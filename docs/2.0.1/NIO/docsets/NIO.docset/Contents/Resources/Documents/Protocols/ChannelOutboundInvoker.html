@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>ChannelOutboundInvoker Protocol Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Protocol/ChannelOutboundInvoker" class="dashAnchor"></a>
+
+    <a title="ChannelOutboundInvoker Protocol Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIO Docs
+        </a>
+         (90% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E0%2E1%2Fdocsets%2FNIO%2Exml">
+            <img class="header-icon" src="../img/dash.png"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIO Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      ChannelOutboundInvoker Protocol Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/AcceptBackoffHandler.html">AcceptBackoffHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/BackPressureHandler.html">BackPressureHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelHandlerContext.html#/s:3NIO21ChannelHandlerContextC12RemovalTokenV">– RemovalToken</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelPipeline.html">ChannelPipeline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelPipeline/Position.html">– Position</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ClientBootstrap.html">ClientBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/DatagramBootstrap.html">DatagramBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel.html">EmbeddedChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel/LeftOverState.html">– LeftOverState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel/BufferState.html">– BufferState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel/WrongTypeError.html">– WrongTypeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EventLoopFuture.html">EventLoopFuture</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/IdleStateHandler.html">IdleStateHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/IdleStateHandler/IdleStateEvent.html">– IdleStateEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MessageToByteHandler.html">MessageToByteHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOFileHandle.html">NIOFileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIONetworkInterface.html">NIONetworkInterface</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool.html">NIOThreadPool</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool/WorkItemState.html">– WorkItemState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/RepeatedTask.html">RepeatedTask</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ServerBootstrap.html">ServerBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ThreadSpecificVariable.html">ThreadSpecificVariable</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ByteToMessageDecoderError.html">ByteToMessageDecoderError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelError.html">ChannelError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelEvent.html">ChannelEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelPipelineError.html">ChannelPipelineError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/CloseMode.html">CloseMode</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/DecodingState.html">DecodingState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/Endianness.html">Endianness</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/EventLoopError.html">EventLoopError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/IOData.html">IOData</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress.html">SocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv4Address.html">– IPv4Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv6Address.html">– IPv6Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/UnixSocketAddress.html">– UnixSocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddressError.html">SocketAddressError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/System.html">System</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ByteToMessageDecoder.html">ByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Channel.html">Channel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelCore.html">ChannelCore</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelHandler.html">ChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundInvoker.html">ChannelInboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOption.html">ChannelOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundInvoker.html">ChannelOutboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoop.html">EventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoopGroup.html">EventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/FileDescriptor.html">FileDescriptor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MessageToByteEncoder.html">MessageToByteEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MulticastChannel.html">MulticastChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RemovableChannelHandler.html">RemovableChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Resolver.html">Resolver</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/SocketOptionProvider.html">SocketOptionProvider</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/WriteObservingByteToMessageDecoder.html">WriteObservingByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelInboundHandler.html">_ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AdaptiveRecvByteBufferAllocator.html">AdaptiveRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AddressedEnvelope.html">AddressedEnvelope</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AllocatorOption.html">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AutoReadOption.html">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/BacklogOption.html">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBuffer.html">ByteBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBufferView.html">ByteBufferView</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions.html">ChannelOptions</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions/Storage.html">– Storage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelShouldQuiesceEvent.html">ChannelShouldQuiesceEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CircularBuffer.html">CircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CircularBuffer/Index.html">– Index</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/DatagramVectorReadMessageCountOption.html">DatagramVectorReadMessageCountOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/EventLoopIterator.html">EventLoopIterator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/EventLoopPromise.html">EventLoopPromise</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FileRegion.html">FileRegion</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FixedSizeRecvByteBufferAllocator.html">FixedSizeRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError.html">IOError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError/FailureDescription.html">– FailureDescription</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOAny.html">NIOAny</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIODeadline.html">NIODeadline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/RecvAllocatorOption.html">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Scheduled.html">Scheduled</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SocketOption.html">SocketOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TimeAmount.html">TimeAmount</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteSpinOption.html">WriteSpinOption</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO20ChannelDuplexHandlera">ChannelDuplexHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/SocketOptionLevel">SocketOptionLevel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17SocketOptionLevela">SocketOptionLevel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO16SocketOptionNamea">SocketOptionName</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/SocketOptionValue">SocketOptionValue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17SocketOptionValuea">SocketOptionValue</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>ChannelOutboundInvoker</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ChannelOutboundInvoker</span></code></pre>
+
+                </div>
+              </div>
+            <p>Allows users to invoke an <q>outbound</q> operation related to a <code><a href="../Protocols/Channel.html">Channel</a></code> that will flow through the <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code> until
+it will finally be executed by the the <code><a href="../Protocols/ChannelCore.html">ChannelCore</a></code> implementation.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP8register7promiseyAA16EventLoopPromiseVyytGSg_tF"></a>
+                    <a name="//apple_ref/swift/Method/register(promise:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP8register7promiseyAA16EventLoopPromiseVyytGSg_tF">register(promise:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Register on an <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> and so have all its IO handled.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">register</span><span class="p">(</span><span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">?)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> that will be notified once the operation completes,
+       or <code>nil</code> if not interested in the outcome of the operation.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP4bind2to7promiseyAA13SocketAddressO_AA16EventLoopPromiseVyytGSgtF"></a>
+                    <a name="//apple_ref/swift/Method/bind(to:promise:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP4bind2to7promiseyAA13SocketAddressO_AA16EventLoopPromiseVyytGSgtF">bind(to:promise:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Bind to a <code><a href="../Enums/SocketAddress.html">SocketAddress</a></code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">bind</span><span class="p">(</span><span class="nv">to</span><span class="p">:</span> <span class="kt"><a href="../Enums/SocketAddress.html">SocketAddress</a></span><span class="p">,</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">?)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>to</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Enums/SocketAddress.html">SocketAddress</a></code> to which we should bind the <code><a href="../Protocols/Channel.html">Channel</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> that will be notified once the operation completes,
+       or <code>nil</code> if not interested in the outcome of the operation.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP7connect2to7promiseyAA13SocketAddressO_AA16EventLoopPromiseVyytGSgtF"></a>
+                    <a name="//apple_ref/swift/Method/connect(to:promise:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP7connect2to7promiseyAA13SocketAddressO_AA16EventLoopPromiseVyytGSgtF">connect(to:promise:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Connect to a <code><a href="../Enums/SocketAddress.html">SocketAddress</a></code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">connect</span><span class="p">(</span><span class="nv">to</span><span class="p">:</span> <span class="kt"><a href="../Enums/SocketAddress.html">SocketAddress</a></span><span class="p">,</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">?)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>to</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Enums/SocketAddress.html">SocketAddress</a></code> to which we should connect the <code><a href="../Protocols/Channel.html">Channel</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> that will be notified once the operation completes,
+       or <code>nil</code> if not interested in the outcome of the operation.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP5write_7promiseyAA6NIOAnyV_AA16EventLoopPromiseVyytGSgtF"></a>
+                    <a name="//apple_ref/swift/Method/write(_:promise:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP5write_7promiseyAA6NIOAnyV_AA16EventLoopPromiseVyytGSgtF">write(_:promise:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write data to the remote peer.</p>
+
+<p>Be aware that to be sure that data is really written to the remote peer you need to call <code>flush</code> or use <code>writeAndFlush</code>.
+Calling <code>write</code> multiple times and then <code>flush</code> may allow the <code><a href="../Protocols/Channel.html">Channel</a></code> to <code>write</code> multiple data objects to the remote peer with one syscall.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">write</span><span class="p">(</span><span class="n">_</span> <span class="nv">data</span><span class="p">:</span> <span class="kt"><a href="../Structs/NIOAny.html">NIOAny</a></span><span class="p">,</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">?)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>data</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the data to write</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> that will be notified once the operation completes,
+       or <code>nil</code> if not interested in the outcome of the operation.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP5flushyyF"></a>
+                    <a name="//apple_ref/swift/Method/flush()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP5flushyyF">flush()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Flush data that was previously written via <code>write</code> to the remote peer.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">flush</span><span class="p">()</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP13writeAndFlush_7promiseyAA6NIOAnyV_AA16EventLoopPromiseVyytGSgtF"></a>
+                    <a name="//apple_ref/swift/Method/writeAndFlush(_:promise:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP13writeAndFlush_7promiseyAA6NIOAnyV_AA16EventLoopPromiseVyytGSgtF">writeAndFlush(_:promise:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Shortcut for calling <code>write</code> and <code>flush</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">writeAndFlush</span><span class="p">(</span><span class="n">_</span> <span class="nv">data</span><span class="p">:</span> <span class="kt"><a href="../Structs/NIOAny.html">NIOAny</a></span><span class="p">,</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">?)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>data</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the data to write</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> that will be notified once the <code>write</code> operation completes,
+       or <code>nil</code> if not interested in the outcome of the operation.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP4readyyF"></a>
+                    <a name="//apple_ref/swift/Method/read()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP4readyyF">read()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Signal that we want to read from the <code><a href="../Protocols/Channel.html">Channel</a></code> once there is data ready.</p>
+
+<p>If <code><a href="../Structs/ChannelOptions.html#/s:3NIO14ChannelOptionsV8autoReadAA04AutoE6OptionVvpZ">ChannelOptions.autoRead</a></code> is set for a <code><a href="../Protocols/Channel.html">Channel</a></code> (which is the default) this method is automatically invoked by the transport implementation,
+otherwise it&rsquo;s the user&rsquo;s responsibility to call this method manually once new data should be read and processed.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">read</span><span class="p">()</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP5close4mode7promiseyAA9CloseModeO_AA16EventLoopPromiseVyytGSgtF"></a>
+                    <a name="//apple_ref/swift/Method/close(mode:promise:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP5close4mode7promiseyAA9CloseModeO_AA16EventLoopPromiseVyytGSgtF">close(mode:promise:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Close the <code><a href="../Protocols/Channel.html">Channel</a></code> and so the connection if one exists.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">close</span><span class="p">(</span><span class="nv">mode</span><span class="p">:</span> <span class="kt"><a href="../Enums/CloseMode.html">CloseMode</a></span><span class="p">,</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">?)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>mode</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Enums/CloseMode.html">CloseMode</a></code> that is used</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> that will be notified once the operation completes,
+       or <code>nil</code> if not interested in the outcome of the operation.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP011triggerUserC5Event_7promiseyyp_AA0G11LoopPromiseVyytGSgtF"></a>
+                    <a name="//apple_ref/swift/Method/triggerUserOutboundEvent(_:promise:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP011triggerUserC5Event_7promiseyyp_AA0G11LoopPromiseVyytGSgtF">triggerUserOutboundEvent(_:promise:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Trigger a custom user outbound event which will flow through the <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">triggerUserOutboundEvent</span><span class="p">(</span><span class="n">_</span> <span class="nv">event</span><span class="p">:</span> <span class="kt">Any</span><span class="p">,</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">?)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> that will be notified once the operation completes,
+       or <code>nil</code> if not interested in the outcome of the operation.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP9eventLoopAA05EventF0_pvp"></a>
+                    <a name="//apple_ref/swift/Property/eventLoop" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP9eventLoopAA05EventF0_pvp">eventLoop</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> which is used by this <code>ChannelOutboundInvoker</code> for execution.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="k">var</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerPAAE8register4file4lineAA15EventLoopFutureCyytGs12StaticStringV_SutF"></a>
+                    <a name="//apple_ref/swift/Method/register(file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerPAAE8register4file4lineAA15EventLoopFutureCyytGs12StaticStringV_SutF">register(file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Register on an <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> and so have all its IO handled.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">register</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the future which will be notified once the operation completes.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerPAAE4bind2to4file4lineAA15EventLoopFutureCyytGAA13SocketAddressO_s12StaticStringVSutF"></a>
+                    <a name="//apple_ref/swift/Method/bind(to:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerPAAE4bind2to4file4lineAA15EventLoopFutureCyytGAA13SocketAddressO_s12StaticStringVSutF">bind(to:file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Bind to a <code><a href="../Enums/SocketAddress.html">SocketAddress</a></code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">bind</span><span class="p">(</span><span class="n">to</span> <span class="nv">address</span><span class="p">:</span> <span class="kt"><a href="../Enums/SocketAddress.html">SocketAddress</a></span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>to</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Enums/SocketAddress.html">SocketAddress</a></code> to which we should bind the <code><a href="../Protocols/Channel.html">Channel</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the future which will be notified once the operation completes.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerPAAE7connect2to4file4lineAA15EventLoopFutureCyytGAA13SocketAddressO_s12StaticStringVSutF"></a>
+                    <a name="//apple_ref/swift/Method/connect(to:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerPAAE7connect2to4file4lineAA15EventLoopFutureCyytGAA13SocketAddressO_s12StaticStringVSutF">connect(to:file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Connect to a <code><a href="../Enums/SocketAddress.html">SocketAddress</a></code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">connect</span><span class="p">(</span><span class="n">to</span> <span class="nv">address</span><span class="p">:</span> <span class="kt"><a href="../Enums/SocketAddress.html">SocketAddress</a></span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>to</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Enums/SocketAddress.html">SocketAddress</a></code> to which we should connect the <code><a href="../Protocols/Channel.html">Channel</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the future which will be notified once the operation completes.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerPAAE5write_4file4lineAA15EventLoopFutureCyytGAA6NIOAnyV_s12StaticStringVSutF"></a>
+                    <a name="//apple_ref/swift/Method/write(_:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerPAAE5write_4file4lineAA15EventLoopFutureCyytGAA6NIOAnyV_s12StaticStringVSutF">write(_:file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write data to the remote peer.</p>
+
+<p>Be aware that to be sure that data is really written to the remote peer you need to call <code>flush</code> or use <code>writeAndFlush</code>.
+Calling <code>write</code> multiple times and then <code>flush</code> may allow the <code><a href="../Protocols/Channel.html">Channel</a></code> to <code>write</code> multiple data objects to the remote peer with one syscall.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">write</span><span class="p">(</span><span class="n">_</span> <span class="nv">data</span><span class="p">:</span> <span class="kt"><a href="../Structs/NIOAny.html">NIOAny</a></span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>data</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the data to write</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the future which will be notified once the operation completes.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerPAAE13writeAndFlush_4file4lineAA15EventLoopFutureCyytGAA6NIOAnyV_s12StaticStringVSutF"></a>
+                    <a name="//apple_ref/swift/Method/writeAndFlush(_:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerPAAE13writeAndFlush_4file4lineAA15EventLoopFutureCyytGAA6NIOAnyV_s12StaticStringVSutF">writeAndFlush(_:file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Shortcut for calling <code>write</code> and <code>flush</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">writeAndFlush</span><span class="p">(</span><span class="n">_</span> <span class="nv">data</span><span class="p">:</span> <span class="kt"><a href="../Structs/NIOAny.html">NIOAny</a></span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>data</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the data to write</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the future which will be notified once the <code>write</code> operation completes.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerPAAE5close4mode4file4lineAA15EventLoopFutureCyytGAA9CloseModeO_s12StaticStringVSutF"></a>
+                    <a name="//apple_ref/swift/Method/close(mode:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerPAAE5close4mode4file4lineAA15EventLoopFutureCyytGAA9CloseModeO_s12StaticStringVSutF">close(mode:file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Close the <code><a href="../Protocols/Channel.html">Channel</a></code> and so the connection if one exists.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">close</span><span class="p">(</span><span class="nv">mode</span><span class="p">:</span> <span class="kt"><a href="../Enums/CloseMode.html">CloseMode</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">all</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>mode</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code><a href="../Enums/CloseMode.html">CloseMode</a></code> that is used</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the future which will be notified once the operation completes.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerPAAE011triggerUserC5Event_4file4lineAA0G10LoopFutureCyytGyp_s12StaticStringVSutF"></a>
+                    <a name="//apple_ref/swift/Method/triggerUserOutboundEvent(_:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerPAAE011triggerUserC5Event_4file4lineAA0G10LoopFutureCyytGyp_s12StaticStringVSutF">triggerUserOutboundEvent(_:file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Trigger a custom user outbound event which will flow through the <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">triggerUserOutboundEvent</span><span class="p">(</span><span class="n">_</span> <span class="nv">event</span><span class="p">:</span> <span class="kt">Any</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>event</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the event itself.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the future which will be notified once the operation completes.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-04-23)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>

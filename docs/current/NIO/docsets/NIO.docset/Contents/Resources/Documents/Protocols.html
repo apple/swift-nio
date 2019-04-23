@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Protocols  Reference</title>
+    <link rel="stylesheet" type="text/css" href="css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="js/jquery.min.js" defer></script>
+    <script src="js/jazzy.js" defer></script>
+    
+    <script src="js/lunr.min.js" defer></script>
+    <script src="js/typeahead.jquery.js" defer></script>
+    <script src="js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Section/Protocols" class="dashAnchor"></a>
+
+    <a title="Protocols  Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="index.html">
+          NIO Docs
+        </a>
+         (90% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E0%2E1%2Fdocsets%2FNIO%2Exml">
+            <img class="header-icon" src="img/dash.png"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="index.html">NIO Reference</a>
+      <img class="carat" src="img/carat.png" />
+      Protocols  Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/AcceptBackoffHandler.html">AcceptBackoffHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/BackPressureHandler.html">BackPressureHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/ByteToMessageHandler.html">ByteToMessageHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/ChannelHandlerContext.html">ChannelHandlerContext</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/ChannelHandlerContext.html#/s:3NIO21ChannelHandlerContextC12RemovalTokenV">– RemovalToken</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/ChannelPipeline.html">ChannelPipeline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/ChannelPipeline/Position.html">– Position</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/ClientBootstrap.html">ClientBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/DatagramBootstrap.html">DatagramBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedChannel.html">EmbeddedChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedChannel/LeftOverState.html">– LeftOverState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedChannel/BufferState.html">– BufferState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedChannel/WrongTypeError.html">– WrongTypeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EventLoopFuture.html">EventLoopFuture</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/IdleStateHandler.html">IdleStateHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/IdleStateHandler/IdleStateEvent.html">– IdleStateEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/MessageToByteHandler.html">MessageToByteHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOFileHandle.html">NIOFileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIONetworkInterface.html">NIONetworkInterface</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOThreadPool.html">NIOThreadPool</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOThreadPool/WorkItemState.html">– WorkItemState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/RepeatedTask.html">RepeatedTask</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/ServerBootstrap.html">ServerBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/ThreadSpecificVariable.html">ThreadSpecificVariable</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/ByteToMessageDecoderError.html">ByteToMessageDecoderError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/ChannelError.html">ChannelError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/ChannelEvent.html">ChannelEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/ChannelPipelineError.html">ChannelPipelineError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/CloseMode.html">CloseMode</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/DecodingState.html">DecodingState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/Endianness.html">Endianness</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/EventLoopError.html">EventLoopError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/IOData.html">IOData</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/SocketAddress.html">SocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/SocketAddress/IPv4Address.html">– IPv4Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/SocketAddress/IPv6Address.html">– IPv6Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/SocketAddress/UnixSocketAddress.html">– UnixSocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/SocketAddressError.html">SocketAddressError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/System.html">System</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/ByteToMessageDecoder.html">ByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/Channel.html">Channel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/ChannelCore.html">ChannelCore</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/ChannelHandler.html">ChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/ChannelInboundInvoker.html">ChannelInboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/ChannelOption.html">ChannelOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/ChannelOutboundInvoker.html">ChannelOutboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/EventLoop.html">EventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/EventLoopGroup.html">EventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/FileDescriptor.html">FileDescriptor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/MessageToByteEncoder.html">MessageToByteEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/MulticastChannel.html">MulticastChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/RemovableChannelHandler.html">RemovableChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/Resolver.html">Resolver</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/SocketOptionProvider.html">SocketOptionProvider</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/WriteObservingByteToMessageDecoder.html">WriteObservingByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/_ChannelInboundHandler.html">_ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AdaptiveRecvByteBufferAllocator.html">AdaptiveRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AddressedEnvelope.html">AddressedEnvelope</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AllocatorOption.html">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AutoReadOption.html">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/BacklogOption.html">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ByteBuffer.html">ByteBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ByteBufferAllocator.html">ByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ByteBufferView.html">ByteBufferView</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ChannelOptions.html">ChannelOptions</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ChannelOptions/Storage.html">– Storage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ChannelShouldQuiesceEvent.html">ChannelShouldQuiesceEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/CircularBuffer.html">CircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/CircularBuffer/Index.html">– Index</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/DatagramVectorReadMessageCountOption.html">DatagramVectorReadMessageCountOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/EventLoopIterator.html">EventLoopIterator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/EventLoopPromise.html">EventLoopPromise</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/FileRegion.html">FileRegion</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/FixedSizeRecvByteBufferAllocator.html">FixedSizeRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/IOError.html">IOError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/IOError/FailureDescription.html">– FailureDescription</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/NIOAny.html">NIOAny</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/NIOConnectionError.html">NIOConnectionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/NIODeadline.html">NIODeadline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/NonBlockingFileIO/Error.html">– Error</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/RecvAllocatorOption.html">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Scheduled.html">Scheduled</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/SocketOption.html">SocketOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/TimeAmount.html">TimeAmount</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/WriteSpinOption.html">WriteSpinOption</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO20ChannelDuplexHandlera">ChannelDuplexHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/SocketOptionLevel">SocketOptionLevel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO17SocketOptionLevela">SocketOptionLevel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO16SocketOptionNamea">SocketOptionName</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/SocketOptionValue">SocketOptionValue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO17SocketOptionValuea">SocketOptionValue</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>Protocols</h1>
+            <p>The following protocols are available globally.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO11ChannelCoreP"></a>
+                    <a name="//apple_ref/swift/Protocol/ChannelCore" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO11ChannelCoreP">ChannelCore</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The core <code><a href="Protocols/Channel.html">Channel</a></code> methods that are for internal use of the <code><a href="Protocols/Channel.html">Channel</a></code> implementation only.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>If you are not implementing a custom <code><a href="Protocols/Channel.html">Channel</a></code> type, you should never call any of these.</p>
+
+</div>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>All methods must be called from the <code><a href="Protocols/EventLoop.html">EventLoop</a></code> thread.</p>
+
+</div>
+
+                        <a href="Protocols/ChannelCore.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ChannelCore</span> <span class="p">:</span> <span class="kt">AnyObject</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO7ChannelP"></a>
+                    <a name="//apple_ref/swift/Protocol/Channel" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO7ChannelP">Channel</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A <code>Channel</code> is easiest thought of as a network socket. But it can be anything that is capable of I/O operations such
+as read, write, connect, and bind.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    All operations on <code>Channel</code> are thread-safe.
+
+</div>
+
+<p>In SwiftNIO, all I/O operations are asynchronous and hence all operations on <code>Channel</code> are asynchronous too. This means
+that all I/O operations will return immediately, usually before the work has been completed. The <code><a href="Structs/EventLoopPromise.html">EventLoopPromise</a></code>s
+passed to or returned by the operations are used to retrieve the result of an operation after it has completed.</p>
+
+<p>A <code>Channel</code> owns its <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code> which handles all I/O events and requests associated with the <code>Channel</code>.</p>
+
+                        <a href="Protocols/Channel.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">Channel</span> <span class="p">:</span> <span class="kt">AnyObject</span><span class="p">,</span> <span class="kt"><a href="Protocols/ChannelOutboundInvoker.html">ChannelOutboundInvoker</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO14ChannelHandlerP"></a>
+                    <a name="//apple_ref/swift/Protocol/ChannelHandler" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO14ChannelHandlerP">ChannelHandler</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>You should <em>never</em> implement this protocol directly. Please implement one of its sub-protocols.</p>
+
+                        <a href="Protocols/ChannelHandler.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ChannelHandler</span> <span class="p">:</span> <span class="kt">AnyObject</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO23_ChannelOutboundHandlerP"></a>
+                    <a name="//apple_ref/swift/Protocol/_ChannelOutboundHandler" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO23_ChannelOutboundHandlerP">_ChannelOutboundHandler</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Untyped <code><a href="Protocols/ChannelHandler.html">ChannelHandler</a></code> which handles outbound I/O events or intercept an outbound I/O operation.</p>
+
+<p>Despite the fact that <code>write</code> is one of the methods on this <code>protocol</code>, you should avoid assuming that <q>outbound</q> events are to do with
+writing to channel sources. Instead, <q>outbound</q> events are events that are passed <em>to</em> the channel source (e.g. a socket): that is, things you tell
+the channel source to do. That includes <code>write</code> (<q>write this data to the channel source</q>), but it also includes <code>read</code> (<q>please begin attempting to read from
+the channel source</q>) and <code>bind</code> (<q>please bind the following address</q>), which have nothing to do with sending data.</p>
+
+<p>We <em>strongly</em> advise against implementing this protocol directly. Please implement <code><a href="Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a></code>.</p>
+
+                        <a href="Protocols/_ChannelOutboundHandler.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="nv">_ChannelOutboundHandler</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelHandler.html">ChannelHandler</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22_ChannelInboundHandlerP"></a>
+                    <a name="//apple_ref/swift/Protocol/_ChannelInboundHandler" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22_ChannelInboundHandlerP">_ChannelInboundHandler</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Untyped <code><a href="Protocols/ChannelHandler.html">ChannelHandler</a></code> which handles inbound I/O events.</p>
+
+<p>Despite the fact that <code>channelRead</code> is one of the methods on this <code>protocol</code>, you should avoid assuming that <q>inbound</q> events are to do with
+reading from channel sources. Instead, <q>inbound</q> events are events that originate <em>from</em> the channel source (e.g. the socket): that is, events that the
+channel source tells you about. This includes things like <code>channelRead</code> (<q>there is some data to read</q>), but it also includes things like
+<code>channelWritabilityChanged</code> (<q>this source is no longer marked writable</q>).</p>
+
+<p>We <em>strongly</em> advise against implementing this protocol directly. Please implement <code><a href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></code>.</p>
+
+                        <a href="Protocols/_ChannelInboundHandler.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="nv">_ChannelInboundHandler</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelHandler.html">ChannelHandler</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO23RemovableChannelHandlerP"></a>
+                    <a name="//apple_ref/swift/Protocol/RemovableChannelHandler" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO23RemovableChannelHandlerP">RemovableChannelHandler</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A <code>RemovableChannelHandler</code> is a <code><a href="Protocols/ChannelHandler.html">ChannelHandler</a></code> that can be dynamically removed from a <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code> whilst
+the <code><a href="Protocols/Channel.html">Channel</a></code> is operating normally.
+A <code>RemovableChannelHandler</code> is required to remove itself from the <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code> (using
+<code>ChannelHandlerContext.removeHandler</code>) as soon as possible.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    When a <code><a href="Protocols/Channel.html">Channel</a></code> gets torn down, every <code><a href="Protocols/ChannelHandler.html">ChannelHandler</a></code> in the <code><a href="Protocols/Channel.html">Channel</a></code>&lsquo;s <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code> will be
+    removed from the <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code>. Those removals however happen synchronously and are not going through
+    the methods of this protocol.
+
+</div>
+
+                        <a href="Protocols/RemovableChannelHandler.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">RemovableChannelHandler</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelHandler.html">ChannelHandler</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundInvokerP"></a>
+                    <a name="//apple_ref/swift/Protocol/ChannelOutboundInvoker" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundInvokerP">ChannelOutboundInvoker</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Allows users to invoke an <q>outbound</q> operation related to a <code><a href="Protocols/Channel.html">Channel</a></code> that will flow through the <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code> until
+it will finally be executed by the the <code><a href="Protocols/ChannelCore.html">ChannelCore</a></code> implementation.</p>
+
+                        <a href="Protocols/ChannelOutboundInvoker.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ChannelOutboundInvoker</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO21ChannelInboundInvokerP"></a>
+                    <a name="//apple_ref/swift/Protocol/ChannelInboundInvoker" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO21ChannelInboundInvokerP">ChannelInboundInvoker</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Fire inbound events related to a <code><a href="Protocols/Channel.html">Channel</a></code> through the <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code> until its end is reached or it&rsquo;s consumed by a <code><a href="Protocols/ChannelHandler.html">ChannelHandler</a></code>.</p>
+
+                        <a href="Protocols/ChannelInboundInvoker.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ChannelInboundInvoker</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO14ChannelInvokerP"></a>
+                    <a name="//apple_ref/swift/Protocol/ChannelInvoker" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO14ChannelInvokerP">ChannelInvoker</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A protocol that signals that outbound and inbound events are triggered by this invoker.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ChannelInvoker</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelInboundInvoker.html">ChannelInboundInvoker</a></span><span class="p">,</span> <span class="kt"><a href="Protocols/ChannelOutboundInvoker.html">ChannelOutboundInvoker</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO13ChannelOptionP"></a>
+                    <a name="//apple_ref/swift/Protocol/ChannelOption" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO13ChannelOptionP">ChannelOption</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A configuration option that can be set on a <code><a href="Protocols/Channel.html">Channel</a></code> to configure different behaviour.</p>
+
+                        <a href="Protocols/ChannelOption.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ChannelOption</span> <span class="p">:</span> <span class="kt">Equatable</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO20ByteToMessageDecoderP"></a>
+                    <a name="//apple_ref/swift/Protocol/ByteToMessageDecoder" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO20ByteToMessageDecoderP">ByteToMessageDecoder</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p><code>ByteToMessageDecoder</code>s decode bytes in a stream-like fashion from <code><a href="Structs/ByteBuffer.html">ByteBuffer</a></code> to another message type.</p>
+
+<p>To add a <code>ByteToMessageDecoder</code> to the <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code> use</p>
+<pre class="highlight swift"><code><span class="n">channel</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="nf">addHandler</span><span class="p">(</span><span class="kt">ByteToMessageHandler</span><span class="p">(</span><span class="kt">MyByteToMessageDecoder</span><span class="p">()))</span>
+</code></pre>
+
+<p><code><a href="Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code> will turn your <code>ByteToMessageDecoder</code> into a <code><a href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></code>. <code><a href="Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code>
+also solves a couple of tricky issues for you, most importantly, in a <code>ByteToMessageDecoder</code> you do <em>not</em> need to
+worry about re-entrancy. You own the passed-in <code><a href="Structs/ByteBuffer.html">ByteBuffer</a></code> for the duration of the <code>decode</code>/<code>decodeLast</code> call an
+can modify it at will.</p>
+
+<p>If a custom frame decoder is required, then one needs to be careful when implementing
+one with <code>ByteToMessageDecoder</code>. Ensure there are enough bytes in the buffer for a
+complete frame by checking <code>buffer.readableBytes</code>. If there are not enough bytes
+for a complete frame, return without modifying the reader index to allow more bytes to arrive.</p>
+
+<p>To check for complete frames without modifying the reader index, use methods like <code>buffer.getInteger</code>.
+One <em>MUST</em> use the reader index when using methods like <code>buffer.getInteger</code>.
+For example calling <code>buffer.getInteger(at: 0)</code> is assuming the frame starts at the beginning of the buffer, which
+is not always the case. Use <code>buffer.getInteger(at: buffer.readerIndex)</code> instead.</p>
+
+<p>If you move the reader index forward, either manually or by using one of <code>buffer.read*</code> methods, you must ensure
+that you no longer need to see those bytes again as they will not be returned to you the next time <code>decode</code> is
+called. If you still need those bytes to come back, consider taking a local copy of buffer inside the function to
+perform your read operations on.</p>
+
+<p>The <code><a href="Structs/ByteBuffer.html">ByteBuffer</a></code> passed in as <code>buffer</code> is a slice of a larger buffer owned by the <code>ByteToMessageDecoder</code>
+implementation. Some aspects of this buffer are preserved across calls to <code>decode</code>, meaning that any changes to
+those properties you make in your <code>decode</code> method will be reflected in the next call to decode. In particular,
+the following operations are have the described effects:</p>
+
+<p>Moving the reader index forward persists across calls. When your method returns, if the reader index has advanced,
+those bytes are considered <q>consumed</q> and will not be available in future calls to <code>decode</code>.
+Please note, however, that the numerical value of the <code>readerIndex</code> itself is not preserved, and may not be the same
+from one call to the next. Please do not rely on this numerical value: if you need
+to recall where a byte is relative to the <code>readerIndex</code>, use an offset rather than an absolute value.</p>
+
+                        <a href="Protocols/ByteToMessageDecoder.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ByteToMessageDecoder</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO34WriteObservingByteToMessageDecoderP"></a>
+                    <a name="//apple_ref/swift/Protocol/WriteObservingByteToMessageDecoder" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO34WriteObservingByteToMessageDecoderP">WriteObservingByteToMessageDecoder</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Some <code><a href="Protocols/ByteToMessageDecoder.html">ByteToMessageDecoder</a></code>s need to observe <code>write</code>s (which are outbound events). <code><a href="Protocols/ByteToMessageDecoder.html">ByteToMessageDecoder</a></code>s which
+implement the <code>WriteObservingByteToMessageDecoder</code> protocol will be notified about every outbound write.</p>
+
+<p><code>WriteObservingByteToMessageDecoder</code> may only observe a <code>write</code> and must not try to transform or block it in any
+way. After the <code>write</code> method returns the <code>write</code> will be forwarded to the next outbound handler.</p>
+
+                        <a href="Protocols/WriteObservingByteToMessageDecoder.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">WriteObservingByteToMessageDecoder</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ByteToMessageDecoder.html">ByteToMessageDecoder</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/ByteToMessageHandler:%20ChannelInboundHandler"></a>
+                <a name="//apple_ref/swift/Section/ByteToMessageHandler: ChannelInboundHandler" class="dashAnchor"></a>
+                <a href="#/ByteToMessageHandler:%20ChannelInboundHandler">
+                  <h3 class="section-name">ByteToMessageHandler: ChannelInboundHandler</h3>
+                </a>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO20MessageToByteEncoderP"></a>
+                    <a name="//apple_ref/swift/Protocol/MessageToByteEncoder" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO20MessageToByteEncoderP">MessageToByteEncoder</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A protocol for straightforward encoders which encode custom messages to <code><a href="Structs/ByteBuffer.html">ByteBuffer</a></code>s.
+To add a <code>MessageToByteEncoder</code> to a <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code>, use
+<code>channel.pipeline.addHandler(MessageToByteHandler(myEncoder)</code>.</p>
+
+                        <a href="Protocols/MessageToByteEncoder.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">MessageToByteEncoder</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopP"></a>
+                    <a name="//apple_ref/swift/Protocol/EventLoop" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopP">EventLoop</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>An EventLoop processes IO / tasks in an endless loop for <code><a href="Protocols/Channel.html">Channel</a></code>s until it&rsquo;s closed.</p>
+
+<p>Usually multiple <code><a href="Protocols/Channel.html">Channel</a></code>s share the same <code>EventLoop</code> for processing IO / tasks and so share the same processing <code>NIOThread</code>.
+For a better understanding of how such an <code>EventLoop</code> works internally the following pseudo code may be helpful:</p>
+<pre class="highlight swift"><code><span class="k">while</span> <span class="n">eventLoop</span><span class="o">.</span><span class="n">isOpen</span> <span class="p">{</span>
+    <span class="c1">/// Block until there is something to process for 1...n Channels</span>
+    <span class="k">let</span> <span class="nv">readyChannels</span> <span class="o">=</span> <span class="nf">blockUntilIoOrTasksAreReady</span><span class="p">()</span>
+    <span class="c1">/// Loop through all the Channels</span>
+    <span class="k">for</span> <span class="n">channel</span> <span class="k">in</span> <span class="n">readyChannels</span> <span class="p">{</span>
+        <span class="c1">/// Process IO and / or tasks for the Channel.</span>
+        <span class="c1">/// This may include things like:</span>
+        <span class="c1">///    - accept new connection</span>
+        <span class="c1">///    - connect to a remote host</span>
+        <span class="c1">///    - read from socket</span>
+        <span class="c1">///    - write to socket</span>
+        <span class="c1">///    - tasks that were submitted via EventLoop methods</span>
+        <span class="c1">/// and others.</span>
+        <span class="nf">processIoAndTasks</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+
+<p>Because an <code>EventLoop</code> may be shared between multiple <code><a href="Protocols/Channel.html">Channel</a></code>s it&rsquo;s important to <em>NOT</em> block while processing IO / tasks. This also includes long running computations which will have the same
+effect as blocking in this case.</p>
+
+                        <a href="Protocols/EventLoop.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">EventLoop</span> <span class="p">:</span> <span class="kt"><a href="Protocols/EventLoopGroup.html">EventLoopGroup</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO14EventLoopGroupP"></a>
+                    <a name="//apple_ref/swift/Protocol/EventLoopGroup" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO14EventLoopGroupP">EventLoopGroup</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Provides an endless stream of <code><a href="Protocols/EventLoop.html">EventLoop</a></code>s to use.</p>
+
+                        <a href="Protocols/EventLoopGroup.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">EventLoopGroup</span> <span class="p">:</span> <span class="kt">AnyObject</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO14FileDescriptorP"></a>
+                    <a name="//apple_ref/swift/Protocol/FileDescriptor" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO14FileDescriptorP">FileDescriptor</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                        <a href="Protocols/FileDescriptor.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">FileDescriptor</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO16MulticastChannelP"></a>
+                    <a name="//apple_ref/swift/Protocol/MulticastChannel" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO16MulticastChannelP">MulticastChannel</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A <code>MulticastChannel</code> is a <code><a href="Protocols/Channel.html">Channel</a></code> that supports IP multicast operations: that is, a channel that can join multicast
+groups.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    As with <code><a href="Protocols/Channel.html">Channel</a></code>, all operations on a <code>MulticastChannel</code> are thread-safe.
+
+</div>
+
+                        <a href="Protocols/MulticastChannel.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">MulticastChannel</span> <span class="p">:</span> <span class="kt"><a href="Protocols/Channel.html">Channel</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO23RecvByteBufferAllocatorP"></a>
+                    <a name="//apple_ref/swift/Protocol/RecvByteBufferAllocator" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO23RecvByteBufferAllocatorP">RecvByteBufferAllocator</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Allocates <code><a href="Structs/ByteBuffer.html">ByteBuffer</a></code>s to be used to read bytes from a <code><a href="Protocols/Channel.html">Channel</a></code> and records the number of the actual bytes that were used.</p>
+
+                        <a href="Protocols/RecvByteBufferAllocator.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">RecvByteBufferAllocator</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO8ResolverP"></a>
+                    <a name="//apple_ref/swift/Protocol/Resolver" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO8ResolverP">Resolver</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A protocol that covers an object that does DNS lookups.</p>
+
+<p>In general the rules for the resolver are relatively broad: there are no specific requirements on how
+it operates. However, the rest of the code assumes that it obeys RFC 6724, particularly section 6 on
+ordering returned addresses. That is, the IPv6 and IPv4 responses should be ordered by the destination
+address ordering rules from that RFC. This specification is widely implemented by getaddrinfo
+implementations, so any implementation based on getaddrinfo will work just fine. In the future, a custom
+resolver will need also to implement these sorting rules.</p>
+
+                        <a href="Protocols/Resolver.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">Resolver</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO20SocketOptionProviderP"></a>
+                    <a name="//apple_ref/swift/Protocol/SocketOptionProvider" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO20SocketOptionProviderP">SocketOptionProvider</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>This protocol defines an object, most commonly a <code><a href="Protocols/Channel.html">Channel</a></code>, that supports
+setting and getting socket options (via <code>setsockopt</code>/<code>getsockopt</code> or similar).
+It provides a strongly typed API that makes working with larger, less-common
+socket options easier than the <code><a href="Protocols/ChannelOption.html">ChannelOption</a></code> API allows.</p>
+
+<p>The API is divided into two portions. For socket options that NIO has prior
+knowledge about, the API has strongly and safely typed APIs that only allow
+users to use the exact correct type for the socket option. This will ensure
+that the API is safe to use, and these are encouraged where possible.</p>
+
+<p>These safe APIs are built on top of an <q>unsafe</q> API that is also exposed to
+users as part of this protocol. The <q>unsafe</q> API is unsafe in the same way
+that <code>UnsafePointer</code> is: incorrect use of the API allows all kinds of
+memory-unsafe behaviour. This API is necessary for socket options that NIO
+does not have prior knowledge of, but wherever possible users are discouraged
+from using it.</p>
+<h3 id='relationship-to-socketoption' class='heading'>Relationship to SocketOption</h3>
+
+<p>All <code><a href="Protocols/Channel.html">Channel</a></code> objects that implement this protocol should also support the
+<code><a href="Structs/SocketOption.html">SocketOption</a></code> <code><a href="Protocols/ChannelOption.html">ChannelOption</a></code> for simple socket options (those with C <code>int</code>
+values). These are the most common socket option types, and so this <code><a href="Protocols/ChannelOption.html">ChannelOption</a></code>
+represents a convenient shorthand for using this protocol where the type allows,
+as well as avoiding the need to cast to this protocol.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    Like the <code><a href="Protocols/Channel.html">Channel</a></code> protocol, all methods in this protocol are
+thread-safe.
+
+</div>
+
+                        <a href="Protocols/SocketOptionProvider.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">SocketOptionProvider</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO23_EmittingChannelHandlerP"></a>
+                    <a name="//apple_ref/swift/Protocol/_EmittingChannelHandler" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO23_EmittingChannelHandlerP">_EmittingChannelHandler</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>ChannelHandler which will emit data by calling <code>ChannelHandlerContext.write</code>.</p>
+
+<p>We <em>strongly</em> advice against implementing this protocol directly. Please implement <code><a href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></code> or / and <code><a href="Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a></code>.</p>
+
+                        <a href="Protocols/_EmittingChannelHandler.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="n">_EmittingChannelHandler</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO21ChannelInboundHandlerP"></a>
+                    <a name="//apple_ref/swift/Protocol/ChannelInboundHandler" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO21ChannelInboundHandlerP">ChannelInboundHandler</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p><code><a href="Protocols/ChannelHandler.html">ChannelHandler</a></code> which handles inbound I/O events for a <code><a href="Protocols/Channel.html">Channel</a></code>.</p>
+
+<p>Please refer to <code><a href="Protocols/_ChannelInboundHandler.html">_ChannelInboundHandler</a></code> and <code><a href="Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a></code> for more details on the provided methods.</p>
+
+                        <a href="Protocols/ChannelInboundHandler.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ChannelInboundHandler</span> <span class="p">:</span> <span class="n"><a href="Protocols/_ChannelInboundHandler.html">_ChannelInboundHandler</a></span><span class="p">,</span> <span class="n"><a href="Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22ChannelOutboundHandlerP"></a>
+                    <a name="//apple_ref/swift/Protocol/ChannelOutboundHandler" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22ChannelOutboundHandlerP">ChannelOutboundHandler</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p><code><a href="Protocols/ChannelHandler.html">ChannelHandler</a></code> which handles outbound I/O events or intercept an outbound I/O operation for a <code><a href="Protocols/Channel.html">Channel</a></code>.</p>
+
+<p>Please refer to <code><a href="Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a></code> and <code><a href="Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a></code> for more details on the provided methods.</p>
+
+                        <a href="Protocols/ChannelOutboundHandler.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ChannelOutboundHandler</span> <span class="p">:</span> <span class="n"><a href="Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a></span><span class="p">,</span> <span class="n"><a href="Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-04-23)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>

@@ -1,0 +1,3320 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>ByteBuffer Structure Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Struct/ByteBuffer" class="dashAnchor"></a>
+
+    <a title="ByteBuffer Structure Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIO Docs
+        </a>
+         (90% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E0%2E1%2Fdocsets%2FNIO%2Exml">
+            <img class="header-icon" src="../img/dash.png"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIO Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      ByteBuffer Structure Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/AcceptBackoffHandler.html">AcceptBackoffHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/BackPressureHandler.html">BackPressureHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelHandlerContext.html#/s:3NIO21ChannelHandlerContextC12RemovalTokenV">– RemovalToken</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelPipeline.html">ChannelPipeline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelPipeline/Position.html">– Position</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ClientBootstrap.html">ClientBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/DatagramBootstrap.html">DatagramBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel.html">EmbeddedChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel/LeftOverState.html">– LeftOverState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel/BufferState.html">– BufferState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel/WrongTypeError.html">– WrongTypeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EventLoopFuture.html">EventLoopFuture</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/IdleStateHandler.html">IdleStateHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/IdleStateHandler/IdleStateEvent.html">– IdleStateEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MessageToByteHandler.html">MessageToByteHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOFileHandle.html">NIOFileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIONetworkInterface.html">NIONetworkInterface</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool.html">NIOThreadPool</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool/WorkItemState.html">– WorkItemState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/RepeatedTask.html">RepeatedTask</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ServerBootstrap.html">ServerBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ThreadSpecificVariable.html">ThreadSpecificVariable</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ByteToMessageDecoderError.html">ByteToMessageDecoderError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelError.html">ChannelError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelEvent.html">ChannelEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelPipelineError.html">ChannelPipelineError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/CloseMode.html">CloseMode</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/DecodingState.html">DecodingState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/Endianness.html">Endianness</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/EventLoopError.html">EventLoopError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/IOData.html">IOData</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress.html">SocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv4Address.html">– IPv4Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv6Address.html">– IPv6Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/UnixSocketAddress.html">– UnixSocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddressError.html">SocketAddressError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/System.html">System</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ByteToMessageDecoder.html">ByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Channel.html">Channel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelCore.html">ChannelCore</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelHandler.html">ChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundInvoker.html">ChannelInboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOption.html">ChannelOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundInvoker.html">ChannelOutboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoop.html">EventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoopGroup.html">EventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/FileDescriptor.html">FileDescriptor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MessageToByteEncoder.html">MessageToByteEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MulticastChannel.html">MulticastChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RemovableChannelHandler.html">RemovableChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Resolver.html">Resolver</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/SocketOptionProvider.html">SocketOptionProvider</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/WriteObservingByteToMessageDecoder.html">WriteObservingByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelInboundHandler.html">_ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AdaptiveRecvByteBufferAllocator.html">AdaptiveRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AddressedEnvelope.html">AddressedEnvelope</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AllocatorOption.html">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AutoReadOption.html">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/BacklogOption.html">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBuffer.html">ByteBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBufferView.html">ByteBufferView</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions.html">ChannelOptions</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions/Storage.html">– Storage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelShouldQuiesceEvent.html">ChannelShouldQuiesceEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CircularBuffer.html">CircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CircularBuffer/Index.html">– Index</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/DatagramVectorReadMessageCountOption.html">DatagramVectorReadMessageCountOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/EventLoopIterator.html">EventLoopIterator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/EventLoopPromise.html">EventLoopPromise</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FileRegion.html">FileRegion</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FixedSizeRecvByteBufferAllocator.html">FixedSizeRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError.html">IOError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError/FailureDescription.html">– FailureDescription</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOAny.html">NIOAny</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIODeadline.html">NIODeadline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/RecvAllocatorOption.html">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Scheduled.html">Scheduled</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SocketOption.html">SocketOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TimeAmount.html">TimeAmount</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteSpinOption.html">WriteSpinOption</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO20ChannelDuplexHandlera">ChannelDuplexHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/SocketOptionLevel">SocketOptionLevel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17SocketOptionLevela">SocketOptionLevel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO16SocketOptionNamea">SocketOptionName</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/SocketOptionValue">SocketOptionValue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17SocketOptionValuea">SocketOptionValue</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>ByteBuffer</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ByteBuffer</span></code></pre>
+
+                </div>
+              </div>
+            <p><code>ByteBuffer</code> stores contiguously allocated raw bytes. It is a random and sequential accessible sequence of zero or
+more bytes (octets).</p>
+<h3 id='allocation' class='heading'>Allocation</h3>
+
+<p>Use <code>allocator.buffer(capacity: desiredCapacity)</code> to allocate a new <code>ByteBuffer</code>.</p>
+<h3 id='supported-types' class='heading'>Supported types</h3>
+
+<p>A variety of types can be read/written from/to a <code>ByteBuffer</code>. Using Swift&rsquo;s <code>extension</code> mechanism you can easily
+create <code>ByteBuffer</code> support for your own data types. Out of the box, <code>ByteBuffer</code> supports for example the following
+types (non-exhaustive list):</p>
+
+<ul>
+<li><code>String</code>/<code>StaticString</code></li>
+<li>Swift&rsquo;s various (unsigned) integer types</li>
+<li><code>Foundation</code>&lsquo;s <code>Data</code></li>
+<li><code>[UInt8]</code> and generally any <code>Collection</code> of <code>UInt8</code></li>
+</ul>
+<h3 id='random-access' class='heading'>Random Access</h3>
+
+<p>For every supported type <code>ByteBuffer</code> usually contains two methods for random access:</p>
+
+<ol>
+<li><code>get&lt;Type&gt;(at: Int, length: Int)</code> where <code>&lt;type&gt;</code> is for example <code>String</code>, <code>Data</code>, <code>Bytes</code> (for <code>[UInt8]</code>)</li>
+<li><code>set&lt;Type&gt;(at: Int)</code></li>
+</ol>
+
+<p>Example:</p>
+<pre class="highlight swift"><code><span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">buf</span><span class="o">.</span><span class="nf">setString</span><span class="p">(</span><span class="s">"Hello World"</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">helloWorld</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getString</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+
+<span class="n">buf</span><span class="o">.</span><span class="nf">setInteger</span><span class="p">(</span><span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getInteger</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+</code></pre>
+
+<p>If needed, <code>ByteBuffer</code> will automatically resize its storage to accommodate your <code>set</code> request.</p>
+<h3 id='sequential-access' class='heading'>Sequential Access</h3>
+
+<p><code>ByteBuffer</code> provides two properties which are indices into the <code>ByteBuffer</code> to support sequential access:</p>
+
+<ul>
+<li><code>readerIndex</code>, the index of the next readable byte</li>
+<li><code>writerIndex</code>, the index of the next byte to write</li>
+</ul>
+
+<p>For every supported type <code>ByteBuffer</code> usually contains two methods for sequential access:</p>
+
+<ol>
+<li><code>read&lt;Type&gt;(length: Int)</code> to read <code>length</code> bytes from the current <code>readerIndex</code> (and then advance the reader
+index by <code>length</code> bytes)</li>
+<li><code>write&lt;Type&gt;(Type)</code> to write, advancing the <code>writerIndex</code> by the appropriate amount</li>
+</ol>
+
+<p>Example:</p>
+<pre class="highlight swift"><code> <span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
+ <span class="n">buf</span><span class="o">.</span><span class="nf">writeString</span><span class="p">(</span><span class="s">"Hello World"</span><span class="p">)</span>
+ <span class="n">buf</span><span class="o">.</span><span class="nf">writeInteger</span><span class="p">(</span><span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">)</span>
+ <span class="k">let</span> <span class="nv">helloWorld</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">readString</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+ <span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">readInteger</span><span class="p">()</span>
+</code></pre>
+<h3 id='layout' class='heading'>Layout</h3>
+<pre class="highlight swift"><code><span class="o">+-------------------+------------------+------------------+</span>
+<span class="o">|</span> <span class="n">discardable</span> <span class="n">bytes</span> <span class="o">|</span>  <span class="n">readable</span> <span class="n">bytes</span>  <span class="o">|</span>  <span class="n">writable</span> <span class="n">bytes</span>  <span class="o">|</span>
+<span class="o">|</span>                   <span class="o">|</span>     <span class="p">(</span><span class="kt">CONTENT</span><span class="p">)</span>    <span class="o">|</span>                  <span class="o">|</span>
+<span class="o">+-------------------+------------------+------------------+</span>
+<span class="o">|</span>                   <span class="o">|</span>                  <span class="o">|</span>                  <span class="o">|</span>
+<span class="mi">0</span>      <span class="o">&lt;=</span>      <span class="n">readerIndex</span>   <span class="o">&lt;=</span>   <span class="n">writerIndex</span>    <span class="o">&lt;=</span>    <span class="n">capacity</span>
+</code></pre>
+
+<p>The &#39;discardable bytes&rsquo; are usually bytes that have already been read, they can however still be accessed using
+the random access methods. &lsquo;Readable bytes&rsquo; are the bytes currently available to be read using the sequential
+access interface (<code>read&lt;Type&gt;</code>/<code>write&lt;Type&gt;</code>). Getting <code>writableBytes</code> (bytes beyond the writer index) is undefined
+behaviour and might yield arbitrary bytes (<em>not</em> <code>0</code> initialised).</p>
+<h3 id='slicing' class='heading'>Slicing</h3>
+
+<p><code>ByteBuffer</code> supports slicing a <code>ByteBuffer</code> without copying the underlying storage.</p>
+
+<p>Example:</p>
+<pre class="highlight swift"><code><span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
+<span class="k">let</span> <span class="nv">dataBytes</span><span class="p">:</span> <span class="p">[</span><span class="kt">UInt8</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0xca</span><span class="p">,</span> <span class="mh">0xfe</span><span class="p">,</span> <span class="mh">0xba</span><span class="p">,</span> <span class="mh">0xbe</span><span class="p">]</span>
+<span class="k">let</span> <span class="nv">dataBytesLength</span> <span class="o">=</span> <span class="kt">UInt32</span><span class="p">(</span><span class="n">dataBytes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span>
+<span class="n">buf</span><span class="o">.</span><span class="nf">writeInteger</span><span class="p">(</span><span class="n">dataBytesLength</span><span class="p">)</span> <span class="cm">/* the header */</span>
+<span class="n">buf</span><span class="o">.</span><span class="nf">writeBytes</span><span class="p">(</span><span class="n">dataBytes</span><span class="p">)</span> <span class="cm">/* the data */</span>
+<span class="k">let</span> <span class="nv">bufDataBytesOnly</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getSlice</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="n">dataBytes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span>
+<span class="cm">/* `bufDataByteOnly` and `buf` will share their storage */</span>
+</code></pre>
+<h3 id='notes' class='heading'>Notes</h3>
+
+<p>All <code>ByteBuffer</code> methods that don&rsquo;t contain the word &lsquo;unsafe&rsquo; will only allow you to access the &lsquo;readable bytes&rsquo;.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV6_Indexa"></a>
+                    <a name="//apple_ref/swift/Alias/_Index" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV6_Indexa">_Index</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">typealias</span> <span class="n">_Index</span> <span class="o">=</span> <span class="kt">UInt32</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV9_Capacitya"></a>
+                    <a name="//apple_ref/swift/Alias/_Capacity" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV9_Capacitya">_Capacity</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">typealias</span> <span class="n">_Capacity</span> <span class="o">=</span> <span class="kt">UInt32</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Public%20Core%20API"></a>
+                <a name="//apple_ref/swift/Section/Public Core API" class="dashAnchor"></a>
+                <a href="#/Public%20Core%20API">
+                  <h3 class="section-name">Public Core API</h3>
+                </a>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV13writableBytesSivp"></a>
+                    <a name="//apple_ref/swift/Property/writableBytes" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV13writableBytesSivp">writableBytes</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The number of bytes writable until <code>ByteBuffer</code> will need to grow its underlying storage which will likely
+trigger a copy of the bytes.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">writableBytes</span><span class="p">:</span> <span class="kt">Int</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV13readableBytesSivp"></a>
+                    <a name="//apple_ref/swift/Property/readableBytes" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV13readableBytesSivp">readableBytes</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The number of bytes readable (<code>readableBytes</code> = <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code> - <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code>).</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">readableBytes</span><span class="p">:</span> <span class="kt">Int</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV8capacitySivp"></a>
+                    <a name="//apple_ref/swift/Property/capacity" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV8capacitySivp">capacity</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The current capacity of the storage of this <code>ByteBuffer</code>, this is not constant and does <em>not</em> signify the number
+of bytes that have been written to this <code>ByteBuffer</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">capacity</span><span class="p">:</span> <span class="kt">Int</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV15reserveCapacityyySiF"></a>
+                    <a name="//apple_ref/swift/Method/reserveCapacity(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV15reserveCapacityyySiF">reserveCapacity(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Reserves enough space to store the specified number of bytes.</p>
+
+<p>This method will ensure that the buffer has space for at least as many bytes as requested.
+This includes any bytes already stored, and completely disregards the reader/writer indices.
+If the buffer already has space to store the requested number of bytes, this method will be
+a no-op.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">reserveCapacity</span><span class="p">(</span><span class="n">_</span> <span class="nv">minimumCapacity</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>minimumCapacity</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The minimum number of bytes this buffer must be able to store.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV30withUnsafeMutableReadableBytesyxxSwKXEKlF"></a>
+                    <a name="//apple_ref/swift/Method/withUnsafeMutableReadableBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV30withUnsafeMutableReadableBytesyxxSwKXEKlF">withUnsafeMutableReadableBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Yields a mutable buffer pointer containing this <code>ByteBuffer</code>&lsquo;s readable bytes. You may modify those bytes.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>Do not escape the pointer from the closure for later use.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">withUnsafeMutableReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>body</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will accept the yielded bytes.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The value returned by <code>fn</code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV30withUnsafeMutableWritableBytesyxxSwKXEKlF"></a>
+                    <a name="//apple_ref/swift/Method/withUnsafeMutableWritableBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV30withUnsafeMutableWritableBytesyxxSwKXEKlF">withUnsafeMutableWritableBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Yields the bytes currently writable (<code>bytesWritable</code> = <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV8capacitySivp">capacity</a></code> - <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code>). Before reading those bytes you must first
+write to them otherwise you will trigger undefined behaviour. The writer index will remain unchanged.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>In almost all cases you should use <code>writeWithUnsafeMutableBytes</code> which will move the write pointer instead of this method</p>
+
+</div>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>Do not escape the pointer from the closure for later use.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">withUnsafeMutableWritableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>body</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will accept the yielded bytes and return the number of bytes written.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV27writeWithUnsafeMutableBytesyS2iSwKXEKF"></a>
+                    <a name="//apple_ref/swift/Method/writeWithUnsafeMutableBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV27writeWithUnsafeMutableBytesyS2iSwKXEKF">writeWithUnsafeMutableBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">writeWithUnsafeMutableBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV19withVeryUnsafeBytesyxxSWKXEKlF"></a>
+                    <a name="//apple_ref/swift/Method/withVeryUnsafeBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV19withVeryUnsafeBytesyxxSWKXEKlF">withVeryUnsafeBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>This vends a pointer to the storage of the <code>ByteBuffer</code>. It&rsquo;s marked as <em>very unsafe</em> because it might contain
+uninitialised memory and it&rsquo;s undefined behaviour to read it. In most cases you should use <code>withUnsafeReadableBytes</code>.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    Do not escape the pointer from the closure for later use.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">withVeryUnsafeBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV26withVeryUnsafeMutableBytesyxxSwKXEKlF"></a>
+                    <a name="//apple_ref/swift/Method/withVeryUnsafeMutableBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV26withVeryUnsafeMutableBytesyxxSwKXEKlF">withVeryUnsafeMutableBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>This vends a pointer to the storage of the <code>ByteBuffer</code>. It&rsquo;s marked as <em>very unsafe</em> because it might contain
+uninitialised memory and it&rsquo;s undefined behaviour to read it. In most cases you should use <code>withUnsafeMutableWritableBytes</code>.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    Do not escape the pointer from the closure for later use.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">withVeryUnsafeMutableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV23withUnsafeReadableBytesyxxSWKXEKlF"></a>
+                    <a name="//apple_ref/swift/Method/withUnsafeReadableBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV23withUnsafeReadableBytesyxxSWKXEKlF">withUnsafeReadableBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Yields a buffer pointer containing this <code>ByteBuffer</code>&lsquo;s readable bytes.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>Do not escape the pointer from the closure for later use.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">withUnsafeReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>body</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will accept the yielded bytes.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The value returned by <code>fn</code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV44withUnsafeReadableBytesWithStorageManagementyxxSW_s9UnmanagedVyyXlGtKXEKlF"></a>
+                    <a name="//apple_ref/swift/Method/withUnsafeReadableBytesWithStorageManagement(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV44withUnsafeReadableBytesWithStorageManagementyxxSW_s9UnmanagedVyyXlGtKXEKlF">withUnsafeReadableBytesWithStorageManagement(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Yields a buffer pointer containing this <code>ByteBuffer</code>&lsquo;s readable bytes. You may hold a pointer to those bytes
+even after the closure returned iff you model the lifetime of those bytes correctly using the <code>Unmanaged</code>
+instance. If you don&rsquo;t require the pointer after the closure returns, use <code>withUnsafeReadableBytes</code>.</p>
+
+<p>If you escape the pointer from the closure, you <em>must</em> call <code>storageManagement.retain()</code> to get ownership to
+the bytes and you also must call <code>storageManagement.release()</code> if you no longer require those bytes. Calls to
+<code>retain</code> and <code>release</code> must be balanced.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">withUnsafeReadableBytesWithStorageManagement</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">,</span> <span class="kt">Unmanaged</span><span class="o">&lt;</span><span class="kt">AnyObject</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>body</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will accept the yielded bytes and the <code>storageManagement</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The value returned by <code>fn</code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV40withVeryUnsafeBytesWithStorageManagementyxxSW_s9UnmanagedVyyXlGtKXEKlF"></a>
+                    <a name="//apple_ref/swift/Method/withVeryUnsafeBytesWithStorageManagement(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV40withVeryUnsafeBytesWithStorageManagementyxxSW_s9UnmanagedVyyXlGtKXEKlF">withVeryUnsafeBytesWithStorageManagement(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>See <code>withUnsafeReadableBytesWithStorageManagement</code> and <code>withVeryUnsafeBytes</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">withVeryUnsafeBytesWithStorageManagement</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">,</span> <span class="kt">Unmanaged</span><span class="o">&lt;</span><span class="kt">AnyObject</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV8getSlice2at6lengthACSgSi_SitF"></a>
+                    <a name="//apple_ref/swift/Method/getSlice(at:length:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV8getSlice2at6lengthACSgSi_SitF">getSlice(at:length:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Returns a slice of size <code>length</code> bytes, starting at <code>index</code>. The <code>ByteBuffer</code> this is invoked on and the
+<code>ByteBuffer</code> returned will share the same underlying storage. However, the byte at <code>index</code> in this <code>ByteBuffer</code>
+will correspond to index <code>0</code> in the returned <code>ByteBuffer</code>.
+The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> of the returned <code>ByteBuffer</code> will be <code>0</code>, the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code> will be <code>length</code>.</p>
+
+<p>The selected bytes must be readable or else <code>nil</code> will be returned.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getSlice</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">ByteBuffer</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The index the requested slice starts at.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The length of the requested slice.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>ByteBuffer</code> containing the selected bytes as readable bytes or <code>nil</code> if the selected bytes were
+       not readable in the initial <code>ByteBuffer</code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV16discardReadBytesSbyF"></a>
+                    <a name="//apple_ref/swift/Method/discardReadBytes()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV16discardReadBytesSbyF">discardReadBytes()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Discard the bytes before the reader index. The byte at index <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> before calling this method will be
+at index <code>0</code> after the call returns.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">discardReadBytes</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p><code>true</code> if one or more bytes have been discarded, <code>false</code> if there are no bytes to discard.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV11readerIndexSivp"></a>
+                    <a name="//apple_ref/swift/Property/readerIndex" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The reader index or the number of bytes previously read from this <code>ByteBuffer</code>. <code>readerIndex</code> is <code>0</code> for a
+newly allocated <code>ByteBuffer</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">readerIndex</span><span class="p">:</span> <span class="kt">Int</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV11writerIndexSivp"></a>
+                    <a name="//apple_ref/swift/Property/writerIndex" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The write index or the number of bytes previously written to this <code>ByteBuffer</code>. <code>writerIndex</code> is <code>0</code> for a
+newly allocated <code>ByteBuffer</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">writerIndex</span><span class="p">:</span> <span class="kt">Int</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV5clearyyF"></a>
+                    <a name="//apple_ref/swift/Method/clear()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV5clearyyF">clear()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Set both reader index and writer index to <code>0</code>. This will reset the state of this <code>ByteBuffer</code> to the state
+of a freshly allocated one, if possible without allocations. This is the cheapest way to recycle a <code>ByteBuffer</code>
+for a new use-case.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    This method will allocate if the underlying storage is referenced by another <code>ByteBuffer</code>. Even if an
+    allocation is necessary this will be cheaper as the copy of the storage is elided.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">clear</span><span class="p">()</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Bytes%20([UInt8])%20APIs"></a>
+                <a name="//apple_ref/swift/Section/Bytes ([UInt8]) APIs" class="dashAnchor"></a>
+                <a href="#/Bytes%20([UInt8])%20APIs">
+                  <h3 class="section-name">Bytes ([UInt8]) APIs</h3>
+                </a>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV8getBytes2at6lengthSays5UInt8VGSgSi_SitF"></a>
+                    <a name="//apple_ref/swift/Method/getBytes(at:length:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV8getBytes2at6lengthSays5UInt8VGSgSi_SitF">getBytes(at:length:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Get <code>length</code> bytes starting at <code>index</code> and return the result as <code>[UInt8]</code>. This will not change the reader index.
+The selected bytes must be readable or else <code>nil</code> will be returned.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getBytes</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="kt">UInt8</span><span class="p">]?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The starting index of the bytes of interest into the <code>ByteBuffer</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes of interest.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>[UInt8]</code> value containing the bytes of interest or <code>nil</code> if the bytes <code>ByteBuffer</code> are not readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV9readBytes6lengthSays5UInt8VGSgSi_tF"></a>
+                    <a name="//apple_ref/swift/Method/readBytes(length:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV9readBytes6lengthSays5UInt8VGSgSi_tF">readBytes(length:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read <code>length</code> bytes off this <code>ByteBuffer</code>, move the reader index forward by <code>length</code> bytes and return the result
+as <code>[UInt8]</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readBytes</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="kt">UInt8</span><span class="p">]?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes to be read from this <code>ByteBuffer</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>[UInt8]</code> value containing <code>length</code> bytes or <code>nil</code> if there aren&rsquo;t at least <code>length</code> bytes readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/StaticString%20APIs"></a>
+                <a name="//apple_ref/swift/Section/StaticString APIs" class="dashAnchor"></a>
+                <a href="#/StaticString%20APIs">
+                  <h3 class="section-name">StaticString APIs</h3>
+                </a>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV17writeStaticStringySis0eF0VF"></a>
+                    <a name="//apple_ref/swift/Method/writeStaticString(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV17writeStaticStringySis0eF0VF">writeStaticString(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write the static <code>string</code> into this <code>ByteBuffer</code> using UTF-8 encoding, moving the writer index forward appropriately.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">writeStaticString</span><span class="p">(</span><span class="n">_</span> <span class="nv">string</span><span class="p">:</span> <span class="kt">StaticString</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>string</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The string to write.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV15setStaticString_2atSis0eF0V_SitF"></a>
+                    <a name="//apple_ref/swift/Method/setStaticString(_:at:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV15setStaticString_2atSis0eF0V_SitF">setStaticString(_:at:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write the static <code>string</code> into this <code>ByteBuffer</code> at <code>index</code> using UTF-8 encoding, moving the writer index forward appropriately.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">setStaticString</span><span class="p">(</span><span class="n">_</span> <span class="nv">string</span><span class="p">:</span> <span class="kt">StaticString</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>string</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The string to write.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The index for the first serialized byte.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/String%20APIs"></a>
+                <a name="//apple_ref/swift/Section/String APIs" class="dashAnchor"></a>
+                <a href="#/String%20APIs">
+                  <h3 class="section-name">String APIs</h3>
+                </a>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV11writeStringySiSSF"></a>
+                    <a name="//apple_ref/swift/Method/writeString(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV11writeStringySiSSF">writeString(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write <code>string</code> into this <code>ByteBuffer</code> using UTF-8 encoding, moving the writer index forward appropriately.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">writeString</span><span class="p">(</span><span class="n">_</span> <span class="nv">string</span><span class="p">:</span> <span class="kt">String</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>string</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The string to write.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV9setString_2atSiSS_SitF"></a>
+                    <a name="//apple_ref/swift/Method/setString(_:at:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV9setString_2atSiSS_SitF">setString(_:at:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write <code>string</code> into this <code>ByteBuffer</code> at <code>index</code> using UTF-8 encoding. Does not move the writer index.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">setString</span><span class="p">(</span><span class="n">_</span> <span class="nv">string</span><span class="p">:</span> <span class="kt">String</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>string</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The string to write.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The index for the first serialized byte.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV9getString2at6lengthSSSgSi_SitF"></a>
+                    <a name="//apple_ref/swift/Method/getString(at:length:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV9getString2at6lengthSSSgSi_SitF">getString(at:length:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Get the string at <code>index</code> from this <code>ByteBuffer</code> decoding using the UTF-8 encoding. Does not move the reader index.
+The selected bytes must be readable or else <code>nil</code> will be returned.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getString</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">String</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The starting index into <code>ByteBuffer</code> containing the string of interest.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes making up the string.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>String</code> value containing the UTF-8 decoded selected bytes from this <code>ByteBuffer</code> or <code>nil</code> if
+       the requested bytes are not readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV10readString6lengthSSSgSi_tF"></a>
+                    <a name="//apple_ref/swift/Method/readString(length:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV10readString6lengthSSSgSi_tF">readString(length:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read <code>length</code> bytes off this <code>ByteBuffer</code>, decoding it as <code>String</code> using the UTF-8 encoding. Move the reader index forward by <code>length</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readString</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">String</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes making up the string.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>String</code> value deserialized from this <code>ByteBuffer</code> or <code>nil</code> if there aren&rsquo;t at least <code>length</code> bytes readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/DispatchData%20APIs"></a>
+                <a name="//apple_ref/swift/Section/DispatchData APIs" class="dashAnchor"></a>
+                <a href="#/DispatchData%20APIs">
+                  <h3 class="section-name">DispatchData APIs</h3>
+                </a>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV17writeDispatchDataySi0E00eF0VF"></a>
+                    <a name="//apple_ref/swift/Method/writeDispatchData(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV17writeDispatchDataySi0E00eF0VF">writeDispatchData(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write <code>dispatchData</code> into this <code>ByteBuffer</code>, moving the writer index forward appropriately.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">writeDispatchData</span><span class="p">(</span><span class="n">_</span> <span class="nv">dispatchData</span><span class="p">:</span> <span class="kt">DispatchData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>dispatchData</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>DispatchData</code> instance to write to the <code>ByteBuffer</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV15setDispatchData_2atSi0E00eF0V_SitF"></a>
+                    <a name="//apple_ref/swift/Method/setDispatchData(_:at:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV15setDispatchData_2atSi0E00eF0V_SitF">setDispatchData(_:at:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write <code>dispatchData</code> into this <code>ByteBuffer</code> at <code>index</code>. Does not move the writer index.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">setDispatchData</span><span class="p">(</span><span class="n">_</span> <span class="nv">dispatchData</span><span class="p">:</span> <span class="kt">DispatchData</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>dispatchData</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>DispatchData</code> to write.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The index for the first serialized byte.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV15getDispatchData2at6length0E00eF0VSgSi_SitF"></a>
+                    <a name="//apple_ref/swift/Method/getDispatchData(at:length:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV15getDispatchData2at6length0E00eF0VSgSi_SitF">getDispatchData(at:length:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Get the bytes at <code>index</code> from this <code>ByteBuffer</code> as a <code>DispatchData</code>. Does not move the reader index.
+The selected bytes must be readable or else <code>nil</code> will be returned.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getDispatchData</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">DispatchData</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The starting index into <code>ByteBuffer</code> containing the string of interest.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>DispatchData</code> value deserialized from this <code>ByteBuffer</code> or <code>nil</code> if the requested bytes
+       are not readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV16readDispatchData6length0E00eF0VSgSi_tF"></a>
+                    <a name="//apple_ref/swift/Method/readDispatchData(length:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV16readDispatchData6length0E00eF0VSgSi_tF">readDispatchData(length:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read <code>length</code> bytes off this <code>ByteBuffer</code> and return them as a <code>DispatchData</code>. Move the reader index forward by <code>length</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readDispatchData</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">DispatchData</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>DispatchData</code> value containing the bytes from this <code>ByteBuffer</code> or <code>nil</code> if there aren&rsquo;t at least <code>length</code> bytes readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Other%20APIs"></a>
+                <a name="//apple_ref/swift/Section/Other APIs" class="dashAnchor"></a>
+                <a href="#/Other%20APIs">
+                  <h3 class="section-name">Other APIs</h3>
+                </a>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV27readWithUnsafeReadableBytesyS2iSWKXEKF"></a>
+                    <a name="//apple_ref/swift/Method/readWithUnsafeReadableBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV27readWithUnsafeReadableBytesyS2iSWKXEKF">readWithUnsafeReadableBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Yields an immutable buffer pointer containing this <code>ByteBuffer</code>&lsquo;s readable bytes. Will move the reader index
+by the number of bytes returned by <code>fn</code>.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>Do not escape the pointer from the closure for later use.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readWithUnsafeReadableBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>body</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will accept the yielded bytes and returns the number of bytes it processed.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes read.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV27readWithUnsafeReadableBytesyxSi_xtSWKXEKlF"></a>
+                    <a name="//apple_ref/swift/Method/readWithUnsafeReadableBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV27readWithUnsafeReadableBytesyxSi_xtSWKXEKlF">readWithUnsafeReadableBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Yields an immutable buffer pointer containing this <code>ByteBuffer</code>&lsquo;s readable bytes. Will move the reader index
+by the number of bytes <code>fn</code> returns in the first tuple component.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>Do not escape the pointer from the closure for later use.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">readWithUnsafeReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">T</span><span class="p">))</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>body</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The value <code>fn</code> returned in the second tuple component.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV34readWithUnsafeMutableReadableBytesyS2iSwKXEKF"></a>
+                    <a name="//apple_ref/swift/Method/readWithUnsafeMutableReadableBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV34readWithUnsafeMutableReadableBytesyS2iSwKXEKF">readWithUnsafeMutableReadableBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Yields a mutable buffer pointer containing this <code>ByteBuffer</code>&lsquo;s readable bytes. You may modify the yielded bytes.
+Will move the reader index by the number of bytes returned by <code>fn</code> but leave writer index as it was.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>Do not escape the pointer from the closure for later use.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readWithUnsafeMutableReadableBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>body</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will accept the yielded bytes and returns the number of bytes it processed.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes read.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV34readWithUnsafeMutableReadableBytesyxSi_xtSwKXEKlF"></a>
+                    <a name="//apple_ref/swift/Method/readWithUnsafeMutableReadableBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV34readWithUnsafeMutableReadableBytesyxSi_xtSwKXEKlF">readWithUnsafeMutableReadableBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Yields a mutable buffer pointer containing this <code>ByteBuffer</code>&lsquo;s readable bytes. You may modify the yielded bytes.
+Will move the reader index by the number of bytes <code>fn</code> returns in the first tuple component but leave writer index as it was.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>Do not escape the pointer from the closure for later use.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">readWithUnsafeMutableReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">T</span><span class="p">))</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>body</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The value <code>fn</code> returned in the second tuple component.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV3set6buffer2atSiAC_SitF"></a>
+                    <a name="//apple_ref/swift/Method/set(buffer:at:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV3set6buffer2atSiAC_SitF">set(buffer:at:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Copy <code>buffer</code>&lsquo;s readable bytes into this <code>ByteBuffer</code> starting at <code>index</code>. Does not move any of the reader or writer indices.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">set</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>buffer</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>ByteBuffer</code> to copy.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The index for the first byte.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV05writeC0ySiACzF"></a>
+                    <a name="//apple_ref/swift/Method/writeBuffer(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV05writeC0ySiACzF">writeBuffer(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write <code>buffer</code>&lsquo;s readable bytes into this <code>ByteBuffer</code> starting at <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code>. This will move both this
+<code>ByteBuffer</code>&rsquo;s writer index as well as <code>buffer</code>&rsquo;s reader index by the number of bytes readable in <code>buffer</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">writeBuffer</span><span class="p">(</span><span class="n">_</span> <span class="nv">buffer</span><span class="p">:</span> <span class="k">inout</span> <span class="kt">ByteBuffer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>buffer</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>ByteBuffer</code> to write.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written to this <code>ByteBuffer</code> which is equal to the number of bytes read from <code>buffer</code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV10writeBytesySixSTRzs5UInt8V7ElementRtzlF"></a>
+                    <a name="//apple_ref/swift/Method/writeBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV10writeBytesySixSTRzs5UInt8V7ElementRtzlF">writeBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write <code>bytes</code>, a <code>Sequence</code> of <code>UInt8</code> into this <code>ByteBuffer</code>. Moves the writer index forward by the number of bytes written.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">writeBytes</span><span class="o">&lt;</span><span class="kt">Bytes</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">bytes</span><span class="p">:</span> <span class="kt">Bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">Bytes</span> <span class="p">:</span> <span class="kt">Sequence</span><span class="p">,</span> <span class="kt">Bytes</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>bytes</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A <code>Collection</code> of <code>UInt8</code> to be written.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written or <code>bytes.count</code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV10writeBytesySiSWF"></a>
+                    <a name="//apple_ref/swift/Method/writeBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV10writeBytesySiSWF">writeBytes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write <code>bytes</code> into this <code>ByteBuffer</code>. Moves the writer index forward by the number of bytes written.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">writeBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">bytes</span><span class="p">:</span> <span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>bytes</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>An <code>UnsafeRawBufferPointer</code></p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written or <code>bytes.count</code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV5sliceACyF"></a>
+                    <a name="//apple_ref/swift/Method/slice()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV5sliceACyF">slice()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Slice the readable bytes off this <code>ByteBuffer</code> without modifying the reader index. This method will return a
+<code>ByteBuffer</code> sharing the underlying storage with the <code>ByteBuffer</code> the method was invoked on. The returned
+<code>ByteBuffer</code> will contain the bytes in the range <code>readerIndex..&lt;writerIndex</code> of the original <code>ByteBuffer</code>.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>Because <code>ByteBuffer</code> implements copy-on-write a copy of the storage will be automatically triggered when either of the <code>ByteBuffer</code>s sharing storage is written to.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">slice</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">ByteBuffer</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>ByteBuffer</code> sharing storage containing the readable bytes only.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV9readSlice6lengthACSgSi_tF"></a>
+                    <a name="//apple_ref/swift/Method/readSlice(length:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV9readSlice6lengthACSgSi_tF">readSlice(length:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Slice <code>length</code> bytes off this <code>ByteBuffer</code> and move the reader index forward by <code>length</code>.
+If enough bytes are readable the <code>ByteBuffer</code> returned by this method will share the underlying storage with
+the <code>ByteBuffer</code> the method was invoked on.
+The returned <code>ByteBuffer</code> will contain the bytes in the range <code>readerIndex..&lt;(readerIndex + length)</code> of the
+original <code>ByteBuffer</code>.
+The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> of the returned <code>ByteBuffer</code> will be <code>0</code>, the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code> will be <code>length</code>.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>Because <code>ByteBuffer</code> implements copy-on-write a copy of the storage will be automatically triggered when either of the <code>ByteBuffer</code>s sharing storage is written to.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readSlice</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">ByteBuffer</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes to slice off.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>ByteBuffer</code> sharing storage containing <code>length</code> bytes or <code>nil</code> if the not enough bytes were readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV11descriptionSSvp"></a>
+                    <a name="//apple_ref/swift/Property/description" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV11descriptionSSvp">description</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A <code>String</code> describing this <code>ByteBuffer</code>. Example:</p>
+<pre class="highlight swift"><code><span class="kt">ByteBuffer</span> <span class="p">{</span> <span class="nv">readerIndex</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">writerIndex</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">readableBytes</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">capacity</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span> <span class="nv">slice</span><span class="p">:</span> <span class="mi">256</span><span class="o">..&lt;</span><span class="mi">768</span><span class="p">,</span> <span class="nv">storage</span><span class="p">:</span> <span class="mh">0x0000000103001000</span> <span class="p">(</span><span class="mi">1024</span> <span class="n">bytes</span><span class="p">)}</span>
+</code></pre>
+
+<p>The format of the description is not API.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">description</span><span class="p">:</span> <span class="kt">String</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A description of this <code>ByteBuffer</code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV16debugDescriptionSSvp"></a>
+                    <a name="//apple_ref/swift/Property/debugDescription" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV16debugDescriptionSSvp">debugDescription</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A <code>String</code> describing this <code>ByteBuffer</code> with some portion of the readable bytes dumped too. Example:</p>
+<pre class="highlight swift"><code><span class="kt">ByteBuffer</span> <span class="p">{</span> <span class="nv">readerIndex</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">writerIndex</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">readableBytes</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">capacity</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span> <span class="nv">slice</span><span class="p">:</span> <span class="mi">256</span><span class="o">..&lt;</span><span class="mi">768</span><span class="p">,</span> <span class="nv">storage</span><span class="p">:</span> <span class="mh">0x0000000103001000</span> <span class="p">(</span><span class="mi">1024</span> <span class="n">bytes</span><span class="p">)}</span>
+<span class="n">readable</span> <span class="nf">bytes</span> <span class="p">(</span><span class="n">max</span> <span class="mi">1</span><span class="n">k</span><span class="p">):</span> <span class="p">[</span> <span class="mo">00</span> <span class="mo">01</span> <span class="mo">02</span> <span class="mo">03</span> <span class="p">]</span>
+</code></pre>
+
+<p>The format of the description is not API.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">debugDescription</span><span class="p">:</span> <span class="kt">String</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A description of this <code>ByteBuffer</code> useful for debugging.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV8setBytes_2atSix_SitSTRzs5UInt8V7ElementRtzlF"></a>
+                    <a name="//apple_ref/swift/Method/setBytes(_:at:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV8setBytes_2atSix_SitSTRzs5UInt8V7ElementRtzlF">setBytes(_:at:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Copy the collection of <code>bytes</code> into the <code>ByteBuffer</code> at <code>index</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">setBytes</span><span class="o">&lt;</span><span class="kt">Bytes</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">bytes</span><span class="p">:</span> <span class="kt">Bytes</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">Bytes</span> <span class="p">:</span> <span class="kt">Sequence</span><span class="p">,</span> <span class="kt">Bytes</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV8setBytes_2atSiSW_SitF"></a>
+                    <a name="//apple_ref/swift/Method/setBytes(_:at:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV8setBytes_2atSiSW_SitF">setBytes(_:at:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Copy <code>bytes</code> into the <code>ByteBuffer</code> at <code>index</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">setBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">bytes</span><span class="p">:</span> <span class="kt">UnsafeRawBufferPointer</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV15moveReaderIndex9forwardByySi_tF"></a>
+                    <a name="//apple_ref/swift/Method/moveReaderIndex(forwardBy:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV15moveReaderIndex9forwardByySi_tF">moveReaderIndex(forwardBy:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Move the reader index forward by <code>offset</code> bytes.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    By contract the bytes between (including) <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> and (excluding) <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code> must be
+       initialised, ie. have been written before. Also the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> must always be less than or equal
+       to the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code>. Failing to meet either of these requirements leads to undefined behaviour.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveReaderIndex</span><span class="p">(</span><span class="n">forwardBy</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>offset</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes to move the reader index forward by.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV15moveReaderIndex2toySi_tF"></a>
+                    <a name="//apple_ref/swift/Method/moveReaderIndex(to:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV15moveReaderIndex2toySi_tF">moveReaderIndex(to:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Set the reader index to <code>offset</code>.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    By contract the bytes between (including) <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> and (excluding) <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code> must be
+       initialised, ie. have been written before. Also the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> must always be less than or equal
+       to the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code>. Failing to meet either of these requirements leads to undefined behaviour.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveReaderIndex</span><span class="p">(</span><span class="n">to</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>offset</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The offset in bytes to set the reader index to.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV15moveWriterIndex9forwardByySi_tF"></a>
+                    <a name="//apple_ref/swift/Method/moveWriterIndex(forwardBy:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV15moveWriterIndex9forwardByySi_tF">moveWriterIndex(forwardBy:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Move the writer index forward by <code>offset</code> bytes.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    By contract the bytes between (including) <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> and (excluding) <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code> must be
+       initialised, ie. have been written before. Also the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> must always be less than or equal
+       to the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code>. Failing to meet either of these requirements leads to undefined behaviour.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveWriterIndex</span><span class="p">(</span><span class="n">forwardBy</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>offset</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes to move the writer index forward by.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV15moveWriterIndex2toySi_tF"></a>
+                    <a name="//apple_ref/swift/Method/moveWriterIndex(to:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV15moveWriterIndex2toySi_tF">moveWriterIndex(to:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Set the writer index to <code>offset</code>.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    By contract the bytes between (including) <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> and (excluding) <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code> must be
+       initialised, ie. have been written before. Also the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexSivp">readerIndex</a></code> must always be less than or equal
+       to the <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11writerIndexSivp">writerIndex</a></code>. Failing to meet either of these requirements leads to undefined behaviour.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveWriterIndex</span><span class="p">(</span><span class="n">to</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>offset</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The offset in bytes to set the reader index to.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV2eeoiySbAC_ACtFZ"></a>
+                    <a name="//apple_ref/swift/Method/==(_:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV2eeoiySbAC_ACtFZ">==(_:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Compare two <code>ByteBuffer</code> values. Two <code>ByteBuffer</code> values are considered equal if the readable bytes are equal.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">==</span> <span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV11readInteger10endianness2asxSgAA10EndiannessO_xmts010FixedWidthE0RzlF"></a>
+                    <a name="//apple_ref/swift/Method/readInteger(endianness:as:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV11readInteger10endianness2asxSgAA10EndiannessO_xmts010FixedWidthE0RzlF">readInteger(endianness:as:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read an integer off this <code>ByteBuffer</code>, move the reader index forward by the integer&rsquo;s byte size and return the result.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">readInteger</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">big</span><span class="p">,</span> <span class="nv">as</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">?</span> <span class="k">where</span> <span class="kt">T</span> <span class="p">:</span> <span class="kt">FixedWidthInteger</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>endianness</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The endianness of the integer in this <code>ByteBuffer</code> (defaults to big endian).</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>as</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the desired <code>FixedWidthInteger</code> type (optional parameter)</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An integer value deserialized from this <code>ByteBuffer</code> or <code>nil</code> if there aren&rsquo;t enough bytes readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV10getInteger2at10endianness2asxSgSi_AA10EndiannessOxmts010FixedWidthE0RzlF"></a>
+                    <a name="//apple_ref/swift/Method/getInteger(at:endianness:as:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV10getInteger2at10endianness2asxSgSi_AA10EndiannessOxmts010FixedWidthE0RzlF">getInteger(at:endianness:as:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Get the integer at <code>index</code> from this <code>ByteBuffer</code>. Does not move the reader index.
+The selected bytes must be readable or else <code>nil</code> will be returned.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">getInteger</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span><span class="o">.</span><span class="n">big</span><span class="p">,</span> <span class="nv">as</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">?</span> <span class="k">where</span> <span class="kt">T</span> <span class="p">:</span> <span class="kt">FixedWidthInteger</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The starting index of the bytes for the integer into the <code>ByteBuffer</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>endianness</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The endianness of the integer in this <code>ByteBuffer</code> (defaults to big endian).</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>as</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the desired <code>FixedWidthInteger</code> type (optional parameter)</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An integer value deserialized from this <code>ByteBuffer</code> or <code>nil</code> if the bytes of interest are not
+       readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV12writeInteger_10endianness2asSix_AA10EndiannessOxmts010FixedWidthE0RzlF"></a>
+                    <a name="//apple_ref/swift/Method/writeInteger(_:endianness:as:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV12writeInteger_10endianness2asSix_AA10EndiannessOxmts010FixedWidthE0RzlF">writeInteger(_:endianness:as:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write <code>integer</code> into this <code>ByteBuffer</code>, moving the writer index forward appropriately.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">writeInteger</span><span class="o">&lt;</span><span class="kt">T</span><span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">integer</span><span class="p">:</span> <span class="kt">T</span><span class="p">,</span>
+                                                        <span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">big</span><span class="p">,</span>
+                                                        <span class="nv">as</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>integer</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The integer to serialize.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>endianness</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The endianness to use, defaults to big endian.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV10setInteger_2at10endianness2asSix_SiAA10EndiannessOxmts010FixedWidthE0RzlF"></a>
+                    <a name="//apple_ref/swift/Method/setInteger(_:at:endianness:as:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV10setInteger_2at10endianness2asSix_SiAA10EndiannessOxmts010FixedWidthE0RzlF">setInteger(_:at:endianness:as:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Write <code>integer</code> into this <code>ByteBuffer</code> starting at <code>index</code>. This does not alter the writer index.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">setInteger</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">integer</span><span class="p">:</span> <span class="kt">T</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">big</span><span class="p">,</span> <span class="nv">as</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">T</span> <span class="p">:</span> <span class="kt">FixedWidthInteger</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>integer</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The integer to serialize.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The index of the first byte to write.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>endianness</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The endianness to use, defaults to big endian.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The number of bytes written.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV17readableBytesViewAA0bcF0Vvp"></a>
+                    <a name="//apple_ref/swift/Property/readableBytesView" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV17readableBytesViewAA0bcF0Vvp">readableBytesView</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A view into the readable bytes of the <code>ByteBuffer</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">readableBytesView</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferView.html">ByteBufferView</a></span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV9viewBytes2at6lengthAA0bC4ViewVSgSi_SitF"></a>
+                    <a name="//apple_ref/swift/Method/viewBytes(at:length:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV9viewBytes2at6lengthAA0bC4ViewVSgSi_SitF">viewBytes(at:length:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Returns a view into some portion of the readable bytes of a <code>ByteBuffer</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">viewBytes</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/ByteBufferView.html">ByteBufferView</a></span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The index the view should start at</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The length of the view (in bytes)</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A view into a portion of a <code>ByteBuffer</code> or <code>nil</code> if the requested bytes were not readable.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-04-23)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>

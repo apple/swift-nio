@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>EventLoop Protocol Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Protocol/EventLoop" class="dashAnchor"></a>
+
+    <a title="EventLoop Protocol Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIO Docs
+        </a>
+         (90% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E0%2E1%2Fdocsets%2FNIO%2Exml">
+            <img class="header-icon" src="../img/dash.png"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIO Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      EventLoop Protocol Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/AcceptBackoffHandler.html">AcceptBackoffHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/BackPressureHandler.html">BackPressureHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelHandlerContext.html#/s:3NIO21ChannelHandlerContextC12RemovalTokenV">– RemovalToken</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelPipeline.html">ChannelPipeline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelPipeline/Position.html">– Position</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ClientBootstrap.html">ClientBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/DatagramBootstrap.html">DatagramBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel.html">EmbeddedChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel/LeftOverState.html">– LeftOverState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel/BufferState.html">– BufferState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel/WrongTypeError.html">– WrongTypeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EventLoopFuture.html">EventLoopFuture</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/IdleStateHandler.html">IdleStateHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/IdleStateHandler/IdleStateEvent.html">– IdleStateEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MessageToByteHandler.html">MessageToByteHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOFileHandle.html">NIOFileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIONetworkInterface.html">NIONetworkInterface</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool.html">NIOThreadPool</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool/WorkItemState.html">– WorkItemState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/RepeatedTask.html">RepeatedTask</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ServerBootstrap.html">ServerBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ThreadSpecificVariable.html">ThreadSpecificVariable</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ByteToMessageDecoderError.html">ByteToMessageDecoderError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelError.html">ChannelError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelEvent.html">ChannelEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelPipelineError.html">ChannelPipelineError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/CloseMode.html">CloseMode</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/DecodingState.html">DecodingState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/Endianness.html">Endianness</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/EventLoopError.html">EventLoopError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/IOData.html">IOData</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress.html">SocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv4Address.html">– IPv4Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv6Address.html">– IPv6Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/UnixSocketAddress.html">– UnixSocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddressError.html">SocketAddressError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/System.html">System</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ByteToMessageDecoder.html">ByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Channel.html">Channel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelCore.html">ChannelCore</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelHandler.html">ChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundInvoker.html">ChannelInboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOption.html">ChannelOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundInvoker.html">ChannelOutboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoop.html">EventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoopGroup.html">EventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/FileDescriptor.html">FileDescriptor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MessageToByteEncoder.html">MessageToByteEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MulticastChannel.html">MulticastChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RemovableChannelHandler.html">RemovableChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Resolver.html">Resolver</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/SocketOptionProvider.html">SocketOptionProvider</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/WriteObservingByteToMessageDecoder.html">WriteObservingByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelInboundHandler.html">_ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AdaptiveRecvByteBufferAllocator.html">AdaptiveRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AddressedEnvelope.html">AddressedEnvelope</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AllocatorOption.html">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AutoReadOption.html">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/BacklogOption.html">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBuffer.html">ByteBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBufferView.html">ByteBufferView</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions.html">ChannelOptions</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions/Storage.html">– Storage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelShouldQuiesceEvent.html">ChannelShouldQuiesceEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CircularBuffer.html">CircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CircularBuffer/Index.html">– Index</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/DatagramVectorReadMessageCountOption.html">DatagramVectorReadMessageCountOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/EventLoopIterator.html">EventLoopIterator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/EventLoopPromise.html">EventLoopPromise</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FileRegion.html">FileRegion</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FixedSizeRecvByteBufferAllocator.html">FixedSizeRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError.html">IOError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError/FailureDescription.html">– FailureDescription</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOAny.html">NIOAny</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIODeadline.html">NIODeadline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/RecvAllocatorOption.html">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Scheduled.html">Scheduled</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SocketOption.html">SocketOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TimeAmount.html">TimeAmount</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteSpinOption.html">WriteSpinOption</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO20ChannelDuplexHandlera">ChannelDuplexHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/SocketOptionLevel">SocketOptionLevel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17SocketOptionLevela">SocketOptionLevel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO16SocketOptionNamea">SocketOptionName</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/SocketOptionValue">SocketOptionValue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17SocketOptionValuea">SocketOptionValue</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>EventLoop</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">EventLoop</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoopGroup.html">EventLoopGroup</a></span></code></pre>
+
+                </div>
+              </div>
+            <p>An EventLoop processes IO / tasks in an endless loop for <code><a href="../Protocols/Channel.html">Channel</a></code>s until it&rsquo;s closed.</p>
+
+<p>Usually multiple <code><a href="../Protocols/Channel.html">Channel</a></code>s share the same <code>EventLoop</code> for processing IO / tasks and so share the same processing <code>NIOThread</code>.
+For a better understanding of how such an <code>EventLoop</code> works internally the following pseudo code may be helpful:</p>
+<pre class="highlight swift"><code><span class="k">while</span> <span class="n">eventLoop</span><span class="o">.</span><span class="n">isOpen</span> <span class="p">{</span>
+    <span class="c1">/// Block until there is something to process for 1...n Channels</span>
+    <span class="k">let</span> <span class="nv">readyChannels</span> <span class="o">=</span> <span class="nf">blockUntilIoOrTasksAreReady</span><span class="p">()</span>
+    <span class="c1">/// Loop through all the Channels</span>
+    <span class="k">for</span> <span class="n">channel</span> <span class="k">in</span> <span class="n">readyChannels</span> <span class="p">{</span>
+        <span class="c1">/// Process IO and / or tasks for the Channel.</span>
+        <span class="c1">/// This may include things like:</span>
+        <span class="c1">///    - accept new connection</span>
+        <span class="c1">///    - connect to a remote host</span>
+        <span class="c1">///    - read from socket</span>
+        <span class="c1">///    - write to socket</span>
+        <span class="c1">///    - tasks that were submitted via EventLoop methods</span>
+        <span class="c1">/// and others.</span>
+        <span class="nf">processIoAndTasks</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+
+<p>Because an <code>EventLoop</code> may be shared between multiple <code><a href="../Protocols/Channel.html">Channel</a></code>s it&rsquo;s important to <em>NOT</em> block while processing IO / tasks. This also includes long running computations which will have the same
+effect as blocking in this case.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopP02inbC0Sbvp"></a>
+                    <a name="//apple_ref/swift/Property/inEventLoop" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopP02inbC0Sbvp">inEventLoop</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Returns <code>true</code> if the current <code>NIOThread</code> is the same as the <code>NIOThread</code> that is tied to this <code>EventLoop</code>. <code>false</code> otherwise.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="k">var</span> <span class="nv">inEventLoop</span><span class="p">:</span> <span class="kt">Bool</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopP7executeyyyycF"></a>
+                    <a name="//apple_ref/swift/Method/execute(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopP7executeyyyycF">execute(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Submit a given task to be executed by the <code>EventLoop</code></p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">execute</span><span class="p">(</span><span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopP6submityAA0bC6FutureCyqd__Gqd__yKclF"></a>
+                    <a name="//apple_ref/swift/Method/submit(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopP6submityAA0bC6FutureCyqd__Gqd__yKclF">submit(_:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Submit a given task to be executed by the <code>EventLoop</code>. Once the execution is complete the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> is notified.</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Submit <code>task</code> to be run on this <code>EventLoop</code>.</p>
+
+<p>The returned <code>EventLoopFuture</code> will be completed when <code>task</code> has finished running. It will be succeeded with
+<code>task</code>&lsquo;s return value or failed if the execution of <code>task</code> threw an error.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="n">submit</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>task</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will be submitted to the <code>EventLoop</code> for execution.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p><code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> that is notified once the task was executed.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopP12scheduleTask8deadline_AA9ScheduledVyqd__GAA11NIODeadlineV_qd__yKctlF"></a>
+                    <a name="//apple_ref/swift/Method/scheduleTask(deadline:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopP12scheduleTask8deadline_AA9ScheduledVyqd__GAA11NIODeadlineV_qd__yKctlF">scheduleTask(deadline:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Schedule a <code>task</code> that is executed by this <code>SelectableEventLoop</code> at the given time.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">func</span> <span class="n">scheduleTask</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">deadline</span><span class="p">:</span> <span class="kt"><a href="../Structs/NIODeadline.html">NIODeadline</a></span><span class="p">,</span> <span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/Scheduled.html">Scheduled</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopP12scheduleTask2in_AA9ScheduledVyqd__GAA10TimeAmountV_qd__yKctlF"></a>
+                    <a name="//apple_ref/swift/Method/scheduleTask(in:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopP12scheduleTask2in_AA9ScheduledVyqd__GAA10TimeAmountV_qd__yKctlF">scheduleTask(in:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Schedule a <code>task</code> that is executed by this <code>SelectableEventLoop</code> after the given amount of time.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">func</span> <span class="n">scheduleTask</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">in</span><span class="p">:</span> <span class="kt"><a href="../Structs/TimeAmount.html">TimeAmount</a></span><span class="p">,</span> <span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/Scheduled.html">Scheduled</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopP014preconditionInbC04file4lineys12StaticStringV_SutF"></a>
+                    <a name="//apple_ref/swift/Method/preconditionInEventLoop(file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopP014preconditionInbC04file4lineys12StaticStringV_SutF">preconditionInEventLoop(file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Checks that this call is run from the <code>EventLoop</code>. If this is called from within the <code>EventLoop</code> this function
+will have no effect, if called from outside the <code>EventLoop</code> it will crash the process with a trap.</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Checks the necessary condition of currently running on the called <code>EventLoop</code> for making forward progress.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">preconditionInEventLoop</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopPAAE11makePromise2of4file4lineAA0bcE0Vyqd__Gqd__m_s12StaticStringVSutlF"></a>
+                    <a name="//apple_ref/swift/Method/makePromise(of:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopPAAE11makePromise2of4file4lineAA0bcE0Vyqd__Gqd__m_s12StaticStringVSutlF">makePromise(of:file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates and returns a new <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> that will be notified using this <code>EventLoop</code> as execution <code>NIOThread</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">makePromise</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">of</span> <span class="nv">type</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopPAAE16makeFailedFuture_4file4lineAA0bcF0Cyqd__Gs5Error_p_s12StaticStringVSutlF"></a>
+                    <a name="//apple_ref/swift/Method/makeFailedFuture(_:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopPAAE16makeFailedFuture_4file4lineAA0bcF0Cyqd__Gs5Error_p_s12StaticStringVSutlF">makeFailedFuture(_:file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates and returns a new <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> that is already marked as failed. Notifications will be done using this <code>EventLoop</code> as execution <code>NIOThread</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">makeFailedFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">error</span><span class="p">:</span> <span class="kt">Error</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>error</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the <code>Error</code> that is used by the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>a failed <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopPAAE19makeSucceededFuture_4file4lineAA0bcF0Cyqd__Gqd___s12StaticStringVSutlF"></a>
+                    <a name="//apple_ref/swift/Method/makeSucceededFuture(_:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopPAAE19makeSucceededFuture_4file4lineAA0bcF0Cyqd__Gqd___s12StaticStringVSutlF">makeSucceededFuture(_:file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates and returns a new <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> that is already marked as success. Notifications will be done using this <code>EventLoop</code> as execution <code>NIOThread</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">makeSucceededFuture</span><span class="o">&lt;</span><span class="kt">Success</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">value</span><span class="p">:</span> <span class="kt">Success</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Success</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the value that is used by the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>a succeeded <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopPAAE4nextAaB_pyF"></a>
+                    <a name="//apple_ref/swift/Method/next()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopPAAE4nextAaB_pyF">next()</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>An <code>EventLoop</code> forms a singular <code><a href="../Protocols/EventLoopGroup.html">EventLoopGroup</a></code>, returning itself as the &lsquo;next&rsquo; <code>EventLoop</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">next</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">EventLoop</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>Itself, because an <code>EventLoop</code> forms a singular <code><a href="../Protocols/EventLoopGroup.html">EventLoopGroup</a></code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopPAAE5closeyyKF"></a>
+                    <a name="//apple_ref/swift/Method/close()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopPAAE5closeyyKF">close()</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Close this <code>EventLoop</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">close</span><span class="p">()</span> <span class="k">throws</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopPAAE20scheduleRepeatedTask12initialDelay5delay9notifying_AA0eF0CAA10TimeAmountV_AkA0bC7PromiseVyytGSgyAIKctF"></a>
+                    <a name="//apple_ref/swift/Method/scheduleRepeatedTask(initialDelay:delay:notifying:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopPAAE20scheduleRepeatedTask12initialDelay5delay9notifying_AA0eF0CAA10TimeAmountV_AkA0bC7PromiseVyytGSgyAIKctF">scheduleRepeatedTask(initialDelay:delay:notifying:_:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Schedule a repeated task to be executed by the <code>EventLoop</code> with a fixed delay between the end and start of each
+task.</p>
+
+<ul>
+<li>return: <code><a href="../Classes/RepeatedTask.html">RepeatedTask</a></code></li>
+</ul>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="nf">scheduleRepeatedTask</span><span class="p">(</span><span class="nv">initialDelay</span><span class="p">:</span> <span class="kt"><a href="../Structs/TimeAmount.html">TimeAmount</a></span><span class="p">,</span> <span class="nv">delay</span><span class="p">:</span> <span class="kt"><a href="../Structs/TimeAmount.html">TimeAmount</a></span><span class="p">,</span> <span class="n">notifying</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">?</span> <span class="o">=</span> <span class="kc">nil</span><span class="p">,</span> <span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt"><a href="../Classes/RepeatedTask.html">RepeatedTask</a></span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/RepeatedTask.html">RepeatedTask</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>initialDelay</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The delay after which the first task is executed.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>delay</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The delay between the end of one task and the start of the next.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>task</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will be executed.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopPAAE25scheduleRepeatedAsyncTask12initialDelay5delay9notifying_AA0eG0CAA10TimeAmountV_AkA0bC7PromiseVyytGSgAA0bC6FutureCyytGAIctF"></a>
+                    <a name="//apple_ref/swift/Method/scheduleRepeatedAsyncTask(initialDelay:delay:notifying:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopPAAE25scheduleRepeatedAsyncTask12initialDelay5delay9notifying_AA0eG0CAA10TimeAmountV_AkA0bC7PromiseVyytGSgAA0bC6FutureCyytGAIctF">scheduleRepeatedAsyncTask(initialDelay:delay:notifying:_:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Schedule a repeated asynchronous task to be executed by the <code>EventLoop</code> with a fixed delay between the end and
+start of each task.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>The delay is measured from the completion of one run&rsquo;s returned future to the start of the execution of
+    the next run. For example: If you schedule a task once per second but your task takes two seconds to
+    complete, the time interval between two subsequent runs will actually be three seconds (2s run time plus
+    the 1s delay.)</p>
+
+</div>
+<li><p>return: <code><a href="../Classes/RepeatedTask.html">RepeatedTask</a></code></p></li>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="nf">scheduleRepeatedAsyncTask</span><span class="p">(</span><span class="nv">initialDelay</span><span class="p">:</span> <span class="kt"><a href="../Structs/TimeAmount.html">TimeAmount</a></span><span class="p">,</span>
+                                      <span class="nv">delay</span><span class="p">:</span> <span class="kt"><a href="../Structs/TimeAmount.html">TimeAmount</a></span><span class="p">,</span>
+                                      <span class="n">notifying</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">?</span> <span class="o">=</span> <span class="kc">nil</span><span class="p">,</span>
+                                      <span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt"><a href="../Classes/RepeatedTask.html">RepeatedTask</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/RepeatedTask.html">RepeatedTask</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>initialDelay</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The delay after which the first task is executed.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>delay</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The delay between the end of one task and the start of the next.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>task</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will be executed.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopPAAE12makeIteratorAA0bcE0VyF"></a>
+                    <a name="//apple_ref/swift/Method/makeIterator()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopPAAE12makeIteratorAA0bcE0VyF">makeIterator()</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Returns an <code><a href="../Structs/EventLoopIterator.html">EventLoopIterator</a></code> over this <code>EventLoop</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">makeIterator</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/EventLoopIterator.html">EventLoopIterator</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p><code><a href="../Structs/EventLoopIterator.html">EventLoopIterator</a></code></p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO9EventLoopPAAE08assertInbC04file4lineys12StaticStringV_SutF"></a>
+                    <a name="//apple_ref/swift/Method/assertInEventLoop(file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO9EventLoopPAAE08assertInbC04file4lineys12StaticStringV_SutF">assertInEventLoop(file:line:)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Extension method
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Checks that this call is run from the EventLoop. If this is called from within the EventLoop this function will
+have no effect, if called from outside the EventLoop it will crash the process with a trap if run in debug mode.
+In release mode this function never has any effect.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    This is not a customization point so calls to this function can be fully optimized out in release mode.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="nf">assertInEventLoop</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-04-23)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>
