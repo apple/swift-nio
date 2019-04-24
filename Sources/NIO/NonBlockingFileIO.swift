@@ -277,21 +277,20 @@ public struct NonBlockingFileIO {
         }
     }
 
-    /// Open the file at `path` for writing on a private thread pool which is separate from any `EventLoop` thread.
+    /// Open the file at `path` with specified access mode and POSIX flags on a private thread pool which is separate from any `EventLoop` thread.
     ///
-    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened and a `FileRegion`
-    /// comprising of the whole file. The caller must close the returned `NIOFileHandle` when it's no longer needed.
-    /// If file does not exist, it will be created with permissions 0644
-    ///
-    /// - note: The reason this returns the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
+    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened.
+    /// The caller must close the returned `NIOFileHandle` when it's no longer needed.
     ///
     /// - parameters:
-    ///     - forWritingAtPath: The path of the file to be opened for writing.
+    ///     - path: The path of the file to be opened for writing.
+    ///     - mode: File access mode.
+    ///     - flags: Additional POSIX flags.
     ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
-    public func openFile(forWritingAtPath path: String, eventLoop: EventLoop) -> EventLoopFuture<NIOFileHandle> {
+    public func openFile(path: String, mode: NIOFileHandle.Mode, flags: NIOFileHandle.Flags = .default, eventLoop: EventLoop) -> EventLoopFuture<NIOFileHandle> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            return try NIOFileHandle(forWritingAtPath: path)
+            return try NIOFileHandle(path: path, mode: mode, flags: flags)
         }
     }
 

@@ -81,21 +81,50 @@ public final class NIOFileHandle: FileDescriptor {
 }
 
 extension NIOFileHandle {
-    /// Open a new `NIOFileHandle`.
-    ///
-    /// - parameters:
-    ///     - path: the path of the file to open for reading. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
-    public convenience init(path: String) throws {
-        let fd = try Posix.open(file: path, oFlag: O_RDONLY | O_CLOEXEC)
-        self.init(descriptor: fd)
+    /// `Mode` represents file access modes.
+    public enum Mode {
+        /// Opens file for reading only
+        case readOnly
+        /// Opens file for wrinting only
+        case writeOnly
+        /// Opens file for both reading and writing
+        case readWrite
+
+        internal var rawValue: Int32 {
+            switch self {
+            case .readOnly:
+                return O_RDONLY
+            case .writeOnly:
+                return O_WRONLY
+            case .readWrite:
+                return O_RDWR
+            }
+        }
+    }
+
+    public struct Flags {
+        internal var posixMode: UInt16
+        internal var posixFlags: Int32
+
+        public static let `default` = Flags(posixMode: 0, posixFlags: 0)
+
+        /// Allows file creation when opening file for writing. File owner is set to the effective user ID of the process.
+        ///
+        /// - parameters:
+        ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for file owner, read for owners group and others.
+        public static func allowFileCreation(posixMode: UInt16 = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
+            return Flags(posixMode: posixMode, posixFlags: O_CREAT)
+        }
     }
 
     /// Open a new `NIOFileHandle`.
     ///
     /// - parameters:
-    ///     - forWritingAtPath: the path of the file to open for writing. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called. If file does not exist, it will be created with default permissions 0644.
-    public convenience init(forWritingAtPath path: String, mode: UInt16 = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) throws {
-        let fd = try Posix.open(file: path, oFlag: O_WRONLY | O_CREAT | O_CLOEXEC, mode: mode)
+    ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
+    ///     - mode: Access mode. Default mode is `.readOnly`.
+    ///     - flags: Additional POSIX flags.
+    public convenience init(path: String, mode: Mode = .readOnly, flags: Flags = .default) throws {
+        let fd = try Posix.open(file: path, oFlag: mode.rawValue | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
 }
