@@ -70,6 +70,8 @@ extension EventLoopFutureTest {
                 ("testWhenAllCompleteResultsWithFailuresStillSucceed", testWhenAllCompleteResultsWithFailuresStillSucceed),
                 ("testWhenAllCompleteResults", testWhenAllCompleteResults),
                 ("testWhenAllCompleteResolvesAfterFutures", testWhenAllCompleteResolvesAfterFutures),
+                ("testAlways", testAlways),
+                ("testAlwaysWithFailingPromise", testAlwaysWithFailingPromise),
            ]
    }
 }

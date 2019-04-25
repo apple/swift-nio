@@ -1015,4 +1015,44 @@ class EventLoopFutureTest : XCTestCase {
         let results = try assertNoThrowWithValue(mainFuture.wait().map { try $0.get() })
         XCTAssertEqual(results, [0, 1, 2, 3, 4])
     }
+    
+    struct DatabaseError: Error {}
+    struct Database {
+        let query: () -> EventLoopFuture<[String]>
+        
+        var closed = false
+
+        init(query: @escaping () -> EventLoopFuture<[String]>) {
+            self.query = query
+        }
+        
+        func runQuery() -> EventLoopFuture<[String]> {
+            return query()
+        }
+        
+        mutating func close() {
+            self.closed = true
+        }
+    }
+    
+    func testAlways() throws {
+        let group = EmbeddedEventLoop()
+        let loop = group.next()
+        var db = Database { loop.makeSucceededFuture(["Item 1", "Item 2", "Item 3"]) }
+        
+        XCTAssertFalse(db.closed)
+        let _ = try assertNoThrowWithValue(db.runQuery().always { db.close() }.map { $0.map { $0.uppercased() }}.wait())
+        XCTAssertTrue(db.closed)
+    }
+    
+    func testAlwaysWithFailingPromise() throws {
+        let group = EmbeddedEventLoop()
+        let loop = group.next()
+        var db = Database { loop.makeFailedFuture(DatabaseError()) }
+
+        XCTAssertFalse(db.closed)
+        let _ = try XCTAssertThrowsError(db.runQuery().always { db.close() }.map { $0.map { $0.uppercased() }}.wait()) { XCTAssertTrue($0 is DatabaseError) }
+        XCTAssertTrue(db.closed)
+
+    }
 }

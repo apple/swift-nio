@@ -1267,3 +1267,18 @@ func executeAndComplete<Value>(_ promise: EventLoopPromise<Value>?, _ body: () t
         promise?.fail(e)
     }
 }
+
+
+extension EventLoopFuture {
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has any result.
+    ///
+    /// - parameters:
+    ///     - callback: the callback that is called when the `EventLoopFuture` is fulfilled.   
+    /// - returns: the current `EventLoopFuture`
+    public func always(_ callback: @escaping () -> Void) -> EventLoopFuture<Value> {
+        self.whenComplete { _ in callback() }
+        return self
+    }
+    
+}
