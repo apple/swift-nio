@@ -82,24 +82,17 @@ public final class NIOFileHandle: FileDescriptor {
 
 extension NIOFileHandle {
     /// `Mode` represents file access modes.
-    public enum Mode {
-        /// Opens file for reading only
-        case readOnly
-        /// Opens file for wrinting only
-        case writeOnly
-        /// Opens file for both reading and writing
-        case readWrite
+    public struct Mode: OptionSet {
+        public let rawValue: Int32
 
-        internal var rawValue: Int32 {
-            switch self {
-            case .readOnly:
-                return O_RDONLY
-            case .writeOnly:
-                return O_WRONLY
-            case .readWrite:
-                return O_RDWR
-            }
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
         }
+
+        /// Opens file for reading
+        public static let read = Mode(rawValue: O_RDONLY)
+        /// Opens file for wrinting
+        public static let write = Mode(rawValue: O_WRONLY)
     }
 
     public struct Flags {
@@ -123,7 +116,7 @@ extension NIOFileHandle {
     ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
     ///     - mode: Access mode. Default mode is `.readOnly`.
     ///     - flags: Additional POSIX flags.
-    public convenience init(path: String, mode: Mode = .readOnly, flags: Flags = .default) throws {
+    public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
         let fd = try Posix.open(file: path, oFlag: mode.rawValue | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
