@@ -91,7 +91,7 @@ extension NIOFileHandle {
 
         /// Opens file for reading
         public static let read = Mode(rawValue: O_RDONLY)
-        /// Opens file for wrinting
+        /// Opens file for writing
         public static let write = Mode(rawValue: O_WRONLY)
     }
 
