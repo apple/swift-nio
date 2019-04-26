@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -18,7 +18,7 @@ import Dispatch
 @testable import NIOHTTP1
 
 extension ChannelPipeline {
-    func assertDoesNotContainUpgrader() throws {
+    fileprivate func assertDoesNotContainUpgrader() throws {
         try self.assertDoesNotContain(handlerType: HTTPServerUpgradeHandler.self)
     }
 
@@ -33,11 +33,11 @@ extension ChannelPipeline {
         }
     }
 
-    func assertContainsUpgrader() throws {
+    fileprivate func assertContainsUpgrader() throws {
         try self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
     }
 
-    func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
+    fileprivate func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
         do {
             _ = try self.context(handlerType: handlerType).wait()
         } catch ChannelPipelineError.notFound {
@@ -47,7 +47,7 @@ extension ChannelPipeline {
 
     // Waits up to 1 second for the upgrader to be removed by polling the pipeline
     // every 50ms checking for the handler.
-    func waitForUpgraderToBeRemoved() throws {
+    fileprivate func waitForUpgraderToBeRemoved() throws {
         for _ in 0..<20 {
             do {
                 _ = try self.context(handlerType: HTTPServerUpgradeHandler.self).wait()
@@ -335,7 +335,7 @@ private extension ByteBuffer {
     }
 }
 
-class HTTPUpgradeTestCase: XCTestCase {
+class HTTPServerUpgradeTestCase: XCTestCase {
     func testUpgradeWithoutUpgrade() throws {
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [ExplodingUpgrader(forProtocol: "myproto")],
                                                                                     extraHandlers: []) { (_: ChannelHandlerContext) in
@@ -481,7 +481,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nUpgrade: myproto\r\nKafkaesque: true\r\n\r\n"
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nKafkaesque: true\r\n\r\n"
         XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.

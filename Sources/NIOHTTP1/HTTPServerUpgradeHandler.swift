@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -28,7 +28,7 @@ public enum HTTPServerUpgradeEvents {
 }
 
 
-/// An object that implements `ProtocolUpgrader` knows how to handle HTTP upgrade to
+/// An object that implements `HTTPServerProtocolUpgrader` knows how to handle HTTP upgrade to
 /// a protocol.
 public protocol HTTPServerProtocolUpgrader {
     /// The protocol this upgrader knows how to support.
@@ -186,12 +186,12 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
             return context.eventLoop.makeSucceededFuture(nil)
         }
 
-        guard let upgrader = upgraders[proto.lowercased()] else {
+        guard let upgrader = self.upgraders[proto.lowercased()] else {
             return self.handleUpgradeForProtocol(context: context, protocolIterator: protocolIterator, request: request, allHeaderNames: allHeaderNames, connectionHeader: connectionHeader)
         }
 
         let requiredHeaders = Set(upgrader.requiredUpgradeHeaders.map { $0.lowercased() })
-        guard requiredHeaders.isSubset(of: allHeaderNames) && requiredHeaders.isSubset(of: connectionHeader) else {
+        guard requiredHeaders.isSubset(of: allHeaderNames) && connectionHeader.isSubset(of: allHeaderNames) else {
             return self.handleUpgradeForProtocol(context: context, protocolIterator: protocolIterator, request: request, allHeaderNames: allHeaderNames, connectionHeader: connectionHeader)
         }
 
