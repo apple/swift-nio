@@ -109,7 +109,7 @@ extension NIOFileHandle {
     }
 
     public struct Flags {
-        internal var posixMode: UInt16
+        internal var posixMode: mode_t
         internal var posixFlags: CInt
 
         public static let `default` = Flags(posixMode: 0, posixFlags: 0)
@@ -118,7 +118,7 @@ extension NIOFileHandle {
         ///
         /// - parameters:
         ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for file owner, read for owners group and others.
-        public static func allowFileCreation(posixMode: UInt16 = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
+        public static func allowFileCreation(posixMode: mode_t = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
             return Flags(posixMode: posixMode, posixFlags: O_CREAT)
         }
     }
