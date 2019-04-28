@@ -83,21 +83,34 @@ public final class NIOFileHandle: FileDescriptor {
 extension NIOFileHandle {
     /// `Mode` represents file access modes.
     public struct Mode: OptionSet {
-        public let rawValue: Int32
+        public let rawValue: UInt8
 
-        public init(rawValue: Int32) {
+        public init(rawValue: UInt8) {
             self.rawValue = rawValue
         }
 
+        internal var posixMode: CInt {
+            switch self {
+            case [.read, .write]:
+                return O_RDWR
+            case .read:
+                return O_RDONLY
+            case .write:
+                return O_WRONLY
+            default:
+                preconditionFailure("Unsupported mode value")
+            }
+        }
+
         /// Opens file for reading
-        public static let read = Mode(rawValue: O_RDONLY)
+        public static let read = Mode(rawValue: 1 << 0)
         /// Opens file for writing
-        public static let write = Mode(rawValue: O_WRONLY)
+        public static let write = Mode(rawValue: 1 << 1)
     }
 
     public struct Flags {
         internal var posixMode: UInt16
-        internal var posixFlags: Int32
+        internal var posixFlags: CInt
 
         public static let `default` = Flags(posixMode: 0, posixFlags: 0)
 
@@ -117,7 +130,7 @@ extension NIOFileHandle {
     ///     - mode: Access mode. Default mode is `.readOnly`.
     ///     - flags: Additional POSIX flags.
     public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
-        let fd = try Posix.open(file: path, oFlag: mode.rawValue | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
+        let fd = try Posix.open(file: path, oFlag: mode.posixMode | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
 }
