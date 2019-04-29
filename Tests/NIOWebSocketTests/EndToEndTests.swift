@@ -114,7 +114,7 @@ private class WebSocketRecorderHandler: ChannelInboundHandler {
 }
 
 class EndToEndTests: XCTestCase {
-    func createTestFixtures(upgraders: [WebSocketUpgrader]) -> (loop: EmbeddedEventLoop, serverChannel: EmbeddedChannel, clientChannel: EmbeddedChannel) {
+    func createTestFixtures(upgraders: [WebSocketServerUpgrader]) -> (loop: EmbeddedEventLoop, serverChannel: EmbeddedChannel, clientChannel: EmbeddedChannel) {
         let loop = EmbeddedEventLoop()
         let serverChannel = EmbeddedChannel(loop: loop)
         let upgradeConfig = (upgraders: upgraders as [HTTPServerProtocolUpgrader], completionHandler: { (context: ChannelHandlerContext) in } )
@@ -129,7 +129,7 @@ class EndToEndTests: XCTestCase {
     }
 
     func testBasicUpgradeDance() throws {
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
+        let basicUpgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                               upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
@@ -151,7 +151,7 @@ class EndToEndTests: XCTestCase {
     }
 
     func testUpgradeWithProtocolName() throws {
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
+        let basicUpgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                               upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
@@ -170,7 +170,7 @@ class EndToEndTests: XCTestCase {
     }
 
     func testCanRejectUpgrade() throws {
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(nil) },
+        let basicUpgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(nil) },
                                               upgradePipelineHandler: { (channel, req) in
                                                   XCTFail("Should not have called")
                                                   return channel.eventLoop.makeSucceededFuture(())
@@ -207,7 +207,7 @@ class EndToEndTests: XCTestCase {
         var acceptPromise: EventLoopPromise<HTTPHeaders?>? = nil
         var upgradeComplete = false
 
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in
+        let basicUpgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in
                                                   acceptPromise = channel.eventLoop.makePromise()
                                                   return acceptPromise!.futureResult
                                               },
@@ -246,7 +246,7 @@ class EndToEndTests: XCTestCase {
     }
 
     func testRequiresVersion13() throws {
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
+        let basicUpgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                               upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
@@ -274,7 +274,7 @@ class EndToEndTests: XCTestCase {
     }
 
     func testRequiresVersionHeader() throws {
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
+        let basicUpgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                               upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
@@ -302,7 +302,7 @@ class EndToEndTests: XCTestCase {
     }
 
     func testRequiresKeyHeader() throws {
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
+        let basicUpgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                               upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
@@ -330,7 +330,7 @@ class EndToEndTests: XCTestCase {
     }
 
     func testUpgradeMayAddCustomHeaders() throws {
-        let upgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in
+        let upgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in
                                             var hdrs = HTTPHeaders()
                                             hdrs.add(name: "TestHeader", value: "TestValue")
                                             return channel.eventLoop.makeSucceededFuture(hdrs)
@@ -353,8 +353,8 @@ class EndToEndTests: XCTestCase {
     }
 
     func testMayRegisterMultipleWebSocketEndpoints() throws {
-        func buildHandler(path: String) -> WebSocketUpgrader {
-            return WebSocketUpgrader(shouldUpgrade: { (channel, head) in
+        func buildHandler(path: String) -> WebSocketServerUpgrader {
+            return WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in
                                          guard head.uri == "/\(path)" else { return channel.eventLoop.makeSucceededFuture(nil) }
                                          var hdrs = HTTPHeaders()
                                          hdrs.add(name: "Target", value: path)
@@ -384,7 +384,7 @@ class EndToEndTests: XCTestCase {
 
     func testSendAFewFrames() throws {
         let recorder = WebSocketRecorderHandler()
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
+        let basicUpgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                               upgradePipelineHandler: { (channel, req) in
                                                 channel.pipeline.addHandler(recorder)
 
@@ -422,7 +422,7 @@ class EndToEndTests: XCTestCase {
     }
 
     func testMaxFrameSize() throws {
-        let basicUpgrader = WebSocketUpgrader(maxFrameSize: 16, shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
+        let basicUpgrader = WebSocketServerUpgrader(maxFrameSize: 16, shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                               upgradePipelineHandler: { (channel, req) in
             return channel.eventLoop.makeSucceededFuture(())
         })
@@ -447,7 +447,7 @@ class EndToEndTests: XCTestCase {
 
     func testAutomaticErrorHandling() throws {
         let recorder = WebSocketRecorderHandler()
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
+        let basicUpgrader = WebSocketServerUpgrader(shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                               upgradePipelineHandler: { (channel, req) in
                                                 channel.pipeline.addHandler(recorder)
 
@@ -490,7 +490,7 @@ class EndToEndTests: XCTestCase {
 
     func testNoAutomaticErrorHandling() throws {
         let recorder = WebSocketRecorderHandler()
-        let basicUpgrader = WebSocketUpgrader(automaticErrorHandling: false,
+        let basicUpgrader = WebSocketServerUpgrader(automaticErrorHandling: false,
                                               shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                               upgradePipelineHandler: { (channel, req) in
                                                 channel.pipeline.addHandler(recorder)
