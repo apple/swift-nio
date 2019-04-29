@@ -191,7 +191,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         }
 
         let requiredHeaders = Set(upgrader.requiredUpgradeHeaders.map { $0.lowercased() })
-        guard requiredHeaders.isSubset(of: allHeaderNames) && connectionHeader.isSubset(of: allHeaderNames) else {
+        guard requiredHeaders.isSubset(of: allHeaderNames) && requiredHeaders.isSubset(of: connectionHeader) else {
             return self.handleUpgradeForProtocol(context: context, protocolIterator: protocolIterator, request: request, allHeaderNames: allHeaderNames, connectionHeader: connectionHeader)
         }
 

@@ -58,7 +58,7 @@ fileprivate extension HTTPHeaders {
 ///
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
-public final class WebSocketServerUpgrader: HTTPServerProtocolUpgrader {
+public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
 
@@ -72,7 +72,7 @@ public final class WebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
 
-    /// Create a new `WebSocketServerUpgrader`.
+    /// Create a new `NIOWebSocketServerUpgrader`.
     ///
     /// - parameters:
     ///     - automaticErrorHandling: Whether the pipeline should automatically handle protocol
@@ -95,7 +95,7 @@ public final class WebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     }
 
 
-    /// Create a new `WebSocketServerUpgrader`.
+    /// Create a new `NIOWebSocketServerUpgrader`.
     ///
     /// - parameters:
     ///     - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the

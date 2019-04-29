@@ -481,7 +481,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nKafkaesque: true\r\n\r\n"
+        // This request is missing a 'Kafkaesque' connection header.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nUpgrade: myproto\r\nKafkaesque: true\r\n\r\n"
         XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
