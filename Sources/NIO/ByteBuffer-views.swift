@@ -21,8 +21,8 @@ public struct ByteBufferView: RandomAccessCollection {
     public typealias Index = Int
     public typealias SubSequence = ByteBufferView
 
-    private let buffer: ByteBuffer
-    private let range: Range<Index>
+    fileprivate let buffer: ByteBuffer
+    fileprivate let range: Range<Index>
 
     internal init(buffer: ByteBuffer, range: Range<Index>) {
         precondition(range.lowerBound >= 0 && range.upperBound <= buffer.capacity)
@@ -79,12 +79,19 @@ extension ByteBuffer {
     /// - parameters:
     ///   - index: The index the view should start at
     ///   - length: The length of the view (in bytes)
-    /// - returns A view into a portion of a `ByteBuffer` or `nil` if the requested bytes were not readable.
+    /// - returns: A view into a portion of a `ByteBuffer` or `nil` if the requested bytes were not readable.
     public func viewBytes(at index: Int, length: Int) -> ByteBufferView? {
         guard index >= self.readerIndex && index <= self.writerIndex - length else {
             return nil
         }
 
         return ByteBufferView(buffer: self, range: index ..< (index + length))
+    }
+
+    /// Create a `ByteBuffer` from the given `ByteBufferView`s range.
+    ///
+    /// - parameter view: The `ByteBufferView` which you want to get a `ByteBuffer` from.
+    public init(_ view: ByteBufferView) {
+        self = view.buffer.getSlice(at: view.range.startIndex, length: view.range.count)!
     }
 }

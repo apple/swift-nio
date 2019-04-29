@@ -80,9 +80,8 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
                 // if we can, we store the check for the backing here
                 self._backingCheck = backingCount < Int(_UInt24.max) ? _UInt24(UInt32(backingCount)) : .max
             }
-            assert(MemoryLayout.size(ofValue: self) == MemoryLayout<Int>.size)
         }
-        
+
         @inlinable
         public static func < (lhs: Index, rhs: Index) -> Bool {
             if lhs.isIndexGEQHeadIndex && rhs.isIndexGEQHeadIndex {

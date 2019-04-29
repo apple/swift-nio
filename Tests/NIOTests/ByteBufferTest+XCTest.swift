@@ -120,6 +120,7 @@ extension ByteBufferTest {
                 ("testViewsStartIndexIsStable", testViewsStartIndexIsStable),
                 ("testSlicesOfByteBufferViewsAreByteBufferViews", testSlicesOfByteBufferViewsAreByteBufferViews),
                 ("testReadableBufferViewRangeEqualCapacity", testReadableBufferViewRangeEqualCapacity),
+                ("testByteBuffersCanBeInitializedFromByteBufferViews", testByteBuffersCanBeInitializedFromByteBufferViews),
                 ("testReserveCapacityWhenOversize", testReserveCapacityWhenOversize),
                 ("testReserveCapacitySameCapacity", testReserveCapacitySameCapacity),
                 ("testReserveCapacityLargerUniquelyReferencedCallsRealloc", testReserveCapacityLargerUniquelyReferencedCallsRealloc),

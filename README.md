@@ -149,15 +149,6 @@ Applications that need extremely high performance from their networking stack ma
 
 The core SwiftNIO repository will contain a few extremely important protocol implementations, such as HTTP, directly in tree. However, we believe that most protocol implementations should be decoupled from the release cycle of the underlying networking stack, as the release cadence is likely to be very different (either much faster or much slower). For this reason, we actively encourage the community to develop and maintain their protocol implementations out-of-tree. Indeed, some first-party SwiftNIO protocol implementations, including our TLS and HTTP/2 bindings, are developed out-of-tree!
 
-## Useful Protocol Implementations
-
-The following projects contain useful protocol implementations that do not live in-tree in SwiftNIO:
-
-- bindings to OpenSSL-compatible libraries for TLS: [swift-nio-ssl](https://github.com/apple/swift-nio-ssl)
-- HTTP/2 support for SwiftNIO: [swift-nio-http2](https://github.com/apple/swift-nio-http2)
-- Network.framework support for SwiftNIO on iOS, tvOS and macOS: [swift-nio-transport-services](https://github.com/apple/swift-nio-transport-services)
-- useful code around SwiftNIO: [swift-nio-extras](https://github.com/apple/swift-nio-extras)
-
 ## Documentation
 
  - [API documentation](https://apple.github.io/swift-nio/docs/current/NIO/index.html)
@@ -254,7 +245,7 @@ have a few prerequisites installed on your system.
 
 ### Linux
 
-- Swift 5.0 from [swift.org/download](https://swift.org/download/#swift-50-development).
+- Swift 5.0 from [swift.org/download](https://swift.org/download/#releases).
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
