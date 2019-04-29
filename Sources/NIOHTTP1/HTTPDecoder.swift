@@ -366,7 +366,15 @@ private class BetterHTTPParser {
             self.firstNonDiscardableOffset = 0
             return firstNonDiscardableOffset
         } else {
-            return parserConsumed
+            // By definition we've consumed all of the http parser offset at this stage. There may still be bytes
+            // left in the buffer though: we didn't consume them because they aren't ours to consume, as they may belong
+            // to an upgraded protocol.
+            //
+            // Set the HTTP parser offset back to zero, and tell the parent that we consumed
+            // the whole buffer.
+            let consumedBytes = self.httpParserOffset + parserConsumed
+            self.httpParserOffset = 0
+            return consumedBytes
         }
     }
 }
