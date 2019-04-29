@@ -89,7 +89,7 @@ extension NIOFileHandle {
             self.rawValue = rawValue
         }
 
-        internal var posixMode: CInt {
+        internal var posixFlags: CInt {
             switch self {
             case [.read, .write]:
                 return O_RDWR
@@ -108,6 +108,7 @@ extension NIOFileHandle {
         public static let write = Mode(rawValue: 1 << 1)
     }
 
+    /// `Flags` allows to specify additional flags to `Mode`, such as permission for file creation.
     public struct Flags {
         internal var posixMode: mode_t
         internal var posixFlags: CInt
@@ -130,7 +131,7 @@ extension NIOFileHandle {
     ///     - mode: Access mode. Default mode is `.readOnly`.
     ///     - flags: Additional POSIX flags.
     public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
-        let fd = try Posix.open(file: path, oFlag: mode.posixMode | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
+        let fd = try Posix.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
 }
