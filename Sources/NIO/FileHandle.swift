@@ -128,7 +128,7 @@ extension NIOFileHandle {
     ///
     /// - parameters:
     ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
-    ///     - mode: Access mode. Default mode is `.readOnly`.
+    ///     - mode: Access mode. Default mode is `.read`.
     ///     - flags: Additional POSIX flags.
     public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
         let fd = try Posix.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
