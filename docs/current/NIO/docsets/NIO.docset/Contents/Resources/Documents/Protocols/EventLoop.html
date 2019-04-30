@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E0%2E1%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E0%2E2%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -471,6 +471,9 @@ effect as blocking in this case.</p>
 
                         </div>
                       </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L223">Show on GitHub</a>
+                      </div>
                     </section>
                   </div>
                 </li>
@@ -497,6 +500,9 @@ effect as blocking in this case.</p>
                           <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">execute</span><span class="p">(</span><span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
 
                         </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L226">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -559,6 +565,9 @@ effect as blocking in this case.</p>
                         <h4>Return Value</h4>
                         <p><code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> that is notified once the task was executed.</p>
                       </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L233">Show on GitHub</a>
+                      </div>
                     </section>
                   </div>
                 </li>
@@ -587,6 +596,9 @@ effect as blocking in this case.</p>
 
                         </div>
                       </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L237">Show on GitHub</a>
+                      </div>
                     </section>
                   </div>
                 </li>
@@ -614,6 +626,9 @@ effect as blocking in this case.</p>
 <span class="kd">func</span> <span class="n">scheduleTask</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">in</span><span class="p">:</span> <span class="kt"><a href="../Structs/TimeAmount.html">TimeAmount</a></span><span class="p">,</span> <span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/Scheduled.html">Scheduled</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L241">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -651,6 +666,9 @@ will have no effect, if called from outside the <code>EventLoop</code> it will c
 
                         </div>
                       </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L245">Show on GitHub</a>
+                      </div>
                     </section>
                   </div>
                 </li>
@@ -684,6 +702,9 @@ will have no effect, if called from outside the <code>EventLoop</code> it will c
                           <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">makePromise</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">of</span> <span class="nv">type</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L441-L443">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -738,6 +759,9 @@ will have no effect, if called from outside the <code>EventLoop</code> it will c
                         <h4>Return Value</h4>
                         <p>a failed <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>.</p>
                       </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L450-L452">Show on GitHub</a>
+                      </div>
                     </section>
                   </div>
                 </li>
@@ -791,6 +815,9 @@ will have no effect, if called from outside the <code>EventLoop</code> it will c
                         <h4>Return Value</h4>
                         <p>a succeeded <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>.</p>
                       </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L459-L461">Show on GitHub</a>
+                      </div>
                     </section>
                   </div>
                 </li>
@@ -825,6 +852,9 @@ will have no effect, if called from outside the <code>EventLoop</code> it will c
                         <h4>Return Value</h4>
                         <p>Itself, because an <code>EventLoop</code> forms a singular <code><a href="../Protocols/EventLoopGroup.html">EventLoopGroup</a></code>.</p>
                       </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L466-L468">Show on GitHub</a>
+                      </div>
                     </section>
                   </div>
                 </li>
@@ -854,6 +884,9 @@ will have no effect, if called from outside the <code>EventLoop</code> it will c
                           <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">close</span><span class="p">()</span> <span class="k">throws</span></code></pre>
 
                         </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L471-L473">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -945,6 +978,9 @@ task.</p>
                             </tr>
                           </tbody>
                         </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L485-L495">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1045,6 +1081,9 @@ start of each task.</p>
                           </tbody>
                         </table>
                       </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L512-L519">Show on GitHub</a>
+                      </div>
                     </section>
                   </div>
                 </li>
@@ -1078,6 +1117,9 @@ start of each task.</p>
                       <div>
                         <h4>Return Value</h4>
                         <p><code><a href="../Structs/EventLoopIterator.html">EventLoopIterator</a></code></p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L524-L526">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1117,6 +1159,9 @@ In release mode this function never has any effect.</p>
 
                         </div>
                       </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L534-L538">Show on GitHub</a>
+                      </div>
                     </section>
                   </div>
                 </li>
@@ -1128,7 +1173,7 @@ In release mode this function never has any effect.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-04-23)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-04-30)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
