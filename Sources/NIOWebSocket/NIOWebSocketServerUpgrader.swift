@@ -18,6 +18,9 @@ import NIOHTTP1
 
 private let magicWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+@available(*, deprecated, renamed: "NIOWebSocketServerUpgrader")
+public typealias WebSocketUpgrader = NIOWebSocketServerUpgrader
+
 /// Errors that can be thrown by `NIOWebSocket` during protocol upgrade.
 public struct NIOWebSocketUpgradeError: Error, Equatable {
     private enum ActualError {
