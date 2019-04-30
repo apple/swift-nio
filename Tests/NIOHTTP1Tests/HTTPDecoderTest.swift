@@ -516,4 +516,22 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual(.head(expectedHead),
                                         try writeToFreshRequestDecoderChannel("GET / HTTP/1.1\r\nfoo: bär\r\n\r\n")))
     }
+
+    func testDoesNotDeliverLeftoversUnnecessarily() {
+        // This test isolates a nasty problem where the http parser offset would never be reset to zero. This would cause us to gradually leak
+        // very small amounts of memory on each connection, or sometimes crash.
+        let data: StaticString = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+
+        let channel = EmbeddedChannel()
+        var dataBuffer = channel.allocator.buffer(capacity: 128)
+        dataBuffer.writeStaticString(data)
+
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .fireError))).wait())
+        XCTAssertNoThrow(try channel.writeInbound(dataBuffer.getSlice(at: 0, length: dataBuffer.readableBytes - 6)!))
+        XCTAssertNoThrow(try channel.writeInbound(dataBuffer.getSlice(at: dataBuffer.readableBytes - 6, length: 6)!))
+
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        channel.pipeline.fireChannelInactive()
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+    }
 }
