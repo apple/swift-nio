@@ -69,6 +69,67 @@ private extension EmbeddedChannel {
 
 class ChannelPipelineTest: XCTestCase {
 
+    class SimpleTypedHandler1: ChannelInboundHandler {
+        typealias InboundIn = NIOAny
+    }
+    class SimpleTypedHandler2: ChannelInboundHandler {
+        typealias InboundIn = NIOAny
+    }
+    class SimpleTypedHandler3: ChannelInboundHandler {
+        typealias InboundIn = NIOAny
+    }
+
+    func testGetHandler() throws {
+        let handler1 = SimpleTypedHandler1()
+        let handler2 = SimpleTypedHandler2()
+        let handler3 = SimpleTypedHandler3()
+        
+        let channel = EmbeddedChannel()
+        try channel.pipeline.addHandlers([
+            handler1,
+            handler2,
+            handler3
+        ]).wait()
+        
+        let result1 = try channel.pipeline.handler(type: SimpleTypedHandler1.self).wait()
+        XCTAssertTrue(result1 === handler1)
+        
+        let result2 = try channel.pipeline.handler(type: SimpleTypedHandler2.self).wait()
+        XCTAssertTrue(result2 === handler2)
+
+        let result3 = try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()
+        XCTAssertTrue(result3 === handler3)
+    }
+    
+    func testGetFirstHandler() throws {
+        let sameTypeHandler1 = SimpleTypedHandler1()
+        let sameTypeHandler2 = SimpleTypedHandler1()
+        let otherHandler = SimpleTypedHandler2()
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.addHandlers([
+            sameTypeHandler1,
+            sameTypeHandler2,
+            otherHandler
+        ]).wait()
+        
+        let result = try channel.pipeline.handler(type: SimpleTypedHandler1.self).wait()
+        XCTAssertTrue(result === sameTypeHandler1)
+    }
+    
+    func testGetNotAddedHandler() throws {
+        let handler1 = SimpleTypedHandler1()
+        let handler2 = SimpleTypedHandler2()
+        
+        let channel = EmbeddedChannel()
+        try channel.pipeline.addHandlers([
+            handler1,
+            handler2,
+        ]).wait()
+        
+        XCTAssertThrowsError(try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()) { XCTAssertTrue($0 is ChannelPipelineError )}
+    }
+    
     func testAddAfterClose() throws {
 
         let channel = EmbeddedChannel()
