@@ -227,6 +227,8 @@ extension ChannelOptions {
         @usableFromInline
         internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
 
+        public init() { }
+
         /// Add `Options`, a `ChannelOption` to the `ChannelOptions.Storage`.
         ///
         /// - parameters:
