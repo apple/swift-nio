@@ -253,7 +253,7 @@ public struct NonBlockingFileIO {
         }
     }
 
-    /// Open the file at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    /// Open the file at `path` for reading on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// This function will return (a future) of the `NIOFileHandle` associated with the file opened and a `FileRegion`
     /// comprising of the whole file. The caller must close the returned `NIOFileHandle` when it's no longer needed.
@@ -261,7 +261,7 @@ public struct NonBlockingFileIO {
     /// - note: The reason this returns the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
     ///
     /// - parameters:
-    ///     - path: The path of the file to be opened.
+    ///     - path: The path of the file to be opened for reading.
     ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
     public func openFile(path: String, eventLoop: EventLoop) -> EventLoopFuture<(NIOFileHandle, FileRegion)> {
@@ -274,6 +274,23 @@ public struct NonBlockingFileIO {
                 _ = try? fh.close()
                 throw error
             }
+        }
+    }
+
+    /// Open the file at `path` with specified access mode and POSIX flags on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened.
+    /// The caller must close the returned `NIOFileHandle` when it's no longer needed.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to be opened for writing.
+    ///     - mode: File access mode.
+    ///     - flags: Additional POSIX flags.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
+    public func openFile(path: String, mode: NIOFileHandle.Mode, flags: NIOFileHandle.Flags = .default, eventLoop: EventLoop) -> EventLoopFuture<NIOFileHandle> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            return try NIOFileHandle(path: path, mode: mode, flags: flags)
         }
     }
 
