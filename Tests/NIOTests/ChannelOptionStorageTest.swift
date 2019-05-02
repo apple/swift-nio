@@ -14,7 +14,7 @@
 
 import XCTest
 
-@testable import NIO
+import NIO
 
 class ChannelOptionStorageTest: XCTestCase {
     func testWeStartWithNoOptions() throws {
