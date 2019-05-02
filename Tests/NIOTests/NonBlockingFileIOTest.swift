@@ -510,4 +510,163 @@ class NonBlockingFileIOTest: XCTestCase {
             XCTFail("wrong error: \(error)")
         }
     }
+
+    func testOpeningFilesForWriting() {
+        XCTAssertNoThrow(try withTemporaryDirectory { dir in
+            try self.fileIO!.openFile(path: "\(dir)/file",
+                mode: .write,
+                flags: .allowFileCreation(),
+                eventLoop: self.eventLoop).wait().close()
+        })
+    }
+
+    func testOpeningFilesForWritingFailsIfWeDontAllowItExplicitly() {
+        XCTAssertThrowsError(try withTemporaryDirectory { dir in
+            try self.fileIO!.openFile(path: "\(dir)/file",
+                mode: .write,
+                flags: .default,
+                eventLoop: self.eventLoop).wait().close()
+        }) { error in
+            XCTAssertEqual(ENOENT, (error as? IOError)?.errnoCode)
+        }
+    }
+
+    func testOpeningFilesForWritingDoesNotAllowReading() {
+        XCTAssertNoThrow(try withTemporaryDirectory { dir in
+            let fileHandle = try self.fileIO!.openFile(path: "\(dir)/file",
+                mode: .write,
+                flags: .allowFileCreation(),
+                eventLoop: self.eventLoop).wait()
+            defer {
+                try! fileHandle.close()
+            }
+            XCTAssertEqual(-1 /* read must fail */,
+                           try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
+                            var data: UInt8 = 0
+                            return withUnsafeMutableBytes(of: &data) { ptr in
+                                read(fd, ptr.baseAddress, ptr.count)
+                            }
+            })
+        })
+    }
+
+    func testOpeningFilesForWritingAndReading() {
+        XCTAssertNoThrow(try withTemporaryDirectory { dir in
+            let fileHandle = try self.fileIO!.openFile(path: "\(dir)/file",
+                mode: [.write, .read],
+                flags: .allowFileCreation(),
+                eventLoop: self.eventLoop).wait()
+            defer {
+                try! fileHandle.close()
+            }
+            XCTAssertEqual(0 /* read should read EOF */,
+                try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
+                    var data: UInt8 = 0
+                    return withUnsafeMutableBytes(of: &data) { ptr in
+                        read(fd, ptr.baseAddress, ptr.count)
+                    }
+            })
+        })
+    }
+
+    func testOpeningFilesForWritingDoesNotImplyTruncation() {
+        XCTAssertNoThrow(try withTemporaryDirectory { dir in
+            // open 1 + write
+            try {
+                let fileHandle = try self.fileIO!.openFile(path: "\(dir)/file",
+                    mode: [.write, .read],
+                    flags: .allowFileCreation(),
+                    eventLoop: self.eventLoop).wait()
+                defer {
+                    try! fileHandle.close()
+                }
+                try fileHandle.withUnsafeFileDescriptor { fd in
+                    var data = UInt8(ascii: "X")
+                    XCTAssertEqual(IOResult<Int>.processed(1),
+                                   try withUnsafeBytes(of: &data) { ptr in
+                                    try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                    })
+                }
+            }()
+            // open 2 + write again + read
+            try {
+                let fileHandle = try self.fileIO!.openFile(path: "\(dir)/file",
+                    mode: [.write, .read],
+                    flags: .default,
+                    eventLoop: self.eventLoop).wait()
+                defer {
+                    try! fileHandle.close()
+                }
+                try fileHandle.withUnsafeFileDescriptor { fd in
+                    try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
+                    var data = UInt8(ascii: "Y")
+                    XCTAssertEqual(IOResult<Int>.processed(1),
+                                   try withUnsafeBytes(of: &data) { ptr in
+                                    try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                    })
+                }
+                XCTAssertEqual(2 /* both bytes */,
+                    try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
+                        var data: UInt16 = 0
+                        try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
+                        let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
+                            read(fd, ptr.baseAddress, ptr.count)
+                        }
+                        XCTAssertEqual(UInt16(bigEndian: (UInt16(UInt8(ascii: "X")) << 8) | UInt16(UInt8(ascii: "Y"))),
+                                       data)
+                        return readReturn
+                    })
+            }()
+        })
+    }
+
+    func testOpeningFilesForWritingCanUseTruncation() {
+        XCTAssertNoThrow(try withTemporaryDirectory { dir in
+            // open 1 + write
+            try {
+                let fileHandle = try self.fileIO!.openFile(path: "\(dir)/file",
+                    mode: [.write, .read],
+                    flags: .allowFileCreation(),
+                    eventLoop: self.eventLoop).wait()
+                defer {
+                    try! fileHandle.close()
+                }
+                try fileHandle.withUnsafeFileDescriptor { fd in
+                    var data = UInt8(ascii: "X")
+                    XCTAssertEqual(IOResult<Int>.processed(1),
+                                   try withUnsafeBytes(of: &data) { ptr in
+                                    try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                        })
+                }
+                }()
+            // open 2 (with truncation) + write again + read
+            try {
+                let fileHandle = try self.fileIO!.openFile(path: "\(dir)/file",
+                    mode: [.write, .read],
+                    flags: .posix(flags: O_TRUNC, mode: 0),
+                    eventLoop: self.eventLoop).wait()
+                defer {
+                    try! fileHandle.close()
+                }
+                try fileHandle.withUnsafeFileDescriptor { fd in
+                    try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
+                    var data = UInt8(ascii: "Y")
+                    XCTAssertEqual(IOResult<Int>.processed(1),
+                                   try withUnsafeBytes(of: &data) { ptr in
+                                    try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                        })
+                }
+                XCTAssertEqual(1 /* read should read just one byte because we truncated the file */,
+                    try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
+                        var data: UInt16 = 0
+                        try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
+                        let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
+                            read(fd, ptr.baseAddress, ptr.count)
+                        }
+                        XCTAssertEqual(UInt16(bigEndian: UInt16(UInt8(ascii: "Y")) << 8), data)
+                        return readReturn
+                    })
+                }()
+            })
+    }
 }
