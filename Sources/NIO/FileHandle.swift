@@ -118,9 +118,19 @@ extension NIOFileHandle {
         /// Allows file creation when opening file for writing. File owner is set to the effective user ID of the process.
         ///
         /// - parameters:
-        ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for file owner, read for owners group and others.
+        ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
         public static func allowFileCreation(posixMode: mode_t = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
             return Flags(posixMode: posixMode, posixFlags: O_CREAT)
+        }
+
+        /// Allows the specification of POSIX flags (e.g. `O_TRUNC`) and mode (e.g. `S_IWUSR`)
+        ///
+        /// - parameters:
+        ///     - flags: The POSIX open flags (the second parameter for `open(2)`).
+        ///     - mode: The POSIX mode (the third parameter for `open(2)`).
+        /// - returns: A `NIOFileHandle.Mode` equivalent to the given POSIX flags and mode.
+        public static func posix(flags: CInt, mode: mode_t) -> Flags {
+            return Flags(posixMode: mode, posixFlags: flags)
         }
     }
 
