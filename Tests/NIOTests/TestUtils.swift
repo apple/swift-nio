@@ -28,6 +28,14 @@ func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) -> [NIO.NIOFileHand
     }
 }
 
+func withTemporaryDirectory<T>(_ body: (String) throws -> T) rethrows -> T {
+    let dir = createTemporaryDirectory()
+    defer {
+        try? FileManager.default.removeItem(atPath: dir)
+    }
+    return try body(dir)
+}
+
 func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.NIOFileHandle, String) throws -> T) rethrows -> T {
     let (fd, path) = openTemporaryFile()
     let fileHandle = NIOFileHandle(descriptor: fd)
@@ -70,6 +78,7 @@ var temporaryDirectory: String {
 #endif
     }
 }
+
 func createTemporaryDirectory() -> String {
     let template = "\(temporaryDirectory)/.NIOTests-temp-dir_XXXXXX"
 
