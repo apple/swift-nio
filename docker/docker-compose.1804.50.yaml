@@ -23,6 +23,7 @@ services:
       - MAX_ALLOCS_ALLOWED_bytebuffer_lots_of_rw=2100
       - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=99100
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
+      - MAX_ALLOCS_ALLOWED_creating_10000_headers=10100
 
   test:
     image: swift-nio:18.04-5.0
@@ -34,6 +35,7 @@ services:
       - MAX_ALLOCS_ALLOWED_bytebuffer_lots_of_rw=2100
       - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=99100
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
+      - MAX_ALLOCS_ALLOWED_creating_10000_headers=10100
 
   echo:
     image: swift-nio:18.04-5.0

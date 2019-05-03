@@ -452,5 +452,16 @@ public func swiftMain() -> Int {
         return 10_000
     }
 
+    measureAndPrint(desc: "creating_10000_headers") {
+        var count = 0
+        
+        for i in 0..<10_000 {
+            let baseHeaders: [(String, String)] = [("Host", "example.com"), ("Content-Length", "4")]
+            count += HTTPHeaders(baseHeaders).count
+        }
+
+        return count
+    }
+
     return 0
 }
