@@ -278,7 +278,7 @@ extension HTTPHeaders {
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
 public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral {
-    internal var headers: [(name: String, value: String)]
+    internal var headers: [(String, String)]
     internal var keepAliveState: KeepAliveState = .unknown
 
     public var description: String {
@@ -289,7 +289,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
         return self.headers.map { $0.0 }
     }
 
-    internal init(_ headers: [Element], keepAliveState: KeepAliveState) {
+    internal init(_ headers: [(String, String)], keepAliveState: KeepAliveState) {
         self.headers = headers
         self.keepAliveState = keepAliveState
     }
@@ -452,7 +452,7 @@ extension HTTPHeaders: RandomAccessCollection {
     public typealias Element = (name: String, value: String)
     
     public struct Index: Comparable {
-        fileprivate let base: Array<HTTPHeaders>.Index
+        fileprivate let base: Array<(String, String)>.Index
         public static func < (lhs: Index, rhs: Index) -> Bool {
             return lhs.base < rhs.base
         }
