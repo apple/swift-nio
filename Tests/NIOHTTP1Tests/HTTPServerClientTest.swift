@@ -243,6 +243,24 @@ class HTTPServerClientTest : XCTestCase {
                         self.sentEnd = true
                         self.maybeClose(context: context)
                     }
+                case "/no-headers":
+                    let replyString = "Hello World!\r\n"
+                    let head = HTTPResponseHead(version: req.version, status: .ok)
+                    let r = HTTPServerResponsePart.head(head)
+                    context.write(self.wrapOutboundOut(r), promise: nil)
+                    var b = context.channel.allocator.buffer(capacity: replyString.count)
+                    b.writeString(replyString)
+
+                    let outbound = self.outboundBody(b)
+                    context.write(self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
+                        outbound.destructor()
+                    }
+                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                        XCTFail("unexpected error \(error)")
+                        }.whenComplete { (_: Result<Void, Error>) in
+                            self.sentEnd = true
+                            self.maybeClose(context: context)
+                    }
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
                 }
@@ -317,17 +335,17 @@ class HTTPServerClientTest : XCTestCase {
         }
     }
 
-    private func testSimpleGet(_ mode: SendMode) throws {
+    private func testSimpleGet(_ mode: SendMode,
+                               httpVersion: HTTPVersion = .init(major: 1, minor: 1),
+                               uri: String = "/helloworld",
+                               expectedHeaders maybeExpectedHeaders: HTTPHeaders? = nil) throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        var expectedHeaders = HTTPHeaders()
-        expectedHeaders.add(name: "content-length", value: "14")
-        expectedHeaders.add(name: "connection", value: "close")
-
-        let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "Hello World!\r\n")
+        let expectedHeaders = maybeExpectedHeaders ?? HTTPHeaders([("content-length", "14"), ("connection", "close")])
+        let accumulation = HTTPClientResponsePartAssertHandler(httpVersion, .ok, expectedHeaders, "Hello World!\r\n")
 
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
@@ -359,7 +377,7 @@ class HTTPServerClientTest : XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/helloworld")
+        var head = HTTPRequestHead(version: httpVersion, method: .GET, uri: uri)
         head.headers.add(name: "Host", value: "apple.com")
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
@@ -623,5 +641,12 @@ class HTTPServerClientTest : XCTestCase {
         try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
 
         accumulation.syncWaitForCompletion()
+    }
+
+    func testNoResponseHeaders() {
+        XCTAssertNoThrow(try self.testSimpleGet(.byteBuffer,
+                                                httpVersion: .init(major: 1, minor: 0),
+                                                uri: "/no-headers",
+                                                expectedHeaders: [:]))
     }
 }
