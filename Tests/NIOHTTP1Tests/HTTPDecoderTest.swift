@@ -534,4 +534,17 @@ class HTTPDecoderTest: XCTestCase {
         channel.pipeline.fireChannelInactive()
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
     }
+
+    func testHTTPResponseWithoutHeaders() {
+        let channel = EmbeddedChannel()
+        var buffer = channel.allocator.buffer(capacity: 128)
+        buffer.writeStaticString("HTTP/1.0 200 ok\r\n\r\n")
+
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: .fireError))).wait())
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+                                                                                    method: .GET, uri: "/"))))
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertEqual(HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 0),
+                                                                          status: .ok)), try channel.readInbound()))
+    }
 }
