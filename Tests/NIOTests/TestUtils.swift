@@ -250,3 +250,11 @@ func getBoolSocketOption<IntType: SignedInteger>(channel: Channel, level: IntTyp
                                       file: file,
                                       line: line).wait() != 0
 }
+
+func assertSuccess<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
+    guard case .success = result else { return XCTFail("Expected result to be successful", file: file, line: line) }
+}
+
+func assertFailure<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
+    guard case .failure = result else { return XCTFail("Expected result to be a failure", file: file, line: line) }
+}

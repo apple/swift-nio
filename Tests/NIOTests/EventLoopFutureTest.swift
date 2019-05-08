@@ -1021,7 +1021,7 @@ class EventLoopFutureTest : XCTestCase {
         let query: () -> EventLoopFuture<[String]>
         
         var closed = false
-
+        
         init(query: @escaping () -> EventLoopFuture<[String]>) {
             self.query = query
         }
@@ -1041,7 +1041,10 @@ class EventLoopFutureTest : XCTestCase {
         var db = Database { loop.makeSucceededFuture(["Item 1", "Item 2", "Item 3"]) }
         
         XCTAssertFalse(db.closed)
-        let _ = try assertNoThrowWithValue(db.runQuery().always { db.close() }.map { $0.map { $0.uppercased() }}.wait())
+        let _ = try assertNoThrowWithValue(db.runQuery().always { result in
+            assertSuccess(result)
+            db.close()
+        }.map { $0.map { $0.uppercased() }}.wait())
         XCTAssertTrue(db.closed)
     }
     
@@ -1049,10 +1052,12 @@ class EventLoopFutureTest : XCTestCase {
         let group = EmbeddedEventLoop()
         let loop = group.next()
         var db = Database { loop.makeFailedFuture(DatabaseError()) }
-
+        
         XCTAssertFalse(db.closed)
-        let _ = try XCTAssertThrowsError(db.runQuery().always { db.close() }.map { $0.map { $0.uppercased() }}.wait()) { XCTAssertTrue($0 is DatabaseError) }
+        let _ = try XCTAssertThrowsError(db.runQuery().always { result in
+            assertFailure(result)
+            db.close()
+        }.map { $0.map { $0.uppercased() }}.wait()) { XCTAssertTrue($0 is DatabaseError) }
         XCTAssertTrue(db.closed)
-
     }
 }

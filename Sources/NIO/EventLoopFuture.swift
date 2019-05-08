@@ -1276,8 +1276,8 @@ extension EventLoopFuture {
     /// - parameters:
     ///     - callback: the callback that is called when the `EventLoopFuture` is fulfilled.   
     /// - returns: the current `EventLoopFuture`
-    public func always(_ callback: @escaping () -> Void) -> EventLoopFuture<Value> {
-        self.whenComplete { _ in callback() }
+    public func always(_ callback: @escaping (Result<Value, Error>) -> Void) -> EventLoopFuture<Value> {
+        self.whenComplete { result in callback(result) }
         return self
     }
     
