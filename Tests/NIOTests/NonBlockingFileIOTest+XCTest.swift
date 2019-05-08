@@ -49,6 +49,12 @@ extension NonBlockingFileIOTest {
                 ("testFileOpenWorks", testFileOpenWorks),
                 ("testFileOpenWorksWithEmptyFile", testFileOpenWorksWithEmptyFile),
                 ("testFileOpenFails", testFileOpenFails),
+                ("testOpeningFilesForWriting", testOpeningFilesForWriting),
+                ("testOpeningFilesForWritingFailsIfWeDontAllowItExplicitly", testOpeningFilesForWritingFailsIfWeDontAllowItExplicitly),
+                ("testOpeningFilesForWritingDoesNotAllowReading", testOpeningFilesForWritingDoesNotAllowReading),
+                ("testOpeningFilesForWritingAndReading", testOpeningFilesForWritingAndReading),
+                ("testOpeningFilesForWritingDoesNotImplyTruncation", testOpeningFilesForWritingDoesNotImplyTruncation),
+                ("testOpeningFilesForWritingCanUseTruncation", testOpeningFilesForWritingCanUseTruncation),
            ]
    }
 }

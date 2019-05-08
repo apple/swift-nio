@@ -18,6 +18,9 @@ import NIOHTTP1
 
 private let magicWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+@available(*, deprecated, renamed: "NIOWebSocketServerUpgrader")
+public typealias WebSocketUpgrader = NIOWebSocketServerUpgrader
+
 /// Errors that can be thrown by `NIOWebSocket` during protocol upgrade.
 public struct NIOWebSocketUpgradeError: Error, Equatable {
     private enum ActualError {
@@ -51,14 +54,14 @@ fileprivate extension HTTPHeaders {
 /// A `HTTPServerProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// Users may frequently want to offer multiple websocket endpoints on the same port. For this
-/// reason, this `WebSocketUpgrader` only knows how to do the required parts of the upgrade and to
+/// reason, this `WebServerSocketUpgrader` only knows how to do the required parts of the upgrade and to
 /// complete the handshake. Users are expected to provide a callback that examines the HTTP headers
 /// (including the path) and determines whether this is a websocket upgrade request that is acceptable
 /// to them.
 ///
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
-public final class WebSocketUpgrader: HTTPServerProtocolUpgrader {
+public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
 
@@ -72,7 +75,7 @@ public final class WebSocketUpgrader: HTTPServerProtocolUpgrader {
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
 
-    /// Create a new `WebSocketUpgrader`.
+    /// Create a new `NIOWebSocketServerUpgrader`.
     ///
     /// - parameters:
     ///     - automaticErrorHandling: Whether the pipeline should automatically handle protocol
@@ -95,7 +98,7 @@ public final class WebSocketUpgrader: HTTPServerProtocolUpgrader {
     }
 
 
-    /// Create a new `WebSocketUpgrader`.
+    /// Create a new `NIOWebSocketServerUpgrader`.
     ///
     /// - parameters:
     ///     - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
