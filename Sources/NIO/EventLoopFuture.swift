@@ -1280,5 +1280,4 @@ extension EventLoopFuture {
         self.whenComplete { result in callback(result) }
         return self
     }
-    
 }
