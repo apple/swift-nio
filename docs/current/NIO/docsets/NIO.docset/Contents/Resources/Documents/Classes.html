@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E0%2E2%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E1%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -117,7 +117,16 @@
                 <a class="nav-group-task-link" href="Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOCloseOnErrorHandler.html">NIOCloseOnErrorHandler</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/NIOFileHandle.html">NIOFileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOFileHandle/Mode.html">– Mode</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOFileHandle/Flags.html">– Flags</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/NIONetworkInterface.html">NIONetworkInterface</a>
@@ -144,6 +153,9 @@
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Enums/ByteToMessageDecoderError.html">ByteToMessageDecoderError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/ByteToMessageDecoderError.html#/s:3NIO25ByteToMessageDecoderErrorO015PayloadTooLargeF0V">– PayloadTooLargeError</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Enums/ChannelError.html">ChannelError</a>
@@ -482,7 +494,7 @@ which means that each write attempt will fail.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/Bootstrap.swift#L56-L307">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/Bootstrap.swift#L56-L307">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -536,7 +548,7 @@ This way you ensure that the same <code><a href="Protocols/EventLoop.html">Event
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/Bootstrap.swift#L349-L536">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/Bootstrap.swift#L349-L536">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -587,7 +599,7 @@ and servers.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/Bootstrap.swift#L561-L681">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/Bootstrap.swift#L561-L681">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -623,7 +635,7 @@ These errors are often recoverable by reducing the rate at which we call accept.
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/ChannelHandlers.swift#L21-L104">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/ChannelHandlers.swift#L21-L104">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -655,7 +667,7 @@ It will start reading again once pending data was written.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/ChannelHandlers.swift#L110-L151">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/ChannelHandlers.swift#L110-L151">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -686,7 +698,7 @@ It will start reading again once pending data was written.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/ChannelHandlers.swift#L154-L333">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/ChannelHandlers.swift#L154-L333">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -836,7 +848,7 @@ protocol and business logic:</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/ChannelPipeline.swift#L136-L872">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/ChannelPipeline.swift#L136-L872">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -876,7 +888,7 @@ at the right point in time. Often, the right behaviour is to react to an event a
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/ChannelPipeline.swift#L1053-L1483">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/ChannelPipeline.swift#L1053-L1483">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -922,7 +934,7 @@ re-entrancy on <code>channelRead</code> that may happen in the <code><a href="Cl
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/Codec.swift#L287-L369">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/Codec.swift#L294-L383">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -965,7 +977,7 @@ re-entrancy on <code>channelRead</code> that may happen in the <code><a href="Cl
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/Codec.swift#L607-L634">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/Codec.swift#L626-L653">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1015,7 +1027,7 @@ unsynchronized fashion.
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/Embedded.swift#L49-L151">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/Embedded.swift#L49-L151">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1087,7 +1099,7 @@ unsynchronized fashion. <code><a href="Classes/EmbeddedEventLoop.html">EmbeddedE
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/Embedded.swift#L301-L591">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/Embedded.swift#L301-L591">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1124,7 +1136,7 @@ unsynchronized fashion. <code><a href="Classes/EmbeddedEventLoop.html">EmbeddedE
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L54-L167">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/EventLoop.swift#L54-L167">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1174,7 +1186,7 @@ all run their own <code><a href="Protocols/EventLoop.html">EventLoop</a></code>.
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoop.swift#L1009-L1142">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/EventLoop.swift#L1009-L1142">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1327,7 +1339,7 @@ should be considered a code smell worth investigating: the <code><a href="Protoc
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/EventLoopFuture.swift#L340-L412">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/EventLoopFuture.swift#L340-L412">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1380,7 +1392,7 @@ needed you must <code>close</code> it or take back ownership of the file descrip
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/FileHandle.swift#L25-L81">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/FileHandle.swift#L25-L81">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1415,7 +1427,42 @@ needed you must <code>close</code> it or take back ownership of the file descrip
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/Interfaces.swift#L42-L112">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/Interfaces.swift#L42-L112">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22NIOCloseOnErrorHandlerC"></a>
+                    <a name="//apple_ref/swift/Class/NIOCloseOnErrorHandler" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22NIOCloseOnErrorHandlerC">NIOCloseOnErrorHandler</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A <code><a href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></code> that closes the channel when an error is caught</p>
+
+                        <a href="Classes/NIOCloseOnErrorHandler.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">NIOCloseOnErrorHandler</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/NIOCloseOnErrorHandler.swift#L17-L28">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1467,7 +1514,7 @@ be preferred to running blocking file IO system calls directly on
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/NIOThreadPool.swift#L34-L182">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/NIOThreadPool.swift#L34-L182">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1506,7 +1553,7 @@ returned by <code>currentValue</code> is defined per thread.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIO/Thread.swift#L130-L182">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIO/Thread.swift#L130-L182">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1519,7 +1566,7 @@ returned by <code>currentValue</code> is defined per thread.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-04-30)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-05-09)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

@@ -23,7 +23,7 @@
         <a class="header-link" href="index.html">
           NIOWebSocket Docs
         </a>
-         (86% documented)
+         (85% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E0%2E2%2Fdocsets%2FNIOWebSocket%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E1%2E0%2Fdocsets%2FNIOWebSocket%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -60,6 +60,9 @@
             <a class="nav-group-name-link" href="Classes.html">Classes</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOWebSocketServerUpgrader.html">NIOWebSocketServerUpgrader</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/WebSocketFrameDecoder.html">WebSocketFrameDecoder</a>
               </li>
               <li class="nav-group-task">
@@ -67,9 +70,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/WebSocketProtocolErrorHandler.html">WebSocketProtocolErrorHandler</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Classes/WebSocketUpgrader.html">WebSocketUpgrader</a>
               </li>
             </ul>
           </li>
@@ -118,6 +118,14 @@
               </li>
             </ul>
           </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:12NIOWebSocket03WebB8Upgradera">WebSocketUpgrader</a>
+              </li>
+            </ul>
+          </li>
         </ul>
       </nav>
       <article class="main-content">
@@ -132,6 +140,50 @@
 
         <section class="section">
           <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:12NIOWebSocket0aB14ServerUpgraderC"></a>
+                    <a name="//apple_ref/swift/Class/NIOWebSocketServerUpgrader" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOWebSocket0aB14ServerUpgraderC">NIOWebSocketServerUpgrader</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A <code>HTTPServerProtocolUpgrader</code> that knows how to do the WebSocket upgrade dance.</p>
+
+<p>Users may frequently want to offer multiple websocket endpoints on the same port. For this
+reason, this <code>WebServerSocketUpgrader</code> only knows how to do the required parts of the upgrade and to
+complete the handshake. Users are expected to provide a callback that examines the HTTP headers
+(including the path) and determines whether this is a websocket upgrade request that is acceptable
+to them.</p>
+
+<p>This upgrader assumes that the <code>HTTPServerUpgradeHandler</code> will appropriately mutate the pipeline to
+remove the HTTP <code>ChannelHandler</code>s.</p>
+
+                        <a href="Classes/NIOWebSocketServerUpgrader.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">NIOWebSocketServerUpgrader</span> <span class="p">:</span> <span class="kt">HTTPServerProtocolUpgrader</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift#L64-L187">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
             <div class="task-group">
               <ul class="item-container">
                 <li class="item">
@@ -171,7 +223,7 @@ parser.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIOWebSocket/WebSocketFrameDecoder.swift#L223-L276">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/WebSocketFrameDecoder.swift#L223-L276">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -216,7 +268,7 @@ frame transformation as needed.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIOWebSocket/WebSocketFrameEncoder.swift#L38-L116">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/WebSocketFrameEncoder.swift#L38-L116">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -255,51 +307,7 @@ WebSocket protocol, and can be used by users when custom behaviour is not requir
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIOWebSocket/WebSocketProtocolErrorHandler.swift#L22-L44">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:12NIOWebSocket03WebB8UpgraderC"></a>
-                    <a name="//apple_ref/swift/Class/WebSocketUpgrader" class="dashAnchor"></a>
-                    <a class="token" href="#/s:12NIOWebSocket03WebB8UpgraderC">WebSocketUpgrader</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>A <code>HTTPServerProtocolUpgrader</code> that knows how to do the WebSocket upgrade dance.</p>
-
-<p>Users may frequently want to offer multiple websocket endpoints on the same port. For this
-reason, this <code>WebSocketUpgrader</code> only knows how to do the required parts of the upgrade and to
-complete the handshake. Users are expected to provide a callback that examines the HTTP headers
-(including the path) and determines whether this is a websocket upgrade request that is acceptable
-to them.</p>
-
-<p>This upgrader assumes that the <code>HTTPServerUpgradeHandler</code> will appropriately mutate the pipeline to
-remove the HTTP <code>ChannelHandler</code>s.</p>
-
-                        <a href="Classes/WebSocketUpgrader.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">WebSocketUpgrader</span> <span class="p">:</span> <span class="kt">HTTPServerProtocolUpgrader</span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.0.2/Sources/NIOWebSocket/WebSocketUpgrader.swift#L61-L184">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/WebSocketProtocolErrorHandler.swift#L22-L44">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -312,7 +320,7 @@ remove the HTTP <code>ChannelHandler</code>s.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-04-30)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-05-09)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

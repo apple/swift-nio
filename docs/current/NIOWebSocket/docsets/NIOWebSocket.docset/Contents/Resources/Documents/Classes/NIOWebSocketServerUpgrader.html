@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>NIOWebSocketServerUpgrader Class Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Class/NIOWebSocketServerUpgrader" class="dashAnchor"></a>
+
+    <a title="NIOWebSocketServerUpgrader Class Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIOWebSocket Docs
+        </a>
+         (85% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E1%2E0%2Fdocsets%2FNIOWebSocket%2Exml">
+            <img class="header-icon" src="../img/dash.png"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIOWebSocket Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      NIOWebSocketServerUpgrader Class Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOWebSocketServerUpgrader.html">NIOWebSocketServerUpgrader</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/WebSocketFrameDecoder.html">WebSocketFrameDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/WebSocketFrameEncoder.html">WebSocketFrameEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/WebSocketProtocolErrorHandler.html">WebSocketProtocolErrorHandler</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/NIOWebSocketError.html">NIOWebSocketError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/WebSocketErrorCode.html">WebSocketErrorCode</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/ByteBuffer.html">ByteBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Int.html">Int</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt16.html">UInt16</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt8.html">UInt8</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOWebSocketUpgradeError.html">NIOWebSocketUpgradeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WebSocketFrame.html">WebSocketFrame</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WebSocketMaskingKey.html">WebSocketMaskingKey</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WebSocketOpcode.html">WebSocketOpcode</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:12NIOWebSocket03WebB8Upgradera">WebSocketUpgrader</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>NIOWebSocketServerUpgrader</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">NIOWebSocketServerUpgrader</span> <span class="p">:</span> <span class="kt">HTTPServerProtocolUpgrader</span></code></pre>
+
+                </div>
+              </div>
+            <p>A <code>HTTPServerProtocolUpgrader</code> that knows how to do the WebSocket upgrade dance.</p>
+
+<p>Users may frequently want to offer multiple websocket endpoints on the same port. For this
+reason, this <code>WebServerSocketUpgrader</code> only knows how to do the required parts of the upgrade and to
+complete the handshake. Users are expected to provide a callback that examines the HTTP headers
+(including the path) and determines whether this is a websocket upgrade request that is acceptable
+to them.</p>
+
+<p>This upgrader assumes that the <code>HTTPServerUpgradeHandler</code> will appropriately mutate the pipeline to
+remove the HTTP <code>ChannelHandler</code>s.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:12NIOWebSocket0aB14ServerUpgraderC17supportedProtocolSSvp"></a>
+                    <a name="//apple_ref/swift/Property/supportedProtocol" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOWebSocket0aB14ServerUpgraderC17supportedProtocolSSvp">supportedProtocol</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>RFC 6455 specs this as the required entry in the Upgrade header.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">supportedProtocol</span><span class="p">:</span> <span class="kt">String</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift#L66">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:12NIOWebSocket0aB14ServerUpgraderC22requiredUpgradeHeadersSaySSGvp"></a>
+                    <a name="//apple_ref/swift/Property/requiredUpgradeHeaders" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOWebSocket0aB14ServerUpgraderC22requiredUpgradeHeadersSaySSGvp">requiredUpgradeHeaders</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>We deliberately do not actually set any required headers here, because the websocket
+spec annoyingly does not actually force the client to send these in the Upgrade header,
+which NIO requires. We check for these manually.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">requiredUpgradeHeaders</span><span class="p">:</span> <span class="p">[</span><span class="kt">String</span><span class="p">]</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift#L71">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:12NIOWebSocket0aB14ServerUpgraderC22automaticErrorHandling13shouldUpgrade22upgradePipelineHandlerACSb_3NIO15EventLoopFutureCy8NIOHTTP111HTTPHeadersVSgGAG7Channel_p_AJ15HTTPRequestHeadVtcAIyytGAgO_p_AQtctcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(automaticErrorHandling:shouldUpgrade:upgradePipelineHandler:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOWebSocket0aB14ServerUpgraderC22automaticErrorHandling13shouldUpgrade22upgradePipelineHandlerACSb_3NIO15EventLoopFutureCy8NIOHTTP111HTTPHeadersVSgGAG7Channel_p_AJ15HTTPRequestHeadVtcAIyytGAgO_p_AQtctcfc">init(automaticErrorHandling:shouldUpgrade:upgradePipelineHandler:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Create a new <code>NIOWebSocketServerUpgrader</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">convenience</span> <span class="nf">init</span><span class="p">(</span><span class="nv">automaticErrorHandling</span><span class="p">:</span> <span class="kt">Bool</span> <span class="o">=</span> <span class="kc">true</span><span class="p">,</span> <span class="nv">shouldUpgrade</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Channel</span><span class="p">,</span> <span class="kt">HTTPRequestHead</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">HTTPHeaders</span><span class="p">?</span><span class="o">&gt;</span><span class="p">,</span>
+            <span class="nv">upgradePipelineHandler</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Channel</span><span class="p">,</span> <span class="kt">HTTPRequestHead</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>automaticErrorHandling</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Whether the pipeline should automatically handle protocol
+errors by sending error responses and closing the connection. Defaults to <code>true</code>,
+may be set to <code>false</code> if the user wishes to handle their own errors.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>shouldUpgrade</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A callback that determines whether the websocket request should be
+upgraded. This callback is responsible for creating a <code>HTTPHeaders</code> object with
+any headers that it needs on the response <em>except for</em> the <code>Upgrade</code>, <code>Connection</code>,
+and <code>Sec-WebSocket-Accept</code> headers, which this upgrader will handle. Should return
+an <code>EventLoopFuture</code> containing <code>nil</code> if the upgrade should be refused.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>upgradePipelineHandler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A function that will be called once the upgrade response is
+flushed, and that is expected to mutate the <code>Channel</code> appropriately to handle the
+websocket protocol. This only needs to add the user handlers: the
+<code><a href="../Classes/WebSocketFrameEncoder.html">WebSocketFrameEncoder</a></code> and <code><a href="../Classes/WebSocketFrameDecoder.html">WebSocketFrameDecoder</a></code> will have been added to the
+pipeline automatically.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift#L94-L98">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:12NIOWebSocket0aB14ServerUpgraderC12maxFrameSize22automaticErrorHandling13shouldUpgrade22upgradePipelineHandlerACSi_Sb3NIO15EventLoopFutureCy8NIOHTTP111HTTPHeadersVSgGAH7Channel_p_AK15HTTPRequestHeadVtcAJyytGAhP_p_ARtctcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(maxFrameSize:automaticErrorHandling:shouldUpgrade:upgradePipelineHandler:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOWebSocket0aB14ServerUpgraderC12maxFrameSize22automaticErrorHandling13shouldUpgrade22upgradePipelineHandlerACSi_Sb3NIO15EventLoopFutureCy8NIOHTTP111HTTPHeadersVSgGAH7Channel_p_AK15HTTPRequestHeadVtcAJyytGAhP_p_ARtctcfc">init(maxFrameSize:automaticErrorHandling:shouldUpgrade:upgradePipelineHandler:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Create a new <code>NIOWebSocketServerUpgrader</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">(</span><span class="nv">maxFrameSize</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">automaticErrorHandling</span><span class="p">:</span> <span class="kt">Bool</span> <span class="o">=</span> <span class="kc">true</span><span class="p">,</span> <span class="nv">shouldUpgrade</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Channel</span><span class="p">,</span> <span class="kt">HTTPRequestHead</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">HTTPHeaders</span><span class="p">?</span><span class="o">&gt;</span><span class="p">,</span>
+            <span class="nv">upgradePipelineHandler</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Channel</span><span class="p">,</span> <span class="kt">HTTPRequestHead</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>maxFrameSize</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The maximum frame size the decoder is willing to tolerate from the
+remote peer. WebSockets in principle allows frame sizes up to <code>2**64</code> bytes, but
+this is an objectively unreasonable maximum value (on AMD64 systems it is not
+possible to even. Users may set this to any value up to <code>UInt32.max</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>automaticErrorHandling</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Whether the pipeline should automatically handle protocol
+errors by sending error responses and closing the connection. Defaults to <code>true</code>,
+may be set to <code>false</code> if the user wishes to handle their own errors.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>shouldUpgrade</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A callback that determines whether the websocket request should be
+upgraded. This callback is responsible for creating a <code>HTTPHeaders</code> object with
+any headers that it needs on the response <em>except for</em> the <code>Upgrade</code>, <code>Connection</code>,
+and <code>Sec-WebSocket-Accept</code> headers, which this upgrader will handle. Should return
+an <code>EventLoopFuture</code> containing <code>nil</code> if the upgrade should be refused.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>upgradePipelineHandler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A function that will be called once the upgrade response is
+flushed, and that is expected to mutate the <code>Channel</code> appropriately to handle the
+websocket protocol. This only needs to add the user handlers: the
+<code><a href="../Classes/WebSocketFrameEncoder.html">WebSocketFrameEncoder</a></code> and <code><a href="../Classes/WebSocketFrameDecoder.html">WebSocketFrameDecoder</a></code> will have been added to the
+pipeline automatically.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift#L121-L128">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP126HTTPServerProtocolUpgraderP20buildUpgradeResponse7channel14upgradeRequest07initialG7Headers3NIO15EventLoopFutureCyAA11HTTPHeadersVGAH7Channel_p_AA15HTTPRequestHeadVALtF"></a>
+                    <a name="//apple_ref/swift/Method/buildUpgradeResponse(channel:upgradeRequest:initialResponseHeaders:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP126HTTPServerProtocolUpgraderP20buildUpgradeResponse7channel14upgradeRequest07initialG7Headers3NIO15EventLoopFutureCyAA11HTTPHeadersVGAH7Channel_p_AA15HTTPRequestHeadVALtF">buildUpgradeResponse(channel:upgradeRequest:initialResponseHeaders:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">buildUpgradeResponse</span><span class="p">(</span><span class="nv">channel</span><span class="p">:</span> <span class="kt">Channel</span><span class="p">,</span> <span class="nv">upgradeRequest</span><span class="p">:</span> <span class="kt">HTTPRequestHead</span><span class="p">,</span> <span class="nv">initialResponseHeaders</span><span class="p">:</span> <span class="kt">HTTPHeaders</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">HTTPHeaders</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift#L130-L170">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP126HTTPServerProtocolUpgraderP7upgrade7context0E7Request3NIO15EventLoopFutureCyytGAG21ChannelHandlerContextC_AA15HTTPRequestHeadVtF"></a>
+                    <a name="//apple_ref/swift/Method/upgrade(context:upgradeRequest:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP126HTTPServerProtocolUpgraderP7upgrade7context0E7Request3NIO15EventLoopFutureCyytGAG21ChannelHandlerContextC_AA15HTTPRequestHeadVtF">upgrade(context:upgradeRequest:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">upgrade</span><span class="p">(</span><span class="nv">context</span><span class="p">:</span> <span class="kt">ChannelHandlerContext</span><span class="p">,</span> <span class="nv">upgradeRequest</span><span class="p">:</span> <span class="kt">HTTPRequestHead</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.1.0/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift#L172-L186">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-05-09)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>
