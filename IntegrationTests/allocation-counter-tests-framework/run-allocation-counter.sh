@@ -30,10 +30,11 @@ function make_git_commit_all() {
     git commit -m 'everything' > /dev/null
 }
 
-# <swiftpm_pkg_name> <targets...>
+# <extra_dependencies_file> <swiftpm_pkg_name> <targets...>
 function hooked_package_swift_start() {
-    local swiftpm_pkg_name=$1
-    shift
+    local extra_dependencies_file=$1
+    local swiftpm_pkg_name=$2
+    shift 2
 
     cat <<"EOF"
 // swift-tools-version:5.0
@@ -44,7 +45,8 @@ let package = Package(
     products: [
 EOF
     for f in "$@"; do
-        local module=$(module_name_from_path "$f")
+        local module
+        module=$(module_name_from_path "$f")
         echo ".executable(name: \"$module\", targets: [\"bootstrap_$module\"]),"
     done
     cat <<EOF
@@ -52,6 +54,11 @@ EOF
     dependencies: [
         .package(url: "HookedFunctions/", .branch("master")),
         .package(url: "$swiftpm_pkg_name/", .branch("master")),
+EOF
+    if [[ -n "$extra_dependencies_file" ]]; then
+        cat "$extra_dependencies_file"
+    fi
+    cat <<EOF
     ],
     targets: [
 EOF
@@ -101,7 +108,8 @@ let package = Package(name: "$1")
 EOF
 }
 
-# <target> <template> <swiftpm_pkg_root> <swiftpm_pkg_name> <hooked_function_module> <bootstrap_module> <shared file> <test_files...>
+# <target> <template> <swiftpm_pkg_root> <swiftpm_pkg_name> <hooked_function_module> <bootstrap_module>
+# <shared file> <extra_dependencies_file> <modules...> -- <test_files...>
 function build_package() {
     local target=$1
     local template=$2
@@ -110,7 +118,15 @@ function build_package() {
     local hooked_function_module=$5
     local bootstrap_module=$6
     local shared_file=$7
-    shift 7
+    local extra_dependencies_file=$8
+    shift 8
+
+    local modules=()
+    while [[ "$1" != "--" ]]; do
+        modules+=( "$1" )
+        shift
+    done
+    shift
 
     test -d "$target" || die "target dir '$target' not a directory"
     test -d "$template" || die "template dir '$template' not a directory"
@@ -141,10 +157,11 @@ function build_package() {
     make_git_commit_all
     cd ..
 
-    hooked_package_swift_start "$swiftpm_pkg_name" "$@" > Package.swift
+    hooked_package_swift_start "$extra_dependencies_file" "$swiftpm_pkg_name" "$@" > Package.swift
     for f in "$@"; do
-        local module=$(module_name_from_path "$f")
-        hooked_package_swift_target "$module" NIO NIOHTTP1 >> Package.swift
+        local module
+        module=$(module_name_from_path "$f")
+        hooked_package_swift_target "$module" "${modules[@]}" >> Package.swift
         mkdir "Sources/bootstrap_$module"
         ln -s "../bootstrap/main.c" "Sources/bootstrap_$module"
         mkdir "Sources/Test_$module"
@@ -183,8 +200,9 @@ do_hooking=true
 pkg_root="$here/.."
 shared_file=""
 modules=()
+extra_dependencies_file=""
 
-while getopts "ns:p:m:" opt; do
+while getopts "ns:p:m:d:" opt; do
     case "$opt" in
         n)
             do_hooking=false
@@ -196,7 +214,10 @@ while getopts "ns:p:m:" opt; do
             pkg_root=$(abs_path "$OPTARG")
             ;;
         m)
-            modules+=( "$OPTIND" )
+            modules+=( "$OPTARG" )
+            ;;
+        d)
+            extra_dependencies_file="$OPTARG"
             ;;
         \?)
             die "unknown option $opt"
@@ -249,6 +270,9 @@ build_package \
     "$selected_hooked_functions" \
     "$selected_bootstrap" \
     "$shared_file" \
+    "$extra_dependencies_file" \
+    "${modules[@]}" \
+    -- \
     "${files[@]}"
 (
 cd "$tmpdir"
