@@ -201,8 +201,9 @@ pkg_root="$here/.."
 shared_file=""
 modules=()
 extra_dependencies_file=""
+tmp_dir="/tmp"
 
-while getopts "ns:p:m:d:" opt; do
+while getopts "ns:p:m:d:t:" opt; do
     case "$opt" in
         n)
             do_hooking=false
@@ -218,6 +219,9 @@ while getopts "ns:p:m:d:" opt; do
             ;;
         d)
             extra_dependencies_file="$OPTARG"
+            ;;
+        t)
+            tmp_dir="$OPTARG"
             ;;
         \?)
             die "unknown option $opt"
@@ -252,7 +256,7 @@ for f in "${files[@]}"; do
     test -f "$f" || die "file '$f' not a file"
 done
 
-tmpdir=$(mktemp -d /tmp/thing_XXXXXX)
+working_dir=$(mktemp -d "$tmp_dir/.nio_alloc_counter_tests_XXXXXX")
 
 selected_hooked_functions="HookedFunctionsDoHook"
 selected_bootstrap="bootstrapDoHook"
@@ -263,7 +267,7 @@ if ! $do_hooking; then
 fi
 
 build_package \
-    "$tmpdir" \
+    "$working_dir" \
     "$here/template" \
     "$pkg_root" \
     "$(find_swiftpm_package_name "$pkg_root")" \
@@ -275,10 +279,12 @@ build_package \
     -- \
     "${files[@]}"
 (
-cd "$tmpdir"
+set -eu
+cd "$working_dir"
 swift build "${build_opts[@]}"
 for f in "${files[@]}"; do
     echo "- $f"
     swift run "${build_opts[@]}" "$(module_name_from_path "$f")"
 done
 )
+rm -rf "$working_dir"
