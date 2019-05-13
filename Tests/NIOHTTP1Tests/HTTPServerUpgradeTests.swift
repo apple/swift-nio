@@ -37,7 +37,7 @@ extension ChannelPipeline {
         try self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
     }
 
-    fileprivate func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
+    func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
         do {
             _ = try self.context(handlerType: handlerType).wait()
         } catch ChannelPipelineError.notFound {
@@ -327,7 +327,7 @@ private class DataRecorder<T>: ChannelInboundHandler {
     }
 }
 
-private extension ByteBuffer {
+extension ByteBuffer {
     static func forString(_ string: String) -> ByteBuffer {
         var buf = ByteBufferAllocator().buffer(capacity: string.utf8.count)
         buf.writeString(string)

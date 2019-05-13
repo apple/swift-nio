@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -25,12 +25,29 @@ extension ChannelPipeline {
     ///
     /// - parameters:
     ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
+    ///     - upgrade: Whether to add a `HTTPClientUpgradeHandler` to the pipeline, configured for
+    ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
+    ///         provided, should be a tuple of an array of `HTTPClientProtocolUpgrader` and the upgrade
+    ///         completion handler. See the documentation on `HTTPClientUpgradeHandler` for more
+    ///         details.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func addHTTPClientHandlers(position: Position = .last,
-                                      leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void> {
-        return self.addHandlers(HTTPRequestEncoder(),
-                                ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy)),
-                                position: position)
+                                      leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
+                                      withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration? = nil) -> EventLoopFuture<Void> {
+        
+        let requestEncoder = HTTPRequestEncoder()
+        let responseDecoder = HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy)
+        
+        var handlers: [RemovableChannelHandler] = [requestEncoder, ByteToMessageHandler(responseDecoder)]
+        
+        if let (upgraders, completionHandler) = upgrade {
+            let upgrader = NIOHTTPClientUpgradeHandler(upgraders: upgraders,
+                                                       httpHandlers: handlers,
+                                                       upgradeCompletionHandler: completionHandler)
+            handlers.append(upgrader)
+        }
+
+        return self.addHandlers(handlers, position: position)
     }
 
     /// Configure a `ChannelPipeline` for use as a HTTP server.
