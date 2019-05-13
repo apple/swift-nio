@@ -37,7 +37,7 @@ extension ChannelPipeline {
         try self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
     }
 
-    func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
+    fileprivate func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
         do {
             _ = try self.context(handlerType: handlerType).wait()
         } catch ChannelPipelineError.notFound {

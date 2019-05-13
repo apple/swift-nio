@@ -35,9 +35,12 @@ public enum ByteToMessageDecoderError: Error {
     case leftoverDataWhenDone(ByteBuffer)
 }
 
-// TODO (tomer): Merge into ByteToMessageDecoderError next major version
-/// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max specified.
-public struct ByteToMessageDecoderPayloadTooLargeError: Error {}
+extension ByteToMessageDecoderError {
+    // TODO: For NIO 3, make this an enum case (or whatever best way for Errors we have come up with).
+    /// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max specified.
+    public struct PayloadTooLargeError: Error {}
+}
+
 
 /// `ByteToMessageDecoder`s decode bytes in a stream-like fashion from `ByteBuffer` to another message type.
 ///
@@ -468,7 +471,7 @@ extension ByteToMessageHandler {
                     decoderResult = try decoder.decodeLast(context: context, buffer: &buffer, seenEOF: self.seenEOF)
                 }
                 if decoderResult == .needMoreData, let maximumBufferSize = self.maximumBufferSize, buffer.readableBytes > maximumBufferSize {
-                    throw ByteToMessageDecoderPayloadTooLargeError()
+                    throw ByteToMessageDecoderError.PayloadTooLargeError()
                 }
                 return decoderResult
             }

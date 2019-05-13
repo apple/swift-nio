@@ -44,6 +44,8 @@ extension HTTPDecoderTest {
                 ("testIllegalHeaderNamesCauseError", testIllegalHeaderNamesCauseError),
                 ("testNonASCIIWorksAsHeaderValue", testNonASCIIWorksAsHeaderValue),
                 ("testDoesNotDeliverLeftoversUnnecessarily", testDoesNotDeliverLeftoversUnnecessarily),
+                ("testHTTPResponseWithoutHeaders", testHTTPResponseWithoutHeaders),
+                ("testBasicVerifications", testBasicVerifications),
            ]
    }
 }

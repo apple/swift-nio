@@ -15,6 +15,7 @@
 import XCTest
 import NIO
 import NIOHTTP1
+import NIOTestUtils
 
 class HTTPDecoderTest: XCTestCase {
     private var channel: EmbeddedChannel!
@@ -533,5 +534,63 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
         channel.pipeline.fireChannelInactive()
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
+    }
+
+    func testHTTPResponseWithoutHeaders() {
+        let channel = EmbeddedChannel()
+        var buffer = channel.allocator.buffer(capacity: 128)
+        buffer.writeStaticString("HTTP/1.0 200 ok\r\n\r\n")
+
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: .fireError))).wait())
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+                                                                                    method: .GET, uri: "/"))))
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertEqual(HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 0),
+                                                                          status: .ok)), try channel.readInbound()))
+    }
+
+    func testBasicVerifications() {
+        let byteBufferContainingJustAnX: ByteBuffer = {
+            var buffer = ByteBufferAllocator().buffer(capacity: 1)
+            buffer.writeString("X")
+            return buffer
+        }()
+        let expectedInOuts: [(String, [HTTPServerRequestPart])] = [
+            ("GET / HTTP/1.1\r\n\r\n",
+             [.head(.init(version: .init(major: 1, minor: 1), method: .GET, uri: "/")),
+              .end(nil)]),
+            ("POST /foo HTTP/1.1\r\n\r\n",
+             [.head(.init(version: .init(major: 1, minor: 1), method: .POST, uri: "/foo")),
+              .end(nil)]),
+            ("POST / HTTP/1.1\r\ncontent-length: 1\r\n\r\nX",
+             [.head(.init(version: .init(major: 1, minor: 1),
+                          method: .POST,
+                          uri: "/",
+                          headers: .init([("content-length", "1")]))),
+              .body(byteBufferContainingJustAnX),
+              .end(nil)]),
+            ("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n1\r\nX\r\n0\r\n\r\n",
+             [.head(.init(version: .init(major: 1, minor: 1),
+                          method: .POST,
+                          uri: "/",
+                          headers: .init([("transfer-encoding", "chunked")]))),
+              .body(byteBufferContainingJustAnX),
+              .end(nil)]),
+            ("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\none: two\r\n\r\n1\r\nX\r\n0\r\nfoo: bar\r\n\r\n",
+             [.head(.init(version: .init(major: 1, minor: 1),
+                          method: .POST,
+                          uri: "/",
+                          headers: .init([("transfer-encoding", "chunked"), ("one", "two")]))),
+              .body(byteBufferContainingJustAnX),
+              .end(.init([("foo", "bar")]))]),
+        ]
+
+        let expectedInOutsBB: [(ByteBuffer, [HTTPServerRequestPart])] = expectedInOuts.map { io in
+            var buffer = ByteBufferAllocator().buffer(capacity: io.0.utf8.count)
+            buffer.writeString(io.0)
+            return (buffer, io.1)
+        }
+        XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: expectedInOutsBB,
+                                                                        decoderFactory: { HTTPRequestDecoder() }))
     }
 }

@@ -23,8 +23,8 @@ private extension UnsafeMutablePointer where Pointee == http_parser {
 }
 
 private enum HTTPDecodingState {
-    case beforeRequest
-    case beforeURL
+    case beforeMessageBegin
+    case afterMessageBegin
     case url
     case headerName
     case headerValue
@@ -37,7 +37,7 @@ private class BetterHTTPParser {
     var delegate: HTTPDecoderDelegate! = nil
     private var parser: http_parser? = http_parser() // nil if unaccessible because reference passed away exclusively
     private var settings = http_parser_settings()
-    private var decodingState: HTTPDecodingState = .beforeRequest
+    private var decodingState: HTTPDecodingState = .beforeMessageBegin
     private var firstNonDiscardableOffset: Int? = nil
     private var currentFieldByteLength = 0
     private var httpParserOffset = 0
@@ -164,10 +164,10 @@ private class BetterHTTPParser {
         case .headersComplete:
             // these are trailers
             self.start(bytes: bytes, newState: .trailerName)
-        case .beforeURL:
+        case .afterMessageBegin:
             // in case we're parsing responses
             self.start(bytes: bytes, newState: .headerName)
-        case .beforeRequest:
+        case .beforeMessageBegin:
             preconditionFailure()
         }
         self.currentFieldByteLength += bytes.count
@@ -187,7 +187,7 @@ private class BetterHTTPParser {
                 delegate.didReceiveTrailerName(bytes)
             }
             self.start(bytes: bytes, newState: .trailerValue)
-        case .beforeRequest, .beforeURL, .headersComplete, .url:
+        case .beforeMessageBegin, .afterMessageBegin, .headersComplete, .url:
             preconditionFailure()
         }
         self.currentFieldByteLength += bytes.count
@@ -201,9 +201,9 @@ private class BetterHTTPParser {
         switch self.decodingState {
         case .url:
             ()
-        case .beforeURL:
+        case .afterMessageBegin:
             self.start(bytes: bytes, newState: .url)
-        case .beforeRequest, .headersComplete, .headerName, .headerValue, .trailerName, .trailerValue:
+        case .beforeMessageBegin, .headersComplete, .headerName, .headerValue, .trailerName, .trailerValue:
             preconditionFailure()
         }
         self.currentFieldByteLength += bytes.count
@@ -219,9 +219,9 @@ private class BetterHTTPParser {
 
     private func didReceiveMessageBeginNotification() {
         switch self.decodingState {
-        case .beforeRequest:
-            self.decodingState = .beforeURL
-        case .headersComplete, .headerName, .headerValue, .trailerName, .trailerValue, .beforeURL, .url:
+        case .beforeMessageBegin:
+            self.decodingState = .afterMessageBegin
+        case .headersComplete, .headerName, .headerValue, .trailerName, .trailerValue, .afterMessageBegin, .url:
             preconditionFailure()
         }
     }
@@ -234,10 +234,10 @@ private class BetterHTTPParser {
             self.finish { delegate, bytes in
                 delegate.didReceiveTrailerValue(bytes)
             }
-        case .beforeRequest, .headerName, .headerValue, .trailerName, .beforeURL, .url:
+        case .beforeMessageBegin, .headerName, .headerValue, .trailerName, .afterMessageBegin, .url:
             preconditionFailure()
         }
-        self.decodingState = .beforeRequest
+        self.decodingState = .beforeMessageBegin
         self.delegate.didFinishMessage()
     }
 
@@ -256,7 +256,10 @@ private class BetterHTTPParser {
             self.finish { delegate, bytes in
                 delegate.didReceiveURL(bytes)
             }
-        case .beforeRequest, .headersComplete, .headerName, .trailerName, .trailerValue, .beforeURL:
+        case .afterMessageBegin:
+            // we're okay here for responses (as they don't have URLs) but for requests we must have seen a URL/headers
+            precondition(self.kind == .response)
+        case .beforeMessageBegin, .headersComplete, .headerName, .trailerName, .trailerValue:
             preconditionFailure()
         }
         assert(self.firstNonDiscardableOffset == nil)

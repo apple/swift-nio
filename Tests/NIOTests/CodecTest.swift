@@ -1420,7 +1420,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: max + 1)
         buffer.writeString(String(repeating: "*", count: max + 1))
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            XCTAssertTrue(error is ByteToMessageDecoderPayloadTooLargeError)
+            XCTAssertTrue(error is ByteToMessageDecoderError.PayloadTooLargeError)
         }
     }
 
