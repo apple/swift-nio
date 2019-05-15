@@ -26,6 +26,7 @@ import XCTest
    @testable import NIOConcurrencyHelpersTests
    @testable import NIOHTTP1Tests
    @testable import NIOTLSTests
+   @testable import NIOTestUtilsTests
    @testable import NIOTests
    @testable import NIOWebSocketTests
 
@@ -40,6 +41,7 @@ import XCTest
          testCase(ByteBufferTest.allTests),
          testCase(ByteBufferUtilsTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
+         testCase(ByteToMessageDecoderVerifierTest.allTests),
          testCase(ChannelNotificationTest.allTests),
          testCase(ChannelOptionStorageTest.allTests),
          testCase(ChannelPipelineTest.allTests),
