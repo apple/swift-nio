@@ -701,3 +701,5 @@ measureAndPrint(desc: "future_whenallcomplete_100k_deferred_on_loop") {
         }.wait()
     return allSucceeded.count
 }
+
+try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark.self)
