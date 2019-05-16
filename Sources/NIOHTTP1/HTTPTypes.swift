@@ -344,10 +344,9 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     ///     names are strongly recommended.
     @inlinable
     public mutating func add<S: Sequence>(contentsOf other: S) where S.Element == (String, String) {
-        precondition(!other.contains { !$0.0.utf8.contains(where: { !$0.isASCII }) }, "names must be ASCII")
-        self.headers.append(contentsOf: other)
-        if other.contains(where: { self.isConnectionHeader($0.0) }) {
-            self.keepAliveState = .unknown
+        self.headers.reserveCapacity(self.headers.count + other.underestimatedCount)
+        for (name, value) in other {
+            self.add(name: name, value: value)
         }
     }
 
