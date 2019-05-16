@@ -320,8 +320,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// Add a header name/value pair to the block.
     ///
     /// This method is strictly additive: if there are other values for the given header name
-    /// already in the block, this will add a new entry. `add` performs case-insensitive
-    /// comparisons on the header field name.
+    /// already in the block, this will add a new entry.
     ///
     /// - Parameter name: The header field name. For maximum compatibility this should be an
     ///     ASCII string. For future-proofing with HTTP/2 lowercase header names are strongly
@@ -338,12 +337,12 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// Add a sequence of header name/value pairs to the block.
     ///
     /// This method is strictly additive: if there are other entries with the same header
-    /// name already in the block, this will add new entries. `add` performs case-insensitive
-    /// comparisons on the header field names.
+    /// name already in the block, this will add new entries.
     ///
     /// - Parameter contentsOf: The sequence of header name/value pairs. For maximum compatibility
     ///     the header should be an ASCII string. For future-proofing with HTTP/2 lowercase header
     ///     names are strongly recommended.
+    @inlinable
     public mutating func add<S: Sequence>(contentsOf other: S) where S.Element == (String, String) {
         precondition(!other.contains { !$0.0.utf8.contains(where: { !$0.isASCII }) }, "names must be ASCII")
         self.headers.append(contentsOf: other)
