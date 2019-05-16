@@ -278,6 +278,7 @@ extension HTTPHeaders {
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
 public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral {
+    @usableFromInline
     internal var headers: [(String, String)]
     internal var keepAliveState: KeepAliveState = .unknown
 
