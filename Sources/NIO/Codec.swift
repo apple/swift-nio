@@ -366,6 +366,11 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     private var seenEOF: Bool = false
     private var selfAsCanDequeueWrites: CanDequeueWrites? = nil
 
+    /// @see: ByteToMessageHandler.init(_:maximumBufferSize)
+    public convenience init(_ decoder: Decoder) {
+        self.init(decoder, maximumBufferSize: nil)
+    }
+
     /// Initialize a `ByteToMessageHandler`.
     ///
     /// - parameters:
