@@ -321,6 +321,26 @@ class HTTPHeadersTest : XCTestCase {
         nonSenseInMultipleHeadersKC.add(name: "connection", value: "close")
         XCTAssertEqual(false, nonSenseInMultipleHeadersKC.isKeepAlive(version: .init(major: 1, minor: 1)))
         XCTAssertEqual(false, nonSenseInMultipleHeadersKC.isKeepAlive(version: .init(major: 1, minor: 0)))
+    }
 
+    func testAddingSequenceOfPairs() {
+        var headers = HTTPHeaders([], keepAliveState: .keepAlive)
+        let fooBar = [("foo", "bar"), ("bar", "qux"), ("connection", "foo")]
+        headers.add(contentsOf: fooBar)
+
+        XCTAssertEqual(["bar"], headers["foo"])
+        XCTAssertEqual(["qux"], headers["bar"])
+        XCTAssertEqual(.unknown, headers.keepAliveState)
+    }
+
+    func testAddingOtherHTTPHeader() {
+        var fooBarHeaders = HTTPHeaders([("foo", "bar"), ("bar", "qux")], keepAliveState: .keepAlive)
+        let bazHeaders = HTTPHeaders([("bar", "baz"), ("baz", "bazzy")], keepAliveState: .unknown)
+        fooBarHeaders.add(contentsOf: bazHeaders)
+
+        XCTAssertEqual(["bar"], fooBarHeaders["foo"])
+        XCTAssertEqual(["qux", "baz"], fooBarHeaders["bar"])
+        XCTAssertEqual(["bazzy"], fooBarHeaders["baz"])
+        XCTAssertEqual(.unknown, fooBarHeaders.keepAliveState)
     }
 }

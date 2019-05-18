@@ -278,6 +278,7 @@ extension HTTPHeaders {
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
 public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral {
+    @usableFromInline
     internal var headers: [(String, String)]
     internal var keepAliveState: KeepAliveState = .unknown
 
@@ -320,17 +321,42 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// Add a header name/value pair to the block.
     ///
     /// This method is strictly additive: if there are other values for the given header name
-    /// already in the block, this will add a new entry. `add` performs case-insensitive
-    /// comparisons on the header field name.
+    /// already in the block, this will add a new entry.
     ///
     /// - Parameter name: The header field name. For maximum compatibility this should be an
     ///     ASCII string. For future-proofing with HTTP/2 lowercase header names are strongly
-    //      recommended.
+    ///     recommended.
     /// - Parameter value: The header field value to add for the given name.
     public mutating func add(name: String, value: String) {
         precondition(!name.utf8.contains(where: { !$0.isASCII }), "name must be ASCII")
         self.headers.append((name, value))
         if self.isConnectionHeader(name) {
+            self.keepAliveState = .unknown
+        }
+    }
+
+    /// Add a sequence of header name/value pairs to the block.
+    ///
+    /// This method is strictly additive: if there are other entries with the same header
+    /// name already in the block, this will add new entries.
+    ///
+    /// - Parameter contentsOf: The sequence of header name/value pairs. For maximum compatibility
+    ///     the header should be an ASCII string. For future-proofing with HTTP/2 lowercase header
+    ///     names are strongly recommended.
+    @inlinable
+    public mutating func add<S: Sequence>(contentsOf other: S) where S.Element == (String, String) {
+        self.headers.reserveCapacity(self.headers.count + other.underestimatedCount)
+        for (name, value) in other {
+            self.add(name: name, value: value)
+        }
+    }
+
+    /// Add another block of headers to the block.
+    ///
+    /// - Parameter contentsOf: The block of headers to add to these headers.
+    public mutating func add(contentsOf other: HTTPHeaders) {
+        self.headers.append(contentsOf: other.headers)
+        if other.keepAliveState == .unknown {
             self.keepAliveState = .unknown
         }
     }

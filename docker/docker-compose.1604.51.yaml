@@ -18,13 +18,6 @@ services:
 
   integration-tests:
     image: swift-nio:16.04-5.1
-    environment:
-      - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=30600
-      - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=583100
-      - MAX_ALLOCS_ALLOWED_ping_pong_1000_reqs_1_conn=4600
-      - MAX_ALLOCS_ALLOWED_bytebuffer_lots_of_rw=2100
-      - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=99100
-      - MAX_ALLOCS_ALLOWED_creating_10000_headers=10100
 
   test:
     image: swift-nio:16.04-5.1
@@ -36,6 +29,7 @@ services:
       - MAX_ALLOCS_ALLOWED_bytebuffer_lots_of_rw=2100
       - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=99100
       - MAX_ALLOCS_ALLOWED_creating_10000_headers=10100
+      - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
 
   echo:
     image: swift-nio:16.04-5.1

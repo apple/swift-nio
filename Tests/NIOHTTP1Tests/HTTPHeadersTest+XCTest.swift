@@ -47,6 +47,8 @@ extension HTTPHeadersTest {
                 ("testSeedGetsUpdatedToDefaultOnConnectionHeaderModification", testSeedGetsUpdatedToDefaultOnConnectionHeaderModification),
                 ("testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent", testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent),
                 ("testWeDefaultToCloseIfDoesNotMakeSense", testWeDefaultToCloseIfDoesNotMakeSense),
+                ("testAddingSequenceOfPairs", testAddingSequenceOfPairs),
+                ("testAddingOtherHTTPHeader", testAddingOtherHTTPHeader),
            ]
    }
 }
