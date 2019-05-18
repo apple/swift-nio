@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -14,17 +14,46 @@
 
 import NIO
 
-public typealias NIOHTTPClientUpgradeConfiguration = (upgraders: [NIOHTTPClientProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
-
 /// Errors that may be raised by the `HTTPClientProtocolUpgrader`.
-public enum NIOHTTPClientUpgradeError: Error {
-    case responseProtocolNotFound
-    case invalidHTTPOrdering
-    case upgraderDeniedUpgrade
+public struct NIOHTTPClientUpgradeError: Hashable, Error {
+
+    // Uses the open enum style to allow additional errors to be added in future.
+    private enum Code: Hashable {
+        case responseProtocolNotFound
+        case invalidHTTPOrdering
+        case upgraderDeniedUpgrade
+        case writingToHandlerDuringUpgrade
+        case writingToHandlerAfterUpgradeCompleted
+        case writingToHandlerAfterUpgradeFailed
+        case receivedResponseBeforeRequestSent
+        case receivedResponseAfterUpgradeCompleted
+    }
+    
+    private var code: Code
+    
+    private init(_ code: Code) {
+        self.code = code
+    }
+
+    public static let responseProtocolNotFound = NIOHTTPClientUpgradeError(.responseProtocolNotFound)
+    public static let invalidHTTPOrdering = NIOHTTPClientUpgradeError(.invalidHTTPOrdering)
+    public static let upgraderDeniedUpgrade = NIOHTTPClientUpgradeError(.upgraderDeniedUpgrade)
+    public static let writingToHandlerDuringUpgrade = NIOHTTPClientUpgradeError(.writingToHandlerDuringUpgrade)
+    public static let writingToHandlerAfterUpgradeCompleted = NIOHTTPClientUpgradeError(.writingToHandlerAfterUpgradeCompleted)
+    public static let writingToHandlerAfterUpgradeFailed = NIOHTTPClientUpgradeError(.writingToHandlerAfterUpgradeFailed)
+    public static let receivedResponseBeforeRequestSent = NIOHTTPClientUpgradeError(.receivedResponseBeforeRequestSent)
+    public static let receivedResponseAfterUpgradeCompleted = NIOHTTPClientUpgradeError(.receivedResponseAfterUpgradeCompleted)
 }
 
-/// An object that implements `ProtocolUpgrader` knows how to handle HTTP upgrade to
-/// a specific protocol.
+extension NIOHTTPClientUpgradeError: CustomStringConvertible {
+    public var description: String {
+        return String(describing: self.code)
+    }
+}
+
+/// An object that implements `NIOHTTPClientProtocolUpgrader` knows how to handle HTTP upgrade to
+/// a protocol on a client-side channel.
+/// It has the option of denying this upgrade based upon the server response.
 public protocol NIOHTTPClientProtocolUpgrader {
     
     /// The protocol this upgrader knows how to support.
@@ -98,8 +127,6 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        
-        precondition(upgraders.count > 0, "A minimum of one protocol upgrader must be specified.")
 
         switch self.upgradeState {
         
@@ -112,17 +139,20 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
             context.write(data, promise: promise)
             
         case .awaitingUpgrader, .upgraderReady, .upgrading:
-            preconditionFailure("We shouldn't be sending anything else until we get a response.")
+            /// We shouldn't be sending anything else until we get a response.
+            context.fireErrorCaught(NIOHTTPClientUpgradeError.writingToHandlerDuringUpgrade)
 
         case .upgradingAddingHandlers:
-            // These are most likely messages immidiately fired by a new protocol handler.
+            // These are most likely messages immediately fired by a new protocol handler.
             // As that is added last we can just forward them on.
             context.write(data, promise: promise)
             
         case .upgradeComplete:
-            preconditionFailure("Upgrade complete and this handler should have been removed from the pipeline.")
+            //Upgrade complete and this handler should have been removed from the pipeline.
+            context.fireErrorCaught(NIOHTTPClientUpgradeError.writingToHandlerAfterUpgradeCompleted)
         case .upgradeFailed:
-            preconditionFailure("Upgrade failed and this handler should have been removed from the pipeline.")
+            //Upgrade failed and this handler should have been removed from the pipeline.
+            context.fireErrorCaught(NIOHTTPClientUpgradeError.writingToHandlerAfterUpgradeCompleted)
         }
     }
 
@@ -130,46 +160,38 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         
         let interceptedOutgoingRequest = self.unwrapOutboundIn(data)
         
-        if case .head(let requestHead) = interceptedOutgoingRequest {
+        if case .head(var requestHead) = interceptedOutgoingRequest {
             
             self.upgradeState = .awaitingConfirmationResponse
             
-            let updatedHeader = self.addUpgradeHeaders(to: requestHead)
-            let completedHeader = self.addConnectionHeaders(to: updatedHeader)
-            return self.wrapOutboundOut(.head(completedHeader))
+            self.addConnectionHeaders(to: &requestHead)
+            self.addUpgradeHeaders(to: &requestHead)
+            return self.wrapOutboundOut(.head(requestHead))
         }
         
         return data
     }
-    
-    private func addUpgradeHeaders(to requestHead: HTTPRequestHead) -> HTTPRequestHead {
+
+    private func addConnectionHeaders(to requestHead: inout HTTPRequestHead) {
         
-        var head = requestHead
+        var connectionValue = "upgrade"
         
-        head.headers.add(name: "Connection", value: "upgrade")
+        for upgrader in self.upgraders where upgrader.requiredUpgradeHeaders.count > 0 {
+            connectionValue.append("," + upgrader.requiredUpgradeHeaders.joined(separator: ","))
+        }
+
+        requestHead.headers.add(name: "Connection", value: connectionValue)
+    }
+
+    private func addUpgradeHeaders(to requestHead: inout HTTPRequestHead) {
         
         let upgraderList = self.upgraders.map({ $0.supportedProtocol.lowercased() }).joined(separator:",")
-        head.headers.add(name: "Upgrade", value: upgraderList)
+        requestHead.headers.add(name: "Upgrade", value: upgraderList)
 
         // Allow each upgrader the chance to add custom headers.
         for upgrader in self.upgraders {
-            upgrader.addCustom(upgradeRequestHeaders: &head.headers)
+            upgrader.addCustom(upgradeRequestHeaders: &requestHead.headers)
         }
-        
-        return head
-    }
-    
-    private func addConnectionHeaders(to requestHead: HTTPRequestHead) -> HTTPRequestHead {
-
-        var head = requestHead
-
-        for upgrader in self.upgraders {
-            for requiredHeader in upgrader.requiredUpgradeHeaders {
-                head.headers.add(name: "Connection", value: requiredHeader)
-            }
-        }
-        
-        return head
     }
     
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -201,9 +223,11 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
             // We were reentrantly called while delivering the response head. We can just pass this through.
             context.fireChannelRead(data)
         case .upgradeComplete:
-            preconditionFailure("Upgrade has completed but we have not seen a whole response and still got reentrantly called.")
+            //Upgrade has completed but we have not seen a whole response and still got reentrantly called.
+            context.fireErrorCaught(NIOHTTPClientUpgradeError.receivedResponseAfterUpgradeCompleted)
         case .requestRequired:
-            preconditionFailure("We are receiving an upgrade response and we have not requested the upgrade.")
+            //We are receiving an upgrade response and we have not requested the upgrade.
+            context.fireErrorCaught(NIOHTTPClientUpgradeError.receivedResponseBeforeRequestSent)
         }
     }
     
@@ -387,20 +411,6 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         
         // Ok, we've delivered all the parts. We can now remove ourselves, which should happen synchronously.
         context.pipeline.removeHandler(context: context, promise: nil)
-    }
-    
-    public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        // As we are not really interested getting notified on success or failure we just pass nil as promise to
-        // reduce allocations.
-        context.close(promise: nil)
-    }
-    
-    private func removeHandler(context: ChannelHandlerContext, handler: RemovableChannelHandler?) -> EventLoopFuture<Void> {
-        if let handler = handler {
-            return context.pipeline.removeHandler(handler)
-        } else {
-            return context.eventLoop.makeSucceededFuture(())
-        }
     }
 }
 

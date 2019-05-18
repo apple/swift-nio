@@ -27,7 +27,7 @@ extension HTTPClientUpgradeTestCase {
    static var allTests : [(String, (HTTPClientUpgradeTestCase) -> () throws -> Void)] {
       return [
                 ("testSimpleUpgradeSucceeds", testSimpleUpgradeSucceeds),
-                ("testUpgradeWithRequiredHeadersSucceeds", testUpgradeWithRequiredHeadersSucceeds),
+                ("testUpgradeWithRequiredHeadersShowsInRequest", testUpgradeWithRequiredHeadersShowsInRequest),
                 ("testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols", testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols),
                 ("testNoUpgradeAsNoServerUpgrade", testNoUpgradeAsNoServerUpgrade),
                 ("testFirstResponseReturnsServerError", testFirstResponseReturnsServerError),

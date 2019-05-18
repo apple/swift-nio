@@ -14,11 +14,20 @@
 
 import NIO
 
-/// Configuration required to configure a HTTP pipeline for upgrade.
+/// Configuration required to configure a HTTP client pipeline for upgrade.
+///
+/// See the documentation for `HTTPClientUpgradeHandler` for details on these
+/// properties.
+public typealias NIOHTTPClientUpgradeConfiguration = (upgraders: [NIOHTTPClientProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
+
+/// Configuration required to configure a HTTP server pipeline for upgrade.
 ///
 /// See the documentation for `HTTPServerUpgradeHandler` for details on these
 /// properties.
-public typealias HTTPUpgradeConfiguration = (upgraders: [HTTPServerProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
+@available(*, deprecated, renamed: "NIOHTTPServerUpgradeConfiguration")
+public typealias HTTPUpgradeConfiguration = NIOHTTPServerUpgradeConfiguration
+
+public typealias NIOHTTPServerUpgradeConfiguration = (upgraders: [HTTPServerProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
 
 extension ChannelPipeline {
     /// Configure a `ChannelPipeline` for use as a HTTP client.
@@ -77,7 +86,7 @@ extension ChannelPipeline {
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func configureHTTPServerPipeline(position: ChannelPipeline.Position = .last,
                                             withPipeliningAssistance pipelining: Bool = true,
-                                            withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
+                                            withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
                                             withErrorHandling errorHandling: Bool = true) -> EventLoopFuture<Void> {
         let responseEncoder = HTTPResponseEncoder()
         let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: upgrade == nil ? .dropBytes : .forwardBytes)
