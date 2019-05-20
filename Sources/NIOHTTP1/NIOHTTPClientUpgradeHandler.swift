@@ -138,7 +138,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
             // Still have full http stack.
             context.write(data, promise: promise)
             
-        case .awaitingUpgrader, .upgraderReady, .upgrading:
+        case .upgraderReady, .upgrading:
             /// We shouldn't be sending anything else until we get a response.
             context.fireErrorCaught(NIOHTTPClientUpgradeError.writingToHandlerDuringUpgrade)
 
@@ -207,11 +207,10 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         switch self.upgradeState {
         case .awaitingConfirmationResponse:
             self.firstResponseHeadReceived(context: context, responsePart: responsePart)
-        case .awaitingUpgrader, .upgrading, .upgradingAddingHandlers:
+        case .upgrading, .upgradingAddingHandlers:
             if case .end = responsePart {
                 // This is the end of the first response. Swallow it, we're buffering the rest.
                 self.seenFirstResponse = true
-                
             }
         case .upgraderReady(let upgrade):
             if case .end = responsePart {
@@ -258,65 +257,49 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
             self.notUpgrading(context: context, data: responsePart)
             return
         }
-
-        // This is an upgrade response.
-        // This may take a while, so while we're waiting more data can come in.
-        self.upgradeState = .awaitingUpgrader
         
-        self.handleUpgrade(context: context, upgradeResponse: response, receivedProtocols: acceptedProtocols).whenSuccess { callback in
-
-            if let callback = callback {
-                self.gotUpgrader(upgrader: callback)
-            } else {
-                self.notUpgrading(context: context, data: responsePart)
-            }
+        if let callback = self.handleUpgrade(context: context,
+                                             upgradeResponse: response,
+                                             receivedProtocols: acceptedProtocols) {
+            self.gotUpgrader(upgrader: callback)
+        } else {
+            self.notUpgrading(context: context, data: responsePart)
         }
     }
     
-    private func handleUpgrade(context: ChannelHandlerContext, upgradeResponse response: HTTPResponseHead, receivedProtocols: [String]) -> EventLoopFuture<(() -> Void)?> {
+    private func handleUpgrade(context: ChannelHandlerContext, upgradeResponse response: HTTPResponseHead, receivedProtocols: [String]) -> (() -> Void)? {
         
-        let allHeaderNames = Set(response.headers.map { $0.name.lowercased() })
-        
-        // We now set off a chain of Futures to try to find a protocol upgrade.
-        // While this is blocking, we need to buffer inbound data.
-        let protocolIterator = receivedProtocols.makeIterator()
-        
-        return self.handleUpgradeForProtocol(context: context, protocolIterator: protocolIterator, response: response, allHeaderNames: allHeaderNames)
+        // At the moment we only upgrade to the first protocol returned from the server.
+        guard let protocolName = receivedProtocols.first?.lowercased() else {
+            // There are no upgrade protocols returned.
+            context.fireErrorCaught(NIOHTTPClientUpgradeError.responseProtocolNotFound)
+            return nil
+        }
+
+        return self.handleUpgradeForProtocol(context: context,
+                                             protocolName: protocolName,
+                                             response: response)
     }
     
     /// Attempt to upgrade a single protocol.
-    private func handleUpgradeForProtocol(context: ChannelHandlerContext, protocolIterator: Array<String>.Iterator, response: HTTPResponseHead, allHeaderNames: Set<String>) -> EventLoopFuture<(() -> Void)?> {
-        
-        var protocolIterator = protocolIterator
-        guard let lowercaseProtoName = protocolIterator.next()?.lowercased() else {
-            // There are no upgrade protocols returned.
-            context.fireErrorCaught(NIOHTTPClientUpgradeError.responseProtocolNotFound)
-            return context.eventLoop.makeSucceededFuture(nil)
-        }
+    private func handleUpgradeForProtocol(context: ChannelHandlerContext, protocolName: String, response: HTTPResponseHead) -> (() -> Void)? {
 
         let matchingUpgrader = self.upgraders
-            .first(where: { $0.supportedProtocol.lowercased() == lowercaseProtoName })
+            .first(where: { $0.supportedProtocol.lowercased() == protocolName })
         
         guard let upgrader = matchingUpgrader else {
             // There is no upgrader for this protocol.
             context.fireErrorCaught(NIOHTTPClientUpgradeError.responseProtocolNotFound)
-            return context.eventLoop.makeSucceededFuture(nil)
+            return nil
         }
         
         guard upgrader.shouldAllowUpgrade(upgradeResponse: response) else {
             // The upgrader says no.
             context.fireErrorCaught(NIOHTTPClientUpgradeError.upgraderDeniedUpgrade)
-            return context.eventLoop.makeSucceededFuture(nil)
+            return nil
         }
         
-        let upgradeFunction = self.performUpgrade(context: context, upgrader: upgrader, response: response)
-        
-        return context.eventLoop.makeSucceededFuture(upgradeFunction)
-        .flatMapError { error in
-            // No upgrade here.
-            context.fireErrorCaught(error)
-            return context.eventLoop.makeSucceededFuture(nil)
-        }
+        return self.performUpgrade(context: context, upgrader: upgrader, response: response)
     }
     
     private func performUpgrade(context: ChannelHandlerContext, upgrader: NIOHTTPClientProtocolUpgrader,  response: HTTPResponseHead) -> () -> Void {
@@ -329,7 +312,6 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         // upgrader code is done, we do our final cleanup steps, namely we replay the received data we
         // buffered in the meantime and then remove ourselves from the pipeline.
         return {
-            // Ok, we're upgrading.
             self.upgradeState = .upgrading
             
             self.removeHTTPHandlers(context: context)
@@ -375,10 +357,6 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
     
     private func gotUpgrader(upgrader: @escaping (() -> Void)) {
 
-        guard case .awaitingUpgrader = self.upgradeState else {
-            preconditionFailure("Unexpected upgrader state: \(self.upgradeState)")
-        }
-
         self.upgradeState = .upgraderReady(upgrader)
         if self.seenFirstResponse {
             // Ok, we're good to go, we can upgrade. Otherwise we're waiting for .end, which
@@ -386,30 +364,15 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
             upgrader()
         }
     }
-    
+
     private func notUpgrading(context: ChannelHandlerContext, data: HTTPClientResponsePart) {
+        
         self.upgradeState = .upgradeFailed
         
-        if !self.seenFirstResponse {
-            // We haven't seen the first response .end. That means we're not buffering anything, and we can
-            // just deliver data.
-            assert(self.receivedMessages.count == 0)
-            context.fireChannelRead(self.wrapInboundOut(data))
-        } else {
-            // We've seen the first request .end, so we now need to deliver the .head we got passed,
-            // as well as the .end we swallowed, and any buffered parts. While we're doing this
-            // we may be reentrantly called, which will cause us to buffer new parts. To make that safe, we
-            // must ensure we aren't holding the buffer mutably, so no for loop for us.
-            context.fireChannelRead(self.wrapInboundOut(data))
-            context.fireChannelRead(self.wrapInboundOut(.end(nil)))
-            
-            while self.receivedMessages.count > 0 {
-                let bufferedPart = self.receivedMessages.removeFirst()
-                context.fireChannelRead(bufferedPart)
-            }
-        }
+        assert(self.receivedMessages.count == 0)
+        context.fireChannelRead(self.wrapInboundOut(data))
         
-        // Ok, we've delivered all the parts. We can now remove ourselves, which should happen synchronously.
+        // We've delivered the data. We can now remove ourselves, which should happen synchronously.
         context.pipeline.removeHandler(context: context, promise: nil)
     }
 }
@@ -423,17 +386,14 @@ extension NIOHTTPClientUpgradeHandler {
         /// Awaiting confirmation response which will allow the upgrade to zero one or more protocols.
         case awaitingConfirmationResponse
         
-        /// The response head has been received. We're currently running the future chain awaiting an upgrader.
-        case awaitingUpgrader
+        /// The response head has been received. We have an upgrader, which means we can begin upgrade.
+        case upgraderReady(() -> Void)
         
-        /// The upgrade is in process.
+        /// The response head has been received. The upgrade is in process.
         case upgrading
         
         /// The upgrade is in process and all of the http handlers have been removed.
         case upgradingAddingHandlers
-        
-        /// We have an upgrader, which means we can begin upgrade.
-        case upgraderReady(() -> Void)
         
         /// The upgrade has succeeded, and we are being removed from the pipeline.
         case upgradeComplete
