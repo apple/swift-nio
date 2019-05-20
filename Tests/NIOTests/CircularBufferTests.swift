@@ -899,4 +899,17 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(1, buf.popLast())
         XCTAssertNil(buf.popLast())
     }
+
+    func testModify() {
+        var buf = CircularBuffer<Int>(initialCapacity: 4)
+        buf.append(contentsOf: 0..<4)
+        XCTAssertEqual(Array(0..<4), Array(buf))
+
+        let secondIndex = buf.index(after: buf.startIndex)
+        buf.modify(secondIndex) { value in
+            XCTAssertEqual(value, 1)
+            value = 5
+        }
+        XCTAssertEqual([0, 5, 2, 3], Array(buf))
+    }
 }
