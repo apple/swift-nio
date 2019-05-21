@@ -43,6 +43,9 @@ extension HTTPDecoderTest {
                 ("testExtraCarriageReturnBetweenSubsequentRequests", testExtraCarriageReturnBetweenSubsequentRequests),
                 ("testIllegalHeaderNamesCauseError", testIllegalHeaderNamesCauseError),
                 ("testNonASCIIWorksAsHeaderValue", testNonASCIIWorksAsHeaderValue),
+                ("testDoesNotDeliverLeftoversUnnecessarily", testDoesNotDeliverLeftoversUnnecessarily),
+                ("testHTTPResponseWithoutHeaders", testHTTPResponseWithoutHeaders),
+                ("testBasicVerifications", testBasicVerifications),
            ]
    }
 }

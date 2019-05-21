@@ -54,6 +54,11 @@ extension ByteToMessageDecoderTest {
                 ("testDecodeLoopStopsOnChannelInactive", testDecodeLoopStopsOnChannelInactive),
                 ("testDecodeLoopStopsOnInboundHalfClosure", testDecodeLoopStopsOnInboundHalfClosure),
                 ("testWeForwardReadEOFAndChannelInactive", testWeForwardReadEOFAndChannelInactive),
+                ("testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode", testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode),
+                ("testWeAreOkayWithReceivingDataAfterHalfClosureEOF", testWeAreOkayWithReceivingDataAfterHalfClosureEOF),
+                ("testWeAreOkayWithReceivingDataAfterFullClose", testWeAreOkayWithReceivingDataAfterFullClose),
+                ("testPayloadTooLarge", testPayloadTooLarge),
+                ("testPayloadTooLargeButHandlerOk", testPayloadTooLargeButHandlerOk),
            ]
    }
 }

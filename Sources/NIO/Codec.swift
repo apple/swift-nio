@@ -35,6 +35,13 @@ public enum ByteToMessageDecoderError: Error {
     case leftoverDataWhenDone(ByteBuffer)
 }
 
+extension ByteToMessageDecoderError {
+    // TODO: For NIO 3, make this an enum case (or whatever best way for Errors we have come up with).
+    /// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max specified.
+    public struct PayloadTooLargeError: Error {}
+}
+
+
 /// `ByteToMessageDecoder`s decode bytes in a stream-like fashion from `ByteBuffer` to another message type.
 ///
 /// To add a `ByteToMessageDecoder` to the `ChannelPipeline` use
@@ -346,6 +353,7 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     }
 
     internal private(set) var decoder: Decoder? // only `nil` if we're already decoding (ie. we're re-entered)
+    private let maximumBufferSize: Int?
     private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1) // queues writes received whilst we're already decoding (re-entrant write)
     private var state: State = .active {
         willSet {
@@ -358,8 +366,19 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     private var seenEOF: Bool = false
     private var selfAsCanDequeueWrites: CanDequeueWrites? = nil
 
-    public init(_ decoder: Decoder) {
+    /// @see: ByteToMessageHandler.init(_:maximumBufferSize)
+    public convenience init(_ decoder: Decoder) {
+        self.init(decoder, maximumBufferSize: nil)
+    }
+
+    /// Initialize a `ByteToMessageHandler`.
+    ///
+    /// - parameters:
+    ///     - decoder: The `ByteToMessageDecoder` to decode the bytes into message.
+    ///     - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
+    public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.decoder = decoder
+        self.maximumBufferSize = maximumBufferSize
     }
 
     deinit {
@@ -448,13 +467,18 @@ extension ByteToMessageHandler {
         var allowEmptyBuffer = decodeMode == .last
         while (self.state.isActive && self.removalState == .notBeingRemoved) || decodeMode == .last {
             let result = try self.withNextBuffer(allowEmptyBuffer: allowEmptyBuffer) { decoder, buffer in
+                let decoderResult: DecodingState
                 if decodeMode == .normal {
                     assert(self.state.isActive, "illegal state for normal decode: \(self.state)")
-                    return try decoder.decode(context: context, buffer: &buffer)
+                    decoderResult = try decoder.decode(context: context, buffer: &buffer)
                 } else {
                     allowEmptyBuffer = false
-                    return try decoder.decodeLast(context: context, buffer: &buffer, seenEOF: self.seenEOF)
+                    decoderResult = try decoder.decodeLast(context: context, buffer: &buffer, seenEOF: self.seenEOF)
                 }
+                if decoderResult == .needMoreData, let maximumBufferSize = self.maximumBufferSize, buffer.readableBytes > maximumBufferSize {
+                    throw ByteToMessageDecoderError.PayloadTooLargeError()
+                }
+                return decoderResult
             }
             switch result {
             case .didProcess(.continue):
@@ -523,15 +547,13 @@ extension ByteToMessageHandler: ChannelInboundHandler {
                     () // fair, all done already
                 case .leftoversNeedProcessing:
                     // seems like we received a `channelInactive` or `handlerRemoved` whilst we were processing a read
-                    defer {
-                        self.state = .done
-                    }
                     switch try self.decodeLoop(context: context, decodeMode: .last) {
                     case .didProcess:
                         () // expected and cool
                     case .cannotProcessReentrantly:
                         preconditionFailure("bug in NIO: non-reentrant decode loop couldn't run \(self), \(self.state)")
                     }
+                    self.state = .done
                 }
             case .cannotProcessReentrantly:
                 // fine, will be done later

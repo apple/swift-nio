@@ -16,52 +16,22 @@
 source defines.sh
 
 set -eu
-swift_bin=swift
+here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-cp -R "test_01_resources/template"/* "$tmp/"
-nio_root="$PWD/../.."
+all_tests=()
+for file in "$here/test_01_resources/"test_*.swift; do
+    test_name=$(basename "$file")
+    test_name=${test_name#test_*}
+    test_name=${test_name%*.swift}
+    all_tests+=( "$test_name" )
+done
 
-(
-set -eu
-cd "$tmp"
+"$here/test_01_resources/run-nio-alloc-counter-tests.sh" -t "$tmp" > "$tmp/output"
 
-function make_git_commit_all() {
-    git init
-    git config --local user.email does@really-not.matter
-    git config --local user.name 'Does Not Matter'
-    git add .
-    git commit -m 'everything'
-}
-
-cd HookedFunctions
-make_git_commit_all
-cd ..
-
-cd AtomicCounter
-make_git_commit_all
-cd ..
-
-mkdir swift-nio
-cd swift-nio
-cat > Package.swift <<"EOF"
-// swift-tools-version:4.0
-// The swift-tools-version declares the minimum version of Swift required to build this package.
-
-import PackageDescription
-
-let package = Package(name: "swift-nio")
-EOF
-make_git_commit_all
-cd ..
-
-"$swift_bin" package edit --path "$nio_root" swift-nio
-"$swift_bin" run -c release | tee "$tmp/output"
-)
-
-for test in 1000_reqs_1_conn 1_reqs_1000_conn ping_pong_1000_reqs_1_conn bytebuffer_lots_of_rw future_lots_of_callbacks; do
+for test in "${all_tests[@]}"; do
     cat "$tmp/output"  # helps debugging
-    total_allocations=$(grep "^$test.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
-    not_freed_allocations=$(grep "^$test.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
+    total_allocations=$(grep "^test_$test.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
+    not_freed_allocations=$(grep "^test_$test.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
     max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test"
 
     info "$test: allocations not freed: $not_freed_allocations"

@@ -58,8 +58,9 @@ jazzy_args=(--clean
             --author_url https://github.com/apple/swift-nio
             --github_url https://github.com/apple/swift-nio
             --theme fullwidth
+            --github-file-prefix https://github.com/apple/swift-nio/tree/$version
             --xcodebuild-arguments -scheme,swift-nio-Package)
-cat > "$module_switcher" <<EOF
+cat > "$module_switcher" <<"EOF"
 # SwiftNIO Docs
 
 SwiftNIO contains multiple modules:
@@ -69,6 +70,18 @@ EOF
 for module in "${modules[@]}"; do
   echo " - [$module](../$module/index.html)" >> "$module_switcher"
 done
+
+cat >> "$module_switcher" <<"EOF"
+
+---
+
+For the API documentation of the other repositories in the SwiftNIO family check:
+
+- [`swift-nio` API docs](https://apple.github.io/swift-nio/docs/current/NIO/index.html)
+- [`swift-nio-ssl` API docs](https://apple.github.io/swift-nio-ssl/docs/current/NIOSSL/index.html)
+- [`swift-nio-http2` API docs](https://apple.github.io/swift-nio-http2/docs/current/NIOHTTP2/index.html)
+
+EOF
 
 for module in "${modules[@]}"; do
   args=("${jazzy_args[@]}"  --output "$root_path/docs/$version/$module" --module "$module"

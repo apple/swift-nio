@@ -12,26 +12,11 @@ For macOS, download Xcode 10, beta 3 or better and you're good to go. On Linux, 
 
 ## Step 2: Update your NIO dependencies
 
-Update the NIO packages you use to include the following.
-
----
-**NOTE**
-
-At this moment, NIO 2 is still in development so if you want to depend on the NIO 2 family packages before we tagged any versions. At this moment, the correct dependencies are:
-
-The already [converged](https://forums.swift.org/t/swiftnio-2-repository-convergence-plan/21387) repositories:
-
-- `swift-nio`: `.package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0-convergence.1")`
-- `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio-extras.git", from: "1.0.0-convergence.1")`
-- `swift-nio-ssl`: `.package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.0.0-convergence.1")`
-- `swift-nio-http2`: `.package(url: "https://github.com/apple/swift-nio-http2.git", from: "1.0.0-convergence.1")`
-- `swift-nio-transport-services`: `.package(url: "https://github.com/apple/swift-nio-transport-services.git", from: "1.0.0-convergence.1")`
-
----
+Update the NIO packages you use to include the following versions.
 
 - `swift-nio`: `.package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0")`
 - `swift-nio-ssl`: `.package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.0.0")`
-- `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")`
+- `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio-extras.git", from: "1.0.0")`
 - `swift-nio-http2`: `.package(url: "https://github.com/apple/swift-nio-http2.git", from: "1.0.0")`
 - `swift-nio-transport-services`: `.package(url: "https://github.com/apple/swift-nio-transport-services.git", from: "1.0.0")`
 
@@ -77,3 +62,11 @@ NIO 2 only supports Swift 5 so after the migration you should change the first l
 ## Step 6: Watch out for more subtle changes
 
 - Make sure you close your `Channel` if there's an unhandled error. Usually, the right thing to do is to invoke `context.close(promise: nil)` when `errorCaught` is invoked on your last `ChannelHandler`. Of course, handle all the errors you know you can handle but `close` on all others. This has always been true for NIO 1 too but in NIO 2 we have removed some of the automatic `Channel` closes in the `HTTPDecoder`s and `ByteToMessageDecoder`s have been removed. Why have they been removed? So a user can opt out of the automatic closure.
+- If you have a `ByteToMessageDecoder` or a `MessageToByteEncoder`, you will now need to wrap them before adding them to the pipeline. For example:
+
+```swift
+    channel.pipeline.addHandler(ByteToMessageHandler(MyExampleDecoder())).flatMap {
+        channel.pipeline.addHandler(MessageToByteHandler(MyExampleEncoder()))
+    }
+```
+- Apart from this, most `ByteToMessageDecoder`s should continue to work. There is however one more subtle change: In SwiftNIO 1, you could (illegally) intercept arbitrary `ChannelInboundHandler` or `ChannelOutboundHandler` events in `ByteToMessageHandler`s. This did never work correctly (because the `ByteToMessageDecoder` driver would then not receive those events anymore). In SwiftNIO 2 this is fixed and you won't receive any of the standard `ChannelHandler` events in `ByteToMessageDecoder`s anymore.

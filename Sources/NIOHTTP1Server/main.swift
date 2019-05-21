@@ -333,6 +333,10 @@ private final class HTTPHandler: ChannelInboundHandler {
                 case .nonblockingFileIO:
                     var responseStarted = false
                     let response = responseHead(request: request, fileRegion: region)
+                    if region.readableBytes == 0 {
+                        responseStarted = true
+                        context.write(self.wrapOutboundOut(.head(response)), promise: nil)
+                    }
                     return self.fileIO.readChunked(fileRegion: region,
                                                    chunkSize: 32 * 1024,
                                                    allocator: context.channel.allocator,
@@ -422,7 +426,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
             var responseHead = httpResponseHead(request: request, status: HTTPResponseStatus.ok)
             self.buffer.clear()
-            self.buffer.writeString(defaultResponse)
+            self.buffer.writeString(self.defaultResponse)
             responseHead.headers.add(name: "content-length", value: "\(self.buffer!.readableBytes)")
             let response = HTTPServerResponsePart.head(responseHead)
             context.write(self.wrapOutboundOut(response), promise: nil)

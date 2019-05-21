@@ -28,6 +28,14 @@ func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) -> [NIO.NIOFileHand
     }
 }
 
+func withTemporaryDirectory<T>(_ body: (String) throws -> T) rethrows -> T {
+    let dir = createTemporaryDirectory()
+    defer {
+        try? FileManager.default.removeItem(atPath: dir)
+    }
+    return try body(dir)
+}
+
 func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.NIOFileHandle, String) throws -> T) rethrows -> T {
     let (fd, path) = openTemporaryFile()
     let fileHandle = NIOFileHandle(descriptor: fd)
@@ -70,6 +78,7 @@ var temporaryDirectory: String {
 #endif
     }
 }
+
 func createTemporaryDirectory() -> String {
     let template = "\(temporaryDirectory)/.NIOTests-temp-dir_XXXXXX"
 
@@ -240,4 +249,12 @@ func getBoolSocketOption<IntType: SignedInteger>(channel: Channel, level: IntTyp
                                                                                       name)),
                                       file: file,
                                       line: line).wait() != 0
+}
+
+func assertSuccess<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
+    guard case .success = result else { return XCTFail("Expected result to be successful", file: file, line: line) }
+}
+
+func assertFailure<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
+    guard case .failure = result else { return XCTFail("Expected result to be a failure", file: file, line: line) }
 }

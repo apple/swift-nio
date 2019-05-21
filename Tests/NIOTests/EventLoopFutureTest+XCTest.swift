@@ -64,9 +64,14 @@ extension EventLoopFutureTest {
                 ("testLoopHoppingHelperNoHopping", testLoopHoppingHelperNoHopping),
                 ("testFlatMapResultHappyPath", testFlatMapResultHappyPath),
                 ("testFlatMapResultFailurePath", testFlatMapResultFailurePath),
+                ("testWhenAllSucceedFailsImmediately", testWhenAllSucceedFailsImmediately),
+                ("testWhenAllSucceedResolvesAfterFutures", testWhenAllSucceedResolvesAfterFutures),
+                ("testWhenAllSucceedIsIndependentOfFulfillmentOrder", testWhenAllSucceedIsIndependentOfFulfillmentOrder),
                 ("testWhenAllCompleteResultsWithFailuresStillSucceed", testWhenAllCompleteResultsWithFailuresStillSucceed),
                 ("testWhenAllCompleteResults", testWhenAllCompleteResults),
                 ("testWhenAllCompleteResolvesAfterFutures", testWhenAllCompleteResolvesAfterFutures),
+                ("testAlways", testAlways),
+                ("testAlwaysWithFailingPromise", testAlwaysWithFailingPromise),
            ]
    }
 }

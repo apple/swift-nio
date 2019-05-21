@@ -20,6 +20,7 @@ needs to be listed here.
 - Andrew Edwards <andrewangeta@gmail.com>
 - Ankit Aggarwal <ankit_aggarwal@apple.com>
 - Arjun Nayini <aanayini@gmail.com>
+- Artem Redkin <aredkin@apple.com>
 - Bas Broek <bas@basbroek.nl>
 - Ben Cohen <ben_cohen@apple.com>
 - Bouke Haarsma <bouke@haarsma.eu>
@@ -40,6 +41,7 @@ needs to be listed here.
 - Helge Heß <helge@alwaysrightinstitute.com>
 - Ian Partridge <i.partridge@uk.ibm.com>
 - Ilya Puchka <ilyapuchka@gmail.com>
+- JP Simard <jp@jpsim.com>
 - Jari (LotU) <j.koopman@jarict.nl>
 - Jason Toffaletti <jtoffaletti@apple.com>
 - Jim Dovey <jimdovey@mac.com>
@@ -50,6 +52,7 @@ needs to be listed here.
 - Karim ElNaggar <karimfarid.naggar@gmail.com>
 - Kevin Clark <kevin.clark@apple.com>
 - Kevin Sweeney <kevin_sweeney@apple.com>
+- Konrad `ktoso` Malawski <ktoso@apple.com>
 - Kyle Bashour <kylebshr@me.com>
 - Kyle Jessup <kyle@perfect.org>
 - Lev Walkin <lwalkin@apple.com>

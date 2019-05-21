@@ -42,7 +42,7 @@ class HeapTests: XCTestCase {
         var maxHeap = Heap<Int>(type: .maxHeap)
         var minHeap = Heap<Int>(type: .minHeap)
 
-        var input = [16, 14, 10, 9, 8, 7, 4, 3, 2, 1]
+        let input = [16, 14, 10, 9, 8, 7, 4, 3, 2, 1]
         input.forEach {
             minHeap.append($0)
             maxHeap.append($0)
@@ -67,7 +67,7 @@ class HeapTests: XCTestCase {
         var maxHeap = Heap<Int>(type: .maxHeap)
         var minHeap = Heap<Int>(type: .minHeap)
 
-        var input = Array([16, 14, 10, 9, 8, 7, 4, 3, 2, 1].reversed())
+        let input = Array([16, 14, 10, 9, 8, 7, 4, 3, 2, 1].reversed())
         input.forEach {
             minHeap.append($0)
             maxHeap.append($0)

@@ -81,12 +81,67 @@ public final class NIOFileHandle: FileDescriptor {
 }
 
 extension NIOFileHandle {
+    /// `Mode` represents file access modes.
+    public struct Mode: OptionSet {
+        public let rawValue: UInt8
+
+        public init(rawValue: UInt8) {
+            self.rawValue = rawValue
+        }
+
+        internal var posixFlags: CInt {
+            switch self {
+            case [.read, .write]:
+                return O_RDWR
+            case .read:
+                return O_RDONLY
+            case .write:
+                return O_WRONLY
+            default:
+                preconditionFailure("Unsupported mode value")
+            }
+        }
+
+        /// Opens file for reading
+        public static let read = Mode(rawValue: 1 << 0)
+        /// Opens file for writing
+        public static let write = Mode(rawValue: 1 << 1)
+    }
+
+    /// `Flags` allows to specify additional flags to `Mode`, such as permission for file creation.
+    public struct Flags {
+        internal var posixMode: mode_t
+        internal var posixFlags: CInt
+
+        public static let `default` = Flags(posixMode: 0, posixFlags: 0)
+
+        /// Allows file creation when opening file for writing. File owner is set to the effective user ID of the process.
+        ///
+        /// - parameters:
+        ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
+        public static func allowFileCreation(posixMode: mode_t = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
+            return Flags(posixMode: posixMode, posixFlags: O_CREAT)
+        }
+
+        /// Allows the specification of POSIX flags (e.g. `O_TRUNC`) and mode (e.g. `S_IWUSR`)
+        ///
+        /// - parameters:
+        ///     - flags: The POSIX open flags (the second parameter for `open(2)`).
+        ///     - mode: The POSIX mode (the third parameter for `open(2)`).
+        /// - returns: A `NIOFileHandle.Mode` equivalent to the given POSIX flags and mode.
+        public static func posix(flags: CInt, mode: mode_t) -> Flags {
+            return Flags(posixMode: mode, posixFlags: flags)
+        }
+    }
+
     /// Open a new `NIOFileHandle`.
     ///
     /// - parameters:
-    ///     - path: the path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
-    public convenience init(path: String) throws {
-        let fd = try Posix.open(file: path, oFlag: O_RDONLY | O_CLOEXEC)
+    ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
+    ///     - mode: Access mode. Default mode is `.read`.
+    ///     - flags: Additional POSIX flags.
+    public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
+        let fd = try Posix.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
 }

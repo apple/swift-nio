@@ -278,7 +278,8 @@ extension HTTPHeaders {
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
 public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral {
-    internal var headers: [(name: String, value: String)]
+    @usableFromInline
+    internal var headers: [(String, String)]
     internal var keepAliveState: KeepAliveState = .unknown
 
     public var description: String {
@@ -289,7 +290,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
         return self.headers.map { $0.0 }
     }
 
-    internal init(_ headers: [Element], keepAliveState: KeepAliveState) {
+    internal init(_ headers: [(String, String)], keepAliveState: KeepAliveState) {
         self.headers = headers
         self.keepAliveState = keepAliveState
     }
@@ -320,17 +321,42 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// Add a header name/value pair to the block.
     ///
     /// This method is strictly additive: if there are other values for the given header name
-    /// already in the block, this will add a new entry. `add` performs case-insensitive
-    /// comparisons on the header field name.
+    /// already in the block, this will add a new entry.
     ///
     /// - Parameter name: The header field name. For maximum compatibility this should be an
     ///     ASCII string. For future-proofing with HTTP/2 lowercase header names are strongly
-    //      recommended.
+    ///     recommended.
     /// - Parameter value: The header field value to add for the given name.
     public mutating func add(name: String, value: String) {
         precondition(!name.utf8.contains(where: { !$0.isASCII }), "name must be ASCII")
         self.headers.append((name, value))
         if self.isConnectionHeader(name) {
+            self.keepAliveState = .unknown
+        }
+    }
+
+    /// Add a sequence of header name/value pairs to the block.
+    ///
+    /// This method is strictly additive: if there are other entries with the same header
+    /// name already in the block, this will add new entries.
+    ///
+    /// - Parameter contentsOf: The sequence of header name/value pairs. For maximum compatibility
+    ///     the header should be an ASCII string. For future-proofing with HTTP/2 lowercase header
+    ///     names are strongly recommended.
+    @inlinable
+    public mutating func add<S: Sequence>(contentsOf other: S) where S.Element == (String, String) {
+        self.headers.reserveCapacity(self.headers.count + other.underestimatedCount)
+        for (name, value) in other {
+            self.add(name: name, value: value)
+        }
+    }
+
+    /// Add another block of headers to the block.
+    ///
+    /// - Parameter contentsOf: The block of headers to add to these headers.
+    public mutating func add(contentsOf other: HTTPHeaders) {
+        self.headers.append(contentsOf: other.headers)
+        if other.keepAliveState == .unknown {
             self.keepAliveState = .unknown
         }
     }
@@ -452,7 +478,7 @@ extension HTTPHeaders: RandomAccessCollection {
     public typealias Element = (name: String, value: String)
     
     public struct Index: Comparable {
-        fileprivate let base: Array<HTTPHeaders>.Index
+        fileprivate let base: Array<(String, String)>.Index
         public static func < (lhs: Index, rhs: Index) -> Bool {
             return lhs.base < rhs.base
         }
@@ -1216,5 +1242,158 @@ extension HTTPResponseHead: CustomStringConvertible {
 extension HTTPVersion: CustomStringConvertible {
     public var description: String {
         return "HTTP/\(self.major).\(self.minor)"
+    }
+}
+
+extension HTTPMethod: RawRepresentable {
+    public var rawValue: String {
+        switch self {
+            case .GET:
+                return "GET"
+            case .PUT:
+                return "PUT"
+            case .ACL:
+                return "ACL"
+            case .HEAD:
+                return "HEAD"
+            case .POST:
+                return "POST"
+            case .COPY:
+                return "COPY"
+            case .LOCK:
+                return "LOCK"
+            case .MOVE:
+                return "MOVE"
+            case .BIND:
+                return "BIND"
+            case .LINK:
+                return "LINK"
+            case .PATCH:
+                return "PATCH"
+            case .TRACE:
+                return "TRACE"
+            case .MKCOL:
+                return "MKCOL"
+            case .MERGE:
+                return "MERGE"
+            case .PURGE:
+                return "PURGE"
+            case .NOTIFY:
+                return "NOTIFY"
+            case .SEARCH:
+                return "SEARCH"
+            case .UNLOCK:
+                return "UNLOCK"
+            case .REBIND:
+                return "REBIND"
+            case .UNBIND:
+                return "UNBIND"
+            case .REPORT:
+                return "REPORT"
+            case .DELETE:
+                return "DELETE"
+            case .UNLINK:
+                return "UNLINK"
+            case .CONNECT:
+                return "CONNECT"
+            case .MSEARCH:
+                return "MSEARCH"
+            case .OPTIONS:
+                return "OPTIONS"
+            case .PROPFIND:
+                return "PROPFIND"
+            case .CHECKOUT:
+                return "CHECKOUT"
+            case .PROPPATCH:
+                return "PROPPATCH"
+            case .SUBSCRIBE:
+                return "SUBSCRIBE"
+            case .MKCALENDAR:
+                return "MKCALENDAR"
+            case .MKACTIVITY:
+                return "MKACTIVITY"
+            case .UNSUBSCRIBE:
+                return "UNSUBSCRIBE"
+            case .SOURCE:
+                return "SOURCE"
+            case let .RAW(value):
+                return value
+        }
+    }
+        
+    public init(rawValue: String) {
+        switch rawValue {
+            case "GET":
+                self = .GET
+            case "PUT":
+                self = .PUT
+            case "ACL":
+                self = .ACL
+            case "HEAD":
+                self = .HEAD
+            case "POST":
+                self = .POST
+            case "COPY":
+                self = .COPY
+            case "LOCK":
+                self = .LOCK
+            case "MOVE":
+                self = .MOVE
+            case "BIND":
+                self = .BIND
+            case "LINK":
+                self = .LINK
+            case "PATCH":
+                self = .PATCH
+            case "TRACE":
+                self = .TRACE
+            case "MKCOL":
+                self = .MKCOL
+            case "MERGE":
+                self = .MERGE
+            case "PURGE":
+                self = .PURGE
+            case "NOTIFY":
+                self = .NOTIFY
+            case "SEARCH":
+                self = .SEARCH
+            case "UNLOCK":
+                self = .UNLOCK
+            case "REBIND":
+                self = .REBIND
+            case "UNBIND":
+                self = .UNBIND
+            case "REPORT":
+                self = .REPORT
+            case "DELETE":
+                self = .DELETE
+            case "UNLINK":
+                self = .UNLINK
+            case "CONNECT":
+                self = .CONNECT
+            case "MSEARCH":
+                self = .MSEARCH
+            case "OPTIONS":
+                self = .OPTIONS
+            case "PROPFIND":
+                self = .PROPFIND
+            case "CHECKOUT":
+                self = .CHECKOUT
+            case "PROPPATCH":
+                self = .PROPPATCH
+            case "SUBSCRIBE":
+                self = .SUBSCRIBE
+            case "MKCALENDAR":
+                self = .MKCALENDAR
+            case "MKACTIVITY":
+                self = .MKACTIVITY
+            case "UNSUBSCRIBE":
+                self = .UNSUBSCRIBE
+            case "SOURCE":
+                self = .SOURCE
+            default:
+                self = .RAW(value: rawValue)
+        }
+        self = .RAW(value: rawValue)
     }
 }

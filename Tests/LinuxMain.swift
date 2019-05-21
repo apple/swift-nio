@@ -26,6 +26,7 @@ import XCTest
    @testable import NIOConcurrencyHelpersTests
    @testable import NIOHTTP1Tests
    @testable import NIOTLSTests
+   @testable import NIOTestUtilsTests
    @testable import NIOTests
    @testable import NIOWebSocketTests
 
@@ -40,6 +41,7 @@ import XCTest
          testCase(ByteBufferTest.allTests),
          testCase(ByteBufferUtilsTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
+         testCase(ByteToMessageDecoderVerifierTest.allTests),
          testCase(ChannelNotificationTest.allTests),
          testCase(ChannelOptionStorageTest.allTests),
          testCase(ChannelPipelineTest.allTests),
@@ -51,6 +53,7 @@ import XCTest
          testCase(EmbeddedChannelTest.allTests),
          testCase(EmbeddedEventLoopTest.allTests),
          testCase(EndToEndTests.allTests),
+         testCase(EventCounterHandlerTest.allTests),
          testCase(EventLoopFutureTest.allTests),
          testCase(EventLoopTest.allTests),
          testCase(FileRegionTest.allTests),
@@ -63,8 +66,9 @@ import XCTest
          testCase(HTTPServerClientTest.allTests),
          testCase(HTTPServerPipelineHandlerTest.allTests),
          testCase(HTTPServerProtocolErrorHandlerTest.allTests),
+         testCase(HTTPServerUpgradeTestCase.allTests),
          testCase(HTTPTest.allTests),
-         testCase(HTTPUpgradeTestCase.allTests),
+         testCase(HTTPTypesTest.allTests),
          testCase(HappyEyeballsTest.allTests),
          testCase(HeapTests.allTests),
          testCase(IdleStateHandlerTest.allTests),
@@ -73,6 +77,7 @@ import XCTest
          testCase(MessageToByteEncoderTest.allTests),
          testCase(MulticastTest.allTests),
          testCase(NIOAnyDebugTest.allTests),
+         testCase(NIOCloseOnErrorHandlerTest.allTests),
          testCase(NIOConcurrencyHelpersTests.allTests),
          testCase(NonBlockingFileIOTest.allTests),
          testCase(PendingDatagramWritesManagerTests.allTests),
