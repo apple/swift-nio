@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E1%2E1%2Fdocsets%2FNIOHTTP1%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E2%2E0%2Fdocsets%2FNIOHTTP1%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -227,7 +227,7 @@ can be represented appropriately.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L284-L286">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L285-L287">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -257,7 +257,7 @@ can be represented appropriately.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L306-L310">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L307-L311">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -287,7 +287,7 @@ can be represented appropriately.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L316-L318">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L317-L319">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -305,7 +305,11 @@ can be represented appropriately.</p>
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        
+                        <p>Add a header name/value pair to the block.</p>
+
+<p>This method is strictly additive: if there are other values for the given header name
+already in the block, this will add a new entry.</p>
+
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
@@ -322,6 +326,20 @@ can be represented appropriately.</p>
                             <tr>
                               <td>
                                 <code>
+                                <em>name</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The header field name. For maximum compatibility this should be an
+ASCII string. For future-proofing with HTTP/2 lowercase header names are strongly
+recommended.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
                                 <em>value</em>
                                 </code>
                               </td>
@@ -335,7 +353,111 @@ can be represented appropriately.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L330-L336">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L330-L336">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP111HTTPHeadersV3add10contentsOfyx_tSTRzSS_SSt7ElementRtzlF"></a>
+                    <a name="//apple_ref/swift/Method/add(contentsOf:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP111HTTPHeadersV3add10contentsOfyx_tSTRzSS_SSt7ElementRtzlF">add(contentsOf:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Add a sequence of header name/value pairs to the block.</p>
+
+<p>This method is strictly additive: if there are other entries with the same header
+name already in the block, this will add new entries.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">add</span><span class="o">&lt;</span><span class="kt">S</span><span class="o">&gt;</span><span class="p">(</span><span class="n">contentsOf</span> <span class="nv">other</span><span class="p">:</span> <span class="kt">S</span><span class="p">)</span> <span class="k">where</span> <span class="kt">S</span> <span class="p">:</span> <span class="kt">Sequence</span><span class="p">,</span> <span class="kt">S</span><span class="o">.</span><span class="kt"><a href="../Structs/HTTPHeaders.html#/s:ST7ElementQa">Element</a></span> <span class="o">==</span> <span class="p">(</span><span class="kt">String</span><span class="p">,</span> <span class="kt">String</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>contentsOf</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The sequence of header name/value pairs. For maximum compatibility
+the header should be an ASCII string. For future-proofing with HTTP/2 lowercase header
+names are strongly recommended.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L347-L352">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP111HTTPHeadersV3add10contentsOfyAC_tF"></a>
+                    <a name="//apple_ref/swift/Method/add(contentsOf:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP111HTTPHeadersV3add10contentsOfyAC_tF">add(contentsOf:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Add another block of headers to the block.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">add</span><span class="p">(</span><span class="n">contentsOf</span> <span class="nv">other</span><span class="p">:</span> <span class="kt">HTTPHeaders</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>contentsOf</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The block of headers to add to these headers.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L357-L362">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -383,7 +505,7 @@ can be represented appropriately.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L351-L357">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L377-L383">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -434,7 +556,7 @@ can be represented appropriately.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L364-L375">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L390-L401">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -494,7 +616,7 @@ performing computation on, consider <code>getCanonicalForm</code>.</p>
                         <p>A list of the values for that header field name.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L388-L395">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L414-L421">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -524,7 +646,7 @@ performing computation on, consider <code>getCanonicalForm</code>.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L402-L409">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L428-L435">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -580,7 +702,7 @@ be split in this way.</p>
                         <p>A list of the values for that header field name.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L418-L431">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L444-L457">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -613,7 +735,7 @@ be split in this way.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -643,7 +765,7 @@ be split in this way.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L454-L459">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L480-L485">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -672,7 +794,7 @@ be split in this way.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L461-L463">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L487-L489">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -701,7 +823,7 @@ be split in this way.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L465-L467">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L491-L493">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -730,7 +852,7 @@ be split in this way.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L469-L471">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L495-L497">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -759,7 +881,7 @@ be split in this way.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L473-L475">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L499-L501">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -788,7 +910,7 @@ be split in this way.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L477-L479">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L503-L505">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -821,7 +943,7 @@ be split in this way.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.1.1/Sources/NIOHTTP1/HTTPTypes.swift#L508-L525">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L534-L551">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -834,7 +956,7 @@ be split in this way.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-05-17)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-05-22)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
