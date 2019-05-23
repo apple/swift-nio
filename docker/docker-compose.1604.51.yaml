@@ -29,6 +29,12 @@ services:
       - MAX_ALLOCS_ALLOWED_creating_10000_headers=10100
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
 
+  performance-test:
+    image: swift-nio:16.04-5.1
+
+  shell:
+    image: swift-nio:16.04-5.1
+
   echo:
     image: swift-nio:16.04-5.1
 
