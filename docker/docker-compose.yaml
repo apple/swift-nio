@@ -35,6 +35,18 @@ services:
     <<: *common
     command: /bin/bash -cl "swift test -Xswiftc -warnings-as-errors && ./scripts/integration_tests.sh"
 
+  performance-test:
+    <<: *common
+    command: /bin/bash -cl "swift build -c release && ./.build/release/NIOPerformanceTester"
+
+  # util
+
+  shell:
+    <<: *common
+    entrypoint: /bin/bash
+
+  # samples
+
   echo:
     <<: *common
     tty: true
