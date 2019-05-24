@@ -249,7 +249,9 @@ public final class ServerBootstrap {
 
         func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
             if event is ChannelShouldQuiesceEvent {
-                context.channel.close(promise: nil)
+                context.channel.close().whenFailure { error in
+                    context.fireErrorCaught(error)
+                }
             }
             context.fireUserInboundEventTriggered(event)
         }

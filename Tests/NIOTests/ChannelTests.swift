@@ -15,6 +15,7 @@
 import XCTest
 @testable import NIO
 import NIOConcurrencyHelpers
+import NIOTestUtils
 import Dispatch
 
 class ChannelLifecycleHandler: ChannelInboundHandler {
@@ -2670,6 +2671,48 @@ public final class ChannelTests: XCTestCase {
                 XCTFail("unexpected error: \(error)")
             }
         }
+    }
+
+    func testAcceptHandlerDoesNotSwallowCloseErrorsWhenQuiescing() {
+        // AcceptHandler is a `private class` so I can only implicitly get it by creating the real thing
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let counter = EventCounterHandler()
+
+        struct DummyError: Error {}
+        class MakeFirstCloseFailAndDontActuallyCloseHandler: ChannelOutboundHandler {
+            typealias OutboundIn = Any
+
+            var closes = 0
+
+            func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+                self.closes += 1
+                if self.closes == 1 {
+                    promise?.fail(DummyError())
+                } else {
+                    context.close(mode: mode, promise: promise)
+                }
+            }
+        }
+
+        let channel = try! assertNoThrowWithValue(ServerBootstrap(group: group).serverChannelInitializer { channel in
+            channel.pipeline.addHandler(MakeFirstCloseFailAndDontActuallyCloseHandler(), position: .first)
+        }.bind(host: "localhost", port: 0).wait())
+        defer {
+            XCTAssertNoThrow(try channel.close().wait())
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.addHandler(counter).wait())
+
+        XCTAssertNoThrow(try channel.eventLoop.submit {
+            // this will trigger a close (which will fail and also not actually close)
+            channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        }.wait())
+        XCTAssertEqual(["userInboundEventTriggered", "close", "errorCaught"], counter.allTriggeredEvents())
+        XCTAssertEqual(1, counter.errorCaughtCalls)
     }
 }
 
