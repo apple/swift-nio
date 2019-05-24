@@ -36,6 +36,8 @@ extension HTTPClientUpgradeTestCase {
                 ("testUpgradeResponseCanBeRejectedByClientUpgrader", testUpgradeResponseCanBeRejectedByClientUpgrader),
                 ("testUpgradeIsCaseInsensitive", testUpgradeIsCaseInsensitive),
                 ("testBuffersInboundDataDuringAddingHandlers", testBuffersInboundDataDuringAddingHandlers),
+                ("testFiresOutboundErrorDuringAddingHandlers", testFiresOutboundErrorDuringAddingHandlers),
+                ("testFiresInboundErrorBeforeSendsRequestUpgrade", testFiresInboundErrorBeforeSendsRequestUpgrade),
            ]
    }
 }
