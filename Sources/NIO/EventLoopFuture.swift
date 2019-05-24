@@ -525,7 +525,10 @@ extension EventLoopFuture {
     ///
     /// Operations performed in `map` should not block, or they will block the entire event
     /// loop. `map` is intended for use when you have a data-driven function that performs
-    /// a simple data transformation that can potentially error.
+    /// a simple data transformation that cannot error.
+    ///
+    /// If you have a data-driven function that can throw, you should use `flatMapThrowing`
+    /// instead.
     ///
     /// ```
     /// let future1 = eventually()
