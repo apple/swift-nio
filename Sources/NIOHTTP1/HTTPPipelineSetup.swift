@@ -34,6 +34,17 @@ extension ChannelPipeline {
     ///
     /// - parameters:
     ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
+    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    public func addHTTPClientHandlers(position: Position = .last,
+                                      leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void> {
+        return self.addHTTPClientHandlers(position: position,
+                                          leftOverBytesStrategy: leftOverBytesStrategy,
+                                          withClientUpgrade: nil)
+    }
+    /// Configure a `ChannelPipeline` for use as a HTTP client with a client upgrader configuration.
+    ///
+    /// - parameters:
+    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
     ///     - upgrade: Whether to add a `HTTPClientUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
     ///         provided, should be a tuple of an array of `HTTPClientProtocolUpgrader` and the upgrade
@@ -42,7 +53,7 @@ extension ChannelPipeline {
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func addHTTPClientHandlers(position: Position = .last,
                                       leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
-                                      withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration? = nil) -> EventLoopFuture<Void> {
+                                      withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration?) -> EventLoopFuture<Void> {
         
         let requestEncoder = HTTPRequestEncoder()
         let responseDecoder = HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy)

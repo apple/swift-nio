@@ -211,15 +211,10 @@ private final class SimpleUpgradedHandler: ChannelInboundHandler {
     }
 }
 
-// A HTTP handler that will send a request and then fail if it receives a response or an error.
-// It can be used when there is a successful upgrade as the handler should be removed by the upgrader.
-private final class ExplodingHTTPHandler: ChannelInboundHandler, RemovableChannelHandler {
-    fileprivate typealias InboundIn = HTTPClientResponsePart
-    fileprivate typealias OutboundOut = HTTPClientRequestPart
+extension ChannelInboundHandler where OutboundOut == HTTPClientRequestPart {
     
-    fileprivate func channelActive(context: ChannelHandlerContext) {
-
-        // We are connected. It's time to send the message to the server to initialise the upgrade dance.
+    fileprivate func fireSendRequest(context: ChannelHandlerContext) {
+        
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
@@ -236,6 +231,18 @@ private final class ExplodingHTTPHandler: ChannelInboundHandler, RemovableChanne
         context.write(self.wrapOutboundOut(body), promise: nil)
         
         context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+    }
+}
+
+// A HTTP handler that will send a request and then fail if it receives a response or an error.
+// It can be used when there is a successful upgrade as the handler should be removed by the upgrader.
+private final class ExplodingHTTPHandler: ChannelInboundHandler, RemovableChannelHandler {
+    fileprivate typealias InboundIn = HTTPClientResponsePart
+    fileprivate typealias OutboundOut = HTTPClientRequestPart
+    
+    fileprivate func channelActive(context: ChannelHandlerContext) {
+        // We are connected. It's time to send the message to the server to initialise the upgrade dance.
+        self.fireSendRequest(context: context)
     }
 
     fileprivate func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -258,24 +265,8 @@ private final class RecordingHTTPHandler: ChannelInboundHandler, RemovableChanne
     fileprivate var errorCaughtChannelHandlerLatestError: Error?
     
     fileprivate func channelActive(context: ChannelHandlerContext) {
-        
         // We are connected. It's time to send the message to the server to initialise the upgrade dance.
-        var headers = HTTPHeaders()
-        headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
-        headers.add(name: "Content-Length", value: "\(0)")
-        
-        let requestHead = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
-                                          method: .GET,
-                                          uri: "/",
-                                          headers: headers)
-        
-        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
-        
-        let emptyBuffer = context.channel.allocator.buffer(capacity: 0)
-        let body = HTTPClientRequestPart.body(.byteBuffer(emptyBuffer))
-        context.write(self.wrapOutboundOut(body), promise: nil)
-        
-        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+        self.fireSendRequest(context: context)
     }
     
     fileprivate func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -334,7 +325,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
         XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
         
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+        clientChannel.embeddedEventLoop.run()
 
         // Once upgraded, validate the pipeline has been removed.
         XCTAssertNoThrow(try clientChannel.pipeline
@@ -436,7 +427,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
         
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+        clientChannel.embeddedEventLoop.run()
         
         // Should just upgrade to the accepted protocol, the other protocol uses an exploding upgrader.
         XCTAssertEqual(1, clientUpgrader.addCustomUpgradeRequestHeadersCallCount)
@@ -472,7 +463,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let response = "HTTP/1.1 200 OK\r\n\r\n"
         XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
         
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+        clientChannel.embeddedEventLoop.run()
         
         // Check that the http elements are not removed from the pipeline.
         XCTAssertNoThrow(try clientChannel.pipeline
@@ -512,7 +503,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let response = "HTTP/1.1 404 Not Found\r\n\r\n"
         XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
         
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+        clientChannel.embeddedEventLoop.run()
         
         // Should fail with error (response is malformed) and remove upgrader from pipeline.
         
@@ -555,7 +546,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\n\r\n"
         XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
         
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+        clientChannel.embeddedEventLoop.run()
         
         // Should fail with error (response is malformed) and remove upgrader from pipeline.
         
@@ -600,7 +591,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: unknownProtocol\r\n\r\n"
         XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
         
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+        clientChannel.embeddedEventLoop.run()
         
         // Should fail with error (response is malformed) and remove upgrader from pipeline.
         
@@ -646,8 +637,8 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
         XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
-        
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+
+        clientChannel.embeddedEventLoop.run()
         
         // Should fail with error (response is denied) and remove upgrader from pipeline.
         
@@ -667,7 +658,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
             
         let reportedError = clientHandler.errorCaughtChannelHandlerLatestError! as! NIOHTTPClientUpgradeError
         XCTAssertEqual(NIOHTTPClientUpgradeError.upgraderDeniedUpgrade, reportedError)
-            
         XCTAssertFalse(upgradeHandlerCallbackFired)
         
         XCTAssertNoThrow(try clientChannel.pipeline
@@ -695,7 +685,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let response = "HTTP/1.1 101 Switching Protocols\r\nCoNnEcTiOn: uPgRaDe\r\nuPgRaDe: \(upgradeProtocol)\r\n\r\n"
         XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
         
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+        clientChannel.embeddedEventLoop.run()
         
         // Should fail with error (response is denied) and remove upgrader from pipeline.
         
@@ -740,7 +730,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
         
         // Run the processing of the response, but with the upgrade delayed by the client upgrader.
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+        clientChannel.embeddedEventLoop.run()
         
         // Sanity check that the upgrade was delayed.
         XCTAssertEqual(0, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
@@ -751,7 +741,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         // Upgrade now.
         clientUpgrader.unblockUpgrade()
-        (clientChannel.eventLoop as! EmbeddedEventLoop).run()
+        clientChannel.embeddedEventLoop.run()
         
         // Check that the http elements are removed from the pipeline.
         XCTAssertNoThrow(try clientChannel.pipeline
@@ -770,5 +760,90 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         // Close the pipeline.
         XCTAssertNoThrow(try clientChannel.close().wait())
+    }
+    
+    func testFiresOutboundErrorDuringAddingHandlers() throws {
+        
+        let upgradeProtocol = "myProto"
+        var errorOnAdditionalChannelWrite: Error?
+        var upgradeHandlerCallbackFired = false
+        
+        let clientUpgrader = UpgradeDelayClientUpgrader(forProtocol: upgradeProtocol)
+        let clientHandler = RecordingHTTPHandler()
+        
+        let clientChannel = try setUpClientChannel(clientHTTPHandler: clientHandler,
+                                                   clientUpgraders: [clientUpgrader]) { (context) in
+                                                    
+                                                    // This is called before the upgrader gets called.
+                                                    upgradeHandlerCallbackFired = true
+        }
+        
+        // Push the successful server response.
+        let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
+        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        
+        let promise = clientChannel.eventLoop.makePromise(of: Void.self)
+        
+        promise.futureResult.whenFailure() { error in
+            errorOnAdditionalChannelWrite = error
+        }
+
+        // Send another outbound request during the upgrade.
+        let requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/")
+        let secondRequest: HTTPClientRequestPart = .head(requestHead)
+        clientChannel.writeAndFlush(secondRequest, promise: promise)
+        
+        clientChannel.embeddedEventLoop.run()
+
+        let reportedError = clientHandler.errorCaughtChannelHandlerLatestError! as! NIOHTTPClientUpgradeError
+        XCTAssertEqual(NIOHTTPClientUpgradeError.writingToHandlerDuringUpgrade, reportedError)
+
+        let promiseError = errorOnAdditionalChannelWrite as! NIOHTTPClientUpgradeError
+        XCTAssertEqual(NIOHTTPClientUpgradeError.writingToHandlerDuringUpgrade, promiseError)
+        
+        // Sanity check that the upgrade was delayed.
+        XCTAssertEqual(0, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
+        
+        // Upgrade now.
+        clientUpgrader.unblockUpgrade()
+        clientChannel.embeddedEventLoop.run()
+
+        // Check that the upgrade was still successful, despite the interruption.
+        XCTAssert(upgradeHandlerCallbackFired)
+        XCTAssertEqual(1, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
+        
+        // Close the pipeline.
+        XCTAssertNoThrow(try clientChannel.close().wait())
+    }
+    
+    func testFiresInboundErrorBeforeSendsRequestUpgrade() throws {
+        
+        let upgradeProtocol = "myProto"
+        
+        let clientUpgrader = SuccessfulClientUpgrader(forProtocol: upgradeProtocol)
+        let clientHandler = RecordingHTTPHandler()
+        
+        let clientChannel = EmbeddedChannel()
+        
+        let upgrader = NIOHTTPClientUpgradeHandler(upgraders: [clientUpgrader],
+                                                   httpHandlers: [clientHandler],
+                                                   upgradeCompletionHandler: { context in
+        })
+        
+        try clientChannel.pipeline.addHandler(upgrader).wait()
+        
+        try clientChannel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)).wait()
+        
+        let headers = HTTPHeaders([("Connection", "upgrade"),
+                                   ("Upgrade", "\(upgradeProtocol)")])
+        let head = HTTPResponseHead(version: .init(major: 1, minor: 1),
+                                    status: .switchingProtocols,
+                                    headers: headers)
+        let response = HTTPClientResponsePart.head(head)
+        
+        XCTAssertThrowsError(try clientChannel.writeInbound(response)) { error in
+            let reportedError = error as! NIOHTTPClientUpgradeError
+            XCTAssertEqual(NIOHTTPClientUpgradeError.receivedResponseBeforeRequestSent, reportedError)
+        }
     }
 }
