@@ -87,11 +87,10 @@ extension ChannelPipeline {
     ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
-    ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
-    ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
-    ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
-    ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
-    ///         details.
+    ///     - upgrade: Add a `HTTPServerUpgradeHandler` to the pipeline, configured for an
+    ///         HTTP upgrade. Should be a tuple of an array of `HTTPServerProtocolUpgrader` and
+    ///         the upgrade completion handler. See the documentation on `HTTPServerUpgradeHandler`
+    ///         for more details.
     ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
