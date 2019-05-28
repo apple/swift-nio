@@ -45,11 +45,10 @@ extension ChannelPipeline {
     ///
     /// - parameters:
     ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
-    ///     - upgrade: Whether to add a `HTTPClientUpgradeHandler` to the pipeline, configured for
-    ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
-    ///         provided, should be a tuple of an array of `HTTPClientProtocolUpgrader` and the upgrade
-    ///         completion handler. See the documentation on `HTTPClientUpgradeHandler` for more
-    ///         details.
+    ///     - upgrade: Add a `HTTPClientUpgradeHandler` to the pipeline, configured for
+    ///         HTTP upgrade. Should be a tuple of an array of `HTTPClientProtocolUpgrader` and
+    ///         the upgrade completion handler. See the documentation on `HTTPClientUpgradeHandler`
+    ///         for more details.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func addHTTPClientHandlers(position: Position = .last,
                                       leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
@@ -87,10 +86,11 @@ extension ChannelPipeline {
     ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
-    ///     - upgrade: Add a `HTTPServerUpgradeHandler` to the pipeline, configured for an
-    ///         HTTP upgrade. Should be a tuple of an array of `HTTPServerProtocolUpgrader` and
-    ///         the upgrade completion handler. See the documentation on `HTTPServerUpgradeHandler`
-    ///         for more details.
+    ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
+    ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
+    ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
+    ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
+    ///         details.
     ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
