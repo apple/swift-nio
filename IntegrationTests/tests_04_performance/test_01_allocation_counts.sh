@@ -39,7 +39,6 @@ for test in "${all_tests[@]}"; do
 
     assert_less_than "$not_freed_allocations" 5     # allow some slack
     assert_greater_than "$not_freed_allocations" -5 # allow some slack
-    assert_greater_than "$total_allocations" 1000
     if [[ -z "${!max_allowed_env_name+x}" ]]; then
         if [[ -z "${!max_allowed_env_name+x}" ]]; then
             warn "no reference number of allocations set (set to \$$max_allowed_env_name)"

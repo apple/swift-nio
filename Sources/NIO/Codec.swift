@@ -44,13 +44,68 @@ extension ByteToMessageDecoderError {
 
 /// `ByteToMessageDecoder`s decode bytes in a stream-like fashion from `ByteBuffer` to another message type.
 ///
-/// To add a `ByteToMessageDecoder` to the `ChannelPipeline` use
+/// ### Purpose
 ///
-///     channel.pipeline.addHandler(ByteToMessageHandler(MyByteToMessageDecoder()))
+/// A `ByteToMessageDecoder` provides a simplified API for handling streams of incoming data that can be broken
+/// up into messages. This API boils down to two methods: `decode`, and `decodeLast`. These two methods, when
+/// implemented, will be used by a `ByteToMessageHandler` paired with a `ByteToMessageDecoder` to decode the
+/// incoming byte stream into a sequence of messages.
 ///
-/// `ByteToMessageHandler` will turn your `ByteToMessageDecoder` into a `ChannelInboundHandler`. `ByteToMessageHandler`
-/// also solves a couple of tricky issues for you, most importantly, in a `ByteToMessageDecoder` you do _not_ need to
-/// worry about re-entrancy. You own the passed-in `ByteBuffer` for the duration of the `decode`/`decodeLast` call an
+/// The reason this helper exists is to smooth away some of the boilerplate and edge case handling code that
+/// is often necessary when implementing parsers in a SwiftNIO `ChannelPipeline`. A `ByteToMessageDecoder`
+/// never needs to worry about how inbound bytes will be buffered, as `ByteToMessageHandler` deals with that
+/// automatically. A `ByteToMessageDecoder` also never needs to worry about memory exclusivity violations
+/// that can occur when re-entrant `ChannelPipeline` operations occur, as `ByteToMessageHandler` will deal with
+/// those as well.
+///
+/// ### Implementing ByteToMessageDecoder
+///
+/// A type that implements `ByteToMessageDecoder` must implement two methods: `decode` and `decodeLast`.
+///
+/// `decode` is the main decoding method, and is the one that will be called most often. `decode` is invoked
+/// whenever data is received by the wrapping `ByteToMessageHandler`. It is invoked with a `ByteBuffer` containing
+/// all the received data (including any data previously buffered), as well as a `ChannelHandlerContext` that can be
+/// used in the `decode` function.
+///
+/// `decode` is called in a loop by the `ByteToMessageHandler`. This loop continues until one of two cases occurs:
+///
+/// 1. The input `ByteBuffer` has no more readable bytes (i.e. `.readableBytes == 0`); OR
+/// 2. The `decode` method returns `.needMoreData`.
+///
+/// The reason this method is invoked in a loop is to ensure that the stream-like properties of inbound data are
+/// respected. It is entirely possible for `ByteToMessageDecoder` to receive either fewer bytes than a single message,
+/// or multiple messages in one go. Rather than have the `ByteToMessageDecoder` handle all of the complexity of this,
+/// the logic can be boiled down to a single choice: has the `ByteToMessageDecoder` been able to move the state forward
+/// or not? If it has, rather than containing an internal loop it may simply return `.continue` in order to request that
+/// `decode` be invoked again immediately. If it has not, it can return `.needMoreData` to ask to be left alone until more
+/// data has been returned from the network.
+///
+/// Essentially, if the next parsing step could not be taken because there wasn't enough data available, return `.needMoreData`.
+/// Otherwise, return `.continue`. This will allow a `ByteToMessageDecoder` implementation to ignore the awkward way data
+/// arrives from the network, and to just treat it as a series of `decode` calls.
+///
+/// `decodeLast` is a cousin of `decode`. It is also called in a loop, but unlike with `decode` this loop will only ever
+/// occur once: when the `ChannelHandlerContext` belonging to this `ByteToMessageDecoder` is about to become invalidated.
+/// This invalidation happens in two situations: when EOF is received from the network, or when the `ByteToMessageDecoder`
+/// is being removed from the `ChannelPipeline`. The distinction between these two states is captured by the value of
+/// `seenEOF`.
+///
+/// In this condition, the `ByteToMessageDecoder` must now produce any final messages it can with the bytes it has
+/// available. In protocols where EOF is used as a message delimiter, having `decodeLast` called with `seenEOF == true`
+/// may produce further messages. In other cases, `decodeLast` may choose to deliver any buffered bytes as "leftovers",
+/// either in error messages or via `channelRead`. This can occur if, for example, a protocol upgrade is occurring.
+///
+/// As with `decode`, `decodeLast` is invoked in a loop. This allows the same simplification as `decode` allows: when
+/// a message is completely parsed, the `decodeLast` function can return `.continue` and be re-invoked from the top,
+/// rather than containing an internal loop.
+///
+/// Note that the value of `seenEOF` may change between calls to `decodeLast` in some rare situations.
+///
+/// ### Implementers Notes
+///
+/// /// `ByteToMessageHandler` will turn your `ByteToMessageDecoder` into a `ChannelInboundHandler`. `ByteToMessageHandler`
+/// also solves a couple of tricky issues for you. Most importantly, in a `ByteToMessageDecoder` you do _not_ need to
+/// worry about re-entrancy. Your code owns the passed-in `ByteBuffer` for the duration of the `decode`/`decodeLast` call and
 /// can modify it at will.
 ///
 /// If a custom frame decoder is required, then one needs to be careful when implementing
@@ -59,7 +114,7 @@ extension ByteToMessageDecoderError {
 /// for a complete frame, return without modifying the reader index to allow more bytes to arrive.
 ///
 /// To check for complete frames without modifying the reader index, use methods like `buffer.getInteger`.
-/// One _MUST_ use the reader index when using methods like `buffer.getInteger`.
+/// You  _MUST_ use the reader index when using methods like `buffer.getInteger`.
 /// For example calling `buffer.getInteger(at: 0)` is assuming the frame starts at the beginning of the buffer, which
 /// is not always the case. Use `buffer.getInteger(at: buffer.readerIndex)` instead.
 ///
@@ -71,35 +126,52 @@ extension ByteToMessageDecoderError {
 /// The `ByteBuffer` passed in as `buffer` is a slice of a larger buffer owned by the `ByteToMessageDecoder`
 /// implementation. Some aspects of this buffer are preserved across calls to `decode`, meaning that any changes to
 /// those properties you make in your `decode` method will be reflected in the next call to decode. In particular,
-/// the following operations are have the described effects:
-///
-/// Moving the reader index forward persists across calls. When your method returns, if the reader index has advanced,
+/// moving the reader index forward persists across calls. When your method returns, if the reader index has advanced,
 /// those bytes are considered "consumed" and will not be available in future calls to `decode`.
 /// Please note, however, that the numerical value of the `readerIndex` itself is not preserved, and may not be the same
 /// from one call to the next. Please do not rely on this numerical value: if you need
 /// to recall where a byte is relative to the `readerIndex`, use an offset rather than an absolute value.
+///
+/// ### Using ByteToMessageDecoder
+///
+/// To add a `ByteToMessageDecoder` to the `ChannelPipeline` use
+///
+///     channel.pipeline.addHandler(ByteToMessageHandler(MyByteToMessageDecoder()))
+///
 public protocol ByteToMessageDecoder {
     /// The type of the messages this `ByteToMessageDecoder` decodes to.
     associatedtype InboundOut
 
-    /// Decode from a `ByteBuffer`. This method will be called till either the input
-    /// `ByteBuffer` has nothing to read left or `DecodingState.needMoreData` is returned.
+    /// Decode from a `ByteBuffer`.
+    ///
+    /// This method will be called in a loop until either the input `ByteBuffer` has nothing to read left or
+    /// `DecodingState.needMoreData` is returned. If `DecodingState.continue` is returned and the `ByteBuffer`
+    /// contains more readable bytes, this method will immediately be invoked again, unless `decodeLast` needs
+    /// to be invoked instead.
     ///
     /// - parameters:
     ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     ///     - buffer: The `ByteBuffer` from which we decode.
     /// - returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
-    //             again once more data is present in the `ByteBuffer`.
+    ///            again once more data is present in the `ByteBuffer`.
     mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState
 
-    /// This method is called once, when the `ChannelHandlerContext` goes inactive (i.e. when `channelInactive` is fired)
+    /// Decode from a `ByteBuffer` when no more data is incoming and the `ByteToMessageDecoder` is about to leave
+    /// the pipeline.
+    ///
+    /// This method is called in a loop only once, when the `ChannelHandlerContext` goes inactive (i.e. when `channelInactive` is fired or
+    /// the `ByteToMessageDecoder` is removed from the pipeline).
+    ///
+    /// Like with `decode`, this method will be called in a loop until either `DecodingState.needMoreData` is returned from the method
+    /// or until the input `ByteBuffer` has no more readable bytes. If `DecodingState.continue` is returned and the `ByteBuffer`
+    /// contains more readable bytes, this method will immediately be invoked again.
     ///
     /// - parameters:
     ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     ///     - buffer: The `ByteBuffer` from which we decode.
     ///     - seenEOF: `true` if EOF has been seen. Usually if this is `false` the handler has been removed.
     /// - returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
-    //             again when more data is present in the `ByteBuffer`.
+    ///            again when more data is present in the `ByteBuffer`.
     mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws  -> DecodingState
 
     /// Called once this `ByteToMessageDecoder` is removed from the `ChannelPipeline`.
