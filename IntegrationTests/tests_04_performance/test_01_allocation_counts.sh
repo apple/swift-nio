@@ -46,6 +46,8 @@ for test in "${all_tests[@]}"; do
             warn "    export $max_allowed_env_name=$total_allocations"
         fi
     else
-        assert_less_than_or_equal "$total_allocations" "${!max_allowed_env_name}"
+        max_allowed=${!max_allowed_env_name}
+        assert_less_than_or_equal "$total_allocations" "$max_allowed"
+        assert_greater_than "$total_allocations" "$(( max_allowed - 1000))"
     fi
 done
