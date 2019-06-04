@@ -469,7 +469,7 @@ final class Selector<R: Registration> {
         }
     }
 
-    /// Apply the given `SelectorStrategy` and execute `fn` once it's complete (which may produce `SelectorEvent`s to handle).
+    /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///
     /// - parameters:
     ///     - strategy: The `SelectorStrategy` to apply
