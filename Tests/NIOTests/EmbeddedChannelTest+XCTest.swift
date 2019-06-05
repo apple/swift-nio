@@ -43,6 +43,7 @@ extension EmbeddedChannelTest {
                 ("testSetLocalAddressAfterSuccessfulBind", testSetLocalAddressAfterSuccessfulBind),
                 ("testSetRemoteAddressAfterSuccessfulConnect", testSetRemoteAddressAfterSuccessfulConnect),
                 ("testUnprocessedOutboundUserEventFailsOnEmbeddedChannel", testUnprocessedOutboundUserEventFailsOnEmbeddedChannel),
+                ("testEmbeddedChannelWritabilityIsWritable", testEmbeddedChannelWritabilityIsWritable),
            ]
    }
 }

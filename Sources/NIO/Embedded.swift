@@ -395,9 +395,7 @@ public final class EmbeddedChannel: Channel {
     }
 
     /// - see: `Channel.isWritable`
-    public var isWritable: Bool {
-        return true
-    }
+    public var isWritable: Bool = true
 
     /// Synchronously closes the `EmbeddedChannel`.
     ///

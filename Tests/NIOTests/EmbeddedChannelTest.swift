@@ -324,4 +324,15 @@ class EmbeddedChannelTest: XCTestCase {
             }
         }
     }
+
+    func testEmbeddedChannelWritabilityIsWritable() {
+        let channel = EmbeddedChannel()
+        let opaqueChannel: Channel = channel
+        XCTAssertTrue(channel.isWritable)
+        XCTAssertTrue(opaqueChannel.isWritable)
+        channel.isWritable = false
+        XCTAssertFalse(channel.isWritable)
+        XCTAssertFalse(opaqueChannel.isWritable)
+    }
+
 }
