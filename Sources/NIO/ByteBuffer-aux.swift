@@ -216,7 +216,7 @@ extension ByteBuffer {
     // MARK: Other APIs
 
     /// Yields an immutable buffer pointer containing this `ByteBuffer`'s readable bytes. Will move the reader index
-    /// by the number of bytes returned by `fn`.
+    /// by the number of bytes returned by `body`.
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
@@ -232,13 +232,13 @@ extension ByteBuffer {
     }
 
     /// Yields an immutable buffer pointer containing this `ByteBuffer`'s readable bytes. Will move the reader index
-    /// by the number of bytes `fn` returns in the first tuple component.
+    /// by the number of bytes `body` returns in the first tuple component.
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
-    /// - returns: The value `fn` returned in the second tuple component.
+    /// - returns: The value `body` returned in the second tuple component.
     @inlinable
     public mutating func readWithUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeReadableBytes(body)
@@ -247,7 +247,7 @@ extension ByteBuffer {
     }
 
     /// Yields a mutable buffer pointer containing this `ByteBuffer`'s readable bytes. You may modify the yielded bytes.
-    /// Will move the reader index by the number of bytes returned by `fn` but leave writer index as it was.
+    /// Will move the reader index by the number of bytes returned by `body` but leave writer index as it was.
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
@@ -263,13 +263,13 @@ extension ByteBuffer {
     }
 
     /// Yields a mutable buffer pointer containing this `ByteBuffer`'s readable bytes. You may modify the yielded bytes.
-    /// Will move the reader index by the number of bytes `fn` returns in the first tuple component but leave writer index as it was.
+    /// Will move the reader index by the number of bytes `body` returns in the first tuple component but leave writer index as it was.
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
-    /// - returns: The value `fn` returned in the second tuple component.
+    /// - returns: The value `body` returned in the second tuple component.
     @inlinable
     public mutating func readWithUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(body)

@@ -54,7 +54,7 @@ final class NIOThread {
     ///
     /// - parameters:
     ///     - body: The closure that will accept the `pthread_t`.
-    /// - returns: The value returned by `fn`.
+    /// - returns: The value returned by `body`.
     func withUnsafePthread<T>(_ body: (pthread_t) throws -> T) rethrows -> T {
         return try body(self.pthread)
     }

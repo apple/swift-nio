@@ -287,4 +287,3 @@ for f in "${files[@]}"; do
     swift run "${build_opts[@]}" "$(module_name_from_path "$f")"
 done
 )
-rm -rf "$working_dir"
