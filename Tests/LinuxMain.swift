@@ -54,6 +54,7 @@ import XCTest
          testCase(EmbeddedEventLoopTest.allTests),
          testCase(EndToEndTests.allTests),
          testCase(EventCounterHandlerTest.allTests),
+         testCase(EventLoopFutureCombineTests.allTests),
          testCase(EventLoopFutureTest.allTests),
          testCase(EventLoopTest.allTests),
          testCase(FileRegionTest.allTests),
