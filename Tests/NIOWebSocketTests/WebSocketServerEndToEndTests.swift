@@ -113,7 +113,7 @@ private class WebSocketRecorderHandler: ChannelInboundHandler {
     }
 }
 
-class EndToEndTests: XCTestCase {
+class WebSocketServerEndToEndTests: XCTestCase {
     func createTestFixtures(upgraders: [NIOWebSocketServerUpgrader]) -> (loop: EmbeddedEventLoop, serverChannel: EmbeddedChannel, clientChannel: EmbeddedChannel) {
         let loop = EmbeddedEventLoop()
         let serverChannel = EmbeddedChannel(loop: loop)
