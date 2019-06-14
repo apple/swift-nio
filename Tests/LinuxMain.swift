@@ -52,7 +52,6 @@ import XCTest
          testCase(EchoServerClientTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
          testCase(EmbeddedEventLoopTest.allTests),
-         testCase(EndToEndTests.allTests),
          testCase(EventCounterHandlerTest.allTests),
          testCase(EventLoopFutureTest.allTests),
          testCase(EventLoopTest.allTests),
@@ -94,5 +93,6 @@ import XCTest
          testCase(UtilitiesTest.allTests),
          testCase(WebSocketFrameDecoderTest.allTests),
          testCase(WebSocketFrameEncoderTest.allTests),
+         testCase(WebSocketServerEndToEndTests.allTests),
     ])
 #endif
