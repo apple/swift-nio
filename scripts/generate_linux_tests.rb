@@ -36,7 +36,7 @@ def header(fileName)
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-<Date> Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -59,7 +59,7 @@ import XCTest
 
   string
     .sub('<FileName>', File.basename(fileName))
-    .sub('<Date>', Time.now.to_s)
+    .sub('<Date>', Time.now.year.to_s)
 end
 
 def createExtensionFile(fileName, classes)
