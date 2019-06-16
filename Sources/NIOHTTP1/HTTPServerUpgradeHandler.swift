@@ -29,7 +29,7 @@ public enum HTTPServerUpgradeEvents {
 
 
 /// An object that implements `HTTPServerProtocolUpgrader` knows how to handle HTTP upgrade to
-/// a protocol.
+/// a protocol on a server-side channel.
 public protocol HTTPServerProtocolUpgrader {
     /// The protocol this upgrader knows how to support.
     var supportedProtocol: String { get }
