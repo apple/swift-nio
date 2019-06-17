@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -132,7 +132,7 @@ private func sanitizeTransportHeaders(hasBody: HTTPMethod.HasBody, headers: inou
 ///
 /// This channel handler is used to translate messages from a series of
 /// `HTTPClientRequestPart` into the HTTP/1.1 wire format.
-public final class HTTPRequestEncoder: ChannelOutboundHandler {
+public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelHandler {
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = IOData
 

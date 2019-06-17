@@ -215,7 +215,7 @@ let bootstrap = ServerBootstrap(group: group)
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
         let httpHandler = HTTPHandler()
-        let config: HTTPUpgradeConfiguration = (
+        let config: NIOHTTPServerUpgradeConfiguration = (
                         upgraders: [ upgrader ],
                         completionHandler: { _ in
                             channel.pipeline.removeHandler(httpHandler, promise: nil)
