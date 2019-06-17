@@ -18,7 +18,7 @@ import NIOHTTP1
 @testable import NIOWebSocket
 
 extension EmbeddedChannel {
-    fileprivate func readAllInboundBuffers() throws -> ByteBuffer {
+    func readAllInboundBuffers() throws -> ByteBuffer {
         var buffer = self.allocator.buffer(capacity: 100)
         while var writtenData: ByteBuffer = try self.readInbound() {
             buffer.writeBuffer(&writtenData)
@@ -27,7 +27,7 @@ extension EmbeddedChannel {
         return buffer
     }
 
-    fileprivate func finishAcceptingAlreadyClosed() throws {
+    func finishAcceptingAlreadyClosed() throws {
         do {
             let result = try self.finish().isClean
             XCTAssertTrue(result)
@@ -38,13 +38,13 @@ extension EmbeddedChannel {
 }
 
 extension ByteBuffer {
-    fileprivate func allAsString() -> String {
+    func allAsString() -> String {
         return self.getString(at: self.readerIndex, length: self.readableBytes)!
     }
 }
 
 extension EmbeddedChannel {
-    fileprivate func writeString(_ string: String) -> EventLoopFuture<Void> {
+    func writeString(_ string: String) -> EventLoopFuture<Void> {
         var buffer = self.allocator.buffer(capacity: string.utf8.count)
         buffer.writeString(string)
         return self.writeAndFlush(buffer)
