@@ -548,7 +548,7 @@ public final class SocketChannelTest : XCTestCase {
         XCTAssertNoThrow(try socket.withUnsafeFileDescriptor { fd in
             var flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
             XCTAssertEqual(0, flags & O_NONBLOCK)
-            let ret = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_SETFL, value: O_NONBLOCK))
+            let ret = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_SETFL, value: flags | O_NONBLOCK))
             XCTAssertEqual(0, ret)
             flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
             XCTAssertEqual(O_NONBLOCK, flags & O_NONBLOCK)
@@ -646,5 +646,37 @@ public final class SocketChannelTest : XCTestCase {
                 XCTFail("unexpected error: \(error)")
             }
         }
+    }
+
+    func testSetSockOptDoesNotOverrideExistingFlags() throws {
+        let s = try assertNoThrowWithValue(Socket(protocolFamily: PF_INET,
+                                                  type: Posix.SOCK_STREAM,
+                                                  setNonBlocking: false))
+        // check initial flags
+        XCTAssertNoThrow(try s.withUnsafeFileDescriptor { fd in
+            let flags = try Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0)
+            XCTAssertEqual(0, flags & O_NONBLOCK)
+        })
+
+        // set other random flag
+        XCTAssertNoThrow(try s.withUnsafeFileDescriptor { fd in
+            let oldFlags = try Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0)
+            let ret = try Posix.fcntl(descriptor: fd, command: F_SETFL, value: oldFlags | O_ASYNC)
+            XCTAssertEqual(0, ret)
+            let newFlags = try Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0)
+            XCTAssertEqual(O_ASYNC, newFlags & O_ASYNC)
+        })
+
+        // enable non-blocking
+        XCTAssertNoThrow(try s.setNonBlocking())
+
+        // check both are enabled
+        XCTAssertNoThrow(try s.withUnsafeFileDescriptor { fd in
+            let flags = try Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0)
+            XCTAssertEqual(O_ASYNC, flags & O_ASYNC)
+            XCTAssertEqual(O_NONBLOCK, flags & O_NONBLOCK)
+        })
+
+        XCTAssertNoThrow(try s.close())
     }
 }
