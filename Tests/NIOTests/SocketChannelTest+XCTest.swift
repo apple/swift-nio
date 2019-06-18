@@ -48,6 +48,7 @@ extension SocketChannelTest {
                 ("testInstantTCPConnectionResetThrowsError", testInstantTCPConnectionResetThrowsError),
                 ("testUnprocessedOutboundUserEventFailsOnServerSocketChannel", testUnprocessedOutboundUserEventFailsOnServerSocketChannel),
                 ("testUnprocessedOutboundUserEventFailsOnSocketChannel", testUnprocessedOutboundUserEventFailsOnSocketChannel),
+                ("testSetSockOptDoesNotOverrideExistingFlags", testSetSockOptDoesNotOverrideExistingFlags),
            ]
    }
 }
