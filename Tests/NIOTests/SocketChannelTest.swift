@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 import XCTest
 @testable import NIO
+import NIOTestUtils
 import NIOConcurrencyHelpers
 
 private extension Array {
@@ -678,5 +679,70 @@ public final class SocketChannelTest : XCTestCase {
         })
 
         XCTAssertNoThrow(try s.close())
+    }
+
+    func testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL() throws {
+        // regression test for https://github.com/apple/swift-nio/issues/1030
+        class HandsOutMoodySocketsServerSocket: ServerSocket {
+            let shouldAcceptsFail: Atomic<Bool> = .init(value: true)
+            override func accept(setNonBlocking: Bool = false) throws -> Socket? {
+                XCTAssertTrue(setNonBlocking)
+                if self.shouldAcceptsFail.load() {
+                    throw NIOFailedToSetSocketNonBlockingError()
+                } else {
+                    return try Socket(protocolFamily: PF_INET,
+                                      type: Posix.SOCK_STREAM,
+                                      setNonBlocking: false)
+                }
+            }
+        }
+
+        class CloseAcceptedSocketsHandler: ChannelInboundHandler {
+            typealias InboundIn = Channel
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                self.unwrapInboundIn(data).close(promise: nil)
+            }
+
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
+                XCTAssert(error is NIOFailedToSetSocketNonBlockingError, "unexpected error: \(error)")
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverSock = try assertNoThrowWithValue(HandsOutMoodySocketsServerSocket(protocolFamily: PF_INET,
+                                                                                     setNonBlocking: true))
+        let serverChan = try assertNoThrowWithValue(ServerSocketChannel(serverSocket: serverSock,
+                                                                        eventLoop: group.next() as! SelectableEventLoop,
+                                                                        group: group))
+        XCTAssertNoThrow(try serverChan.setOption(ChannelOptions.maxMessagesPerRead, value: 1).wait())
+        XCTAssertNoThrow(try serverChan.setOption(ChannelOptions.autoRead, value: false).wait())
+        XCTAssertNoThrow(try serverChan.register().wait())
+        XCTAssertNoThrow(try serverChan.bind(to: .init(ipAddress: "127.0.0.1", port: 0)).wait())
+
+        let eventCounter = EventCounterHandler()
+        XCTAssertNoThrow(try serverChan.pipeline.addHandler(eventCounter).wait())
+        XCTAssertNoThrow(try serverChan.pipeline.addHandler(CloseAcceptedSocketsHandler()).wait())
+
+        XCTAssertEqual([], eventCounter.allTriggeredEvents())
+        XCTAssertNoThrow(try serverChan.eventLoop.submit {
+            serverChan.readable()
+        }.wait())
+        XCTAssertEqual(["errorCaught"], eventCounter.allTriggeredEvents())
+        XCTAssertEqual(1, eventCounter.errorCaughtCalls)
+
+        serverSock.shouldAcceptsFail.store(false)
+
+        XCTAssertNoThrow(try serverChan.eventLoop.submit {
+            serverChan.readable()
+        }.wait())
+        XCTAssertEqual(["errorCaught", "channelRead", "channelReadComplete"],
+                       eventCounter.allTriggeredEvents())
+        XCTAssertEqual(1, eventCounter.errorCaughtCalls)
+        XCTAssertEqual(1, eventCounter.channelReadCalls)
+        XCTAssertEqual(1, eventCounter.channelReadCompleteCalls)
     }
 }
