@@ -77,9 +77,6 @@ var targets: [PackageDescription.Target] = [
 
 let package = Package(
     name: "swift-nio",
-    platforms: [
-        .macOS(.v10_12), .iOS(.v10), .watchOS(.v3), .tvOS(.v10),
-    ],
     products: [
         .executable(name: "NIOEchoServer", targets: ["NIOEchoServer"]),
         .executable(name: "NIOEchoClient", targets: ["NIOEchoClient"]),

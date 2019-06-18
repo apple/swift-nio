@@ -106,7 +106,11 @@ var temporaryDirectory: String {
 #elseif os(Linux)
         return "/tmp"
 #else
-        return FileManager.default.temporaryDirectory.path
+        if #available(OSX 10.12, *) {
+            return FileManager.default.temporaryDirectory.path
+        } else {
+            return "/tmp"
+        }
 #endif
     }
 }
