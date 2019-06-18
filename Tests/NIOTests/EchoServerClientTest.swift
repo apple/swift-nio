@@ -95,43 +95,40 @@ class EchoServerClientTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let udsTempDir = createTemporaryDirectory()
-        defer {
-            XCTAssertNoThrow(try FileManager.default.removeItem(atPath: udsTempDir))
+        try withTemporaryUnixDomainSocketPathName { udsPath in
+            let numBytes = 16 * 1024
+            let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
+            let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+
+                // Set the handlers that are appled to the accepted Channels
+                .childChannelInitializer { channel in
+                    // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
+                    channel.pipeline.addHandler(countingHandler)
+                }.bind(unixDomainSocketPath: udsPath).wait())
+
+            defer {
+                XCTAssertNoThrow(try serverChannel.close().wait())
+            }
+
+            let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!)
+                .wait())
+
+            defer {
+                XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
+            }
+
+            var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+
+            for i in 0..<numBytes {
+                buffer.writeInteger(UInt8(i % 256))
+            }
+
+            XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
+
+            XCTAssertNoThrow(try countingHandler.assertReceived(buffer: buffer))
         }
-
-        let numBytes = 16 * 1024
-        let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-
-            // Set the handlers that are appled to the accepted Channels
-            .childChannelInitializer { channel in
-                // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.addHandler(countingHandler)
-            }.bind(unixDomainSocketPath: udsTempDir + "/server.sock").wait())
-
-        defer {
-            XCTAssertNoThrow(try serverChannel.close().wait())
-        }
-
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!)
-            .wait())
-
-        defer {
-            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
-        }
-
-        var buffer = clientChannel.allocator.buffer(capacity: numBytes)
-
-        for i in 0..<numBytes {
-            buffer.writeInteger(UInt8(i % 256))
-        }
-
-        XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
-
-        XCTAssertNoThrow(try countingHandler.assertReceived(buffer: buffer))
     }
 
     func testConnectUnixDomainSocket() throws {
@@ -140,42 +137,39 @@ class EchoServerClientTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let udsTempDir = createTemporaryDirectory()
-        defer {
-            XCTAssertNoThrow(try FileManager.default.removeItem(atPath: udsTempDir))
+        try withTemporaryUnixDomainSocketPathName { udsPath in
+            let numBytes = 16 * 1024
+            let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
+            let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+
+                // Set the handlers that are appled to the accepted Channels
+                .childChannelInitializer { channel in
+                    channel.pipeline.addHandler(countingHandler)
+                }.bind(unixDomainSocketPath: udsPath).wait())
+
+            defer {
+                XCTAssertNoThrow(try serverChannel.close().wait())
+            }
+
+            let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+                .connect(unixDomainSocketPath: udsPath)
+                .wait())
+
+            defer {
+                XCTAssertNoThrow(try clientChannel.close().wait())
+            }
+
+            var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+
+            for i in 0..<numBytes {
+                buffer.writeInteger(UInt8(i % 256))
+            }
+
+            try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
+
+            try countingHandler.assertReceived(buffer: buffer)
         }
-
-        let numBytes = 16 * 1024
-        let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-
-            // Set the handlers that are appled to the accepted Channels
-            .childChannelInitializer { channel in
-                channel.pipeline.addHandler(countingHandler)
-            }.bind(unixDomainSocketPath: udsTempDir + "/server.sock").wait())
-
-        defer {
-            XCTAssertNoThrow(try serverChannel.close().wait())
-        }
-
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(unixDomainSocketPath: udsTempDir + "/server.sock")
-            .wait())
-
-        defer {
-            XCTAssertNoThrow(try clientChannel.close().wait())
-        }
-
-        var buffer = clientChannel.allocator.buffer(capacity: numBytes)
-
-        for i in 0..<numBytes {
-            buffer.writeInteger(UInt8(i % 256))
-        }
-
-        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
-
-        try countingHandler.assertReceived(buffer: buffer)
     }
 
     func testChannelActiveOnConnect() throws {
