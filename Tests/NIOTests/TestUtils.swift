@@ -36,6 +36,42 @@ func withTemporaryDirectory<T>(_ body: (String) throws -> T) rethrows -> T {
     return try body(dir)
 }
 
+/// This function creates a filename that can be used for a temporary UNIX domain socket path.
+///
+/// If the temporary directory is too long to store a UNIX domain socket path, it will `chdir` into the temporary
+/// directory and return a short-enough path. The iOS simulator is known to have too long paths.
+func withTemporaryUnixDomainSocketPathName<T>(directory: String = temporaryDirectory,
+                                              _ body: (String) throws -> T) throws -> T {
+    // this is racy but we're trying to create the shortest possible path so we can't add a directory...
+    let (fd, path) = openTemporaryFile()
+    try! Posix.close(descriptor: fd)
+    try! FileManager.default.removeItem(atPath: path)
+
+    let saveCurrentDirectory = FileManager.default.currentDirectoryPath
+    let restoreSavedCWD: Bool
+    let shortEnoughPath: String
+    do {
+        _ = try SocketAddress(unixDomainSocketPath: path)
+        // this seems to be short enough for a UDS
+        shortEnoughPath = path
+        restoreSavedCWD = false
+    } catch SocketAddressError.unixDomainSocketPathTooLong {
+        FileManager.default.changeCurrentDirectoryPath(URL(fileURLWithPath: path).deletingLastPathComponent().absoluteString)
+        shortEnoughPath = URL(fileURLWithPath: path).lastPathComponent
+        restoreSavedCWD = true
+        print("WARNING: Path '\(path)' could not be used as UNIX domain socket path, using chdir & '\(shortEnoughPath)'")
+    }
+    defer {
+        if FileManager.default.fileExists(atPath: path) {
+            try? FileManager.default.removeItem(atPath: path)
+        }
+        if restoreSavedCWD {
+            FileManager.default.changeCurrentDirectoryPath(saveCurrentDirectory)
+        }
+    }
+    return try body(shortEnoughPath)
+}
+
 func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.NIOFileHandle, String) throws -> T) rethrows -> T {
     let (fd, path) = openTemporaryFile()
     let fileHandle = NIOFileHandle(descriptor: fd)
@@ -95,7 +131,7 @@ func createTemporaryDirectory() -> String {
 }
 
 func openTemporaryFile() -> (CInt, String) {
-    let template = "\(temporaryDirectory)/niotestXXXXXXX"
+    let template = "\(temporaryDirectory)/nio_XXXXXX"
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in
