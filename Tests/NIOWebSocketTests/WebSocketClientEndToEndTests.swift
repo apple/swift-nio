@@ -21,9 +21,7 @@ extension EmbeddedChannel {
     
     fileprivate func readByteBufferOutputAsString() throws -> String? {
         
-        if let requestData: IOData = try self.readOutbound(),
-            case .byteBuffer(let requestBuffer) = requestData {
-            
+        if let requestBuffer: ByteBuffer = try self.readOutbound() {
             return requestBuffer.getString(at: 0, length: requestBuffer.readableBytes)
         }
         
