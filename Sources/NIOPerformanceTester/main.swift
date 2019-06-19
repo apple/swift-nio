@@ -124,7 +124,6 @@ defer {
 
 let serverChannel = try ServerBootstrap(group: group)
     .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-    .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     .childChannelInitializer { channel in
         channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
             channel.pipeline.addHandler(SimpleHTTPServer())
@@ -578,7 +577,6 @@ measureAndPrint(desc: "http1_10k_reqs_1_conn") {
     let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: 10_000, eventLoop: group.next())
 
     let clientChannel = try! ClientBootstrap(group: group)
-        .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
         .channelInitializer { channel in
             channel.pipeline.addHTTPClientHandlers().flatMap {
                 channel.pipeline.addHandler(repeatedRequestsHandler)

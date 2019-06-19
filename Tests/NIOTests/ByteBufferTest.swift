@@ -1875,6 +1875,86 @@ class ByteBufferTest: XCTestCase {
         buf.moveWriterIndex(to: buf.writerIndex - 4)
         checkEquals(expected: "abcd", actual: buf.readableBytesView)
     }
+
+    func testDataByteTransferStrategyNoCopy() {
+        let byteCount = 200_000 // this needs to be large because Data might also decide to copy.
+        self.buf.clear()
+        self.buf.writeString(String(repeating: "x", count: byteCount))
+        var byteBufferPointerValue: UInt = 0xbad
+        var dataPointerValue: UInt = 0xdead
+        self.buf.withUnsafeReadableBytes { ptr in
+            byteBufferPointerValue = UInt(bitPattern: ptr.baseAddress)
+        }
+        if let data = self.buf.readData(length: byteCount, byteTransferStrategy: .noCopy) {
+            data.withUnsafeBytes { ptr in
+                dataPointerValue = UInt(bitPattern: ptr.baseAddress)
+            }
+        } else {
+            XCTFail("unable to read Data from ByteBuffer")
+        }
+
+        XCTAssertEqual(byteBufferPointerValue, dataPointerValue)
+    }
+
+    func testDataByteTransferStrategyCopy() {
+        let byteCount = 200_000 // this needs to be large because Data might also decide to copy.
+        self.buf.clear()
+        self.buf.writeString(String(repeating: "x", count: byteCount))
+        var byteBufferPointerValue: UInt = 0xbad
+        var dataPointerValue: UInt = 0xdead
+        self.buf.withUnsafeReadableBytes { ptr in
+            byteBufferPointerValue = UInt(bitPattern: ptr.baseAddress)
+        }
+        if let data = self.buf.readData(length: byteCount, byteTransferStrategy: .copy) {
+            data.withUnsafeBytes { ptr in
+                dataPointerValue = UInt(bitPattern: ptr.baseAddress)
+            }
+        } else {
+            XCTFail("unable to read Data from ByteBuffer")
+        }
+
+        XCTAssertNotEqual(byteBufferPointerValue, dataPointerValue)
+    }
+
+    func testDataByteTransferStrategyAutomaticMayNotCopy() {
+        let byteCount = 500_000 // this needs to be larger than ByteBuffer's heuristic's threshold.
+        self.buf.clear()
+        self.buf.writeString(String(repeating: "x", count: byteCount))
+        var byteBufferPointerValue: UInt = 0xbad
+        var dataPointerValue: UInt = 0xdead
+        self.buf.withUnsafeReadableBytes { ptr in
+            byteBufferPointerValue = UInt(bitPattern: ptr.baseAddress)
+        }
+        if let data = self.buf.readData(length: byteCount, byteTransferStrategy: .automatic) {
+            data.withUnsafeBytes { ptr in
+                dataPointerValue = UInt(bitPattern: ptr.baseAddress)
+            }
+        } else {
+            XCTFail("unable to read Data from ByteBuffer")
+        }
+
+        XCTAssertEqual(byteBufferPointerValue, dataPointerValue)
+    }
+
+    func testDataByteTransferStrategyAutomaticMayCopy() {
+        let byteCount = 200_000 // above Data's 'do not copy' but less than ByteBuffer's 'do not copy' threshold.
+        self.buf.clear()
+        self.buf.writeString(String(repeating: "x", count: byteCount))
+        var byteBufferPointerValue: UInt = 0xbad
+        var dataPointerValue: UInt = 0xdead
+        self.buf.withUnsafeReadableBytes { ptr in
+            byteBufferPointerValue = UInt(bitPattern: ptr.baseAddress)
+        }
+        if let data = self.buf.readData(length: byteCount, byteTransferStrategy: .automatic) {
+            data.withUnsafeBytes { ptr in
+                dataPointerValue = UInt(bitPattern: ptr.baseAddress)
+            }
+        } else {
+            XCTFail("unable to read Data from ByteBuffer")
+        }
+
+        XCTAssertNotEqual(byteBufferPointerValue, dataPointerValue)
+    }
 }
 
 private enum AllocationExpectationState: Int {

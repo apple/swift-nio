@@ -144,6 +144,16 @@ extension NIOFileHandle {
         let fd = try Posix.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
+
+    /// Open a new `NIOFileHandle`.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
+    public convenience init(path: String) throws {
+        // This function is here because we had a function like this in NIO 2.0, and the one above doesn't quite match. Sadly we can't
+        // really deprecate this either, because it'll be preferred to the one above in many cases.
+        try self.init(path: path, mode: .read, flags: .default)
+    }
 }
 
 extension NIOFileHandle: CustomStringConvertible {

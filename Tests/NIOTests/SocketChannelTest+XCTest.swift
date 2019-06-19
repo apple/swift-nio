@@ -49,6 +49,7 @@ extension SocketChannelTest {
                 ("testUnprocessedOutboundUserEventFailsOnServerSocketChannel", testUnprocessedOutboundUserEventFailsOnServerSocketChannel),
                 ("testUnprocessedOutboundUserEventFailsOnSocketChannel", testUnprocessedOutboundUserEventFailsOnSocketChannel),
                 ("testSetSockOptDoesNotOverrideExistingFlags", testSetSockOptDoesNotOverrideExistingFlags),
+                ("testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL", testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL),
            ]
    }
 }

@@ -636,7 +636,6 @@ class EchoServerClientTest : XCTestCase {
         }
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.addHandler(WriteWhenActiveHandler(str, dpGroup))
             }.bind(host: "127.0.0.1", port: 0).wait())

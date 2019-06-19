@@ -78,6 +78,7 @@ extension ChannelTests {
                 ("testApplyingTwoDistinctSocketOptionsOfSameTypeWorks", testApplyingTwoDistinctSocketOptionsOfSameTypeWorks),
                 ("testUnprocessedOutboundUserEventFailsOnServerSocketChannel", testUnprocessedOutboundUserEventFailsOnServerSocketChannel),
                 ("testAcceptHandlerDoesNotSwallowCloseErrorsWhenQuiescing", testAcceptHandlerDoesNotSwallowCloseErrorsWhenQuiescing),
+                ("testTCP_NODELAYisOnByDefault", testTCP_NODELAYisOnByDefault),
            ]
    }
 }
