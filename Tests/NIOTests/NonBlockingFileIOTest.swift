@@ -405,7 +405,8 @@ class NonBlockingFileIOTest: XCTestCase {
         try withPipe { readFH, writeFH in
             do {
                 try readFH.withUnsafeFileDescriptor { readFD in
-                    let ret = try Posix.fcntl(descriptor: readFD, command: F_SETFL, value: O_NONBLOCK)
+                    let flags = try Posix.fcntl(descriptor: readFD, command: F_GETFL, value: 0)
+                    let ret = try Posix.fcntl(descriptor: readFD, command: F_SETFL, value: flags | O_NONBLOCK)
                     assert(ret == 0, "unexpectedly, fcntl(\(readFD), F_SETFL, O_NONBLOCK) returned \(ret)")
                 }
                 try self.fileIO.readChunked(fileHandle: readFH,
