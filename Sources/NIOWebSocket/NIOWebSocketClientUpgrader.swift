@@ -23,9 +23,9 @@ import NIOHTTP1
 public final class NIOWebClientSocketUpgrader: NIOHTTPClientProtocolUpgrader {
     
     /// RFC 6455 specs this as the required entry in the Upgrade header.
-    public var supportedProtocol: String = "websocket"
+    public let supportedProtocol: String = "websocket"
     /// None of the websocket headers are actually defined as 'required'.
-    public var requiredUpgradeHeaders: [String] = []
+    public let requiredUpgradeHeaders: [String] = []
     
     private let requestKey: String
     private let maxFrameSize: Int
