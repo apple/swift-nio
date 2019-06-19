@@ -23,7 +23,7 @@
         <a class="header-link" href="../index.html">
           NIOFoundationCompat Docs
         </a>
-         (91% documented)
+         (94% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E2%2E0%2Fdocsets%2FNIOFoundationCompat%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E3%2E0%2Fdocsets%2FNIOFoundationCompat%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -71,6 +71,9 @@
                 <a class="nav-group-task-link" href="../Extensions/ByteBuffer.html">ByteBuffer</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/ByteBuffer/ByteTransferStrategy.html">– ByteTransferStrategy</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Extensions/ByteBufferView.html">ByteBufferView</a>
               </li>
             </ul>
@@ -95,6 +98,41 @@
         <section class="section">
           <div class="section-content">
             <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV19NIOFoundationCompatE0B16TransferStrategyO"></a>
+                    <a name="//apple_ref/swift/Enum/ByteTransferStrategy" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV19NIOFoundationCompatE0B16TransferStrategyO">ByteTransferStrategy</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Controls how bytes are transferred between <code>ByteBuffer</code> and other storage types.</p>
+
+                        <a href="../Extensions/ByteBuffer/ByteTransferStrategy.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">enum</span> <span class="kt">ByteTransferStrategy</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L42-L51">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
               <div class="task-name-container">
                 <a name="/Data%20APIs"></a>
                 <a name="//apple_ref/swift/Section/Data APIs" class="dashAnchor"></a>
@@ -118,6 +156,10 @@
                       <div class="abstract">
                         <p>Read <code>length</code> bytes off this <code>ByteBuffer</code>, move the reader index forward by <code>length</code> bytes and return the result
 as <code>Data</code>.</p>
+
+<p><code>ByteBuffer</code> will use a heuristic to decide whether to copy the bytes or whether to reference <code>ByteBuffer</code>&lsquo;s
+underlying storage from the returned <code>Data</code> value. If you want manual control over the byte transferring
+behaviour, please use <code><a href="../Extensions/ByteBuffer.html#/s:3NIO10ByteBufferV19NIOFoundationCompatE8readData6length20byteTransferStrategy10Foundation0G0VSgSi_AcDE0bjK0OtF">readData(length:byteTransferStrategy:)</a></code>.</p>
 
                       </div>
                       <div class="declaration">
@@ -152,7 +194,74 @@ as <code>Data</code>.</p>
                         <p>A <code>Data</code> value containing <code>length</code> bytes or <code>nil</code> if there aren&rsquo;t at least <code>length</code> bytes readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L50-L55">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L65-L67">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV19NIOFoundationCompatE8readData6length20byteTransferStrategy10Foundation0G0VSgSi_AcDE0bjK0OtF"></a>
+                    <a name="//apple_ref/swift/Method/readData(length:byteTransferStrategy:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV19NIOFoundationCompatE8readData6length20byteTransferStrategy10Foundation0G0VSgSi_AcDE0bjK0OtF">readData(length:byteTransferStrategy:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read <code>length</code> bytes off this <code>ByteBuffer</code>, move the reader index forward by <code>length</code> bytes and return the result
+as <code>Data</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readData</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">byteTransferStrategy</span><span class="p">:</span> <span class="kt"><a href="../Extensions/ByteBuffer/ByteTransferStrategy.html">ByteTransferStrategy</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Data</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes to be read from this <code>ByteBuffer</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>byteTransferStrategy</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Controls how to transfer the bytes. See <code><a href="../Extensions/ByteBuffer/ByteTransferStrategy.html">ByteTransferStrategy</a></code> for an explanation
+                    of the options.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>Data</code> value containing <code>length</code> bytes or <code>nil</code> if there aren&rsquo;t at least <code>length</code> bytes readable.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L78-L83">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -173,12 +282,16 @@ as <code>Data</code>.</p>
                         <p>Return <code>length</code> bytes starting at <code>index</code> and return the result as <code>Data</code>. This will not change the reader index.
 The selected bytes must be readable or else <code>nil</code> will be returned.</p>
 
+<p><code>ByteBuffer</code> will use a heuristic to decide whether to copy the bytes or whether to reference <code>ByteBuffer</code>&lsquo;s
+underlying storage from the returned <code>Data</code> value. If you want manual control over the byte transferring
+behaviour, please use <code>getData(at:byteTransferStrategy:)</code>.</p>
+
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getData</span><span class="p">(</span><span class="n">at</span> <span class="nv">index0</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Data</span><span class="p">?</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getData</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Data</span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -218,11 +331,101 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         <p>A <code>Data</code> value containing the bytes of interest or <code>nil</code> if the selected bytes are not readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L64-L75">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L96-L98">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
                 </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10ByteBufferV19NIOFoundationCompatE7getData2at6length20byteTransferStrategy10Foundation0G0VSgSi_SiAcDE0bkL0OtF"></a>
+                    <a name="//apple_ref/swift/Method/getData(at:length:byteTransferStrategy:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10ByteBufferV19NIOFoundationCompatE7getData2at6length20byteTransferStrategy10Foundation0G0VSgSi_SiAcDE0bkL0OtF">getData(at:length:byteTransferStrategy:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Return <code>length</code> bytes starting at <code>index</code> and return the result as <code>Data</code>. This will not change the reader index.
+The selected bytes must be readable or else <code>nil</code> will be returned.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getData</span><span class="p">(</span><span class="n">at</span> <span class="nv">index0</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">byteTransferStrategy</span><span class="p">:</span> <span class="kt"><a href="../Extensions/ByteBuffer/ByteTransferStrategy.html">ByteTransferStrategy</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Data</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The starting index of the bytes of interest into the <code>ByteBuffer</code></p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>length</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes of interest</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>byteTransferStrategy</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Controls how to transfer the bytes. See <code><a href="../Extensions/ByteBuffer/ByteTransferStrategy.html">ByteTransferStrategy</a></code> for an explanation
+                    of the options.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A <code>Data</code> value containing the bytes of interest or <code>nil</code> if the selected bytes are not readable.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L109-L135">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Foundation%20String%20APIs"></a>
+                <a name="//apple_ref/swift/Section/Foundation String APIs" class="dashAnchor"></a>
+                <a href="#/Foundation%20String%20APIs">
+                  <h3 class="section-name">Foundation String APIs</h3>
+                </a>
+              </div>
+              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -297,7 +500,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
        cannot be decoded with the given encoding.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L86-L91">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L148-L153">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -363,7 +566,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
 if those bytes cannot be decoded with the given encoding.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L100-L110">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L162-L172">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -429,7 +632,7 @@ if those bytes cannot be decoded with the given encoding.</p>
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L119-L123">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L181-L185">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -507,7 +710,7 @@ if those bytes cannot be decoded with the given encoding.</p>
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L133-L138">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift#L195-L200">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -520,7 +723,7 @@ if those bytes cannot be decoded with the given encoding.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-05-22)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-06-19)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

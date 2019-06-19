@@ -23,7 +23,7 @@
         <a class="header-link" href="index.html">
           NIOHTTP1 Docs
         </a>
-         (46% documented)
+         (49% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E2%2E0%2Fdocsets%2FNIOHTTP1%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E3%2E0%2Fdocsets%2FNIOHTTP1%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -76,6 +76,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/HTTPServerUpgradeHandler.html">HTTPServerUpgradeHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOHTTPClientUpgradeHandler.html">NIOHTTPClientUpgradeHandler</a>
               </li>
             </ul>
           </li>
@@ -122,6 +125,9 @@
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Protocols/HTTPServerProtocolUpgrader.html">HTTPServerProtocolUpgrader</a>
               </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/NIOHTTPClientProtocolUpgrader.html">NIOHTTPClientProtocolUpgrader</a>
+              </li>
             </ul>
           </li>
           <li class="nav-group-name">
@@ -141,6 +147,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/HTTPVersion.html">HTTPVersion</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/NIOHTTPClientUpgradeError.html">NIOHTTPClientUpgradeError</a>
               </li>
             </ul>
           </li>
@@ -167,6 +176,12 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Typealiases.html#/s:8NIOHTTP124HTTPUpgradeConfigurationa">HTTPUpgradeConfiguration</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:8NIOHTTP133NIOHTTPClientUpgradeConfigurationa">NIOHTTPClientUpgradeConfiguration</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:8NIOHTTP133NIOHTTPServerUpgradeConfigurationa">NIOHTTPServerUpgradeConfiguration</a>
               </li>
             </ul>
           </li>
@@ -218,7 +233,7 @@ were for accurate decoding.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPDecoder.swift#L409">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPDecoder.swift#L409">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -256,7 +271,7 @@ that reason, applications should try to ensure that the <code>HTTPRequestDecoder
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPDecoder.swift#L420">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPDecoder.swift#L420">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -265,6 +280,39 @@ that reason, applications should try to ensure that the <code>HTTPRequestDecoder
             </div>
             <div class="task-group">
               <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP133NIOHTTPClientUpgradeConfigurationa"></a>
+                    <a name="//apple_ref/swift/Alias/NIOHTTPClientUpgradeConfiguration" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP133NIOHTTPClientUpgradeConfigurationa">NIOHTTPClientUpgradeConfiguration</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Configuration required to configure a HTTP client pipeline for upgrade.</p>
+
+<p>See the documentation for <code>HTTPClientUpgradeHandler</code> for details on these
+properties.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">typealias</span> <span class="kt">NIOHTTPClientUpgradeConfiguration</span> <span class="o">=</span> <span class="p">(</span><span class="nv">upgraders</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="Protocols/NIOHTTPClientProtocolUpgrader.html">NIOHTTPClientProtocolUpgrader</a></span><span class="p">],</span> <span class="nv">completionHandler</span><span class="p">:</span> <span class="p">(</span><span class="kt">ChannelHandlerContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPPipelineSetup.swift#L21">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
                 <li class="item">
                   <div>
                     <code>
@@ -278,7 +326,7 @@ that reason, applications should try to ensure that the <code>HTTPRequestDecoder
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Configuration required to configure a HTTP pipeline for upgrade.</p>
+                        <p>Configuration required to configure a HTTP server pipeline for upgrade.</p>
 
 <p>See the documentation for <code><a href="Classes/HTTPServerUpgradeHandler.html">HTTPServerUpgradeHandler</a></code> for details on these
 properties.</p>
@@ -288,12 +336,43 @@ properties.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">typealias</span> <span class="kt">HTTPUpgradeConfiguration</span> <span class="o">=</span> <span class="p">(</span><span class="nv">upgraders</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="Protocols/HTTPServerProtocolUpgrader.html">HTTPServerProtocolUpgrader</a></span><span class="p">],</span> <span class="nv">completionHandler</span><span class="p">:</span> <span class="p">(</span><span class="kt">ChannelHandlerContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">@available(*, deprecated, renamed: "NIOHTTPServerUpgradeConfiguration")</span>
+<span class="kd">public</span> <span class="kd">typealias</span> <span class="kt">HTTPUpgradeConfiguration</span> <span class="o">=</span> <span class="kt"><a href="Typealiases.html#/s:8NIOHTTP133NIOHTTPServerUpgradeConfigurationa">NIOHTTPServerUpgradeConfiguration</a></span></code></pre>
 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPPipelineSetup.swift#L21">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPPipelineSetup.swift#L28">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP133NIOHTTPServerUpgradeConfigurationa"></a>
+                    <a name="//apple_ref/swift/Alias/NIOHTTPServerUpgradeConfiguration" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP133NIOHTTPServerUpgradeConfigurationa">NIOHTTPServerUpgradeConfiguration</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">typealias</span> <span class="kt">NIOHTTPServerUpgradeConfiguration</span> <span class="o">=</span> <span class="p">(</span><span class="nv">upgraders</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="Protocols/HTTPServerProtocolUpgrader.html">HTTPServerProtocolUpgrader</a></span><span class="p">],</span> <span class="nv">completionHandler</span><span class="p">:</span> <span class="p">(</span><span class="kt">ChannelHandlerContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPPipelineSetup.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -327,7 +406,7 @@ properties.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L142">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPTypes.swift#L142">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -357,7 +436,7 @@ properties.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L145">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPTypes.swift#L145">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -387,7 +466,7 @@ properties.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L148">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPTypes.swift#L148">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -417,7 +496,7 @@ properties.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPTypes.swift#L151">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPTypes.swift#L151">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -430,7 +509,7 @@ properties.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-05-22)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-06-19)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

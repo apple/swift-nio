@@ -23,7 +23,7 @@
         <a class="header-link" href="index.html">
           NIOHTTP1 Docs
         </a>
-         (46% documented)
+         (49% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E2%2E0%2Fdocsets%2FNIOHTTP1%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E3%2E0%2Fdocsets%2FNIOHTTP1%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -76,6 +76,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/HTTPServerUpgradeHandler.html">HTTPServerUpgradeHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOHTTPClientUpgradeHandler.html">NIOHTTPClientUpgradeHandler</a>
               </li>
             </ul>
           </li>
@@ -122,6 +125,9 @@
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Protocols/HTTPServerProtocolUpgrader.html">HTTPServerProtocolUpgrader</a>
               </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/NIOHTTPClientProtocolUpgrader.html">NIOHTTPClientProtocolUpgrader</a>
+              </li>
             </ul>
           </li>
           <li class="nav-group-name">
@@ -141,6 +147,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/HTTPVersion.html">HTTPVersion</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/NIOHTTPClientUpgradeError.html">NIOHTTPClientUpgradeError</a>
               </li>
             </ul>
           </li>
@@ -167,6 +176,12 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Typealiases.html#/s:8NIOHTTP124HTTPUpgradeConfigurationa">HTTPUpgradeConfiguration</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:8NIOHTTP133NIOHTTPClientUpgradeConfigurationa">NIOHTTPClientUpgradeConfiguration</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:8NIOHTTP133NIOHTTPServerUpgradeConfigurationa">NIOHTTPServerUpgradeConfiguration</a>
               </li>
             </ul>
           </li>
@@ -200,7 +215,7 @@
                       <div class="pointer"></div>
                       <div class="abstract">
                         <p>An object that implements <code>HTTPServerProtocolUpgrader</code> knows how to handle HTTP upgrade to
-a protocol.</p>
+a protocol on a server-side channel.</p>
 
                         <a href="Protocols/HTTPServerProtocolUpgrader.html" class="slightly-smaller">See more</a>
                       </div>
@@ -213,7 +228,44 @@ a protocol.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIOHTTP1/HTTPServerUpgradeHandler.swift#L33-L51">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/HTTPServerUpgradeHandler.swift#L33-L51">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP129NIOHTTPClientProtocolUpgraderP"></a>
+                    <a name="//apple_ref/swift/Protocol/NIOHTTPClientProtocolUpgrader" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP129NIOHTTPClientProtocolUpgraderP">NIOHTTPClientProtocolUpgrader</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>An object that implements <code>NIOHTTPClientProtocolUpgrader</code> knows how to handle HTTP upgrade to
+a protocol on a client-side channel.
+It has the option of denying this upgrade based upon the server response.</p>
+
+                        <a href="Protocols/NIOHTTPClientProtocolUpgrader.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">NIOHTTPClientProtocolUpgrader</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOHTTP1/NIOHTTPClientUpgradeHandler.swift#L57-L77">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -226,7 +278,7 @@ a protocol.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-05-22)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-06-19)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

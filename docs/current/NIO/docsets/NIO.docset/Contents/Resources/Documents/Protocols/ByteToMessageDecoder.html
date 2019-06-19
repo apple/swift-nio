@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E2%2E0%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E3%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -360,6 +360,9 @@
                 <a class="nav-group-task-link" href="../Structs/NIODeadline.html">NIODeadline</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:3NIO36NIOFailedToSetSocketNonBlockingErrorV">NIOFailedToSetSocketNonBlockingError</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
               </li>
               <li class="nav-group-task">
@@ -428,14 +431,68 @@
                 </div>
               </div>
             <p><code>ByteToMessageDecoder</code>s decode bytes in a stream-like fashion from <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> to another message type.</p>
+<h3 id='purpose' class='heading'>Purpose</h3>
 
-<p>To add a <code>ByteToMessageDecoder</code> to the <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code> use</p>
-<pre class="highlight swift"><code><span class="n">channel</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="nf">addHandler</span><span class="p">(</span><span class="kt">ByteToMessageHandler</span><span class="p">(</span><span class="kt">MyByteToMessageDecoder</span><span class="p">()))</span>
-</code></pre>
+<p>A <code>ByteToMessageDecoder</code> provides a simplified API for handling streams of incoming data that can be broken
+up into messages. This API boils down to two methods: <code>decode</code>, and <code>decodeLast</code>. These two methods, when
+implemented, will be used by a <code><a href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code> paired with a <code>ByteToMessageDecoder</code> to decode the
+incoming byte stream into a sequence of messages.</p>
 
-<p><code><a href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code> will turn your <code>ByteToMessageDecoder</code> into a <code><a href="../Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></code>. <code><a href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code>
-also solves a couple of tricky issues for you, most importantly, in a <code>ByteToMessageDecoder</code> you do <em>not</em> need to
-worry about re-entrancy. You own the passed-in <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> for the duration of the <code>decode</code>/<code>decodeLast</code> call an
+<p>The reason this helper exists is to smooth away some of the boilerplate and edge case handling code that
+is often necessary when implementing parsers in a SwiftNIO <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code>. A <code>ByteToMessageDecoder</code>
+never needs to worry about how inbound bytes will be buffered, as <code><a href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code> deals with that
+automatically. A <code>ByteToMessageDecoder</code> also never needs to worry about memory exclusivity violations
+that can occur when re-entrant <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code> operations occur, as <code><a href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code> will deal with
+those as well.</p>
+<h3 id='implementing-bytetomessagedecoder' class='heading'>Implementing ByteToMessageDecoder</h3>
+
+<p>A type that implements <code>ByteToMessageDecoder</code> must implement two methods: <code>decode</code> and <code>decodeLast</code>.</p>
+
+<p><code>decode</code> is the main decoding method, and is the one that will be called most often. <code>decode</code> is invoked
+whenever data is received by the wrapping <code><a href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code>. It is invoked with a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> containing
+all the received data (including any data previously buffered), as well as a <code><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></code> that can be
+used in the <code>decode</code> function.</p>
+
+<p><code>decode</code> is called in a loop by the <code><a href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code>. This loop continues until one of two cases occurs:</p>
+
+<ol>
+<li>The input <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> has no more readable bytes (i.e. <code>.readableBytes == 0</code>); OR</li>
+<li>The <code>decode</code> method returns <code>.needMoreData</code>.</li>
+</ol>
+
+<p>The reason this method is invoked in a loop is to ensure that the stream-like properties of inbound data are
+respected. It is entirely possible for <code>ByteToMessageDecoder</code> to receive either fewer bytes than a single message,
+or multiple messages in one go. Rather than have the <code>ByteToMessageDecoder</code> handle all of the complexity of this,
+the logic can be boiled down to a single choice: has the <code>ByteToMessageDecoder</code> been able to move the state forward
+or not? If it has, rather than containing an internal loop it may simply return <code>.continue</code> in order to request that
+<code>decode</code> be invoked again immediately. If it has not, it can return <code>.needMoreData</code> to ask to be left alone until more
+data has been returned from the network.</p>
+
+<p>Essentially, if the next parsing step could not be taken because there wasn&rsquo;t enough data available, return <code>.needMoreData</code>.
+Otherwise, return <code>.continue</code>. This will allow a <code>ByteToMessageDecoder</code> implementation to ignore the awkward way data
+arrives from the network, and to just treat it as a series of <code>decode</code> calls.</p>
+
+<p><code>decodeLast</code> is a cousin of <code>decode</code>. It is also called in a loop, but unlike with <code>decode</code> this loop will only ever
+occur once: when the <code><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></code> belonging to this <code>ByteToMessageDecoder</code> is about to become invalidated.
+This invalidation happens in two situations: when EOF is received from the network, or when the <code>ByteToMessageDecoder</code>
+is being removed from the <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code>. The distinction between these two states is captured by the value of
+<code>seenEOF</code>.</p>
+
+<p>In this condition, the <code>ByteToMessageDecoder</code> must now produce any final messages it can with the bytes it has
+available. In protocols where EOF is used as a message delimiter, having <code>decodeLast</code> called with <code>seenEOF == true</code>
+may produce further messages. In other cases, <code>decodeLast</code> may choose to deliver any buffered bytes as <q>leftovers</q>,
+either in error messages or via <code>channelRead</code>. This can occur if, for example, a protocol upgrade is occurring.</p>
+
+<p>As with <code>decode</code>, <code>decodeLast</code> is invoked in a loop. This allows the same simplification as <code>decode</code> allows: when
+a message is completely parsed, the <code>decodeLast</code> function can return <code>.continue</code> and be re-invoked from the top,
+rather than containing an internal loop.</p>
+
+<p>Note that the value of <code>seenEOF</code> may change between calls to <code>decodeLast</code> in some rare situations.</p>
+<h3 id='implementers-notes' class='heading'>Implementers Notes</h3>
+
+<p>/// <code><a href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code> will turn your <code>ByteToMessageDecoder</code> into a <code><a href="../Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></code>. <code><a href="../Classes/ByteToMessageHandler.html">ByteToMessageHandler</a></code>
+also solves a couple of tricky issues for you. Most importantly, in a <code>ByteToMessageDecoder</code> you do <em>not</em> need to
+worry about re-entrancy. Your code owns the passed-in <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> for the duration of the <code>decode</code>/<code>decodeLast</code> call and
 can modify it at will.</p>
 
 <p>If a custom frame decoder is required, then one needs to be careful when implementing
@@ -444,7 +501,7 @@ complete frame by checking <code>buffer.readableBytes</code>. If there are not e
 for a complete frame, return without modifying the reader index to allow more bytes to arrive.</p>
 
 <p>To check for complete frames without modifying the reader index, use methods like <code>buffer.getInteger</code>.
-One <em>MUST</em> use the reader index when using methods like <code>buffer.getInteger</code>.
+You  <em>MUST</em> use the reader index when using methods like <code>buffer.getInteger</code>.
 For example calling <code>buffer.getInteger(at: 0)</code> is assuming the frame starts at the beginning of the buffer, which
 is not always the case. Use <code>buffer.getInteger(at: buffer.readerIndex)</code> instead.</p>
 
@@ -456,13 +513,16 @@ perform your read operations on.</p>
 <p>The <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> passed in as <code>buffer</code> is a slice of a larger buffer owned by the <code>ByteToMessageDecoder</code>
 implementation. Some aspects of this buffer are preserved across calls to <code>decode</code>, meaning that any changes to
 those properties you make in your <code>decode</code> method will be reflected in the next call to decode. In particular,
-the following operations are have the described effects:</p>
-
-<p>Moving the reader index forward persists across calls. When your method returns, if the reader index has advanced,
+moving the reader index forward persists across calls. When your method returns, if the reader index has advanced,
 those bytes are considered <q>consumed</q> and will not be available in future calls to <code>decode</code>.
 Please note, however, that the numerical value of the <code>readerIndex</code> itself is not preserved, and may not be the same
 from one call to the next. Please do not rely on this numerical value: if you need
 to recall where a byte is relative to the <code>readerIndex</code>, use an offset rather than an absolute value.</p>
+<h3 id='using-bytetomessagedecoder' class='heading'>Using ByteToMessageDecoder</h3>
+
+<p>To add a <code>ByteToMessageDecoder</code> to the <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code> use</p>
+<pre class="highlight swift"><code><span class="n">channel</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="nf">addHandler</span><span class="p">(</span><span class="kt">ByteToMessageHandler</span><span class="p">(</span><span class="kt">MyByteToMessageDecoder</span><span class="p">()))</span>
+</code></pre>
 
           </div>
         </section>
@@ -496,7 +556,7 @@ to recall where a byte is relative to the <code>readerIndex</code>, use an offse
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIO/Codec.swift#L83">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIO/Codec.swift#L143">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -514,7 +574,12 @@ to recall where a byte is relative to the <code>readerIndex</code>, use an offse
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Decode from a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code>.</p>
+
+<p>This method will be called in a loop until either the input <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> has nothing to read left or
+<code><a href="../Enums/DecodingState.html#/s:3NIO13DecodingStateO12needMoreDatayA2CmF">DecodingState.needMoreData</a></code> is returned. If <code><a href="../Enums/DecodingState.html#/s:3NIO13DecodingStateO8continueyA2CmF">DecodingState.continue</a></code> is returned and the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code>
+contains more readable bytes, this method will immediately be invoked again, unless <code>decodeLast</code> needs
+to be invoked instead.</p>
 
                       </div>
                       <div class="declaration">
@@ -525,8 +590,44 @@ to recall where a byte is relative to the <code>readerIndex</code>, use an offse
 
                         </div>
                       </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>context</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></code> which this <code>ByteToMessageDecoder</code> belongs to.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>buffer</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> from which we decode.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p><code><a href="../Enums/DecodingState.html#/s:3NIO13DecodingStateO8continueyA2CmF">DecodingState.continue</a></code> if we should continue calling this method or <code><a href="../Enums/DecodingState.html#/s:3NIO13DecodingStateO12needMoreDatayA2CmF">DecodingState.needMoreData</a></code> if it should be called
+       again once more data is present in the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code>.</p>
+                      </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIO/Codec.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIO/Codec.swift#L157">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -544,7 +645,15 @@ to recall where a byte is relative to the <code>readerIndex</code>, use an offse
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Decode from a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> when no more data is incoming and the <code>ByteToMessageDecoder</code> is about to leave
+the pipeline.</p>
+
+<p>This method is called in a loop only once, when the <code><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></code> goes inactive (i.e. when <code>channelInactive</code> is fired or
+the <code>ByteToMessageDecoder</code> is removed from the pipeline).</p>
+
+<p>Like with <code>decode</code>, this method will be called in a loop until either <code><a href="../Enums/DecodingState.html#/s:3NIO13DecodingStateO12needMoreDatayA2CmF">DecodingState.needMoreData</a></code> is returned from the method
+or until the input <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> has no more readable bytes. If <code><a href="../Enums/DecodingState.html#/s:3NIO13DecodingStateO8continueyA2CmF">DecodingState.continue</a></code> is returned and the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code>
+contains more readable bytes, this method will immediately be invoked again.</p>
 
                       </div>
                       <div class="declaration">
@@ -555,8 +664,56 @@ to recall where a byte is relative to the <code>readerIndex</code>, use an offse
 
                         </div>
                       </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>context</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></code> which this <code>ByteToMessageDecoder</code> belongs to.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>buffer</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> from which we decode.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>seenEOF</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p><code>true</code> if EOF has been seen. Usually if this is <code>false</code> the handler has been removed.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p><code><a href="../Enums/DecodingState.html#/s:3NIO13DecodingStateO8continueyA2CmF">DecodingState.continue</a></code> if we should continue calling this method or <code><a href="../Enums/DecodingState.html#/s:3NIO13DecodingStateO12needMoreDatayA2CmF">DecodingState.needMoreData</a></code> if it should be called
+       again when more data is present in the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code>.</p>
+                      </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIO/Codec.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIO/Codec.swift#L175">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -612,7 +769,7 @@ to recall where a byte is relative to the <code>readerIndex</code>, use an offse
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIO/Codec.swift#L109">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIO/Codec.swift#L181">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -668,7 +825,7 @@ to recall where a byte is relative to the <code>readerIndex</code>, use an offse
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIO/Codec.swift#L115">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIO/Codec.swift#L187">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -730,7 +887,7 @@ Be aware that reclaiming memory may involve memory copies and so is not free.</p
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIO/Codec.swift#L123">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIO/Codec.swift#L195">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -767,7 +924,7 @@ Be aware that reclaiming memory may involve memory copies and so is not free.</p
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.2.0/Sources/NIO/Codec.swift#L162-L164">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIO/Codec.swift#L234-L236">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -780,7 +937,7 @@ Be aware that reclaiming memory may involve memory copies and so is not free.</p
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-05-22)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-06-19)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
