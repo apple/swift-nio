@@ -89,7 +89,13 @@
             let sock = Socket(descriptor: fd)
             #if !os(Linux)
             if setNonBlocking {
-                try sock.setNonBlocking()
+                do {
+                    try sock.setNonBlocking()
+                } catch {
+                    // best effort
+                    try? sock.close()
+                    throw error
+                }
             }
             #endif
             return sock

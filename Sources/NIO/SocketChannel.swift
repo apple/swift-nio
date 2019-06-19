@@ -406,16 +406,18 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             guard self.isOpen else {
                 throw ChannelError.eof
             }
-            if let accepted =  try self.socket.accept(setNonBlocking: true) {
+            if let accepted = try self.socket.accept(setNonBlocking: true) {
                 readPending = false
                 result = .some
                 do {
-                    let chan = try SocketChannel(socket: accepted, parent: self, eventLoop: group.next() as! SelectableEventLoop)
+                    let chan = try SocketChannel(socket: accepted,
+                                                 parent: self,
+                                                 eventLoop: group.next() as! SelectableEventLoop)
                     assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(chan))
-                } catch let err {
+                } catch {
                     try? accepted.close()
-                    throw err
+                    throw error
                 }
             } else {
                 break
@@ -425,6 +427,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
+        if err is NIOFailedToSetSocketNonBlockingError {
+            // see https://github.com/apple/swift-nio/issues/1030
+            // on Darwin, fcntl(fd, F_SETFL, O_NONBLOCK) sometimes returns EINVAL...
+            return false
+        }
         guard let err = err as? IOError else { return true }
 
         switch err.errnoCode {
