@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -27,6 +27,26 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
     }
+    
+    func testWriteOutboundByteBufferMultipleTimes() throws {
+        let channel = EmbeddedChannel()
+        var buf = channel.allocator.buffer(capacity: 1024)
+        buf.writeString("hello")
+        
+        XCTAssertTrue(try channel.writeOutbound(buf).isFull)
+        XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
+        
+        var bufB = channel.allocator.buffer(capacity: 1024)
+        bufB.writeString("again")
+        
+        XCTAssertTrue(try channel.writeOutbound(bufB).isFull)
+        XCTAssertTrue(try channel.finish().hasLeftOvers)
+        XCTAssertNoThrow(XCTAssertEqual(bufB, try channel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
+    }
 
     func testWriteInboundByteBuffer() throws {
         let channel = EmbeddedChannel()
@@ -36,6 +56,26 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertTrue(try channel.writeInbound(buf).isFull)
         XCTAssertTrue(try channel.finish().hasLeftOvers)
         XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
+    }
+    
+    func testWriteInboundByteBufferMultipleTimes() throws {
+        let channel = EmbeddedChannel()
+        var buf = channel.allocator.buffer(capacity: 1024)
+        buf.writeString("hello")
+        
+        XCTAssertTrue(try channel.writeInbound(buf).isFull)
+        XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
+        
+        var bufB = channel.allocator.buffer(capacity: 1024)
+        bufB.writeString("again")
+        
+        XCTAssertTrue(try channel.writeInbound(bufB).isFull)
+        XCTAssertTrue(try channel.finish().hasLeftOvers)
+        XCTAssertNoThrow(XCTAssertEqual(bufB, try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
     }
