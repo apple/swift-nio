@@ -269,7 +269,8 @@ class BaseSocket: Selectable {
         #if !os(Linux)
         if setNonBlocking {
             do {
-                let ret = try Posix.fcntl(descriptor: sock, command: F_SETFL, value: O_NONBLOCK)
+                let flags = try Posix.fcntl(descriptor: sock, command: F_GETFL, value: 0)
+                let ret = try Posix.fcntl(descriptor: sock, command: F_SETFL, value: flags | O_NONBLOCK)
                 assert(ret == 0, "unexpectedly, fcntl(\(sock), F_SETFL, O_NONBLOCK) returned \(ret)")
             } catch {
                 // best effort close
@@ -319,7 +320,8 @@ class BaseSocket: Selectable {
     /// throws: An `IOError` if the operation failed.
     final func setNonBlocking() throws {
         return try withUnsafeFileDescriptor { fd in
-            let ret = try Posix.fcntl(descriptor: fd, command: F_SETFL, value: O_NONBLOCK)
+            let flags = try Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0)
+            let ret = try Posix.fcntl(descriptor: fd, command: F_SETFL, value: flags | O_NONBLOCK)
             assert(ret == 0, "unexpectedly, fcntl(\(fd), F_SETFL, O_NONBLOCK) returned \(ret)")
         }
     }

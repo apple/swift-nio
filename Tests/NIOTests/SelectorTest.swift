@@ -334,35 +334,35 @@ class SelectorTest: XCTestCase {
         defer {
             XCTAssertNoThrow(try el.syncShutdownGracefully())
         }
-        let tempDir = createTemporaryDirectory()
-        let secondServerChannel = try! ServerBootstrap(group: el)
-            .childChannelInitializer { channel in
-                channel.pipeline.addHandler(ServerHandler(allServerChannels: allServerChannels,
-                                                            numberOfConnectedChannels: numberOfConnectedChannels))
-            }
-            .bind(to: SocketAddress(unixDomainSocketPath: "\(tempDir)/server-sock.uds"))
-            .wait()
+        XCTAssertNoThrow(try withTemporaryUnixDomainSocketPathName { udsPath in
+            let secondServerChannel = try! ServerBootstrap(group: el)
+                .childChannelInitializer { channel in
+                    channel.pipeline.addHandler(ServerHandler(allServerChannels: allServerChannels,
+                                                              numberOfConnectedChannels: numberOfConnectedChannels))
+                }
+                .bind(to: SocketAddress(unixDomainSocketPath: udsPath))
+                .wait()
 
-        let everythingWasReadPromise = el.makePromise(of: Void.self)
-        XCTAssertNoThrow(try el.submit { () -> [EventLoopFuture<Channel>] in
-            (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map { (_: Int) in
-                ClientBootstrap(group: el)
-                    .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-                    .channelInitializer { channel in
-                        channel.pipeline.addHandler(CloseEveryOtherAndOpenNewOnesHandler(allChannels: allChannels,
-                                                                                           hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
-                                                                                           serverAddress: secondServerChannel.localAddress!,
-                                                                                           everythingWasReadPromise: everythingWasReadPromise))
-                    }
-                    .connect(to: secondServerChannel.localAddress!)
-                    .map { channel in
-                        numberOfConnectedChannels.value += 1
-                        return channel
+            let everythingWasReadPromise = el.makePromise(of: Void.self)
+            XCTAssertNoThrow(try el.submit { () -> [EventLoopFuture<Channel>] in
+                (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map { (_: Int) in
+                    ClientBootstrap(group: el)
+                        .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+                        .channelInitializer { channel in
+                            channel.pipeline.addHandler(CloseEveryOtherAndOpenNewOnesHandler(allChannels: allChannels,
+                                                                                             hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
+                                                                                             serverAddress: secondServerChannel.localAddress!,
+                                                                                             everythingWasReadPromise: everythingWasReadPromise))
+                        }
+                        .connect(to: secondServerChannel.localAddress!)
+                        .map { channel in
+                            numberOfConnectedChannels.value += 1
+                            return channel
                     }
                 }
-        }.wait().forEach { XCTAssertNoThrow(try $0.wait()) } as Void)
-        XCTAssertNoThrow(try everythingWasReadPromise.futureResult.wait())
-        XCTAssertNoThrow(try FileManager.default.removeItem(at: URL(fileURLWithPath: tempDir)))
+                }.wait().forEach { XCTAssertNoThrow(try $0.wait()) } as Void)
+            XCTAssertNoThrow(try everythingWasReadPromise.futureResult.wait())
+        })
     }
 
     func testTimerFDIsLevelTriggered() throws {
@@ -385,7 +385,7 @@ class SelectorTest: XCTestCase {
             }
         }
         var socketFDs: [CInt] = [-1, -1]
-        #if os(macOS)
+        #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
         let err = socketpair(PF_LOCAL, SOCK_STREAM, 0, &socketFDs)
         #else
         let err = socketpair(PF_LOCAL, CInt(SOCK_STREAM.rawValue), 0, &socketFDs)
