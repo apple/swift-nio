@@ -99,7 +99,6 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
 func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
     let serverChannel = try ServerBootstrap(group: group)
         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-        .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
         .childChannelInitializer { channel in
             channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
                                                          withErrorHandling: false).flatMap {
@@ -120,7 +119,6 @@ func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> I
                 channel.pipeline.addHandler(repeatedRequestsHandler)
             }
         }
-        .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
         .connect(to: serverChannel.localAddress!)
         .wait()
 

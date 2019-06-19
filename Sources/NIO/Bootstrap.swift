@@ -36,8 +36,7 @@
 ///             }
 ///         }
 ///
-///         // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
-///         .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+///         // Enable SO_REUSEADDR for the accepted Channels
 ///         .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
 ///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
@@ -80,6 +79,7 @@ public final class ServerBootstrap {
     public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
         self.group = group
         self.childGroup = childGroup
+        self._serverChannelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     }
 
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
@@ -363,6 +363,7 @@ public final class ClientBootstrap {
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
         self.group = group
+        self._channelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     }
 
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
