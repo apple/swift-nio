@@ -14,7 +14,7 @@
 ##===----------------------------------------------------------------------===##
 require 'optparse'
 
-METRIC="mean" # used for comparison
+METRIC="min" # used for comparison
 
 module Enumerable
   def sum
