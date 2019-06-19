@@ -38,17 +38,45 @@ public enum ByteBufferFoundationError: Error {
  */
 
 extension ByteBuffer {
+    /// Controls how bytes are transferred between `ByteBuffer` and other storage types.
+    public enum ByteTransferStrategy {
+        /// Force a copy of the bytes.
+        case copy
 
-    // MARK: Data APIs
+        /// Do not copy the bytes if at all possible.
+        case noCopy
+
+        /// Use a heuristic to decide whether to copy the bytes or not.
+        case automatic
+    }
+
+    // MARK: - Data APIs
+
+    /// Read `length` bytes off this `ByteBuffer`, move the reader index forward by `length` bytes and return the result
+    /// as `Data`.
+    ///
+    /// `ByteBuffer` will use a heuristic to decide whether to copy the bytes or whether to reference `ByteBuffer`'s
+    /// underlying storage from the returned `Data` value. If you want manual control over the byte transferring
+    /// behaviour, please use `readData(length:byteTransferStrategy:)`.
+    ///
+    /// - parameters:
+    ///     - length: The number of bytes to be read from this `ByteBuffer`.
+    /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
+    public mutating func readData(length: Int) -> Data? {
+        return self.readData(length: length, byteTransferStrategy: .automatic)
+    }
+
 
     /// Read `length` bytes off this `ByteBuffer`, move the reader index forward by `length` bytes and return the result
     /// as `Data`.
     ///
     /// - parameters:
     ///     - length: The number of bytes to be read from this `ByteBuffer`.
+    ///     - byteTransferStrategy: Controls how to transfer the bytes. See `ByteTransferStrategy` for an explanation
+    ///                             of the options.
     /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
-    public mutating func readData(length: Int) -> Data? {
-        return self.getData(at: self.readerIndex, length: length).map {
+    public mutating func readData(length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
+        return self.getData(at: self.readerIndex, length: length, byteTransferStrategy: byteTransferStrategy).map {
             self.moveReaderIndex(forwardBy: length)
             return $0
         }
@@ -57,22 +85,56 @@ extension ByteBuffer {
     /// Return `length` bytes starting at `index` and return the result as `Data`. This will not change the reader index.
     /// The selected bytes must be readable or else `nil` will be returned.
     ///
+    /// `ByteBuffer` will use a heuristic to decide whether to copy the bytes or whether to reference `ByteBuffer`'s
+    /// underlying storage from the returned `Data` value. If you want manual control over the byte transferring
+    /// behaviour, please use `getData(at:byteTransferStrategy:)`.
+    ///
     /// - parameters:
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`
     ///     - length: The number of bytes of interest
     /// - returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
-    public func getData(at index0: Int, length: Int) -> Data? {
+    public func getData(at index: Int, length: Int) -> Data? {
+        return self.getData(at: index, length: length, byteTransferStrategy: .automatic)
+    }
+
+    /// Return `length` bytes starting at `index` and return the result as `Data`. This will not change the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
+    ///
+    /// - parameters:
+    ///     - index: The starting index of the bytes of interest into the `ByteBuffer`
+    ///     - length: The number of bytes of interest
+    ///     - byteTransferStrategy: Controls how to transfer the bytes. See `ByteTransferStrategy` for an explanation
+    ///                             of the options.
+    /// - returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
+    public func getData(at index0: Int, length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
         let index = index0 - self.readerIndex
         guard index >= 0 && length >= 0 && index <= self.readableBytes - length else {
             return nil
         }
+        let doCopy: Bool
+        switch byteTransferStrategy {
+        case .copy:
+            doCopy = true
+        case .noCopy:
+            doCopy = false
+        case .automatic:
+            doCopy = length <= 256*1024
+        }
+
         return self.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-            _ = storageRef.retain()
-            return Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
-                        count: Int(length),
-                        deallocator: .custom { _, _ in storageRef.release() })
+            if doCopy {
+                return Data(bytes: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
+                            count: Int(length))
+            } else {
+                _ = storageRef.retain()
+                return Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
+                            count: Int(length),
+                            deallocator: .custom { _, _ in storageRef.release() })
+            }
         }
     }
+
+    // MARK: - Foundation String APIs
 
     /// Get a `String` decoding `length` bytes starting at `index` with `encoding`. This will not change the reader index.
     /// The selected bytes must be readable or else `nil` will be returned.
@@ -138,6 +200,7 @@ extension ByteBuffer {
     }
 }
 
+// MARK: - Conformances
 extension ByteBufferView: ContiguousBytes {}
 
 extension ByteBufferView: DataProtocol {

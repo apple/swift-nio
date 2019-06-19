@@ -138,6 +138,10 @@ extension ByteBufferTest {
                 ("testVariousContiguousStorageAccessors", testVariousContiguousStorageAccessors),
                 ("testGetBytesThatAreNotReadable", testGetBytesThatAreNotReadable),
                 ("testByteBufferViewAsDataProtocol", testByteBufferViewAsDataProtocol),
+                ("testDataByteTransferStrategyNoCopy", testDataByteTransferStrategyNoCopy),
+                ("testDataByteTransferStrategyCopy", testDataByteTransferStrategyCopy),
+                ("testDataByteTransferStrategyAutomaticMayNotCopy", testDataByteTransferStrategyAutomaticMayNotCopy),
+                ("testDataByteTransferStrategyAutomaticMayCopy", testDataByteTransferStrategyAutomaticMayCopy),
            ]
    }
 }
