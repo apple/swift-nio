@@ -263,7 +263,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     /// Returned by the `private func readable0()` to inform the caller about the current state of the underlying read stream.
     /// This is mostly useful when receiving `.readEOF` as we then need to drain the read stream fully (ie. until we receive EOF or error of course)
-    private enum ReadStreamState {
+    private enum ReadStreamState: Equatable {
         /// Everything seems normal
         case normal(ReadResult)
 
@@ -450,11 +450,11 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
                 // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
                 var readAtLeastOnce = false
-                while let read = try? readFromSocket(), read == .some {
+                while let read = try? self.readFromSocket(), read == .some {
                     readAtLeastOnce = true
                 }
                 if readAtLeastOnce && self.lifecycleManager.isActive {
-                    pipeline.fireChannelReadComplete()
+                    self.pipeline.fireChannelReadComplete()
                 }
             }
 
@@ -959,7 +959,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         let readResult: ReadResult
         do {
-            readResult = try readFromSocket()
+            readResult = try self.readFromSocket()
         } catch let err {
             let readStreamState: ReadStreamState
             // ChannelError.eof is not something we want to fire through the pipeline as it just means the remote
@@ -970,7 +970,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
                 // getOption0 can only fail if the channel is not active anymore but we assert further up that it is. If
                 // that's not the case this is a precondition failure and we would like to know.
-                if self.lifecycleManager.isActive, try! getOption0(ChannelOptions.allowRemoteHalfClosure) {
+                if self.lifecycleManager.isActive, try! self.getOption0(ChannelOptions.allowRemoteHalfClosure) {
                     // If we want to allow half closure we will just mark the input side of the Channel
                     // as closed.
                     assert(self.lifecycleManager.isActive)
@@ -987,7 +987,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             }
 
             // Call before triggering the close of the Channel.
-            if self.lifecycleManager.isActive {
+            if readStreamState != .error, self.lifecycleManager.isActive {
                 self.pipeline.fireChannelReadComplete0()
             }
 
@@ -997,6 +997,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
             return readStreamState
         }
+        assert(readResult == .some)
         if self.lifecycleManager.isActive {
             self.pipeline.fireChannelReadComplete0()
         }
