@@ -177,7 +177,9 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
         }
 
         if self.automaticErrorHandling {
-            upgradeFuture = upgradeFuture.flatMap { context.pipeline.addHandler(WebSocketProtocolErrorHandler())}
+            upgradeFuture = upgradeFuture.flatMap {
+                context.pipeline.addHandler(WebSocketProtocolErrorHandler())
+            }
         }
 
         return upgradeFuture.flatMap {

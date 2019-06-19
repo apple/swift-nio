@@ -45,11 +45,14 @@ public final class NIOWebClientSocketUpgrader: NIOHTTPClientProtocolUpgrader {
         self.automaticErrorHandling = automaticErrorHandling
     }
 
+    /// Add additional headers that are needed for a WebSocket upgrade request.
     public func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
         upgradeRequestHeaders.add(name: "Sec-WebSocket-Key", value: self.requestKey)
         upgradeRequestHeaders.add(name: "Sec-WebSocket-Version", value: "13")
     }
 
+    /// Allow or deny the upgrade based on the upgrade HTTP response
+    /// headers containing the correct accept key.
     public func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
         
         let acceptValueHeader = upgradeResponse.headers["Sec-WebSocket-Accept"]
@@ -59,29 +62,29 @@ public final class NIOWebClientSocketUpgrader: NIOHTTPClientProtocolUpgrader {
         }
 
         // Validate the response key in 'Sec-WebSocket-Accept'.
-        let expectedAcceptValue: String
-        do {
-            var hasher = SHA1()
-            hasher.update(string: self.requestKey)
-            hasher.update(string: magicWebSocketGUID)
-            expectedAcceptValue = String(base64Encoding: hasher.finish())
-        }
+        var hasher = SHA1()
+        hasher.update(string: self.requestKey)
+        hasher.update(string: magicWebSocketGUID)
+        let expectedAcceptValue = String(base64Encoding: hasher.finish())
 
         return expectedAcceptValue == acceptValueHeader[0]
     }
 
+    /// Called when the upgrade response has been flushed and it is safe to mutate the channel
+    /// pipeline. Adds channel handlers for websocket frame encoding, decoding and errors.
     public func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void> {
 
-        var upgradeFuture = context.pipeline.addHandler(WebSocketFrameEncoder()).flatMap {_ in
+        var upgradeFuture = context.pipeline.addHandler(WebSocketFrameEncoder()).flatMap {
             context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
         }
         
         if self.automaticErrorHandling {
-            upgradeFuture = upgradeFuture.flatMap { context.pipeline.addHandler(WebSocketProtocolErrorHandler())
+            upgradeFuture = upgradeFuture.flatMap {
+                context.pipeline.addHandler(WebSocketProtocolErrorHandler())
             }
         }
         
-        return upgradeFuture.flatMap { _ in
+        return upgradeFuture.flatMap {
             self.upgradePipelineHandler(context.channel, upgradeResponse)
         }
     }
