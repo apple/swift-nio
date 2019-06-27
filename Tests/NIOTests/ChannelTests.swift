@@ -1752,12 +1752,7 @@ public final class ChannelTests: XCTestCase {
     func testAcceptsAfterCloseDontCauseIssues() throws {
         class ChannelCollector {
             let q = DispatchQueue(label: "q")
-            let group: EventLoopGroup
             var channels: [ObjectIdentifier: Channel] = [:]
-
-            init(group: EventLoopGroup) {
-                self.group = group
-            }
 
             deinit {
                 XCTAssertTrue(channels.isEmpty, "\(channels)")
@@ -1819,7 +1814,7 @@ public final class ChannelTests: XCTestCase {
             defer {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
-            let collector = ChannelCollector(group: group)
+            let collector = ChannelCollector()
             let serverBoot = ServerBootstrap(group: group)
                 .childChannelInitializer { channel in
                     return channel.pipeline.addHandler(CheckActiveHandler(channelCollector: collector))
