@@ -183,6 +183,19 @@ public struct EventLoopPromise<Value> {
     public func fail(_ error: Error) {
         self._resolve(value: .failure(error))
     }
+    
+    /// Complete the promise with the passed in `EventLoopFuture<Value>`.
+    ///
+    /// This method is equivalent to invoking `future.cascade(to: promise)`,
+    /// but sometimes may read better than its cascade counterpart.
+    /// 
+    /// - parameters:
+    ///     - future: The future whose value will be used to succeed or fail this promise.
+    /// - seealso: `EventLoopFuture.cascade(to:)`
+    @inlinable
+    public func completeWith(_ future: EventLoopFuture<Value>) {
+        future.cascade(to: self)
+    }
 
     /// Fire the associated `EventLoopFuture` on the appropriate event loop.
     ///
@@ -794,6 +807,7 @@ extension EventLoopFuture {
     /// ```
     ///
     /// - Parameter to: The `EventLoopPromise` to fulfill with the results of this future.
+    /// - SeeAlso: `EventLoopPromise.completeWith(_:)`
     @inlinable
     public func cascade(to promise: EventLoopPromise<Value>?) {
         guard let promise = promise else { return }
