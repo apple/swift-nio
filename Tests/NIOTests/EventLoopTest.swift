@@ -778,4 +778,21 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
         }
     }
+
+    func testIllegalCloseOfEventLoopFails() {
+        // Vapor 3 closes EventLoops directly which is illegal and makes the `shutdownGracefully` of the owning
+        // MultiThreadedEventLoopGroup never succeed.
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        XCTAssertThrowsError(try group.next().syncShutdownGracefully()) { error in
+            switch error {
+            case EventLoopError.unsupportedOperation:
+                () // expected
+            default:
+                XCTFail("illegal shutdown threw wrong error \(error)")
+            }
+        }
+    }
 }
