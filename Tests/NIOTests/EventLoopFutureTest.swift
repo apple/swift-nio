@@ -1060,4 +1060,28 @@ class EventLoopFutureTest : XCTestCase {
         }.map { $0.map { $0.uppercased() }}.wait()) { XCTAssertTrue($0 is DatabaseError) }
         XCTAssertTrue(db.closed)
     }
+
+    func testPromiseCompletedWithSuccessfulFuture() throws {
+        let group = EmbeddedEventLoop()
+        let loop = group.next()
+
+        let future = loop.makeSucceededFuture("yay")
+        let promise = loop.makePromise(of: String.self)
+
+        promise.completeWith(future)
+        XCTAssertEqual(try promise.futureResult.wait(), "yay")
+    }
+
+    func testPromiseCompletedWithFailedFuture() throws {
+        let group = EmbeddedEventLoop()
+        let loop = group.next()
+
+        let future: EventLoopFuture<EventLoopFutureTestError> = loop.makeFailedFuture(EventLoopFutureTestError.example)
+        let promise = loop.makePromise(of: EventLoopFutureTestError.self)
+
+        promise.completeWith(future)
+        XCTAssertThrowsError(try promise.futureResult.wait()) { error in
+            XCTAssert(type(of: error) == EventLoopFutureTestError.self)
+        }
+    }
 }
