@@ -63,7 +63,7 @@ if [[ $# -lt 3 ]]; then
     exit 1
 fi
 
-hash jq 2>/dev/null || (echo "jq must be installed"; exit 1)
+hash jq 2> /dev/null || { echo >&2 "ERROR: jq must be installed"; exit 1; }
 tmpdir=$(mktemp -d /tmp/.check-api_XXXXXX)
 repo_url=$1
 new_tag=$2
