@@ -47,8 +47,15 @@ function build_and_do() {
 function usage() {
     echo >&2 "Usage: $0 REPO-GITHUB-URL NEW-VERSION OLD-VERSIONS..."
     echo >&2
-    echo >&2 "Example: "
+    echo >&2 "This script requires a Swift 5.1+ toolchain."
+    echo >&2
+    echo >&2 "Examples:"
+    echo >&2
+    echo >&2 "Check between master and tag 2.1.1 of swift-nio:"
     echo >&2 "  $0 https://github.com/apple/swift-nio master 2.1.1"
+    echo >&2
+    echo >&2 "Check between HEAD and commit 64cf63d7 using the provided toolchain:"
+    echo >&2 "  xcrun --toolchain org.swift.5120190702a $0 ../some-local-repo HEAD 64cf63d7"
 }
 
 if [[ $# -lt 3 ]]; then
@@ -56,6 +63,7 @@ if [[ $# -lt 3 ]]; then
     exit 1
 fi
 
+hash jq 2>/dev/null || (echo "jq must be installed"; exit 1)
 tmpdir=$(mktemp -d /tmp/.check-api_XXXXXX)
 repo_url=$1
 new_tag=$2
