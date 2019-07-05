@@ -5,7 +5,7 @@
 #     cd build
 #     cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DBUILD_SHARED_LIBS:ON ..
 #     ninja
-#     ninja package
+#     cpack -G TGZ .
 cmake_minimum_required(VERSION 3.14.20190603)
 
 project(swift-nio-demos LANGUAGES C Swift VERSION 2.3.0)
@@ -58,6 +58,8 @@ set(NIO_DEMO_PROGRAMS
   NIOHTTP1Server
   NIOMulticastChat
   NIOPerformanceTester
+  NIOUDPEchoClient
+  NIOUDPEchoServer
   NIOWebSocketServer
 )
 
@@ -98,7 +100,7 @@ include(CPack)
 file(GLOB NIO_MODULES "${CMAKE_CURRENT_LIST_DIR}/Sources/*")
 foreach(nio_module IN LISTS NIO_MODULES)
   get_filename_component(nio_module "${nio_module}" NAME)
-  if(NOT TARGET ${nio_module})
+  if(NOT TARGET ${nio_module} AND NOT nio_module STREQUAL "_NIO1APIShims")
     message(WARNING "No CMake target for NIO module ${nio_module}")
   endif()
 endforeach()
