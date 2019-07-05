@@ -56,6 +56,7 @@ set(NIO_DEMO_PROGRAMS
   NIOEchoServer
   NIOHTTP1Client
   NIOHTTP1Server
+  NIOMulticastChat
   NIOPerformanceTester
   NIOWebSocketServer
 )
@@ -92,3 +93,13 @@ install(TARGETS ${NIO_LIBRARIES} ${NIO_DEMO_PROGRAMS}
 )
 
 include(CPack)
+
+# Sanity Check
+file(GLOB NIO_MODULES "${CMAKE_CURRENT_LIST_DIR}/Sources/*")
+foreach(nio_module IN LISTS NIO_MODULES)
+  get_filename_component(nio_module "${nio_module}" NAME)
+  if(NOT TARGET ${nio_module})
+    message(WARNING "No CMake target for NIO module ${nio_module}")
+  endif()
+endforeach()
+
