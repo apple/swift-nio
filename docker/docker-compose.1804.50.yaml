@@ -40,5 +40,5 @@ services:
   http:
     image: swift-nio:18.04-5.0
 
-  cmake:
+  cmake-integration-tests:
     image: swift-nio:18.04-5.0
