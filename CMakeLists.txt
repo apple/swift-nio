@@ -17,6 +17,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_Swift_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/swiftmodules)
 list(APPEND CMAKE_BUILD_RPATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 
+add_compile_options($<$<COMPILE_LANGUAGE:Swift>:-warnings-as-errors>)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(CMAKE_Swift_FLAGS "${CMAKE_Swift_FLAGS} -target x86_64-apple-macosx10.14")
   # XXX: Workaround "Cannot load underlying module for Darwin"
