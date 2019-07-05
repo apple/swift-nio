@@ -46,6 +46,7 @@ add_subdirectory(Sources/NIOEchoServer)
 add_subdirectory(Sources/NIOHTTP1Server)
 add_subdirectory(Sources/NIOHTTP1Client)
 add_subdirectory(Sources/NIOWebSocketServer)
+add_subdirectory(Sources/NIOPerformanceTester)
 
 #        .executable(name: "NIOWebSocketServer",
 #                    targets: ["NIOWebSocketServer"]),
@@ -57,27 +58,40 @@ add_subdirectory(Sources/NIOWebSocketServer)
 
 set(NIO_C_LIBRARIES CNIOAtomics CNIOSHA1 CNIOLinux CNIODarwin CNIOHTTPParser)
 set(NIO_Swift_LIBRARIES NIOConcurrencyHelpers NIO NIOHTTP1 NIOWebSocket)
-set(NIO_DEMO_PROGRAMS NIOChatClient NIOChatServer NIOEchoClient NIOEchoServer NIOHTTP1Server NIOHTTP1Client)
+set(NIO_DEMO_PROGRAMS NIOChatClient NIOChatServer NIOEchoClient NIOEchoServer NIOHTTP1Server NIOHTTP1Client NIOPerformanceTester NIOWebSocketServer)
 
 set(CMAKE_LINK_WHAT_YOU_USE ON)
+
+### MARK - Hacks
+
+# XXX: -O -gline-tables-only gets passed to executables but not to shared libraries
+foreach(nio_library IN LISTS NIO_Swift_LIBRARIES NIO_DEMO_PROGRAMS)
+  target_compile_options(${nio_library} PRIVATE
+      $<$<CONFIG:Debug>:-g;-Onone;-assert-config;Debug>
+      $<$<CONFIG:RelWithDebugInfo>:-O;-gline-tables-only;-assert-config;Release>
+      $<$<CONFIG:Release>:-O;-assert-config;Release>
+  )
+endforeach()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   # XXX: CMake doesn't set LC_ID on Swift SHARED libraries, so we need to fix install_name here
   foreach(nio_library IN LISTS NIO_Swift_LIBRARIES)
-    target_link_options(${nio_library} PRIVATE LINKER:-install_name,@rpath/$<TARGET_FILE_NAME:${nio_library}>)
-    target_link_options(${nio_library} INTERFACE LINKER:-rpath,$<TARGET_FILE_DIR:${nio_library}>)
+    target_link_options(${nio_library} PRIVATE LINKER:-install_name,@rpath/$<TARGET_LINKER_FILE_NAME:${nio_library}>)
+    target_link_options(${nio_library} INTERFACE LINKER:-rpath,$<TARGET_LINKER_FILE_DIR:${nio_library}>)
   endforeach()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   foreach(nio_library IN LISTS NIO_Swift_LIBRARIES)
     # XXX: CMake doesn't set SONAME on Swift SHARED libraries, so we need to fix it here
-    target_link_options(${nio_library} PRIVATE LINKER:-soname,$<TARGET_FILE_NAME:${nio_library}>)
-    target_link_options(${nio_library} INTERFACE LINKER:-rpath,$<TARGET_FILE_DIR:${nio_library}>)
+    target_link_options(${nio_library} PRIVATE LINKER:-soname,$<TARGET_LINKER_FILE_NAME:${nio_library}>)
+    target_link_options(${nio_library} INTERFACE LINKER:-rpath,$<TARGET_LINKER_FILE_DIR:${nio_library}>)
 
     # XXX: swift-autolink-extract always prefers the -l mode
     # so we need to expect -lNIOConcurrencyHelpers on the command-line
-    target_link_options(${nio_library} INTERFACE -L$<TARGET_FILE_DIR:${nio_library}>)
+    target_link_options(${nio_library} INTERFACE -L$<TARGET_LINKER_FILE_DIR:${nio_library}>)
   endforeach()
 endif()
+
+### MARK - Packaging
 
 install(TARGETS ${NIO_LIBRARIES} ${NIO_DEMO_PROGRAMS}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
