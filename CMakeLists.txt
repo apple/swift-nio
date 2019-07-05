@@ -25,6 +25,13 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(CMAKE_Swift_FLAGS "${CMAKE_Swift_FLAGS} -sdk ${CMAKE_OSX_SYSROOT}")
 endif()
 
+# XXX: -O -gline-tables-only gets passed to executables but not to shared libraries
+add_compile_options(
+  "$<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:Swift>>:-g;-Onone;-assert-config;Debug>"
+  "$<$<AND:$<CONFIG:RelWithDebugInfo>,$<COMPILE_LANGUAGE:Swift>>:-O;-gline-tables-only;-assert-config;Release>"
+  "$<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:Swift>>:-O;-assert-config;Release>"
+)
+
 # Helper Libraries
 
 add_subdirectory(Sources/CNIOAtomics)
@@ -65,15 +72,6 @@ set(NIO_DEMO_PROGRAMS NIOChatClient NIOChatServer NIOEchoClient NIOEchoServer NI
 set(CMAKE_LINK_WHAT_YOU_USE ON)
 
 ### MARK - Hacks
-
-# XXX: -O -gline-tables-only gets passed to executables but not to shared libraries
-foreach(nio_library IN LISTS NIO_Swift_LIBRARIES NIO_DEMO_PROGRAMS)
-  target_compile_options(${nio_library} PRIVATE
-      $<$<CONFIG:Debug>:-g;-Onone;-assert-config;Debug>
-      $<$<CONFIG:RelWithDebugInfo>:-O;-gline-tables-only;-assert-config;Release>
-      $<$<CONFIG:Release>:-O;-assert-config;Release>
-  )
-endforeach()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   # XXX: CMake doesn't set LC_ID on Swift SHARED libraries, so we need to fix install_name here
