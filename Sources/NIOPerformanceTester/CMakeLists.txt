@@ -1,4 +1,6 @@
 add_executable(NIOPerformanceTester
+  Benchmark.swift
+  ChannelPipelineBenchmark.swift
   main.swift
   resources.swift
 )
