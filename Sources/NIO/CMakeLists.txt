@@ -56,4 +56,4 @@ add_library(NIO
   Utilities.swift
 )
 target_link_libraries(NIO PUBLIC CNIOAtomics NIOConcurrencyHelpers CNIOLinux CNIODarwin)
-target_include_directories(NIO INTERFACE ${CMAKE_Swift_MODULE_DIRECTORY})
+target_include_directories(NIO INTERFACE $<BUILD_INTERFACE:$<TARGET_PROPERTY:NIO,Swift_MODULE_DIRECTORY>>)

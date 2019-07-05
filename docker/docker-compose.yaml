@@ -60,3 +60,8 @@ services:
     ports:
       - "8888:8888"
     command: /bin/bash -cl "swift run NIOHTTP1Server 0.0.0.0 8888"
+
+  cmake:
+    <<: *common
+    tty: true
+    command: /bin/bash -cl "mkdir -p build-linux && cd build-linux && cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DCMAKE_C_COMPILER=clang -DBUILD_SHARED_LIBS=ON .. && ninja -v && bash"

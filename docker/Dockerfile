@@ -11,6 +11,7 @@ RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
 RUN apt-get update && apt-get install -y wget git build-essential software-properties-common pkg-config locales
 RUN apt-get update && apt-get install -y libicu-dev libblocksruntime0
 RUN apt-get update && apt-get install -y lsof dnsutils netcat-openbsd net-tools # used by integration tests
+RUN apt-get update && apt-get install -y ninja-build # used by cmake
 
 # local
 RUN locale-gen en_US.UTF-8
@@ -64,3 +65,11 @@ RUN mkdir -p $HOME/.scripts
 RUN wget -q https://raw.githubusercontent.com/apple/swift/master/utils/symbolicate-linux-fatal -O $HOME/.scripts/symbolicate-linux-fatal
 RUN chmod 755 $HOME/.scripts/symbolicate-linux-fatal
 RUN echo 'export PATH="$HOME/.scripts:$PATH"' >> $HOME/.profile
+
+# cmake 3.15.0-rc3 (with experimental Swift support)
+RUN wget -q "https://github.com/Kitware/CMake/releases/download/v3.15.0-rc3/cmake-3.15.0-rc3-Linux-x86_64.tar.gz" -O $HOME/cmake-3.15.0-rc3-Linux-x86_64.tar.gz
+RUN echo "7fe5f70c3e161a871477edf3f0e68a8f6125f1b41fe9ae5080887e2d1018d6df  cmake-3.15.0-rc3-Linux-x86_64.tar.gz" | (cd $HOME && sha256sum -c -)
+RUN mkdir $HOME/.cmake
+RUN tar zxvf $HOME/cmake-3.15.0-rc3-Linux-x86_64.tar.gz --directory $HOME/.cmake --strip-components=1
+RUN ls $HOME/.cmake/bin/cmake
+RUN echo 'export PATH="$HOME/.cmake/bin:$PATH"' >> $HOME/.profile
