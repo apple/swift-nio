@@ -11,6 +11,8 @@ set(CMAKE_Swift_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/swiftmodules)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(CMAKE_Swift_FLAGS "${CMAKE_Swift_FLAGS} -target x86_64-apple-macosx10.14")
+  # XXX: Workaround "Cannot load underlying module for Darwin"
+  set(CMAKE_Swift_FLAGS "${CMAKE_Swift_FLAGS} -sdk ${CMAKE_OSX_SYSROOT}")
 endif()
 
 add_subdirectory(Sources/CNIOAtomics)
@@ -60,6 +62,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
       LINK_FLAGS "-Xlinker -rpath -Xlinker @executable_path/../lib"
     )
   endforeach()
+  set(CMAKE_INSTALL_RPATH "@executable_path/../lib")
 endif()
 
 install(TARGETS ${NIO_LIBRARIES} ${NIO_DEMO_PROGRAMS}
