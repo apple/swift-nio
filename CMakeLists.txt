@@ -33,43 +33,36 @@ add_compile_options(
 )
 
 # Helper Libraries
+set(NIO_C_LIBRARIES
+  CNIOAtomics
+  CNIODarwin
+  CNIOHTTPParser
+  CNIOLinux
+  CNIOSHA1
+)
+set(NIO_Swift_LIBRARIES
+  NIO
+  NIOConcurrencyHelpers
+  NIOFoundationCompat
+  NIOHTTP1
+  NIOTLS
+  NIOTestUtils
+  NIOWebSocket
+)
+set(NIO_DEMO_PROGRAMS
+  NIOChatClient
+  NIOChatServer
+  NIOEchoClient
+  NIOEchoServer
+  NIOHTTP1Client
+  NIOHTTP1Server
+  NIOPerformanceTester
+  NIOWebSocketServer
+)
 
-add_subdirectory(Sources/CNIOAtomics)
-add_subdirectory(Sources/NIOConcurrencyHelpers)
-add_subdirectory(Sources/CNIOSHA1)
-add_subdirectory(Sources/CNIOLinux)
-add_subdirectory(Sources/CNIODarwin)
-add_subdirectory(Sources/CNIOHTTPParser)
-
-# Libraries
-add_subdirectory(Sources/NIO)
-add_subdirectory(Sources/NIOHTTP1)
-add_subdirectory(Sources/NIOWebSocket)
-add_subdirectory(Sources/NIOFoundationCompat)
-
-# Demo Programs
-add_subdirectory(Sources/NIOChatClient)
-add_subdirectory(Sources/NIOChatServer)
-add_subdirectory(Sources/NIOEchoClient)
-add_subdirectory(Sources/NIOEchoServer)
-add_subdirectory(Sources/NIOHTTP1Server)
-add_subdirectory(Sources/NIOHTTP1Client)
-add_subdirectory(Sources/NIOWebSocketServer)
-add_subdirectory(Sources/NIOPerformanceTester)
-
-#        .executable(name: "NIOWebSocketServer",
-#                    targets: ["NIOWebSocketServer"]),
-#        .executable(name: "NIOPerformanceTester",
-#                    targets: ["NIOPerformanceTester"]),
-#        .executable(name: "NIOMulticastChat", targets: ["NIOMulticastChat"]),
-#        .executable(name: "NIOUDPEchoServer", targets: ["NIOUDPEchoServer"]),
-#        .executable(name: "NIOUDPEchoClient", targets: ["NIOUDPEchoClient"]),
-
-set(NIO_C_LIBRARIES CNIOAtomics CNIOSHA1 CNIOLinux CNIODarwin CNIOHTTPParser)
-set(NIO_Swift_LIBRARIES NIOConcurrencyHelpers NIO NIOHTTP1 NIOWebSocket NIOFoundationCompat)
-set(NIO_DEMO_PROGRAMS NIOChatClient NIOChatServer NIOEchoClient NIOEchoServer NIOHTTP1Server NIOHTTP1Client NIOPerformanceTester NIOWebSocketServer)
-
-set(CMAKE_LINK_WHAT_YOU_USE ON)
+foreach(subdir IN LISTS NIO_C_LIBRARIES NIO_Swift_LIBRARIES NIO_DEMO_PROGRAMS)
+  add_subdirectory(Sources/${subdir})
+endforeach()
 
 ### MARK - Hacks
 
