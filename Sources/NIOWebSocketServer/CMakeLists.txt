@@ -1,2 +1,0 @@
-add_executable(NIOWebSocketServer main.swift)
-target_link_libraries(NIOWebSocketServer NIO NIOWebSocket)

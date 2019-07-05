@@ -1,4 +1,4 @@
-add_library(CNIOLinux
+add_library(CNIOLinux STATIC
   ifaddrs-android.c
   shim.c
 )

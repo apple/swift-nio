@@ -1,2 +1,0 @@
-add_executable(NIOHTTP1Client main.swift)
-target_link_libraries(NIOHTTP1Client NIO NIOHTTP1 NIOConcurrencyHelpers)

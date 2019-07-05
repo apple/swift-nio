@@ -1,2 +1,0 @@
-add_executable(NIOChatServer main.swift)
-target_link_libraries(NIOChatServer NIO NIOConcurrencyHelpers)
