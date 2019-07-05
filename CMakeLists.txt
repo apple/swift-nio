@@ -20,9 +20,9 @@ list(APPEND CMAKE_BUILD_RPATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 add_compile_options($<$<COMPILE_LANGUAGE:Swift>:-warnings-as-errors>)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-  set(CMAKE_Swift_FLAGS "${CMAKE_Swift_FLAGS} -target x86_64-apple-macosx10.14")
+  add_compile_options("$<$<COMPILE_LANGUAGE:Swift>:-target;x86_64-apple-macosx10.14>")
   # XXX: Workaround "Cannot load underlying module for Darwin"
-  set(CMAKE_Swift_FLAGS "${CMAKE_Swift_FLAGS} -sdk ${CMAKE_OSX_SYSROOT}")
+  add_compile_options("$<$<COMPILE_LANGUAGE:Swift>:-sdk;${CMAKE_OSX_SYSROOT}>")
 endif()
 
 # XXX: -O -gline-tables-only gets passed to executables but not to shared libraries
