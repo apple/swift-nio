@@ -45,6 +45,7 @@ add_subdirectory(Sources/NIOEchoClient)
 add_subdirectory(Sources/NIOEchoServer)
 add_subdirectory(Sources/NIOHTTP1Server)
 add_subdirectory(Sources/NIOHTTP1Client)
+add_subdirectory(Sources/NIOWebSocketServer)
 
 #        .executable(name: "NIOWebSocketServer",
 #                    targets: ["NIOWebSocketServer"]),
