@@ -6,7 +6,7 @@
 # To build with CMake on Darwin
 #     mkdir build-darwin
 #     cd build-darwin
-#     cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DBUILD_SHARED_LIBS:ON ..
+#     xcrun cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DBUILD_SHARED_LIBS:ON ..
 #     ninja
 #     # Create an installable package
 #     cpack -G TGZ .
