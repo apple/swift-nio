@@ -66,7 +66,7 @@ add_subdirectory(Sources/NIOPerformanceTester)
 #        .executable(name: "NIOUDPEchoClient", targets: ["NIOUDPEchoClient"]),
 
 set(NIO_C_LIBRARIES CNIOAtomics CNIOSHA1 CNIOLinux CNIODarwin CNIOHTTPParser)
-set(NIO_Swift_LIBRARIES NIOConcurrencyHelpers NIO NIOHTTP1 NIOWebSocket)
+set(NIO_Swift_LIBRARIES NIOConcurrencyHelpers NIO NIOHTTP1 NIOWebSocket NIOFoundationCompat)
 set(NIO_DEMO_PROGRAMS NIOChatClient NIOChatServer NIOEchoClient NIOEchoServer NIOHTTP1Server NIOHTTP1Client NIOPerformanceTester NIOWebSocketServer)
 
 set(CMAKE_LINK_WHAT_YOU_USE ON)
@@ -83,7 +83,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   foreach(nio_library IN LISTS NIO_Swift_LIBRARIES)
     # XXX: CMake doesn't set SONAME on Swift SHARED libraries, so we need to fix it here
     target_link_options(${nio_library} PRIVATE LINKER:-soname,$<TARGET_LINKER_FILE_NAME:${nio_library}>)
-    target_link_options(${nio_library} INTERFACE LINKER:-rpath,$<TARGET_LINKER_FILE_DIR:${nio_library}>)
+    target_link_options(${nio_library} INTERFACE $<BUILD_INTERFACE:LINKER:-rpath,$<TARGET_LINKER_FILE_DIR:${nio_library}>>)
 
     # XXX: swift-autolink-extract always prefers the -l mode
     # so we need to expect -lNIOConcurrencyHelpers on the command-line
