@@ -1,11 +1,19 @@
 # Support for building and installing the NIO demo programs with CMake
 #
-# To build with CMake use
-#     mkdir build
-#     cd build
+# CMake 3.15.0-rc3 is required for Swift support.
+# Ninja is also required.
+#
+# To build with CMake on Darwin
+#     mkdir build-darwin
+#     cd build-darwin
 #     cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DBUILD_SHARED_LIBS:ON ..
 #     ninja
+#     # Create an installable package
 #     cpack -G TGZ .
+#     # Run integration tests
+#     ctest -VV .
+# To build with CMake on Linux
+#     docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.1804.50.yaml up --build cmake-integration-tests
 cmake_minimum_required(VERSION 3.14.20190603)
 
 project(SwiftNIODemo LANGUAGES C Swift VERSION 2.3.0)
