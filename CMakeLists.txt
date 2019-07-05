@@ -32,7 +32,6 @@ add_compile_options(
   "$<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:Swift>>:-O;-assert-config;Release>"
 )
 
-# Helper Libraries
 set(NIO_C_LIBRARIES
   CNIOAtomics
   CNIODarwin
@@ -105,3 +104,5 @@ foreach(nio_module IN LISTS NIO_MODULES)
   endif()
 endforeach()
 
+enable_testing()
+add_subdirectory(IntegrationTests)

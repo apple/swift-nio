@@ -83,8 +83,11 @@ function start_server() {
     fi
 
     mkdir "$tmp/htdocs"
-    swift build
-    "$(swift build --show-bin-path)/NIOHTTP1Server" $extra_args $maybe_nio_host "$port" "$tmp/htdocs" &
+    if ! [[ -x "${NIOHTTP1Server_EXEC}" ]]; then
+      swift build --product NIOHTTP1Server
+      NIOHTTP1Server_EXEC="$(swift build --show-bin-path)/NIOHTTP1Server"
+    fi
+    "${NIOHTTP1Server_EXEC}" $extra_args $maybe_nio_host "$port" "$tmp/htdocs" &
     tmp_server_pid=$!
     case "$type" in
     inet)
