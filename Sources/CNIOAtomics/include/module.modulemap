@@ -1,0 +1,4 @@
+module CNIOAtomics {
+  umbrella header "CNIOAtomics.h"
+  export *
+}
