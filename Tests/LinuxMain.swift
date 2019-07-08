@@ -91,6 +91,7 @@ import XCTest
          testCase(ThreadTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
          testCase(UtilitiesTest.allTests),
+         testCase(WebSocketClientEndToEndTests.allTests),
          testCase(WebSocketFrameDecoderTest.allTests),
          testCase(WebSocketFrameEncoderTest.allTests),
          testCase(WebSocketServerEndToEndTests.allTests),

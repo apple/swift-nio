@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -16,7 +16,7 @@ import CNIOSHA1
 import NIO
 import NIOHTTP1
 
-private let magicWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+let magicWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 @available(*, deprecated, renamed: "NIOWebSocketServerUpgrader")
 public typealias WebSocketUpgrader = NIOWebSocketServerUpgrader
@@ -177,7 +177,9 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
         }
 
         if self.automaticErrorHandling {
-            upgradeFuture = upgradeFuture.flatMap { context.pipeline.addHandler(WebSocketProtocolErrorHandler())}
+            upgradeFuture = upgradeFuture.flatMap {
+                context.pipeline.addHandler(WebSocketProtocolErrorHandler())
+            }
         }
 
         return upgradeFuture.flatMap {
