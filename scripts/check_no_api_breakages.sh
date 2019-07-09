@@ -35,7 +35,7 @@ function build_and_do() {
 
     (
     cd "$repodir"
-    git checkout "$tag" 2> /dev/null
+    git checkout -q "$tag" 
     swift build
     while read -r module; do
         swift api-digester -dump-sdk -module "$module" \
