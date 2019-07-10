@@ -464,7 +464,9 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     /// Creates a new instance of `HTTPDecoder`.
     ///
     /// - parameters:
-    ///     - leftOverBytesStrategy: the strategy to use when removing the decoder from the pipeline and an upgrade was detected
+    ///     - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
+    ///                              detected. Note that this does not affect what happens on EOF (in which case an
+    ///                              `ByteToMessageDecoderError.leftoverDataWhenDone` error is fired.)
     public init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) {
         self.headers.reserveCapacity(16)
         if In.self == HTTPServerRequestPart.self {
@@ -619,13 +621,17 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
             }
         }
         if buffer.readableBytes > 0 {
-            switch self.leftOverBytesStrategy {
-            case .dropBytes:
-                ()
-            case .fireError:
+            if seenEOF {
                 context.fireErrorCaught(ByteToMessageDecoderError.leftoverDataWhenDone(buffer))
-            case .forwardBytes:
-                context.fireChannelRead(NIOAny(buffer))
+            } else {
+                switch self.leftOverBytesStrategy {
+                case .dropBytes:
+                    ()
+                case .fireError:
+                    context.fireErrorCaught(ByteToMessageDecoderError.leftoverDataWhenDone(buffer))
+                case .forwardBytes:
+                    context.fireChannelRead(NIOAny(buffer))
+                }
             }
         }
         return .needMoreData
