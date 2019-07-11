@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E3%2E0%2Fdocsets%2FNIOWebSocket%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E4%2E0%2Fdocsets%2FNIOWebSocket%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -59,6 +59,9 @@
           <li class="nav-group-name">
             <a class="nav-group-name-link" href="Classes.html">Classes</a>
             <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOWebClientSocketUpgrader.html">NIOWebClientSocketUpgrader</a>
+              </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/NIOWebSocketServerUpgrader.html">NIOWebSocketServerUpgrader</a>
               </li>
@@ -145,6 +148,45 @@
                 <li class="item">
                   <div>
                     <code>
+                    <a name="/s:12NIOWebSocket0a6ClientB8UpgraderC"></a>
+                    <a name="//apple_ref/swift/Class/NIOWebClientSocketUpgrader" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOWebSocket0a6ClientB8UpgraderC">NIOWebClientSocketUpgrader</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A <code>HTTPClientProtocolUpgrader</code> that knows how to do the WebSocket upgrade dance.</p>
+
+<p>This upgrader assumes that the <code>HTTPClientUpgradeHandler</code> will create and send the upgrade request. 
+This upgrader also assumes that the <code>HTTPClientUpgradeHandler</code> will appropriately mutate the
+pipeline to remove the HTTP <code>ChannelHandler</code>s.</p>
+
+                        <a href="Classes/NIOWebClientSocketUpgrader.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">NIOWebClientSocketUpgrader</span> <span class="p">:</span> <span class="kt">NIOHTTPClientProtocolUpgrader</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.4.0/Sources/NIOWebSocket/NIOWebSocketClientUpgrader.swift#L23-L91">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
                     <a name="/s:12NIOWebSocket0aB14ServerUpgraderC"></a>
                     <a name="//apple_ref/swift/Class/NIOWebSocketServerUpgrader" class="dashAnchor"></a>
                     <a class="token" href="#/s:12NIOWebSocket0aB14ServerUpgraderC">NIOWebSocketServerUpgrader</a>
@@ -177,7 +219,7 @@ remove the HTTP <code>ChannelHandler</code>s.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift#L64-L187">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.4.0/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift#L64-L189">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -223,7 +265,7 @@ parser.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOWebSocket/WebSocketFrameDecoder.swift#L223-L276">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.4.0/Sources/NIOWebSocket/WebSocketFrameDecoder.swift#L223-L276">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -268,7 +310,7 @@ frame transformation as needed.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOWebSocket/WebSocketFrameEncoder.swift#L38-L116">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.4.0/Sources/NIOWebSocket/WebSocketFrameEncoder.swift#L38-L116">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -307,7 +349,7 @@ WebSocket protocol, and can be used by users when custom behaviour is not requir
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.3.0/Sources/NIOWebSocket/WebSocketProtocolErrorHandler.swift#L22-L44">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.4.0/Sources/NIOWebSocket/WebSocketProtocolErrorHandler.swift#L22-L44">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -320,7 +362,7 @@ WebSocket protocol, and can be used by users when custom behaviour is not requir
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-06-19)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-07-11)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
