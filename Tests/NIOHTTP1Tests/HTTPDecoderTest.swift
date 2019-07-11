@@ -594,24 +594,14 @@ class HTTPDecoderTest: XCTestCase {
                                                                         decoderFactory: { HTTPRequestDecoder() }))
     }
 
-    func testErrorFiredOnEOFForLeftOversInAllLeftOversModes() throws {
+    func testNothingHappensOnEOFForLeftOversInAllLeftOversModes() throws {
         class Receiver: ChannelInboundHandler {
             typealias InboundIn = HTTPServerRequestPart
 
-            private let errorReceivedPromise: EventLoopPromise<ByteToMessageDecoderError>
             private var numberOfErrors = 0
 
-            init(errorReceivedPromise: EventLoopPromise<ByteToMessageDecoderError>) {
-                self.errorReceivedPromise = errorReceivedPromise
-            }
-
             func errorCaught(context: ChannelHandlerContext, error: Error) {
-                self.numberOfErrors += 1
-                if self.numberOfErrors == 1, let error = error as? ByteToMessageDecoderError {
-                    self.errorReceivedPromise.succeed(error)
-                } else {
-                    XCTFail("illegal: number of errors: \(self.numberOfErrors), error: \(error)")
-                }
+                XCTFail("unexpected error: \(error)")
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -629,24 +619,14 @@ class HTTPDecoderTest: XCTestCase {
 
         for leftOverBytesStrategy in [RemoveAfterUpgradeStrategy.dropBytes, .fireError, .forwardBytes] {
             let channel = EmbeddedChannel()
-            let errorReceivedPromise: EventLoopPromise<ByteToMessageDecoderError> = channel.eventLoop.makePromise()
             var buffer = channel.allocator.buffer(capacity: 64)
             buffer.writeStaticString("OPTIONS * HTTP/1.1\r\nHost: L\r\nUpgrade: P\r\nConnection: upgrade\r\n\r\nXXXX")
 
             let decoder = HTTPRequestDecoder(leftOverBytesStrategy: leftOverBytesStrategy)
             XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(decoder)).wait())
-            XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver(errorReceivedPromise: errorReceivedPromise)).wait())
+            XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
             XCTAssertNoThrow(try channel.writeInbound(buffer))
             XCTAssertNoThrow(XCTAssert(try channel.finish().isClean))
-
-            switch Result(catching: { try errorReceivedPromise.futureResult.wait() }) {
-            case .success(ByteToMessageDecoderError.leftoverDataWhenDone(let buffer)):
-                XCTAssertEqual("XXXX", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
-            case .failure(let error):
-                XCTFail("unexpected error: \(error)")
-            case .success(let error):
-                XCTFail("unexpected error: \(error)")
-            }
         }
     }
 

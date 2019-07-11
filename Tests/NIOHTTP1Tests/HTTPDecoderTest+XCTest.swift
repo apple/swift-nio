@@ -46,7 +46,7 @@ extension HTTPDecoderTest {
                 ("testDoesNotDeliverLeftoversUnnecessarily", testDoesNotDeliverLeftoversUnnecessarily),
                 ("testHTTPResponseWithoutHeaders", testHTTPResponseWithoutHeaders),
                 ("testBasicVerifications", testBasicVerifications),
-                ("testErrorFiredOnEOFForLeftOversInAllLeftOversModes", testErrorFiredOnEOFForLeftOversInAllLeftOversModes),
+                ("testNothingHappensOnEOFForLeftOversInAllLeftOversModes", testNothingHappensOnEOFForLeftOversInAllLeftOversModes),
                 ("testBytesCanBeForwardedWhenHandlerRemoved", testBytesCanBeForwardedWhenHandlerRemoved),
                 ("testBytesCanBeFiredAsErrorWhenHandlerRemoved", testBytesCanBeFiredAsErrorWhenHandlerRemoved),
                 ("testBytesCanBeDroppedWhenHandlerRemoved", testBytesCanBeDroppedWhenHandlerRemoved),
