@@ -465,8 +465,7 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     ///
     /// - parameters:
     ///     - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
-    ///                              detected. Note that this does not affect what happens on EOF (in which case an
-    ///                              `ByteToMessageDecoderError.leftoverDataWhenDone` error is fired.)
+    ///                              detected. Note that this does not affect what happens on EOF.
     public init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) {
         self.headers.reserveCapacity(16)
         if In.self == HTTPServerRequestPart.self {
@@ -620,18 +619,16 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
                 try self.feedEOF(context: context)
             }
         }
-        if buffer.readableBytes > 0 {
-            if seenEOF {
+        if buffer.readableBytes > 0 && !seenEOF {
+            // We only do this if we haven't seen EOF because the left-overs strategy must only be invoked when we're
+            // sure that this is the completion of an upgrade.
+            switch self.leftOverBytesStrategy {
+            case .dropBytes:
+                ()
+            case .fireError:
                 context.fireErrorCaught(ByteToMessageDecoderError.leftoverDataWhenDone(buffer))
-            } else {
-                switch self.leftOverBytesStrategy {
-                case .dropBytes:
-                    ()
-                case .fireError:
-                    context.fireErrorCaught(ByteToMessageDecoderError.leftoverDataWhenDone(buffer))
-                case .forwardBytes:
-                    context.fireChannelRead(NIOAny(buffer))
-                }
+            case .forwardBytes:
+                context.fireChannelRead(NIOAny(buffer))
             }
         }
         return .needMoreData
