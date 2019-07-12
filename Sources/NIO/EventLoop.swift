@@ -914,22 +914,10 @@ internal final class SelectableEventLoop: EventLoop {
 
     @usableFromInline
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
-        self.closeGently().map {
-            do {
-                try self.close0()
-                queue.async {
-                    callback(nil)
-                }
-            } catch {
-                queue.async {
-                    callback(error)
-                }
-            }
-        }.whenFailure { error in
-            _ = try? self.close0()
-            queue.async {
-                callback(error)
-            }
+        // This function is never called legally because the only possibly owner of an `SelectableEventLoop` is
+        // `MultiThreadedEventLoopGroup` which calls `closeGently`.
+        queue.async {
+            callback(EventLoopError.unsupportedOperation)
         }
     }
 }
