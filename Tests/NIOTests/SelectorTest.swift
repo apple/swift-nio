@@ -330,9 +330,10 @@ class SelectorTest: XCTestCase {
                 }
             }
         }
-        let el = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let el = elg.next()
         defer {
-            XCTAssertNoThrow(try el.syncShutdownGracefully())
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
         }
         XCTAssertNoThrow(try withTemporaryUnixDomainSocketPathName { udsPath in
             let secondServerChannel = try! ServerBootstrap(group: el)
