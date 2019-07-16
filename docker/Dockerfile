@@ -8,7 +8,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
 
 # basic dependencies
-RUN apt-get update && apt-get install -y wget git build-essential software-properties-common pkg-config locales
+RUN apt-get update && apt-get install -y wget git jq build-essential software-properties-common pkg-config locales
 RUN apt-get update && apt-get install -y libicu-dev libblocksruntime0
 RUN apt-get update && apt-get install -y lsof dnsutils netcat-openbsd net-tools # used by integration tests
 
@@ -41,11 +41,7 @@ RUN [ -z $install_curl_from_source ] || ( cd $HOME/.curl && ./configure --with-s
 RUN [ -z $install_curl_from_source ] || ldconfig
 
 # ruby and jazzy for docs generation
-ARG skip_ruby_from_ppa
-RUN [ -n "$skip_ruby_from_ppa" ] || apt-add-repository -y ppa:brightbox/ruby-ng
-RUN [ -n "$skip_ruby_from_ppa" ] || { apt-get update && apt-get install -y ruby2.4 ruby2.4-dev; }
-RUN [ -z "$skip_ruby_from_ppa" ] || { apt-get update && apt-get install -y ruby ruby-dev; }
-RUN apt-get update && apt-get install -y libsqlite3-dev
+RUN apt-get update && apt-get install -y ruby ruby-dev libsqlite3-dev
 RUN gem install jazzy --no-ri --no-rdoc
 
 # swift

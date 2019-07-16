@@ -8,9 +8,8 @@ services:
       args:
         ubuntu_version: "16.04"
         swift_version: "5.1"
-        swift_flavour: "DEVELOPMENT-SNAPSHOT-2019-07-09-a"
+        swift_flavour: "DEVELOPMENT-SNAPSHOT-2019-07-13-a"
         swift_builds_suffix: "branch"
-        skip_ruby_from_ppa: "true"
 
   unit-tests:
     image: swift-nio:16.04-5.1
