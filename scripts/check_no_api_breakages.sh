@@ -38,7 +38,7 @@ function build_and_do() {
     git checkout -q "$tag" 
     swift build
     while read -r module; do
-        swift api-digester -dump-sdk -module "$module" \
+        swift api-digester -sdk "$sdk" -dump-sdk -module "$module" \
             -o "$output/$module.json" -I "$repodir/.build/debug"
     done < <(all_modules "$repodir")
     )
@@ -61,6 +61,11 @@ function usage() {
 if [[ $# -lt 3 ]]; then
     usage
     exit 1
+fi
+
+sdk=/
+if [[ "$(uname -s)" == Darwin ]]; then
+    sdk=$(xcrun --show-sdk-path)
 fi
 
 hash jq 2> /dev/null || { echo >&2 "ERROR: jq must be installed"; exit 1; }
@@ -91,7 +96,7 @@ for old_tag in "$@"; do
         fi
 
         echo -n "Checking $f... "
-        swift api-digester -diagnose-sdk \
+        swift api-digester -sdk "$sdk" -diagnose-sdk \
             --input-paths "$tmpdir/api-old/$f" -input-paths "$tmpdir/api-new/$f" 2>&1 \
             > "$report" 2>&1
 
