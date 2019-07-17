@@ -51,7 +51,8 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHan
     }
 }
 
-private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHandlerContext, isChunked: Bool, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
+private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHandlerContext, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
+    let isChunked = true
     switch (isChunked, promise) {
     case (true, let p):
         var buffer: ByteBuffer
