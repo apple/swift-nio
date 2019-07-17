@@ -185,6 +185,8 @@ extension UInt16 {
             self = 1011
         case .unknown(let i):
             self = i
+        case .breakAPI
+            self = 666
         }
     }
 }
