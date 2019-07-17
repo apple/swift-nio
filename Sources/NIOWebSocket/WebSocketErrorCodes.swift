@@ -73,16 +73,8 @@ public enum WebSocketErrorCode {
     /// Corresponds to code 1010.
     case missingExtension
 
-    /// Indicates that a server is terminating the connection because
-    /// it encountered an unexpected condition that prevented it from
-    /// fulfilling the request.
-    /// Corresponds to code 1011.
-    case unexpectedServerError
-
     /// We don't have a better name for this error code.
     case unknown(UInt16)
-    
-    case breakAPI
 
     /// Create an error code from a raw 16-bit integer as sent on the
     /// network.
@@ -181,12 +173,8 @@ extension UInt16 {
             self = 1009
         case .missingExtension:
             self = 1010
-        case .unexpectedServerError:
-            self = 1011
         case .unknown(let i):
             self = i
-        case .breakAPI:
-            self = 666
         }
     }
 }
