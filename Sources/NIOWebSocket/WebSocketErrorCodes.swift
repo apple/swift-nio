@@ -81,6 +81,8 @@ public enum WebSocketErrorCode {
 
     /// We don't have a better name for this error code.
     case unknown(UInt16)
+    
+    case breakAPI
 
     /// Create an error code from a raw 16-bit integer as sent on the
     /// network.
