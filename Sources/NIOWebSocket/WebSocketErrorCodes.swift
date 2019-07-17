@@ -98,9 +98,7 @@ public enum WebSocketErrorCode {
         case 1009:
             self = .messageTooLarge
         case 1010:
-            self = .missingExtension
-        case 1011:
-            self = .unexpectedServerError
+            self = .missingExtension            
         default:
             self = .unknown(integer)
         }
