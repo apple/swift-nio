@@ -35,7 +35,7 @@ function build_and_do() {
 
     (
     cd "$repodir"
-    git checkout -q "$tag" 
+    git checkout -q "$tag"
     swift build
     while read -r module; do
         swift api-digester -sdk "$sdk" -dump-sdk -module "$module" \
@@ -76,6 +76,7 @@ shift 2
 
 repodir="$tmpdir/repo"
 git clone "$repo_url" "$repodir"
+git -C "$repodir" fetch -q origin '+refs/pull/*:refs/remotes/origin/pr/*'
 errors=0
 
 for old_tag in "$@"; do
