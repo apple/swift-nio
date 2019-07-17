@@ -121,6 +121,9 @@ private class BetterHTTPParser {
             return 0
         }
     }
+    
+    public func breakAPI() {
+    }
 
     private func start(bytes: UnsafeRawBufferPointer, newState: HTTPDecodingState) {
         assert(self.firstNonDiscardableOffset == nil)
