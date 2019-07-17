@@ -795,4 +795,13 @@ public final class EventLoopTest : XCTestCase {
             }
         }
     }
+
+    func testSubtractingDeadlineFromPastAndFuturesDeadlinesWorks() {
+        let older = NIODeadline.now()
+        Thread.sleep(until: Date().addingTimeInterval(0.02))
+        let newer = NIODeadline.now()
+
+        XCTAssertLessThan(older - newer, .nanoseconds(0))
+        XCTAssertGreaterThan(newer - older, .nanoseconds(0))
+    }
 }
