@@ -54,6 +54,7 @@ extension EventLoopTest {
                 ("testAndAllSucceedWithZeroFutures", testAndAllSucceedWithZeroFutures),
                 ("testCancelledScheduledTasksDoNotHoldOnToRunClosure", testCancelledScheduledTasksDoNotHoldOnToRunClosure),
                 ("testIllegalCloseOfEventLoopFails", testIllegalCloseOfEventLoopFails),
+                ("testSubtractingDeadlineFromPastAndFuturesDeadlinesWorks", testSubtractingDeadlineFromPastAndFuturesDeadlinesWorks),
            ]
    }
 }
