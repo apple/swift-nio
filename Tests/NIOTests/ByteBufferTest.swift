@@ -726,7 +726,7 @@ class ByteBufferTest: XCTestCase {
         var src = self.allocator.buffer(capacity: 4)
         src.writeBytes(Data([0, 1, 2, 3]))
 
-        self.buf.set(buffer: src, at: 1)
+        self.buf.setBuffer(src, at: 1)
 
         /* Should bit increase the writerIndex of the src buffer */
         XCTAssertEqual(4, src.readableBytes)

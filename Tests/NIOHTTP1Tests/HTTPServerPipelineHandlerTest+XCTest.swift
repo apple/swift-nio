@@ -45,6 +45,11 @@ extension HTTPServerPipelineHandlerTest {
                 ("testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer", testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer),
                 ("testParserErrorOnly", testParserErrorOnly),
                 ("testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding", testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding),
+                ("testRemovingWithResponseOutstandingTriggersRead", testRemovingWithResponseOutstandingTriggersRead),
+                ("testRemovingWithPartialResponseOutstandingTriggersRead", testRemovingWithPartialResponseOutstandingTriggersRead),
+                ("testRemovingWithBufferedRequestForwards", testRemovingWithBufferedRequestForwards),
+                ("testQuiescingInAResponseThenRemovedFiresEventAndReads", testQuiescingInAResponseThenRemovedFiresEventAndReads),
+                ("testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead", testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead),
            ]
    }
 }

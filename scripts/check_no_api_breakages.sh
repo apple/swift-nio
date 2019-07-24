@@ -35,10 +35,10 @@ function build_and_do() {
 
     (
     cd "$repodir"
-    git checkout -q "$tag" 
+    git checkout -q "$tag"
     swift build
     while read -r module; do
-        swift api-digester -dump-sdk -module "$module" \
+        swift api-digester -sdk "$sdk" -dump-sdk -module "$module" \
             -o "$output/$module.json" -I "$repodir/.build/debug"
     done < <(all_modules "$repodir")
     )
@@ -63,6 +63,11 @@ if [[ $# -lt 3 ]]; then
     exit 1
 fi
 
+sdk=/
+if [[ "$(uname -s)" == Darwin ]]; then
+    sdk=$(xcrun --show-sdk-path)
+fi
+
 hash jq 2> /dev/null || { echo >&2 "ERROR: jq must be installed"; exit 1; }
 tmpdir=$(mktemp -d /tmp/.check-api_XXXXXX)
 repo_url=$1
@@ -71,6 +76,7 @@ shift 2
 
 repodir="$tmpdir/repo"
 git clone "$repo_url" "$repodir"
+git -C "$repodir" fetch -q origin '+refs/pull/*:refs/remotes/origin/pr/*'
 errors=0
 
 for old_tag in "$@"; do
@@ -91,7 +97,7 @@ for old_tag in "$@"; do
         fi
 
         echo -n "Checking $f... "
-        swift api-digester -diagnose-sdk \
+        swift api-digester -sdk "$sdk" -diagnose-sdk \
             --input-paths "$tmpdir/api-old/$f" -input-paths "$tmpdir/api-new/$f" 2>&1 \
             > "$report" 2>&1
 

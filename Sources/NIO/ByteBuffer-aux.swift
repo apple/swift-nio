@@ -284,7 +284,19 @@ extension ByteBuffer {
     ///     - index: The index for the first byte.
     /// - returns: The number of bytes written.
     @discardableResult
+    @available(*, deprecated, renamed: "setBuffer(_:at:)")
     public mutating func set(buffer: ByteBuffer, at index: Int) -> Int {
+        return self.setBuffer(buffer, at: index)
+    }
+
+    /// Copy `buffer`'s readable bytes into this `ByteBuffer` starting at `index`. Does not move any of the reader or writer indices.
+    ///
+    /// - parameters:
+    ///     - buffer: The `ByteBuffer` to copy.
+    ///     - index: The index for the first byte.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    public mutating func setBuffer(_ buffer: ByteBuffer, at index: Int) -> Int {
         return buffer.withUnsafeReadableBytes{ p in
             self.setBytes(p, at: index)
         }
@@ -298,7 +310,7 @@ extension ByteBuffer {
     /// - returns: The number of bytes written to this `ByteBuffer` which is equal to the number of bytes read from `buffer`.
     @discardableResult
     public mutating func writeBuffer(_ buffer: inout ByteBuffer) -> Int {
-        let written = set(buffer: buffer, at: writerIndex)
+        let written = self.setBuffer(buffer, at: writerIndex)
         self._moveWriterIndex(forwardBy: written)
         buffer._moveReaderIndex(forwardBy: written)
         return written
