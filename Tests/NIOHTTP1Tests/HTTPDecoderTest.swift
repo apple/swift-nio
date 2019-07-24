@@ -593,4 +593,156 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: expectedInOutsBB,
                                                                         decoderFactory: { HTTPRequestDecoder() }))
     }
+
+    func testNothingHappensOnEOFForLeftOversInAllLeftOversModes() throws {
+        class Receiver: ChannelInboundHandler {
+            typealias InboundIn = HTTPServerRequestPart
+
+            private var numberOfErrors = 0
+
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
+                XCTFail("unexpected error: \(error)")
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .head(let head):
+                    XCTAssertEqual(.OPTIONS, head.method)
+                case .body:
+                    XCTFail("unexpected .body part")
+                case .end:
+                    ()
+                }
+            }
+        }
+
+        for leftOverBytesStrategy in [RemoveAfterUpgradeStrategy.dropBytes, .fireError, .forwardBytes] {
+            let channel = EmbeddedChannel()
+            var buffer = channel.allocator.buffer(capacity: 64)
+            buffer.writeStaticString("OPTIONS * HTTP/1.1\r\nHost: L\r\nUpgrade: P\r\nConnection: upgrade\r\n\r\nXXXX")
+
+            let decoder = HTTPRequestDecoder(leftOverBytesStrategy: leftOverBytesStrategy)
+            XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(decoder)).wait())
+            XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
+            XCTAssertNoThrow(try channel.writeInbound(buffer))
+            XCTAssertNoThrow(XCTAssert(try channel.finish().isClean))
+        }
+    }
+
+    func testBytesCanBeForwardedWhenHandlerRemoved() throws {
+        class Receiver: ChannelInboundHandler, RemovableChannelHandler {
+            typealias InboundIn = HTTPServerRequestPart
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .head(let head):
+                    XCTAssertEqual(.OPTIONS, head.method)
+                case .body:
+                    XCTFail("unexpected .body part")
+                case .end:
+                    ()
+                }
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.writeStaticString("OPTIONS * HTTP/1.1\r\nHost: L\r\nUpgrade: P\r\nConnection: upgrade\r\n\r\nXXXX")
+
+        let receiver = Receiver()
+        let decoder = ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes))
+        XCTAssertNoThrow(try channel.pipeline.addHandler(decoder).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(receiver).wait())
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        let removalFutures = [ channel.pipeline.removeHandler(receiver), channel.pipeline.removeHandler(decoder) ]
+        channel.embeddedEventLoop.run()
+        try removalFutures.forEach {
+            XCTAssertNoThrow(try $0.wait())
+        }
+        XCTAssertNoThrow(XCTAssertEqual("XXXX", try channel.readInbound(as: ByteBuffer.self).map {
+            String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
+        }))
+        XCTAssertNoThrow(XCTAssert(try channel.finish().isClean))
+    }
+
+    func testBytesCanBeFiredAsErrorWhenHandlerRemoved() throws {
+        class Receiver: ChannelInboundHandler, RemovableChannelHandler {
+            typealias InboundIn = HTTPServerRequestPart
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .head(let head):
+                    XCTAssertEqual(.OPTIONS, head.method)
+                case .body:
+                    XCTFail("unexpected .body part")
+                case .end:
+                    ()
+                }
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.writeStaticString("OPTIONS * HTTP/1.1\r\nHost: L\r\nUpgrade: P\r\nConnection: upgrade\r\n\r\nXXXX")
+
+        let receiver = Receiver()
+        let decoder = ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .fireError))
+        XCTAssertNoThrow(try channel.pipeline.addHandler(decoder).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(receiver).wait())
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        let removalFutures = [ channel.pipeline.removeHandler(receiver), channel.pipeline.removeHandler(decoder) ]
+        channel.embeddedEventLoop.run()
+        try removalFutures.forEach {
+            XCTAssertNoThrow(try $0.wait())
+        }
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            switch error as? ByteToMessageDecoderError {
+            case .some(ByteToMessageDecoderError.leftoverDataWhenDone(let buffer)):
+                XCTAssertEqual("XXXX", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
+            case .some(let error):
+                XCTFail("unexpected error: \(error)")
+            case .none:
+                XCTFail("unexpected error")
+            }
+        }
+        XCTAssertNoThrow(XCTAssert(try channel.finish().isClean))
+    }
+
+    func testBytesCanBeDroppedWhenHandlerRemoved() throws {
+        class Receiver: ChannelInboundHandler, RemovableChannelHandler {
+            typealias InboundIn = HTTPServerRequestPart
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .head(let head):
+                    XCTAssertEqual(.OPTIONS, head.method)
+                case .body:
+                    XCTFail("unexpected .body part")
+                case .end:
+                    ()
+                }
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.writeStaticString("OPTIONS * HTTP/1.1\r\nHost: L\r\nUpgrade: P\r\nConnection: upgrade\r\n\r\nXXXX")
+
+        let receiver = Receiver()
+        let decoder = ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .dropBytes))
+        XCTAssertNoThrow(try channel.pipeline.addHandler(decoder).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(receiver).wait())
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        let removalFutures = [ channel.pipeline.removeHandler(receiver), channel.pipeline.removeHandler(decoder) ]
+        channel.embeddedEventLoop.run()
+        try removalFutures.forEach {
+            XCTAssertNoThrow(try $0.wait())
+        }
+        XCTAssertNoThrow(XCTAssert(try channel.finish().isClean))
+    }
+
 }

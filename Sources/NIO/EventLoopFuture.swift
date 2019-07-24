@@ -919,16 +919,28 @@ extension EventLoopFuture {
     @inlinable
     public func fold<OtherValue>(_ futures: [EventLoopFuture<OtherValue>],
                                  with combiningFunction: @escaping (Value, OtherValue) -> EventLoopFuture<Value>) -> EventLoopFuture<Value> {
-        let body = futures.reduce(self) { (f1: EventLoopFuture<Value>, f2: EventLoopFuture<OtherValue>) -> EventLoopFuture<Value> in
-            let newFuture = f1.and(f2).flatMap { (args: (Value, OtherValue)) -> EventLoopFuture<Value> in
-                let (f1Value, f2Value) = args
-                self.eventLoop.assertInEventLoop()
-                return combiningFunction(f1Value, f2Value)
+        func fold0() -> EventLoopFuture<Value> {
+            let body = futures.reduce(self) { (f1: EventLoopFuture<Value>, f2: EventLoopFuture<OtherValue>) -> EventLoopFuture<Value> in
+                let newFuture = f1.and(f2).flatMap { (args: (Value, OtherValue)) -> EventLoopFuture<Value> in
+                    let (f1Value, f2Value) = args
+                    self.eventLoop.assertInEventLoop()
+                    return combiningFunction(f1Value, f2Value)
+                }
+                assert(newFuture.eventLoop === self.eventLoop)
+                return newFuture
             }
-            assert(newFuture.eventLoop === self.eventLoop)
-            return newFuture
+            return body
         }
-        return body
+
+        if self.eventLoop.inEventLoop {
+            return fold0()
+        } else {
+            let promise = self.eventLoop.makePromise(of: Value.self)
+            self.eventLoop.execute {
+                fold0().cascade(to: promise)
+            }
+            return promise.futureResult
+        }
     }
 }
 

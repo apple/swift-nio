@@ -464,7 +464,8 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     /// Creates a new instance of `HTTPDecoder`.
     ///
     /// - parameters:
-    ///     - leftOverBytesStrategy: the strategy to use when removing the decoder from the pipeline and an upgrade was detected
+    ///     - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
+    ///                              detected. Note that this does not affect what happens on EOF.
     public init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) {
         self.headers.reserveCapacity(16)
         if In.self == HTTPServerRequestPart.self {
@@ -618,7 +619,9 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
                 try self.feedEOF(context: context)
             }
         }
-        if buffer.readableBytes > 0 {
+        if buffer.readableBytes > 0 && !seenEOF {
+            // We only do this if we haven't seen EOF because the left-overs strategy must only be invoked when we're
+            // sure that this is the completion of an upgrade.
             switch self.leftOverBytesStrategy {
             case .dropBytes:
                 ()

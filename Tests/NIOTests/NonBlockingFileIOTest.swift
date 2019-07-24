@@ -473,6 +473,31 @@ class NonBlockingFileIOTest: XCTestCase {
         }
     }
 
+    func testWriteMultipleTimes() throws {
+        var buffer = allocator.buffer(capacity: 3)
+        buffer.writeStaticString("xxx")
+
+        try withTemporaryFile(content: "AAA") { (fileHandle, path) in
+            for i in 0 ..< 3 {
+                buffer.writeString("\(i)")
+                try self.fileIO.write(fileHandle: fileHandle,
+                                      buffer: buffer,
+                                      eventLoop: self.eventLoop).wait()
+            }
+            let offset = try fileHandle.withUnsafeFileDescriptor {
+                try Posix.lseek(descriptor: $0, offset: 0, whence: SEEK_SET)
+            }
+            XCTAssertEqual(offset, 0)
+
+            let expectedOutput = "xxx0xxx01xxx012"
+            let readBuffer = try self.fileIO.read(fileHandle: fileHandle,
+                                                  byteCount: expectedOutput.utf8.count,
+                                                  allocator: self.allocator,
+                                                  eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(expectedOutput, String(decoding: readBuffer.readableBytesView, as: Unicode.UTF8.self))
+        }
+    }
+
     func testFileOpenWorks() throws {
         let content = "123"
         try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
