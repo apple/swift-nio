@@ -133,14 +133,16 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
     }
     
     private func pingTestFrameData(context: ChannelHandlerContext) {
-        let frameData = ByteBuffer(string: self.testFrameData)
-        let frame = WebSocketFrame(fin: true, opcode: .ping, data: frameData)
+        var buffer = context.channel.allocator.buffer(capacity: self.testFrameData.utf8.count)
+        buffer.writeString(self.testFrameData)
+        let frame = WebSocketFrame(fin: true, opcode: .ping, data: buffer)
         context.write(self.wrapOutboundOut(frame), promise: nil)
     }
     
     private func pong(context: ChannelHandlerContext, frame: WebSocketFrame) {
-        if let frameData = frame.data.getString(at: 0, length: self.testFrameData.count) {
-            print("Websocket: Received: \(frameData)")
+        var frameData = frame.data
+        if let frameDataString = frameData.readString(length: self.testFrameData.count) {
+            print("Websocket: Received: \(frameDataString)")
         }
     }
     
@@ -153,13 +155,6 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
         context.write(self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
             context.close(mode: .output, promise: nil)
         }
-    }
-}
-
-extension ByteBuffer {
-    fileprivate init(string: String) {
-        self = ByteBufferAllocator().buffer(capacity: string.utf8.count)
-        self.writeString(string)
     }
 }
 
