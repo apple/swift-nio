@@ -1,0 +1,47 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOTestUtils/ByteToMessageDecoderVerifier.swift",
+      "line": null,
+      "symbol": "ByteToMessageDecoderVerifier",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/ByteToMessageDecoderVerifier.swift",
+      "line": 17,
+      "symbol": "ByteToMessageDecoderVerifier",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/ByteToMessageDecoderVerifier.swift",
+      "line": 192,
+      "symbol": "ByteToMessageDecoderVerifier.VerificationError.ErrorCode",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/EventCounterHandler.swift",
+      "line": 45,
+      "symbol": "EventCounterHandler.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/EventCounterHandler.swift",
+      "line": 50,
+      "symbol": "EventCounterHandler.ValidityError",
+      "symbol_kind": "source.lang.swift.decl.struct",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/EventCounterHandler.swift",
+      "line": 51,
+      "symbol": "EventCounterHandler.ValidityError.reason",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}
