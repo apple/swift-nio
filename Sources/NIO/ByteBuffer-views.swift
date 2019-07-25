@@ -81,7 +81,7 @@ extension ByteBuffer {
     ///   - length: The length of the view (in bytes)
     /// - returns: A view into a portion of a `ByteBuffer` or `nil` if the requested bytes were not readable.
     public func viewBytes(at index: Int, length: Int) -> ByteBufferView? {
-        guard index >= self.readerIndex && index <= self.writerIndex - length else {
+        guard length >= 0 && index >= self.readerIndex && index <= self.writerIndex - length else {
             return nil
         }
 
