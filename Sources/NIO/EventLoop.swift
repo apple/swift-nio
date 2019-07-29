@@ -1131,8 +1131,6 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             }
         }
 
-        self.shutdownLock.unlock()
-
         var error: Error? = nil
 
         for loop in self.eventLoops {
