@@ -804,4 +804,37 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertLessThan(older - newer, .nanoseconds(0))
         XCTAssertGreaterThan(newer - older, .nanoseconds(0))
     }
+
+    func testCallingSyncShutdownGracefullyMultipleTimesShouldNotHang() throws {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 4)
+        try elg.syncShutdownGracefully()
+        try elg.syncShutdownGracefully()
+        try elg.syncShutdownGracefully()
+    }
+
+    func testCallingShutdownGracefullyMultipleTimesShouldExecuteAllCallbacks() throws {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 4)
+        let condition: ConditionLock<Int> = ConditionLock(value: 0)
+        elg.shutdownGracefully { _ in
+            if condition.lock(whenValue: 0, timeoutSeconds: 1) {
+                condition.unlock(withValue: 1)
+            }
+        }
+        elg.shutdownGracefully { _ in
+            if condition.lock(whenValue: 1, timeoutSeconds: 1) {
+                condition.unlock(withValue: 2)
+            }
+        }
+        elg.shutdownGracefully { _ in
+            if condition.lock(whenValue: 2, timeoutSeconds: 1) {
+                condition.unlock(withValue: 3)
+            }
+        }
+
+        guard condition.lock(whenValue: 3, timeoutSeconds: 1) else {
+            XCTFail("Not all shutdown callbacks have been executed")
+            return
+        }
+        condition.unlock()
+    }
 }

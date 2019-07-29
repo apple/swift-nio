@@ -996,10 +996,18 @@ typealias ThreadInitializer = (NIOThread) -> Void
 ///            subclass, a good place to shut it down is the `tearDown` method.
 public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
+    private enum RunState {
+        case running
+        case closing([(DispatchQueue, (Error?) -> Void)])
+        case closed(Error?)
+    }
+
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
 
     private let index = Atomic<Int>(value: 0)
     private let eventLoops: [SelectableEventLoop]
+    private let shutdownLock: Lock = Lock()
+    private var runState: RunState = .running
 
     private static func setupThreadAndEventLoop(name: String, initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
         let lock = Lock()
@@ -1104,6 +1112,27 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
         let g = DispatchGroup()
         let q = DispatchQueue(label: "nio.shutdownGracefullyQueue", target: queue)
+        do {
+            self.shutdownLock.lock()
+            defer { shutdownLock.unlock() }
+
+            switch self.runState {
+            case .running:
+                self.runState = .closing([])
+            case .closing(var callbacks):
+                callbacks.append((q, handler))
+                self.runState = .closing(callbacks)
+                return
+            case .closed(let error):
+                q.async {
+                    handler(error)
+                }
+                return
+            }
+        }
+
+        self.shutdownLock.unlock()
+
         var error: Error? = nil
 
         for loop in self.eventLoops {
@@ -1125,6 +1154,19 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             }
 
             handler(error)
+            self.shutdownLock.withLock {
+                guard case .closing(let callbacks) = self.runState else {
+                    fatalError("runState was \(self.runState), expected .closing")
+                }
+
+                for (q, handler) in callbacks {
+                    q.async {
+                        handler(error)
+                    }
+                }
+
+                self.runState = .closed(error)
+            }
         }
     }
 }
