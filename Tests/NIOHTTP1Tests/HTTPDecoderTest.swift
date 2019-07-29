@@ -745,4 +745,44 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssert(try channel.finish().isClean))
     }
 
+    func testAppropriateErrorWhenReceivingUnsolicitedResponse() throws {
+        let channel = EmbeddedChannel()
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.writeStaticString("HTTP/1.1 200 OK\r\nServer: a-bad-server/1.0.0\r\n\r\n")
+
+        let decoder = ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes))
+        XCTAssertNoThrow(try channel.pipeline.addHandler(decoder).wait())
+
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(error as? NIOHTTPDecoderError, .unsolicitedResponse)
+        }
+    }
+
+    func testAppropriateErrorWhenReceivingUnsolicitedResponseDoesNotRecover() throws {
+        let channel = EmbeddedChannel()
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.writeStaticString("HTTP/1.1 200 OK\r\nServer: a-bad-server/1.0.0\r\n\r\n")
+
+        let decoder = ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes))
+        XCTAssertNoThrow(try channel.pipeline.addHandler(decoder).wait())
+
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(error as? NIOHTTPDecoderError, .unsolicitedResponse)
+        }
+
+        // Write a request.
+        let request = HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1), method: .GET, uri: "/"))
+        XCTAssertNoThrow(try channel.writeOutbound(request))
+
+        // The server sending another response should lead to another error.
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            guard case .some(.dataReceivedInErrorState(let baseError, _)) = error as? ByteToMessageDecoderError else {
+                XCTFail("Unexpected error type: \(error)")
+                return
+            }
+
+            XCTAssertEqual(baseError as? NIOHTTPDecoderError, .unsolicitedResponse)
+        }
+    }
+
 }
