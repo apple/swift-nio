@@ -1152,18 +1152,21 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             }
 
             handler(error)
-            self.shutdownLock.withLock {
+
+            let callbacks: [(DispatchQueue, (Error?) -> Void)] = self.shutdownLock.withLock {
                 guard case .closing(let callbacks) = self.runState else {
                     fatalError("runState was \(self.runState), expected .closing")
                 }
 
-                for (q, handler) in callbacks {
-                    q.async {
-                        handler(error)
-                    }
-                }
-
                 self.runState = .closed(error)
+
+                return callbacks
+            }
+
+            for (q, handler) in callbacks {
+                q.async {
+                    handler(error)
+                }
             }
         }
     }
