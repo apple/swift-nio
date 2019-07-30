@@ -1113,8 +1113,6 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         let g = DispatchGroup()
         let q = DispatchQueue(label: "nio.shutdownGracefullyQueue", target: queue)
         let wasRunning: Bool = self.shutdownLock.withLock {
-            defer { shutdownLock.unlock() }
-
             switch self.runState {
             case .running:
                 self.runState = .closing([])
