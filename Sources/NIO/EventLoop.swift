@@ -1102,6 +1102,9 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
     /// shut down and release their resources.
     ///
+    /// Even though calling `shutdownGracefully` more than once should be avoided, it is safe to do so and execution
+    /// of the `handler` is guaranteed.
+    ///
     /// - parameters:
     ///    - queue: The `DispatchQueue` to run `handler` on when the shutdown operation completes.
     ///    - handler: The handler which is called after the shutdown operation completes. The parameter will be `nil`
@@ -1113,15 +1116,22 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         let g = DispatchGroup()
         let q = DispatchQueue(label: "nio.shutdownGracefullyQueue", target: queue)
         let wasRunning: Bool = self.shutdownLock.withLock {
+            // We need to check the current `runState` and react accordingly.
             switch self.runState {
             case .running:
+                // If we are still running, we set the `runState` to `closing`,
+                // so that potential future invocations know, that the shutdown
+                // has already been initiaited.
                 self.runState = .closing([])
                 return true
             case .closing(var callbacks):
+                // If we are currently closing, we need to register the `handler`
+                // for invocation after the shutdown is completed.
                 callbacks.append((q, handler))
                 self.runState = .closing(callbacks)
                 return false
             case .closed(let error):
+                // If we are already closed, we can directly dispatch the `handler`
                 q.async {
                     handler(error)
                 }
@@ -1129,6 +1139,8 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             }
         }
 
+        // If the `runState` was not `running` when `shutdownGracefully` was called,
+        // the shutdown has already been initiated and we have to return here.
         guard wasRunning else {
             return
         }
