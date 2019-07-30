@@ -161,8 +161,11 @@ There are currently several example projects that demonstrate how to use SwiftNI
 - **chat server** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatServer
 - **echo client** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoClient
 - **echo server** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoServer
-- **HTTP server** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Server
+- **UDP echo client** https://github.com/apple/swift-nio/tree/master/Sources/NIOUDPEchoClient
 - **UDP echo server** https://github.com/apple/swift-nio/tree/master/Sources/NIOUDPEchoServer
+- **HTTP client** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Client
+- **HTTP server** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Server
+- **WebSocket client** https://github.com/apple/swift-nio/tree/master/Sources/NIOWebSocketClient
 - **WebSocket server** https://github.com/apple/swift-nio/tree/master/Sources/NIOWebSocketServer
 
 ## Getting Started
