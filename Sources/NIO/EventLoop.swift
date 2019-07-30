@@ -1112,23 +1112,27 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
         let g = DispatchGroup()
         let q = DispatchQueue(label: "nio.shutdownGracefullyQueue", target: queue)
-        do {
-            self.shutdownLock.lock()
+        let wasRunning: Bool = self.shutdownLock.withLock {
             defer { shutdownLock.unlock() }
 
             switch self.runState {
             case .running:
                 self.runState = .closing([])
+                return true
             case .closing(var callbacks):
                 callbacks.append((q, handler))
                 self.runState = .closing(callbacks)
-                return
+                return false
             case .closed(let error):
                 q.async {
                     handler(error)
                 }
-                return
+                return false
             }
+        }
+
+        guard wasRunning else {
+            return
         }
 
         var error: Error? = nil
