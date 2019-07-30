@@ -700,4 +700,19 @@ measureAndPrint(desc: "future_whenallcomplete_100k_deferred_on_loop") {
     return allSucceeded.count
 }
 
+measureAndPrint(desc: "future_reduce_10k_futures") {
+    let el1 = group.next()
+
+    let oneHundredFutures = (1 ... 10_000).map { i in el1.makeSucceededFuture(i) }
+    return try! EventLoopFuture<Int>.reduce(0, oneHundredFutures, on: el1, +).wait()
+}
+
+measureAndPrint(desc: "future_reduce_into_10k_futures") {
+    let el1 = group.next()
+
+    let oneHundredFutures = (1 ... 10_000).map { i in el1.makeSucceededFuture(i) }
+    return try! EventLoopFuture<Int>.reduce(into: 0, oneHundredFutures, on: el1, { $0 += $1 }).wait()
+}
+
+
 try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark.self)

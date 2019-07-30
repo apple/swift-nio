@@ -83,6 +83,21 @@ private final class ReadCountingHandler: ChannelOutboundHandler {
 }
 
 
+private final class QuiesceEventRecorder: ChannelInboundHandler {
+    typealias InboundIn = Any
+    typealias InboundOut = Any
+
+    public var quiesceCount = 0
+
+    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        if event is ChannelShouldQuiesceEvent {
+            quiesceCount += 1
+        }
+        context.fireUserInboundEventTriggered(event)
+    }
+}
+
+
 class HTTPServerPipelineHandlerTest: XCTestCase {
     var channel: EmbeddedChannel! = nil
     var requestHead: HTTPRequestHead! = nil
@@ -90,17 +105,22 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     fileprivate var readRecorder: ReadRecorder! = nil
     fileprivate var readCounter: ReadCountingHandler! = nil
     fileprivate var writeRecorder: WriteRecorder! = nil
+    fileprivate var pipelineHandler: HTTPServerPipelineHandler! = nil
+    fileprivate var quiesceEventRecorder: QuiesceEventRecorder! = nil
 
     override func setUp() {
         self.channel = EmbeddedChannel()
         self.readRecorder = ReadRecorder()
         self.readCounter = ReadCountingHandler()
         self.writeRecorder = WriteRecorder()
+        self.pipelineHandler = HTTPServerPipelineHandler()
+        self.quiesceEventRecorder = QuiesceEventRecorder()
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.readCounter).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.writeRecorder).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPServerPipelineHandler()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(self.pipelineHandler).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(self.quiesceEventRecorder).wait())
 
         self.requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/path")
         self.requestHead.headers.add(name: "Host", value: "example.com")
@@ -121,6 +141,8 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.responseHead = nil
         self.readCounter = nil
         self.readRecorder = nil
+        self.pipelineHandler = nil
+        self.quiesceEventRecorder = nil
     }
 
     func testBasicBufferingBehaviour() throws {
@@ -482,6 +504,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
         XCTAssertFalse(self.channel.isActive)
         self.channel = nil
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testQuiescingEventWhenIdleAfterARequest() throws {
@@ -507,6 +530,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
         XCTAssertFalse(self.channel.isActive)
         self.channel = nil
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testQuiescingInTheMiddleOfARequestNoResponseBitsYet() throws {
@@ -536,6 +560,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         XCTAssertFalse(self.channel.isActive)
         self.channel = nil
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testQuiescingAfterHavingReceivedRequestButBeforeResponseWasSent() throws {
@@ -565,6 +590,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         XCTAssertFalse(self.channel.isActive)
         self.channel = nil
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testQuiescingAfterHavingReceivedRequestAndResponseHeadButNoResponseEndYet() throws {
@@ -593,6 +619,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         XCTAssertFalse(self.channel.isActive)
         self.channel = nil
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd() throws {
@@ -629,6 +656,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         XCTAssertFalse(self.channel.isActive)
         self.channel = nil
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd() throws {
@@ -666,6 +694,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         XCTAssertFalse(self.channel.isActive)
         self.channel = nil
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer() throws {
@@ -705,6 +734,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         XCTAssertFalse(self.channel.isActive)
         self.channel = nil
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testParserErrorOnly() throws {
@@ -800,5 +830,159 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         // let's now run the HTTP responses that we enqueued earlier on.
         (self.channel.eventLoop as! EmbeddedEventLoop).run()
         XCTAssertEqual(.done, handler.state)
+    }
+
+    func testRemovingWithResponseOutstandingTriggersRead() throws {
+        // First, call read() and check it makes it through.
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Send in a request.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Call read again, twice. This should not change the number.
+        self.channel.read()
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Remove the handler.
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+
+        // This should have automatically triggered a call to read(), but only one.
+        XCTAssertEqual(self.readCounter.readCount, 2)
+
+        // Incidentally we shouldn't have fired a quiesce event.
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+    }
+
+    func testRemovingWithPartialResponseOutstandingTriggersRead() throws {
+        // First, call read() and check it makes it through.
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Send in a request.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Call read again, twice. This should not change the number.
+        self.channel.read()
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Send a partial response, which should not trigger a read.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Remove the handler.
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+
+        // This should have automatically triggered a call to read(), but only one.
+        XCTAssertEqual(self.readCounter.readCount, 2)
+
+        // Incidentally we shouldn't have fired a quiesce event.
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+    }
+
+    func testRemovingWithBufferedRequestForwards() throws {
+        // Send in a request, and part of another.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+
+        // Only one request should have made it through.
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        // Remove the handler.
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+
+        // The extra data should have been forwarded.
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil)),
+                        .channelRead(HTTPServerRequestPart.head(self.requestHead))])
+    }
+
+    func testQuiescingInAResponseThenRemovedFiresEventAndReads() throws {
+        // First, call read() and check it makes it through.
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Send through a request and part of another.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+
+        // Only one request should have made it through.
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Now quiesce the channel.
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Call read again, twice. This should not lead to reads, as we're waiting for the end.
+        self.channel.read()
+        self.channel.read()
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Now remove the handler.
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+
+        // Channel should be open, but the quiesce event should have fired, and read
+        // shouldn't have been called as we aren't expecting more data.
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 1)
+        XCTAssertEqual(self.readCounter.readCount, 1)
+    }
+
+    func testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead() throws {
+        // First, call read() and check it makes it through.
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Send through just the head.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead))])
+
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+        XCTAssertEqual(self.readCounter.readCount, 1)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // Call read again, twice. This should pass through.
+        self.channel.read()
+        self.channel.read()
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+        XCTAssertEqual(self.readCounter.readCount, 3)
+
+        // Now remove the handler.
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+
+        // Channel should be open, but the quiesce event should have fired, and read
+        // shouldn't be (as it passed through.
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 1)
+        XCTAssertEqual(self.readCounter.readCount, 3)
     }
 }

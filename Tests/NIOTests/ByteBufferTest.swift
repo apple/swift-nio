@@ -726,7 +726,7 @@ class ByteBufferTest: XCTestCase {
         var src = self.allocator.buffer(capacity: 4)
         src.writeBytes(Data([0, 1, 2, 3]))
 
-        self.buf.set(buffer: src, at: 1)
+        self.buf.setBuffer(src, at: 1)
 
         /* Should bit increase the writerIndex of the src buffer */
         XCTAssertEqual(4, src.readableBytes)
@@ -971,6 +971,7 @@ class ByteBufferTest: XCTestCase {
         testIndexAndLengthFunc(buf.getSlice)
         testIndexAndLengthFunc(buf.getString)
         testIndexAndLengthFunc(buf.getDispatchData)
+        testIndexAndLengthFunc(buf.viewBytes(at:length:))
     }
 
     func testWriteForContiguousCollections() throws {
@@ -1954,6 +1955,20 @@ class ByteBufferTest: XCTestCase {
         }
 
         XCTAssertNotEqual(byteBufferPointerValue, dataPointerValue)
+    }
+
+    func testViewBytesIsHappyWithNegativeValues() {
+        self.buf.clear()
+        XCTAssertNil(self.buf.viewBytes(at: -1, length: 0))
+        XCTAssertNil(self.buf.viewBytes(at: 0, length: -1))
+        XCTAssertNil(self.buf.viewBytes(at: -1, length: -1))
+
+        self.buf.writeString("hello world")
+        self.buf.moveWriterIndex(forwardBy: 6)
+
+        XCTAssertNil(self.buf.viewBytes(at: -1, length: 0))
+        XCTAssertNil(self.buf.viewBytes(at: 0, length: -1))
+        XCTAssertNil(self.buf.viewBytes(at: -1, length: -1))
     }
 }
 

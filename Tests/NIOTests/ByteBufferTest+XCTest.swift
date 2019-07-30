@@ -142,6 +142,7 @@ extension ByteBufferTest {
                 ("testDataByteTransferStrategyCopy", testDataByteTransferStrategyCopy),
                 ("testDataByteTransferStrategyAutomaticMayNotCopy", testDataByteTransferStrategyAutomaticMayNotCopy),
                 ("testDataByteTransferStrategyAutomaticMayCopy", testDataByteTransferStrategyAutomaticMayCopy),
+                ("testViewBytesIsHappyWithNegativeValues", testViewBytesIsHappyWithNegativeValues),
            ]
    }
 }
