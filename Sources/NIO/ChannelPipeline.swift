@@ -488,11 +488,21 @@ public final class ChannelPipeline: ChannelInvoker {
 
         let nextCtx = context.next
         let prevCtx = context.prev
+        var inThePipeline = false
+
         if let prevCtx = prevCtx {
+            inThePipeline = true
             prevCtx.next = nextCtx
         }
         if let nextCtx = nextCtx {
+            inThePipeline = true
             nextCtx.prev = prevCtx
+        }
+
+        guard inThePipeline else {
+            // if both next and prev are nil already, the we were previously removed from the pipeline
+            promise?.succeed(())
+            return
         }
 
         do {

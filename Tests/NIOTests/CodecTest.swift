@@ -1452,6 +1452,66 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
         XCTAssertGreaterThan(decoder.decodeCalls, 0)
     }
+
+    func testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress() {
+        class Decoder: ByteToMessageDecoder {
+            typealias InboundOut = Never
+
+            var removedCalls = 0
+
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                XCTFail("\(#function) should never have been called")
+                return .needMoreData
+            }
+
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                XCTAssertEqual(0, buffer.readableBytes)
+                XCTAssertTrue(seenEOF)
+                return .needMoreData
+            }
+
+            func decoderRemoved(context: ChannelHandlerContext) {
+                self.removedCalls += 1
+                XCTAssertEqual(1, self.removedCalls)
+            }
+        }
+
+        let decoder = Decoder()
+        let decoderHandler = ByteToMessageHandler(decoder)
+        let channel = EmbeddedChannel(handler: decoderHandler)
+
+        XCTAssertNoThrow(try channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait())
+
+        // We are now trying to get the channel into the following states (ordered by time):
+        // 1. user-triggered removal is in progress (started but not completed)
+        // 2. `removeHandlers()` as part of the Channel teardown is called
+        // 3. user-triggered removal completes
+        //
+        // The way we can get into this situation might be slightly counter-intuitive but currently, the easiest way
+        // to trigger this is:
+        // 1. `channel.close()` (because `removeHandlers()` is called inside an `eventLoop.execute` so is delayed
+        // 2. user-triggered removal start (`channel.pipeline.removeHandler`) which will also use an
+        //    `eventLoop.execute` to ask for the handler to actually be removed.
+        // 3. run the event loop (this will now first call `removeHandlers()` which completes the channel tear down
+        //    and a little later will complete the user-triggered removal.
+
+        let closeFuture = channel.close() // close the channel, `removeHandlers` will be called in next EL tick.
+
+        // user-trigger the handelr removal (the actual removal will be done on the next EL tick too)
+        let removalFuture = channel.pipeline.removeHandler(decoderHandler)
+
+        // run the event loop, this will make `removeHandlers` run first because it was enqueued before the
+        // user-triggered handler removal
+        channel.embeddedEventLoop.run()
+
+        // just to make sure everything has completed.
+        XCTAssertNoThrow(try closeFuture.wait())
+        XCTAssertNoThrow(try removalFuture.wait())
+
+        XCTAssertThrowsError(try channel.finish()) { error in
+            XCTAssertEqual(ChannelError.alreadyClosed, error as? ChannelError)
+        }
+    }
 }
 
 public final class MessageToByteEncoderTest: XCTestCase {
