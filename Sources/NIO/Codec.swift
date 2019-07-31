@@ -376,9 +376,19 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     }
 
     private enum RemovalState {
+        /// No one tried to remove this handler.
         case notBeingRemoved
+
+        /// The user-triggered removal has been started but isn't complete yet. This state will not be entered if the
+        /// removal is triggered by Channel teardown.
         case removalStarted
+
+        /// The user-triggered removal is complete. This state will not be entered if the removal is triggered by
+        /// Channel teardown.
         case removalCompleted
+
+        /// This handler has been removed from the pipeline.
+        case handlerRemovedCalled
     }
 
     private enum State {
@@ -454,7 +464,8 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     }
 
     deinit {
-        assert(self.removalState == .removalCompleted, "illegal state in deinit: removalState = \(self.removalState)")
+        assert(self.removalState == .handlerRemovedCalled,
+               "illegal state in deinit: removalState = \(self.removalState)")
         assert(self.state.isFinalState, "illegal state in deinit: state = \(self.state)")
     }
 }
@@ -589,7 +600,7 @@ extension ByteToMessageHandler: ChannelInboundHandler {
     public func handlerRemoved(context: ChannelHandlerContext) {
         // very likely, the removal state is `.notBeingRemoved` or `.removalCompleted` here but we can't assert it
         // because the pipeline might be torn down during the formal removal process.
-        self.removalState = .removalCompleted
+        self.removalState = .handlerRemovedCalled
         if !self.state.isFinalState {
             self.state = .done
         }
@@ -691,8 +702,17 @@ extension ByteToMessageHandler: RemovableChannelHandler {
         context.eventLoop.execute {
             self.processLeftovers(context: context)
             assert(!self.state.isLeftoversNeedProcessing, "illegal state: \(self.state)")
-            assert(self.removalState == .removalStarted, "illegal removal state: \(self.removalState)")
-            self.removalState = .removalCompleted
+            switch self.removalState {
+            case .removalStarted:
+                self.removalState = .removalCompleted
+            case .handlerRemovedCalled:
+                // if we're here, then the channel has also been torn down between the start and the completion of
+                // the user-triggered removal. That's okay.
+                ()
+            default:
+                assertionFailure("illegal removal state: \(self.removalState)")
+            }
+            // this is necessary as it'll complete the promise.
             context.leavePipeline(removalToken: removalToken)
         }
     }

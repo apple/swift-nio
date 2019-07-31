@@ -59,6 +59,7 @@ extension ByteToMessageDecoderTest {
                 ("testWeAreOkayWithReceivingDataAfterFullClose", testWeAreOkayWithReceivingDataAfterFullClose),
                 ("testPayloadTooLarge", testPayloadTooLarge),
                 ("testPayloadTooLargeButHandlerOk", testPayloadTooLargeButHandlerOk),
+                ("testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress", testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress),
            ]
    }
 }
