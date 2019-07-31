@@ -139,8 +139,9 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
         self.requestHead = nil
         self.responseHead = nil
-        self.readCounter = nil
         self.readRecorder = nil
+        self.readCounter = nil
+        self.writeRecorder = nil
         self.pipelineHandler = nil
         self.quiesceEventRecorder = nil
     }
