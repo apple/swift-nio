@@ -500,7 +500,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
 
         guard inThePipeline else {
-            // if both next and prev are nil already, the we were previously removed from the pipeline
+            // if both next and prev are nil already, then we were previously removed from the pipeline
             promise?.succeed(())
             return
         }
