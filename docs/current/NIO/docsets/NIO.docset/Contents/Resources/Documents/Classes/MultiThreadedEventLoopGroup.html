@@ -21,7 +21,7 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIO 2.5.1 Docs
+          NIO 2.6.0 Docs
         </a>
          (91% documented)
       </p>
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E5%2E1%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E6%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -496,7 +496,7 @@ all run their own <code><a href="../Protocols/EventLoop.html">EventLoop</a></cod
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.5.1/Sources/NIO/EventLoop.swift#L1045-L1048">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.6.0/Sources/NIO/EventLoop.swift#L1053-L1056">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -530,7 +530,7 @@ all run their own <code><a href="../Protocols/EventLoop.html">EventLoop</a></cod
                         <p>The current <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> for the calling thread or <code>nil</code> if none is assigned to the thread.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.5.1/Sources/NIO/EventLoop.swift#L1067-L1069">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.6.0/Sources/NIO/EventLoop.swift#L1075-L1077">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -564,7 +564,7 @@ all run their own <code><a href="../Protocols/EventLoop.html">EventLoop</a></cod
                         <p><code><a href="../Structs/EventLoopIterator.html">EventLoopIterator</a></code></p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.5.1/Sources/NIO/EventLoop.swift#L1074-L1076">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.6.0/Sources/NIO/EventLoop.swift#L1082-L1084">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -600,7 +600,7 @@ all run their own <code><a href="../Protocols/EventLoop.html">EventLoop</a></cod
                         <p>The next <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> to use.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.5.1/Sources/NIO/EventLoop.swift#L1083-L1085">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.6.0/Sources/NIO/EventLoop.swift#L1091-L1093">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -620,6 +620,9 @@ all run their own <code><a href="../Protocols/EventLoop.html">EventLoop</a></cod
                       <div class="abstract">
                         <p>Shut this <code>MultiThreadedEventLoopGroup</code> down which causes the <code><a href="../Protocols/EventLoop.html">EventLoop</a></code>s and their associated threads to be
 shut down and release their resources.</p>
+
+<p>Even though calling <code>shutdownGracefully</code> more than once should be avoided, it is safe to do so and execution
+of the <code>handler</code> is guaranteed.</p>
 
                       </div>
                       <div class="declaration">
@@ -663,7 +666,7 @@ shut down and release their resources.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.5.1/Sources/NIO/EventLoop.swift#L1101-L1129">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.6.0/Sources/NIO/EventLoop.swift#L1112-L1186">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -676,7 +679,7 @@ shut down and release their resources.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-07-24)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-08-02)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.10.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
