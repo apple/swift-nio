@@ -785,4 +785,32 @@ class HTTPDecoderTest: XCTestCase {
         }
     }
 
+    func testOneRequestTwoResponses() {
+        let eventCounter = EventCounterHandler()
+        let responseDecoder = ByteToMessageHandler(HTTPResponseDecoder())
+        let channel = EmbeddedChannel(handler: responseDecoder)
+        XCTAssertNoThrow(try channel.pipeline.addHandler(eventCounter).wait())
+
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+                                                                                    method: .GET, uri: "/"))))
+        var buffer = channel.allocator.buffer(capacity: 128)
+        buffer.writeString("HTTP/1.1 200 ok\r\ncontent-length: 0\r\n\r\nHTTP/1.1 200 ok\r\ncontent-length: 0\r\n\r\n")
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.unsolicitedResponse, error as? NIOHTTPDecoderError)
+        }
+        XCTAssertNoThrow(XCTAssertEqual(.head(.init(version: .init(major: 1, minor: 1),
+                                                    status: .ok,
+                                                    headers: ["content-length": "0"])),
+                                        try channel.readInbound(as: HTTPClientResponsePart.self)))
+        XCTAssertNoThrow(XCTAssertEqual(.end(nil),
+                                        try channel.readInbound(as: HTTPClientResponsePart.self)))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound(as: HTTPClientResponsePart.self)))
+        XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound()))
+        XCTAssertEqual(1, eventCounter.writeCalls)
+        XCTAssertEqual(1, eventCounter.flushCalls)
+        XCTAssertEqual(2, eventCounter.channelReadCalls) // .head & .end
+        XCTAssertEqual(1, eventCounter.channelReadCompleteCalls)
+        XCTAssertEqual(["channelReadComplete", "write", "flush", "channelRead", "errorCaught"], eventCounter.allTriggeredEvents())
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
 }
