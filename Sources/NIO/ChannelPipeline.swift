@@ -488,21 +488,12 @@ public final class ChannelPipeline: ChannelInvoker {
 
         let nextCtx = context.next
         let prevCtx = context.prev
-        var inThePipeline = false
 
         if let prevCtx = prevCtx {
-            inThePipeline = true
             prevCtx.next = nextCtx
         }
         if let nextCtx = nextCtx {
-            inThePipeline = true
             nextCtx.prev = prevCtx
-        }
-
-        guard inThePipeline else {
-            // if both next and prev are nil already, then we were previously removed from the pipeline
-            promise?.succeed(())
-            return
         }
 
         do {
@@ -1108,6 +1099,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     public let name: String
     private let inboundHandler: _ChannelInboundHandler?
     private let outboundHandler: _ChannelOutboundHandler?
+    private var removeHandlerInvoked = false
 
     // Only created from within ChannelPipeline
     fileprivate init(name: String, handler: ChannelHandler, pipeline: ChannelPipeline) {
@@ -1487,6 +1479,10 @@ public final class ChannelHandlerContext: ChannelInvoker {
 
     fileprivate func invokeHandlerRemoved() throws {
         self.eventLoop.assertInEventLoop()
+        guard !self.removeHandlerInvoked else {
+            return
+        }
+        self.removeHandlerInvoked = true
 
         handler.handlerRemoved(context: self)
     }
