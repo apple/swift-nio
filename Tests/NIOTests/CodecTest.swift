@@ -1587,3 +1587,31 @@ private class PairOfBytesDecoder: ByteToMessageDecoder {
         return .needMoreData
     }
 }
+
+public final class MessageToByteHandlerTest: XCTestCase {
+    private struct ThrowingMessageToByteEncoder: MessageToByteEncoder {
+        private struct HandlerError: Error { }
+        
+        typealias OutboundIn = Int
+
+        public func encode(data value: Int, out: inout ByteBuffer) throws {
+            if value == 0 {
+                out.writeInteger(value)
+            } else {
+                throw HandlerError()
+            }
+        }
+    }
+    
+    func testThrowingEncoderFailsPromises() {
+        let channel = EmbeddedChannel()
+        
+        XCTAssertNoThrow(try channel.pipeline.addHandler(MessageToByteHandler(ThrowingMessageToByteEncoder())).wait())
+        
+        XCTAssertNoThrow(try channel.writeAndFlush(0).wait())
+        
+        XCTAssertThrowsError(try channel.writeAndFlush(1).wait())
+        
+        XCTAssertThrowsError(try channel.writeAndFlush(0).wait())
+    }
+}
