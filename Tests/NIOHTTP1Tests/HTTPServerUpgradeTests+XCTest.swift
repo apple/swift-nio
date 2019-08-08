@@ -45,6 +45,8 @@ extension HTTPServerUpgradeTestCase {
                 ("testDelayedUpgradeResponseDeliversFullRequestAndPendingBits", testDelayedUpgradeResponseDeliversFullRequestAndPendingBits),
                 ("testRemovesAllHTTPRelatedHandlersAfterUpgrade", testRemovesAllHTTPRelatedHandlersAfterUpgrade),
                 ("testUpgradeWithUpgradePayloadInlineWithRequestWorks", testUpgradeWithUpgradePayloadInlineWithRequestWorks),
+                ("testDeliversBytesWhenRemovedDuringPartialUpgrade", testDeliversBytesWhenRemovedDuringPartialUpgrade),
+                ("testDeliversBytesWhenReentrantlyCalledInChannelReadCompleteOnRemoval", testDeliversBytesWhenReentrantlyCalledInChannelReadCompleteOnRemoval),
            ]
    }
 }

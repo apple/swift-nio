@@ -132,6 +132,21 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         }
     }
 
+    public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+        // We have been formally removed from the pipeline. We should send any buffered data we have.
+        // Note that we loop twice. This is because we want to guard against being reentrantly called from fireChannelReadComplete.
+        while self.receivedMessages.count > 0 {
+            while self.receivedMessages.count > 0 {
+                let bufferedPart = self.receivedMessages.removeFirst()
+                context.fireChannelRead(bufferedPart)
+            }
+
+            context.fireChannelReadComplete()
+        }
+
+        context.leavePipeline(removalToken: removalToken)
+    }
+
     private func firstRequestHeadReceived(context: ChannelHandlerContext, requestPart: HTTPServerRequestPart) {
         // We should decide if we're going to upgrade based on the first request header: if we aren't upgrading,
         // by the time the body comes in we should be out of the pipeline. That means that if we don't think we're
@@ -220,20 +235,9 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                     upgrader.upgrade(context: context, upgradeRequest: request)
                 }.map {
                     context.fireUserInboundEventTriggered(HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
-
                     self.upgradeState = .upgradeComplete
-
-                    // We unbuffer any buffered data here and, if we sent any,
-                    // we also fire readComplete.
-                    let fireReadComplete = self.receivedMessages.count > 0
-                    while self.receivedMessages.count > 0 {
-                        let bufferedPart = self.receivedMessages.removeFirst()
-                        context.fireChannelRead(bufferedPart)
-                    }
-                    if fireReadComplete {
-                        context.fireChannelReadComplete()
-                    }
                 }.whenComplete { (_: Result<Void, Error>) in
+                    // When we remove ourselves we'll be delivering any buffered data.
                     context.pipeline.removeHandler(context: context, promise: nil)
                 }
             }
@@ -281,11 +285,6 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
             // must ensure we aren't holding the buffer mutably, so no for loop for us.
             context.fireChannelRead(self.wrapInboundOut(data))
             context.fireChannelRead(self.wrapInboundOut(.end(nil)))
-
-            while self.receivedMessages.count > 0 {
-                let bufferedPart = self.receivedMessages.removeFirst()
-                context.fireChannelRead(bufferedPart)
-            }
         }
 
         context.fireChannelReadComplete()

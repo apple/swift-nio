@@ -265,15 +265,8 @@ private class BetterHTTPParser {
         }
         assert(self.firstNonDiscardableOffset == nil)
         self.decodingState = .headersComplete
-        let success = self.delegate.didFinishHead(versionMajor: versionMajor,
-                                                  versionMinor: versionMinor,
-                                                  isUpgrade: isUpgrade,
-                                                  method: method,
-                                                  statusCode: statusCode,
-                                                  keepAliveState: keepAliveState)
-        guard success else {
-            return .error(HPE_INVALID_VERSION)
-        }
+
+        var skipBody = false
 
         if self.kind == .response {
             // http_parser doesn't correctly handle responses to HEAD requests. We have to do something
@@ -296,24 +289,30 @@ private class BetterHTTPParser {
             // does not meet the requirement of RFC 7230. This is an outstanding http_parser issue:
             // https://github.com/nodejs/http-parser/issues/251. As a result, we check for these status
             // codes and override http_parser's handling as well.
-            if self.requestHeads.count > 0 {
-                let method = self.requestHeads.removeFirst().method
-                if method == .HEAD || method == .CONNECT {
-                    return .skipBody
-                }
-            } else {
+            guard let method = self.requestHeads.popFirst()?.method else {
                 self.richerError = NIOHTTPDecoderError.unsolicitedResponse
                 return .error(HPE_UNKNOWN)
             }
 
-            if (statusCode / 100 == 1 ||  // 1XX codes
-                statusCode == 204 ||
-                statusCode == 304) {
-                return .skipBody
+            if method == .HEAD || method == .CONNECT {
+                skipBody = true
+            } else if statusCode / 100 == 1 ||  // 1XX codes
+                statusCode == 204 || statusCode == 304 {
+                skipBody = true
             }
         }
 
-        return .normal
+        let success = self.delegate.didFinishHead(versionMajor: versionMajor,
+                                                  versionMinor: versionMinor,
+                                                  isUpgrade: isUpgrade,
+                                                  method: method,
+                                                  statusCode: statusCode,
+                                                  keepAliveState: keepAliveState)
+        guard success else {
+            return .error(HPE_INVALID_VERSION)
+        }
+
+        return skipBody ? .skipBody : .normal
     }
 
     func start() {

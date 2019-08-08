@@ -60,6 +60,7 @@ extension ChannelPipelineTest {
                 ("testNonRemovableChannelHandlerIsNotRemovable", testNonRemovableChannelHandlerIsNotRemovable),
                 ("testAddMultipleHandlers", testAddMultipleHandlers),
                 ("testPipelineDebugDescription", testPipelineDebugDescription),
+                ("testWeDontCallHandlerRemovedTwiceIfAHandlerCompletesRemovalOnlyAfterChannelTeardown", testWeDontCallHandlerRemovedTwiceIfAHandlerCompletesRemovalOnlyAfterChannelTeardown),
            ]
    }
 }
