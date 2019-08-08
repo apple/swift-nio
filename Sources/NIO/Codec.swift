@@ -767,6 +767,7 @@ extension MessageToByteHandler {
         case .notInChannelYet:
             preconditionFailure("MessageToByteHandler.write called before it was added to a Channel")
         case .error(let error):
+            promise?.fail(error)
             context.fireErrorCaught(error)
             return
         case .done:
@@ -784,6 +785,7 @@ extension MessageToByteHandler {
             context.write(self.wrapOutboundOut(self.buffer!), promise: promise)
         } catch {
             self.state = .error(error)
+            promise?.fail(error)
             context.fireErrorCaught(error)
         }
     }

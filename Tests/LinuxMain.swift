@@ -75,6 +75,7 @@ import XCTest
          testCase(IntegerTypesTest.allTests),
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
+         testCase(MessageToByteHandlerTest.allTests),
          testCase(MulticastTest.allTests),
          testCase(NIOAnyDebugTest.allTests),
          testCase(NIOCloseOnErrorHandlerTest.allTests),

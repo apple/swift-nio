@@ -74,3 +74,12 @@ extension MessageToByteEncoderTest {
    }
 }
 
+extension MessageToByteHandlerTest {
+
+   static var allTests : [(String, (MessageToByteHandlerTest) -> () throws -> Void)] {
+      return [
+                ("testThrowingEncoderFailsPromises", testThrowingEncoderFailsPromises),
+           ]
+   }
+}
+
