@@ -73,6 +73,8 @@ extension CircularBufferTests {
                 ("testLotsOfInsertAtEnd", testLotsOfInsertAtEnd),
                 ("testPopLast", testPopLast),
                 ("testModify", testModify),
+                ("testEquality", testEquality),
+                ("testHash", testHash),
            ]
    }
 }
