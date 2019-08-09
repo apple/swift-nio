@@ -35,9 +35,9 @@ public final class NIOThreadPool {
 
     /// The state of the `WorkItem`.
     public enum WorkItemState {
-        /// The `WorkItem` is active now and in process by the `BlockingIOThreadPool`.
+        /// The `WorkItem` is active now and in process by the `NIOThreadPool`.
         case active
-        /// The `WorkItem` was cancelled and will not be processed by the `BlockingIOThreadPool`.
+        /// The `WorkItem` was cancelled and will not be processed by the `NIOThreadPool`.
         case cancelled
     }
 
@@ -45,16 +45,16 @@ public final class NIOThreadPool {
     public typealias WorkItem = (WorkItemState) -> Void
 
     private enum State {
-        /// The `BlockingIOThreadPool` is already stopped.
+        /// The `NIOThreadPool` is already stopped.
         case stopped
-        /// The `BlockingIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.
+        /// The `NIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.
         case shuttingDown([Bool])
-        /// The `BlockingIOThreadPool` is up and running, the `CircularBuffer` containing the yet unprocessed `WorkItems`.
+        /// The `NIOThreadPool` is up and running, the `CircularBuffer` containing the yet unprocessed `WorkItems`.
         case running(CircularBuffer<WorkItem>)
     }
     private let semaphore = DispatchSemaphore(value: 0)
     private let lock = Lock()
-    private let queues: [DispatchQueue]
+    private var threads: [NIOThread]? = nil // protected by `lock`
     private var state: State = .stopped
     private let numberOfThreads: Int
 
@@ -65,7 +65,7 @@ public final class NIOThreadPool {
     ///     - callback: The function to be executed once the shutdown is complete.
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         let g = DispatchGroup()
-        self.lock.withLock {
+        let threadsToJoin = self.lock.withLock { () -> [NIOThread] in
             switch self.state {
             case .running(let items):
                 queue.async {
@@ -75,17 +75,22 @@ public final class NIOThreadPool {
                 (0..<numberOfThreads).forEach { _ in
                     self.semaphore.signal()
                 }
+                let threads = self.threads!
+                defer {
+                    self.threads = nil
+                }
+                return threads
             case .shuttingDown, .stopped:
-                ()
+                return []
             }
+        }
 
-            self.queues.forEach { q in
-                q.async(group: g) {}
-            }
+        DispatchQueue(label: "io.swiftnio.NIOThreadPool.shutdownGracefully").async(group: g) {
+            threadsToJoin.forEach { $0.join() }
+        }
 
-            g.notify(queue: queue) {
-                callback(nil)
-            }
+        g.notify(queue: queue) {
+            callback(nil)
         }
     }
 
@@ -94,7 +99,7 @@ public final class NIOThreadPool {
     /// - note: This is a low-level method, in most cases the `runIfActive` method should be used.
     ///
     /// - parameters:
-    ///     - body: The `WorkItem` to process by the `BlockingIOThreadPool`.
+    ///     - body: The `WorkItem` to process by the `NIOThreadPool`.
     public func submit(_ body: @escaping WorkItem) {
         let item = self.lock.withLock { () -> WorkItem? in
             switch self.state {
@@ -117,9 +122,6 @@ public final class NIOThreadPool {
     ///   - numberOfThreads: The number of threads to use for the thread pool.
     public init(numberOfThreads: Int) {
         self.numberOfThreads = numberOfThreads
-        self.queues = (0..<numberOfThreads).map {
-            DispatchQueue(label: "BlockingIOThreadPool thread #\($0)")
-        }
     }
 
     private func process(identifier: Int) {
@@ -149,7 +151,7 @@ public final class NIOThreadPool {
         } while item != nil
     }
 
-    /// Start the `NonBlockingIOThreadPool` if not already started.
+    /// Start the `NIOThreadPool` if not already started.
     public func start() {
         self.lock.withLock {
             switch self.state {
@@ -162,13 +164,29 @@ public final class NIOThreadPool {
                 self.state = .running(CircularBuffer(initialCapacity: 16))
             }
         }
-        self.queues.enumerated().forEach { idAndQueue in
-            let id = idAndQueue.0
-            let q = idAndQueue.1
-            q.async {
+
+        let group = DispatchGroup()
+
+        self.lock.withLock {
+            assert(self.threads == nil)
+            self.threads = []
+            self.threads?.reserveCapacity(self.numberOfThreads)
+        }
+
+        for id in 0..<self.numberOfThreads {
+            group.enter()
+            NIOThread.spawnAndRun(name: "NIOThreadPool thread #\(id)", detachThread: false) { thread in
+                self.lock.withLock {
+                    self.threads!.append(thread)
+                }
+                group.leave()
                 self.process(identifier: id)
+                return ()
             }
         }
+
+        group.wait()
+        assert(self.lock.withLock { self.threads?.count ?? -1 } == self.numberOfThreads)
     }
 
     deinit {
