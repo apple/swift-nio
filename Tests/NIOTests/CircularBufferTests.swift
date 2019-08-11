@@ -912,4 +912,63 @@ class CircularBufferTests: XCTestCase {
         }
         XCTAssertEqual([0, 5, 2, 3], Array(buf))
     }
+    
+    func testEquality() {
+        // Empty buffers
+        let emptyA = CircularBuffer<Int>()
+        let emptyB = CircularBuffer<Int>()
+        XCTAssertEqual(emptyA, emptyB)
+        
+        var buffA = CircularBuffer<Int>()
+        var buffB = CircularBuffer<Int>()
+        var buffC = CircularBuffer<Int>()
+        var buffD = CircularBuffer<Int>()
+        buffA.append(contentsOf: 1...10)
+        buffB.append(contentsOf: 1...10)
+        buffC.append(contentsOf: 2...11) // Same count different values
+        buffD.append(contentsOf: 1...2) // Different count
+        XCTAssertEqual(buffA, buffB)
+        XCTAssertNotEqual(buffA, buffC)
+        XCTAssertNotEqual(buffA, buffD)
+        
+        // Will make internal head/tail indexes different
+        var prependBuff = CircularBuffer<Int>()
+        var appendBuff = CircularBuffer<Int>()
+        for i in (1...100).reversed() {
+            prependBuff.prepend(i)
+        }
+        for i in 1...100 {
+            appendBuff.append(i)
+        }
+        // But the contents are still the same
+        XCTAssertEqual(prependBuff, appendBuff)
+    }
+    
+    func testHash() {
+        let emptyA = CircularBuffer<Int>()
+        let emptyB = CircularBuffer<Int>()
+        XCTAssertEqual(Set([emptyA,emptyB]).count, 1)
+        
+        var buffA = CircularBuffer<Int>()
+        var buffB = CircularBuffer<Int>()
+        buffA.append(contentsOf: 1...10)
+        buffB.append(contentsOf: 1...10)
+        XCTAssertEqual(Set([buffA,buffB]).count, 1)
+        buffB.append(123)
+        XCTAssertEqual(Set([buffA,buffB]).count, 2)
+        buffA.append(1)
+        XCTAssertEqual(Set([buffA,buffB]).count, 2)
+        
+        // Will make internal head/tail indexes different
+        var prependBuff = CircularBuffer<Int>()
+        var appendBuff = CircularBuffer<Int>()
+        for i in (1...100).reversed() {
+            prependBuff.prepend(i)
+        }
+        for i in 1...100 {
+            appendBuff.append(i)
+        }
+        XCTAssertEqual(Set([prependBuff,appendBuff]).count, 1)
+    }
+    
 }
