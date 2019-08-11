@@ -706,3 +706,9 @@ extension CircularBuffer: Hashable where Element: Hashable {
         }
     }
 }
+
+extension CircularBuffer: ExpressibleByArrayLiteral {
+    public init(arrayLiteral elements: Element...) {
+        self.init(elements)
+    }
+}
