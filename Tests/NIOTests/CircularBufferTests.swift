@@ -971,4 +971,17 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(Set([prependBuff,appendBuff]).count, 1)
     }
     
+    func testArrayLiteralInit() {
+        let empty: CircularBuffer<Int> = []
+        XCTAssert(empty.isEmpty)
+        
+        let increasingInts: CircularBuffer = [1, 2, 3, 4, 5]
+        XCTAssertEqual(increasingInts.count, 5)
+        XCTAssert(zip(increasingInts, 1...5).allSatisfy(==))
+        
+        let someIntsArray = [-9, 384, 2, 10, 0, 0, 0]
+        let someInts: CircularBuffer = [-9, 384, 2, 10, 0, 0, 0]
+        XCTAssertEqual(someInts.count, 7)
+        XCTAssert(zip(someInts, someIntsArray).allSatisfy(==))
+    }
 }
