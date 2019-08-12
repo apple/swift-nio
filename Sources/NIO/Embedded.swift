@@ -282,14 +282,6 @@ class EmbeddedChannelCore: ChannelCore {
 /// `EmbeddedChannel` automatically collects arriving outbound data and makes it
 /// available one-by-one through `readOutbound`.
 ///
-/// - note: Due to [#243](https://github.com/apple/swift-nio/issues/243)
-///   `EmbeddedChannel` expects outbound data to be of `IOData` type. This is an
-///   incorrect and unfortunate assumption that will be fixed with the next
-///   major NIO release when we can change the public API again. If you do need
-///   to collect outbound data that is not `IOData` you can create a custom
-///   `ChannelOutboundHandler`, insert it at the very beginning of the
-///   `ChannelPipeline` and collect the outbound data there. Just don't forward
-///   it using `context.write`.
 /// - note: `EmbeddedChannel` is currently only compatible with
 ///   `EmbeddedEventLoop`s and cannot be used with `SelectableEventLoop`s from
 ///   for example `MultiThreadedEventLoopGroup`.
