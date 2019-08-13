@@ -978,6 +978,8 @@ extension EventLoopGroup {
     }
 }
 
+private let nextEventLoopGroupID = Atomic(value: 0)
+
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
 typealias ThreadInitializer = (NIOThread) -> Void
 
@@ -1060,10 +1062,12 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - arguments:
     ///     - threadInitializers: The `ThreadInitializer`s to use.
     internal init(threadInitializers: [ThreadInitializer]) {
+        let myGroupID = nextEventLoopGroupID.add(1)
         var idx = 0
         self.eventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
-            let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-#\(idx)", initializer: initializer)
+            let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-\(myGroupID)-#\(idx)",
+                                                                         initializer: initializer)
             idx += 1
             return ev
         }
