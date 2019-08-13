@@ -189,7 +189,7 @@
  * Macro version of C's famous "cast to bool" operator (i.e. !!) which takes
  * anything and casts it to 0 if it is 0 and 1 otherwise.
  */
-#define BOOL(x) NOT(NOT(x))
+#define BOOLIFY(x) NOT(NOT(x))
 
 /**
  * Logical OR. Simply performs a lookup.
@@ -225,7 +225,7 @@
  * 4. Note that the "true" clause is in the extra set of brackets; thus these
  *    become the arguments to _IF_0 or _IF_1 and thus a selection is made!
  */
-#define IF(c) _IF(BOOL(c))
+#define IF(c) _IF(BOOLIFY(c))
 #define _IF(c) CAT(_IF_,c)
 #define _IF_0(...)
 #define _IF_1(...) __VA_ARGS__
@@ -240,7 +240,7 @@
  *
  * The mechanism is analogous to IF.
  */
-#define IF_ELSE(c) _IF_ELSE(BOOL(c))
+#define IF_ELSE(c) _IF_ELSE(BOOLIFY(c))
 #define _IF_ELSE(c) CAT(_IF_ELSE_,c)
 #define _IF_ELSE_0(t,f) f
 #define _IF_ELSE_1(t,f) t
@@ -263,12 +263,12 @@
  *    0 when it is expanded. In the latter, a non-zero result remains. If the
  *    first argument started with parentheses these will mostly not contain
  *    only a single 0, but e.g a C cast or some arithmetic operation that will
- *    cause the BOOL in _END_OF_ARGUMENTS_ to be one.
- * 4. BOOL is used to force non-zero results into 1 giving the clean 0 or 1
+ *    cause the BOOLIFY in _END_OF_ARGUMENTS_ to be one.
+ * 4. BOOLIFY is used to force non-zero results into 1 giving the clean 0 or 1
  *    output required.
  */
-#define HAS_ARGS(...) BOOL(FIRST(_END_OF_ARGUMENTS_ __VA_ARGS__)(0))
-#define _END_OF_ARGUMENTS_(...) BOOL(FIRST(__VA_ARGS__))
+#define HAS_ARGS(...) BOOLIFY(FIRST(_END_OF_ARGUMENTS_ __VA_ARGS__)(0))
+#define _END_OF_ARGUMENTS_(...) BOOLIFY(FIRST(__VA_ARGS__))
 
 
 /**
