@@ -21,25 +21,6 @@
 #include "../include/CNIOAtomics.h"
 #include "../include/cpp_magic.h"
 
-struct catmc_atomic_flag {
-    atomic_flag _flag;
-};
-
-struct catmc_atomic_flag *catmc_atomic_flag_create(bool value) {
-    struct catmc_atomic_flag *flag = malloc(sizeof(*flag));
-    flag->_flag = (__typeof__(flag->_flag))ATOMIC_FLAG_INIT;
-    if (value) {
-        (void)atomic_flag_test_and_set_explicit(&flag->_flag, memory_order_relaxed);
-    } else {
-        atomic_flag_clear_explicit(&flag->_flag, memory_order_relaxed);
-    }
-    return flag;
-}
-
-void catmc_atomic_flag_destroy(struct catmc_atomic_flag *flag) {
-    free(flag);
-}
-
 #define MAKE(type) /*
 */ struct catmc_atomic_##type { /*
 */     _Atomic type value; /*
