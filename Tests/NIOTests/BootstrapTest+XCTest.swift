@@ -27,6 +27,10 @@ extension BootstrapTest {
    static var allTests : [(String, (BootstrapTest) -> () throws -> Void)] {
       return [
                 ("testBootstrapsCallInitializersOnCorrectEventLoop", testBootstrapsCallInitializersOnCorrectEventLoop),
+                ("testTCPBootstrapsTolerateFuturesFromDifferentEventLoopsReturnedInInitializers", testTCPBootstrapsTolerateFuturesFromDifferentEventLoopsReturnedInInitializers),
+                ("testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
+                ("testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
+                ("testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
            ]
    }
 }
