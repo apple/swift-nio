@@ -218,7 +218,8 @@ public final class ServerBootstrap {
         }
 
         return eventLoop.submit {
-            return serverChannelInit(serverChannel).flatMap {
+            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
+            return serverChannelInit(serverChannel).hop(to: eventLoop).flatMap {
                 serverChannel.pipeline.addHandler(AcceptHandler(childChannelInitializer: childChannelInit,
                                                                 childChannelOptions: childChannelOptions))
             }.flatMap {
@@ -485,17 +486,27 @@ public final class ClientBootstrap {
             return eventLoop.makeFailedFuture(error)
         }
 
-        return channelInitializer(channel).flatMap {
-            self._channelOptions.applyAllChannelOptions(to: channel)
-        }.flatMap {
-            let promise = eventLoop.makePromise(of: Void.self)
-            channel.registerAlreadyConfigured0(promise: promise)
-            return promise.futureResult
-        }.map {
-            channel
-        }.flatMapError { error in
-            channel.close0(error: error, mode: .all, promise: nil)
-            return channel.eventLoop.makeFailedFuture(error)
+        func setupChannel() -> EventLoopFuture<Channel> {
+            eventLoop.assertInEventLoop()
+            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
+            return channelInitializer(channel).hop(to: eventLoop).flatMap {
+                self._channelOptions.applyAllChannelOptions(to: channel)
+            }.flatMap {
+                let promise = eventLoop.makePromise(of: Void.self)
+                channel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            }.map {
+                channel
+            }.flatMapError { error in
+                channel.close0(error: error, mode: .all, promise: nil)
+                return channel.eventLoop.makeFailedFuture(error)
+            }
+        }
+
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
+            return eventLoop.submit{ setupChannel() }.flatMap { $0 }
         }
     }
 
@@ -517,7 +528,8 @@ public final class ClientBootstrap {
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
-            channelInitializer(channel).flatMap {
+            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
+            channelInitializer(channel).hop(to: eventLoop).flatMap {
                 channelOptions.applyAllChannelOptions(to: channel)
             }.flatMap {
                 channel.registerAndDoSynchronously(body)
@@ -671,14 +683,25 @@ public final class DatagramBootstrap {
             return eventLoop.makeFailedFuture(error)
         }
 
-        return channelInitializer(channel).flatMap {
-            channelOptions.applyAllChannelOptions(to: channel)
-        }.flatMap {
-            registerAndBind(eventLoop, channel)
-        }.map {
-            channel
-        }.flatMapError { error in
-            eventLoop.makeFailedFuture(error)
+        func setupChannel() -> EventLoopFuture<Channel> {
+            eventLoop.assertInEventLoop()
+            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
+            return channelInitializer(channel).hop(to: eventLoop).flatMap {
+                eventLoop.assertInEventLoop()
+                return channelOptions.applyAllChannelOptions(to: channel)
+            }.flatMap {
+                registerAndBind(eventLoop, channel)
+            }.map {
+                channel
+            }.flatMapError { error in
+                eventLoop.makeFailedFuture(error)
+            }
+        }
+
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
+            return eventLoop.submit(setupChannel).flatMap { $0 }
         }
     }
 }
