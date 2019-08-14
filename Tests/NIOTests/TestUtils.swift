@@ -106,7 +106,7 @@ var temporaryDirectory: String {
 #elseif os(Linux)
         return "/tmp"
 #else
-        if #available(OSX 10.12, *) {
+        if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {
             return FileManager.default.temporaryDirectory.path
         } else {
             return "/tmp"
