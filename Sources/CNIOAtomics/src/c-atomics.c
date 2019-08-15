@@ -19,7 +19,7 @@
 #include <stdio.h>
 
 #include "../include/CNIOAtomics.h"
-#include "../include/cpp_magic.h"
+#include "cpp_magic.h"
 
 #define MAKE(type) /*
 */ struct catmc_atomic_##type { /*
