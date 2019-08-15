@@ -15,13 +15,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "cpp_magic.h"
-
-#if __clang_major__ == 3 && __clang_minor__ <= 6
-/* clang 3.6 doesn't seem to know about _Nonnull yet */
-#define _Nonnull __attribute__((nonnull))
-#endif
-
 struct catmc_atomic__Bool;
 struct catmc_atomic__Bool * _Nonnull catmc_atomic__Bool_create(bool value);
 void catmc_atomic__Bool_destroy(struct catmc_atomic__Bool * _Nonnull atomic);
