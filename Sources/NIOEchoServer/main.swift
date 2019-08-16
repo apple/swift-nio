@@ -13,22 +13,97 @@
 //===----------------------------------------------------------------------===//
 import NIO
 
-private final class EchoHandler: ChannelInboundHandler {
-    public typealias InboundIn = ByteBuffer
-    public typealias OutboundOut = ByteBuffer
+private final class CasingHandler: TypeSafeChannelHandler {
+    typealias InboundIn = ByteBuffer
+    typealias InboundOut = ByteBuffer
+    typealias OutboundIn = ByteBuffer
+    typealias OutboundOut = ByteBuffer
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        // As we are not really interested getting notified on success or failure we just pass nil as promise to
-        // reduce allocations.
+    enum How {
+        case lower
+        case upper
+        case cRaZy
+        case random
+        case asIs
+    }
+
+    enum Where {
+        case `in`
+        case out
+        case duplex
+    }
+
+    private let how: How
+    private let `where`: Where
+
+    init(how: How, where: Where = .duplex) {
+        self.how = how
+        self.where = `where`
+    }
+
+    func changeCase(_ byte: UInt8, index: Int) -> UInt8 {
+        switch self.how {
+        case .lower:
+            return .init(tolower(.init(byte)))
+        case .upper:
+            return .init(toupper(.init(byte)))
+        case .cRaZy:
+            return .init((index % 2 == 0 ? toupper : tolower)(.init(byte)))
+        case .random:
+            return .init((Bool.random() ? toupper : tolower)(.init(byte)))
+        case .asIs:
+            return byte
+        }
+    }
+
+    func channelRead(context: Context, data: ByteBuffer) {
+        var data = data
+        switch self.where {
+        case .in, .duplex:
+            data.withUnsafeMutableReadableBytes { ptr in
+                for i in ptr.indices {
+                    ptr[i] = self.changeCase(ptr[i], index: i)
+                }
+            }
+        case .out:
+            ()
+        }
+        context.fireChannelRead(data)
+    }
+
+    func write(context: Context, data: ByteBuffer, promise: EventLoopPromise<Void>?) {
+        var data = data
+        switch self.where {
+        case .out, .duplex:
+            data.withUnsafeMutableReadableBytes { ptr in
+                for i in ptr.indices {
+                    ptr[i] = self.changeCase(ptr[i], index: i)
+                }
+            }
+        case .in:
+            ()
+        }
+        context.write(data, promise: promise)
+    }
+}
+
+
+private final class EchoHandler: TypeSafeChannelHandler {
+    public typealias InboundIn = ByteBuffer
+    public typealias InboundOut = Never
+    public typealias OutboundOut = ByteBuffer
+    public typealias OutboundIn = Never
+
+    public func channelRead(context: Context, data: ByteBuffer) {
         context.write(data, promise: nil)
     }
 
     // Flush it out. This can make use of gathering writes if multiple buffers are pending
-    public func channelReadComplete(context: ChannelHandlerContext) {
+    public func channelReadComplete(context: Context) {
         context.flush()
     }
 
-    public func errorCaught(context: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: Context, error: Error) {
         print("error: ", error)
 
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
@@ -46,7 +121,7 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelInitializer { channel in
         // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
         channel.pipeline.addHandler(BackPressureHandler()).flatMap { v in
-            channel.pipeline.addHandler(EchoHandler())
+            return channel.pipeline.addHandler(CasingHandler(how: .asIs) <==> CasingHandler(how: .random) <==> EchoHandler())
         }
     }
 
