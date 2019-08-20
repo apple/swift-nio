@@ -49,7 +49,7 @@ of an incident.
 *This policy is adapted from the Contributor Code of Conduct [version 1.3.0](https://contributor-covenant.org/version/1/3/0/).*
 
 ### Reporting
-A working group of community members is committed to promptly addressing any [reported issues](mailto:swift-nio-conduct@group.apple.com).
+A working group of community members is committed to promptly addressing any [reported issues](mailto:swift-server-conduct@group.apple.com).
 Working group members are volunteers appointed by the project lead, with a 
 preference for individuals with varied backgrounds and perspectives. Membership is expected 
 to change regularly, and may grow or shrink.
