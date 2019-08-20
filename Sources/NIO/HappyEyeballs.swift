@@ -449,7 +449,7 @@ internal class HappyEyeballsConnector {
     private func beginConnecting() {
         precondition(connectionTask == nil, "beginConnecting called while connection attempts outstanding")
         guard let target = targets.next() else {
-            if self.pendingConnections.count == 0 {
+            if self.pendingConnections.isEmpty {
                 processInput(.noTargetsRemaining)
             }
             return
@@ -488,7 +488,7 @@ internal class HappyEyeballsConnector {
     /// This method checks that we don't have any connection attempts outstanding. If
     /// we discover we don't, it automatically triggers the next connection attempt.
     private func connectFailed() {
-        if self.pendingConnections.count == 0 {
+        if self.pendingConnections.isEmpty {
             self.connectionTask?.cancel()
             self.connectionTask = nil
             beginConnecting()
@@ -516,7 +516,7 @@ internal class HappyEyeballsConnector {
     /// Asserts that there is nothing left on the internal state, and then fails the connection
     /// promise.
     private func failed() {
-        precondition(pendingConnections.count == 0, "failed with pending connections")
+        precondition(pendingConnections.isEmpty, "failed with pending connections")
         cleanUp()
         self.resolutionPromise.fail(self.error)
     }

@@ -290,7 +290,7 @@ extension B2MDBuffer {
                 return .nothingAvailable
             }
         case .ready:
-            assert(self.buffers.count == 0)
+            assert(self.buffers.isEmpty)
             if allowEmptyBuffer {
                 self.state = .processingInProgress
                 return .available(self.emptyByteBuffer)
@@ -302,7 +302,7 @@ extension B2MDBuffer {
     mutating func finishProcessing(remainder buffer: inout ByteBuffer) -> Void {
         assert(self.state == .processingInProgress)
         self.state = .ready
-        if buffer.readableBytes == 0 && self.buffers.count == 0 {
+        if buffer.readableBytes == 0 && self.buffers.isEmpty {
             // fast path, no bytes left and no other buffers, just return
             return
         }
@@ -672,7 +672,7 @@ extension ByteToMessageHandler: ChannelOutboundHandler, _ChannelOutboundHandler 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         if self.decoder != nil {
             let data = self.unwrapOutboundIn(data)
-            assert(self.queuedWrites.count == 0)
+            assert(self.queuedWrites.isEmpty)
             self.decoder!.write(data: data)
         } else {
             self.queuedWrites.append(data)

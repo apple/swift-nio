@@ -49,10 +49,10 @@ public func measure(_ fn: () throws -> Int) rethrows -> [TimeInterval] {
 let limitSet = CommandLine.arguments.dropFirst()
 
 public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void {
-    if limitSet.count == 0 || limitSet.contains(desc) {
+    if limitSet.isEmpty || limitSet.contains(desc) {
         print("measuring\(warning): \(desc): ", terminator: "")
         let measurements = try measure(fn)
-        print(measurements.reduce("") { $0 + "\($1), " })
+        print(measurements.reduce(into: "") { $0.append("\($1), ") })
     } else {
         print("skipping '\(desc)', limit set = \(limitSet)")
     }

@@ -276,7 +276,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         if !self.seenFirstRequest {
             // We haven't seen the first request .end. That means we're not buffering anything, and we can
             // just deliver data.
-            assert(self.receivedMessages.count == 0)
+            assert(self.receivedMessages.isEmpty)
             context.fireChannelRead(self.wrapInboundOut(data))
         } else {
             // This is trickier. We've seen the first request .end, so we now need to deliver the .head we
