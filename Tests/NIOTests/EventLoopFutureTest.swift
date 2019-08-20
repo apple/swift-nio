@@ -292,7 +292,9 @@ class EventLoopFutureTest : XCTestCase {
         let promises: [EventLoopPromise<Int>] = (0..<5).map { (_: Int) in eventLoop.makePromise() }
         let futures = promises.map { $0.futureResult }
 
-        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce([], futures, on: eventLoop) {$0 + [$1]}
+        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce(into: [], futures, on: eventLoop) {
+            $0.append($1)
+        }
         for i in 1...5 {
             promises[i - 1].succeed((i))
         }
@@ -305,7 +307,9 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         let futures: [EventLoopFuture<Int>] = []
 
-        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce([], futures, on: eventLoop) {$0 + [$1]}
+        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce(into: [], futures, on: eventLoop) {
+            $0.append($1)
+        }
 
         let results = try fN.wait()
         XCTAssertEqual(results, [])

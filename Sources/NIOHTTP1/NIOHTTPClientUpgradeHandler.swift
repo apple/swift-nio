@@ -360,7 +360,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
             context.fireErrorCaught(error)
         }
         
-        assert(self.receivedMessages.count == 0)
+        assert(self.receivedMessages.isEmpty)
         context.fireChannelRead(self.wrapInboundOut(data))
         
         // We've delivered the data. We can now remove ourselves, which should happen synchronously.
