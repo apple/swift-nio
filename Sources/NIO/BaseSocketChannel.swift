@@ -216,7 +216,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     private let isActiveAtomic: Atomic<Bool> = Atomic(value: false)
     private var _pipeline: ChannelPipeline! = nil // this is really a constant (set in .init) but needs `self` to be constructed and therefore a `var`. Do not change as this needs to accessed from arbitrary threads
 
-    internal var interestedEvent: SelectorEventSet = [.readEOF, .reset] {
+    // We start with the invalid empty set of selector events we're interested in. This is to make sure we later on
+    // (in `becomeFullyRegistered0`) seed the initial event correctly.
+    internal var interestedEvent: SelectorEventSet = [] {
         didSet {
             assert(self.interestedEvent.contains(.reset), "impossible to unregister for reset")
         }
@@ -671,6 +673,22 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         self.safeReregister(interested: self.interestedEvent.union(.read))
+    }
+
+    private final func registerForReadEOF() {
+        self.eventLoop.assertInEventLoop()
+        assert(self.lifecycleManager.isRegisteredFully)
+
+        guard !self.lifecycleManager.hasSeenEOFNotification else {
+            // we have seen an EOF notification before so there's no point in registering for reads
+            return
+        }
+
+        guard !self.interestedEvent.contains(.readEOF) else {
+            return
+        }
+
+        self.safeReregister(interested: self.interestedEvent.union(.readEOF))
     }
 
     internal final func unregisterForReadable() {
@@ -1129,8 +1147,10 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         assert(self.lifecycleManager.isPreRegistered)
         assert(!self.lifecycleManager.isRegisteredFully)
 
-        // We always register with interested .none and will just trigger readIfNeeded0() later to re-register if needed.
-        try self.safeRegister(interested: [.readEOF, .reset])
+        // The initial set of interested events must not contain `.readEOF` because when connect doesn't return
+        // synchronously, kevent might send us a `readEOF` because the `writable` event that marks the connect as completed.
+        // See SocketChannelTest.testServerClosesTheConnectionImmediately for a regression test.
+        try self.safeRegister(interested: [.reset])
         self.lifecycleManager.finishRegistration()(nil, self.pipeline)
     }
 
@@ -1140,12 +1160,18 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         if !self.lifecycleManager.isRegisteredFully {
             do {
                 try self.becomeFullyRegistered0()
+                assert(self.lifecycleManager.isRegisteredFully)
             } catch {
                 self.close0(error: error, mode: .all, promise: promise)
                 return
             }
         }
         self.lifecycleManager.activate()(promise, self.pipeline)
+        guard self.lifecycleManager.isOpen else {
+            // in the user callout for `channelActive` the channel got closed.
+            return
+        }
+        self.registerForReadEOF()
         self.readIfNeeded0()
     }
 }
