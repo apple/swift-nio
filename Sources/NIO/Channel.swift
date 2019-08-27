@@ -143,7 +143,7 @@ public protocol Channel: class, ChannelOutboundInvoker {
 }
 
 /// A `SelectableChannel` is a `Channel` that can be used with a `Selector` which notifies a user when certain events
-/// before possible. On UNIX a `Selector` is usually an abstraction of `select`, `poll`, `epoll` or `kqueue`.
+/// are possible. On UNIX a `Selector` is usually an abstraction of `select`, `poll`, `epoll` or `kqueue`.
 ///
 /// - warning: `SelectableChannel` methods and properties are _not_ thread-safe (unless they also belong to `Channel`).
 internal protocol SelectableChannel: Channel {
