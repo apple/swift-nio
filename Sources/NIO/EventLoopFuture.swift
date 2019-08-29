@@ -197,6 +197,25 @@ public struct EventLoopPromise<Value> {
         future.cascade(to: self)
     }
 
+    /// Complete the promise with the passed in `Result<Value, Error>`.
+    ///
+    /// This method is equivalent to invoking:
+    /// ```
+    /// switch result {
+    /// case .success(let value):
+    ///     promise.succeed(value)
+    /// case .failure(let error):
+    ///     promise.fail(error)
+    /// }
+    /// ```
+    ///
+    /// - parameters:
+    ///     - result: The result which will be used to succeed or fail this promise.
+    @inlinable
+    public func completeWith(_ result: Result<Value, Error>) {
+        self._resolve(value: result)
+    }
+
     /// Fire the associated `EventLoopFuture` on the appropriate event loop.
     ///
     /// This method provides the primary difference between the `EventLoopPromise` and most
