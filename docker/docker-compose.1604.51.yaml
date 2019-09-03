@@ -8,7 +8,7 @@ services:
       args:
         ubuntu_version: "16.04"
         swift_version: "5.1"
-        swift_flavour: "DEVELOPMENT-SNAPSHOT-2019-08-15-a"
+        swift_flavour: "DEVELOPMENT-SNAPSHOT-2019-08-29-a"
         swift_builds_suffix: "branch"
 
   unit-tests:
