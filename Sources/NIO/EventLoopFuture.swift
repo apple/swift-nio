@@ -430,6 +430,8 @@ extension EventLoopFuture: Equatable {
     }
 }
 
+// MARK: flatMap and map
+
 // 'flatMap' and 'map' implementations. This is really the key of the entire system.
 extension EventLoopFuture {
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback,
@@ -603,6 +605,33 @@ extension EventLoopFuture {
         return next.futureResult
     }
 
+    /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
+    /// performs a synchronous computation and returns either a new value (of type `NewValue`) or
+    /// an error depending on the `Result` returned by the closure.
+    ///
+    /// Operations performed in `flatMapResult` should not block, or they will block the entire
+    /// event loop. `flatMapResult` is intended for use when you have a data-driven function that
+    /// performs a simple data transformation that can potentially error.
+    ///
+    ///
+    /// - parameters:
+    ///     - body: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new value or error lifted into a new `EventLoopFuture`.
+    /// - returns: A future that will receive the eventual value.
+    @inlinable
+    public func flatMapResult<NewValue, SomeError: Error>(file: StaticString = #file,
+                                                          line: UInt = #line,
+                                                          _ body: @escaping (Value) -> Result<NewValue, SomeError>) -> EventLoopFuture<NewValue> {
+        return self.flatMap(file: file, line: line) { value in
+            switch body(value) {
+            case .success(let value):
+                return self.eventLoop.makeSucceededFuture(value, file: file, line: line)
+            case .failure(let error):
+                return self.eventLoop.makeFailedFuture(error, file: file, line: line)
+            }
+        }
+    }
+
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// can recover from the error and return a new value of type `Value`. The provided callback may not `throw`,
     /// so this function should be used when the error is always recoverable.
@@ -726,6 +755,7 @@ extension EventLoopFuture {
     }
 }
 
+// MARK: and
 
 extension EventLoopFuture {
     /// Return a new `EventLoopFuture` that succeeds when this "and" another
@@ -850,6 +880,8 @@ extension EventLoopFuture {
     }
 }
 
+// MARK: wait
+
 extension EventLoopFuture {
     /// Wait for the resolution of this `EventLoopFuture` by blocking the current thread until it
     /// resolves.
@@ -899,6 +931,8 @@ Further information:
     }
 }
 
+// MARK: fold
+
 extension EventLoopFuture {
     /// Returns a new `EventLoopFuture` that fires only when this `EventLoopFuture` and
     /// all the provided `futures` complete. It then provides the result of folding the value of this
@@ -943,6 +977,8 @@ extension EventLoopFuture {
         }
     }
 }
+
+// MARK: reduce
 
 extension EventLoopFuture {
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
@@ -1018,36 +1054,10 @@ extension EventLoopFuture {
         }
         return p0.futureResult
     }
-
-    /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
-    /// performs a synchronous computation and returns either a new value (of type `NewValue`) or
-    /// an error depending on the `Result` returned by the closure.
-    ///
-    /// Operations performed in `flatMapResult` should not block, or they will block the entire
-    /// event loop. `flatMapResult` is intended for use when you have a data-driven function that
-    /// performs a simple data transformation that can potentially error.
-    ///
-    ///
-    /// - parameters:
-    ///     - body: Function that will receive the value of this `EventLoopFuture` and return
-    ///         a new value or error lifted into a new `EventLoopFuture`.
-    /// - returns: A future that will receive the eventual value.
-    @inlinable
-    public func flatMapResult<NewValue, SomeError: Error>(file: StaticString = #file,
-                                                          line: UInt = #line,
-                                                          _ body: @escaping (Value) -> Result<NewValue, SomeError>) -> EventLoopFuture<NewValue> {
-        return self.flatMap(file: file, line: line) { value in
-            switch body(value) {
-            case .success(let value):
-                return self.eventLoop.makeSucceededFuture(value, file: file, line: line)
-            case .failure(let error):
-                return self.eventLoop.makeFailedFuture(error, file: file, line: line)
-            }
-        }
-    }
 }
 
-// "fail fast" reduce
+// MARK: "fail fast" reduce
+
 extension EventLoopFuture {
     /// Returns a new `EventLoopFuture` that succeeds only if all of the provided futures succeed.
     ///
@@ -1156,7 +1166,8 @@ extension EventLoopFuture {
     }
 }
 
-// "fail slow" reduce
+// MARK: "fail slow" reduce
+
 extension EventLoopFuture {
     /// Returns a new `EventLoopFuture` that succeeds when all of the provided `EventLoopFuture`s complete.
     ///
@@ -1263,6 +1274,8 @@ extension EventLoopFuture {
     }
 }
 
+// MARK: hop
+
 extension EventLoopFuture {
     /// Returns an `EventLoopFuture` that fires when this future completes, but executes its callbacks on the
     /// target event loop instead of the original one.
@@ -1297,6 +1310,8 @@ func executeAndComplete<Value>(_ promise: EventLoopPromise<Value>?, _ body: () t
     }
 }
 
+
+// MARK: always
 
 extension EventLoopFuture {
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
