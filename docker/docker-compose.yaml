@@ -21,23 +21,23 @@ services:
 
   sanity:
     <<: *common
-    command: /bin/bash -cl "./scripts/sanity.sh"
+    command: /bin/bash -xcl "./scripts/sanity.sh"
 
   unit-tests:
     <<: *common
-    command: /bin/bash -cl "swift test -Xswiftc -warnings-as-errors"
+    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors"
 
   integration-tests:
     <<: *common
-    command: /bin/bash -cl "./scripts/integration_tests.sh"
+    command: /bin/bash -xcl "./scripts/integration_tests.sh"
 
   test:
     <<: *common
-    command: /bin/bash -cl "swift test -Xswiftc -warnings-as-errors && ./scripts/integration_tests.sh"
+    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && ./scripts/integration_tests.sh"
 
   performance-test:
     <<: *common
-    command: /bin/bash -cl "swift build -c release && ./.build/release/NIOPerformanceTester"
+    command: /bin/bash -xcl "swift build -c release && ./.build/release/NIOPerformanceTester"
 
   # util
 
@@ -52,11 +52,11 @@ services:
     tty: true
     ports:
       - "9999:9999"
-    command: /bin/bash -cl "swift run NIOEchoServer 0.0.0.0 9999"
+    command: /bin/bash -xcl "swift run NIOEchoServer 0.0.0.0 9999"
 
   http:
     <<: *common
     tty: true
     ports:
       - "8888:8888"
-    command: /bin/bash -cl "swift run NIOHTTP1Server 0.0.0.0 8888"
+    command: /bin/bash -xcl "swift run NIOHTTP1Server 0.0.0.0 8888"
