@@ -169,12 +169,15 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         // We'll attempt to upgrade. This may take a while, so while we're waiting more data can come in.
         self.upgradeState = .awaitingUpgrader
 
-        self.handleUpgrade(context: context, request: request, requestedProtocols: requestedProtocols).whenSuccess { callback in
-            if let callback = callback {
-                self.gotUpgrader(upgrader: callback)
-            } else {
-                self.notUpgrading(context: context, data: requestPart)
-            }
+        self.handleUpgrade(context: context, request: request, requestedProtocols: requestedProtocols)
+            .hop(to: context.eventLoop) // the user might return a future from another EventLoop.
+            .whenSuccess { callback in
+                assert(context.eventLoop.inEventLoop)
+                if let callback = callback {
+                    self.gotUpgrader(upgrader: callback)
+                } else {
+                    self.notUpgrading(context: context, data: requestPart)
+                }
         }
     }
 
