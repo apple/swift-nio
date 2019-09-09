@@ -249,12 +249,13 @@ public protocol EventLoop: EventLoopGroup {
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
 public struct TimeAmount: Equatable {
+    @available(*, deprecated, message: "This typealias doesn't serve any purpose. Please use Int64 directly.")
     public typealias Value = Int64
 
     /// The nanoseconds representation of the `TimeAmount`.
-    public let nanoseconds: Value
+    public let nanoseconds: Int64
 
-    private init(_ nanoseconds: Value) {
+    private init(_ nanoseconds: Int64) {
         self.nanoseconds = nanoseconds
     }
 
@@ -263,7 +264,7 @@ public struct TimeAmount: Equatable {
     /// - parameters:
     ///     - amount: the amount of nanoseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func nanoseconds(_ amount: Value) -> TimeAmount {
+    public static func nanoseconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount)
     }
 
@@ -272,7 +273,7 @@ public struct TimeAmount: Equatable {
     /// - parameters:
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func microseconds(_ amount: Value) -> TimeAmount {
+    public static func microseconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000)
     }
 
@@ -281,7 +282,7 @@ public struct TimeAmount: Equatable {
     /// - parameters:
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func milliseconds(_ amount: Value) -> TimeAmount {
+    public static func milliseconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000)
     }
 
@@ -290,7 +291,7 @@ public struct TimeAmount: Equatable {
     /// - parameters:
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func seconds(_ amount: Value) -> TimeAmount {
+    public static func seconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000)
     }
 
@@ -299,7 +300,7 @@ public struct TimeAmount: Equatable {
     /// - parameters:
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func minutes(_ amount: Value) -> TimeAmount {
+    public static func minutes(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000 * 60)
     }
 
@@ -308,7 +309,7 @@ public struct TimeAmount: Equatable {
     /// - parameters:
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func hours(_ amount: Value) -> TimeAmount {
+    public static func hours(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000 * 60 * 60)
     }
 }
@@ -329,11 +330,11 @@ extension TimeAmount {
     }
 
     public static func * <T: BinaryInteger>(lhs: T, rhs: TimeAmount) -> TimeAmount {
-        return TimeAmount(TimeAmount.Value(lhs) * rhs.nanoseconds)
+        return TimeAmount(Int64(lhs) * rhs.nanoseconds)
     }
 
     public static func * <T: BinaryInteger>(lhs: TimeAmount, rhs: T) -> TimeAmount {
-        return TimeAmount(lhs.nanoseconds * TimeAmount.Value(rhs))
+        return TimeAmount(lhs.nanoseconds * Int64(rhs))
     }
 }
 
@@ -355,24 +356,35 @@ extension TimeAmount {
 ///
 /// - note: `NIODeadline` should not be used to represent a time interval
 public struct NIODeadline: Equatable, Hashable {
+    @available(*, deprecated, message: "This typealias doesn't server any purpose, please use UInt64 directly.")
     public typealias Value = UInt64
 
+    // This really should be an UInt63 but we model it as Int64 with >=0 assert
+    private var _uptimeNanoseconds: Int64 {
+        didSet {
+            assert(self._uptimeNanoseconds >= 0)
+        }
+    }
+
     /// The nanoseconds since boot representation of the `NIODeadline`.
-    public let uptimeNanoseconds: Value
+    public var uptimeNanoseconds: UInt64 {
+        return .init(self._uptimeNanoseconds)
+    }
 
     public static let distantPast = NIODeadline(0)
-    public static let distantFuture = NIODeadline(DispatchTime.distantFuture.uptimeNanoseconds)
+    public static let distantFuture = NIODeadline(.init(Int64.max))
 
-    private init(_ nanoseconds: Value) {
-        self.uptimeNanoseconds = nanoseconds
+    private init(_ nanoseconds: Int64) {
+        precondition(nanoseconds >= 0)
+        self._uptimeNanoseconds = nanoseconds
     }
 
     public static func now() -> NIODeadline {
-        return NIODeadline(DispatchTime.now().uptimeNanoseconds)
+        return NIODeadline.uptimeNanoseconds(DispatchTime.now().uptimeNanoseconds)
     }
 
-    public static func uptimeNanoseconds(_ nanoseconds: Value) -> NIODeadline {
-        return NIODeadline(nanoseconds)
+    public static func uptimeNanoseconds(_ nanoseconds: UInt64) -> NIODeadline {
+        return NIODeadline(Int64(min(UInt64(Int64.max), nanoseconds)))
     }
 }
 
@@ -394,22 +406,38 @@ extension NIODeadline: CustomStringConvertible {
 
 extension NIODeadline {
     public static func - (lhs: NIODeadline, rhs: NIODeadline) -> TimeAmount {
-        return .nanoseconds(TimeAmount.Value(lhs.uptimeNanoseconds) - TimeAmount.Value(rhs.uptimeNanoseconds))
+        // This won't ever crash, NIODeadlines are guanteed to be within 0 ..< 2^63-1 nanoseconds so the result can
+        // definitely be stored in a TimeAmount (which is an Int64).
+        return .nanoseconds(Int64(lhs.uptimeNanoseconds) - Int64(rhs.uptimeNanoseconds))
     }
 
     public static func + (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
-        if rhs.nanoseconds < 0 {
-            return NIODeadline(lhs.uptimeNanoseconds - rhs.nanoseconds.magnitude)
-        } else {
-            return NIODeadline(lhs.uptimeNanoseconds + rhs.nanoseconds.magnitude)
+        let partial: Int64
+        let overflow: Bool
+        (partial, overflow) = Int64(lhs.uptimeNanoseconds).addingReportingOverflow(rhs.nanoseconds)
+        if overflow {
+            assert(rhs.nanoseconds > 0) // this certainly must have overflowed towards +infinity
+            return NIODeadline.distantFuture
         }
+        guard partial >= 0 else {
+            return NIODeadline.uptimeNanoseconds(0)
+        }
+        return NIODeadline(partial)
     }
 
     public static func - (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
         if rhs.nanoseconds < 0 {
-            return NIODeadline(lhs.uptimeNanoseconds + rhs.nanoseconds.magnitude)
+            // The addition won't crash because the worst that could happen is `UInt64(Int64.max) + UInt64(Int64.max)`
+            // which fits into an UInt64 (and will then be capped to Int64.max == distantFuture by `uptimeNanoseconds`).
+            return NIODeadline.uptimeNanoseconds(lhs.uptimeNanoseconds + rhs.nanoseconds.magnitude)
+        } else if rhs.nanoseconds > lhs.uptimeNanoseconds {
+            // Cap it at `0` because otherwise this would be negative.
+            return NIODeadline.init(0)
         } else {
-            return NIODeadline(lhs.uptimeNanoseconds - rhs.nanoseconds.magnitude)
+            // This will be positive but still fix in an Int64.
+            let result = Int64(lhs.uptimeNanoseconds) - rhs.nanoseconds
+            assert(result >= 0)
+            return NIODeadline(result)
         }
     }
 }
