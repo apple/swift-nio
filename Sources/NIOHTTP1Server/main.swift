@@ -250,7 +250,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             return { context, req in
                 self.handleJustWrite(context: context,
                                      request: req, string: self.defaultResponse,
-                                     delay: TimeAmount.Value(howLong).map { .milliseconds($0) } ?? .seconds(0))
+                                     delay: Int64(howLong).map { .milliseconds($0) } ?? .seconds(0))
             }
         }
 
