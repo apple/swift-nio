@@ -61,6 +61,7 @@ extension ChannelPipelineTest {
                 ("testAddMultipleHandlers", testAddMultipleHandlers),
                 ("testPipelineDebugDescription", testPipelineDebugDescription),
                 ("testWeDontCallHandlerRemovedTwiceIfAHandlerCompletesRemovalOnlyAfterChannelTeardown", testWeDontCallHandlerRemovedTwiceIfAHandlerCompletesRemovalOnlyAfterChannelTeardown),
+                ("testWeFailTheSecondRemoval", testWeFailTheSecondRemoval),
            ]
    }
 }

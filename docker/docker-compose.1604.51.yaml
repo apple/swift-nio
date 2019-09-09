@@ -8,7 +8,7 @@ services:
       args:
         ubuntu_version: "16.04"
         swift_version: "5.1"
-        swift_flavour: "DEVELOPMENT-SNAPSHOT-2019-08-15-a"
+        swift_flavour: "DEVELOPMENT-SNAPSHOT-2019-09-05-a"
         swift_builds_suffix: "branch"
 
   unit-tests:
@@ -28,6 +28,7 @@ services:
       - MAX_ALLOCS_ALLOWED_creating_10000_headers=10100
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
       - MAX_ALLOCS_ALLOWED_modifying_1000_circular_buffer_elements=50
+      - SANITIZER_ARG=--sanitize=thread
 
   performance-test:
     image: swift-nio:16.04-5.1

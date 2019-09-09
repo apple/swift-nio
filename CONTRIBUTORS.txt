@@ -30,6 +30,7 @@ needs to be listed here.
 - Damiaan Dufaux <damiaan@dpro.be>
 - Daniel Alm <Daniel.Alm@ForumD.net>
 - Daniel Dunbar <daniel_dunbar@apple.com>
+- Dario Rexin <drexin@apple.com>
 - David Skrundz <david.skrundz@gmail.com>
 - Esteban Torres <me@estebantorr.es>
 - Eugen <eugenf78@gmail.com>
@@ -49,13 +50,16 @@ needs to be listed here.
 - John Connolly <connoljo2@gmail.com>
 - John Holdsworth <github@johnholdsworth.com>
 - Jovan Milenkovic <jovan.milenkovic@htecgroup.com>
+- Julian Lettner <julian.lettner@apple.com>
 - Karim ElNaggar <karimfarid.naggar@gmail.com>
 - Kevin Clark <kevin.clark@apple.com>
 - Kevin Sweeney <kevin_sweeney@apple.com>
+- Konrad `ktoso` Malawski <konrad_malawski@apple.com>
 - Konrad `ktoso` Malawski <ktoso@apple.com>
 - Kyle Bashour <kylebshr@me.com>
 - Kyle Jessup <kyle@perfect.org>
 - Lev Walkin <lwalkin@apple.com>
+- Liam Flynn <l.flynn2@live.co.uk>
 - Liam Flynn <l.flynn@live.co.uk>
 - Ludovic Dewailly <ldewailly@apple.com>
 - Markus Jais <markusjais@googlemail.com>
@@ -72,6 +76,7 @@ needs to be listed here.
 - OleG <emptystamp@gmail.com>
 - Portia <portia-s@users.noreply.github.com>
 - Pushkar N Kulkarni <pushkar.nk@in.ibm.com>
+- Romain Pouclet <rpouclet@apple.com>
 - Rukshani Athapathu <arukshani@users.noreply.github.com>
 - Sebastian Thiebaud <770074+SebastianThiebaud@users.noreply.github.com>
 - Semen Zhydenko <simeon.zhidenko@gmail.com>
@@ -79,14 +84,18 @@ needs to be listed here.
 - Sergo Beruashvili <beruashvili@gmail.com>
 - Shaun Hubbard <shaunhubbard2013@icloud.com>
 - Siemen Sikkema <s.h.sikkema@gmail.com>
+- Simon Evans <si@si.org>
 - Stuart Hinson <stuart.hinson@gmail.com>
 - Tanner <me@tanner.xyz>
 - Tiago Martinho <martinho@thoughtworks.com>
 - Tibor Bödecs <mail.tib@gmail.com>
 - Tim Condon <0xtimc@gmail.com>
 - Tim Kientzle <tkientzle@apple.com>
+- Tom Counsell <tamc@greenonblack.com>
 - Tomer Doron <tomerd@apple.com>
+- Trevör <adtrevor@users.noreply.github.com>
 - Trevör Anne Denise <adtrevor@users.noreply.github.com>
+- Will Lisac <will@lisac.org>
 - Wilson Ding <hello@wilsonding.com>
 - fadi-botros <botros_fadi@yahoo.com>
 - sun_ <sunlubo.sun@gmail.com>
