@@ -28,13 +28,17 @@ public final class Lock {
 
     /// Create a new lock.
     public init() {
-        let err = pthread_mutex_init(self.mutex, nil)
-        precondition(err == 0)
+        var attr = pthread_mutexattr_t()
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK));
+
+        let err = pthread_mutex_init(self.mutex, &attr)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
     }
 
     deinit {
         let err = pthread_mutex_destroy(self.mutex)
-        precondition(err == 0)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         mutex.deallocate()
     }
 
@@ -44,7 +48,7 @@ public final class Lock {
     /// `unlock`, to simplify lock handling.
     public func lock() {
         let err = pthread_mutex_lock(self.mutex)
-        precondition(err == 0)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
     }
 
     /// Release the lock.
@@ -53,7 +57,7 @@ public final class Lock {
     /// `lock`, to simplify lock handling.
     public func unlock() {
         let err = pthread_mutex_unlock(self.mutex)
-        precondition(err == 0)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
     }
 }
 
@@ -98,12 +102,12 @@ public final class ConditionLock<T: Equatable> {
         self._value = value
         self.mutex = Lock()
         let err = pthread_cond_init(self.cond, nil)
-        precondition(err == 0)
+        precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
     }
 
     deinit {
         let err = pthread_cond_destroy(self.cond)
-        precondition(err == 0)
+        precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
         self.cond.deallocate()
     }
 
@@ -141,7 +145,7 @@ public final class ConditionLock<T: Equatable> {
                 break
             }
             let err = pthread_cond_wait(self.cond, self.mutex.mutex)
-            precondition(err == 0, "pthread_cond_wait error \(err)")
+            precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
         }
     }
 
@@ -192,7 +196,7 @@ public final class ConditionLock<T: Equatable> {
     public func unlock(withValue newValue: T) {
         self._value = newValue
         self.unlock()
-        let r = pthread_cond_broadcast(self.cond)
-        precondition(r == 0)
+        let err = pthread_cond_broadcast(self.cond)
+        precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
     }
 }
