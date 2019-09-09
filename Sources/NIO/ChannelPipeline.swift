@@ -400,11 +400,15 @@ public final class ChannelPipeline: ChannelInvoker {
             promise?.fail(ChannelError.unremovableHandler)
             return
         }
+        func removeHandler0() {
+            context.startUserTriggeredRemoval(promise: promise)
+        }
+
         if self.eventLoop.inEventLoop {
-            handler.removeHandler(context: context, removalToken: .init(promise: promise))
+            removeHandler0()
         } else {
             self.eventLoop.execute {
-                handler.removeHandler(context: context, removalToken: .init(promise: promise))
+                removeHandler0()
             }
         }
     }
@@ -1100,6 +1104,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     private let inboundHandler: _ChannelInboundHandler?
     private let outboundHandler: _ChannelOutboundHandler?
     private var removeHandlerInvoked = false
+    private var userTriggeredRemovalStarted = false
 
     // Only created from within ChannelPipeline
     fileprivate init(name: String, handler: ChannelHandler, pipeline: ChannelPipeline) {
@@ -1506,6 +1511,17 @@ extension ChannelHandlerContext {
     public func leavePipeline(removalToken: RemovalToken) {
         self.eventLoop.preconditionInEventLoop()
         self.pipeline.removeHandlerFromPipeline(context: self, promise: removalToken.promise)
+    }
+
+    internal func startUserTriggeredRemoval(promise: EventLoopPromise<Void>?) {
+        self.eventLoop.assertInEventLoop()
+        guard !self.userTriggeredRemovalStarted else {
+            promise?.fail(NIOAttemptedToRemoveHandlerMultipleTimesError())
+            return
+        }
+        self.userTriggeredRemovalStarted = true
+        (self.handler as! RemovableChannelHandler).removeHandler(context: self,
+                                                                 removalToken: .init(promise: promise))
     }
 }
 
