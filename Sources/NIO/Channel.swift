@@ -356,6 +356,9 @@ extension ChannelError: Equatable { }
 /// we have seen this happen on Darwin.
 public struct NIOFailedToSetSocketNonBlockingError: Error {}
 
+/// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
+public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
+
 /// An `Channel` related event that is passed through the `ChannelPipeline` to notify the user.
 public enum ChannelEvent: Equatable {
     /// `ChannelOptions.allowRemoteHalfClosure` is `true` and input portion of the `Channel` was closed.

@@ -1288,6 +1288,50 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try allDonePromise.futureResult.wait())
     }
+
+    func testWeFailTheSecondRemoval() {
+        final class Handler: ChannelInboundHandler, RemovableChannelHandler {
+            typealias InboundIn = Never
+
+            private let removalTriggeredPromise: EventLoopPromise<Void>
+            private let continueRemovalFuture: EventLoopFuture<Void>
+            private var removeHandlerCalls = 0
+
+            init(removalTriggeredPromise: EventLoopPromise<Void>,
+                 continueRemovalFuture: EventLoopFuture<Void>) {
+                self.removalTriggeredPromise = removalTriggeredPromise
+                self.continueRemovalFuture = continueRemovalFuture
+            }
+
+            func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+                self.removeHandlerCalls += 1
+                XCTAssertEqual(1, self.removeHandlerCalls)
+                self.removalTriggeredPromise.succeed(())
+                self.continueRemovalFuture.whenSuccess {
+                    context.leavePipeline(removalToken: removalToken)
+                }
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        let removalTriggeredPromise: EventLoopPromise<Void> = channel.eventLoop.makePromise()
+        let continueRemovalPromise: EventLoopPromise<Void> = channel.eventLoop.makePromise()
+
+        let handler = Handler(removalTriggeredPromise: removalTriggeredPromise,
+                              continueRemovalFuture: continueRemovalPromise.futureResult)
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        let removal1Future = channel.pipeline.removeHandler(handler)
+        XCTAssertThrowsError(try channel.pipeline.removeHandler(handler).wait()) { error in
+            XCTAssert(error is NIOAttemptedToRemoveHandlerMultipleTimesError,
+                      "unexpected error: \(error)")
+        }
+        continueRemovalPromise.succeed(())
+        XCTAssertThrowsError(try channel.pipeline.removeHandler(handler).wait()) { error in
+            XCTAssertEqual(.notFound, error as? ChannelPipelineError, "unexpected error: \(error)")
+        }
+        XCTAssertNoThrow(try removal1Future.wait())
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
 }
 
 // this should be within `testAddMultipleHandlers` but https://bugs.swift.org/browse/SR-9956
