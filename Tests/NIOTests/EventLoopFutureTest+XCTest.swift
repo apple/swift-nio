@@ -74,6 +74,8 @@ extension EventLoopFutureTest {
                 ("testAlwaysWithFailingPromise", testAlwaysWithFailingPromise),
                 ("testPromiseCompletedWithSuccessfulFuture", testPromiseCompletedWithSuccessfulFuture),
                 ("testPromiseCompletedWithFailedFuture", testPromiseCompletedWithFailedFuture),
+                ("testPromiseCompletedWithSuccessfulResult", testPromiseCompletedWithSuccessfulResult),
+                ("testPromiseCompletedWithFailedResult", testPromiseCompletedWithFailedResult),
            ]
    }
 }
