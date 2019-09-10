@@ -21,7 +21,7 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIO 2.7.1 Docs
+          NIO 2.8.0 Docs
         </a>
          (91% documented)
       </p>
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E7%2E1%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E8%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -354,6 +354,9 @@
                 <a class="nav-group-task-link" href="../Structs/NIOAny.html">NIOAny</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:3NIO45NIOAttemptedToRemoveHandlerMultipleTimesErrorV">NIOAttemptedToRemoveHandlerMultipleTimesError</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
               </li>
               <li class="nav-group-task">
@@ -481,7 +484,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -506,12 +509,12 @@ compute new timeouts for each step</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">uptimeNanoseconds</span><span class="p">:</span> <span class="kt"><a href="../Structs/NIODeadline.html#/s:3NIO11NIODeadlineV5Valuea">Value</a></span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">uptimeNanoseconds</span><span class="p">:</span> <span class="kt">UInt64</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L361">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L370-L372">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -541,7 +544,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -571,7 +574,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -601,7 +604,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L370-L372">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L382-L384">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -626,12 +629,12 @@ compute new timeouts for each step</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">uptimeNanoseconds</span><span class="p">(</span><span class="n">_</span> <span class="nv">nanoseconds</span><span class="p">:</span> <span class="kt"><a href="../Structs/NIODeadline.html#/s:3NIO11NIODeadlineV5Valuea">Value</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">NIODeadline</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">uptimeNanoseconds</span><span class="p">(</span><span class="n">_</span> <span class="nv">nanoseconds</span><span class="p">:</span> <span class="kt">UInt64</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">NIODeadline</span></code></pre>
 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L374-L376">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L386-L388">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -664,7 +667,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L380-L382">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L392-L394">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -693,7 +696,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L384-L386">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L396-L398">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -726,7 +729,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L390-L392">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L402-L404">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -760,7 +763,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L396-L398">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L408-L412">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -790,7 +793,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L400-L406">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L414-L426">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -820,7 +823,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoop.swift#L408-L414">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L428-L442">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -833,7 +836,7 @@ compute new timeouts for each step</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-08-27)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-09-10)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.10.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

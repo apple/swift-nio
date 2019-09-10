@@ -21,7 +21,7 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIO 2.7.1 Docs
+          NIO 2.8.0 Docs
         </a>
          (91% documented)
       </p>
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E7%2E1%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E8%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -354,6 +354,9 @@
                 <a class="nav-group-task-link" href="../Structs/NIOAny.html">NIOAny</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:3NIO45NIOAttemptedToRemoveHandlerMultipleTimesErrorV">NIOAttemptedToRemoveHandlerMultipleTimesError</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
               </li>
               <li class="nav-group-task">
@@ -582,7 +585,7 @@ should be considered a code smell worth investigating: the <code><a href="../Pro
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L366">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L385">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -615,7 +618,7 @@ should be considered a code smell worth investigating: the <code><a href="../Pro
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L428-L430">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L447-L449">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -623,6 +626,13 @@ should be considered a code smell worth investigating: the <code><a href="../Pro
               </ul>
             </div>
             <div class="task-group">
+              <div class="task-name-container">
+                <a name="/flatMap%20and%20map"></a>
+                <a name="//apple_ref/swift/Section/flatMap and map" class="dashAnchor"></a>
+                <a href="#/flatMap%20and%20map">
+                  <h3 class="section-name">flatMap and map</h3>
+                </a>
+              </div>
               <ul class="item-container">
                 <li class="item">
                   <div>
@@ -693,7 +703,7 @@ a new <code>EventLoopFuture</code>.</p>
                         <p>A future that will receive the eventual value.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L463-L482">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L484-L503">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -758,7 +768,7 @@ a new value lifted into a new <code>EventLoopFuture</code>.</p>
                         <p>A future that will receive the eventual value.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L499-L509">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L520-L530">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -821,7 +831,7 @@ a new value lifted into a new <code>EventLoopFuture</code>.</p>
                         <p>A future that will receive the eventual value or a rethrown error.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L526-L534">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L547-L555">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -894,7 +904,7 @@ a new value lifted into a new <code>EventLoopFuture</code>.</p>
                         <p>A future that will receive the eventual value.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L563-L570">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L584-L591">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -954,7 +964,70 @@ a new value lifted into a new <code>EventLoopFuture</code>.</p>
                         <p>A future that will receive the recovered value.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L585-L604">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L606-L625">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC13flatMapResult4file4line_ACyqd__Gs12StaticStringV_Sus0G0Oyqd__qd_0_Gxcts5ErrorRd_0_r0_lF"></a>
+                    <a name="//apple_ref/swift/Method/flatMapResult(file:line:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC13flatMapResult4file4line_ACyqd__Gs12StaticStringV_Sus0G0Oyqd__qd_0_Gxcts5ErrorRd_0_r0_lF">flatMapResult(file:line:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>When the current <code>EventLoopFuture&lt;Value&gt;</code> is fulfilled, run the provided callback, which
+performs a synchronous computation and returns either a new value (of type <code>NewValue</code>) or
+an error depending on the <code>Result</code> returned by the closure.</p>
+
+<p>Operations performed in <code>flatMapResult</code> should not block, or they will block the entire
+event loop. <code>flatMapResult</code> is intended for use when you have a data-driven function that
+performs a simple data transformation that can potentially error.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">flatMapResult</span><span class="o">&lt;</span><span class="kt">NewValue</span><span class="p">,</span> <span class="kt">SomeError</span><span class="p">:</span> <span class="kt">Error</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span>
+                                                      <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">,</span>
+                                                      <span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Result</span><span class="o">&lt;</span><span class="kt">NewValue</span><span class="p">,</span> <span class="kt">SomeError</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">NewValue</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>body</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Function that will receive the value of this <code>EventLoopFuture</code> and return
+a new value or error lifted into a new <code>EventLoopFuture</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A future that will receive the eventual value.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L641-L652">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1015,7 +1088,7 @@ a new value lifted into a new <code>EventLoopFuture</code>.</p>
                         <p>A future that will receive the recovered value.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L619-L623">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L667-L671">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1071,7 +1144,7 @@ in the body of this function, consider using <code>cascade</code> instead.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L668-L675">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L716-L723">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1127,7 +1200,7 @@ in the body of this function, consider using <code>cascade</code> instead.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L688-L695">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L736-L743">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1182,7 +1255,7 @@ of any resources that needed to be kept open until the <code>EventLoopFuture</co
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L707-L712">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L755-L760">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1190,6 +1263,13 @@ of any resources that needed to be kept open until the <code>EventLoopFuture</co
               </ul>
             </div>
             <div class="task-group">
+              <div class="task-name-container">
+                <a name="/and"></a>
+                <a name="//apple_ref/swift/Section/and" class="dashAnchor"></a>
+                <a href="#/and">
+                  <h3 class="section-name">and</h3>
+                </a>
+              </div>
               <ul class="item-container">
                 <li class="item">
                   <div>
@@ -1222,7 +1302,7 @@ the first error encountered.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L736-L775">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L785-L824">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1256,7 +1336,7 @@ This is just syntactic sugar for <code>future.and(loop.makeSucceedFuture(value))
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L780-L784">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L829-L833">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1338,7 +1418,7 @@ tidy up your computational pipelines.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L812-L820">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L861-L869">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1396,7 +1476,7 @@ intermediate <code>map</code>.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L835-L838">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L884-L887">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1449,7 +1529,7 @@ error cases, while passing the user <code><a href="../Structs/EventLoopPromise.h
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L847-L850">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L896-L899">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1458,10 +1538,10 @@ error cases, while passing the user <code><a href="../Structs/EventLoopPromise.h
             </div>
             <div class="task-group">
               <div class="task-name-container">
-                <a name="/cascade2"></a>
-                <a name="//apple_ref/swift/Section/cascade" class="dashAnchor"></a>
-                <a href="#/cascade2">
-                  <h3 class="section-name">cascade</h3>
+                <a name="/wait"></a>
+                <a name="//apple_ref/swift/Section/wait" class="dashAnchor"></a>
+                <a href="#/wait">
+                  <h3 class="section-name">wait</h3>
                 </a>
               </div>
               <ul class="item-container">
@@ -1506,7 +1586,7 @@ and non-blocking code.</p>
                         <p>The value of the <code>EventLoopFuture</code> when it completes.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L865-L899">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L916-L950">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1515,10 +1595,10 @@ and non-blocking code.</p>
             </div>
             <div class="task-group">
               <div class="task-name-container">
-                <a name="/cascade3"></a>
-                <a name="//apple_ref/swift/Section/cascade" class="dashAnchor"></a>
-                <a href="#/cascade3">
-                  <h3 class="section-name">cascade</h3>
+                <a name="/fold"></a>
+                <a name="//apple_ref/swift/Section/fold" class="dashAnchor"></a>
+                <a href="#/fold">
+                  <h3 class="section-name">fold</h3>
                 </a>
               </div>
               <ul class="item-container">
@@ -1594,7 +1674,7 @@ a failure is encountered, it will immediately fail the overall EventLoopFuture.<
                         <p>A new <code>EventLoopFuture</code> with the folded value whose callbacks run on <code>self.eventLoop</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L920-L944">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L973-L997">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1603,10 +1683,10 @@ a failure is encountered, it will immediately fail the overall EventLoopFuture.<
             </div>
             <div class="task-group">
               <div class="task-name-container">
-                <a name="/cascade4"></a>
-                <a name="//apple_ref/swift/Section/cascade" class="dashAnchor"></a>
-                <a href="#/cascade4">
-                  <h3 class="section-name">cascade</h3>
+                <a name="/reduce"></a>
+                <a name="//apple_ref/swift/Section/reduce" class="dashAnchor"></a>
+                <a href="#/reduce">
+                  <h3 class="section-name">reduce</h3>
                 </a>
               </div>
               <ul class="item-container">
@@ -1708,7 +1788,7 @@ a failure is encountered, it will immediately fail the overall <code>EventLoopFu
                         <p>A new <code>EventLoopFuture</code> with the reduced value.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L967-L978">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L1022-L1033">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1809,70 +1889,7 @@ a failure is encountered, it will immediately fail the overall <code>EventLoopFu
                         <p>A new <code>EventLoopFuture</code> with the combined value.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L997-L1020">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO15EventLoopFutureC13flatMapResult4file4line_ACyqd__Gs12StaticStringV_Sus0G0Oyqd__qd_0_Gxcts5ErrorRd_0_r0_lF"></a>
-                    <a name="//apple_ref/swift/Method/flatMapResult(file:line:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO15EventLoopFutureC13flatMapResult4file4line_ACyqd__Gs12StaticStringV_Sus0G0Oyqd__qd_0_Gxcts5ErrorRd_0_r0_lF">flatMapResult(file:line:_:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>When the current <code>EventLoopFuture&lt;Value&gt;</code> is fulfilled, run the provided callback, which
-performs a synchronous computation and returns either a new value (of type <code>NewValue</code>) or
-an error depending on the <code>Result</code> returned by the closure.</p>
-
-<p>Operations performed in <code>flatMapResult</code> should not block, or they will block the entire
-event loop. <code>flatMapResult</code> is intended for use when you have a data-driven function that
-performs a simple data transformation that can potentially error.</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
-<span class="kd">public</span> <span class="kd">func</span> <span class="n">flatMapResult</span><span class="o">&lt;</span><span class="kt">NewValue</span><span class="p">,</span> <span class="kt">SomeError</span><span class="p">:</span> <span class="kt">Error</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span>
-                                                      <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">,</span>
-                                                      <span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Result</span><span class="o">&lt;</span><span class="kt">NewValue</span><span class="p">,</span> <span class="kt">SomeError</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">NewValue</span><span class="o">&gt;</span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>body</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Function that will receive the value of this <code>EventLoopFuture</code> and return
-a new value or error lifted into a new <code>EventLoopFuture</code>.</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                      <div>
-                        <h4>Return Value</h4>
-                        <p>A future that will receive the eventual value.</p>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L1036-L1047">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L1052-L1075">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1881,10 +1898,10 @@ a new value or error lifted into a new <code>EventLoopFuture</code>.</p>
             </div>
             <div class="task-group">
               <div class="task-name-container">
-                <a name="/cascade5"></a>
-                <a name="//apple_ref/swift/Section/cascade" class="dashAnchor"></a>
-                <a href="#/cascade5">
-                  <h3 class="section-name">cascade</h3>
+                <a name="/%22fail%20fast%22%20reduce"></a>
+                <a name="//apple_ref/swift/Section/&quot;fail fast&quot; reduce" class="dashAnchor"></a>
+                <a href="#/%22fail%20fast%22%20reduce">
+                  <h3 class="section-name">&quot;fail fast&quot; reduce</h3>
                 </a>
               </div>
               <ul class="item-container">
@@ -1954,7 +1971,7 @@ a new value or error lifted into a new <code>EventLoopFuture</code>.</p>
                         <p>A new <code>EventLoopFuture</code> that waits for the other futures to succeed.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L1063-L1075">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L1092-L1104">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2022,7 +2039,7 @@ The new <code>EventLoopFuture</code> will contain all of the values fulfilled by
                         <p>A new <code>EventLoopFuture</code> with all of the values fulfilled by the provided futures.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L1085-L1106">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L1114-L1135">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2031,10 +2048,10 @@ The new <code>EventLoopFuture</code> will contain all of the values fulfilled by
             </div>
             <div class="task-group">
               <div class="task-name-container">
-                <a name="/cascade6"></a>
-                <a name="//apple_ref/swift/Section/cascade" class="dashAnchor"></a>
-                <a href="#/cascade6">
-                  <h3 class="section-name">cascade</h3>
+                <a name="/%22fail%20slow%22%20reduce"></a>
+                <a name="//apple_ref/swift/Section/&quot;fail slow&quot; reduce" class="dashAnchor"></a>
+                <a href="#/%22fail%20slow%22%20reduce">
+                  <h3 class="section-name">&quot;fail slow&quot; reduce</h3>
                 </a>
               </div>
               <ul class="item-container">
@@ -2103,7 +2120,7 @@ Values fulfilled by each future are discarded.</p>
                         <p>A new <code>EventLoopFuture</code> that succeeds after all futures complete.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L1171-L1183">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L1201-L1213">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2175,7 +2192,7 @@ use one of the <code>reduce</code> methods instead.</p>
                         <p>A new <code>EventLoopFuture</code> with all the results of the provided futures.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L1196-L1222">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L1226-L1252">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2184,10 +2201,10 @@ use one of the <code>reduce</code> methods instead.</p>
             </div>
             <div class="task-group">
               <div class="task-name-container">
-                <a name="/cascade7"></a>
-                <a name="//apple_ref/swift/Section/cascade" class="dashAnchor"></a>
-                <a href="#/cascade7">
-                  <h3 class="section-name">cascade</h3>
+                <a name="/hop"></a>
+                <a name="//apple_ref/swift/Section/hop" class="dashAnchor"></a>
+                <a href="#/hop">
+                  <h3 class="section-name">hop</h3>
                 </a>
               </div>
               <ul class="item-container">
@@ -2246,7 +2263,7 @@ the one you&rsquo;re hopping <em>to</em>, allowing you to avoid doing allocation
                         <p>An <code>EventLoopFuture</code> whose callbacks run on <code>target</code> instead of the original loop.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L1279-L1287">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L1311-L1319">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2255,10 +2272,10 @@ the one you&rsquo;re hopping <em>to</em>, allowing you to avoid doing allocation
             </div>
             <div class="task-group">
               <div class="task-name-container">
-                <a name="/cascade8"></a>
-                <a name="//apple_ref/swift/Section/cascade" class="dashAnchor"></a>
-                <a href="#/cascade8">
-                  <h3 class="section-name">cascade</h3>
+                <a name="/always"></a>
+                <a name="//apple_ref/swift/Section/always" class="dashAnchor"></a>
+                <a href="#/always">
+                  <h3 class="section-name">always</h3>
                 </a>
               </div>
               <ul class="item-container">
@@ -2311,7 +2328,7 @@ the one you&rsquo;re hopping <em>to</em>, allowing you to avoid doing allocation
                         <p>the current <code>EventLoopFuture</code></p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.7.1/Sources/NIO/EventLoopFuture.swift#L1308-L1311">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L1342-L1345">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2324,7 +2341,7 @@ the one you&rsquo;re hopping <em>to</em>, allowing you to avoid doing allocation
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-08-27)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-09-10)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.10.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
