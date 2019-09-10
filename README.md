@@ -9,7 +9,7 @@ It's like [Netty](https://netty.io), but written for Swift.
 
 The SwiftNIO project is split across multiple repositories:
 
-Repository | NIO 2 (Swift 5) | NIO 1 (Swift 4+)
+Repository | NIO 2 (Swift 5+) | NIO 1 (Swift 4+)
 --- | --- | ---
 [https://github.com/apple/swift-nio][repo-nio] <br> SwiftNIO core | `from: "2.0.0"` | `from: "1.0.0"`
 [https://github.com/apple/swift-nio-ssl][repo-nio-ssl] <br> TLS (SSL) support | `from: "2.0.0"` | `from: "1.0.0"`
@@ -32,7 +32,7 @@ The latest released SwiftNIO 1 version supports Swift 4.0, 4.1, 4.2, and 5.0.
 
 #### SwiftNIO 2
 
-The latest released SwiftNIO 2 version supports only Swift 5.0. If you have a SwiftNIO 1 application or library that you would like to migrate to SwiftNIO 2, please check out the [migration guide](docs/migration-guide-NIO1-to-NIO2.md) we prepared for you.
+The latest released SwiftNIO 2 version supports only Swift 5.0 & 5.1. If you have a SwiftNIO 1 application or library that you would like to migrate to SwiftNIO 2, please check out the [migration guide](docs/migration-guide-NIO1-to-NIO2.md) we prepared for you.
 
 ### Compatibility
 
@@ -180,6 +180,12 @@ dependencies: [
 
 and then adding the appropriate SwiftNIO module(s) to your target dependencies.
 
+If your project is set up as an Xcode project and you're using Xcode 11+, you can add SwiftNIO as a dependency to your
+Xcode project by clicking File -> Swift Packages -> Add Package Dependency. In the upcoming dialog, please enter
+`https://github.com/apple/swift-nio.git` and click Next twice. Finally, select the targets you are planning to use (for
+example `NIO`, `NIOHTTP1`, and `NIOFoundationCompat`) and click finish. Now will be able to `import NIO` (as well as all
+the other targets you have selected) in your project.
+
 To work on SwiftNIO itself, or to investigate some of the demonstration applications, you can clone the repository directly and use SwiftPM to help build it. For example, you can run the following commands to compile and run the example echo server:
 
 ```bash
@@ -196,16 +202,13 @@ echo "Hello SwiftNIO" | nc localhost 9999
 
 If all goes well, you'll see the message echoed back to you.
 
-To generate an Xcode project to work on SwiftNIO in Xcode:
+To work on SwiftNIO in Xcode 11+, you can just open the `Package.swift`
+file in Xcode and use Xcode's support for SwiftPM Packages.
+
+If you want to develop SwiftNIO with Xcode 10, you have to generate an Xcode project:
 
 ```bash
 swift package generate-xcodeproj
-```
-
-This generates an Xcode project using SwiftPM. You can open the project with:
-
-```bash
-open swift-nio.xcodeproj
 ```
 
 ### An alternative: using `docker-compose`
@@ -244,11 +247,11 @@ have a few prerequisites installed on your system.
 
 #### macOS
 
-- Xcode 10.2 or newer
+- Xcode 10.2 or newer, Xcode 11 recommended.
 
 ### Linux
 
-- Swift 5.0 from [swift.org/download](https://swift.org/download/#releases).
+- Swift 5.0 or 5.1 (recommended) from [swift.org/download](https://swift.org/download/#releases).
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
