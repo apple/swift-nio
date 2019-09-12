@@ -69,6 +69,11 @@ struct SelectorEventSet: OptionSet, Equatable {
     /// Interest in/availability of data to be written
     static let write = SelectorEventSet(rawValue: 1 << 3)
 
+    /// EOF at the write/output end of a `Selectable`.
+    ///
+    /// - note: This is rarely used because in many cases, there is no signal that this happened.
+    static let writeEOF = SelectorEventSet(rawValue: 1 << 4)
+
     init(rawValue: SelectorEventSet.RawValue) {
         self.rawValue = rawValue
     }
@@ -319,6 +324,7 @@ final class Selector<R: Registration> {
     }
 
     deinit {
+        assert(self.registrations.count == 0, "left-over registrations: \(self.registrations)")
         assert(self.lifecycleState == .closed, "Selector \(self.lifecycleState) (expected .closed) on deinit")
         Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
 
@@ -644,7 +650,7 @@ extension Selector: CustomStringConvertible {
 /// An event that is triggered once the `Selector` was able to select something.
 struct SelectorEvent<R> {
     public let registration: R
-    public let io: SelectorEventSet
+    public var io: SelectorEventSet
 
     /// Create new instance
     ///
@@ -680,6 +686,8 @@ extension Selector where R == NIORegistration {
             case .socketChannel(let chan, _):
                 return closeChannel(chan)
             case .datagramChannel(let chan, _):
+                return closeChannel(chan)
+            case .pipeChannel(let chan, _, _):
                 return closeChannel(chan)
             }
         }.map { future in

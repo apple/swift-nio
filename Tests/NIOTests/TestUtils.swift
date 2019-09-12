@@ -16,16 +16,25 @@ import XCTest
 @testable import NIO
 import NIOConcurrencyHelpers
 
-func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) -> [NIO.NIOFileHandle]) throws {
+func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) throws -> [NIO.NIOFileHandle]) throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
     }
     let readFH = NIOFileHandle(descriptor: fds[0])
     let writeFH = NIOFileHandle(descriptor: fds[1])
-    let toClose = body(readFH, writeFH)
+    var toClose: [NIOFileHandle] = [readFH, writeFH]
+    var error: Error? = nil
+    do {
+        toClose = try body(readFH, writeFH)
+    } catch let err {
+        error = err
+    }
     try toClose.forEach { fh in
         XCTAssertNoThrow(try fh.close())
+    }
+    if let error = error {
+        throw error
     }
 }
 
@@ -474,7 +483,45 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
     }
     let channelEL = group.next()
 
-    // TCP
+    let lock = Lock()
+    var ret: [T] = []
+    _ = try forEachCrossConnectedStreamChannelPair(file: file, line: line) { (chan1: Channel, chan2: Channel) throws -> Void in
+        var innerRet: [T] = [try body(chan1)]
+        if let parent = chan1.parent {
+            innerRet.append(try body(parent))
+        }
+        lock.withLock {
+            ret.append(contentsOf: innerRet)
+        }
+    }
+
+    // UDP
+    let udpChannel = DatagramBootstrap(group: channelEL)
+        .channelInitializer { channel in
+            XCTAssert(channel.eventLoop.inEventLoop)
+            return channelEL.makeSucceededFuture(())
+    }
+    .bind(host: "127.0.0.1", port: 0)
+    defer {
+        XCTAssertNoThrow(try udpChannel.wait().syncCloseAcceptingAlreadyClosed())
+    }
+
+    return try lock.withLock {
+        ret.append(try body(udpChannel.wait()))
+        return ret
+    }
+}
+
+func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
+                                           file: StaticString = #file,
+                                           line: UInt = #line,
+                                           _ body: (Channel, Channel) throws -> R) throws -> R {
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    defer {
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
+    }
+    let channelEL = group.next()
+
     let tcpAcceptedChannel = channelEL.makePromise(of: Channel.self)
     let tcpServerChannel = try assertNoThrowWithValue(ServerBootstrap(group: channelEL)
         .childChannelInitializer { channel in
@@ -484,7 +531,7 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
             }.cascade(to: tcpAcceptedChannel)
             return channel.pipeline.addHandler(FulfillOnFirstEventHandler(channelActivePromise: accepted))
         }
-        .bind(host: "127.0.0.1", port: 0)
+        .bind(to: bindTarget)
         .wait(), file: file, line: line)
     defer {
         XCTAssertNoThrow(try tcpServerChannel.syncCloseAcceptingAlreadyClosed())
@@ -501,21 +548,73 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
         XCTAssertNoThrow(try tcpClientChannel.syncCloseAcceptingAlreadyClosed())
     }
 
-    // UDP
-    let udpChannel = DatagramBootstrap(group: channelEL)
-        .channelInitializer { channel in
-            XCTAssert(channel.eventLoop.inEventLoop)
-            return channelEL.makeSucceededFuture(())
+    return try body(try tcpAcceptedChannel.futureResult.wait(), tcpClientChannel)
+}
+
+func withCrossConnectedTCPChannels<R>(file: StaticString = #file,
+                                      line: UInt = #line,
+                                      _ body: (Channel, Channel) throws -> R) throws -> R {
+    return try withCrossConnectedSockAddrChannels(bindTarget: .init(ipAddress: "127.0.0.1", port: 0), body)
+}
+
+func withCrossConnectedUnixDomainSocketChannels<R>(file: StaticString = #file,
+                                                   line: UInt = #line,
+                                                   _ body: (Channel, Channel) throws -> R) throws -> R {
+    return try withTemporaryDirectory { tempDir in
+        let bindTarget = try SocketAddress(unixDomainSocketPath: tempDir + "/server.sock")
+        return try withCrossConnectedSockAddrChannels(bindTarget: bindTarget, body)
     }
-    .bind(host: "127.0.0.1", port: 0)
+}
+
+func withCrossConnectedPipeChannels<R>(file: StaticString = #file,
+                                       line: UInt = #line,
+                                       _ body: (Channel, Channel) throws -> R) throws -> R {
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
-        XCTAssertNoThrow(try udpChannel.wait().syncCloseAcceptingAlreadyClosed())
+        XCTAssertNoThrow(try group.syncShutdownGracefully(), file: file, line: line)
     }
 
-    return try [tcpServerChannel,
-                tcpAcceptedChannel.futureResult.wait(),
-                tcpClientChannel,
-                udpChannel.wait()].map {
-        try body($0)
-    }
+    var result: R? = nil
+
+    XCTAssertNoThrow(try withPipe { pipe1Read, pipe1Write -> [NIOFileHandle] in
+        try withPipe { pipe2Read, pipe2Write -> [NIOFileHandle] in
+            try pipe1Read.withUnsafeFileDescriptor { pipe1Read in
+                try pipe1Write.withUnsafeFileDescriptor { pipe1Write in
+                    try pipe2Read.withUnsafeFileDescriptor { pipe2Read in
+                        try pipe2Write.withUnsafeFileDescriptor { pipe2Write in
+                            let channel1 = try NIOPipeBootstrap(group: group)
+                                .withPipes(inputDescriptor: pipe1Read, outputDescriptor: pipe2Write)
+                                .wait()
+                            defer {
+                                XCTAssertNoThrow(try channel1.syncCloseAcceptingAlreadyClosed())
+                            }
+                            let channel2 = try NIOPipeBootstrap(group: group)
+                                .withPipes(inputDescriptor: pipe2Read, outputDescriptor: pipe1Write)
+                                .wait()
+                            defer {
+                                XCTAssertNoThrow(try channel2.syncCloseAcceptingAlreadyClosed())
+                            }
+                            result = try body(channel1, channel2)
+                        }
+                    }
+                }
+            }
+            XCTAssertNoThrow(try pipe1Read.takeDescriptorOwnership(), file: file, line: line)
+            XCTAssertNoThrow(try pipe1Write.takeDescriptorOwnership(), file: file, line: line)
+            XCTAssertNoThrow(try pipe2Read.takeDescriptorOwnership(), file: file, line: line)
+            XCTAssertNoThrow(try pipe2Write.takeDescriptorOwnership(), file: file, line: line)
+            return []
+        }
+        return [] // the channels are closing the pipes
+    }, file: file, line: line)
+    return result!
+}
+
+func forEachCrossConnectedStreamChannelPair<R>(file: StaticString = #file,
+                                               line: UInt = #line,
+                                               _ body: (Channel, Channel) throws -> R) throws -> [R] {
+    let r1 = try withCrossConnectedTCPChannels(body)
+    let r2 = try withCrossConnectedPipeChannels(body)
+    let r3 = try withCrossConnectedUnixDomainSocketChannels(body)
+    return [r1, r2, r3]
 }

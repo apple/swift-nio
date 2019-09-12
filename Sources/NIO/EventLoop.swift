@@ -580,6 +580,7 @@ enum NIORegistration: Registration {
     case serverSocketChannel(ServerSocketChannel, SelectorEventSet)
     case socketChannel(SocketChannel, SelectorEventSet)
     case datagramChannel(DatagramChannel, SelectorEventSet)
+    case pipeChannel(PipeChannel, PipeChannel.Direction, SelectorEventSet)
 
     /// The `SelectorEventSet` in which this `NIORegistration` is interested in.
     var interested: SelectorEventSet {
@@ -591,6 +592,8 @@ enum NIORegistration: Registration {
                 self = .socketChannel(c, newValue)
             case .datagramChannel(let c, _):
                 self = .datagramChannel(c, newValue)
+            case .pipeChannel(let c, let d, _):
+                self = .pipeChannel(c, d, newValue)
             }
         }
         get {
@@ -600,6 +603,8 @@ enum NIORegistration: Registration {
             case .socketChannel(_, let i):
                 return i
             case .datagramChannel(_, let i):
+                return i
+            case .pipeChannel(_, _, let i):
                 return i
             }
         }
@@ -710,24 +715,26 @@ internal final class SelectableEventLoop: EventLoop {
             throw EventLoopError.shutdown
         }
 
-        try selector.register(selectable: channel.selectable, interested: channel.interestedEvent, makeRegistration: channel.registrationFor(interested:))
+        try channel.register(selector: self.selector, interested: channel.interestedEvent)
     }
 
     /// Deregister the given `SelectableChannel` from this `SelectableEventLoop`.
-    public func deregister<C: SelectableChannel>(channel: C) throws {
+    public func deregister<C: SelectableChannel>(channel: C, mode: CloseMode = .all) throws {
         self.assertInEventLoop()
         guard lifecycleState == .open else {
             // It's possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
             return
         }
-        try selector.deregister(selectable: channel.selectable)
+
+        try channel.deregister(selector: self.selector, mode: mode)
     }
 
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. This should be done whenever `channel.interestedEvents` has changed and it should be taken into account when
     /// waiting for new I/O for the given `SelectableChannel`.
     public func reregister<C: SelectableChannel>(channel: C) throws {
         self.assertInEventLoop()
-        try selector.reregister(selectable: channel.selectable, interested: channel.interestedEvent)
+
+        try channel.reregister(selector: self.selector, interested: channel.interestedEvent)
     }
 
     /// - see: `EventLoop.inEventLoop`
@@ -789,8 +796,8 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     /// Handle the given `SelectorEventSet` for the `SelectableChannel`.
-    private func handleEvent<C: SelectableChannel>(_ ev: SelectorEventSet, channel: C) {
-        guard channel.selectable.isOpen else {
+    internal final func handleEvent<C: SelectableChannel>(_ ev: SelectorEventSet, channel: C) {
+        guard channel.isOpen else {
             return
         }
 
@@ -798,10 +805,16 @@ internal final class SelectableEventLoop: EventLoop {
         if ev.contains(.reset) {
             channel.reset()
         } else {
-            if ev.contains(.write) {
+            if ev.contains(.writeEOF) {
+                channel.writeEOF()
+
+                guard channel.isOpen else {
+                    return
+                }
+            } else if ev.contains(.write) {
                 channel.writable()
 
-                guard channel.selectable.isOpen else {
+                guard channel.isOpen else {
                     return
                 }
             }
@@ -860,6 +873,15 @@ internal final class SelectableEventLoop: EventLoop {
                     case .socketChannel(let chan, _):
                         self.handleEvent(ev.io, channel: chan)
                     case .datagramChannel(let chan, _):
+                        self.handleEvent(ev.io, channel: chan)
+                    case .pipeChannel(let chan, let direction, _):
+                        var ev = ev
+                        if ev.io.contains(.reset) {
+                            // .reset needs special treatment here because we're dealing with two separate pipes instead
+                            // of one socket. So we turn .reset input .readEOF/.writeEOF.
+                            ev.io.subtract([.reset])
+                            ev.io.formUnion([direction == .input ? .readEOF : .writeEOF])
+                        }
                         self.handleEvent(ev.io, channel: chan)
                     }
                 }

@@ -16,7 +16,8 @@
 typealias IOVector = iovec
 
 // TODO: scattering support
-/* final but tests */ class Socket: BaseSocket {
+/* final but tests */ class Socket: BaseSocket, SocketProtocol {
+    typealias SocketType = Socket
 
     /// The maximum number of bytes to write per `writev` call.
     static var writevLimitBytes = Int(Int32.max)
@@ -33,7 +34,7 @@ typealias IOVector = iovec
     /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: CInt, type: CInt, setNonBlocking: Bool = false) throws {
         let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
-        super.init(descriptor: sock)
+        try super.init(descriptor: sock)
     }
 
     /// Create a new instance out of an already established socket.
@@ -43,7 +44,7 @@ typealias IOVector = iovec
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if could not change the socket into non-blocking
     init(descriptor: CInt, setNonBlocking: Bool) throws {
-        super.init(descriptor: descriptor)
+        try super.init(descriptor: descriptor)
         if setNonBlocking {
             try self.setNonBlocking()
         }
@@ -56,8 +57,8 @@ typealias IOVector = iovec
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
-    override init(descriptor: CInt) {
-        super.init(descriptor: descriptor)
+    override init(descriptor: CInt) throws {
+        try super.init(descriptor: descriptor)
     }
 
     /// Connect to the `SocketAddress`.

@@ -202,15 +202,15 @@ private struct SocketChannelLifecycleManager {
 /// For this reason, `BaseSocketChannel` exists to provide a common core implementation of
 /// the `SelectableChannel` protocol. It uses a number of private functions to provide hooks
 /// for subclasses to implement the specific logic to handle their writes and reads.
-class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
-    typealias SelectableType = T
+class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, ChannelCore {
+    typealias SelectableType = SocketType.SelectableType
 
     // MARK: Stored Properties
     // Visible to access from EventLoop directly
     public let parent: Channel?
-    internal let socket: T
+    internal let socket: SocketType
     private let closePromise: EventLoopPromise<Void>
-    private let selectableEventLoop: SelectableEventLoop
+    internal let selectableEventLoop: SelectableEventLoop
     private let addressesCached: AtomicBox<Box<(local:SocketAddress?, remote:SocketAddress?)>> = AtomicBox(value: Box((local: nil, remote: nil)))
     private let bufferAllocatorCached: AtomicBox<Box<ByteBufferAllocator>>
     private let isActiveAtomic: Atomic<Bool> = Atomic(value: false)
@@ -302,10 +302,6 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         return self.lifecycleManager.isPreRegistered
     }
 
-    internal var selectable: T {
-        return self.socket
-    }
-
     // This is `Channel` API so must be thread-safe.
     public var isActive: Bool {
         return self.isActiveAtomic.load()
@@ -342,11 +338,6 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     // MARK: Methods to override in subclasses.
     func writeToSocket() throws -> OverallWriteResult {
         fatalError("must be overridden")
-    }
-
-    /// Provides the registration for this selector. Must be implemented by subclasses.
-    func registrationFor(interested: SelectorEventSet) -> NIORegistration {
-        fatalError("must override")
     }
 
     /// Read data from the underlying socket and dispatch it to the `ChannelPipeline`
@@ -388,7 +379,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     // MARK: Common base socket logic.
-    init(socket: T, parent: Channel? = nil, eventLoop: SelectableEventLoop, recvAllocator: RecvByteBufferAllocator) throws {
+    init(socket: SocketType, parent: Channel?, eventLoop: SelectableEventLoop, recvAllocator: RecvByteBufferAllocator) throws {
         self.bufferAllocatorCached = AtomicBox(value: Box(self.bufferAllocator))
         self.socket = socket
         self.selectableEventLoop = eventLoop
@@ -398,7 +389,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.lifecycleManager = SocketChannelLifecycleManager(eventLoop: eventLoop, isActiveAtomic: self.isActiveAtomic)
         // As the socket may already be connected we should ensure we start with the correct addresses cached.
         self.addressesCached.store(Box((local: try? socket.localAddress(), remote: try? socket.remoteAddress())))
-        self.socketDescription = (try? socket.withUnsafeFileDescriptor { "socket fd: \($0)" }) ?? "[closed socket]"
+        self.socketDescription = socket.description
         self._pipeline = ChannelPipeline(channel: self)
     }
 
@@ -884,7 +875,11 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
     }
 
-    final func readEOF() {
+    func writeEOF() {
+        fatalError("\(self) received writeEOF which is unexpected")
+    }
+
+    func readEOF() {
         assert(!self.lifecycleManager.hasSeenEOFNotification)
         self.lifecycleManager.hasSeenEOFNotification = true
 
@@ -1111,7 +1106,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         assert(self.lifecycleManager.isRegisteredFully)
 
         guard self.isOpen else {
-            assert(self.interestedEvent == .reset, "interestedEvent=\(self.interestedEvent) event though we're closed")
+            assert(self.interestedEvent == .reset, "interestedEvent=\(self.interestedEvent) even though we're closed")
             return
         }
         if interested == interestedEvent {
@@ -1176,5 +1171,17 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
         self.registerForReadEOF()
         self.readIfNeeded0()
+    }
+
+    func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
+        fatalError("must override")
+    }
+
+    func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
+        fatalError("must override")
+    }
+
+    func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
+        fatalError("must override")
     }
 }

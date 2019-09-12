@@ -1933,7 +1933,7 @@ public final class ChannelTests: XCTestCase {
         // In here what we're doing is that we flip the order around and connect it first, make sure the server
         // has written something and then on registration something is available to be read. We then 'fake connect'
         // again which our special `Socket` subclass will let succeed.
-        _ = try sc.selectable.connect(to: bootstrap.localAddress!)
+        _ = try sc.socket.connect(to: bootstrap.localAddress!)
         try serverWriteHappenedPromise.futureResult.wait()
         try sc.pipeline.addHandler(ReadDoesNotHappen(hasRegisteredPromise: clientHasRegistered,
                                                        hasUnregisteredPromise: clientHasUnregistered,

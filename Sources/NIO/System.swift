@@ -87,9 +87,11 @@ private let sysAF_UNIX = AF_UNIX
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 
 #if os(Linux)
+private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
 #else
+private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
 private let sysKevent = kevent
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
@@ -266,22 +268,7 @@ internal enum Posix {
     @inline(never)
     public static func socket(domain: CInt, type: CInt, `protocol`: CInt) throws -> CInt {
         return try wrapSyscall {
-            let fd = sysSocket(domain, type, `protocol`)
-
-            #if os(Linux)
-                /* no SO_NOSIGPIPE on Linux :( */
-                _ = unsafeBitCast(Glibc.signal(SIGPIPE, SIG_IGN) as sighandler_t?, to: Int.self)
-            #else
-                if fd != -1 {
-                    do {
-                        try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
-                    } catch {
-                        _ = sysClose(fd) // don't care about failure here
-                        throw error
-                    }
-                }
-            #endif
-            return fd
+            return sysSocket(domain, type, `protocol`)
         }
     }
 
@@ -501,6 +488,13 @@ internal enum Posix {
     public static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t, timeout: CInt) throws -> CInt {
         return try wrapSyscall {
             sysPoll(fds, nfds, timeout)
+        }
+    }
+
+    @inline(never)
+    public static func fstat(descriptor: CInt, outStat: UnsafeMutablePointer<stat>) throws {
+        _ = try wrapSyscall {
+            sysFstat(descriptor, outStat)
         }
     }
 }
