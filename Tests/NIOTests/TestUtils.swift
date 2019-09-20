@@ -14,6 +14,7 @@
 
 import XCTest
 @testable import NIO
+import NIOConcurrencyHelpers
 
 func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) -> [NIO.NIOFileHandle]) throws {
     var fds: [Int32] = [-1, -1]
@@ -293,4 +294,228 @@ func assertSuccess<Value>(_ result: Result<Value, Error>, file: StaticString = #
 
 func assertFailure<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
     guard case .failure = result else { return XCTFail("Expected result to be a failure", file: file, line: line) }
+}
+
+/// Fulfills the promise when the respective event is first received.
+///
+/// - note: Once this is used more widely and shows value, we might want to put it into `NIOTestUtils`.
+final class FulfillOnFirstEventHandler: ChannelDuplexHandler {
+    typealias InboundIn = Any
+    typealias OutboundIn = Any
+
+    struct ExpectedEventMissing: Error {}
+
+    private let channelRegisteredPromise: EventLoopPromise<Void>?
+    private let channelUnregisteredPromise: EventLoopPromise<Void>?
+    private let channelActivePromise: EventLoopPromise<Void>?
+    private let channelInactivePromise: EventLoopPromise<Void>?
+    private let channelReadPromise: EventLoopPromise<Void>?
+    private let channelReadCompletePromise: EventLoopPromise<Void>?
+    private let channelWritabilityChangedPromise: EventLoopPromise<Void>?
+    private let userInboundEventTriggeredPromise: EventLoopPromise<Void>?
+    private let errorCaughtPromise: EventLoopPromise<Void>?
+    private let registerPromise: EventLoopPromise<Void>?
+    private let bindPromise: EventLoopPromise<Void>?
+    private let connectPromise: EventLoopPromise<Void>?
+    private let writePromise: EventLoopPromise<Void>?
+    private let flushPromise: EventLoopPromise<Void>?
+    private let readPromise: EventLoopPromise<Void>?
+    private let closePromise: EventLoopPromise<Void>?
+    private let triggerUserOutboundEventPromise: EventLoopPromise<Void>?
+
+    init(channelRegisteredPromise: EventLoopPromise<Void>? = nil,
+         channelUnregisteredPromise: EventLoopPromise<Void>? = nil,
+         channelActivePromise: EventLoopPromise<Void>? = nil,
+         channelInactivePromise: EventLoopPromise<Void>? = nil,
+         channelReadPromise: EventLoopPromise<Void>? = nil,
+         channelReadCompletePromise: EventLoopPromise<Void>? = nil,
+         channelWritabilityChangedPromise: EventLoopPromise<Void>? = nil,
+         userInboundEventTriggeredPromise: EventLoopPromise<Void>? = nil,
+         errorCaughtPromise: EventLoopPromise<Void>? = nil,
+         registerPromise: EventLoopPromise<Void>? = nil,
+         bindPromise: EventLoopPromise<Void>? = nil,
+         connectPromise: EventLoopPromise<Void>? = nil,
+         writePromise: EventLoopPromise<Void>? = nil,
+         flushPromise: EventLoopPromise<Void>? = nil,
+         readPromise: EventLoopPromise<Void>? = nil,
+         closePromise: EventLoopPromise<Void>? = nil,
+         triggerUserOutboundEventPromise: EventLoopPromise<Void>? = nil) {
+        self.channelRegisteredPromise = channelRegisteredPromise
+        self.channelUnregisteredPromise = channelUnregisteredPromise
+        self.channelActivePromise = channelActivePromise
+        self.channelInactivePromise = channelInactivePromise
+        self.channelReadPromise = channelReadPromise
+        self.channelReadCompletePromise = channelReadCompletePromise
+        self.channelWritabilityChangedPromise = channelWritabilityChangedPromise
+        self.userInboundEventTriggeredPromise = userInboundEventTriggeredPromise
+        self.errorCaughtPromise = errorCaughtPromise
+        self.registerPromise = registerPromise
+        self.bindPromise = bindPromise
+        self.connectPromise = connectPromise
+        self.writePromise = writePromise
+        self.flushPromise = flushPromise
+        self.readPromise = readPromise
+        self.closePromise = closePromise
+        self.triggerUserOutboundEventPromise = triggerUserOutboundEventPromise
+    }
+
+    func handlerRemoved(context: ChannelHandlerContext) {
+        self.channelRegisteredPromise?.fail(ExpectedEventMissing())
+        self.channelUnregisteredPromise?.fail(ExpectedEventMissing())
+        self.channelActivePromise?.fail(ExpectedEventMissing())
+        self.channelInactivePromise?.fail(ExpectedEventMissing())
+        self.channelReadPromise?.fail(ExpectedEventMissing())
+        self.channelReadCompletePromise?.fail(ExpectedEventMissing())
+        self.channelWritabilityChangedPromise?.fail(ExpectedEventMissing())
+        self.userInboundEventTriggeredPromise?.fail(ExpectedEventMissing())
+        self.errorCaughtPromise?.fail(ExpectedEventMissing())
+        self.registerPromise?.fail(ExpectedEventMissing())
+        self.bindPromise?.fail(ExpectedEventMissing())
+        self.connectPromise?.fail(ExpectedEventMissing())
+        self.writePromise?.fail(ExpectedEventMissing())
+        self.flushPromise?.fail(ExpectedEventMissing())
+        self.readPromise?.fail(ExpectedEventMissing())
+        self.closePromise?.fail(ExpectedEventMissing())
+        self.triggerUserOutboundEventPromise?.fail(ExpectedEventMissing())
+    }
+
+    func channelRegistered(context: ChannelHandlerContext) {
+        self.channelRegisteredPromise?.succeed(())
+        context.fireChannelRegistered()
+    }
+
+    func channelUnregistered(context: ChannelHandlerContext) {
+        self.channelUnregisteredPromise?.succeed(())
+        context.fireChannelUnregistered()
+    }
+
+    func channelActive(context: ChannelHandlerContext) {
+        self.channelActivePromise?.succeed(())
+        context.fireChannelActive()
+    }
+
+    func channelInactive(context: ChannelHandlerContext) {
+        self.channelInactivePromise?.succeed(())
+        context.fireChannelInactive()
+    }
+
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        self.channelReadPromise?.succeed(())
+        context.fireChannelRead(data)
+    }
+
+    func channelReadComplete(context: ChannelHandlerContext) {
+        self.channelReadCompletePromise?.succeed(())
+        context.fireChannelReadComplete()
+    }
+
+    func channelWritabilityChanged(context: ChannelHandlerContext) {
+        self.channelWritabilityChangedPromise?.succeed(())
+        context.fireChannelWritabilityChanged()
+    }
+
+    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        self.userInboundEventTriggeredPromise?.succeed(())
+        context.fireUserInboundEventTriggered(event)
+    }
+
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        self.errorCaughtPromise?.succeed(())
+        context.fireErrorCaught(error)
+    }
+
+    func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+        self.registerPromise?.succeed(())
+        context.register(promise: promise)
+    }
+
+    func bind(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.bindPromise?.succeed(())
+        context.bind(to: to, promise: promise)
+    }
+
+    func connect(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.connectPromise?.succeed(())
+        context.connect(to: to, promise: promise)
+    }
+
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        self.writePromise?.succeed(())
+        context.write(data, promise: promise)
+    }
+
+    func flush(context: ChannelHandlerContext) {
+        self.flushPromise?.succeed(())
+        context.flush()
+    }
+
+    func read(context: ChannelHandlerContext) {
+        self.readPromise?.succeed(())
+        context.read()
+    }
+
+    func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        self.closePromise?.succeed(())
+        context.close(mode: mode, promise: promise)
+    }
+
+    func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
+        self.triggerUserOutboundEventPromise?.succeed(())
+        context.triggerUserOutboundEvent(event, promise: promise)
+    }
+}
+
+func forEachActiveChannelType<T>(file: StaticString = #file,
+                                 line: UInt = #line,
+                                 _ body: @escaping (Channel) throws -> T) throws -> [T] {
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    defer {
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
+    }
+    let channelEL = group.next()
+
+    // TCP
+    let tcpAcceptedChannel = channelEL.makePromise(of: Channel.self)
+    let tcpServerChannel = try assertNoThrowWithValue(ServerBootstrap(group: channelEL)
+        .childChannelInitializer { channel in
+            let accepted = channel.eventLoop.makePromise(of: Void.self)
+            accepted.futureResult.map {
+                channel
+            }.cascade(to: tcpAcceptedChannel)
+            return channel.pipeline.addHandler(FulfillOnFirstEventHandler(channelActivePromise: accepted))
+        }
+        .bind(host: "127.0.0.1", port: 0)
+        .wait(), file: file, line: line)
+    defer {
+        XCTAssertNoThrow(try tcpServerChannel.syncCloseAcceptingAlreadyClosed())
+    }
+
+    let tcpClientChannel = try assertNoThrowWithValue(ClientBootstrap(group: channelEL)
+        .channelInitializer { channel in
+            XCTAssert(channel.eventLoop.inEventLoop)
+            return channel.eventLoop.makeSucceededFuture(())
+        }
+        .connect(to: tcpServerChannel.localAddress!)
+        .wait())
+    defer {
+        XCTAssertNoThrow(try tcpClientChannel.syncCloseAcceptingAlreadyClosed())
+    }
+
+    // UDP
+    let udpChannel = DatagramBootstrap(group: channelEL)
+        .channelInitializer { channel in
+            XCTAssert(channel.eventLoop.inEventLoop)
+            return channelEL.makeSucceededFuture(())
+    }
+    .bind(host: "127.0.0.1", port: 0)
+    defer {
+        XCTAssertNoThrow(try udpChannel.wait().syncCloseAcceptingAlreadyClosed())
+    }
+
+    return try [tcpServerChannel,
+                tcpAcceptedChannel.futureResult.wait(),
+                tcpClientChannel,
+                udpChannel.wait()].map {
+        try body($0)
+    }
 }
