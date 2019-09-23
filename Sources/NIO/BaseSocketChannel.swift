@@ -215,6 +215,8 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     private let bufferAllocatorCached: AtomicBox<Box<ByteBufferAllocator>>
     private let isActiveAtomic: Atomic<Bool> = Atomic(value: false)
     private var _pipeline: ChannelPipeline! = nil // this is really a constant (set in .init) but needs `self` to be constructed and therefore a `var`. Do not change as this needs to accessed from arbitrary threads
+    // just a thread-safe way of having something to print about the socket from any thread
+    internal let socketDescription: String
 
     // We start with the invalid empty set of selector events we're interested in. This is to make sure we later on
     // (in `becomeFullyRegistered0`) seed the initial event correctly.
@@ -395,8 +397,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.recvAllocator = recvAllocator
         self.lifecycleManager = SocketChannelLifecycleManager(eventLoop: eventLoop, isActiveAtomic: self.isActiveAtomic)
         // As the socket may already be connected we should ensure we start with the correct addresses cached.
-        self._pipeline = ChannelPipeline(channel: self)
         self.addressesCached.store(Box((local: try? socket.localAddress(), remote: try? socket.remoteAddress())))
+        self.socketDescription = (try? socket.withUnsafeFileDescriptor { "socket fd: \($0)" }) ?? "[closed socket]"
+        self._pipeline = ChannelPipeline(channel: self)
     }
 
     deinit {

@@ -2748,6 +2748,25 @@ public final class ChannelTests: XCTestCase {
                                                                level: IPPROTO_TCP,
                                                                name: TCP_NODELAY)))
     }
+
+    func testDescriptionCanBeCalledFromNonEventLoopThreads() {
+        // regression test for https://github.com/apple/swift-nio/issues/1141
+        let q = DispatchQueue(label: "elsewhere")
+        XCTAssertNoThrow(try forEachActiveChannelType { channel in
+            let g = DispatchGroup()
+            q.async(group: g) {
+                // we spin here for a bit and read
+                for _ in 0..<10_000 {
+                    // this should trigger TSan if there's an issue.
+                    XCTAssert(String(describing: channel).count != 0)
+                }
+            }
+
+            // We need to write to BaseSocket's `descriptor` which can only be done by closing the channel.
+            XCTAssertNoThrow(try channel.syncCloseAcceptingAlreadyClosed())
+            g.wait()
+        })
+    }
 }
 
 fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
