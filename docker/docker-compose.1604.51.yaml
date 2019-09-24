@@ -6,10 +6,8 @@ services:
     image: swift-nio:16.04-5.1
     build:
       args:
-        ubuntu_version: "16.04"
+        ubuntu_version: "xenial"
         swift_version: "5.1"
-        swift_flavour: "DEVELOPMENT-SNAPSHOT-2019-09-05-a"
-        swift_builds_suffix: "branch"
 
   unit-tests:
     image: swift-nio:16.04-5.1
