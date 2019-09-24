@@ -28,12 +28,12 @@ $cr
 EOF
 echo "FOO BAR" > "$htdocs/some_file.txt"
 # headers have acceptable size
-do_curl "$token" -H "$(python -c 'print "x"*80000'): x" \
+do_curl "$token" -H "$(dd if=/dev/zero bs=1000 count=80 2> /dev/null | tr '\0' x): x" \
     "http://foobar.com/fileio/some_file.txt" > "$tmp/out"
 assert_equal_files "$htdocs/some_file.txt" "$tmp/out"
 
 # headers too large
-do_curl "$token" -H "$(python -c 'print "x"*90000'): x" \
+do_curl "$token" -H "$(dd if=/dev/zero bs=1000 count=90 2> /dev/null | tr '\0' x): x" \
     -D "$tmp/headers_actual" \
     "http://foobar.com/fileio/some_file.txt" > "$tmp/out"
 assert_equal_files "$tmp/empty" "$tmp/out"
