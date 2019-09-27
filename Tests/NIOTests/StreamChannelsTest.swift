@@ -148,6 +148,56 @@ class StreamChannelTest: XCTestCase {
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
     }
 
+    func testPassiveHalfClosureWorks() throws {
+        class EchoHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                context.write(data, promise: nil)
+            }
+
+            func channelReadComplete(context: ChannelHandlerContext) {
+                context.flush()
+            }
+        }
+
+        func runTest(chan1: Channel, chan2: Channel) throws {
+            let inboundEventReceivedPromise = chan1.eventLoop.makePromise(of: Void.self)
+            let readReceivedPromise = chan1.eventLoop.makePromise(of: Void.self)
+            let chan1InactivePromise = chan1.eventLoop.makePromise(of: Void.self)
+            let chan2InactivePromise = chan1.eventLoop.makePromise(of: Void.self)
+
+            XCTAssertNoThrow(try chan2.pipeline.addHandler(FulfillOnFirstEventHandler(userInboundEventTriggeredPromise: inboundEventReceivedPromise)).wait())
+            XCTAssertNoThrow(try chan1.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+            XCTAssertNoThrow(try chan2.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+
+            // new situation:
+            //       --[ closed ]->
+            // chan1                chan2
+            //       <-[  open  ]--
+            XCTAssertNoThrow(try chan1.close(mode: .output).wait())
+
+            XCTAssertNoThrow(try inboundEventReceivedPromise.futureResult.wait())
+            XCTAssertNoThrow(try chan1.pipeline.addHandler(FulfillOnFirstEventHandler(channelReadPromise: readReceivedPromise)).wait())
+            var buffer = chan2.allocator.buffer(capacity: 5)
+            buffer.writeString("hello")
+            XCTAssertNoThrow(try chan2.writeAndFlush(buffer).wait())
+            XCTAssertNoThrow(try readReceivedPromise.futureResult.wait())
+
+            // Now, let's shut both directions and wait for the channels to fully shut down.
+            XCTAssertNoThrow(try chan1.pipeline.addHandler(FulfillOnFirstEventHandler(channelInactivePromise: chan1InactivePromise)).wait())
+            XCTAssertNoThrow(try chan2.pipeline.addHandler(FulfillOnFirstEventHandler(channelInactivePromise: chan2InactivePromise)).wait())
+            // After this, both ways should be half-closed, which means both channels should now be fully closed.
+            XCTAssertNoThrow(try chan2.close(mode: .output).wait())
+
+            XCTAssertNoThrow(try chan1InactivePromise.futureResult.wait())
+            XCTAssertNoThrow(try chan2InactivePromise.futureResult.wait())
+            XCTAssertNoThrow(try chan1.closeFuture.wait())
+            XCTAssertNoThrow(try chan2.closeFuture.wait())
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
+    }
+
     func testHalfCloseOwnOutput() throws {
         func runTest(chan1: Channel, chan2: Channel) throws {
             let readPromise = chan2.eventLoop.makePromise(of: Void.self)
