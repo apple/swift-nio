@@ -105,13 +105,15 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
             context.fireChannelRead(data)
         }
     }
-
 }
 
 /// HTTP1 server that accepts and process only one request at a time.
 /// This helps writing tests against a real server while keeping the ability to
 /// write tests and assertions the same way we would if we were testing a
 /// `ChannelHandler` in isolation.
+/// `NIOHTTP1TestServer` enables writing test cases for HTTP1 clients that have
+/// complex behaviours like client implementing a protocol where an high level
+/// operation translates into several, possibly parallel, HTTP requests.
 public final class NIOHTTP1TestServer {
     private let eventLoop: EventLoop
     // all protected by eventLoop

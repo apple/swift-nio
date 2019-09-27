@@ -13,11 +13,113 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
+import NIOHTTP1
 import NIOTestUtils
 import XCTest
 
+private enum ResponseError: Error {
+    case badStatus
+    case missingResponse
+}
+
+private final class TestHTTPHandler: ChannelInboundHandler {
+    public typealias InboundIn = HTTPClientResponsePart
+    public typealias OutboundOut = HTTPClientRequestPart
+
+    private let responsePromise: EventLoopPromise<String>
+
+    init(responsePromise: EventLoopPromise<String>) {
+        self.responsePromise = responsePromise
+    }
+
+    public func channelActive(context: ChannelHandlerContext) {
+    }
+
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        switch self.unwrapInboundIn(data) {
+        case .head(let responseHead):
+            guard case .ok = responseHead.status else {
+                self.responsePromise.fail(ResponseError.badStatus)
+                return
+            }
+        case .body(var byteBuffer):
+            // We're using AggregateBodyHandler so we see all the body content at once
+            if let response = byteBuffer.readString(length: byteBuffer.readableBytes) {
+                self.responsePromise.succeed(response)
+            } else {
+                self.responsePromise.fail(ResponseError.missingResponse)
+            }
+        case .end:
+            context.close(promise: nil)
+        }
+    }
+
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
+        self.responsePromise.fail(error)
+        context.close(promise: nil)
+    }
+}
+
+extension HTTPServerRequestPart {
+    func assertHead(expectedURI: String, file: StaticString = #file, line: UInt = #line) {
+        switch self {
+        case .head(let head):
+            XCTAssertEqual(.GET, head.method)
+            XCTAssertEqual(expectedURI, head.uri)
+            XCTAssertEqual("text/plain; charset=utf-8", head.headers["Content-Type"].first)
+        default:
+            XCTFail("Expected head, got \(self)", file: file, line: line)
+        }
+    }
+
+    func assertBody(expectedMessage: String, file: StaticString = #file, line: UInt = #line) {
+        switch self {
+        case .body(let buffer):
+            // Note that the test server coalesces the body parts for us.
+            XCTAssertEqual(expectedMessage, String(bytes: buffer.readableBytesView, encoding: .utf8))
+        default:
+            XCTFail("Expected body, got \(self)", file: file, line: line)
+        }
+    }
+
+    func assertEnd(file: StaticString = #file, line: UInt = #line) {
+        switch self {
+        case .end(_):
+            ()
+        default:
+            XCTFail("Expected end, got \(self)", file: file, line: line)
+        }
+    }
+}
+
+private final class AggregateBodyHandler: ChannelInboundHandler {
+    typealias InboundIn = HTTPClientResponsePart
+    typealias InboundOut = HTTPClientResponsePart
+
+    var receivedSoFar: ByteBuffer? = nil
+
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        switch self.unwrapInboundIn(data) {
+        case .head:
+            context.fireChannelRead(data)
+        case .body(var buffer):
+            if self.receivedSoFar == nil {
+                self.receivedSoFar = buffer
+            } else {
+                self.receivedSoFar?.writeBuffer(&buffer)
+            }
+        case .end:
+            if let receivedSoFar = self.receivedSoFar {
+                context.fireChannelRead(self.wrapInboundOut(.body(receivedSoFar)))
+            }
+            context.fireChannelRead(data)
+        }
+    }
+}
+
 class NIOHTTP1TestServerTest: XCTestCase {
     private var group: EventLoopGroup!
+    private let allocator = ByteBufferAllocator()
 
     override func setUp() {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -28,19 +130,133 @@ class NIOHTTP1TestServerTest: XCTestCase {
         self.group = nil
     }
 
+    func connect(serverPort: Int, responsePromise: EventLoopPromise<String>) throws -> EventLoopFuture<Channel> {
+        let bootstrap = ClientBootstrap(group: self.group)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .channelInitializer { channel in
+                channel.pipeline.addHTTPClientHandlers(position: .first,
+                                                       leftOverBytesStrategy: .fireError).flatMap {
+                    channel.pipeline.addHandler(AggregateBodyHandler())
+                }.flatMap {
+                    channel.pipeline.addHandler(TestHTTPHandler(responsePromise: responsePromise))
+                }
+        }
+        return bootstrap.connect(host: "127.0.0.1", port: serverPort)
+    }
+
+    private func sendRequest(channel: Channel, uri: String, message: String) {
+        var requestBuffer = allocator.buffer(capacity: message.utf8.count)
+        requestBuffer.writeString(message)
+        var headers = HTTPHeaders()
+        headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
+        headers.add(name: "Content-Length", value: "\(requestBuffer.readableBytes)")
+
+        let requestHead = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
+                                          method: .GET,
+                                          uri: uri,
+                                          headers: headers)
+
+        channel.write(NIOAny(HTTPClientRequestPart.head(requestHead)), promise: nil)
+        channel.write(NIOAny(HTTPClientRequestPart.body(.byteBuffer(requestBuffer))), promise: nil)
+        channel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
+    }
+
     func testSimpleRequest() {
+        let uri = "/request"
+        let requestMessage = "request message"
+        let responseMessage = "response message"
         let testServer = NIOHTTP1TestServer(group: self.group)
         defer {
             XCTAssertNoThrow(try testServer.stop())
         }
-        XCTFail("Not implemented yet")
+
+        // Establish the connection and send the request
+        let responsePromise = group.next().makePromise(of: String.self)
+        var channel: Channel!
+        XCTAssertNoThrow(channel = try connect(serverPort: testServer.serverPort, responsePromise: responsePromise).wait())
+
+        // Send a request to the server
+        sendRequest(channel: channel, uri: uri, message: requestMessage)
+        let response = responsePromise.futureResult
+
+        // Assert we received the expected request
+        XCTAssertNoThrow(try testServer.readInbound().assertHead(expectedURI: uri))
+        XCTAssertNoThrow(try testServer.readInbound().assertBody(expectedMessage: requestMessage))
+        XCTAssertNoThrow(try testServer.readInbound().assertEnd())
+
+        // Send the response to the client
+        var responseBuffer = allocator.buffer(capacity: responseMessage.utf8.count)
+        responseBuffer.writeString(responseMessage)
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(responseBuffer))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
+
+        // Verify that the client got what the server sent
+        XCTAssertNoThrow(XCTAssertEqual(responseMessage, try response.wait()))
     }
 
     func testConcurrentRequests() {
-        XCTFail("Not implemented yet")
-    }
+        let testServer = NIOHTTP1TestServer(group: self.group)
+        defer {
+            XCTAssertNoThrow(try testServer.stop())
+        }
 
-    func testServerConnectionClose() {
-        XCTFail("Not implemented yet")
+        // Establish two "concurrent" requests
+        let request1URI = "/request1"
+        let request1Message = "Request #1"
+        let response1Promise = group.next().makePromise(of: String.self)
+        var channel1: Channel!
+        XCTAssertNoThrow(channel1 = try connect(serverPort: testServer.serverPort, responsePromise: response1Promise).wait())
+
+        let request2URI = "/request2"
+        let request2Message = "Request #2"
+        let response2Promise = group.next().makePromise(of: String.self)
+        var channel2: Channel!
+        XCTAssertNoThrow(channel2 = try connect(serverPort: testServer.serverPort, responsePromise: response2Promise).wait())
+
+        // Both channels are connected to the server. Request on `channel1`
+        // connected connection first so `testServer` will handle it completely
+        // before moving on to the request on `channel2`.
+
+        // Send a request to the server using the second channel (Accepted but the server is not handling it)
+        sendRequest(channel: channel2, uri: request2URI, message: request2Message)
+
+        // Check that nothing happened. The server is blocked waiting for the first
+        // request to complete so it times out and throws when we try to read from it
+        // before the first request completes.
+        XCTAssertThrowsError(try testServer.readInbound(deadline: .now() + .milliseconds(5)))
+
+        // Send a request to the server using the second channel (Currently handled by the server)
+        sendRequest(channel: channel1, uri: request1URI, message: request1Message)
+
+        // Assert we received the expected request from client1
+        XCTAssertNoThrow(try testServer.readInbound().assertHead(expectedURI: request1URI))
+        XCTAssertNoThrow(try testServer.readInbound().assertBody(expectedMessage: request1Message))
+        XCTAssertNoThrow(try testServer.readInbound().assertEnd())
+
+        // Send the response to client1
+        let response1Message = "Response #1"
+        var response1Buffer = allocator.buffer(capacity: response1Message.utf8.count)
+        response1Buffer.writeString(response1Message)
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response1Buffer))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
+
+        // Assert we received the expected request from client2
+        XCTAssertNoThrow(try testServer.readInbound().assertHead(expectedURI: request2URI))
+        XCTAssertNoThrow(try testServer.readInbound().assertBody(expectedMessage: request2Message))
+        XCTAssertNoThrow(try testServer.readInbound().assertEnd())
+
+        // Send the response to client2
+        let response2Message = "Response #2"
+        var response2Buffer = allocator.buffer(capacity: response2Message.utf8.count)
+        response2Buffer.writeString(response2Message)
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response2Buffer))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
+
+        // Verify that the each client got their own response
+        XCTAssertNoThrow(XCTAssertEqual(response1Message, try response1Promise.futureResult.wait()))
+        XCTAssertNoThrow(XCTAssertEqual(response2Message, try response2Promise.futureResult.wait()))
     }
 }
