@@ -114,6 +114,57 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
 /// `NIOHTTP1TestServer` enables writing test cases for HTTP1 clients that have
 /// complex behaviours like client implementing a protocol where an high level
 /// operation translates into several, possibly parallel, HTTP requests.
+///
+/// With `NIOHTTP1TestServer` we have:
+///  - visibility on the `HTTPServerRequestPart`s received by the server;
+///  - control over the `HTTPServerResponsePart`s send by the server.
+///
+/// The following code snippet shows an example test case where the client
+/// under test sends a request to the server.
+///
+///     // Setup the test environment.
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     let allocator = ByteBufferAllocator()
+///     let testServer = NIOHTTP1TestServer(group: group)
+///     defer {
+///         XCTAssertNoThrow(try testServer.stop())
+///         XCTAssertNoThrow(try group.syncShutdownGracefully())
+///     }
+///
+///     // Use your library to send a request to the server.
+///     let requestBody = "ping"
+///     var requestComplete: EventLoopFuture<String>!
+///     XCTAssertNoThrow(requestComplete = try sendRequestTo(
+///         URL(string: "http://127.0.0.1:\(testServer.serverPort)/some-route")!,
+///         body: requestBody))
+///
+///     // Assert the server received the expected request.
+///     // Use custom methods if you only want some specific assertions on part
+///     // of the request.
+///     XCTAssertNoThrow(XCTAssertEqual(.head(.init(version: .init(major: 1, minor: 1),
+///                                                 method: .GET,
+///                                                 uri: "/some-route",
+///                                                 headers: .init([
+///                                                     ("Content-Type", "text/plain; charset=utf-8"),
+///                                                     ("Content-Length", "4")]))),
+///                                     try testServer.readInbound()))
+///     var requestBuffer = allocator.buffer(capacity: 128)
+///     requestBuffer.writeString(requestBody)
+///     XCTAssertNoThrow(XCTAssertEqual(.body(requestBuffer),
+///                                     try testServer.readInbound()))
+///     XCTAssertNoThrow(XCTAssertEqual(.end(nil),
+///                                     try testServer.readInbound()))
+///
+///     // Make the server send a response to the client.
+///     let responseBody = "pong"
+///     var responseBuffer = allocator.buffer(capacity: 128)
+///     responseBuffer.writeString(responseBody)
+///     XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
+///     XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(responseBuffer))))
+///     XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
+///
+///     // Assert that the client received the response from the server.
+///     XCTAssertNoThrow(XCTAssertEqual(responseBody, try requestComplete.wait()))
 public final class NIOHTTP1TestServer {
     private let eventLoop: EventLoop
     // all protected by eventLoop
@@ -121,31 +172,79 @@ public final class NIOHTTP1TestServer {
     private var currentClientChannel: Channel? = nil
     private var serverChannel: Channel! = nil
 
+    enum State {
+        case channelsAvailable(CircularBuffer<Channel>)
+        case waitingForChannel(EventLoopPromise<Void>)
+        case idle
+        case stopped
+    }
+    private var state: State = .idle
+
+    func handleChannels() {
+        self.eventLoop.assertInEventLoop()
+
+        let channel: Channel!
+        switch self.state {
+        case .channelsAvailable(var channels):
+            channel = channels.removeFirst()
+            if channels.isEmpty {
+                self.state = .idle
+            } else {
+                self.state = .channelsAvailable(channels)
+            }
+        case .idle:
+            let promise = self.eventLoop.makePromise(of: Void.self)
+            promise.futureResult.whenSuccess {
+                self.handleChannels()
+            }
+            self.state = .waitingForChannel(promise)
+            return
+        case .waitingForChannel:
+            preconditionFailure("illegal state \(self.state)")
+        case .stopped:
+            return
+        }
+
+        assert(self.currentClientChannel == nil)
+        self.currentClientChannel = channel
+        channel.closeFuture.whenSuccess {
+            self.currentClientChannel = nil
+            self.handleChannels()
+            return
+        }
+        channel.pipeline.configureHTTPServerPipeline().flatMap {
+            channel.pipeline.addHandler(AggregateBodyHandler())
+        }.flatMap {
+            channel.pipeline.addHandler(WebServerHandler(webServer: self))
+        }.whenSuccess {
+            _ = channel.setOption(ChannelOptions.autoRead, value: true)
+        }
+    }
+
     public init(group: EventLoopGroup) {
         self.eventLoop = group.next()
 
         self.serverChannel = try! ServerBootstrap(group: self.eventLoop)
-            .serverChannelOption(ChannelOptions.autoRead, value: false)
-            .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { channel in
-                assert(self.currentClientChannel == nil)
-                self.currentClientChannel = channel
-                channel.closeFuture.whenSuccess {
-                    self.currentClientChannel = nil
-                    if let serverChannel = self.serverChannel {
-                        serverChannel.read()
-                    }
+                switch self.state {
+                case .channelsAvailable(var channels):
+                    channels.append(channel)
+                    self.state = .channelsAvailable(channels)
+                case .waitingForChannel(let promise):
+                    self.state = .channelsAvailable([channel])
+                    promise.succeed(())
+                case .idle:
+                    self.state = .channelsAvailable([channel])
+                case .stopped:
+                    channel.close(promise: nil)
                 }
-                return channel.pipeline.configureHTTPServerPipeline().flatMap {
-                    channel.pipeline.addHandler(AggregateBodyHandler())
-                }.flatMap {
-                    channel.pipeline.addHandler(WebServerHandler(webServer: self))
-                }
+                return channel.eventLoop.makeSucceededFuture(())
         }
         .bind(host: "127.0.0.1", port: 0)
-            .map {
-                $0.read()
-                return $0
+        .map { channel in
+            self.handleChannels()
+            return channel
         }
         .wait()
     }
@@ -157,8 +256,22 @@ extension NIOHTTP1TestServer {
 
     public func stop() throws {
         assert(!self.eventLoop.inEventLoop)
-        try self.eventLoop.submit {
-            self.serverChannel.close().flatMapThrowing {
+        try self.eventLoop.submit { () -> EventLoopFuture<Void> in
+            switch self.state {
+            case .channelsAvailable(let channels):
+                self.state = .stopped
+                channels.forEach {
+                    $0.close(promise: nil)
+                }
+            case .waitingForChannel(let promise):
+                self.state = .stopped
+                promise.fail(ChannelError.ioOnClosedChannel)
+            case .idle:
+                self.state = .stopped
+            case .stopped:
+                preconditionFailure("double stopped NIOHTTP1TestServer")
+            }
+            return self.serverChannel.close().flatMapThrowing {
                 self.serverChannel = nil
                 guard self.inboundBuffer.isEmpty else {
                     throw NonEmptyInboundBufferOnStop()
