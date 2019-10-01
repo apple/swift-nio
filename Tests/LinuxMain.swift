@@ -81,6 +81,7 @@ import XCTest
          testCase(NIOAnyDebugTest.allTests),
          testCase(NIOCloseOnErrorHandlerTest.allTests),
          testCase(NIOConcurrencyHelpersTests.allTests),
+         testCase(NIOHTTP1TestServerTest.allTests),
          testCase(NonBlockingFileIOTest.allTests),
          testCase(PendingDatagramWritesManagerTests.allTests),
          testCase(PriorityQueueTest.allTests),
