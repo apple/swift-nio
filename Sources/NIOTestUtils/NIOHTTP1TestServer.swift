@@ -183,7 +183,7 @@ public final class NIOHTTP1TestServer {
     func handleChannels() {
         self.eventLoop.assertInEventLoop()
 
-        let channel: Channel!
+        let channel: Channel
         switch self.state {
         case .channelsAvailable(var channels):
             channel = channels.removeFirst()

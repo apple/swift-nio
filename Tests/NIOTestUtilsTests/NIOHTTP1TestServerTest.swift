@@ -61,6 +61,13 @@ class NIOHTTP1TestServerTest: XCTestCase {
         channel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
     }
 
+    private func sendRequestTo(_ url: URL, body: String) throws -> EventLoopFuture<String> {
+        let responsePromise = self.group.next().makePromise(of: String.self)
+        let channel = try connect(serverPort: url.port!, responsePromise: responsePromise).wait()
+        sendRequest(channel: channel, uri: url.path, message: body)
+        return responsePromise.futureResult
+    }
+
     func testTheExampleInTheDocs() {
         // Setup the test environment.
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -70,15 +77,6 @@ class NIOHTTP1TestServerTest: XCTestCase {
             XCTAssertNoThrow(try testServer.stop())
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-
-        // -- SNIP --
-        func sendRequestTo(_ url: URL, body: String) throws -> EventLoopFuture<String> {
-            let responsePromise = self.group.next().makePromise(of: String.self)
-            let channel = try connect(serverPort: url.port!, responsePromise: responsePromise).wait()
-            sendRequest(channel: channel, uri: url.path, message: body)
-            return responsePromise.futureResult
-        }
-        // -- SNIP --
 
         // Use your library to send a request to the server.
         let requestBody = "ping"
