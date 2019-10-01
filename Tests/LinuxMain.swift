@@ -24,6 +24,7 @@ import XCTest
 
 #if os(Linux) || os(FreeBSD)
    @testable import NIOConcurrencyHelpersTests
+   @testable import NIOFoundationCompatTests
    @testable import NIOHTTP1Tests
    @testable import NIOTLSTests
    @testable import NIOTestUtilsTests
@@ -47,6 +48,7 @@ import XCTest
          testCase(ChannelPipelineTest.allTests),
          testCase(ChannelTests.allTests),
          testCase(CircularBufferTests.allTests),
+         testCase(CodableByteBufferTest.allTests),
          testCase(CustomChannelTests.allTests),
          testCase(DatagramChannelTests.allTests),
          testCase(EchoServerClientTest.allTests),
