@@ -8,3 +8,4 @@ Package.pins
 Package.resolved
 .podspecs
 DerivedData
+.swiftpm
