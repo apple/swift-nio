@@ -27,9 +27,8 @@ class EventCounterHandlerTest: XCTestCase {
 
     override func tearDown() {
         self.handler = nil
-        if let channel = self.channel {
-            XCTAssertNoThrow(try channel.finish())
-        }
+        XCTAssertNoThrow(try self.channel?.finish())
+        self.channel = nil
     }
 
     func testNothingButEmbeddedChannelInit() {
@@ -134,6 +133,9 @@ class EventCounterHandlerTest: XCTestCase {
 
         for (fire, name) in noArgEvents {
             let channel = EmbeddedChannel()
+            defer {
+                XCTAssertNoThrow(try channel.finish())
+            }
             let handler = EventCounterHandler()
 
             XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
