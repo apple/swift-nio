@@ -46,13 +46,13 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
 
     private var responseBody: ByteBuffer!
 
-    func channelRegistered(context: ChannelHandlerContext) {
+    func handlerAdded(context: ChannelHandlerContext) {
         var buffer = context.channel.allocator.buffer(capacity: websocketResponse.utf8.count)
         buffer.writeString(websocketResponse)
         self.responseBody = buffer
     }
 
-    func channelUnregistered(context: ChannelHandlerContext) {
+    func handlerRemoved(context: ChannelHandlerContext) {
         self.responseBody = nil
     }
 
