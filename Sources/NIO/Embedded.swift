@@ -237,7 +237,7 @@ class EmbeddedChannelCore: ChannelCore {
 
     func flush0() {
         let pendings = self.pendingOutboundBuffer
-        self.pendingOutboundBuffer.removeAll()
+        self.pendingOutboundBuffer.removeAll(keepingCapacity: true)
         for dataAndPromise in pendings {
             self.addToBuffer(buffer: &self.outboundBuffer, data: dataAndPromise.0)
             dataAndPromise.1?.succeed(())

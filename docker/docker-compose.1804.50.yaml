@@ -26,6 +26,10 @@ services:
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
       - MAX_ALLOCS_ALLOWED_creating_10000_headers=10100
       - MAX_ALLOCS_ALLOWED_modifying_1000_circular_buffer_elements=50
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer=4010
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer_with_space=4010
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer=6010
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_space=6010
 
   performance-test:
     image: swift-nio:18.04-5.0

@@ -30,24 +30,28 @@ done
 
 for test in "${all_tests[@]}"; do
     cat "$tmp/output"  # helps debugging
-    total_allocations=$(grep "^test_$test.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
-    not_freed_allocations=$(grep "^test_$test.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
-    max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test"
 
-    info "$test: allocations not freed: $not_freed_allocations"
-    info "$test: total number of mallocs: $total_allocations"
+    while read -r test_case; do
+        test_case=${test_case#test_*}
+        total_allocations=$(grep "^test_$test_case.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
+        not_freed_allocations=$(grep "^test_$test_case.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
+        max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test_case"
 
-    assert_less_than "$not_freed_allocations" 5     # allow some slack
-    assert_greater_than "$not_freed_allocations" -5 # allow some slack
-    if [[ -z "${!max_allowed_env_name+x}" ]]; then
+        info "$test_case: allocations not freed: $not_freed_allocations"
+        info "$test_case: total number of mallocs: $total_allocations"
+
+        assert_less_than "$not_freed_allocations" 5     # allow some slack
+        assert_greater_than "$not_freed_allocations" -5 # allow some slack
         if [[ -z "${!max_allowed_env_name+x}" ]]; then
-            warn "no reference number of allocations set (set to \$$max_allowed_env_name)"
-            warn "to set current number:"
-            warn "    export $max_allowed_env_name=$total_allocations"
+            if [[ -z "${!max_allowed_env_name+x}" ]]; then
+                warn "no reference number of allocations set (set to \$$max_allowed_env_name)"
+                warn "to set current number:"
+                warn "    export $max_allowed_env_name=$total_allocations"
+            fi
+        else
+            max_allowed=${!max_allowed_env_name}
+            assert_less_than_or_equal "$total_allocations" "$max_allowed"
+            assert_greater_than "$total_allocations" "$(( max_allowed - 1000))"
         fi
-    else
-        max_allowed=${!max_allowed_env_name}
-        assert_less_than_or_equal "$total_allocations" "$max_allowed"
-        assert_greater_than "$total_allocations" "$(( max_allowed - 1000))"
-    fi
+    done < <(grep "^test_$test[^\W]*.total_allocations:" "$tmp/output" | cut -d: -f1 | cut -d. -f1 | sort | uniq)
 done
