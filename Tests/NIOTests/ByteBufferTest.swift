@@ -1970,6 +1970,11 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(self.buf.viewBytes(at: 0, length: -1))
         XCTAssertNil(self.buf.viewBytes(at: -1, length: -1))
     }
+
+    func testByteBufferAllocatorSize1Capacity() {
+        let buffer = ByteBufferAllocator().buffer(capacity: 1)
+        XCTAssertEqual(1, buffer.capacity)
+    }
 }
 
 private enum AllocationExpectationState: Int {
