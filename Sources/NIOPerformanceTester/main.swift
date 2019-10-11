@@ -714,5 +714,28 @@ measureAndPrint(desc: "future_reduce_into_10k_futures") {
     return try! EventLoopFuture<Int>.reduce(into: 0, oneHundredFutures, on: el1, { $0 += $1 }).wait()
 }
 
+try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark())
 
-try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark.self)
+try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .spaceAtFront, cowStrategy: .always))
+
+try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_100k_frames_cow",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always))
+
+try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_1m_frames_cow",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always))
+
+try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_100k_frames_cow",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always))
+
+try measureAndPrint(desc: "websocket_encode_50b_space_at_front_10k_frames",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .spaceAtFront, cowStrategy: .never))
+
+try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_1k_frames",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .spaceAtFront, cowStrategy: .never))
+
+try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_10k_frames",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never))
+
+try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never))
