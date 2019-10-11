@@ -2767,6 +2767,18 @@ public final class ChannelTests: XCTestCase {
             g.wait()
         })
     }
+
+    func testFixedSizeRecvByteBufferAllocatorSizeIsConstant() {
+        let actualAllocator = ByteBufferAllocator()
+        var allocator = FixedSizeRecvByteBufferAllocator(capacity: 1)
+        let b1 = allocator.buffer(allocator: actualAllocator)
+        XCTAssertFalse(allocator.record(actualReadBytes: 1024))
+        let b2 = allocator.buffer(allocator: actualAllocator)
+        XCTAssertEqual(1, b1.capacity)
+        XCTAssertEqual(1, b2.capacity)
+        XCTAssertEqual(1, allocator.capacity)
+
+    }
 }
 
 fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
