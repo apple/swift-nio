@@ -32,6 +32,7 @@ extension WebSocketFrameEncoderTest {
                 ("testEncodesEachReservedBitProperly", testEncodesEachReservedBitProperly),
                 ("testEncodesExtensionDataCorrectly", testEncodesExtensionDataCorrectly),
                 ("testMasksDataCorrectly", testMasksDataCorrectly),
+                ("testFrameEncoderReusesHeaderBufferWherePossible", testFrameEncoderReusesHeaderBufferWherePossible),
            ]
    }
 }

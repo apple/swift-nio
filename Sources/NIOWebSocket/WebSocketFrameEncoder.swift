@@ -39,40 +39,49 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     public typealias OutboundIn = WebSocketFrame
     public typealias OutboundOut = ByteBuffer
 
+    /// This buffer is used to write frame headers into. We hold a buffer here as it's possible we'll be
+    /// able to avoid some allocations by re-using it.
+    private var headerBuffer: ByteBuffer? = nil
+
+    /// The maximum size of a websocket frame header. One byte for the frame "first byte", one more for the first
+    /// length byte and the mask bit, potentially up to 8 more bytes for a 64-bit length field, and potentially 4 bytes
+    /// for a mask key.
+    private static let maximumFrameHeaderLength: Int = (2 + 4 + 8)
+
     public init() { }
+
+    public func handlerAdded(context: ChannelHandlerContext) {
+        self.headerBuffer = context.channel.allocator.buffer(capacity: WebSocketFrameEncoder.maximumFrameHeaderLength)
+    }
+
+    public func handlerRemoved(context: ChannelHandlerContext) {
+        self.headerBuffer = nil
+    }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let data = self.unwrapOutboundIn(data)
 
-        var maskSize: Int
-        var maskBitMask: UInt8
-        if data.maskKey != nil {
-            maskSize = 4
-            maskBitMask = 0x80
-        } else {
-            maskSize = 0
-            maskBitMask = 0
+        // Grab the header buffer. We nil it out while we're in this call to avoid the risk of CoWing when we
+        // write to it.
+        guard var buffer = self.headerBuffer else {
+            fatalError("Channel handler lifecycle violated: did not allocate header buffer")
         }
+        self.headerBuffer = nil
+        buffer.clear()
 
-        // Calculate the "base" length of the data: that is, everything except the variable-length
-        // frame encoding. That's two octets for initial frame header, maybe 4 bytes for the masking
-        // key, and whatever the other data is.
-        let baseLength = data.length + maskSize + 2
+        // Calculate some information about the mask.
+        let maskBitMask: UInt8 = data.maskKey != nil ? 0x80 : 0x00
 
         // Time to add the extra bytes. To avoid checking this twice, we also start writing stuff out here.
-        var buffer: ByteBuffer
         switch data.length {
         case 0...maxOneByteSize:
-            buffer = context.channel.allocator.buffer(capacity: baseLength)
             buffer.writeInteger(data.firstByte)
             buffer.writeInteger(UInt8(data.length) | maskBitMask)
         case (maxOneByteSize + 1)...maxTwoByteSize:
-            buffer = context.channel.allocator.buffer(capacity: baseLength + 2)
             buffer.writeInteger(data.firstByte)
             buffer.writeInteger(UInt8(126) | maskBitMask)
             buffer.writeInteger(UInt16(data.length))
         case (maxTwoByteSize + 1)...maxNIOFrameSize:
-            buffer = context.channel.allocator.buffer(capacity: baseLength + 8)
             buffer.writeInteger(data.firstByte)
             buffer.writeInteger(UInt8(127) | maskBitMask)
             buffer.writeInteger(UInt64(data.length))
@@ -84,7 +93,8 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
             buffer.writeBytes(maskKey)
         }
 
-        // Ok, frame header away!
+        // Ok, frame header away! Before we send it we save it back onto ourselves in case we get recursively called.
+        self.headerBuffer = buffer
         context.write(self.wrapOutboundOut(buffer), promise: nil)
 
         // Next, let's mask the extension and application data and send
