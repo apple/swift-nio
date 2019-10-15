@@ -115,4 +115,30 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         assertFrameEncodes(frame: frame,
                            expectedBytes: [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01, 0x86, 0x0F, 0x18, 0x08, 0x8A, 0x09, 0x12, 0x02, 0x84, 0x0D])
     }
+
+    func testFrameEncoderReusesHeaderBufferWherePossible() {
+        let dataBytes: [UInt8] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
+        self.buffer.writeBytes(dataBytes)
+
+        let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: self.buffer)
+
+        // We're going to send the above frame twice, and capture the value of the backing pointer each time. It should
+        // be identical in both cases so long as we force the header buffer to nil between uses.
+        var headerBuffer: ByteBuffer? = nil
+        self.channel.writeAndFlush(frame, promise: nil)
+        XCTAssertNoThrow(headerBuffer = try self.channel.readOutbound(as: ByteBuffer.self))
+
+        let originalPointer = headerBuffer?.withVeryUnsafeBytes { UInt(bitPattern: $0.baseAddress!) }
+        headerBuffer = nil
+        XCTAssertNoThrow(try self.channel.readOutbound(as: ByteBuffer.self))  // Throw away the body data.
+
+        self.channel.writeAndFlush(frame, promise: nil)
+        XCTAssertNoThrow(headerBuffer = try self.channel.readOutbound(as: ByteBuffer.self))
+
+        let newPointer = headerBuffer?.withVeryUnsafeBytes { UInt(bitPattern: $0.baseAddress!) }
+        XCTAssertNoThrow(try self.channel.readOutbound(as: ByteBuffer.self))  // Throw away the body data again.
+        XCTAssertEqual(originalPointer, newPointer)
+        XCTAssertNotNil(originalPointer)
+    }
 }
