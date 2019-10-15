@@ -663,4 +663,39 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
         #endif
     }
+
+    func testConnectAfterBind() {
+        let firstDatagramEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try firstDatagramEventLoopGroup.syncShutdownGracefully())
+        }
+
+        let firstDatagramBootstrap = DatagramBootstrap(group: firstDatagramEventLoopGroup)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
+
+        let firstDatagramAddress = try! SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 10001)
+
+        let firstDatagramChannel = try! firstDatagramBootstrap.bind(to: firstDatagramAddress).wait()
+
+        let secondDatagramEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try secondDatagramEventLoopGroup.syncShutdownGracefully())
+        }
+
+        let secondDatagramBootstrap = DatagramBootstrap(group: secondDatagramEventLoopGroup)
+            .channelOption(ChannelOptions.connectToSocketAddressAfterBind, value: firstDatagramAddress)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
+            .channelOption(ChannelOptions.maxMessagesPerRead, value: 64)
+
+        let secondDatagramChannel = try! secondDatagramBootstrap.bind(host: "127.0.0.1", port: 10002).wait()
+
+        Thread.sleep(forTimeInterval: 0.5)
+
+        XCTAssertEqual(secondDatagramChannel.remoteAddress, firstDatagramAddress)
+
+        XCTAssertNoThrow(try firstDatagramChannel.close().wait())
+        XCTAssertNoThrow(try secondDatagramChannel.close().wait())
+    }
 }

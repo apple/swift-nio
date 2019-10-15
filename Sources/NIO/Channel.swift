@@ -345,6 +345,9 @@ public enum ChannelError: Error {
 
     /// An attempt was made to remove a ChannelHandler that is not removable.
     case unremovableHandler
+
+    /// An attempt to connect datagram socket after it was bound did not succeed.
+    case connectAfterBindNotAllowed
 }
 
 extension ChannelError: Equatable { }

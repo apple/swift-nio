@@ -93,6 +93,13 @@ public struct BacklogOption: ChannelOption {
     public init() {}
 }
 
+/// `ConnectToSocketAddressAfterBindOption` determines whether socket should be connected after bind or not.
+public struct ConnectToSocketAddressAfterBindOption: ChannelOption {
+    public typealias Value = SocketAddress
+
+    public init() {}
+}
+
 /// `DatagramVectorReadMessageCountOption` allows users to configure the number of messages to attempt to read in a single syscall on a
 /// datagram `Channel`.
 ///
@@ -218,6 +225,9 @@ public struct ChannelOptions {
 
     /// - seealso: `DatagramVectorReadMessageCountOption`
     public static let datagramVectorReadMessageCount = DatagramVectorReadMessageCountOption()
+
+    /// - seealso: `connectToSocketAddressAfterBindOption`.
+    public static let connectToSocketAddressAfterBind = ConnectToSocketAddressAfterBindOption()
 }
 
 extension ChannelOptions {

@@ -492,7 +492,6 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 ///
 /// - Multicast support
 /// - Broadcast support
-/// - Connected mode
 final class DatagramChannel: BaseSocketChannel<Socket> {
 
     // Guard against re-entrance of flushNow() method.
@@ -500,6 +499,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     /// Support for vector reads, if enabled.
     private var vectorReadManager: DatagramVectorReadManager?
+
+    /// A `SocketAddress` (remote) to which the socket should be connected to after bind.
+    var connectToSocketAddressAfterBind: SocketAddress? = nil
+    var isConnected: Bool = false
 
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
@@ -576,6 +579,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             #else
             break
             #endif
+        case _ as ConnectToSocketAddressAfterBindOption:
+            connectToSocketAddressAfterBind = value as? SocketAddress
         default:
             try super.setOption0(option, value: value)
         }
@@ -595,6 +600,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return pendingWrites.waterMark as! Option.Value
         case _ as DatagramVectorReadMessageCountOption:
             return (self.vectorReadManager?.messageCount ?? 0) as! Option.Value
+        case _ as ConnectToSocketAddressAfterBindOption:
+            return connectToSocketAddressAfterBind as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -605,12 +612,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
-        // For now we don't support operating in connected mode for datagram channels.
+        // Now we do support operating in connected mode for datagram channels, but only via channel options.
         throw ChannelError.operationUnsupported
     }
 
     override func finishConnectSocket() throws {
-        // For now we don't support operating in connected mode for datagram channels.
+        // Now we do support operating in connected mode for datagram channels, but only via channel options.
         throw ChannelError.operationUnsupported
     }
 
@@ -776,6 +783,19 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
         do {
             try socket.bind(to: address)
+
+            if let socketAddressToConnect = self.connectToSocketAddressAfterBind, !self.isConnected {
+                let result = try socket.connect(to: socketAddressToConnect)
+
+                if !result {
+                    promise?.fail(ChannelError.connectAfterBindNotAllowed)
+                    return
+                }
+
+                self.updateCachedAddressesFromSocket(updateRemote: true)
+                self.isConnected = true
+            }
+
             self.updateCachedAddressesFromSocket(updateRemote: false)
             becomeActive0(promise: promise)
         } catch let err {
