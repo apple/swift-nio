@@ -53,6 +53,7 @@ extension SocketChannelTest {
                 ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide),
                 ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide),
                 ("testServerClosesTheConnectionImmediately", testServerClosesTheConnectionImmediately),
+                ("testBindBeforeConnect", testBindBeforeConnect),
            ]
    }
 }

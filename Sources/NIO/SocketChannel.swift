@@ -42,6 +42,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     private let pendingWrites: PendingStreamWritesManager
 
+    // Contains `SocketAddress` to be bound before connecting to a remote
+    private var bindToSocketAddressBeforeConnect: SocketAddress? = nil
+
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
         return pendingWrites.isWritable
@@ -86,6 +89,8 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             pendingWrites.writeSpinCount = value as! UInt
         case _ as WriteBufferWaterMarkOption:
             pendingWrites.waterMark = value as! WriteBufferWaterMark
+        case _ as BindToSocketAddressBeforeConnectOption:
+            bindToSocketAddressBeforeConnect = value as? SocketAddress
         default:
             try super.setOption0(option, value: value)
         }
@@ -107,6 +112,8 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             return pendingWrites.writeSpinCount as! Option.Value
         case _ as WriteBufferWaterMarkOption:
             return pendingWrites.waterMark as! Option.Value
+        case _ as BindToSocketAddressBeforeConnectOption:
+            return bindToSocketAddressBeforeConnect as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -195,6 +202,10 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
+        if let socketAddressToBind = self.bindToSocketAddressBeforeConnect {
+            try self.socket.bind(to: socketAddressToBind)
+        }
+
         if try self.socket.connect(to: address) {
             return true
         }

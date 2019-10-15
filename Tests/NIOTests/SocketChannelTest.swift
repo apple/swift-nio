@@ -905,6 +905,54 @@ public final class SocketChannelTest : XCTestCase {
         g.wait()
         XCTAssertNoThrow(try serverSocket.close())
     }
+
+    func testBindBeforeConnect() {
+        let serverEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try serverEventLoopGroup.syncShutdownGracefully()) }
+
+        var socketChannel: Channel!
+
+        let serverBootstrap = ServerBootstrap(group: serverEventLoopGroup)
+            .serverChannelOption(ChannelOptions.backlog, value: 256)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
+            .childChannelInitializer { channel in
+                socketChannel = channel
+                return channel.eventLoop.makeSucceededFuture(())
+            }
+            .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+            .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
+            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
+            .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
+
+        let serverSocketAddress = try! SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 10001)
+        let clientSocketAddress = try! SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 10002)
+
+        let serverSocketChannel = try! serverBootstrap.bind(to: serverSocketAddress).wait()
+
+        let clientEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try clientEventLoopGroup.syncShutdownGracefully()) }
+
+        let clientBootstrap = ClientBootstrap(group: clientEventLoopGroup)
+            .channelOption(ChannelOptions.bindToSocketAddressBeforeConnect, value: clientSocketAddress)
+            .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
+            .channelOption(ChannelOptions.maxMessagesPerRead, value: 64)
+
+        Thread.sleep(forTimeInterval: 1)
+
+        let clientChannel = try! clientBootstrap.connect(to: serverSocketAddress).wait()
+
+        Thread.sleep(forTimeInterval: 1)
+
+        XCTAssertEqual(socketChannel.remoteAddress, clientSocketAddress)
+        XCTAssertEqual(clientChannel.remoteAddress, serverSocketAddress)
+
+        XCTAssertNoThrow(try socketChannel.close().wait())
+        XCTAssertNoThrow(try serverSocketChannel.close().wait())
+    }
 }
 
 class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler {
