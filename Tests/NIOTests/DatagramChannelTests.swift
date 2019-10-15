@@ -106,6 +106,8 @@ final class DatagramChannelTests: XCTestCase {
     private var firstChannel: Channel! = nil
     private var secondChannel: Channel! = nil
 
+    static var serverDatagramConnectedModeReads: [AddressedEnvelope<ByteBuffer>] = []
+
     private func buildChannel(group: EventLoopGroup) throws -> Channel {
         return try DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -662,5 +664,116 @@ final class DatagramChannelTests: XCTestCase {
         #else
         XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
         #endif
+    }
+
+    func testServerDatagramConnectedMode() {
+        let queue = DispatchQueue(label: "testServerDatagramConnectedMode", qos: .background)
+
+        ///
+        /// Create a new server datagram socket, bind it
+        ///
+
+        let serverEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer { XCTAssertNoThrow(try serverEventLoopGroup.syncShutdownGracefully()) }
+
+        let serverDatagramBootstrap = ServerDatagramBootstrap(group: serverEventLoopGroup)
+            .serverChannelOption(ChannelOptions.shouldConnectAfterBind, value: true)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
+            .childChannelInitializer { channel in
+                let readRecorder = AddressedEnvelopeReadRecorder(queue: queue)
+                return channel.pipeline.addHandler(readRecorder)
+        }
+
+        let _ = try! serverDatagramBootstrap.bind(host: "127.0.0.1", port: 10001).wait()
+
+        ///
+        /// Create first datagram socket (regular, client), bind it
+        ///
+
+        let clientEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try clientEventLoopGroup.syncShutdownGracefully()) }
+
+        let datagramBootstrap = DatagramBootstrap(group: clientEventLoopGroup)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+
+        let clientChannel = try! datagramBootstrap.bind(host: "127.0.0.1", port: 10002).wait()
+
+        ///
+        /// Create second datagram socket (regular, client), bind it
+        ///
+
+        let anotherClientEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+
+        let anotherDatagramBootstrap = DatagramBootstrap(group: anotherClientEventLoopGroup)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+
+        let anotherClientChannel = try! anotherDatagramBootstrap.bind(host: "127.0.0.1", port: 10003).wait()
+
+        ///
+        /// Send some data to the server from both clients; connect events should happen on the server side
+        ///
+
+        let serverSocketAddress = try! SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 10001)
+
+        for index: UInt8 in 1...255 {
+            // Send odd bytes from one channel and even bytes from the other one
+            if index % 2 == 0 {
+                var clientByteBuffer = clientChannel.allocator.buffer(capacity: 1)
+                clientByteBuffer.writeBytes([index])
+                let addressedEnvelope: AddressedEnvelope<ByteBuffer> = AddressedEnvelope(remoteAddress: serverSocketAddress, data: clientByteBuffer)
+                try! clientChannel.writeAndFlush(addressedEnvelope).wait()
+            } else {
+                var anotherClientByteBuffer = clientChannel.allocator.buffer(capacity: 1)
+                anotherClientByteBuffer.writeBytes([index])
+                let addressedEnvelope: AddressedEnvelope<ByteBuffer> = AddressedEnvelope(remoteAddress: serverSocketAddress, data: anotherClientByteBuffer)
+                try! anotherClientChannel.writeAndFlush(addressedEnvelope).wait()
+            }
+        }
+
+        Thread.sleep(forTimeInterval: 0.5)
+
+        ///
+        /// Verify the results
+        ///
+
+        var lastEvenByte: UInt8 = 0x00
+        var lastOddByte: UInt8 = 0x00
+
+        for addressedEnvelope in DatagramChannelTests.serverDatagramConnectedModeReads {
+            let byte = addressedEnvelope.data.getBytes(at: 0, length: 1)!.first!
+
+            // Verify the order of both even & odd bytes (as they appear on different channels)
+            if byte % 2 == 0 {
+                XCTAssertTrue(lastEvenByte < byte)
+                lastEvenByte = byte
+            } else {
+                XCTAssertTrue(lastOddByte < byte)
+                lastOddByte = byte
+            }
+        }
+
+        XCTAssertEqual(DatagramChannelTests.serverDatagramConnectedModeReads.count, 255)
+
+        XCTAssertNoThrow(try clientChannel.close().wait())
+        XCTAssertNoThrow(try anotherClientChannel.close().wait())
+    }
+}
+
+class AddressedEnvelopeReadRecorder: ChannelInboundHandler {
+    typealias InboundIn = AddressedEnvelope<ByteBuffer>
+
+    let queue: DispatchQueue
+
+    init(queue: DispatchQueue) {
+        self.queue = queue
+    }
+
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        queue.sync {
+            let addressedEnvelope = self.unwrapInboundIn(data)
+
+            DatagramChannelTests.serverDatagramConnectedModeReads.append(addressedEnvelope)
+        }
     }
 }

@@ -93,6 +93,13 @@ public struct BacklogOption: ChannelOption {
     public init() {}
 }
 
+/// `ShouldConnetAfterBindOption` allows users to let the newly created (by `ServerDatagramChannel`) datagram channel operate in connected mode. If set to `false`, it will create a new DatagramChannel per each incoming `AddressedEnvelope`'s remoteAddress, only to split the load across `EventLoopGroup`'s threads.
+public struct ShouldConnectAfterBindOption: ChannelOption {
+    public typealias Value = Bool
+
+    public init() {}
+}
+
 /// `DatagramVectorReadMessageCountOption` allows users to configure the number of messages to attempt to read in a single syscall on a
 /// datagram `Channel`.
 ///
@@ -218,6 +225,9 @@ public struct ChannelOptions {
 
     /// - seealso: `DatagramVectorReadMessageCountOption`
     public static let datagramVectorReadMessageCount = DatagramVectorReadMessageCountOption()
+
+    /// - seealso: `ShouldConnectAfterBindOption`.
+    public static let shouldConnectAfterBind = ShouldConnectAfterBindOption()
 }
 
 extension ChannelOptions {

@@ -345,6 +345,9 @@ public enum ChannelError: Error {
 
     /// An attempt was made to remove a ChannelHandler that is not removable.
     case unremovableHandler
+
+    /// A `DatagramChannel` entry is not present in `(DataramChannel, SocketAddress)` pair cache (when in connected mode)
+    case datagramChannelNotPresent
 }
 
 extension ChannelError: Equatable { }

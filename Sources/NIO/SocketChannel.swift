@@ -492,14 +492,21 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 ///
 /// - Multicast support
 /// - Broadcast support
-/// - Connected mode
 final class DatagramChannel: BaseSocketChannel<Socket> {
+
+    // `initializationPromise` returns a futureResult when channel has been initialised so we can continue with registration; useful only for datagram server in connected mode for queueing and ordering incomming messages
+    var initializationPromise: EventLoopPromise<Void>? = nil
+
+    // `becomeActivePromise` is used in combination with `initializationPromise` and helps to achieve the desired results mentioned above
+    var becomeActivePromise: EventLoopPromise<Void>? = nil
 
     // Guard against re-entrance of flushNow() method.
     private let pendingWrites: PendingDatagramWritesManager
 
     /// Support for vector reads, if enabled.
     private var vectorReadManager: DatagramVectorReadManager?
+
+    var isConnected: Bool = false
 
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
@@ -527,6 +534,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         if var vectorReadManager = self.vectorReadManager {
             vectorReadManager.deallocate()
         }
+
+        if let parent = self.parent as? ServerDatagramChannel, self.isConnected {
+            parent.connectedSocketAddressDatagramChannelPairs.removeAll { $0.0 === self }
+
+            parent.connectedSocketAddresses.removeAll { $0 == self.remoteAddress }
+        }
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
@@ -546,12 +559,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
-    init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
+    init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop, usePromises: Bool = false) throws {
         try socket.setNonBlocking()
         self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
                                                           iovecs: eventLoop.iovecs,
                                                           addresses: eventLoop.addresses,
                                                           storageRefs: eventLoop.storageRefs)
+
+        if usePromises {
+            self.initializationPromise = eventLoop.makePromise()
+            self.becomeActivePromise = eventLoop.makePromise()
+        }
+
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
@@ -796,6 +815,12 @@ extension ServerSocketChannel: CustomStringConvertible {
     }
 }
 
+extension ServerDatagramChannel: CustomStringConvertible {
+    var description: String {
+        return "ServerDatagramChannel { selectable = \(self.selectable), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+    }
+}
+
 extension DatagramChannel: CustomStringConvertible {
     var description: String {
         return "DatagramChannel { \(self.socketDescription), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
@@ -927,5 +952,356 @@ extension DatagramChannel: MulticastChannel {
             promise?.fail(error)
             return
         }
+    }
+}
+
+/// A `Channel` for a server datagram socket.
+///
+/// - note: All operations on `ServerDatagramChannel` are thread-safe.
+final class ServerDatagramChannel: BaseSocketChannel<Socket> {
+
+    private let group: EventLoopGroup
+
+    private var shouldConnectAfterBind: Bool = false
+
+    var connectedSocketAddresses: [SocketAddress] = []
+    var connectedSocketAddressDatagramChannelPairs: [(DatagramChannel, SocketAddress)] = []
+
+    /// Support for vector reads, if enabled.
+    private var vectorReadManager: DatagramVectorReadManager?
+
+    /// The server datagram socket channel is never writable.
+    // This is `Channel` API so must be thread-safe.
+    override public var isWritable: Bool { return false }
+
+    deinit {
+        if var vectorReadManager = self.vectorReadManager {
+            vectorReadManager.deallocate()
+        }
+    }
+
+    convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: Int32) throws {
+        try self.init(serverSocket: try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_DGRAM, setNonBlocking: true), eventLoop: eventLoop, group: group)
+    }
+
+    init(serverSocket: Socket, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
+        self.group = group
+        try super.init(socket: serverSocket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
+    }
+
+    convenience init(descriptor: CInt, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
+        let socket = try Socket(descriptor: descriptor, setNonBlocking: true)
+        try self.init(serverSocket: socket, eventLoop: eventLoop, group: group)
+    }
+
+    override func registrationFor(interested: SelectorEventSet) -> NIORegistration {
+        return .serverDatagramChannel(self, interested)
+    }
+
+    override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
+        self.eventLoop.assertInEventLoop()
+
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
+
+        switch option {
+        case _ as ShouldConnectAfterBindOption:
+            shouldConnectAfterBind = value as! Bool
+        case _ as DatagramVectorReadMessageCountOption:
+            // We only support vector reads on these OSes. Let us know if there's another OS with this syscall!
+            #if os(Linux) || os(FreeBSD) || os(Android)
+            self.vectorReadManager.updateMessageCount(value as! Int)
+            #else
+            break
+            #endif
+        default:
+            try super.setOption0(option, value: value)
+        }
+    }
+
+    override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
+        self.eventLoop.assertInEventLoop()
+
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
+
+        switch option {
+        case _ as ShouldConnectAfterBindOption:
+            return shouldConnectAfterBind as! Option.Value
+        case _ as DatagramVectorReadMessageCountOption:
+            return (self.vectorReadManager?.messageCount ?? 0) as! Option.Value
+        default:
+            return try super.getOption0(option)
+        }
+    }
+
+    override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.eventLoop.assertInEventLoop()
+
+        guard self.isOpen else {
+            promise?.fail(ChannelError.ioOnClosedChannel)
+            return
+        }
+
+        guard self.isRegistered else {
+            promise?.fail(ChannelError.inappropriateOperationForState)
+            return
+        }
+
+        let p = eventLoop.makePromise(of: Void.self)
+        p.futureResult.map {
+            // It's important to call the methods before we actually notify the original promise for ordering reasons.
+            self.becomeActive0(promise: promise)
+        }.whenFailure{ error in
+            promise?.fail(error)
+        }
+        executeAndComplete(p) {
+            try socket.bind(to: address)
+            self.updateCachedAddressesFromSocket(updateRemote: false)
+        }
+    }
+
+    override func connectSocket(to address: SocketAddress) throws -> Bool {
+        throw ChannelError.operationUnsupported
+    }
+
+    override func finishConnectSocket() throws {
+        throw ChannelError.operationUnsupported
+    }
+
+    override func readFromSocket() throws -> ReadResult {
+        if self.vectorReadManager != nil {
+            return try self.vectorReadFromSocket()
+        } else {
+            return try self.singleReadFromSocket()
+        }
+    }
+
+    private func createNewSocketAndChannel(remoteAddress: SocketAddress) throws -> (datagramChannel: DatagramChannel, contained: Bool) {
+        if !self.connectedSocketAddresses.contains(remoteAddress) {
+            self.connectedSocketAddresses.append(remoteAddress)
+
+            let localAddress = try! self.socket.localAddress()
+            let newSocket = try! Socket(protocolFamily: AF_INET, type: SOCK_DGRAM, setNonBlocking: true)
+
+            try! newSocket.setOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_REUSEADDR, value: 1)
+            try! newSocket.setOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_REUSEPORT, value: 1)
+
+            if self.shouldConnectAfterBind {
+                try! newSocket.bind(to: localAddress)
+                let _ = try newSocket.connect(to: remoteAddress)
+            } else {
+                try! newSocket.bind(to: localAddress)
+            }
+
+            let datagramChannel = try DatagramChannel(socket: newSocket,
+                                                      parent: self,
+                                                      eventLoop: group.next() as! SelectableEventLoop,
+                                                      usePromises: true)
+
+            self.connectedSocketAddressDatagramChannelPairs.append((datagramChannel, remoteAddress))
+
+            return (datagramChannel: datagramChannel, contained: false)
+        } else {
+            var datagramChannel: DatagramChannel? = nil
+
+            for (channel, connectedSocketAddress) in self.connectedSocketAddressDatagramChannelPairs {
+                if connectedSocketAddress == remoteAddress {
+                    datagramChannel = channel
+                }
+            }
+
+            guard datagramChannel != nil else { throw ChannelError.datagramChannelNotPresent }
+
+            return (datagramChannel: datagramChannel!, contained: true)
+        }
+    }
+
+    private func singleReadFromSocket() throws -> ReadResult {
+        var rawAddress = sockaddr_storage()
+        var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
+        var buffer = self.recvAllocator.buffer(allocator: self.allocator)
+        var readResult = ReadResult.none
+
+        for i in 1...self.maxMessagesPerRead {
+            guard self.isOpen else {
+                throw ChannelError.eof
+            }
+            buffer.clear()
+
+            let result = try buffer.withMutableWritePointer {
+                try self.socket.recvfrom(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength)
+            }
+
+            let remoteAddress: SocketAddress = rawAddress.convert()
+
+            switch result {
+            case .processed(let bytesRead):
+                assert(bytesRead > 0)
+                assert(self.isOpen)
+
+                let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
+                readPending = false
+
+                let addressedEnvelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
+
+                let (datagramChannel, contained) = try createNewSocketAndChannel(remoteAddress: remoteAddress)
+
+                assert(self.isActive)
+
+                if contained {
+                    datagramChannel.becomeActivePromise?.futureResult.whenComplete { result in
+                        datagramChannel.pipeline.fireChannelRead0(NIOAny(addressedEnvelope))
+                    }
+                } else {
+                    self.pipeline.fireChannelRead0(NIOAny(datagramChannel))
+
+                    datagramChannel.initializationPromise?.futureResult.whenComplete { result in
+                        let localBecomeActivePromise: EventLoopPromise<Void> = datagramChannel.eventLoop.makePromise()
+
+                        datagramChannel.register().flatMapThrowing {
+                            guard datagramChannel.isOpen else { throw ChannelError.ioOnClosedChannel }
+
+                            datagramChannel.updateCachedAddressesFromSocket(updateRemote: true)
+                            datagramChannel.becomeActive0(promise: localBecomeActivePromise)
+                        }.whenFailure { error in
+                            datagramChannel.close(promise: nil)
+                        }
+
+                        localBecomeActivePromise.futureResult.whenComplete { result in
+                            datagramChannel.pipeline.fireChannelRead0(NIOAny(addressedEnvelope))
+                            datagramChannel.becomeActivePromise?.succeed(())
+                        }
+                    }
+                }
+
+                if mayGrow && i < maxMessagesPerRead {
+                    buffer = recvAllocator.buffer(allocator: allocator)
+                }
+                readResult = .some
+
+            case .wouldBlock(let bytesRead):
+                assert(bytesRead == 0)
+                return readResult
+            }
+        }
+
+        return readResult
+    }
+
+    private func vectorReadFromSocket() throws -> ReadResult {
+        #if os(Linux) || os(FreeBSD) || os(Android)
+        var buffer = self.recvAllocator.buffer(allocator: self.allocator)
+        var readResult = ReadResult.none
+
+        readLoop: for i in 1...self.maxMessagesPerRead {
+            guard self.isOpen else {
+                throw ChannelError.eof
+            }
+            guard let vectorReadManager = self.vectorReadManager else {
+                // The vector read manager went away. This happens if users unset the vector read manager
+                // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
+                break readLoop
+            }
+            buffer.clear()
+
+            // This force-unwrap is safe, as we checked whether this is nil in the caller.
+            let result = try vectorReadManager.readFromSocket(socket: self.socket, buffer: &buffer)
+            switch result {
+            case .some(let results, let totalRead):
+                assert(self.isOpen)
+                assert(self.isActive)
+
+                let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
+                readPending = false
+
+                var messageIterator = results.makeIterator()
+
+                while self.isActive, let addressedEnvelope = messageIterator.next() {
+                    let (datagramChannel, contained) = try createNewSocketAndChannel(remoteAddress: remoteAddress)
+
+                    assert(self.isActive)
+
+                    if contained {
+                        datagramChannel.becomeActivePromise?.futureResult.whenComplete { result in
+                            datagramChannel.pipeline.fireChannelRead0(NIOAny(addressedEnvelope))
+                        }
+                    } else {
+                        self.pipeline.fireChannelRead0(NIOAny(datagramChannel))
+
+                        datagramChannel.initializationPromise?.futureResult.whenComplete { result in
+                            let localBecomeActivePromise: EventLoopPromise<Void> = datagramChannel.eventLoop.makePromise()
+
+                            datagramChannel.register().flatMapThrowing {
+                                guard datagramChannel.isOpen else { throw ChannelError.ioOnClosedChannel }
+
+                                datagramChannel.updateCachedAddressesFromSocket(updateRemote: true)
+                                datagramChannel.becomeActive0(promise: localBecomeActivePromise)
+                            }.whenFailure { error in
+                                datagramChannel.close(promise: nil)
+                            }
+
+                            localBecomeActivePromise.futureResult.whenComplete { result in
+                                datagramChannel.pipeline.fireChannelRead0(NIOAny(addressedEnvelope))
+                                datagramChannel.becomeActivePromise?.succeed(())
+                            }
+                        }
+                    }
+                }
+
+                if mayGrow && i < maxMessagesPerRead {
+                    buffer = recvAllocator.buffer(allocator: allocator)
+                }
+                readResult = .some
+            case .none:
+                break readLoop
+            }
+        }
+
+        return readResult
+        #else
+        fatalError("Cannot perform vector reads on this operating system")
+        #endif
+    }
+
+    override func shouldCloseOnReadError(_ err: Error) -> Bool {
+        if err is NIOFailedToSetSocketNonBlockingError {
+            // see https://github.com/apple/swift-nio/issues/1030
+            // on Darwin, fcntl(fd, F_SETFL, O_NONBLOCK) sometimes returns EINVAL...
+            return false
+        }
+        guard let err = err as? IOError else { return true }
+
+        switch err.errnoCode {
+        case ECONNABORTED,
+             EMFILE,
+             ENFILE,
+             ENOBUFS,
+             ENOMEM:
+            // These are errors we may be able to recover from. The user may just want to stop accepting connections for example
+            // or provide some other means of back-pressure. This could be achieved by a custom ChannelDuplexHandler.
+            return false
+        default:
+            return true
+        }
+    }
+
+    override func cancelWritesOnClose(error: Error) {
+        // No writes to cancel.
+        return
+    }
+
+    override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+        promise?.fail(ChannelError.operationUnsupported)
+    }
+
+    override func markFlushPoint() {
+        // We do nothing here: flushes are no-ops.
+    }
+
+    override func flushNow() -> IONotificationState {
+        return IONotificationState.unregister
     }
 }

@@ -679,6 +679,8 @@ extension Selector where R == NIORegistration {
                 return closeChannel(chan)
             case .socketChannel(let chan, _):
                 return closeChannel(chan)
+            case .serverDatagramChannel(let chan, _):
+                return closeChannel(chan)
             case .datagramChannel(let chan, _):
                 return closeChannel(chan)
             }

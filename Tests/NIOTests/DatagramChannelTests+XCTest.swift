@@ -49,6 +49,7 @@ extension DatagramChannelTests {
                 ("testBasicMultipleReads", testBasicMultipleReads),
                 ("testMmsgWillTruncateWithoutChangeToAllocator", testMmsgWillTruncateWithoutChangeToAllocator),
                 ("testRecvMmsgForMultipleCycles", testRecvMmsgForMultipleCycles),
+                ("testServerDatagramConnectedMode", testServerDatagramConnectedMode),
            ]
    }
 }

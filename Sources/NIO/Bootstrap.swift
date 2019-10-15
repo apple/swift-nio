@@ -705,3 +705,300 @@ public final class DatagramBootstrap {
         }
     }
 }
+
+/// A `ServerDatagramBootstrap` is an easy way to bootstrap a `ServerDatagramChannel` when creating datagram network servers.
+///
+/// Example:
+///
+/// ```swift
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
+///     let bootstrap = ServerDatagramBootstrap(group: group)
+///         // Specify if connected mode is used and enable SO_REUSEADDR / SO_REUSEPORT for the server itself
+///         .serverChannelOption(ChannelOptions.shouldConnectAfterBind, value: true)
+///         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+///         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
+///
+///         // Set the handlers that are applied to the accepted child `Channel`s.
+///         .childChannelInitializer { channel in
+///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
+///             channel.pipeline.addHandler(BackPressureHandler()).flatMap { () in
+///                 // make sure to instantiate your `ChannelHandlers` inside of
+///                 // the closure as it will be invoked once per connection.
+///                 channel.pipeline.addHandler(MyChannelHandler())
+///             }
+///         }
+///
+///         // Enable SO_REUSEADDR for the accepted Channels
+///         .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+///         .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
+///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
+///     let channel = try! bootstrap.bind(host: host, port: port).wait()
+///     /* the server will now be accepting connections */
+///
+///     try! channel.closeFuture.wait() // wait forever as we never close the Channel
+/// ```
+///
+/// The `EventLoopFuture` returned by `bind` will fire with a `ServerDatagramChannel`. This is the channel that owns the datagram socket for incomming datagrams with addresses not connected yet.
+/// Each time it accepts a new connection it will fire a `DatagramChannel` through the `ChannelPipeline` via `fireChannelRead`: as a result,
+/// the `ServerDatagramChannel` operates on `Channel`s as inbound messages. Outbound messages are not supported on a `ServerDatagramChannel`
+/// which means that each write attempt will fail.
+///
+/// Newly created `DatagramChannel`s operate on `ByteBuffer` as inbound data, and `IOData` as outbound data.
+public final class ServerDatagramBootstrap {
+
+    private let group: EventLoopGroup
+    private let childGroup: EventLoopGroup
+    private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
+    private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
+    @usableFromInline
+    internal var _serverChannelOptions = ChannelOptions.Storage()
+    @usableFromInline
+    internal var _childChannelOptions = ChannelOptions.Storage()
+
+    /// Create a `ServerDatagramBootstrap` for the `EventLoopGroup` `group`.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use for the `ServerDatagramChannel`.
+    public convenience init(group: EventLoopGroup) {
+        self.init(group: group, childGroup: group)
+    }
+
+    /// Create a `ServerDatagramBootstrap`.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use for the `bind` of the `ServerDatagramChannel` and to create new `DatagramChannel`s with.
+    ///     - childGroup: The `EventLoopGroup` to run the new `DatagramChannel`s on.
+    public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
+        self.group = group
+        self.childGroup = childGroup
+    }
+
+    /// Initialize the `ServerDatagramChannel` with `initializer`. The most common task in initializer is to add
+    /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// The `ServerDatagramChannel` uses the accepted `Channel`s as inbound messages.
+    ///
+    /// - note: To set the initializer for the newly created `DatagramChannel`s, look at `ServerDatagramBootstrap.childChannelInitializer`.
+    ///
+    /// - parameters:
+    ///     - initializer: A closure that initializes the provided `Channel`.
+    public func serverChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
+        self.serverChannelInit = initializer
+        return self
+    }
+
+    /// Initialize the newly created `DatagramChannel`s with `initializer`. The most common task in initializer is to add
+    /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// - warning: The `initializer` will be invoked once for the first incoming message per address. Therefore it's usually the
+    ///            right choice to instantiate stateful `ChannelHandler`s within the closure to make sure they are not
+    ///            accidentally shared across `Channel`s. There are expert use-cases where stateful handler need to be
+    ///            shared across `Channel`s in which case the user is responsible to synchronise the state access
+    ///            appropriately.
+    ///
+    /// The accepted `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
+    ///
+    /// - parameters:
+    ///     - initializer: A closure that initializes the provided `Channel`.
+    public func childChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
+        self.childChannelInit = initializer
+        return self
+    }
+
+    /// Specifies a `ChannelOption` to be applied to the `ServerDatagramChannel`.
+    ///
+    /// - note: To specify options for the new `DatagramChannel`s, look at `ServerDatagramBootstrap.childChannelOption`.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
+    @inlinable
+    public func serverChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
+        self._serverChannelOptions.append(key: option, value: value)
+        return self
+    }
+
+    /// Specifies a `ChannelOption` to be applied to the new `DatagramChannel`s.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
+    @inlinable
+    public func childChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
+        self._childChannelOptions.append(key: option, value: value)
+        return self
+    }
+
+    /// Bind the `ServerDatagramChannel` to `host` and `port`.
+    ///
+    /// - parameters:
+    ///     - host: The host to bind on.
+    ///     - port: The port to bind on.
+    public func bind(host: String, port: Int) -> EventLoopFuture<Channel> {
+        return bind0 {
+            return try SocketAddress.makeAddressResolvingHost(host, port: port)
+        }
+    }
+
+    /// Bind the `ServerDatagramChannel` to `address`.
+    ///
+    /// - parameters:
+    ///     - address: The `SocketAddress` to bind on.
+    public func bind(to address: SocketAddress) -> EventLoopFuture<Channel> {
+        return bind0 { address }
+    }
+
+    /// Bind the `ServerDatagramChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
+    public func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
+        return bind0 {
+            try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+        }
+    }
+
+    /// Use the existing bound socket file descriptor.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the bound datagram socket.
+    public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerDatagramChannel {
+            return try ServerDatagramChannel(eventLoop: eventLoop, group: childEventLoopGroup, protocolFamily: descriptor)
+        }
+        return bind0(makeServerDatagramChannel: makeChannel) { (eventLoop, channel) in
+            let promise = eventLoop.makePromise(of: Void.self)
+            channel.registerAlreadyConfigured0(promise: promise)
+            return promise.futureResult
+        }
+    }
+
+    private func bind0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
+        let address: SocketAddress
+        do {
+            address = try makeSocketAddress()
+        } catch {
+            return group.next().makeFailedFuture(error)
+        }
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerDatagramChannel {
+            return try ServerDatagramChannel(eventLoop: eventLoop, group: childEventLoopGroup, protocolFamily: address.protocolFamily)
+        }
+
+        return bind0(makeServerDatagramChannel: makeChannel) { (eventGroup, serverDatagramChannel) in
+            serverDatagramChannel.registerAndDoSynchronously { serverDatagramChannel in
+                serverDatagramChannel.bind(to: address)
+            }
+        }
+    }
+
+    private func bind0(makeServerDatagramChannel: (_ eventLoop: SelectableEventLoop, _ childGroup: EventLoopGroup) throws -> ServerDatagramChannel, _ register: @escaping (EventLoop, ServerDatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
+        let eventLoop = self.group.next()
+        let childEventLoopGroup = self.childGroup
+        let serverChannelOptions = self._serverChannelOptions
+        let serverChannelInit = self.serverChannelInit ?? { _ in eventLoop.makeSucceededFuture(()) }
+        let childChannelInit = self.childChannelInit
+        let childChannelOptions = self._childChannelOptions
+
+        let serverDatagramChannel: ServerDatagramChannel
+        do {
+            serverDatagramChannel = try makeServerDatagramChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup)
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
+
+        return eventLoop.submit {
+            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
+            return serverChannelInit(serverDatagramChannel).hop(to: eventLoop).flatMap {
+                serverDatagramChannel.pipeline.addHandler(AcceptHandler(childChannelInitializer: childChannelInit,
+                                                                        childChannelOptions: childChannelOptions))
+                }.flatMap {
+                    serverChannelOptions.applyAllChannelOptions(to: serverDatagramChannel)
+                }.flatMap {
+                    register(eventLoop, serverDatagramChannel)
+                }.map {
+                    serverDatagramChannel as Channel
+                }.flatMapError { error in
+                    serverDatagramChannel.close0(error: error, mode: .all, promise: nil)
+                    return eventLoop.makeFailedFuture(error)
+                }
+            }.flatMap { $0 }
+    }
+
+    private class AcceptHandler: ChannelInboundHandler {
+        public typealias InboundIn = DatagramChannel
+
+        private let childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
+        private let childChannelOptions: ChannelOptions.Storage
+
+        init(childChannelInitializer: ((Channel) -> EventLoopFuture<Void>)?, childChannelOptions: ChannelOptions.Storage) {
+            self.childChannelInit = childChannelInitializer
+            self.childChannelOptions = childChannelOptions
+        }
+
+        func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+            if event is ChannelShouldQuiesceEvent {
+                context.channel.close().whenFailure { error in
+                    context.fireErrorCaught(error)
+                }
+            }
+            context.fireUserInboundEventTriggered(event)
+        }
+
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            let datagramChannel = self.unwrapInboundIn(data)
+
+            let ctxEventLoop = context.eventLoop
+            let childEventLoop = datagramChannel.eventLoop
+            let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.makeSucceededFuture(()) }
+
+            @inline(__always)
+            func setupChildChannel() -> EventLoopFuture<Void> {
+                return self.childChannelOptions.applyAllChannelOptions(to: datagramChannel).flatMap { () -> EventLoopFuture<Void> in
+                    childEventLoop.assertInEventLoop()
+                    return childChannelInit(datagramChannel)
+                }
+            }
+
+            @inline(__always)
+            func fireThroughPipeline(_ future: EventLoopFuture<Void>) {
+                ctxEventLoop.assertInEventLoop()
+                future.flatMap { (_) -> EventLoopFuture<Void> in
+                    ctxEventLoop.assertInEventLoop()
+                    guard !context.pipeline.destroyed else {
+                        return context.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
+                    }
+
+                    datagramChannel.initializationPromise?.succeed(())
+
+                    return context.eventLoop.makeSucceededFuture(())
+                }.whenFailure { error in
+                    ctxEventLoop.assertInEventLoop()
+                    datagramChannel.initializationPromise?.fail(error)
+                    self.closeAndFire(context: context, accepted: datagramChannel, err: error)
+                }
+            }
+
+            if childEventLoop === ctxEventLoop {
+                fireThroughPipeline(setupChildChannel())
+            } else {
+                fireThroughPipeline(childEventLoop.submit {
+                    return setupChildChannel()
+                }.flatMap { $0 }.hop(to: ctxEventLoop))
+            }
+        }
+
+        private func closeAndFire(context: ChannelHandlerContext, accepted: DatagramChannel, err: Error) {
+            accepted.close(promise: nil)
+            if context.eventLoop.inEventLoop {
+                context.fireErrorCaught(err)
+            } else {
+                context.eventLoop.execute {
+                    context.fireErrorCaught(err)
+                }
+            }
+        }
+    }
+}
