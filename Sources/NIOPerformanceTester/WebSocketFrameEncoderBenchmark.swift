@@ -54,6 +54,7 @@ extension WebSocketFrameEncoderBenchmark {
 extension WebSocketFrameEncoderBenchmark: Benchmark {
     func setUp() throws {
         // We want the pipeline walk to have some cost.
+        try! self.channel.pipeline.addHandler(WriteConsumingHandler()).wait()
         for _ in 0..<3 {
             try! self.channel.pipeline.addHandler(NoOpOutboundHandler()).wait()
         }
@@ -116,4 +117,14 @@ extension ByteBufferAllocator {
 fileprivate final class NoOpOutboundHandler: ChannelOutboundHandler {
     typealias OutboundIn = Any
     typealias OutboundOut = Any
+}
+
+
+fileprivate final class WriteConsumingHandler: ChannelOutboundHandler {
+    typealias OutboundIn = Any
+    typealias OutboundOut = Never
+
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        promise?.succeed(())
+    }
 }
