@@ -376,9 +376,9 @@ class SelectorTest: XCTestCase {
         }
         class FakeSocket: Socket {
             private let hasBeenClosedPromise: EventLoopPromise<Void>
-            init(hasBeenClosedPromise: EventLoopPromise<Void>, descriptor: CInt) {
+            init(hasBeenClosedPromise: EventLoopPromise<Void>, descriptor: CInt) throws {
                 self.hasBeenClosedPromise = hasBeenClosedPromise
-                super.init(descriptor: descriptor)
+                try super.init(descriptor: descriptor)
             }
             override func close() throws {
                 self.hasBeenClosedPromise.succeed(())

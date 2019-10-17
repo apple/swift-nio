@@ -34,8 +34,7 @@ class NIOAnyDebugTest: XCTestCase {
         FileRegion { \
         handle: \
         FileHandle \
-        { descriptor: 1, \
-        isOpen: \(fileHandle.isOpen) \
+        { descriptor: 1 \
         }, \
         readerIndex: \(fileRegion.readerIndex), \
         endIndex: \(fileRegion.endIndex) }

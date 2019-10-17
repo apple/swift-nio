@@ -13,7 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 /// A server socket that can accept new connections.
-/* final but tests */ class ServerSocket: BaseSocket {
+/* final but tests */ class ServerSocket: BaseSocket, ServerSocketProtocol {
+    typealias SocketType = ServerSocket
+
     public final class func bootstrap(protocolFamily: Int32, host: String, port: Int) throws -> ServerSocket {
         let socket = try ServerSocket(protocolFamily: protocolFamily)
         try socket.bind(to: SocketAddress.makeAddressResolvingHost(host, port: port))
@@ -29,7 +31,7 @@
     /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: Int32, setNonBlocking: Bool = false) throws {
         let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: setNonBlocking)
-        super.init(descriptor: sock)
+        try super.init(descriptor: sock)
     }
 
     /// Create a new instance.
@@ -39,7 +41,7 @@
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if socket is invalid.
     init(descriptor: CInt, setNonBlocking: Bool = false) throws {
-        super.init(descriptor: descriptor)
+        try super.init(descriptor: descriptor)
         if setNonBlocking {
             try self.setNonBlocking()
         }
@@ -86,7 +88,7 @@
             guard let fd = result else {
                 return nil
             }
-            let sock = Socket(descriptor: fd)
+            let sock = try Socket(descriptor: fd)
             #if !os(Linux)
             if setNonBlocking {
                 do {

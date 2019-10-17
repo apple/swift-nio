@@ -151,8 +151,7 @@ internal protocol SelectableChannel: Channel {
     /// `Selector`.
     associatedtype SelectableType: Selectable
 
-    /// Returns the `Selectable` which usually contains the file descriptor for the socket.
-    var selectable: SelectableType { get }
+    var isOpen: Bool { get }
 
     /// The event(s) of interest.
     var interestedEvent: SelectorEventSet { get }
@@ -166,15 +165,17 @@ internal protocol SelectableChannel: Channel {
     /// Called when the read side of the `SelectableChannel` hit EOF.
     func readEOF()
 
+    /// Called when the read side of the `SelectableChannel` hit EOF.
+    func writeEOF()
+
     /// Called when the `SelectableChannel` was reset (ie. is now unusable)
     func reset()
 
-    /// Creates a registration for the `interested` `SelectorEventSet` suitable for this `Channel`.
-    ///
-    /// - parameters:
-    ///     - interested: The event(s) of interest.
-    /// - returns: A suitable registration for the `SelectorEventSet` of interest.
-    func registrationFor(interested: SelectorEventSet) -> NIORegistration
+    func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws
+
+    func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws
+
+    func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws
 }
 
 /// Default implementations which will start on the head of the `ChannelPipeline`.
