@@ -75,6 +75,8 @@ var targets: [PackageDescription.Target] = [
                 dependencies: ["NIO", "NIOWebSocket"]),
     .testTarget(name: "NIOTestUtilsTests",
                 dependencies: ["NIOTestUtils"]),
+    .testTarget(name: "NIOFoundationCompatTests",
+                dependencies: ["NIO", "NIOFoundationCompat"]),
 ]
 
 let package = Package(
