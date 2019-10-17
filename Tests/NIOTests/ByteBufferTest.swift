@@ -1975,6 +1975,63 @@ class ByteBufferTest: XCTestCase {
         let buffer = ByteBufferAllocator().buffer(capacity: 1)
         XCTAssertEqual(1, buffer.capacity)
     }
+
+    func testByteBufferModifiedWithoutAllocationLogic() {
+        var buffer = ByteBufferAllocator().buffer(capacity: 1)
+        let firstResult = buffer.modifyIfUniquelyOwned {
+            $0.readableBytes
+        }
+        XCTAssertEqual(firstResult, 0)
+
+        withExtendedLifetime(buffer) {
+            var localCopy = buffer
+            let secondResult = localCopy.modifyIfUniquelyOwned {
+                $0.readableBytes
+            }
+            let thirdResult = buffer.modifyIfUniquelyOwned {
+                $0.readableBytes
+            }
+            XCTAssertNil(secondResult)
+            XCTAssertNil(thirdResult)
+        }
+
+        let fourthResult = buffer.modifyIfUniquelyOwned {
+            $0.readableBytes
+        }
+        XCTAssertEqual(fourthResult, 0)
+
+        let fifthResult = buffer.modifyIfUniquelyOwned {
+            $0.modifyIfUniquelyOwned {
+                $0.readableBytes
+            }
+        }
+        XCTAssertEqual(fifthResult, 0)
+    }
+
+    func testByteBufferModifyIfUniquelyOwnedMayThrow() {
+        struct MyError: Error { }
+
+        func doAThrow(_ b: inout ByteBuffer) throws {
+            throw MyError()
+        }
+
+        var buffer = ByteBufferAllocator().buffer(capacity: 1)
+
+        XCTAssertThrowsError(try buffer.modifyIfUniquelyOwned(doAThrow(_:))) { error in
+            XCTAssertTrue(error is MyError)
+        }
+
+        // This can't actually throw but XCTAssertNoThrow isn't doing well here.
+        try! withExtendedLifetime(buffer) {
+            var localCopy = buffer
+            XCTAssertNoThrow(try localCopy.modifyIfUniquelyOwned(doAThrow(_:)))
+            XCTAssertNoThrow(try buffer.modifyIfUniquelyOwned(doAThrow(_:)))
+        }
+
+        XCTAssertThrowsError(try buffer.modifyIfUniquelyOwned(doAThrow(_:))) { error in
+            XCTAssertTrue(error is MyError)
+        }
+    }
 }
 
 private enum AllocationExpectationState: Int {
