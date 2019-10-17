@@ -775,6 +775,18 @@ extension ByteBuffer: Equatable {
 }
 
 extension ByteBuffer {
+    /// Whether this `ByteBuffer` is known to be able to be modified without
+    /// requiring a new allocation for the backing storage.
+    ///
+    /// This property is conservative: it is possible that it will return false negatives.
+    public var canBeModifiedWithoutAllocation: Bool {
+        mutating get {
+            return isKnownUniquelyReferenced(&self._storage)
+        }
+    }
+}
+
+extension ByteBuffer {
     @inlinable
     func rangeWithinReadableBytes(index: Int, length: Int) -> Range<Int>? {
         let indexFromReaderIndex = index - self.readerIndex

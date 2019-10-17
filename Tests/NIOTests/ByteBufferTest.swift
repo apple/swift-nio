@@ -1975,6 +1975,19 @@ class ByteBufferTest: XCTestCase {
         let buffer = ByteBufferAllocator().buffer(capacity: 1)
         XCTAssertEqual(1, buffer.capacity)
     }
+
+    func testByteBufferModifiedWithoutAllocationLogic() {
+        var buffer = ByteBufferAllocator().buffer(capacity: 1)
+        XCTAssertTrue(buffer.canBeModifiedWithoutAllocation)
+
+        withExtendedLifetime(buffer) {
+            var localCopy = buffer
+            XCTAssertFalse(localCopy.canBeModifiedWithoutAllocation)
+            XCTAssertFalse(buffer.canBeModifiedWithoutAllocation)
+        }
+
+        XCTAssertTrue(buffer.canBeModifiedWithoutAllocation)
+    }
 }
 
 private enum AllocationExpectationState: Int {
