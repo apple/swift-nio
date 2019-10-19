@@ -116,7 +116,7 @@ public struct NonBlockingFileIO {
                             allocator: ByteBufferAllocator,
                             eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
         precondition(chunkSize > 0, "chunkSize must be > 0 (is \(chunkSize))")
-        var remainingReads = 1 + (byteCount / chunkSize)
+        let remainingReads = 1 + (byteCount / chunkSize)
         let lastReadSize = byteCount % chunkSize
 
         func _read(remainingReads: Int) -> EventLoopFuture<Void> {

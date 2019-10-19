@@ -561,7 +561,7 @@ func withCrossConnectedUnixDomainSocketChannels<R>(file: StaticString = #file,
                                                    line: UInt = #line,
                                                    _ body: (Channel, Channel) throws -> R) throws -> R {
     return try withTemporaryDirectory { tempDir in
-        let bindTarget = try SocketAddress(unixDomainSocketPath: tempDir + "/server.sock")
+        let bindTarget = try SocketAddress(unixDomainSocketPath: tempDir + "/s")
         return try withCrossConnectedSockAddrChannels(bindTarget: bindTarget, body)
     }
 }

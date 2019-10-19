@@ -99,7 +99,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
             let addressLen = p.copySocketAddress(addresses.baseAddress! + c)
             iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
 
-            var msg = msghdr(msg_name: addresses.baseAddress! + c,
+            let msg = msghdr(msg_name: addresses.baseAddress! + c,
                              msg_namelen: addressLen,
                              msg_iov: iovecs.baseAddress! + c,
                              msg_iovlen: 1,
