@@ -331,7 +331,7 @@ public final class EventLoopTest : XCTestCase {
 
     public func testEventLoopMakeIterator() throws {
         let eventLoop = EmbeddedEventLoop()
-        var iterator = eventLoop.makeIterator()
+        let iterator = eventLoop.makeIterator()
         defer {
             XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
         }
@@ -614,8 +614,6 @@ public final class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleMultipleTasks() throws {
-        let nanos: NIODeadline = .now()
-        let amount: TimeAmount = .seconds(1)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())

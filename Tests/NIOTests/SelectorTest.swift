@@ -296,7 +296,7 @@ class SelectorTest: XCTestCase {
         // all of the following are boxed as we need mutable references to them, they can only be read/written on the
         // event loop `el`.
         let allServerChannels: Box<[Channel]> = Box([])
-        var allChannels: Box<[Channel]> = Box([])
+        let allChannels: Box<[Channel]> = Box([])
         let hasReConnectEventLoopTickFinished: Box<Bool> = Box(false)
         let numberOfConnectedChannels: Box<Int> = Box(0)
 
