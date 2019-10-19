@@ -111,6 +111,11 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.NIOFileHandle, St
 }
 var temporaryDirectory: String {
     get {
+#if targetEnvironment(simulator)
+        // Simulator temp directories are so long (and contain the user name) that they're not usable
+        // for UNIX Domain Socket paths (which are limited to 103 bytes).
+        return "/tmp"
+#else
 #if os(Android)
         return "/data/local/tmp"
 #elseif os(Linux)
@@ -121,7 +126,8 @@ var temporaryDirectory: String {
         } else {
             return "/tmp"
         }
-#endif
+#endif // os
+#endif // targetEnvironment
     }
 }
 
