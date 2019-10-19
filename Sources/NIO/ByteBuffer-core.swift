@@ -84,8 +84,10 @@ public struct ByteBufferAllocator {
 
     /// Request a freshly allocated `ByteBuffer` of size `capacity` or larger.
     ///
+    /// - note: The passed `capacity` is the `ByteBuffer`'s initial capacity, it will grow automatically if necessary.
+    ///
     /// - parameters:
-    ///     - capacity: The capacity of the returned `ByteBuffer`.
+    ///     - capacity: The initial capacity of the returned `ByteBuffer`.
     public func buffer(capacity: Int) -> ByteBuffer {
         return ByteBuffer(allocator: self, startingCapacity: capacity)
     }

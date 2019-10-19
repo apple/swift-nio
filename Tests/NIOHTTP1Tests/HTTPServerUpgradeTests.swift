@@ -452,8 +452,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             upgraderCbFired = true
         }
 
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { (context) in
+        let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
+                                                                               extraHandlers: []) { (context) in
             // This is called before the upgrader gets called.
             XCTAssertNil(upgradeRequest)
             upgradeHandlerCbFired = true
@@ -558,8 +558,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             upgraderCbFired = true
         }
 
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
-                                                                                    extraHandlers: []) { context in
+        let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
+                                                                               extraHandlers: []) { context in
             // This is called before the upgrader gets called.
             XCTAssertNil(upgradeRequest)
             upgradeHandlerCbFired = true
@@ -606,8 +606,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             XCTAssertEqual(eventSaver.events.count, 0)
         }
 
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: [eventSaver]) { context in
+        let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
+                                                                               extraHandlers: [eventSaver]) { context in
             XCTAssertEqual(eventSaver.events.count, 0)
             context.close(promise: nil)
         }
@@ -663,8 +663,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
         let errorCatcher = ErrorSaver()
 
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
-                                                                                    extraHandlers: [errorCatcher]) { context in
+        let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
+                                                                               extraHandlers: [errorCatcher]) { context in
             // This is called before the upgrader gets called.
             XCTAssertNil(upgradeRequest)
             upgradeHandlerCbFired = true
@@ -714,8 +714,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
     func testUpgradeIsCaseInsensitive() throws {
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["WeIrDcAsE"]) { req in }
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { context in
+        let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
+                                                                               extraHandlers: []) { context in
             context.close(promise: nil)
         }
         defer {
@@ -792,7 +792,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         let upgrader = UpgradeDelayer(forProtocol: "myproto")
         let dataRecorder = DataRecorder<ByteBuffer>()
 
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader], extraHandlers: [dataRecorder]) { context in
+        let (group, server, client, _) = try setUpTestWithAutoremoval(upgraders: [upgrader],
+                                                                      extraHandlers: [dataRecorder]) { context in
             g.leave()
         }
         defer {
@@ -1111,9 +1112,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
     func testRemovesAllHTTPRelatedHandlersAfterUpgrade() throws {
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in }
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(pipelining: true,
-                                                                                    upgraders: [upgrader],
-                                                                                    extraHandlers: []) { context in }
+        let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(pipelining: true,
+                                                                               upgraders: [upgrader],
+                                                                               extraHandlers: []) { context in }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1222,15 +1223,15 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         let firstByteDonePromise = promiseGroup.next().makePromise(of: Void.self)
         let secondByteDonePromise = promiseGroup.next().makePromise(of: Void.self)
         let allDonePromise = promiseGroup.next().makePromise(of: Void.self)
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { (context) in
-                                                                                        // This is called before the upgrader gets called.
-                                                                                        XCTAssertNil(upgradeRequest)
-                                                                                        upgradeHandlerCbFired = true
-                                                                                        
-                                                                                        _ = context.channel.pipeline.addHandler(CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
-                                                                                                                                                            secondByteDonePromise: secondByteDonePromise,
-                                                                                                                                                            allDonePromise: allDonePromise))
+        let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
+                                                                               extraHandlers: []) { (context) in
+            // This is called before the upgrader gets called.
+            XCTAssertNil(upgradeRequest)
+            upgradeHandlerCbFired = true
+
+            _ = context.channel.pipeline.addHandler(CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
+                                                                                  secondByteDonePromise: secondByteDonePromise,
+                                                                                  allDonePromise: allDonePromise))
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1384,14 +1385,14 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             upgraderCbFired = true
         }
 
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { (context) in
-                                                                                        // This is called before the upgrader gets called.
-                                                                                        XCTAssertNil(upgradeRequest)
-                                                                                        upgradeHandlerCbFired = true
+        let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
+                                                                               extraHandlers: []) { (context) in
+                                                                                // This is called before the upgrader gets called.
+            XCTAssertNil(upgradeRequest)
+            upgradeHandlerCbFired = true
 
-                                                                                        // We're closing the connection now.
-                                                                                        context.close(promise: nil)
+            // We're closing the connection now.
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())

@@ -396,7 +396,7 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - context: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
     public func removeHandler(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        guard let handler = context.handler as? RemovableChannelHandler else {
+        guard context.handler is RemovableChannelHandler else {
             promise?.fail(ChannelError.unremovableHandler)
             return
         }

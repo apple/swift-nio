@@ -291,7 +291,6 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         DispatchData(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(ptr.baseAddress), count: ptr.count))
     }
     var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1024 * 1024)
-    let foundationData = "A".data(using: .utf8)!
     @inline(never)
     func doWrites(buffer: inout ByteBuffer) {
         /* all of those should be 0 allocations */

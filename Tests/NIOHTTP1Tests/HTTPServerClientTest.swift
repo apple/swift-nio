@@ -347,7 +347,6 @@ class HTTPServerClientTest : XCTestCase {
         let expectedHeaders = maybeExpectedHeaders ?? HTTPHeaders([("content-length", "14"), ("connection", "close")])
         let accumulation = HTTPClientResponsePartAssertHandler(httpVersion, .ok, expectedHeaders, "Hello World!\r\n")
 
-        let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -405,7 +404,6 @@ class HTTPServerClientTest : XCTestCase {
 
         let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "12345678910")
 
-        let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -466,7 +464,6 @@ class HTTPServerClientTest : XCTestCase {
 
         let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "12345678910", expectedTrailers)
 
-        let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -565,7 +562,6 @@ class HTTPServerClientTest : XCTestCase {
 
         let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "")
 
-        let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -610,7 +606,6 @@ class HTTPServerClientTest : XCTestCase {
 
         let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .noContent, expectedHeaders, "")
 
-        let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
