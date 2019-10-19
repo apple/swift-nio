@@ -483,7 +483,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var state: Int = 1
 
             mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                if let slice = buffer.readSlice(length: self.state) {
+                if buffer.readSlice(length: self.state) != nil {
                     defer {
                         self.state += 1
                     }

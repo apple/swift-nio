@@ -2583,7 +2583,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
         }
         var numberOfAcceptedChannel = 0
-        var acceptedChannels: [EventLoopPromise<Channel>] = [singleThreadedELG.next().makePromise(),
+        let acceptedChannels: [EventLoopPromise<Channel>] = [singleThreadedELG.next().makePromise(),
                                                              singleThreadedELG.next().makePromise(),
                                                              singleThreadedELG.next().makePromise()]
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
@@ -2718,8 +2718,7 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
         }
-        var numberOfAcceptedChannel = 0
-        var acceptedChannel = singleThreadedELG.next().makePromise(of: Channel.self)
+        let acceptedChannel = singleThreadedELG.next().makePromise(of: Channel.self)
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
             .childChannelInitializer { channel in
                 acceptedChannel.succeed(channel)

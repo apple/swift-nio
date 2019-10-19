@@ -203,7 +203,6 @@ class FileRegionTest : XCTestCase {
 
     func testFileRegionDuplicatesShareSeekPointer() throws {
         try withTemporaryFile(content: "0123456789") { fh1, path in
-            let fr1 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: 10)
             let fh2 = try fh1.duplicate()
 
             var fr1Bytes: [UInt8] = Array(repeating: 0, count: 5)
