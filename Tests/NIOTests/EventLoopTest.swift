@@ -613,40 +613,6 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertFalse(channel.isActive)
     }
 
-    public func testFlatSubmitCloseFutureNotifiedBeforeUnblock() throws {
-        class AssertHandler: ChannelInboundHandler {
-            typealias InboundIn = Any
-
-            let groupIsShutdown = Atomic(value: false)
-            let removed = Atomic(value: false)
-
-            public func handlerRemoved(context: ChannelHandlerContext) {
-                XCTAssertFalse(groupIsShutdown.load())
-                XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
-            }
-        }
-
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let eventLoop = group.next()
-        let assertHandler = AssertHandler()
-        let serverSocket = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .bind(host: "localhost", port: 0).wait())
-        let channel = try assertNoThrowWithValue(SocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
-                                                               protocolFamily: serverSocket.localAddress!.protocolFamily))
-        XCTAssertNoThrow(try channel.pipeline.addHandler(assertHandler).wait() as Void)
-        XCTAssertNoThrow(try channel.eventLoop.flatSubmit {
-            channel.register().flatMap {
-                channel.connect(to: serverSocket.localAddress!)
-            }
-        }.wait() as Void)
-        XCTAssertFalse(channel.closeFuture.isFulfilled)
-        XCTAssertNoThrow(try group.syncShutdownGracefully())
-        XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
-        XCTAssertTrue(assertHandler.removed.load())
-        XCTAssertTrue(channel.closeFuture.isFulfilled)
-        XCTAssertFalse(channel.isActive)
-    }
-
     public func testScheduleMultipleTasks() throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -961,5 +927,49 @@ public final class EventLoopTest : XCTestCase {
                 XCTAssertEqual((deadline - timeAmount).uptimeNanoseconds, expectedValue)
             }
         }
+    }
+
+    func testSuccessfulFlatSubmit() {
+        let eventLoop = EmbeddedEventLoop()
+        let future = eventLoop.flatSubmit {
+            eventLoop.makeSucceededFuture(1)
+        }
+        eventLoop.run()
+        XCTAssertNoThrow(XCTAssertEqual(1, try future.wait()))
+    }
+
+    func testFailingFlatSubmit() {
+        enum TestError: Error { case failed }
+
+        let eventLoop = EmbeddedEventLoop()
+        let future = eventLoop.flatSubmit { () -> EventLoopFuture<Int> in
+            eventLoop.makeFailedFuture(TestError.failed)
+        }
+        eventLoop.run()
+        XCTAssertThrowsError(try future.wait()) { error in
+            XCTAssertEqual(.failed, error as? TestError)
+        }
+    }
+
+    func testFlatSubmitOnShutdownLoopGroup() {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let eventLoop = eventLoopGroup.next()
+        XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+
+        let _ = eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
+            eventLoop.makeSucceededFuture(XCTFail())
+        }
+        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
+    }
+
+    func testSubmitOnShutdownLoopGroup() {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let eventLoop = eventLoopGroup.next()
+        XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+
+        let _ = eventLoop.submit {
+            XCTFail()
+        }
+        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
     }
 }

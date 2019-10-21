@@ -46,7 +46,6 @@ extension EventLoopTest {
                 ("testCurrentEventLoop", testCurrentEventLoop),
                 ("testShutdownWhileScheduledTasksNotReady", testShutdownWhileScheduledTasksNotReady),
                 ("testCloseFutureNotifiedBeforeUnblock", testCloseFutureNotifiedBeforeUnblock),
-                ("testFlatSubmitCloseFutureNotifiedBeforeUnblock", testFlatSubmitCloseFutureNotifiedBeforeUnblock),
                 ("testScheduleMultipleTasks", testScheduleMultipleTasks),
                 ("testRepeatedTaskThatIsImmediatelyCancelledNotifies", testRepeatedTaskThatIsImmediatelyCancelledNotifies),
                 ("testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies", testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies),
@@ -61,6 +60,10 @@ extension EventLoopTest {
                 ("testEdgeCasesNIODeadlineMinusNIODeadline", testEdgeCasesNIODeadlineMinusNIODeadline),
                 ("testEdgeCasesNIODeadlinePlusTimeAmount", testEdgeCasesNIODeadlinePlusTimeAmount),
                 ("testEdgeCasesNIODeadlineMinusTimeAmount", testEdgeCasesNIODeadlineMinusTimeAmount),
+                ("testSuccessfulFlatSubmit", testSuccessfulFlatSubmit),
+                ("testFailingFlatSubmit", testFailingFlatSubmit),
+                ("testFlatSubmitOnShutdownLoopGroup", testFlatSubmitOnShutdownLoopGroup),
+                ("testSubmitOnShutdownLoopGroup", testSubmitOnShutdownLoopGroup),
            ]
    }
 }
