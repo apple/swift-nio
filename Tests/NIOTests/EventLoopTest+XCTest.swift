@@ -46,6 +46,7 @@ extension EventLoopTest {
                 ("testCurrentEventLoop", testCurrentEventLoop),
                 ("testShutdownWhileScheduledTasksNotReady", testShutdownWhileScheduledTasksNotReady),
                 ("testCloseFutureNotifiedBeforeUnblock", testCloseFutureNotifiedBeforeUnblock),
+                ("testFlatSubmitCloseFutureNotifiedBeforeUnblock", testFlatSubmitCloseFutureNotifiedBeforeUnblock),
                 ("testScheduleMultipleTasks", testScheduleMultipleTasks),
                 ("testRepeatedTaskThatIsImmediatelyCancelledNotifies", testRepeatedTaskThatIsImmediatelyCancelledNotifies),
                 ("testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies", testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies),

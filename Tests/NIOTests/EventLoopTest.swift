@@ -613,6 +613,40 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertFalse(channel.isActive)
     }
 
+    public func testFlatSubmitCloseFutureNotifiedBeforeUnblock() throws {
+        class AssertHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+
+            let groupIsShutdown = Atomic(value: false)
+            let removed = Atomic(value: false)
+
+            public func handlerRemoved(context: ChannelHandlerContext) {
+                XCTAssertFalse(groupIsShutdown.load())
+                XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let eventLoop = group.next()
+        let assertHandler = AssertHandler()
+        let serverSocket = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .bind(host: "localhost", port: 0).wait())
+        let channel = try assertNoThrowWithValue(SocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
+                                                               protocolFamily: serverSocket.localAddress!.protocolFamily))
+        XCTAssertNoThrow(try channel.pipeline.addHandler(assertHandler).wait() as Void)
+        XCTAssertNoThrow(try channel.eventLoop.flatSubmit {
+            channel.register().flatMap {
+                channel.connect(to: serverSocket.localAddress!)
+            }
+        }.wait() as Void)
+        XCTAssertFalse(channel.closeFuture.isFulfilled)
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
+        XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
+        XCTAssertTrue(assertHandler.removed.load())
+        XCTAssertTrue(channel.closeFuture.isFulfilled)
+        XCTAssertFalse(channel.isActive)
+    }
+
     public func testScheduleMultipleTasks() throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
