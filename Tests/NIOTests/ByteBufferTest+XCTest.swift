@@ -144,6 +144,8 @@ extension ByteBufferTest {
                 ("testDataByteTransferStrategyAutomaticMayCopy", testDataByteTransferStrategyAutomaticMayCopy),
                 ("testViewBytesIsHappyWithNegativeValues", testViewBytesIsHappyWithNegativeValues),
                 ("testByteBufferAllocatorSize1Capacity", testByteBufferAllocatorSize1Capacity),
+                ("testByteBufferModifiedWithoutAllocationLogic", testByteBufferModifiedWithoutAllocationLogic),
+                ("testByteBufferModifyIfUniquelyOwnedMayThrow", testByteBufferModifyIfUniquelyOwnedMayThrow),
            ]
    }
 }

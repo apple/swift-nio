@@ -777,6 +777,29 @@ extension ByteBuffer: Equatable {
 }
 
 extension ByteBuffer {
+    /// Modify this `ByteBuffer` if this `ByteBuffer` is known to uniquely own its storage.
+    ///
+    /// In some cases it is possible that code is holding a `ByteBuffer` that has been shared with other
+    /// parts of the code, and may want to mutate that `ByteBuffer`. In some cases it may be worth modifying
+    /// a `ByteBuffer` only if that `ByteBuffer` is guaranteed to not perform a copy-on-write operation to do
+    /// so, for example when a different buffer could be used or more cheaply allocated instead.
+    ///
+    /// This function will execute the provided block only if it is guaranteed to be able to avoid a copy-on-write
+    /// operation. If it cannot execute the block the returned value will be `nil`.
+    ///
+    /// - parameters:
+    ///     - body: The modification operation to execute, with this `ByteBuffer` passed `inout` as an argument.
+    /// - returns: The return value of `body`.
+    public mutating func modifyIfUniquelyOwned<T>(_ body: (inout ByteBuffer) throws -> T) rethrows -> T? {
+        if isKnownUniquelyReferenced(&self._storage) {
+            return try body(&self)
+        } else {
+            return nil
+        }
+    }
+}
+
+extension ByteBuffer {
     @inlinable
     func rangeWithinReadableBytes(index: Int, length: Int) -> Range<Int>? {
         let indexFromReaderIndex = index - self.readerIndex
