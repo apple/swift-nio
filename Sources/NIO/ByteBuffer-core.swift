@@ -504,9 +504,9 @@ public struct ByteBuffer {
     @inlinable
     public mutating func writeWithUnsafeMutableBytes(minimumWritableBytes: Int, _ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
         if minimumWritableBytes > 0 {
-            self.reserveCapacity(writerIndex + minimumWritableBytes)
+            self.reserveCapacity(self.writerIndex + minimumWritableBytes)
         }
-        let bytesWritten = try withUnsafeMutableWritableBytes(body)
+        let bytesWritten = try self.withUnsafeMutableWritableBytes(body)
         self._moveWriterIndex(to: self._writerIndex + _toIndex(bytesWritten))
         return bytesWritten
     }
