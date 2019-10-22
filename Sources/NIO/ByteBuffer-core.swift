@@ -492,12 +492,30 @@ public struct ByteBuffer {
         return try body(.init(rebasing: self._slicedStorageBuffer.dropFirst(self.writerIndex)))
     }
 
+    /// This vends a pointer of the `ByteBuffer` at the `writerIndex` after ensuring that the buffer has at least `minimumWritableBytes` of writable bytes available.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - minimumWritableBytes: The number of writable bytes to reserve capacity for before vending the `ByteBuffer` pointer to `body`.
+    ///     - body: The closure that will accept the yielded bytes and return the number of bytes written.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    @inlinable
+    public mutating func writeWithUnsafeMutableBytes(minimumWritableBytes: Int, _ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
+        if minimumWritableBytes > 0 {
+            self.reserveCapacity(self.writerIndex + minimumWritableBytes)
+        }
+        let bytesWritten = try self.withUnsafeMutableWritableBytes(body)
+        self._moveWriterIndex(to: self._writerIndex + _toIndex(bytesWritten))
+        return bytesWritten
+    }
+
+    @available(*, deprecated, message: "please use writeWithUnsafeMutableBytes(minimumWritableBytes:_:) instead to ensure sufficient write capacity.")
     @discardableResult
     @inlinable
     public mutating func writeWithUnsafeMutableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
-        let bytesWritten = try withUnsafeMutableWritableBytes(body)
-        self._moveWriterIndex(to: self._writerIndex + _toIndex(bytesWritten))
-        return bytesWritten
+        return try self.writeWithUnsafeMutableBytes(minimumWritableBytes: 0, body)
     }
 
     /// This vends a pointer to the storage of the `ByteBuffer`. It's marked as _very unsafe_ because it might contain

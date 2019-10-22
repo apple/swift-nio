@@ -15,7 +15,7 @@
 extension ByteBuffer {
     mutating func withMutableWritePointer(body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
         var singleResult: IOResult<Int>!
-        _ = try self.writeWithUnsafeMutableBytes { ptr in
+        _ = try self.writeWithUnsafeMutableBytes(minimumWritableBytes: 0) { ptr in
             let localWriteResult = try body(ptr)
             singleResult = localWriteResult
             switch localWriteResult {

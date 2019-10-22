@@ -188,7 +188,7 @@ public struct NonBlockingFileIO {
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
             var bytesRead = 0
             while bytesRead < byteCount {
-                let n = try buf.writeWithUnsafeMutableBytes { ptr in
+                let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
                     let res = try fileHandle.withUnsafeFileDescriptor { descriptor in
                         try Posix.read(descriptor: descriptor,
                                        pointer: ptr.baseAddress!,

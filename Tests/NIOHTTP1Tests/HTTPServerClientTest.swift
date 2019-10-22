@@ -191,7 +191,7 @@ class HTTPServerClientTest : XCTestCase {
 
                 case "/massive-response":
                     var buf = context.channel.allocator.buffer(capacity: HTTPServerClientTest.massiveResponseLength)
-                    buf.writeWithUnsafeMutableBytes { targetPtr in
+                    buf.writeWithUnsafeMutableBytes(minimumWritableBytes: HTTPServerClientTest.massiveResponseLength) { targetPtr in
                         return HTTPServerClientTest.massiveResponseBytes.withUnsafeBytes { srcPtr in
                             precondition(targetPtr.count >= srcPtr.count)
                             targetPtr.copyMemory(from: srcPtr)

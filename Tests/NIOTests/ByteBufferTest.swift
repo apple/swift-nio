@@ -228,9 +228,56 @@ class ByteBufferTest: XCTestCase {
     func testWithMutableWritePointerMovesWriterIndexAndReturnsNumBytesWritten() {
         XCTAssertEqual(0, buf.writerIndex)
 
-        let bytesWritten = buf.writeWithUnsafeMutableBytes { (_: UnsafeMutableRawBufferPointer) in return 5 }
+        let bytesWritten = buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 5) {
+            XCTAssertTrue($0.count >= 5)
+            return 5
+        }
         XCTAssertEqual(5, bytesWritten)
         XCTAssertEqual(5, buf.writerIndex)
+    }
+
+    func testWithMutableWritePointerWithMinimumSpecifiedAdjustsCapacity() {
+        XCTAssertEqual(0, buf.writerIndex)
+        XCTAssertEqual(512, buf.capacity)
+
+        var bytesWritten = buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 256) {
+            XCTAssertTrue($0.count >= 256)
+            return 256
+        }
+        XCTAssertEqual(256, bytesWritten)
+        XCTAssertEqual(256, buf.writerIndex)
+        XCTAssertEqual(512, buf.capacity)
+
+        bytesWritten += buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 1024) {
+            XCTAssertTrue($0.count >= 1024)
+            return 1024
+        }
+        let expectedBytesWritten = 256 + 1024
+        XCTAssertEqual(expectedBytesWritten, bytesWritten)
+        XCTAssertEqual(expectedBytesWritten, buf.writerIndex)
+        XCTAssertTrue(buf.capacity >= expectedBytesWritten)
+    }
+
+    func testWithMutableWritePointerWithMinimumSpecifiedWhileAtMaxCapacity() {
+        XCTAssertEqual(0, buf.writerIndex)
+        XCTAssertEqual(512, buf.capacity)
+
+        var bytesWritten = buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 512) {
+            XCTAssertTrue($0.count >= 512)
+            return 512
+        }
+        XCTAssertEqual(512, bytesWritten)
+        XCTAssertEqual(512, buf.writerIndex)
+        XCTAssertEqual(512, buf.capacity)
+
+        bytesWritten += buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 1) {
+            XCTAssertTrue($0.count >= 1)
+            return 1
+        }
+        let expectedBytesWritten = 512 + 1
+        XCTAssertEqual(expectedBytesWritten, bytesWritten)
+        XCTAssertEqual(expectedBytesWritten, buf.writerIndex)
+        XCTAssertTrue(buf.capacity >= expectedBytesWritten)
     }
 
     func testSetGetInt8() throws {
@@ -598,7 +645,7 @@ class ByteBufferTest: XCTestCase {
         let cap = buf.capacity
         var otherBuf = buf
         XCTAssertEqual(otherBuf, buf)
-        otherBuf?.writeWithUnsafeMutableBytes { ptr in
+        otherBuf?.writeWithUnsafeMutableBytes(minimumWritableBytes: 0) { ptr in
             XCTAssertEqual(cap, ptr.count)
             let intPtr = ptr.baseAddress!.bindMemory(to: UInt8.self, capacity: ptr.count)
             for i in 0..<ptr.count {
