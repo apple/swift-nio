@@ -60,6 +60,8 @@ extension EventLoopTest {
                 ("testEdgeCasesNIODeadlineMinusNIODeadline", testEdgeCasesNIODeadlineMinusNIODeadline),
                 ("testEdgeCasesNIODeadlinePlusTimeAmount", testEdgeCasesNIODeadlinePlusTimeAmount),
                 ("testEdgeCasesNIODeadlineMinusTimeAmount", testEdgeCasesNIODeadlineMinusTimeAmount),
+                ("testSuccessfulFlatSubmit", testSuccessfulFlatSubmit),
+                ("testFailingFlatSubmit", testFailingFlatSubmit),
            ]
    }
 }

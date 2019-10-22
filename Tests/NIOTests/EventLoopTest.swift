@@ -928,4 +928,26 @@ public final class EventLoopTest : XCTestCase {
             }
         }
     }
+
+    func testSuccessfulFlatSubmit() {
+        let eventLoop = EmbeddedEventLoop()
+        let future = eventLoop.flatSubmit {
+            eventLoop.makeSucceededFuture(1)
+        }
+        eventLoop.run()
+        XCTAssertNoThrow(XCTAssertEqual(1, try future.wait()))
+    }
+
+    func testFailingFlatSubmit() {
+        enum TestError: Error { case failed }
+
+        let eventLoop = EmbeddedEventLoop()
+        let future = eventLoop.flatSubmit { () -> EventLoopFuture<Int> in
+            eventLoop.makeFailedFuture(TestError.failed)
+        }
+        eventLoop.run()
+        XCTAssertThrowsError(try future.wait()) { error in
+            XCTAssertEqual(.failed, error as? TestError)
+        }
+    }
 }
