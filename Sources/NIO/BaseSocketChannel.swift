@@ -480,13 +480,13 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
 
         switch option {
-        case let option as SocketOption:
+        case let option as ChannelOptions.Types.SocketOption:
             try self.setSocketOption0(level: option.level, name: option.name, value: value)
-        case _ as AllocatorOption:
+        case _ as ChannelOptions.Types.AllocatorOption:
             bufferAllocator = value as! ByteBufferAllocator
-        case _ as RecvAllocatorOption:
+        case _ as ChannelOptions.Types.RecvAllocatorOption:
             recvAllocator = value as! RecvByteBufferAllocator
-        case _ as AutoReadOption:
+        case _ as ChannelOptions.Types.AutoReadOption:
             let auto = value as! Bool
             let old = self.autoRead
             self.autoRead = auto
@@ -500,7 +500,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                     pauseRead0()
                 }
             }
-        case _ as MaxMessagesPerReadOption:
+        case _ as ChannelOptions.Types.MaxMessagesPerReadOption:
             maxMessagesPerRead = value as! UInt
         default:
             fatalError("option \(option) not supported")
@@ -527,15 +527,15 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
 
         switch option {
-        case let option as SocketOption:
+        case let option as ChannelOptions.Types.SocketOption:
             return try self.getSocketOption0(level: option.level, name: option.name)
-        case _ as AllocatorOption:
+        case _ as ChannelOptions.Types.AllocatorOption:
             return bufferAllocator as! Option.Value
-        case _ as RecvAllocatorOption:
+        case _ as ChannelOptions.Types.RecvAllocatorOption:
             return recvAllocator as! Option.Value
-        case _ as AutoReadOption:
+        case _ as ChannelOptions.Types.AutoReadOption:
             return autoRead as! Option.Value
-        case _ as MaxMessagesPerReadOption:
+        case _ as ChannelOptions.Types.MaxMessagesPerReadOption:
             return maxMessagesPerRead as! Option.Value
         default:
             fatalError("option \(option) not supported")
