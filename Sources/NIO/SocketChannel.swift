@@ -57,7 +57,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         }
 
         switch option {
-        case _ as ConnectTimeoutOption:
+        case _ as ChannelOptions.Types.ConnectTimeoutOption:
             connectTimeout = value as? TimeAmount
         default:
             try super.setOption0(option, value: value)
@@ -72,7 +72,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         }
 
         switch option {
-        case _ as ConnectTimeoutOption:
+        case _ as ChannelOptions.Types.ConnectTimeoutOption:
             return connectTimeout as! Option.Value
         default:
             return try super.getOption0(option)
@@ -165,7 +165,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
 
         switch option {
-        case _ as BacklogOption:
+        case _ as ChannelOptions.Types.BacklogOption:
             backlog = value as! Int32
         default:
             try super.setOption0(option, value: value)
@@ -180,7 +180,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
 
         switch option {
-        case _ as BacklogOption:
+        case _ as ChannelOptions.Types.BacklogOption:
             return backlog as! Option.Value
         default:
             return try super.getOption0(option)
@@ -403,11 +403,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
 
         switch option {
-        case _ as WriteSpinOption:
+        case _ as ChannelOptions.Types.WriteSpinOption:
             pendingWrites.writeSpinCount = value as! UInt
-        case _ as WriteBufferWaterMarkOption:
-            pendingWrites.waterMark = value as! WriteBufferWaterMark
-        case _ as DatagramVectorReadMessageCountOption:
+        case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
+            pendingWrites.waterMark = value as! ChannelOptions.Types.WriteBufferWaterMark
+        case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
             // We only support vector reads on these OSes. Let us know if there's another OS with this syscall!
             #if os(Linux) || os(FreeBSD) || os(Android)
             self.vectorReadManager.updateMessageCount(value as! Int)
@@ -427,11 +427,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
 
         switch option {
-        case _ as WriteSpinOption:
+        case _ as ChannelOptions.Types.WriteSpinOption:
             return pendingWrites.writeSpinCount as! Option.Value
-        case _ as WriteBufferWaterMarkOption:
+        case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
             return pendingWrites.waterMark as! Option.Value
-        case _ as DatagramVectorReadMessageCountOption:
+        case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
             return (self.vectorReadManager?.messageCount ?? 0) as! Option.Value
         default:
             return try super.getOption0(option)

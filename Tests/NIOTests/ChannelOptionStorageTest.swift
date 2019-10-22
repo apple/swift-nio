@@ -34,7 +34,7 @@ class ChannelOptionStorageTest: XCTestCase {
     }
 
     func testSetTwoOptionsOfSameType() throws {
-        let options: [(SocketOption, SocketOptionValue)] = [(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), 1),
+        let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), 1),
                                                             (ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), 2)]
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
@@ -44,9 +44,9 @@ class ChannelOptionStorageTest: XCTestCase {
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
         XCTAssertEqual(options.map { $0.0 },
-                       (optionsCollector.allOptions as! [(SocketOption, SocketOptionValue)]).map { $0.0 })
+                       (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.0 })
         XCTAssertEqual(options.map { $0.1 },
-                       (optionsCollector.allOptions as! [(SocketOption, SocketOptionValue)]).map { $0.1 })
+                       (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.1 })
     }
 
     func testSetOneOptionTwice() throws {
@@ -57,9 +57,9 @@ class ChannelOptionStorageTest: XCTestCase {
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(1, optionsCollector.allOptions.count)
         XCTAssertEqual([ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR)],
-                       (optionsCollector.allOptions as! [(SocketOption, SocketOptionValue)]).map { $0.0 })
+                       (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.0 })
         XCTAssertEqual([SocketOptionValue(2)],
-                       (optionsCollector.allOptions as! [(SocketOption, SocketOptionValue)]).map { $0.1 })
+                       (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.1 })
     }
 }
 
