@@ -233,6 +233,40 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(5, buf.writerIndex)
     }
 
+    func testWithMutableWritePointerWithMinimumSpecifiedAdjustsCapacity() {
+        XCTAssertEqual(0, buf.writerIndex)
+        XCTAssertEqual(512, buf.capacity)
+
+        var bytesWritten = buf.writeWithUnsafeMutableBytes{ (_: UnsafeMutableRawBufferPointer) in return 256 }
+        XCTAssertEqual(256, bytesWritten)
+        XCTAssertEqual(256, buf.writerIndex)
+        XCTAssertEqual(512, buf.capacity)
+
+        bytesWritten += buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 1024) { (_: UnsafeMutableRawBufferPointer) in return 1024 }
+        let expectedBytesWritten = 256 + 1024
+        XCTAssertEqual(expectedBytesWritten, bytesWritten)
+
+        XCTAssertEqual(expectedBytesWritten, buf.writerIndex)
+        XCTAssertTrue(buf.capacity >= expectedBytesWritten)
+    }
+
+    func testWithMutableWritePointerWithMinimumSpecifiedWhileAtMaxCapacity() {
+        XCTAssertEqual(0, buf.writerIndex)
+        XCTAssertEqual(512, buf.capacity)
+
+        var bytesWritten = buf.writeWithUnsafeMutableBytes{ (_: UnsafeMutableRawBufferPointer) in return 512 }
+        XCTAssertEqual(512, bytesWritten)
+        XCTAssertEqual(512, buf.writerIndex)
+        XCTAssertEqual(512, buf.capacity)
+
+        bytesWritten += buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 1) { (_: UnsafeMutableRawBufferPointer) in return 1 }
+        let expectedBytesWritten = 512 + 1
+        XCTAssertEqual(expectedBytesWritten, bytesWritten)
+
+        XCTAssertEqual(expectedBytesWritten, buf.writerIndex)
+        XCTAssertTrue(buf.capacity >= expectedBytesWritten)
+    }
+
     func testSetGetInt8() throws {
         try setGetInt(index: 0, v: Int8.max)
     }
