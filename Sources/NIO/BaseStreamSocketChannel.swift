@@ -41,12 +41,12 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }
 
         switch option {
-        case _ as AllowRemoteHalfClosureOption:
+        case _ as ChannelOptions.Types.AllowRemoteHalfClosureOption:
             self.allowRemoteHalfClosure = value as! Bool
-        case _ as WriteSpinOption:
+        case _ as ChannelOptions.Types.WriteSpinOption:
             self.pendingWrites.writeSpinCount = value as! UInt
-        case _ as WriteBufferWaterMarkOption:
-            self.pendingWrites.waterMark = value as! WriteBufferWaterMark
+        case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
+            self.pendingWrites.waterMark = value as! ChannelOptions.Types.WriteBufferWaterMark
         default:
             try super.setOption0(option, value: value)
         }
@@ -60,11 +60,11 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }
 
         switch option {
-        case _ as AllowRemoteHalfClosureOption:
+        case _ as ChannelOptions.Types.AllowRemoteHalfClosureOption:
             return self.allowRemoteHalfClosure as! Option.Value
-        case _ as WriteSpinOption:
+        case _ as ChannelOptions.Types.WriteSpinOption:
             return self.pendingWrites.writeSpinCount as! Option.Value
-        case _ as WriteBufferWaterMarkOption:
+        case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
             return self.pendingWrites.waterMark as! Option.Value
         default:
             return try super.getOption0(option)
