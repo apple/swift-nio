@@ -325,9 +325,10 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
         self.buffer.writeBytes(wrongFrame)
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            if case .some(.dataReceivedInErrorState(let data)) = error as? ByteToMessageDecoderError {
+            if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
                 // ok
-                XCTAssertEqual(wrongFrame, Array(data.1.readableBytesView))
+                XCTAssertEqual(.fragmentedControlFrame, innerError as? NIOWebSocketError)
+                XCTAssertEqual(wrongFrame, Array(data.readableBytesView))
             } else {
                 XCTFail("unexpected error: \(error)")
             }
@@ -458,9 +459,10 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
         self.buffer.writeBytes(wrongFrame)
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            if case .some(.dataReceivedInErrorState(let data)) = error as? ByteToMessageDecoderError {
+            if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
                 // ok
-                XCTAssertEqual(wrongFrame, Array(data.1.readableBytesView))
+                XCTAssertEqual(.fragmentedControlFrame, innerError as? NIOWebSocketError)
+                XCTAssertEqual(wrongFrame, Array(data.readableBytesView))
             } else {
                 XCTFail("unexpected error: \(error)")
             }
@@ -569,9 +571,10 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
         self.buffer.writeBytes(wrongFrame)
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            if case .some(.dataReceivedInErrorState(let data)) = error as? ByteToMessageDecoderError {
+            if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
                 // ok
-                XCTAssertEqual(wrongFrame, Array(data.1.readableBytesView))
+                XCTAssertEqual(.fragmentedControlFrame, innerError as? NIOWebSocketError)
+                XCTAssertEqual(wrongFrame, Array(data.readableBytesView))
             } else {
                 XCTFail("unexpected error: \(error)")
             }
