@@ -950,26 +950,4 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertEqual(.failed, error as? TestError)
         }
     }
-
-    func testFlatSubmitOnShutdownLoopGroup() {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let eventLoop = eventLoopGroup.next()
-        XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
-
-        let _ = eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
-            eventLoop.makeSucceededFuture(XCTFail())
-        }
-        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
-    }
-
-    func testSubmitOnShutdownLoopGroup() {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let eventLoop = eventLoopGroup.next()
-        XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
-
-        let _ = eventLoop.submit {
-            XCTFail()
-        }
-        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
-    }
 }

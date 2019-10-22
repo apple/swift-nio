@@ -62,8 +62,6 @@ extension EventLoopTest {
                 ("testEdgeCasesNIODeadlineMinusTimeAmount", testEdgeCasesNIODeadlineMinusTimeAmount),
                 ("testSuccessfulFlatSubmit", testSuccessfulFlatSubmit),
                 ("testFailingFlatSubmit", testFailingFlatSubmit),
-                ("testFlatSubmitOnShutdownLoopGroup", testFlatSubmitOnShutdownLoopGroup),
-                ("testSubmitOnShutdownLoopGroup", testSubmitOnShutdownLoopGroup),
            ]
    }
 }
