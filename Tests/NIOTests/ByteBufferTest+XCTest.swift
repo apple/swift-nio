@@ -41,6 +41,8 @@ extension ByteBufferTest {
                 ("testCoWWorks", testCoWWorks),
                 ("testWithMutableReadPointerMovesReaderIndexAndReturnsNumBytesConsumed", testWithMutableReadPointerMovesReaderIndexAndReturnsNumBytesConsumed),
                 ("testWithMutableWritePointerMovesWriterIndexAndReturnsNumBytesWritten", testWithMutableWritePointerMovesWriterIndexAndReturnsNumBytesWritten),
+                ("testWithMutableWritePointerWithMinimumSpecifiedAdjustsCapacity", testWithMutableWritePointerWithMinimumSpecifiedAdjustsCapacity),
+                ("testWithMutableWritePointerWithMinimumSpecifiedWhileAtMaxCapacity", testWithMutableWritePointerWithMinimumSpecifiedWhileAtMaxCapacity),
                 ("testSetGetInt8", testSetGetInt8),
                 ("testSetGetInt16", testSetGetInt16),
                 ("testSetGetInt32", testSetGetInt32),
