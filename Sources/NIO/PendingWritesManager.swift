@@ -276,7 +276,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
-    internal var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
+    internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag: Atomic<Bool> = Atomic(value: true)
 
     internal var writeSpinCount: UInt = 16

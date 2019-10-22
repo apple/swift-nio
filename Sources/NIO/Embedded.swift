@@ -545,7 +545,7 @@ public final class EmbeddedChannel: Channel {
 
     /// - see: `Channel.getOption`
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value>  {
-        if option is AutoReadOption {
+        if option is ChannelOptions.Types.AutoReadOption {
             return self.eventLoop.makeSucceededFuture(true as! Option.Value)
         }
         fatalError("option \(option) not supported")
