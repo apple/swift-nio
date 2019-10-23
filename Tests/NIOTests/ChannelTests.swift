@@ -1590,10 +1590,10 @@ public final class ChannelTests: XCTestCase {
         usleep(100 * 1000);
 
         // Now we send close. This should deliver data.
-        try clientChannel.eventLoop.submit { () -> EventLoopFuture<Void> in
+        try clientChannel.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             handler.expectingData = true
             return clientChannel.close()
-        }.wait().wait()
+        }.wait()
         try serverChannel.close().wait()
     }
 
@@ -2108,7 +2108,7 @@ public final class ChannelTests: XCTestCase {
 
         let allDone = clientEL.makePromise(of: Void.self)
 
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        XCTAssertNoThrow(try sc.eventLoop.flatSubmit {
             // this is pretty delicate at the moment:
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
             // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `flatMap` on the eventloop that the
@@ -2119,7 +2119,7 @@ public final class ChannelTests: XCTestCase {
             }.flatMap {
                 sc.connect(to: serverChannel.localAddress!)
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
@@ -2274,14 +2274,14 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        XCTAssertNoThrow(try sc.eventLoop.flatSubmit {
             sc.register().flatMap {
                 sc.connect(to: serverChannel.localAddress!)
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
 
         do {
-            try sc.eventLoop.submit { () -> EventLoopFuture<Void> in
+            try sc.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
                 let p = sc.eventLoop.makePromise(of: Void.self)
                 // this callback must be attached before we call the close
                 let f = p.futureResult.map {
@@ -2292,7 +2292,7 @@ public final class ChannelTests: XCTestCase {
                 }
                 sc.close(promise: p)
                 return f
-            }.wait().wait()
+            }.wait()
             XCTFail("shouldn't be reached")
         } catch ChannelError.alreadyClosed {
             // ok

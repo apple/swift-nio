@@ -256,7 +256,7 @@ extension NIOHTTP1TestServer {
 
     public func stop() throws {
         assert(!self.eventLoop.inEventLoop)
-        try self.eventLoop.submit { () -> EventLoopFuture<Void> in
+        try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             switch self.state {
             case .channelsAvailable(let channels):
                 self.state = .stopped
@@ -277,7 +277,7 @@ extension NIOHTTP1TestServer {
                     throw NonEmptyInboundBufferOnStop()
                 }
             }
-        }.wait().wait()
+        }.wait()
     }
 
     public func readInbound(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPServerRequestPart {
@@ -289,13 +289,13 @@ extension NIOHTTP1TestServer {
 
     public func writeOutbound(_ data: HTTPServerResponsePart) throws {
         assert(!self.eventLoop.inEventLoop)
-        try self.eventLoop.submit { () -> EventLoopFuture<Void> in
+        try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             if let channel = self.currentClientChannel {
                 return channel.writeAndFlush(data)
             } else {
                 return self.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
             }
-        }.wait().wait()
+        }.wait()
     }
 
     public var serverPort: Int {

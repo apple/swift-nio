@@ -258,7 +258,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
                                               name: self.acceptHandlerName)
         }.wait())
 
-        XCTAssertNoThrow(try eventLoop.submit {
+        XCTAssertNoThrow(try eventLoop.flatSubmit {
             // this is pretty delicate at the moment:
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
             // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `flatMap` on the eventloop that the
@@ -266,7 +266,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
             serverChannel.register().flatMap { () -> EventLoopFuture<()> in
                 return serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
         return serverChannel
     }
 }

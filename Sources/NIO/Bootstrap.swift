@@ -290,9 +290,9 @@ public final class ServerBootstrap {
             if childEventLoop === ctxEventLoop {
                 fireThroughPipeline(setupChildChannel())
             } else {
-                fireThroughPipeline(childEventLoop.submit {
+                fireThroughPipeline(childEventLoop.flatSubmit {
                     return setupChildChannel()
-                }.flatMap { $0 }.hop(to: ctxEventLoop))
+                }.hop(to: ctxEventLoop))
             }
         }
 
@@ -506,7 +506,7 @@ public final class ClientBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit{ setupChannel() }.flatMap { $0 }
+            return eventLoop.flatSubmit { setupChannel() }
         }
     }
 
@@ -545,7 +545,9 @@ public final class ClientBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit(setupChannel).flatMap { $0 }
+            return eventLoop.flatSubmit {
+                setupChannel()
+            }
         }
     }
 }
@@ -701,7 +703,9 @@ public final class DatagramBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit(setupChannel).flatMap { $0 }
+            return eventLoop.flatSubmit {
+                setupChannel()
+            }
         }
     }
 }
@@ -814,7 +818,9 @@ public final class NIOPipeBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit{ setupChannel() }.flatMap { $0 }
+            return eventLoop.flatSubmit {
+                setupChannel()
+            }
         }
     }
 }
