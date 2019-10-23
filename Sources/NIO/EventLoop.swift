@@ -347,7 +347,7 @@ extension TimeAmount {
 ///
 /// ```
 /// func doSomething(deadline: NIODeadline) -> EventLoopFuture<Void> {
-///     return step1(deadline: deadline).then {
+///     return step1(deadline: deadline).flatMap {
 ///         step2(deadline: deadline)
 ///     }
 /// }
@@ -474,7 +474,7 @@ extension EventLoop {
     ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: An `EventLoopFuture` identical to the `EventLooopFuture` returned from `task`.
     public func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
-        return submit(task).flatMap { $0 }
+        return self.submit(task).flatMap { $0 }
     }
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.

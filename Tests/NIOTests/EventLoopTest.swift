@@ -600,11 +600,11 @@ public final class EventLoopTest : XCTestCase {
         let channel = try assertNoThrowWithValue(SocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
                                                                protocolFamily: serverSocket.localAddress!.protocolFamily))
         XCTAssertNoThrow(try channel.pipeline.addHandler(assertHandler).wait() as Void)
-        XCTAssertNoThrow(try channel.eventLoop.submit {
+        XCTAssertNoThrow(try channel.eventLoop.flatSubmit {
             channel.register().flatMap {
                 channel.connect(to: serverSocket.localAddress!)
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
         XCTAssertFalse(channel.closeFuture.isFulfilled)
         XCTAssertNoThrow(try group.syncShutdownGracefully())
         XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
