@@ -154,13 +154,13 @@ public final class SocketChannelTest : XCTestCase {
                                                                            group: group))
         let promise = serverChannel.eventLoop.makePromise(of: IOError.self)
 
-        XCTAssertNoThrow(try serverChannel.eventLoop.submit {
+        XCTAssertNoThrow(try serverChannel.eventLoop.flatSubmit {
             serverChannel.pipeline.addHandler(AcceptHandler(promise)).flatMap {
                 serverChannel.register()
             }.flatMap {
                 serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
 
         XCTAssertEqual(active, try serverChannel.eventLoop.submit {
             serverChannel.readable()
@@ -456,7 +456,7 @@ public final class SocketChannelTest : XCTestCase {
 
         // We need to call submit {...} here to ensure then {...} is called while on the EventLoop already to not have
         // a ECONNRESET sneak in.
-        XCTAssertNoThrow(try channel.eventLoop.submit {
+        XCTAssertNoThrow(try channel.eventLoop.flatSubmit {
             channel.register().map { () -> Void in
                 channel.connect(to: serverChannel.localAddress!, promise: connectPromise)
             }.map { () -> Void in
@@ -465,7 +465,7 @@ public final class SocketChannelTest : XCTestCase {
                 // before we have the chance to register it for .write.
                 channel.close(promise: closePromise)
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
 
         do {
             try connectPromise.futureResult.wait()
