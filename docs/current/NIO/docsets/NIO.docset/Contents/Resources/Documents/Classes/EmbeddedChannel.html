@@ -21,9 +21,9 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIO 2.8.0 Docs
+          NIO 2.9.0 Docs
         </a>
-         (91% documented)
+         (90% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E8%2E0%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E9%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -130,6 +130,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Classes/NIONetworkInterface.html">NIONetworkInterface</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOPipeBootstrap.html">NIOPipeBootstrap</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Classes/NIOThreadPool.html">NIOThreadPool</a>
@@ -285,18 +288,6 @@
                 <a class="nav-group-task-link" href="../Structs/AddressedEnvelope.html">AddressedEnvelope</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/AllocatorOption.html">AllocatorOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/AutoReadOption.html">AutoReadOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/BacklogOption.html">BacklogOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/ByteBuffer.html">ByteBuffer</a>
               </li>
               <li class="nav-group-task">
@@ -309,6 +300,9 @@
                 <a class="nav-group-task-link" href="../Structs/ChannelOptions.html">ChannelOptions</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions/Types.html">– Types</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/ChannelOptions/Storage.html">– Storage</a>
               </li>
               <li class="nav-group-task">
@@ -319,12 +313,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/CircularBuffer/Index.html">– Index</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/DatagramVectorReadMessageCountOption.html">DatagramVectorReadMessageCountOption</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/EventLoopIterator.html">EventLoopIterator</a>
@@ -348,9 +336,6 @@
                 <a class="nav-group-task-link" href="../Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/NIOAny.html">NIOAny</a>
               </li>
               <li class="nav-group-task">
@@ -372,28 +357,13 @@
                 <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/RecvAllocatorOption.html">RecvAllocatorOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Scheduled.html">Scheduled</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/SocketOption.html">SocketOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/TimeAmount.html">TimeAmount</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/WriteSpinOption.html">WriteSpinOption</a>
               </li>
             </ul>
           </li>
@@ -401,7 +371,34 @@
             <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO15AllocatorOptiona">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO28AllowRemoteHalfClosureOptiona">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO14AutoReadOptiona">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO13BacklogOptiona">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO20ChannelDuplexHandlera">ChannelDuplexHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO20ConnectTimeoutOptiona">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO36DatagramVectorReadMessageCountOptiona">DatagramVectorReadMessageCountOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO24MaxMessagesPerReadOptiona">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO19RecvAllocatorOptiona">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO12SocketOptiona">SocketOption</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Typealiases.html#/SocketOptionLevel">SocketOptionLevel</a>
@@ -417,6 +414,15 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17SocketOptionValuea">SocketOptionValue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO20WriteBufferWaterMarka">WriteBufferWaterMark</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO26WriteBufferWaterMarkOptiona">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO15WriteSpinOptiona">WriteSpinOption</a>
               </li>
             </ul>
           </li>
@@ -502,7 +508,7 @@ return if it&rsquo;s either <code>.clean</code> (no left overs) or that it has <
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L300-L322">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L300-L322">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -539,7 +545,7 @@ buffer will be returned from <code>writeInbound</code>/<code>writeOutbound</code
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L331-L351">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L331-L351">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -571,7 +577,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L355-L365">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L355-L365">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -608,7 +614,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L372">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L372">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -642,7 +648,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L375">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L375">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -676,7 +682,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L380-L382">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L380-L382">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -710,7 +716,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L385-L387">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L385-L387">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -744,7 +750,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L390">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L390">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -784,7 +790,7 @@ item in the respective buffer is of a different type.</p>
        events, the <code>EmbeddedChannel</code> will returns those as <code>.leftOvers(inbound:outbound:pendingOutbound:)</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L401-L413">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L401-L413">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -818,7 +824,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L418">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L418">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -852,7 +858,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L421-L423">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L421-L423">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -883,7 +889,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L427">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L427">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -917,7 +923,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L430">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L430">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -951,7 +957,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L433">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L433">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -981,7 +987,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L436">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L436">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1029,7 +1035,7 @@ first <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L450-L452">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L450-L452">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1071,7 +1077,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L464-L466">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L464-L466">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1102,7 +1108,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L477-L482">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L477-L482">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1133,7 +1139,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L494-L497">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L494-L497">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1165,7 +1171,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L502-L507">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L502-L507">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1228,7 +1234,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L527-L538">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L527-L538">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1262,7 +1268,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L541-L544">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L541-L544">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1296,7 +1302,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L547-L552">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L547-L552">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1359,7 +1365,7 @@ happens when it travels the <code><a href="../Classes/ChannelPipeline.html">Chan
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L561-L566">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L561-L566">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1422,7 +1428,7 @@ which happens when it travels the <code><a href="../Classes/ChannelPipeline.html
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Embedded.swift#L575-L580">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Embedded.swift#L575-L580">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1435,8 +1441,8 @@ which happens when it travels the <code><a href="../Classes/ChannelPipeline.html
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-09-10)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.10.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-10-24)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

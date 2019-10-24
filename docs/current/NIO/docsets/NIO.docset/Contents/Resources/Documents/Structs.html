@@ -21,9 +21,9 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="index.html">
-          NIO 2.8.0 Docs
+          NIO 2.9.0 Docs
         </a>
-         (91% documented)
+         (90% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E8%2E0%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E9%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -130,6 +130,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/NIONetworkInterface.html">NIONetworkInterface</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOPipeBootstrap.html">NIOPipeBootstrap</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/NIOThreadPool.html">NIOThreadPool</a>
@@ -285,18 +288,6 @@
                 <a class="nav-group-task-link" href="Structs/AddressedEnvelope.html">AddressedEnvelope</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/AllocatorOption.html">AllocatorOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/AutoReadOption.html">AutoReadOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/BacklogOption.html">BacklogOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/ByteBuffer.html">ByteBuffer</a>
               </li>
               <li class="nav-group-task">
@@ -309,6 +300,9 @@
                 <a class="nav-group-task-link" href="Structs/ChannelOptions.html">ChannelOptions</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ChannelOptions/Types.html">– Types</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/ChannelOptions/Storage.html">– Storage</a>
               </li>
               <li class="nav-group-task">
@@ -319,12 +313,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/CircularBuffer/Index.html">– Index</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/DatagramVectorReadMessageCountOption.html">DatagramVectorReadMessageCountOption</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/EventLoopIterator.html">EventLoopIterator</a>
@@ -348,9 +336,6 @@
                 <a class="nav-group-task-link" href="Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/NIOAny.html">NIOAny</a>
               </li>
               <li class="nav-group-task">
@@ -372,28 +357,13 @@
                 <a class="nav-group-task-link" href="Structs/NonBlockingFileIO/Error.html">– Error</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/RecvAllocatorOption.html">RecvAllocatorOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Scheduled.html">Scheduled</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/SocketOption.html">SocketOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/TimeAmount.html">TimeAmount</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/WriteSpinOption.html">WriteSpinOption</a>
               </li>
             </ul>
           </li>
@@ -401,7 +371,34 @@
             <a class="nav-group-name-link" href="Typealiases.html">Type Aliases</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO15AllocatorOptiona">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO28AllowRemoteHalfClosureOptiona">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO14AutoReadOptiona">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO13BacklogOptiona">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO20ChannelDuplexHandlera">ChannelDuplexHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO20ConnectTimeoutOptiona">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO36DatagramVectorReadMessageCountOptiona">DatagramVectorReadMessageCountOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO24MaxMessagesPerReadOptiona">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO19RecvAllocatorOptiona">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO12SocketOptiona">SocketOption</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Typealiases.html#/SocketOptionLevel">SocketOptionLevel</a>
@@ -417,6 +414,15 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO17SocketOptionValuea">SocketOptionValue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO20WriteBufferWaterMarka">WriteBufferWaterMark</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO26WriteBufferWaterMarkOptiona">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO15WriteSpinOptiona">WriteSpinOption</a>
               </li>
             </ul>
           </li>
@@ -466,7 +472,7 @@ it is going.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/AddressedEnvelope.swift#L20-L28">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/AddressedEnvelope.swift#L20-L28">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -589,7 +595,7 @@ behaviour and might yield arbitrary bytes (<em>not</em> <code>0</code> initialis
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ByteBuffer-core.swift#L189-L649">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ByteBuffer-core.swift#L191-L669">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -626,7 +632,7 @@ behaviour and might yield arbitrary bytes (<em>not</em> <code>0</code> initialis
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ByteBuffer-core.swift#L63-L98">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ByteBuffer-core.swift#L63-L100">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -664,7 +670,7 @@ behaviour and might yield arbitrary bytes (<em>not</em> <code>0</code> initialis
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ByteBuffer-views.swift#L19-L69">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ByteBuffer-views.swift#L19-L69">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -702,7 +708,7 @@ we have seen this happen on Darwin.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Channel.swift#L357">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Channel.swift#L358">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -732,7 +738,7 @@ we have seen this happen on Darwin.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Channel.swift#L360">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Channel.swift#L361">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -767,7 +773,7 @@ processing the request currently in flight.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Channel.swift#L375-L378">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Channel.swift#L376-L379">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -776,418 +782,6 @@ processing the request currently in flight.</p>
             </div>
             <div class="task-group">
               <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO12SocketOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/SocketOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO12SocketOptionV">SocketOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>SocketOption</code> allows users to specify configuration settings that are directly applied to the underlying socket file descriptor.</p>
-
-<p>Valid options are typically found in the various man pages like <code>man 4 tcp</code>.</p>
-
-                        <a href="Structs/SocketOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">SocketOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span><span class="p">,</span> <span class="kt">Equatable</span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L33-L48">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO15AllocatorOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/AllocatorOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO15AllocatorOptionV">AllocatorOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>AllocatorOption</code> allows to specify the <code><a href="Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></code> to use.</p>
-
-                        <a href="Structs/AllocatorOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">AllocatorOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L51-L55">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO19RecvAllocatorOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/RecvAllocatorOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO19RecvAllocatorOptionV">RecvAllocatorOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>RecvAllocatorOption</code> allows users to specify the <code><a href="Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a></code> to use.</p>
-
-                        <a href="Structs/RecvAllocatorOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">RecvAllocatorOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L58-L62">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO14AutoReadOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/AutoReadOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO14AutoReadOptionV">AutoReadOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>AutoReadOption</code> allows users to configure if a <code><a href="Protocols/Channel.html">Channel</a></code> should automatically call <code>Channel.read</code> again once all data was read from the transport or
-if the user is responsible to call <code>Channel.read</code> manually.</p>
-
-                        <a href="Structs/AutoReadOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">AutoReadOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L66-L70">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO15WriteSpinOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/WriteSpinOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO15WriteSpinOptionV">WriteSpinOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>WriteSpinOption</code> allows users to configure the number of repetitions of a only partially successful write call before considering the <code><a href="Protocols/Channel.html">Channel</a></code> not writable.
-Setting this option to <code>0</code> means that we only issue one write call and if that call does not write all the bytes,
-we consider the <code><a href="Protocols/Channel.html">Channel</a></code> not writable.</p>
-
-                        <a href="Structs/WriteSpinOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">WriteSpinOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L75-L79">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO24MaxMessagesPerReadOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/MaxMessagesPerReadOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO24MaxMessagesPerReadOptionV">MaxMessagesPerReadOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>MaxMessagesPerReadOption</code> allows users to configure the maximum number of read calls to the underlying transport are performed before wait again until
-there is more to read and be notified.</p>
-
-                        <a href="Structs/MaxMessagesPerReadOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">MaxMessagesPerReadOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L83-L87">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO13BacklogOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/BacklogOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO13BacklogOptionV">BacklogOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>BacklogOption</code> allows users to configure the <code>backlog</code> value as specified in <code>man 2 listen</code>. This is only useful for <code>ServerSocketChannel</code>s.</p>
-
-                        <a href="Structs/BacklogOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">BacklogOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L90-L94">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO36DatagramVectorReadMessageCountOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/DatagramVectorReadMessageCountOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO36DatagramVectorReadMessageCountOptionV">DatagramVectorReadMessageCountOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>DatagramVectorReadMessageCountOption</code> allows users to configure the number of messages to attempt to read in a single syscall on a
-datagram <code><a href="Protocols/Channel.html">Channel</a></code>.</p>
-
-<p>Some datagram <code><a href="Protocols/Channel.html">Channel</a></code>s have extremely high datagram throughput. This can occur when the single datagram socket is encapsulating
-many logical <q>connections</q> (e.g. with QUIC) or when the datagram socket is simply serving an enormous number of consumers (e.g.
-with a public-facing DNS server). In this case the overhead of one syscall per datagram is profoundly limiting. Using this
-<code><a href="Protocols/ChannelOption.html">ChannelOption</a></code> allows the <code><a href="Protocols/Channel.html">Channel</a></code> to read multiple datagrams at once.</p>
-
-<p>Note that simply increasing this number will not necessarily bring performance gains and may in fact cause data loss. Any increase
-to this should be matched by increasing the size of the buffers allocated by the <code><a href="Protocols/Channel.html">Channel</a></code> <code><a href="Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a></code> (as set by
-<code>ChannelOption.recvAllocator</code>) proportionally. For example, to receive 10 messages at a time, set the size of the buffers allocated
-by the <code><a href="Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a></code> to at least 10x the size of the maximum datagram size you wish to receive.</p>
-
-<p>Naturally, this option is only valid on datagram channels.</p>
-
-<p>This option only works on the following platforms:</p>
-
-<ul>
-<li>Linux</li>
-<li>FreeBSD</li>
-<li>Android</li>
-</ul>
-
-<p>On all other platforms, setting it has no effect.</p>
-
-<p>Set this option to 0 to disable vector reads and to use serial reads instead.</p>
-
-                        <a href="Structs/DatagramVectorReadMessageCountOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">DatagramVectorReadMessageCountOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L120-L124">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO20WriteBufferWaterMarkV"></a>
-                    <a name="//apple_ref/swift/Struct/WriteBufferWaterMark" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO20WriteBufferWaterMarkV">WriteBufferWaterMark</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>The watermark used to detect when <code><a href="Protocols/Channel.html#/s:3NIO7ChannelP10isWritableSbvp">Channel.isWritable</a></code> returns <code>true</code> or <code>false</code>.</p>
-
-                        <a href="Structs/WriteBufferWaterMark.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">WriteBufferWaterMark</span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L127-L153">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO26WriteBufferWaterMarkOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/WriteBufferWaterMarkOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO26WriteBufferWaterMarkOptionV">WriteBufferWaterMarkOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>WriteBufferWaterMarkOption</code> allows users to configure when a <code><a href="Protocols/Channel.html">Channel</a></code> should be marked as writable or not. Once the amount of bytes queued in a
-<code><a href="Protocols/Channel.html">Channel</a></code>s outbound buffer is larger than <code><a href="Structs/WriteBufferWaterMark.html#/s:3NIO20WriteBufferWaterMarkV4highSivp">WriteBufferWaterMark.high</a></code> the channel will be marked as non-writable and so
-<code><a href="Protocols/Channel.html#/s:3NIO7ChannelP10isWritableSbvp">Channel.isWritable</a></code> will return <code>false</code>. Once we were able to write some data out of the outbound buffer and the amount of bytes queued
-falls below <code><a href="Structs/WriteBufferWaterMark.html#/s:3NIO20WriteBufferWaterMarkV3lowSivp">WriteBufferWaterMark.low</a></code> the <code><a href="Protocols/Channel.html">Channel</a></code> will become writable again. Once this happens <code>Channel.writable</code> will return
-<code>true</code> again. These writability changes are also propagated through the <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code> and so can be intercepted via <code>ChannelInboundHandler.channelWritabilityChanged</code>.</p>
-
-                        <a href="Structs/WriteBufferWaterMarkOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">WriteBufferWaterMarkOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L160-L164">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO20ConnectTimeoutOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/ConnectTimeoutOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO20ConnectTimeoutOptionV">ConnectTimeoutOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>ConnectTimeoutOption</code> allows users to configure the <code><a href="Structs/TimeAmount.html">TimeAmount</a></code> after which a connect will fail if it was not established in the meantime. May be
-<code>nil</code>, in which case the connection attempt will never time out.</p>
-
-                        <a href="Structs/ConnectTimeoutOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ConnectTimeoutOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L168-L172">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO28AllowRemoteHalfClosureOptionV"></a>
-                    <a name="//apple_ref/swift/Struct/AllowRemoteHalfClosureOption" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO28AllowRemoteHalfClosureOptionV">AllowRemoteHalfClosureOption</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p><code>AllowRemoteHalfClosureOption</code> allows users to configure whether the <code><a href="Protocols/Channel.html">Channel</a></code> will close itself when its remote
-peer shuts down its send stream, or whether it will remain open. If set to <code>false</code> (the default), the <code><a href="Protocols/Channel.html">Channel</a></code>
-will be closed automatically if the remote peer shuts down its send stream. If set to true, the <code><a href="Protocols/Channel.html">Channel</a></code> will
-not be closed: instead, a <code>ChannelEvent.inboundClosed</code> user event will be sent on the <code><a href="Classes/ChannelPipeline.html">ChannelPipeline</a></code>,
-and no more data will be received.</p>
-
-                        <a href="Structs/AllowRemoteHalfClosureOption.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">AllowRemoteHalfClosureOption</span> <span class="p">:</span> <span class="kt"><a href="Protocols/ChannelOption.html">ChannelOption</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L179-L183">Show on GitHub</a>
-                      </div>
-                    </section>
-                  </div>
-                </li>
                 <li class="item">
                   <div>
                     <code>
@@ -1214,7 +808,7 @@ and no more data will be received.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L186-L221">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ChannelOption.swift#L227-L262">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1251,7 +845,7 @@ expansions from happening frequently. Expansions will always force an allocation
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/CircularBuffer.swift#L18-L103">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/CircularBuffer.swift#L18-L103">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1289,7 +883,7 @@ will be notified once the execution is complete.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L22-L49">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L22-L49">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1327,7 +921,7 @@ will be notified once the execution is complete.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L178-L193">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L178-L193">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1363,7 +957,7 @@ will be notified once the execution is complete.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L251-L315">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L251-L315">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1411,7 +1005,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L358-L389">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L358-L389">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1477,7 +1071,7 @@ or <code>eventLoop.newFailedFuture(error:)</code>.</p></li>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoopFuture.swift#L153-L247">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoopFuture.swift#L153-L247">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1525,7 +1119,7 @@ need access to the bytes (in a <code><a href="Structs/ByteBuffer.html">ByteBuffe
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/FileRegion.swift#L26-L74">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/FileRegion.swift#L26-L74">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1560,7 +1154,7 @@ need access to the bytes (in a <code><a href="Structs/ByteBuffer.html">ByteBuffe
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/HappyEyeballs.swift#L39-L45">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/HappyEyeballs.swift#L39-L45">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1592,7 +1186,7 @@ to a given host and port.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/HappyEyeballs.swift#L49-L69">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/HappyEyeballs.swift#L49-L69">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1627,7 +1221,7 @@ to a given host and port.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/IO.swift#L16-L50">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/IO.swift#L16-L50">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1666,7 +1260,7 @@ safe to write.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/MarkedCircularBuffer.swift#L20-L130">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/MarkedCircularBuffer.swift#L20-L130">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1732,7 +1326,7 @@ certain type known at run-time. Canonical example:</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NIOAny.swift#L45-L258">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NIOAny.swift#L45-L258">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1781,7 +1375,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L30-L297">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L30-L297">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1816,7 +1410,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/RecvByteBufferAllocator.swift#L31-L47">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/RecvByteBufferAllocator.swift#L31-L47">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1847,7 +1441,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/RecvByteBufferAllocator.swift#L50-L166">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/RecvByteBufferAllocator.swift#L50-L166">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1860,8 +1454,8 @@ of blocking.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-09-10)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.10.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-10-24)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

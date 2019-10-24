@@ -21,9 +21,9 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="index.html">
-          NIO 2.8.0 Docs
+          NIO 2.9.0 Docs
         </a>
-         (91% documented)
+         (90% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E8%2E0%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E9%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -130,6 +130,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/NIONetworkInterface.html">NIONetworkInterface</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOPipeBootstrap.html">NIOPipeBootstrap</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/NIOThreadPool.html">NIOThreadPool</a>
@@ -285,18 +288,6 @@
                 <a class="nav-group-task-link" href="Structs/AddressedEnvelope.html">AddressedEnvelope</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/AllocatorOption.html">AllocatorOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/AutoReadOption.html">AutoReadOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/BacklogOption.html">BacklogOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/ByteBuffer.html">ByteBuffer</a>
               </li>
               <li class="nav-group-task">
@@ -309,6 +300,9 @@
                 <a class="nav-group-task-link" href="Structs/ChannelOptions.html">ChannelOptions</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ChannelOptions/Types.html">– Types</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/ChannelOptions/Storage.html">– Storage</a>
               </li>
               <li class="nav-group-task">
@@ -319,12 +313,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/CircularBuffer/Index.html">– Index</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/DatagramVectorReadMessageCountOption.html">DatagramVectorReadMessageCountOption</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/EventLoopIterator.html">EventLoopIterator</a>
@@ -348,9 +336,6 @@
                 <a class="nav-group-task-link" href="Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/NIOAny.html">NIOAny</a>
               </li>
               <li class="nav-group-task">
@@ -372,28 +357,13 @@
                 <a class="nav-group-task-link" href="Structs/NonBlockingFileIO/Error.html">– Error</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/RecvAllocatorOption.html">RecvAllocatorOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Scheduled.html">Scheduled</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/SocketOption.html">SocketOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/TimeAmount.html">TimeAmount</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/WriteSpinOption.html">WriteSpinOption</a>
               </li>
             </ul>
           </li>
@@ -401,7 +371,34 @@
             <a class="nav-group-name-link" href="Typealiases.html">Type Aliases</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO15AllocatorOptiona">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO28AllowRemoteHalfClosureOptiona">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO14AutoReadOptiona">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO13BacklogOptiona">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO20ChannelDuplexHandlera">ChannelDuplexHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO20ConnectTimeoutOptiona">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO36DatagramVectorReadMessageCountOptiona">DatagramVectorReadMessageCountOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO24MaxMessagesPerReadOptiona">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO19RecvAllocatorOptiona">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO12SocketOptiona">SocketOption</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Typealiases.html#/SocketOptionLevel">SocketOptionLevel</a>
@@ -417,6 +414,15 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO17SocketOptionValuea">SocketOptionValue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO20WriteBufferWaterMarka">WriteBufferWaterMark</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO26WriteBufferWaterMarkOptiona">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Typealiases.html#/s:3NIO15WriteSpinOptiona">WriteSpinOption</a>
               </li>
             </ul>
           </li>
@@ -472,7 +478,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Channel.swift#L22-L93">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Channel.swift#L22-L93">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -515,7 +521,7 @@ passed to or returned by the operations are used to retrieve the result of an op
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Channel.swift#L105-L143">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Channel.swift#L105-L143">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -550,7 +556,7 @@ passed to or returned by the operations are used to retrieve the result of an op
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelHandler.swift#L20-L32">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ChannelHandler.swift#L20-L32">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -588,7 +594,7 @@ the channel source</q>) and <code>bind</code> (<q>please bind the following addr
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelHandler.swift#L42-L128">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ChannelHandler.swift#L42-L128">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -626,7 +632,7 @@ channel source tells you about. This includes things like <code>channelRead</cod
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelHandler.swift#L138-L216">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ChannelHandler.swift#L138-L216">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -667,7 +673,7 @@ A <code>RemovableChannelHandler</code> is required to remove itself from the <co
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelHandler.swift#L320-L335">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ChannelHandler.swift#L320-L335">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -703,7 +709,7 @@ it will finally be executed by the the <code><a href="Protocols/ChannelCore.html
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelInvoker.swift#L16-L85">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ChannelInvoker.swift#L16-L85">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -734,7 +740,7 @@ it will finally be executed by the the <code><a href="Protocols/ChannelCore.html
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelInvoker.swift#L175-L228">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ChannelInvoker.swift#L175-L228">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -764,7 +770,7 @@ it will finally be executed by the the <code><a href="Protocols/ChannelCore.html
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelInvoker.swift#L231">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ChannelInvoker.swift#L231">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -799,7 +805,7 @@ it will finally be executed by the the <code><a href="Protocols/ChannelCore.html
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/ChannelOption.swift#L16-L19">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/ChannelOption.swift#L16-L19">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -926,7 +932,7 @@ to recall where a byte is relative to the <code>readerIndex</code>, use an offse
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Codec.swift#L141-L196">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Codec.swift#L141-L196">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -961,7 +967,7 @@ way. After the <code>write</code> method returns the <code>write</code> will be 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Codec.swift#L203-L212">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Codec.swift#L203-L212">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1005,7 +1011,7 @@ To add a <code>MessageToByteEncoder</code> to a <code><a href="Classes/ChannelPi
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Codec.swift#L687-L696">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Codec.swift#L687-L696">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1063,7 +1069,7 @@ effect as blocking in this case.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L221-L246">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L221-L246">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1094,7 +1100,7 @@ effect as blocking in this case.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/EventLoop.swift#L964-L981">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L998-L1015">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1129,7 +1135,7 @@ effect as blocking in this case.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/FileDescriptor.swift#L15-L33">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/FileDescriptor.swift#L15-L33">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1170,7 +1176,7 @@ groups.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/MulticastChannel.swift#L19-L55">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/MulticastChannel.swift#L19-L55">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1205,7 +1211,7 @@ groups.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/RecvByteBufferAllocator.swift#L16-L26">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/RecvByteBufferAllocator.swift#L16-L26">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1247,7 +1253,7 @@ resolver will need also to implement these sorting rules.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/Resolver.swift#L24-L49">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/Resolver.swift#L24-L49">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1288,7 +1294,7 @@ from using it.</p>
 <h3 id='relationship-to-socketoption' class='heading'>Relationship to SocketOption</h3>
 
 <p>All <code><a href="Protocols/Channel.html">Channel</a></code> objects that implement this protocol should also support the
-<code><a href="Structs/SocketOption.html">SocketOption</a></code> <code><a href="Protocols/ChannelOption.html">ChannelOption</a></code> for simple socket options (those with C <code>int</code>
+<code><a href="Typealiases.html#/s:3NIO12SocketOptiona">SocketOption</a></code> <code><a href="Protocols/ChannelOption.html">ChannelOption</a></code> for simple socket options (those with C <code>int</code>
 values). These are the most common socket option types, and so this <code><a href="Protocols/ChannelOption.html">ChannelOption</a></code>
 represents a convenient shorthand for using this protocol where the type allows,
 as well as avoiding the need to cast to this protocol.</p>
@@ -1310,7 +1316,7 @@ thread-safe.
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/SocketOptionProvider.swift#L42-L74">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/SocketOptionProvider.swift#L42-L74">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1347,7 +1353,7 @@ thread-safe.
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/TypeAssistedChannelHandler.swift#L18-L25">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/TypeAssistedChannelHandler.swift#L18-L25">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1380,7 +1386,7 @@ thread-safe.
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/TypeAssistedChannelHandler.swift#L38-L52">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/TypeAssistedChannelHandler.swift#L38-L52">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1413,7 +1419,7 @@ thread-safe.
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/TypeAssistedChannelHandler.swift#L70-L77">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/TypeAssistedChannelHandler.swift#L70-L77">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1426,8 +1432,8 @@ thread-safe.
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-09-10)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.10.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-10-24)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

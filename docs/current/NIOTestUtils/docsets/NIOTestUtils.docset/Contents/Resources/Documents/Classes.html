@@ -21,9 +21,9 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="index.html">
-          NIOTestUtils 2.8.0 Docs
+          NIOTestUtils 2.9.0 Docs
         </a>
-         (89% documented)
+         (83% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E8%2E0%2Fdocsets%2FNIOTestUtils%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E9%2E0%2Fdocsets%2FNIOTestUtils%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -64,6 +64,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/EventCounterHandler/ValidityError.html">– ValidityError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOHTTP1TestServer.html">NIOHTTP1TestServer</a>
               </li>
             </ul>
           </li>
@@ -130,7 +133,102 @@ the <code>ChannelPipeline</code>.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIOTestUtils/EventCounterHandler.swift#L26-L46">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIOTestUtils/EventCounterHandler.swift#L26-L46">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:12NIOTestUtils18NIOHTTP1TestServerC"></a>
+                    <a name="//apple_ref/swift/Class/NIOHTTP1TestServer" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOTestUtils18NIOHTTP1TestServerC">NIOHTTP1TestServer</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>HTTP1 server that accepts and process only one request at a time.
+This helps writing tests against a real server while keeping the ability to
+write tests and assertions the same way we would if we were testing a
+<code>ChannelHandler</code> in isolation.
+<code>NIOHTTP1TestServer</code> enables writing test cases for HTTP1 clients that have
+complex behaviours like client implementing a protocol where an high level
+operation translates into several, possibly parallel, HTTP requests.</p>
+
+<p>With <code>NIOHTTP1TestServer</code> we have:</p>
+
+<ul>
+<li>visibility on the <code>HTTPServerRequestPart</code>s received by the server;</li>
+<li>control over the <code>HTTPServerResponsePart</code>s send by the server.</li>
+</ul>
+
+<p>The following code snippet shows an example test case where the client
+under test sends a request to the server.</p>
+<pre class="highlight swift"><code><span class="c1">// Setup the test environment.</span>
+<span class="k">let</span> <span class="nv">group</span> <span class="o">=</span> <span class="kt">MultiThreadedEventLoopGroup</span><span class="p">(</span><span class="nv">numberOfThreads</span><span class="p">:</span> <span class="mi">1</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">allocator</span> <span class="o">=</span> <span class="kt">ByteBufferAllocator</span><span class="p">()</span>
+<span class="k">let</span> <span class="nv">testServer</span> <span class="o">=</span> <span class="kt">NIOHTTP1TestServer</span><span class="p">(</span><span class="nv">group</span><span class="p">:</span> <span class="n">group</span><span class="p">)</span>
+<span class="k">defer</span> <span class="p">{</span>
+    <span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="k">try</span> <span class="n">testServer</span><span class="o">.</span><span class="nf">stop</span><span class="p">())</span>
+    <span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="k">try</span> <span class="n">group</span><span class="o">.</span><span class="nf">syncShutdownGracefully</span><span class="p">())</span>
+<span class="p">}</span>
+
+<span class="c1">// Use your library to send a request to the server.</span>
+<span class="k">let</span> <span class="nv">requestBody</span> <span class="o">=</span> <span class="s">"ping"</span>
+<span class="k">var</span> <span class="nv">requestComplete</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">String</span><span class="o">&gt;!</span>
+<span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="n">requestComplete</span> <span class="o">=</span> <span class="k">try</span> <span class="nf">sendRequestTo</span><span class="p">(</span>
+    <span class="kt">URL</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="s">"http://127.0.0.1:</span><span class="se">\(</span><span class="n">testServer</span><span class="o">.</span><span class="n">serverPort</span><span class="se">)</span><span class="s">/some-route"</span><span class="p">)</span><span class="o">!</span><span class="p">,</span>
+    <span class="nv">body</span><span class="p">:</span> <span class="n">requestBody</span><span class="p">))</span>
+
+<span class="c1">// Assert the server received the expected request.</span>
+<span class="c1">// Use custom methods if you only want some specific assertions on part</span>
+<span class="c1">// of the request.</span>
+<span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="kt">XCTAssertEqual</span><span class="p">(</span><span class="o">.</span><span class="nf">head</span><span class="p">(</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">version</span><span class="p">:</span> <span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">major</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nv">minor</span><span class="p">:</span> <span class="mi">1</span><span class="p">),</span>
+                                            <span class="nv">method</span><span class="p">:</span> <span class="o">.</span><span class="kt">GET</span><span class="p">,</span>
+                                            <span class="nv">uri</span><span class="p">:</span> <span class="s">"/some-route"</span><span class="p">,</span>
+                                            <span class="nv">headers</span><span class="p">:</span> <span class="o">.</span><span class="nf">init</span><span class="p">([</span>
+                                                <span class="p">(</span><span class="s">"Content-Type"</span><span class="p">,</span> <span class="s">"text/plain; charset=utf-8"</span><span class="p">),</span>
+                                                <span class="p">(</span><span class="s">"Content-Length"</span><span class="p">,</span> <span class="s">"4"</span><span class="p">)]))),</span>
+                                <span class="k">try</span> <span class="n">testServer</span><span class="o">.</span><span class="nf">readInbound</span><span class="p">()))</span>
+<span class="k">var</span> <span class="nv">requestBuffer</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">.</span><span class="nf">buffer</span><span class="p">(</span><span class="nv">capacity</span><span class="p">:</span> <span class="mi">128</span><span class="p">)</span>
+<span class="n">requestBuffer</span><span class="o">.</span><span class="nf">writeString</span><span class="p">(</span><span class="n">requestBody</span><span class="p">)</span>
+<span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="kt">XCTAssertEqual</span><span class="p">(</span><span class="o">.</span><span class="nf">body</span><span class="p">(</span><span class="n">requestBuffer</span><span class="p">),</span>
+                                <span class="k">try</span> <span class="n">testServer</span><span class="o">.</span><span class="nf">readInbound</span><span class="p">()))</span>
+<span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="kt">XCTAssertEqual</span><span class="p">(</span><span class="o">.</span><span class="nf">end</span><span class="p">(</span><span class="kc">nil</span><span class="p">),</span>
+                                <span class="k">try</span> <span class="n">testServer</span><span class="o">.</span><span class="nf">readInbound</span><span class="p">()))</span>
+
+<span class="c1">// Make the server send a response to the client.</span>
+<span class="k">let</span> <span class="nv">responseBody</span> <span class="o">=</span> <span class="s">"pong"</span>
+<span class="k">var</span> <span class="nv">responseBuffer</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">.</span><span class="nf">buffer</span><span class="p">(</span><span class="nv">capacity</span><span class="p">:</span> <span class="mi">128</span><span class="p">)</span>
+<span class="n">responseBuffer</span><span class="o">.</span><span class="nf">writeString</span><span class="p">(</span><span class="n">responseBody</span><span class="p">)</span>
+<span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="k">try</span> <span class="n">testServer</span><span class="o">.</span><span class="nf">writeOutbound</span><span class="p">(</span><span class="o">.</span><span class="nf">head</span><span class="p">(</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">version</span><span class="p">:</span> <span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">major</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nv">minor</span><span class="p">:</span> <span class="mi">1</span><span class="p">),</span> <span class="nv">status</span><span class="p">:</span> <span class="o">.</span><span class="n">ok</span><span class="p">))))</span>
+<span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="k">try</span> <span class="n">testServer</span><span class="o">.</span><span class="nf">writeOutbound</span><span class="p">(</span><span class="o">.</span><span class="nf">body</span><span class="p">(</span><span class="o">.</span><span class="nf">byteBuffer</span><span class="p">(</span><span class="n">responseBuffer</span><span class="p">))))</span>
+<span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="k">try</span> <span class="n">testServer</span><span class="o">.</span><span class="nf">writeOutbound</span><span class="p">(</span><span class="o">.</span><span class="nf">end</span><span class="p">(</span><span class="kc">nil</span><span class="p">)))</span>
+
+<span class="c1">// Assert that the client received the response from the server.</span>
+<span class="kt">XCTAssertNoThrow</span><span class="p">(</span><span class="kt">XCTAssertEqual</span><span class="p">(</span><span class="n">responseBody</span><span class="p">,</span> <span class="k">try</span> <span class="n">requestComplete</span><span class="o">.</span><span class="nf">wait</span><span class="p">()))</span>
+</code></pre>
+
+                        <a href="Classes/NIOHTTP1TestServer.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">NIOHTTP1TestServer</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIOTestUtils/NIOHTTP1TestServer.swift#L168-L251">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -143,8 +241,8 @@ the <code>ChannelPipeline</code>.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-09-10)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.10.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-10-24)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

@@ -1,0 +1,12 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift",
+      "line": 207,
+      "symbol": "ByteBufferView.Regions",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}

@@ -21,9 +21,9 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIO 2.8.0 Docs
+          NIO 2.9.0 Docs
         </a>
-         (91% documented)
+         (90% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E8%2E0%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E9%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -130,6 +130,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Classes/NIONetworkInterface.html">NIONetworkInterface</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOPipeBootstrap.html">NIOPipeBootstrap</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Classes/NIOThreadPool.html">NIOThreadPool</a>
@@ -285,18 +288,6 @@
                 <a class="nav-group-task-link" href="../Structs/AddressedEnvelope.html">AddressedEnvelope</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/AllocatorOption.html">AllocatorOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/AutoReadOption.html">AutoReadOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/BacklogOption.html">BacklogOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/ByteBuffer.html">ByteBuffer</a>
               </li>
               <li class="nav-group-task">
@@ -309,6 +300,9 @@
                 <a class="nav-group-task-link" href="../Structs/ChannelOptions.html">ChannelOptions</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions/Types.html">– Types</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/ChannelOptions/Storage.html">– Storage</a>
               </li>
               <li class="nav-group-task">
@@ -319,12 +313,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/CircularBuffer/Index.html">– Index</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/DatagramVectorReadMessageCountOption.html">DatagramVectorReadMessageCountOption</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/EventLoopIterator.html">EventLoopIterator</a>
@@ -348,9 +336,6 @@
                 <a class="nav-group-task-link" href="../Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/NIOAny.html">NIOAny</a>
               </li>
               <li class="nav-group-task">
@@ -372,28 +357,13 @@
                 <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/RecvAllocatorOption.html">RecvAllocatorOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Scheduled.html">Scheduled</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/SocketOption.html">SocketOption</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/TimeAmount.html">TimeAmount</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/WriteSpinOption.html">WriteSpinOption</a>
               </li>
             </ul>
           </li>
@@ -401,7 +371,34 @@
             <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO15AllocatorOptiona">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO28AllowRemoteHalfClosureOptiona">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO14AutoReadOptiona">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO13BacklogOptiona">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO20ChannelDuplexHandlera">ChannelDuplexHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO20ConnectTimeoutOptiona">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO36DatagramVectorReadMessageCountOptiona">DatagramVectorReadMessageCountOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO24MaxMessagesPerReadOptiona">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO19RecvAllocatorOptiona">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO12SocketOptiona">SocketOption</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Typealiases.html#/SocketOptionLevel">SocketOptionLevel</a>
@@ -417,6 +414,15 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17SocketOptionValuea">SocketOptionValue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO20WriteBufferWaterMarka">WriteBufferWaterMark</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO26WriteBufferWaterMarkOptiona">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO15WriteSpinOptiona">WriteSpinOption</a>
               </li>
             </ul>
           </li>
@@ -481,7 +487,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L32">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L32">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -511,7 +517,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L35">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L35">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -542,7 +548,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L38-L43">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L38-L43">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -591,7 +597,7 @@ of blocking.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L51-L53">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L51-L53">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -704,7 +710,7 @@ times, delivering <code>chunkSize</code> bytes each time. If less than <code>fil
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which is the result of the overall operation. If either the reading of <code>fileHandle</code> or <code>chunkHandler</code> fails, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will fail too. If the reading of <code>fileHandle</code> as well as <code>chunkHandler</code> always succeeded, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will succeed too.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L72-L91">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L72-L91">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -834,7 +840,7 @@ times, delivering <code>chunkSize</code> bytes each time. If less than <code>byt
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which is the result of the overall operation. If either the reading of <code>fileHandle</code> or <code>chunkHandler</code> fails, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will fail too. If the reading of <code>fileHandle</code> as well as <code>chunkHandler</code> always succeeded, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will succeed too.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L113-L138">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L113-L138">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -924,7 +930,7 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which delivers a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> if the read was successful or a failure on error.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L153-L166">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L153-L166">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1026,7 +1032,7 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which delivers a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> if the read was successful or a failure on error.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L182-L214">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L182-L214">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1105,7 +1111,7 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which is fulfilled if the write was successful or fails on error.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L223-L254">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L223-L254">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1178,7 +1184,7 @@ comprising of the whole file. The caller must close the returned <code><a href="
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> containing the <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code> and the <code><a href="../Structs/FileRegion.html">FileRegion</a></code> comprising the whole file.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L267-L278">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L267-L278">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1270,7 +1276,7 @@ The caller must close the returned <code><a href="../Classes/NIOFileHandle.html"
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> containing the <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code> and the <code><a href="../Structs/FileRegion.html">FileRegion</a></code> comprising the whole file.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.8.0/Sources/NIO/NonBlockingFileIO.swift#L291-L295">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/NonBlockingFileIO.swift#L291-L295">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1283,8 +1289,8 @@ The caller must close the returned <code><a href="../Classes/NIOFileHandle.html"
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-09-10)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.10.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-10-24)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>
