@@ -290,9 +290,9 @@ public final class ServerBootstrap {
             if childEventLoop === ctxEventLoop {
                 fireThroughPipeline(setupChildChannel())
             } else {
-                fireThroughPipeline(childEventLoop.flatSubmit {
+                fireThroughPipeline(childEventLoop.submit {
                     return setupChildChannel()
-                }.hop(to: ctxEventLoop))
+                }.flatMap { $0 }.hop(to: ctxEventLoop))
             }
         }
 
