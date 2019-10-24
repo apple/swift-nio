@@ -290,9 +290,9 @@ public final class ServerBootstrap {
             if childEventLoop === ctxEventLoop {
                 fireThroughPipeline(setupChildChannel())
             } else {
-                fireThroughPipeline(childEventLoop.flatSubmit {
+                fireThroughPipeline(childEventLoop.submit {
                     return setupChildChannel()
-                }.hop(to: ctxEventLoop))
+                }.flatMap { $0 }.hop(to: ctxEventLoop))
             }
         }
 
@@ -506,7 +506,7 @@ public final class ClientBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.flatSubmit { setupChannel() }
+            return eventLoop.submit{ setupChannel() }.flatMap { $0 }
         }
     }
 
@@ -545,9 +545,7 @@ public final class ClientBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.flatSubmit {
-                setupChannel()
-            }
+            return eventLoop.submit(setupChannel).flatMap { $0 }
         }
     }
 }
