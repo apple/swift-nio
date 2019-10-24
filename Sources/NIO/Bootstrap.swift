@@ -545,7 +545,7 @@ public final class ClientBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit(setupChannel).flatMap { $0 }
+            return eventLoop.flatSubmit(setupChannel)
         }
     }
 }
