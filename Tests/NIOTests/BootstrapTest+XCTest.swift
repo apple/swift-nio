@@ -31,6 +31,7 @@ extension BootstrapTest {
                 ("testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
                 ("testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
                 ("testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
+                ("testCanBindOnClientConnection", testCanBindOnClientConnection),
            ]
    }
 }

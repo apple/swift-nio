@@ -2010,13 +2010,24 @@ public final class ChannelTests: XCTestCase {
             XCTAssertFalse(channel.isWritable)
         }
 
-        withChannel { channel in
+        withChannel(skipDatagram: true, skipServerSocket: true) { channel in
+            XCTAssertEqual(0, channel.localAddress?.port ?? 0xffff)
+            XCTAssertNil(channel.remoteAddress)
+            XCTAssertNoThrow(try channel.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)).wait(),
+                             "channel \(channel) not happy with bind before register")
+            XCTAssertNotEqual(0, channel.localAddress?.port ?? 0)
+            XCTAssertNotNil(channel.localAddress)
+            XCTAssertNil(channel.remoteAddress)
+        }
+
+        withChannel(skipStream: true) { channel in
+            XCTAssertEqual(0, channel.localAddress?.port ?? 0xffff)
+            XCTAssertNil(channel.remoteAddress)
             checkThatItThrowsInappropriateOperationForState {
-                XCTAssertEqual(0, channel.localAddress?.port ?? 0xffff)
-                XCTAssertNil(channel.remoteAddress)
                 try channel.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)).wait()
             }
         }
+
     }
 
     func testCloseSocketWhenReadErrorWasReceivedAndMakeSureNoReadCompleteArrives() throws {

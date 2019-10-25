@@ -518,6 +518,25 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
     }
 }
 
+func withTCPServerChannel<R>(bindTarget: SocketAddress? = nil,
+                             file: StaticString = #file, line: UInt = #line,
+                             _ body: (Channel) throws -> R) throws -> R {
+
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    defer {
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
+    }
+    let channelEL = group.next()
+
+    let serverChannel = try ServerBootstrap(group: channelEL)
+        .bind(to: bindTarget ?? (try! .init(ipAddress: "127.0.0.1", port: 0)))
+        .wait()
+    defer {
+        XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed(), file: file, line: line)
+    }
+    return try body(serverChannel)
+}
+
 func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
                                            file: StaticString = #file,
                                            line: UInt = #line,

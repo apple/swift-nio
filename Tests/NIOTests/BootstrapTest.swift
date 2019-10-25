@@ -207,4 +207,21 @@ class BootstrapTest: XCTestCase {
         XCTAssertNoThrow(try childChannelDone.futureResult.wait())
         XCTAssertNoThrow(try serverChannelDone.futureResult.wait())
     }
+
+    func testCanBindOnClientConnection() {
+        XCTAssertNoThrow(try withTCPServerChannel { serverChannel in
+            var maybeClient: Channel?
+            XCTAssertNoThrow(maybeClient = try ClientBootstrap(group: serverChannel.eventLoop)
+                .channelInitializer { childChannel in
+                    childChannel.bind(to: try! .init(ipAddress: "127.0.0.1", port: 12345))
+            }
+            .connect(to: serverChannel.localAddress!)
+            .wait())
+            guard let client = maybeClient else {
+                XCTFail()
+                return
+            }
+            XCTAssertEqual(12345, client.localAddress?.port)
+        })
+    }
 }
