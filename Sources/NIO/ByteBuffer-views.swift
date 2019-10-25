@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A read-only view into a portion of a `ByteBuffer`.
+/// A view into a portion of a `ByteBuffer`.
 ///
 /// A `ByteBufferView` is useful whenever a `Collection where Element == UInt8` representing a portion of a
 /// `ByteBuffer` is needed.
@@ -21,28 +21,33 @@ public struct ByteBufferView: RandomAccessCollection {
     public typealias Index = Int
     public typealias SubSequence = ByteBufferView
 
-    fileprivate let buffer: ByteBuffer
-    fileprivate let range: Range<Index>
+    /* private but usableFromInline */ @usableFromInline var _buffer: ByteBuffer
+    /* private but usableFromInline */ @usableFromInline var _range: Range<Index>
 
     internal init(buffer: ByteBuffer, range: Range<Index>) {
         precondition(range.lowerBound >= 0 && range.upperBound <= buffer.capacity)
-        self.buffer = buffer
-        self.range = range
+        self._buffer = buffer
+        self._range = range
+    }
+
+    /// Creates a `ByteBufferView` from the readable bytes of the given `buffer`.
+    public init(_ buffer: ByteBuffer) {
+        self = ByteBufferView(buffer: buffer, range: buffer.readerIndex ..< buffer.readerIndex + buffer.readableBytes)
     }
 
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try self.buffer.withVeryUnsafeBytes { ptr in
-            try body(UnsafeRawBufferPointer.init(start: ptr.baseAddress!.advanced(by: self.range.lowerBound),
-                                                 count: self.range.count))
+        return try self._buffer.withVeryUnsafeBytes { ptr in
+            try body(UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: self._range.lowerBound),
+                                            count: self._range.count))
         }
     }
 
     public var startIndex: Index {
-        return self.range.lowerBound
+        return self._range.lowerBound
     }
 
     public var endIndex: Index {
-        return self.range.upperBound
+        return self._range.upperBound
     }
 
     public func index(after i: Index) -> Index {
@@ -50,20 +55,81 @@ public struct ByteBufferView: RandomAccessCollection {
     }
 
     public subscript(position: Index) -> UInt8 {
-        guard position >= self.range.lowerBound && position < self.range.upperBound else {
-            preconditionFailure("index \(position) out of range")
+        get {
+            guard position >= self._range.lowerBound && position < self._range.upperBound else {
+                preconditionFailure("index \(position) out of range")
+            }
+            return self._buffer.getInteger(at: position)! // range check above
         }
-        return self.buffer.getInteger(at: position)! // range check above
+        set {
+            guard position >= self._range.lowerBound && position < self._range.upperBound else {
+                preconditionFailure("index \(position) out of range")
+            }
+            self._buffer.setInteger(newValue, at: position)
+        }
     }
 
     public subscript(range: Range<Index>) -> ByteBufferView {
-        return ByteBufferView(buffer: self.buffer, range: range)
+        get {
+            return ByteBufferView(buffer: self._buffer, range: range)
+        }
+        set {
+            self.replaceSubrange(range, with: newValue)
+        }
     }
 
     @inlinable
     public func withContiguousStorageIfAvailable<R>(_ body: (UnsafeBufferPointer<UInt8>) throws -> R) rethrows -> R? {
         return try self.withUnsafeBytes { bytes in
             return try body(bytes.bindMemory(to: UInt8.self))
+        }
+    }
+}
+
+extension ByteBufferView: MutableCollection {}
+
+extension ByteBufferView: RangeReplaceableCollection {
+    // required by `RangeReplaceableCollection`
+    public init() {
+        self = ByteBufferView(ByteBufferAllocator().buffer(capacity: 0))
+    }
+
+    @inlinable
+    public mutating func replaceSubrange<C: Collection>(_ subrange: Range<Index>, with newElements: C) where ByteBufferView.Element == C.Element {
+        precondition(subrange.startIndex >= self.startIndex && subrange.endIndex <= self.endIndex,
+                     "subrange out of bounds")
+
+        if newElements.count == subrange.count {
+            self._buffer.setBytes(newElements, at: subrange.startIndex)
+        } else if newElements.count < subrange.count {
+            // Replace the subrange.
+            self._buffer.setBytes(newElements, at: subrange.startIndex)
+
+            // Remove the unwanted bytes between the newly copied bytes and the end of the subrange.
+            // try! is fine here: the copied range is within the view and the length can't be negative.
+            try! self._buffer.copyBytes(at: subrange.endIndex,
+                                        to: subrange.startIndex.advanced(by: newElements.count),
+                                        length: subrange.endIndex.distance(to: self._buffer.writerIndex))
+
+            // Shorten the range.
+            let removedBytes = subrange.count - newElements.count
+            self._buffer.moveWriterIndex(to: self._buffer.writerIndex - removedBytes)
+            self._range = self._range.dropLast(removedBytes)
+        } else {
+            // Make space for the new elements.
+            // try! is fine here: the copied range is within the view and the length can't be negative.
+            try! self._buffer.copyBytes(at: subrange.endIndex,
+                                        to: subrange.startIndex.advanced(by: newElements.count),
+                                        length: subrange.endIndex.distance(to: self._buffer.writerIndex))
+
+            // Replace the bytes.
+            self._buffer.setBytes(newElements, at: subrange.startIndex)
+
+            // Widen the range.
+            let additionalByteCount = newElements.count - subrange.count
+            self._buffer.moveWriterIndex(forwardBy: additionalByteCount)
+            self._range = self._range.startIndex ..< self._range.endIndex.advanced(by: additionalByteCount)
+
         }
     }
 }
@@ -92,6 +158,6 @@ extension ByteBuffer {
     ///
     /// - parameter view: The `ByteBufferView` which you want to get a `ByteBuffer` from.
     public init(_ view: ByteBufferView) {
-        self = view.buffer.getSlice(at: view.range.startIndex, length: view.range.count)!
+        self = view._buffer.getSlice(at: view.startIndex, length: view.count)!
     }
 }
