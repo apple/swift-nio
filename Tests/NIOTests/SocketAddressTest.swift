@@ -65,6 +65,13 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual(s, sampleString,
                        "Address description is way below our expectations 😱")
     }
+	
+	func testIPAddressWorks() throws {
+		let sa = try! SocketAddress(ipAddress: "127.0.0.1", port: 12345)
+		XCTAssertEqual("127.0.0.1", sa.ipAddress)
+		let sa6 = try! SocketAddress(ipAddress: "::1", port: 12345)
+		XCTAssertEqual("::1", sa6.ipAddress)
+	}
 
     func testCanCreateIPv4AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
