@@ -34,6 +34,26 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         case basic
     }
 
+    private let negotiatedEvent: TLSUserEvent = .handshakeCompleted(negotiatedProtocol: "h2")
+    private let negotiatedResult: ALPNResult = .negotiated("h2")
+
+    func testChannelProvidedToCallback() throws {
+        let emChannel = EmbeddedChannel()
+        let loop = emChannel.eventLoop as! EmbeddedEventLoop
+        var called = false
+
+        let handler = ApplicationProtocolNegotiationHandler { result, channel in
+            called = true
+            XCTAssertEqual(result, self.negotiatedResult)
+            XCTAssertTrue(emChannel === channel)
+            return loop.makeSucceededFuture(())
+        }
+
+        try emChannel.pipeline.addHandler(handler).wait()
+        emChannel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
+        XCTAssertTrue(called)
+    }
+
     func testIgnoresUnknownUserEvents() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
@@ -60,11 +80,10 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let loop = channel.eventLoop as! EmbeddedEventLoop
         let continuePromise = loop.makePromise(of: Void.self)
 
-        let expectedResult: ALPNResult = .negotiated("h2")
         var called = false
 
         let handler = ApplicationProtocolNegotiationHandler { result in
-            XCTAssertEqual(expectedResult, result)
+            XCTAssertEqual(self.negotiatedResult, result)
             called = true
             return continuePromise.futureResult
         }
@@ -72,7 +91,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.addHandler(handler).wait()
 
         // Fire the handshake complete event.
-        channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
+        channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
 
         // At this time the callback should have fired, but the handler should still be in
         // the pipeline.
@@ -89,7 +108,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     }
 
     func testCallbackReflectsNotificationResult() throws {
-        try negotiateTest(event: .handshakeCompleted(negotiatedProtocol: "h2"), expectedResult: .negotiated("h2"))
+        try negotiateTest(event: negotiatedEvent, expectedResult: negotiatedResult)
     }
 
     func testCallbackNotesFallbackForNoNegotiation() throws {
@@ -126,7 +145,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.addHandler(handler).wait()
 
         // Fire in the event.
-        channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
+        channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
 
         // At this point all writes should be buffered.
         try channel.writeInbound("writes")
@@ -159,7 +178,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
-        channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
+        channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
 
         // At this time, readComplete hasn't fired.
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 0)
@@ -186,7 +205,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
-        channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
+        channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
 
         // Send a write, which is buffered.
         try channel.writeInbound("a write")

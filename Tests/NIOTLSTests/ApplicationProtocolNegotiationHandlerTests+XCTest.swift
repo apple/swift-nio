@@ -26,6 +26,7 @@ extension ApplicationProtocolNegotiationHandlerTests {
 
    static var allTests : [(String, (ApplicationProtocolNegotiationHandlerTests) -> () throws -> Void)] {
       return [
+                ("testChannelProvidedToCallback", testChannelProvidedToCallback),
                 ("testIgnoresUnknownUserEvents", testIgnoresUnknownUserEvents),
                 ("testCallbackReflectsNotificationResult", testCallbackReflectsNotificationResult),
                 ("testCallbackNotesFallbackForNoNegotiation", testCallbackNotesFallbackForNoNegotiation),
