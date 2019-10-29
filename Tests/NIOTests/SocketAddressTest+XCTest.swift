@@ -30,6 +30,7 @@ extension SocketAddressTest {
                 ("testDescriptionWorksWithoutIP", testDescriptionWorksWithoutIP),
                 ("testDescriptionWorksWithIPOnly", testDescriptionWorksWithIPOnly),
                 ("testIn6AddrDescriptionWorks", testIn6AddrDescriptionWorks),
+                ("testIPAddressWorks", testIPAddressWorks),
                 ("testCanCreateIPv4AddressFromString", testCanCreateIPv4AddressFromString),
                 ("testCanCreateIPv6AddressFromString", testCanCreateIPv6AddressFromString),
                 ("testRejectsNonIPStrings", testRejectsNonIPStrings),
