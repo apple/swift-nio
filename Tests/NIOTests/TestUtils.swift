@@ -653,3 +653,34 @@ extension EventLoopFuture {
         }
     }
 }
+
+func withCrossConnectedRawSocketToChannel<R>(file: StaticString = #file,
+                                             line: UInt = #line,
+                                             _ body: (CInt, Channel) throws -> R) throws -> R? {
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    defer {
+        XCTAssertNoThrow(try group.syncShutdownGracefully(), file: file, line: line)
+    }
+
+    // socketpair doesn't work for AF_INET (at least on Darwin) so let's build it ourselves.
+    let serverSocket = try ServerSocket(protocolFamily: AF_INET, setNonBlocking: false)
+    defer {
+        XCTAssertNoThrow(try serverSocket.close(), file: file, line: line)
+    }
+    try serverSocket.bind(to: .init(ipAddress: "127.0.0.1", port: 0))
+    try serverSocket.listen()
+
+    let clientChannel = ClientBootstrap(group: group).connect(to: try serverSocket.localAddress())
+    let acceptedSocket = try serverSocket.accept()! /* only returns nil if in non-blocking mode */
+    defer {
+        try? acceptedSocket.close()
+    }
+    let channel = try clientChannel.wait()
+    defer {
+        XCTAssertNoThrow(try channel.syncCloseAcceptingAlreadyClosed(), file: file, line: line)
+    }
+
+    return try acceptedSocket.withUnsafeFileDescriptor { acceptedFD in
+        try body(acceptedFD, channel)
+    }
+}

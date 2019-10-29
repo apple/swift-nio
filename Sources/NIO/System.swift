@@ -194,6 +194,7 @@ internal enum Posix {
     static let SHUT_RD: CInt = CInt(Darwin.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
+    static let MSG_OOB: CInt = Darwin.MSG_OOB
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 
 #if os(Android)
@@ -208,6 +209,7 @@ internal enum Posix {
     static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
+    static let MSG_OOB: CInt = CInt(Glibc.MSG_OOB)
 #else
     static var SOCK_STREAM: CInt {
         fatalError("unsupported OS")
@@ -365,10 +367,13 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func sendto(descriptor: CInt, pointer: UnsafeRawPointer, size: size_t,
+    public static func sendto(descriptor: CInt,
+                              pointer: UnsafeRawPointer,
+                              size: size_t,
+                              flags: CInt,
                               destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
-            sysSendTo(descriptor, pointer, size, 0, destinationPtr, destinationSize)
+            sysSendTo(descriptor, pointer, size, flags,  destinationPtr, destinationSize)
         }
     }
 

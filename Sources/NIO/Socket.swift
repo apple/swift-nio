@@ -134,7 +134,7 @@ typealias IOVector = iovec
     func sendto(pointer: UnsafeRawBufferPointer, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
         return try withUnsafeFileDescriptor { fd in
             try Posix.sendto(descriptor: fd, pointer: UnsafeMutableRawPointer(mutating: pointer.baseAddress!),
-                             size: pointer.count, destinationPtr: destinationPtr,
+                             size: pointer.count, flags: 0, destinationPtr: destinationPtr,
                              destinationSize: destinationSize)
         }
     }

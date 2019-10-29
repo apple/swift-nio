@@ -2776,7 +2776,29 @@ public final class ChannelTests: XCTestCase {
         XCTAssertEqual(1, b1.capacity)
         XCTAssertEqual(1, b2.capacity)
         XCTAssertEqual(1, allocator.capacity)
+    }
 
+    func testWeTolerateOutOfBandData() {
+        func runTest() throws {
+            try withCrossConnectedRawSocketToChannel { socketFD, channel in
+                let channelRead = channel.eventLoop.makePromise(of: Void.self)
+                XCTAssertNoThrow(try channel.pipeline.addHandler(FulfillOnFirstEventHandler(channelReadPromise: channelRead)).wait())
+                var data = [UInt8(ascii: "x")]
+                try channel.remoteAddress!.withSockAddr { sockAddrPtr, sockAddrSize in
+                    for _ in 0..<100 {
+                    XCTAssertNoThrow(try Posix.sendto(descriptor: socketFD,
+                                                      pointer: &data,
+                                                      size: 1,
+                                                      flags: Posix.MSG_OOB,
+                                                      destinationPtr: sockAddrPtr,
+                                                      destinationSize: .init(sockAddrSize)))
+                    }
+                    Thread.sleep(until: .init(timeIntervalSinceNow: 0.01))
+                    XCTAssertFalse(channelRead.futureResult.isFulfilled)
+                }
+            }
+        }
+        XCTAssertNoThrow(try runTest())
     }
 }
 
