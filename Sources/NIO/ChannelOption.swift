@@ -23,8 +23,8 @@ public typealias SocketOptionName = Int32
     public typealias SocketOptionLevel = Int
     public typealias SocketOptionValue = Int
 #else
-    public typealias SocketOptionLevel = Int32
-    public typealias SocketOptionValue = Int32
+    public typealias SocketOptionLevel = CInt
+    public typealias SocketOptionValue = CInt
 #endif
 
 @available(*, deprecated, renamed: "ChannelOptions.Types.SocketOption")

@@ -143,11 +143,7 @@ class BootstrapTest: XCTestCase {
 
     func testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
         var socketFDs: [CInt] = [-1, -1]
-        #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-        let err = socketpair(PF_LOCAL, SOCK_STREAM, 0, &socketFDs)
-        #else
-        let err = socketpair(PF_LOCAL, CInt(SOCK_STREAM.rawValue), 0, &socketFDs)
-        #endif
+        let err = socketpair(PF_LOCAL, Posix.SOCK_STREAM, 0, &socketFDs)
         XCTAssertEqual(0, err)
         defer {
             // 0 is closed together with the Channel below.
