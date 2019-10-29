@@ -130,21 +130,21 @@ public enum SocketAddress: CustomStringConvertible {
         }
     }
 	
-	/// Get the IP address as a string
-	public var ipAddress: String? {
-		switch self {
-		case .v4(let addr):
-			var mutAddr = addr.address.sin_addr
-			// this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-			return try! descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
-		case .v6(let addr):
-			var mutAddr = addr.address.sin6_addr
-			// this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-			return try! descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
-		case .unixDomainSocket(_):
-			return nil
-		}
-	}
+    /// Get the IP address as a string
+    public var ipAddress: String? {
+        switch self {
+        case .v4(let addr):
+            var mutAddr = addr.address.sin_addr
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            return try! descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+        case .v6(let addr):
+            var mutAddr = addr.address.sin6_addr
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            return try! descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+        case .unixDomainSocket(_):
+            return nil
+        }
+    }
 
     /// Get the port associated with the address, if defined.
     public var port: Int? {
