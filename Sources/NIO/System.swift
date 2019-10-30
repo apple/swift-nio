@@ -85,6 +85,7 @@ private let sysAF_INET = AF_INET
 private let sysAF_INET6 = AF_INET6
 private let sysAF_UNIX = AF_UNIX
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
+private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 
 #if os(Linux)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
@@ -107,8 +108,14 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
 }
 
 private func assertIsNotBlacklistedErrno(err: CInt, where function: StaticString) -> Void {
+    debugOnly {
+        preconditionIsNotBlacklistedErrno(err: err, where: function)
+    }
+}
+
+private func preconditionIsNotBlacklistedErrno(err: CInt, where function: StaticString) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+    precondition(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
 }
 
 private func preconditionIsNotBlacklistedErrno(err: CInt, where function: StaticString) -> Void {
@@ -500,6 +507,16 @@ internal enum Posix {
     public static func fstat(descriptor: CInt, outStat: UnsafeMutablePointer<stat>) throws {
         _ = try wrapSyscall {
             sysFstat(descriptor, outStat)
+        }
+    }
+
+    @inline(never)
+    public static func socketpair(domain: CInt,
+                                  type: CInt,
+                                  protocol: CInt,
+                                  socketVector: UnsafeMutablePointer<CInt>?) throws {
+        _ = try wrapSyscall {
+            sysSocketpair(domain, type, `protocol`, socketVector)
         }
     }
 }
