@@ -235,7 +235,7 @@ public struct ByteBuffer {
             return self.allocateStorage(capacity: self.capacity)
         }
 
-        public func allocateStorage(capacity: _Capacity) -> _Storage {
+        internal func allocateStorage(capacity: _Capacity) -> _Storage {
             let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2ClampedToMax()
             return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, allocator: self.allocator),
                             capacity: newCapacity,
@@ -659,15 +659,28 @@ public struct ByteBuffer {
     ///
     /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
     ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
+    public mutating func clear() {
+        if !isKnownUniquelyReferenced(&self._storage) {
+            self._storage = self._storage.allocateStorage()
+        }
+        self._moveWriterIndex(to: 0)
+        self._moveReaderIndex(to: 0)
+    }
+
+    /// Set both reader index and writer index to `0`. This will reset the state of this `ByteBuffer` to the state
+    /// of a freshly allocated one, if possible without allocations. This is the cheapest way to recycle a `ByteBuffer`
+    /// for a new use-case.
+    ///
+    /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
+    ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
     ///
     /// - parameters:
     ///     - minimumNeededCapacity: The minimum capacity that will be (re)allocated for this buffer
-    public mutating func clear(capacity minimumNeededCapacity: _Capacity? = nil) {
-        let capacity = minimumNeededCapacity ?? self._storage.capacity
+    public mutating func clear(capacity minimumNeededCapacity: _Capacity) {
         if !isKnownUniquelyReferenced(&self._storage) {
-            self._storage = self._storage.allocateStorage(capacity: capacity)
+            self._storage = self._storage.allocateStorage(capacity: minimumNeededCapacity)
         } else {
-            self._storage.reallocStorage(capacity: capacity)
+            self._storage.reallocStorage(capacity: minimumNeededCapacity)
         }
         self._moveWriterIndex(to: 0)
         self._moveReaderIndex(to: 0)
