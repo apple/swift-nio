@@ -107,6 +107,8 @@ extension ByteBufferTest {
                 ("testWritableBytesAccountsForSlicing", testWritableBytesAccountsForSlicing),
                 ("testClearDupesStorageIfTheresTwoBuffersSharingStorage", testClearDupesStorageIfTheresTwoBuffersSharingStorage),
                 ("testClearDoesNotDupeStorageIfTheresOnlyOneBuffer", testClearDoesNotDupeStorageIfTheresOnlyOneBuffer),
+                ("testClearDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer", testClearDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer),
+                ("testClearDoesAllocateStorageCorrectlyIfTheresTwoBuffersSharingStorage", testClearDoesAllocateStorageCorrectlyIfTheresTwoBuffersSharingStorage),
                 ("testWeUseFastWriteForContiguousCollections", testWeUseFastWriteForContiguousCollections),
                 ("testUnderestimatingSequenceWorks", testUnderestimatingSequenceWorks),
                 ("testZeroSizeByteBufferResizes", testZeroSizeByteBufferResizes),
