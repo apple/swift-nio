@@ -107,11 +107,6 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
     }
 }
 
-private func assertIsNotBlacklistedErrno(err: CInt, where function: StaticString) -> Void {
-    // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
-}
-
 private func preconditionIsNotBlacklistedErrno(err: CInt, where function: StaticString) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     precondition(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
