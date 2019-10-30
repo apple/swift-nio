@@ -146,17 +146,36 @@ public enum SocketAddress: CustomStringConvertible {
         }
     }
 
-    /// Get the port associated with the address, if defined.
+    /// Get and set the port associated with the address, if defined.
+    /// When setting to `nil` the port will default to `0` for compatible sockets. The rationale for this is that both `nil` and `0` can
+    /// be interpreted as "no preference".
     public var port: Int? {
-        switch self {
-        case .v4(let addr):
-            // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
-            return Int(in_port_t(bigEndian: addr.address.sin_port))
-        case .v6(let addr):
-            // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
-            return Int(in_port_t(bigEndian: addr.address.sin6_port))
-        case .unixDomainSocket:
-            return nil
+        get {
+            switch self {
+            case .v4(let addr):
+                // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
+                return Int(in_port_t(bigEndian: addr.address.sin_port))
+            case .v6(let addr):
+                // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
+                return Int(in_port_t(bigEndian: addr.address.sin6_port))
+            case .unixDomainSocket:
+                return nil
+            }
+        }
+        set {
+            switch self {
+            case .v4(let addr):
+                var mutAddr = addr.address
+                mutAddr.sin_port = in_port_t(newValue ?? 0).bigEndian
+                self = .v4(.init(address: mutAddr, host: addr.host))
+            case .v6(let addr):
+                var mutAddr = addr.address
+                mutAddr.sin6_port = in_port_t(newValue ?? 0).bigEndian
+                self = .v6(.init(address: mutAddr, host: addr.host))
+            case .unixDomainSocket:
+                // ignore
+                break
+            }
         }
     }
 

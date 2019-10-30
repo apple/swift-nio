@@ -370,4 +370,26 @@ class SocketAddressTest: XCTestCase {
         }
         XCTAssertEqual(storage.ss_family, sa_family_t(AF_UNIX))
     }
+
+    func testPortIsMutable() throws {
+        var ipV4 = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
+        var ipV6 = try SocketAddress(ipAddress: "::1", port: 80)
+        var unix = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
+
+        ipV4.port = 81
+        ipV6.port = 81
+        unix.port = 1
+        
+        XCTAssertEqual(ipV4.port, 81)
+        XCTAssertEqual(ipV6.port, 81)
+        XCTAssertNil(unix.port)
+
+        ipV4.port = nil
+        ipV6.port = nil
+        unix.port = nil
+
+        XCTAssertEqual(ipV4.port, 0)
+        XCTAssertEqual(ipV6.port, 0)
+        XCTAssertNil(unix.port)
+    }
 }
