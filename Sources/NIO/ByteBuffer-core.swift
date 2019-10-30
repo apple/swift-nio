@@ -235,7 +235,7 @@ public struct ByteBuffer {
             return self.allocateStorage(capacity: self.capacity)
         }
 
-        internal func allocateStorage(capacity: _Capacity) -> _Storage {
+        fileprivate func allocateStorage(capacity: _Capacity) -> _Storage {
             let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2ClampedToMax()
             return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, allocator: self.allocator),
                             capacity: newCapacity,
@@ -679,9 +679,11 @@ public struct ByteBuffer {
     public mutating func clear(capacity minimumNeededCapacity: _Capacity) {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.allocateStorage(capacity: minimumNeededCapacity)
-        } else {
+        } else if minimumNeededCapacity > self._storage.capacity {
             self._storage.reallocStorage(capacity: minimumNeededCapacity)
         }
+        self._slice = self._storage.fullSlice
+
         self._moveWriterIndex(to: 0)
         self._moveReaderIndex(to: 0)
     }
