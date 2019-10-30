@@ -1236,17 +1236,19 @@ class ByteBufferTest: XCTestCase {
         var buf1PtrVal: UInt = 1
         var buf2PtrVal: UInt = 2
         
-        buf1.assign(to: &buf1PtrVal)
-        buf2.assign(to: &buf2PtrVal)
+        buf1PtrVal = buf1.storagePointerIntegerValue()
+        buf2PtrVal = buf2.storagePointerIntegerValue()
         
         XCTAssertEqual(buf1PtrVal, buf2PtrVal)
 
         buf2.clear(capacity: 32)
 
-        buf1.assign(to: &buf1PtrVal)
-        buf2.assign(to: &buf2PtrVal)
-        
+        buf1PtrVal = buf1.storagePointerIntegerValue()
+        buf2PtrVal = buf2.storagePointerIntegerValue()
+
         XCTAssertNotEqual(buf1PtrVal, buf2PtrVal)
+        XCTAssertLessThan(buf1.capacity, 32)
+        XCTAssertGreaterThanOrEqual(buf2.capacity, 32)
     }
     
     func testClearWithSmallerMinimumCapacityDupesStorageIfTheresTwoBuffersSharingStorage() throws {
@@ -1257,17 +1259,19 @@ class ByteBufferTest: XCTestCase {
         var buf1PtrVal: UInt = 1
         var buf2PtrVal: UInt = 2
         
-        buf1.assign(to: &buf1PtrVal)
-        buf2.assign(to: &buf2PtrVal)
-        
+        buf1PtrVal = buf1.storagePointerIntegerValue()
+        buf2PtrVal = buf2.storagePointerIntegerValue()
+
         XCTAssertEqual(buf1PtrVal, buf2PtrVal)
 
-        buf2.clear(capacity: 8)
+        buf2.clear(capacity: 4)
 
-        buf1.assign(to: &buf1PtrVal)
-        buf2.assign(to: &buf2PtrVal)
-        
+        buf1PtrVal = buf1.storagePointerIntegerValue()
+        buf2PtrVal = buf2.storagePointerIntegerValue()
+
         XCTAssertNotEqual(buf1PtrVal, buf2PtrVal)
+        XCTAssertGreaterThanOrEqual(buf1.capacity, 16)
+        XCTAssertLessThan(buf2.capacity, 16)
     }
 
     func testClearWithBiggerMinimumCapacityDoesNotDupeStorageIfTheresOnlyOneBuffer() throws {
@@ -1277,11 +1281,17 @@ class ByteBufferTest: XCTestCase {
         var bufPtrValPre: UInt = 1
         var bufPtrValPost: UInt = 2
 
-        buf.assign(to: &bufPtrValPre)
+        XCTAssertLessThan(buf.capacity, 32)
+        let preCapacity = buf.capacity
+
+        bufPtrValPre = buf.storagePointerIntegerValue()
         buf.clear(capacity: 32)
-        buf.assign(to: &bufPtrValPost)
-        
+        bufPtrValPost = buf.storagePointerIntegerValue()
+        let postCapacity = buf.capacity
+
         XCTAssertNotEqual(bufPtrValPre, bufPtrValPost)
+        XCTAssertGreaterThanOrEqual(buf.capacity, 32)
+        XCTAssertNotEqual(preCapacity, postCapacity)
     }
     
     func testClearWithSmallerMinimumCapacityDoesNotDupeStorageIfTheresOnlyOneBuffer() throws {
@@ -1291,11 +1301,16 @@ class ByteBufferTest: XCTestCase {
         var bufPtrValPre: UInt = 1
         var bufPtrValPost: UInt = 2
 
-        buf.assign(to: &bufPtrValPre)
-        buf.clear(capacity: 8)
-        buf.assign(to: &bufPtrValPost)
+        let preCapacity = buf.capacity
+        XCTAssertGreaterThanOrEqual(buf.capacity, 16)
         
+        bufPtrValPre = buf.storagePointerIntegerValue()
+        buf.clear(capacity: 8)
+        bufPtrValPost = buf.storagePointerIntegerValue()
+        let postCapacity = buf.capacity
+
         XCTAssertEqual(bufPtrValPre, bufPtrValPost)
+        XCTAssertEqual(preCapacity, postCapacity)
     }
 
     func testClearWithBiggerCapacityDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer() throws {
@@ -2235,9 +2250,11 @@ private func testReserveCapacityLarger_memcpyHook(_ dst: UnsafeMutableRawPointer
 }
 
 extension ByteBuffer {
-    func assign(to pointer: inout UInt) {
+    func storagePointerIntegerValue() -> UInt {
+        var pointer: UInt = 0
         self.withUnsafeReadableBytes { ptr in
             pointer = UInt(bitPattern: ptr.baseAddress!)
         }
+        return pointer
     }
 }
