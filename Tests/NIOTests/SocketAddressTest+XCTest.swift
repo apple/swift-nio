@@ -44,6 +44,7 @@ extension SocketAddressTest {
                 ("testUnequalAcrossFamilies", testUnequalAcrossFamilies),
                 ("testPortAccessor", testPortAccessor),
                 ("testCanMutateSockaddrStorage", testCanMutateSockaddrStorage),
+                ("testPortIsMutable", testPortIsMutable),
            ]
    }
 }
