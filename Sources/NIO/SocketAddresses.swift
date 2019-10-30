@@ -149,7 +149,7 @@ public enum SocketAddress: CustomStringConvertible {
     /// Get and set the port associated with the address, if defined.
     /// When setting to `nil` the port will default to `0` for compatible sockets. The rationale for this is that both `nil` and `0` can
     /// be interpreted as "no preference".
-    /// Setting a non-nil value to a unix port is invalid and will result in a fatal error.
+    /// Setting a non-nil value for a unix domain socket is invalid and will result in a fatal error.
     public var port: Int? {
         get {
             switch self {
