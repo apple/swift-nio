@@ -1248,15 +1248,6 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(buf2._storage.capacity, 16)
     }
 
-    func testClearDoesNotReallocateStorageIfNotSpecified() throws {
-        let alloc = ByteBufferAllocator()
-        var buf = alloc.buffer(capacity: 16)
-
-        buf.clear()
-
-        XCTAssertEqual(buf._storage.capacity, 16)
-    }
-
     func testWeUseFastWriteForContiguousCollections() throws {
         struct WrongCollection: Collection {
             let storage: [UInt8] = [1, 2, 3]
