@@ -235,7 +235,7 @@ public struct ByteBuffer {
             return self.allocateStorage(capacity: self.capacity)
         }
 
-        private func allocateStorage(capacity: _Capacity) -> _Storage {
+        public func allocateStorage(capacity: _Capacity) -> _Storage {
             let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2ClampedToMax()
             return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, allocator: self.allocator),
                             capacity: newCapacity,
@@ -659,9 +659,15 @@ public struct ByteBuffer {
     ///
     /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
     ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
-    public mutating func clear() {
+    ///
+    /// - parameters:
+    ///     - minimumNeededCapacity: The minimum capacity that will be (re)allocated for this buffer
+    public mutating func clear(capacity minimumNeededCapacity: _Capacity? = nil) {
+        let capacity = minimumNeededCapacity ?? self._storage.capacity
         if !isKnownUniquelyReferenced(&self._storage) {
-            self._storage = self._storage.allocateStorage()
+            self._storage = self._storage.allocateStorage(capacity: capacity)
+        } else {
+            self._storage.reallocStorage(capacity: capacity)
         }
         self._moveWriterIndex(to: 0)
         self._moveReaderIndex(to: 0)

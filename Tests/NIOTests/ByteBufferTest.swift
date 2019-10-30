@@ -1228,6 +1228,35 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(bufPtrValPre, bufPtrValPost)
     }
 
+    func testClearDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer() throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+
+        buf.clear(capacity: 8)
+
+        XCTAssertEqual(buf._storage.capacity, 8)
+    }
+
+    func testClearDoesAllocateStorageCorrectlyIfTheresTwoBuffersSharingStorage() throws {
+        let alloc = ByteBufferAllocator()
+        var buf1 = alloc.buffer(capacity: 16)
+        let buf2 = buf1
+
+        buf1.clear(capacity: 8)
+
+        XCTAssertEqual(buf1._storage.capacity, 8)
+        XCTAssertEqual(buf2._storage.capacity, 16)
+    }
+
+    func testClearDoesNotReallocateStorageIfNotSpecified() throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+
+        buf.clear()
+
+        XCTAssertEqual(buf._storage.capacity, 16)
+    }
+
     func testWeUseFastWriteForContiguousCollections() throws {
         struct WrongCollection: Collection {
             let storage: [UInt8] = [1, 2, 3]
