@@ -1227,6 +1227,76 @@ class ByteBufferTest: XCTestCase {
         }
         XCTAssertEqual(bufPtrValPre, bufPtrValPost)
     }
+    
+    func testClearWithBiggerMinimumCapacityDupesStorageIfTheresTwoBuffersSharingStorage() throws {
+        let alloc = ByteBufferAllocator()
+        let buf1 = alloc.buffer(capacity: 16)
+        var buf2 = buf1
+
+        var buf1PtrVal: UInt = 1
+        var buf2PtrVal: UInt = 2
+        
+        buf1.assign(to: &buf1PtrVal)
+        buf2.assign(to: &buf2PtrVal)
+        
+        XCTAssertEqual(buf1PtrVal, buf2PtrVal)
+
+        buf2.clear(minimumCapacity: 32)
+
+        buf1.assign(to: &buf1PtrVal)
+        buf2.assign(to: &buf2PtrVal)
+        
+        XCTAssertNotEqual(buf1PtrVal, buf2PtrVal)
+    }
+    
+    func testClearWithSmallerMinimumCapacityDupesStorageIfTheresTwoBuffersSharingStorage() throws {
+        let alloc = ByteBufferAllocator()
+        let buf1 = alloc.buffer(capacity: 16)
+        var buf2 = buf1
+
+        var buf1PtrVal: UInt = 1
+        var buf2PtrVal: UInt = 2
+        
+        buf1.assign(to: &buf1PtrVal)
+        buf2.assign(to: &buf2PtrVal)
+        
+        XCTAssertEqual(buf1PtrVal, buf2PtrVal)
+
+        buf2.clear(minimumCapacity: 8)
+
+        buf1.assign(to: &buf1PtrVal)
+        buf2.assign(to: &buf2PtrVal)
+        
+        XCTAssertNotEqual(buf1PtrVal, buf2PtrVal)
+    }
+
+    func testClearWithBiggerMinimumCapacityDoesNotDupeStorageIfTheresOnlyOneBuffer() throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+
+        var bufPtrValPre: UInt = 1
+        var bufPtrValPost: UInt = 2
+
+        buf.assign(to: &bufPtrValPre)
+        buf.clear(minimumCapacity: 32)
+        buf.assign(to: &bufPtrValPost)
+        
+        XCTAssertNotEqual(bufPtrValPre, bufPtrValPost)
+    }
+    
+    func testClearWithSmallerMinimumCapacityDoesNotDupeStorageIfTheresOnlyOneBuffer() throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+
+        var bufPtrValPre: UInt = 1
+        var bufPtrValPost: UInt = 2
+
+        buf.assign(to: &bufPtrValPre)
+        buf.clear(minimumCapacity: 8)
+        buf.assign(to: &bufPtrValPost)
+        
+        XCTAssertEqual(bufPtrValPre, bufPtrValPost)
+    }
 
     func testWeUseFastWriteForContiguousCollections() throws {
         struct WrongCollection: Collection {
@@ -2133,4 +2203,12 @@ private func testReserveCapacityLarger_reallocHook(_ ptr: UnsafeMutableRawPointe
 
 private func testReserveCapacityLarger_memcpyHook(_ dst: UnsafeMutableRawPointer, _ src: UnsafeRawPointer, _ count: Int) -> Void {
     // No copying
+}
+
+extension ByteBuffer {
+    func assign(to pointer: inout UInt) {
+        self.withUnsafeReadableBytes { ptr in
+            pointer = UInt(bitPattern: ptr.baseAddress!)
+        }
+    }
 }
