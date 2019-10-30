@@ -359,7 +359,7 @@ extension TimeAmount {
 ///
 /// - note: `NIODeadline` should not be used to represent a time interval
 public struct NIODeadline: Equatable, Hashable {
-    @available(*, deprecated, message: "This typealias doesn't server any purpose, please use UInt64 directly.")
+    @available(*, deprecated, message: "This typealias doesn't serve any purpose, please use UInt64 directly.")
     public typealias Value = UInt64
 
     // This really should be an UInt63 but we model it as Int64 with >=0 assert
