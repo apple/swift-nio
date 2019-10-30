@@ -149,6 +149,7 @@ public enum SocketAddress: CustomStringConvertible {
     /// Get and set the port associated with the address, if defined.
     /// When setting to `nil` the port will default to `0` for compatible sockets. The rationale for this is that both `nil` and `0` can
     /// be interpreted as "no preference".
+    /// Setting a non-nil value to a unix port is invalid and will result in a fatal error.
     public var port: Int? {
         get {
             switch self {
@@ -173,8 +174,7 @@ public enum SocketAddress: CustomStringConvertible {
                 mutAddr.sin6_port = in_port_t(newValue ?? 0).bigEndian
                 self = .v6(.init(address: mutAddr, host: addr.host))
             case .unixDomainSocket:
-                // ignore
-                break
+                precondition(newValue == nil, "attempting to set a non-nil value to a unix socket is not valid")
             }
         }
     }

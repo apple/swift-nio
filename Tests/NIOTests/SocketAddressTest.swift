@@ -378,11 +378,9 @@ class SocketAddressTest: XCTestCase {
 
         ipV4.port = 81
         ipV6.port = 81
-        unix.port = 1
-        
+
         XCTAssertEqual(ipV4.port, 81)
         XCTAssertEqual(ipV6.port, 81)
-        XCTAssertNil(unix.port)
 
         ipV4.port = nil
         ipV6.port = nil
