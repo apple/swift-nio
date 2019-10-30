@@ -386,12 +386,10 @@ class SelectorTest: XCTestCase {
             }
         }
         var socketFDs: [CInt] = [-1, -1]
-        #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-        let err = socketpair(PF_LOCAL, SOCK_STREAM, 0, &socketFDs)
-        #else
-        let err = socketpair(PF_LOCAL, CInt(SOCK_STREAM.rawValue), 0, &socketFDs)
-        #endif
-        XCTAssertEqual(0, err)
+        XCTAssertNoThrow(try Posix.socketpair(domain: PF_LOCAL,
+                                              type: Posix.SOCK_STREAM,
+                                              protocol: 0,
+                                              socketVector: &socketFDs))
 
         let numberFires = Atomic<Int>(value: 0)
         let el = group.next() as! SelectableEventLoop
