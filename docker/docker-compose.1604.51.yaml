@@ -30,6 +30,7 @@ services:
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer_with_space=2010
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer=4010
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_space=4010
+      - MAX_ALLOCS_ALLOWED_decode_1000_ws_frames=2000
       - SANITIZER_ARG=--sanitize=thread
 
   performance-test:

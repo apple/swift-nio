@@ -663,6 +663,7 @@ public struct ByteBuffer {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.allocateStorage()
         }
+        self._slice = self._storage.fullSlice
         self._moveWriterIndex(to: 0)
         self._moveReaderIndex(to: 0)
     }
