@@ -71,7 +71,9 @@ for mode in debug release; do
             exit_code=$?
             # expecting illegal instruction as it should fail with a blacklisted errno
             assert_equal $(( 128 + 4 )) $exit_code  # 4 == SIGILL
-            grep -q blacklisted\ errno "$temp_file"
+            if [[ "$mode" == "debug" ]]; then
+                grep -q blacklisted\ errno "$temp_file"
+            fi
         fi
     done
 done
