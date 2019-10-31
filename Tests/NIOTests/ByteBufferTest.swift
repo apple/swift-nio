@@ -238,7 +238,7 @@ class ByteBufferTest: XCTestCase {
 
     func testWithMutableWritePointerWithMinimumSpecifiedAdjustsCapacity() {
         XCTAssertEqual(0, buf.writerIndex)
-        XCTAssertEqual(512, buf.capacity)
+        XCTAssertEqual(1024, buf.capacity)
 
         var bytesWritten = buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 256) {
             XCTAssertTrue($0.count >= 256)
@@ -246,7 +246,7 @@ class ByteBufferTest: XCTestCase {
         }
         XCTAssertEqual(256, bytesWritten)
         XCTAssertEqual(256, buf.writerIndex)
-        XCTAssertEqual(512, buf.capacity)
+        XCTAssertEqual(1024, buf.capacity)
 
         bytesWritten += buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 1024) {
             XCTAssertTrue($0.count >= 1024)
@@ -260,7 +260,7 @@ class ByteBufferTest: XCTestCase {
 
     func testWithMutableWritePointerWithMinimumSpecifiedWhileAtMaxCapacity() {
         XCTAssertEqual(0, buf.writerIndex)
-        XCTAssertEqual(512, buf.capacity)
+        XCTAssertEqual(1024, buf.capacity)
 
         var bytesWritten = buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 512) {
             XCTAssertTrue($0.count >= 512)
@@ -268,7 +268,7 @@ class ByteBufferTest: XCTestCase {
         }
         XCTAssertEqual(512, bytesWritten)
         XCTAssertEqual(512, buf.writerIndex)
-        XCTAssertEqual(512, buf.capacity)
+        XCTAssertEqual(1024, buf.capacity)
 
         bytesWritten += buf.writeWithUnsafeMutableBytes(minimumWritableBytes: 1) {
             XCTAssertTrue($0.count >= 1)
@@ -1340,6 +1340,32 @@ class ByteBufferTest: XCTestCase {
 
         XCTAssertEqual(buf1._storage.capacity, 8)
         XCTAssertEqual(buf2._storage.capacity, 16)
+    }
+
+    func testClearResetsTheSliceCapacityIfTheresOnlyOneBuffer() {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+        buf.writeString("qwertyuiop")
+        XCTAssertEqual(buf.capacity, 16)
+
+        var slice = buf.getSlice(at: 3, length: 4)!
+        XCTAssertEqual(slice.capacity, 4)
+
+        slice.clear()
+        XCTAssertEqual(slice.capacity, 16)
+    }
+
+    func testClearResetsTheSliceCapacityIfTheresTwoSlicesSharingStorage() {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+        buf.writeString("qwertyuiop")
+
+        var slice1 = buf.getSlice(at: 3, length: 4)!
+        let slice2 = slice1
+
+        slice1.clear()
+        XCTAssertEqual(slice1.capacity, 16)
+        XCTAssertEqual(slice2.capacity, 4)
     }
 
     func testWeUseFastWriteForContiguousCollections() throws {

@@ -114,6 +114,8 @@ extension ByteBufferTest {
                 ("testClearWithBiggerCapacityDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer", testClearWithBiggerCapacityDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer),
                 ("testClearWithSmallerCapacityDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer", testClearWithSmallerCapacityDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer),
                 ("testClearDoesAllocateStorageCorrectlyIfTheresTwoBuffersSharingStorage", testClearDoesAllocateStorageCorrectlyIfTheresTwoBuffersSharingStorage),
+                ("testClearResetsTheSliceCapacityIfTheresOnlyOneBuffer", testClearResetsTheSliceCapacityIfTheresOnlyOneBuffer),
+                ("testClearResetsTheSliceCapacityIfTheresTwoSlicesSharingStorage", testClearResetsTheSliceCapacityIfTheresTwoSlicesSharingStorage),
                 ("testWeUseFastWriteForContiguousCollections", testWeUseFastWriteForContiguousCollections),
                 ("testUnderestimatingSequenceWorks", testUnderestimatingSequenceWorks),
                 ("testZeroSizeByteBufferResizes", testZeroSizeByteBufferResizes),
