@@ -676,12 +676,12 @@ public struct ByteBuffer {
     ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
     ///
     /// - parameters:
-    ///     - minimumNeededCapacity: The minimum capacity that will be (re)allocated for this buffer
-    public mutating func clear(capacity minimumNeededCapacity: _Capacity) {
+    ///     - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
+    public mutating func clear(minimumCapacity: _Capacity) {
         if !isKnownUniquelyReferenced(&self._storage) {
-            self._storage = self._storage.allocateStorage(capacity: minimumNeededCapacity)
-        } else if minimumNeededCapacity > self._storage.capacity {
-            self._storage.reallocStorage(capacity: minimumNeededCapacity)
+            self._storage = self._storage.allocateStorage(capacity: minimumCapacity)
+        } else if minimumCapacity > self._storage.capacity {
+            self._storage.reallocStorage(capacity: minimumCapacity)
         }
         self._slice = self._storage.fullSlice
 
