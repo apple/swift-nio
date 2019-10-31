@@ -235,7 +235,7 @@ public struct ByteBuffer {
             return self.allocateStorage(capacity: self.capacity)
         }
 
-        private func allocateStorage(capacity: _Capacity) -> _Storage {
+        fileprivate func allocateStorage(capacity: _Capacity) -> _Storage {
             let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2ClampedToMax()
             return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, allocator: self.allocator),
                             capacity: newCapacity,
@@ -664,6 +664,27 @@ public struct ByteBuffer {
             self._storage = self._storage.allocateStorage()
         }
         self._slice = self._storage.fullSlice
+        self._moveWriterIndex(to: 0)
+        self._moveReaderIndex(to: 0)
+    }
+
+    /// Set both reader index and writer index to `0`. This will reset the state of this `ByteBuffer` to the state
+    /// of a freshly allocated one, if possible without allocations. This is the cheapest way to recycle a `ByteBuffer`
+    /// for a new use-case.
+    ///
+    /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
+    ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
+    ///
+    /// - parameters:
+    ///     - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
+    public mutating func clear(minimumCapacity: _Capacity) {
+        if !isKnownUniquelyReferenced(&self._storage) {
+            self._storage = self._storage.allocateStorage(capacity: minimumCapacity)
+        } else if minimumCapacity > self._storage.capacity {
+            self._storage.reallocStorage(capacity: minimumCapacity)
+        }
+        self._slice = self._storage.fullSlice
+
         self._moveWriterIndex(to: 0)
         self._moveReaderIndex(to: 0)
     }

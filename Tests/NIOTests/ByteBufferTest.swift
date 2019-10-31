@@ -1227,6 +1227,120 @@ class ByteBufferTest: XCTestCase {
         }
         XCTAssertEqual(bufPtrValPre, bufPtrValPost)
     }
+    
+    func testClearWithBiggerMinimumCapacityDupesStorageIfTheresTwoBuffersSharingStorage() throws {
+        let alloc = ByteBufferAllocator()
+        let buf1 = alloc.buffer(capacity: 16)
+        var buf2 = buf1
+
+        var buf1PtrVal: UInt = 1
+        var buf2PtrVal: UInt = 2
+        
+        buf1PtrVal = buf1.storagePointerIntegerValue()
+        buf2PtrVal = buf2.storagePointerIntegerValue()
+        
+        XCTAssertEqual(buf1PtrVal, buf2PtrVal)
+
+        buf2.clear(minimumCapacity: 32)
+
+        buf1PtrVal = buf1.storagePointerIntegerValue()
+        buf2PtrVal = buf2.storagePointerIntegerValue()
+
+        XCTAssertNotEqual(buf1PtrVal, buf2PtrVal)
+        XCTAssertLessThan(buf1.capacity, 32)
+        XCTAssertGreaterThanOrEqual(buf2.capacity, 32)
+    }
+    
+    func testClearWithSmallerMinimumCapacityDupesStorageIfTheresTwoBuffersSharingStorage() throws {
+        let alloc = ByteBufferAllocator()
+        let buf1 = alloc.buffer(capacity: 16)
+        var buf2 = buf1
+
+        var buf1PtrVal: UInt = 1
+        var buf2PtrVal: UInt = 2
+        
+        buf1PtrVal = buf1.storagePointerIntegerValue()
+        buf2PtrVal = buf2.storagePointerIntegerValue()
+
+        XCTAssertEqual(buf1PtrVal, buf2PtrVal)
+
+        buf2.clear(minimumCapacity: 4)
+
+        buf1PtrVal = buf1.storagePointerIntegerValue()
+        buf2PtrVal = buf2.storagePointerIntegerValue()
+
+        XCTAssertNotEqual(buf1PtrVal, buf2PtrVal)
+        XCTAssertGreaterThanOrEqual(buf1.capacity, 16)
+        XCTAssertLessThan(buf2.capacity, 16)
+    }
+
+    func testClearWithBiggerMinimumCapacityDoesNotDupeStorageIfTheresOnlyOneBuffer() throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+
+        var bufPtrValPre: UInt = 1
+        var bufPtrValPost: UInt = 2
+
+        XCTAssertLessThan(buf.capacity, 32)
+        let preCapacity = buf.capacity
+
+        bufPtrValPre = buf.storagePointerIntegerValue()
+        buf.clear(minimumCapacity: 32)
+        bufPtrValPost = buf.storagePointerIntegerValue()
+        let postCapacity = buf.capacity
+
+        XCTAssertNotEqual(bufPtrValPre, bufPtrValPost)
+        XCTAssertGreaterThanOrEqual(buf.capacity, 32)
+        XCTAssertNotEqual(preCapacity, postCapacity)
+    }
+    
+    func testClearWithSmallerMinimumCapacityDoesNotDupeStorageIfTheresOnlyOneBuffer() throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+
+        var bufPtrValPre: UInt = 1
+        var bufPtrValPost: UInt = 2
+
+        let preCapacity = buf.capacity
+        XCTAssertGreaterThanOrEqual(buf.capacity, 16)
+        
+        bufPtrValPre = buf.storagePointerIntegerValue()
+        buf.clear(minimumCapacity: 8)
+        bufPtrValPost = buf.storagePointerIntegerValue()
+        let postCapacity = buf.capacity
+
+        XCTAssertEqual(bufPtrValPre, bufPtrValPost)
+        XCTAssertEqual(preCapacity, postCapacity)
+    }
+
+    func testClearWithBiggerCapacityDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer() throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+
+        buf.clear(minimumCapacity: 32)
+
+        XCTAssertEqual(buf._storage.capacity, 32)
+    }
+
+    func testClearWithSmallerCapacityDoesReallocateStorageCorrectlyIfTheresOnlyOneBuffer() throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+
+        buf.clear(minimumCapacity: 8)
+
+        XCTAssertEqual(buf._storage.capacity, 16)
+    }
+
+    func testClearDoesAllocateStorageCorrectlyIfTheresTwoBuffersSharingStorage() throws {
+        let alloc = ByteBufferAllocator()
+        var buf1 = alloc.buffer(capacity: 16)
+        let buf2 = buf1
+
+        buf1.clear(minimumCapacity: 8)
+
+        XCTAssertEqual(buf1._storage.capacity, 8)
+        XCTAssertEqual(buf2._storage.capacity, 16)
+    }
 
     func testClearResetsTheSliceCapacityIfTheresOnlyOneBuffer() {
         let alloc = ByteBufferAllocator()
@@ -2159,4 +2273,14 @@ private func testReserveCapacityLarger_reallocHook(_ ptr: UnsafeMutableRawPointe
 
 private func testReserveCapacityLarger_memcpyHook(_ dst: UnsafeMutableRawPointer, _ src: UnsafeRawPointer, _ count: Int) -> Void {
     // No copying
+}
+
+extension ByteBuffer {
+    func storagePointerIntegerValue() -> UInt {
+        var pointer: UInt = 0
+        self.withUnsafeReadableBytes { ptr in
+            pointer = UInt(bitPattern: ptr.baseAddress!)
+        }
+        return pointer
+    }
 }
