@@ -1241,7 +1241,7 @@ class ByteBufferTest: XCTestCase {
         
         XCTAssertEqual(buf1PtrVal, buf2PtrVal)
 
-        buf2.clear(capacity: 32)
+        buf2.clear(minimumCapacity: 32)
 
         buf1PtrVal = buf1.storagePointerIntegerValue()
         buf2PtrVal = buf2.storagePointerIntegerValue()
@@ -1264,7 +1264,7 @@ class ByteBufferTest: XCTestCase {
 
         XCTAssertEqual(buf1PtrVal, buf2PtrVal)
 
-        buf2.clear(capacity: 4)
+        buf2.clear(minimumCapacity: 4)
 
         buf1PtrVal = buf1.storagePointerIntegerValue()
         buf2PtrVal = buf2.storagePointerIntegerValue()
@@ -1285,7 +1285,7 @@ class ByteBufferTest: XCTestCase {
         let preCapacity = buf.capacity
 
         bufPtrValPre = buf.storagePointerIntegerValue()
-        buf.clear(capacity: 32)
+        buf.clear(minimumCapacity: 32)
         bufPtrValPost = buf.storagePointerIntegerValue()
         let postCapacity = buf.capacity
 
@@ -1305,7 +1305,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertGreaterThanOrEqual(buf.capacity, 16)
         
         bufPtrValPre = buf.storagePointerIntegerValue()
-        buf.clear(capacity: 8)
+        buf.clear(minimumCapacity: 8)
         bufPtrValPost = buf.storagePointerIntegerValue()
         let postCapacity = buf.capacity
 
@@ -1317,7 +1317,7 @@ class ByteBufferTest: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buf = alloc.buffer(capacity: 16)
 
-        buf.clear(capacity: 32)
+        buf.clear(minimumCapacity: 32)
 
         XCTAssertEqual(buf._storage.capacity, 32)
     }
@@ -1326,7 +1326,7 @@ class ByteBufferTest: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buf = alloc.buffer(capacity: 16)
 
-        buf.clear(capacity: 8)
+        buf.clear(minimumCapacity: 8)
 
         XCTAssertEqual(buf._storage.capacity, 16)
     }
@@ -1336,7 +1336,7 @@ class ByteBufferTest: XCTestCase {
         var buf1 = alloc.buffer(capacity: 16)
         let buf2 = buf1
 
-        buf1.clear(capacity: 8)
+        buf1.clear(minimumCapacity: 8)
 
         XCTAssertEqual(buf1._storage.capacity, 8)
         XCTAssertEqual(buf2._storage.capacity, 16)
