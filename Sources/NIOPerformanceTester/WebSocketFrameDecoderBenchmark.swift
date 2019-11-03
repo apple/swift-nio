@@ -15,24 +15,30 @@
 import NIO
 import NIOWebSocket
 
-
 final class WebSocketFrameDecoderBenchmark {
 
     private let channel: EmbeddedChannel
     private let runCount: Int
+    private let dataSize: Int
+    private var maskKey: WebSocketMaskingKey?
     private var data: ByteBuffer
 
-    init(dataSize: Int, runCount: Int) {
+    init(dataSize: Int, runCount: Int, withMaskKey: Bool = false) {
         self.channel = EmbeddedChannel()
+        self.dataSize = dataSize
         self.data = ByteBufferAllocator().buffer(capacity: dataSize)
         self.runCount = runCount
+        if withMaskKey {
+            self.maskKey = [0x80, 0x08, 0x10, 0x01]
+            self.data.webSocketMask(self.maskKey!)
+        }
     }
 }
 
 extension WebSocketFrameDecoderBenchmark: Benchmark {
 
     func setUp() throws {
-        self.data.writeBytes([0x81, 0x00]) // empty websocket
+        self.data = ByteBufferAllocator().buffer(size: self.dataSize)
         try self.channel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder())).wait()
     }
 
@@ -40,11 +46,37 @@ extension WebSocketFrameDecoderBenchmark: Benchmark {
         _ = try! self.channel.finish()
     }
 
-    func run() throws  -> Int{
-        for _ in 0..<runCount {
+    func run() throws -> Int {
+        if let maskKey = self.maskKey {
+            return try self.run(with: maskKey)
+        } else {
+            return try self.runWithoutMaskKey()
+        }
+    }
+
+    private func runWithoutMaskKey() throws -> Int {
+        for _ in 0..<self.runCount {
             try self.channel.writeInbound(self.data)
             let _: WebSocketFrame? =  try self.channel.readInbound()
         }
         return 1
+    }
+
+    private func run(with maskKey: WebSocketMaskingKey) throws -> Int {
+        for _ in 0..<self.runCount {
+            self.data.webSocketUnmask(maskKey)
+            try self.channel.writeInbound(self.data)
+            let _: WebSocketFrame? =  try self.channel.readInbound()
+        }
+        return 1
+    }
+}
+
+extension ByteBufferAllocator {
+    fileprivate func buffer(size: Int) -> ByteBuffer {
+        var data = self.buffer(capacity: size)
+        let bytes = size / 8
+        data.writeBytes([0x81] + Array(repeatElement(0, count: bytes - 1)))
+        return data
     }
 }
