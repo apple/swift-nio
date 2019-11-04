@@ -741,7 +741,7 @@ try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
 
 try measureAndPrint(desc: "websocket_decode_16b", benchmark: WebSocketFrameDecoderBenchmark(dataSize: 16, runCount: 100_000))
 
-try measureAndPrint(desc: "websocket_decode_16b_with_а_masking_кey", benchmark: WebSocketFrameDecoderBenchmark(dataSize: 16, runCount: 100_000, withMaskKey: true))
+try measureAndPrint(desc: "websocket_decode_16b_with_а_masking_key", benchmark: WebSocketFrameDecoderBenchmark(dataSize: 16, runCount: 100_000, withMaskKey: true))
 
 try measureAndPrint(desc: "websocket_decode_64b", benchmark: WebSocketFrameDecoderBenchmark(dataSize: 64, runCount: 10_000))
 
