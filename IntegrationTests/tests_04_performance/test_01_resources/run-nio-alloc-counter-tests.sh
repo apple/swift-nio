@@ -33,7 +33,7 @@ shift $((OPTIND-1))
 
 tests_to_run=("$here"/test_*.swift)
 
-if [ $# -gt 0 ]; then
+if [[ $# -gt 0 ]]; then
     tests_to_run=$@
 fi
 
