@@ -166,7 +166,7 @@ class CodableByteBufferTest: XCTestCase {
             try container.encode(date.timeIntervalSinceReferenceDate)
             strategyExpectation.fulfill()
         })
-        XCTAssertNoThrow(try encoder.encode(expectedDate, into: &self.buffer))
+        XCTAssertNoThrow(try encoder.encode(["date": expectedDate], into: &self.buffer))
         XCTAssertEqual(XCTWaiter().wait(for: [strategyExpectation], timeout: 0.0), .completed)
     }
 
@@ -184,8 +184,8 @@ class CodableByteBufferTest: XCTestCase {
             let container = try decoder.singleValueContainer()
             return Date(timeIntervalSinceReferenceDate: try container.decode(Double.self))
         })
-        XCTAssertNoThrow(try encoder.encode(expectedDate, into: &self.buffer))
-        XCTAssertNoThrow(XCTAssertEqual(expectedDate, try decoder.decode(Date.self, from: self.buffer)))
+        XCTAssertNoThrow(try encoder.encode(["date": expectedDate], into: &self.buffer))
+        XCTAssertNoThrow(XCTAssertEqual(["date": expectedDate], try decoder.decode(Dictionary<String, Date>.self, from: self.buffer)))
         XCTAssertEqual(XCTWaiter().wait(for: [strategyExpectation], timeout: 0.0), .completed)
     }
 }
