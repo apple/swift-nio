@@ -156,6 +156,38 @@ class CodableByteBufferTest: XCTestCase {
         }
         XCTAssertNoThrow(try self.buffer.readJSONDecodable(StringAndInt.self, length: writtenBytes ?? -1))
     }
+    
+    func testCustomEncoderIsRespected() {
+        let expectedDate = Date(timeIntervalSinceReferenceDate: 86400)
+        let strategyExpectation = XCTestExpectation(description: "Custom encoding strategy invoked")
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .custom({ date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(date.timeIntervalSinceReferenceDate)
+            strategyExpectation.fulfill()
+        })
+        XCTAssertNoThrow(try encoder.encode(expectedDate, into: &self.buffer))
+        XCTAssertEqual(XCTWaiter().wait(for: [strategyExpectation], timeout: 0.0), .completed)
+    }
+
+    func testCustomDecoderIsRespected() {
+        let expectedDate = Date(timeIntervalSinceReferenceDate: 86400)
+        let strategyExpectation = XCTestExpectation(description: "Custom decoding strategy invoked")
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        encoder.dateEncodingStrategy = .custom({ date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(date.timeIntervalSinceReferenceDate)
+        })
+        decoder.dateDecodingStrategy = .custom({ decoder in
+            strategyExpectation.fulfill()
+            let container = try decoder.singleValueContainer()
+            return Date(timeIntervalSinceReferenceDate: try container.decode(Double.self))
+        })
+        XCTAssertNoThrow(try encoder.encode(expectedDate, into: &self.buffer))
+        XCTAssertNoThrow(XCTAssertEqual(expectedDate, try decoder.decode(Date.self, from: self.buffer)))
+        XCTAssertEqual(XCTWaiter().wait(for: [strategyExpectation], timeout: 0.0), .completed)
+    }
 }
 
 struct StringAndInt: Codable, Equatable {
