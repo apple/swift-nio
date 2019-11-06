@@ -104,6 +104,7 @@ extension JSONDecoder {
     /// - returns: The decoded object.
     public func decode<T: Decodable>(_ type: T.Type, from buffer: ByteBuffer) throws -> T {
         return try buffer.getJSONDecodable(T.self,
+                                           decoder: self,
                                            at: buffer.readerIndex,
                                            length: buffer.readableBytes)! // must work, enough readable bytes
     }
