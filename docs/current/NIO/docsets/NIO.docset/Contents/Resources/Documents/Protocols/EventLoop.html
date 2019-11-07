@@ -21,7 +21,7 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIO 2.9.0 Docs
+          NIO 2.10.0 Docs
         </a>
          (90% documented)
       </p>
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E9%2E0%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E10%2E0%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -496,7 +496,7 @@ effect as blocking in this case.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L223">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L226">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -526,7 +526,7 @@ effect as blocking in this case.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L226">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L229">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -590,7 +590,7 @@ effect as blocking in this case.</p>
                         <p><code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> that is notified once the task was executed.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L233">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L236">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -621,7 +621,7 @@ effect as blocking in this case.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L237">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L240">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -652,7 +652,7 @@ effect as blocking in this case.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L241">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L244">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -691,7 +691,7 @@ will have no effect, if called from outside the <code>EventLoop</code> it will c
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L245">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L248">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -726,7 +726,8 @@ the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> r
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">flatSubmit</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">flatSubmit</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">task</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -754,7 +755,7 @@ the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> r
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> identical to the <code>EventLooopFuture</code> returned from <code>task</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L476-L478">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L481-L483">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -782,12 +783,13 @@ the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> r
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">makePromise</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">of</span> <span class="nv">type</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">makePromise</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">of</span> <span class="nv">type</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L481-L483">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L487-L489">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -815,7 +817,8 @@ the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> r
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">makeFailedFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">error</span><span class="p">:</span> <span class="kt">Error</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">makeFailedFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">error</span><span class="p">:</span> <span class="kt">Error</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -843,7 +846,7 @@ the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> r
                         <p>a failed <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L490-L492">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L497-L499">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -871,7 +874,8 @@ the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> r
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">makeSucceededFuture</span><span class="o">&lt;</span><span class="kt">Success</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">value</span><span class="p">:</span> <span class="kt">Success</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Success</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">makeSucceededFuture</span><span class="o">&lt;</span><span class="kt">Success</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">value</span><span class="p">:</span> <span class="kt">Success</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Success</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -899,7 +903,7 @@ the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> r
                         <p>a succeeded <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L499-L501">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L507-L509">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -936,7 +940,7 @@ the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> r
                         <p>Itself, because an <code>EventLoop</code> forms a singular <code><a href="../Protocols/EventLoopGroup.html">EventLoopGroup</a></code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L506-L508">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L514-L516">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -969,7 +973,7 @@ the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> r
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L511-L513">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L519-L521">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1063,7 +1067,7 @@ task.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L525-L535">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L533-L543">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1165,7 +1169,7 @@ start of each task.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L552-L559">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L560-L567">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1202,7 +1206,7 @@ start of each task.</p>
                         <p><code><a href="../Structs/EventLoopIterator.html">EventLoopIterator</a></code></p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L564-L566">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L572-L574">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1243,7 +1247,7 @@ In release mode this function never has any effect.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.9.0/Sources/NIO/EventLoop.swift#L574-L578">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L582-L586">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1256,7 +1260,7 @@ In release mode this function never has any effect.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-10-24)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-11-07)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
