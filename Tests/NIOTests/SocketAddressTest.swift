@@ -65,6 +65,15 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual(s, sampleString,
                        "Address description is way below our expectations 😱")
     }
+	
+    func testIPAddressWorks() throws {
+        let sa = try! SocketAddress(ipAddress: "127.0.0.1", port: 12345)
+        XCTAssertEqual("127.0.0.1", sa.ipAddress)
+        let sa6 = try! SocketAddress(ipAddress: "::1", port: 12345)
+        XCTAssertEqual("::1", sa6.ipAddress)
+        let unix = try! SocketAddress(unixDomainSocketPath: "/definitely/a/path")
+        XCTAssertEqual(nil, unix.ipAddress)
+    }
 
     func testCanCreateIPv4AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
@@ -360,5 +369,25 @@ class SocketAddressTest: XCTestCase {
             addr.pointee.sa_family = sa_family_t(AF_UNIX)
         }
         XCTAssertEqual(storage.ss_family, sa_family_t(AF_UNIX))
+    }
+
+    func testPortIsMutable() throws {
+        var ipV4 = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
+        var ipV6 = try SocketAddress(ipAddress: "::1", port: 80)
+        var unix = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
+
+        ipV4.port = 81
+        ipV6.port = 81
+
+        XCTAssertEqual(ipV4.port, 81)
+        XCTAssertEqual(ipV6.port, 81)
+
+        ipV4.port = nil
+        ipV6.port = nil
+        unix.port = nil
+
+        XCTAssertEqual(ipV4.port, 0)
+        XCTAssertEqual(ipV6.port, 0)
+        XCTAssertNil(unix.port)
     }
 }

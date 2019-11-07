@@ -85,6 +85,7 @@ private let sysAF_INET = AF_INET
 private let sysAF_INET6 = AF_INET6
 private let sysAF_UNIX = AF_UNIX
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
+private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 
 #if os(Linux)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
@@ -106,9 +107,9 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
     }
 }
 
-private func assertIsNotBlacklistedErrno(err: CInt, where function: StaticString) -> Void {
+private func preconditionIsNotBlacklistedErrno(err: CInt, where function: StaticString) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+    precondition(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
 }
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
@@ -124,7 +125,7 @@ internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticSt
             case EWOULDBLOCK:
                 return .wouldBlock(0)
             default:
-                assertIsNotBlacklistedErrno(err: err, where: function)
+                preconditionIsNotBlacklistedErrno(err: err, where: function)
                 throw IOError(errnoCode: err, function: function)
             }
 
@@ -144,7 +145,7 @@ internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #
             if err == EINTR {
                 continue
             }
-            assertIsNotBlacklistedErrno(err: err, where: function)
+            preconditionIsNotBlacklistedErrno(err: err, where: function)
             throw IOError(errnoCode: err, function: function)
         }
         return res
@@ -160,7 +161,7 @@ internal func wrapErrorIsNullReturnCall<T>(where function: StaticString = #funct
             if err == EINTR {
                 continue
             }
-            assertIsNotBlacklistedErrno(err: err, where: function)
+            preconditionIsNotBlacklistedErrno(err: err, where: function)
             throw IOError(errnoCode: err, function: function)
         }
         return res
@@ -243,7 +244,7 @@ internal enum Posix {
             //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
             //     - https://lwn.net/Articles/576478/
             if err != EINTR {
-                assertIsNotBlacklistedErrno(err: err, where: #function)
+                preconditionIsNotBlacklistedErrno(err: err, where: #function)
                 throw IOError(errnoCode: err, function: "close")
             }
         }
@@ -495,6 +496,16 @@ internal enum Posix {
     public static func fstat(descriptor: CInt, outStat: UnsafeMutablePointer<stat>) throws {
         _ = try wrapSyscall {
             sysFstat(descriptor, outStat)
+        }
+    }
+
+    @inline(never)
+    public static func socketpair(domain: CInt,
+                                  type: CInt,
+                                  protocol: CInt,
+                                  socketVector: UnsafeMutablePointer<CInt>?) throws {
+        _ = try wrapSyscall {
+            sysSocketpair(domain, type, `protocol`, socketVector)
         }
     }
 }

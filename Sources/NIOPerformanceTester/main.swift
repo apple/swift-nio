@@ -738,3 +738,5 @@ try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_10k_frames",
 
 try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
                     benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never))
+
+try measureAndPrint(desc: "websocket_decode", benchmark: WebSocketFrameDecoderBenchmark(dataSize: 1024, runCount: 100_000))

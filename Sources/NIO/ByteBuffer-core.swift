@@ -25,7 +25,7 @@ extension _ByteBufferSlice: Equatable {}
 struct _ByteBufferSlice {
     @usableFromInline var upperBound: ByteBuffer._Index
     @usableFromInline var _begin: _UInt24
-    @usableFromInline var lowerBound: ByteBuffer._Index {
+    @inlinable var lowerBound: ByteBuffer._Index {
         return UInt32(self._begin)
     }
     @inlinable var count: Int {
@@ -235,7 +235,7 @@ public struct ByteBuffer {
             return self.allocateStorage(capacity: self.capacity)
         }
 
-        private func allocateStorage(capacity: _Capacity) -> _Storage {
+        fileprivate func allocateStorage(capacity: _Capacity) -> _Storage {
             let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2ClampedToMax()
             return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, allocator: self.allocator),
                             capacity: newCapacity,
@@ -412,10 +412,10 @@ public struct ByteBuffer {
 
     /// The number of bytes writable until `ByteBuffer` will need to grow its underlying storage which will likely
     /// trigger a copy of the bytes.
-    public var writableBytes: Int { return Int(_toCapacity(self._slice.count) - self._writerIndex) }
+    @inlinable public var writableBytes: Int { return Int(_toCapacity(self._slice.count) - self._writerIndex) }
 
     /// The number of bytes readable (`readableBytes` = `writerIndex` - `readerIndex`).
-    public var readableBytes: Int { return Int(self._writerIndex - self._readerIndex) }
+    @inlinable public var readableBytes: Int { return Int(self._writerIndex - self._readerIndex) }
 
     /// The current capacity of the storage of this `ByteBuffer`, this is not constant and does _not_ signify the number
     /// of bytes that have been written to this `ByteBuffer`.
@@ -643,12 +643,14 @@ public struct ByteBuffer {
 
     /// The reader index or the number of bytes previously read from this `ByteBuffer`. `readerIndex` is `0` for a
     /// newly allocated `ByteBuffer`.
+    @inlinable
     public var readerIndex: Int {
         return Int(self._readerIndex)
     }
 
     /// The write index or the number of bytes previously written to this `ByteBuffer`. `writerIndex` is `0` for a
     /// newly allocated `ByteBuffer`.
+    @inlinable
     public var writerIndex: Int {
         return Int(self._writerIndex)
     }
@@ -663,6 +665,28 @@ public struct ByteBuffer {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.allocateStorage()
         }
+        self._slice = self._storage.fullSlice
+        self._moveWriterIndex(to: 0)
+        self._moveReaderIndex(to: 0)
+    }
+
+    /// Set both reader index and writer index to `0`. This will reset the state of this `ByteBuffer` to the state
+    /// of a freshly allocated one, if possible without allocations. This is the cheapest way to recycle a `ByteBuffer`
+    /// for a new use-case.
+    ///
+    /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
+    ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
+    ///
+    /// - parameters:
+    ///     - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
+    public mutating func clear(minimumCapacity: _Capacity) {
+        if !isKnownUniquelyReferenced(&self._storage) {
+            self._storage = self._storage.allocateStorage(capacity: minimumCapacity)
+        } else if minimumCapacity > self._storage.capacity {
+            self._storage.reallocStorage(capacity: minimumCapacity)
+        }
+        self._slice = self._storage.fullSlice
+
         self._moveWriterIndex(to: 0)
         self._moveReaderIndex(to: 0)
     }
