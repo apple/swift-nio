@@ -319,15 +319,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
 /// A channel used with datagram sockets.
 ///
-/// Currently this channel is in an early stage. It supports only unconnected
-/// datagram sockets, and does not currently support either multicast or
-/// broadcast send or receive.
-///
-/// The following features are well worth adding:
-///
-/// - Multicast support
-/// - Broadcast support
-/// - Connected mode
+/// Currently, it does not support connected mode which is well worth adding.
 final class DatagramChannel: BaseSocketChannel<Socket> {
 
     // Guard against re-entrance of flushNow() method.

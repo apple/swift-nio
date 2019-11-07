@@ -129,18 +129,53 @@ public enum SocketAddress: CustomStringConvertible {
             return PF_UNIX
         }
     }
-
-    /// Get the port associated with the address, if defined.
-    public var port: Int? {
+	
+    /// Get the IP address as a string
+    public var ipAddress: String? {
         switch self {
         case .v4(let addr):
-            // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
-            return Int(in_port_t(bigEndian: addr.address.sin_port))
+            var mutAddr = addr.address.sin_addr
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            return try! descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
         case .v6(let addr):
-            // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
-            return Int(in_port_t(bigEndian: addr.address.sin6_port))
-        case .unixDomainSocket:
+            var mutAddr = addr.address.sin6_addr
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            return try! descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+        case .unixDomainSocket(_):
             return nil
+        }
+    }
+
+    /// Get and set the port associated with the address, if defined.
+    /// When setting to `nil` the port will default to `0` for compatible sockets. The rationale for this is that both `nil` and `0` can
+    /// be interpreted as "no preference".
+    /// Setting a non-nil value for a unix domain socket is invalid and will result in a fatal error.
+    public var port: Int? {
+        get {
+            switch self {
+            case .v4(let addr):
+                // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
+                return Int(in_port_t(bigEndian: addr.address.sin_port))
+            case .v6(let addr):
+                // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
+                return Int(in_port_t(bigEndian: addr.address.sin6_port))
+            case .unixDomainSocket:
+                return nil
+            }
+        }
+        set {
+            switch self {
+            case .v4(let addr):
+                var mutAddr = addr.address
+                mutAddr.sin_port = in_port_t(newValue ?? 0).bigEndian
+                self = .v4(.init(address: mutAddr, host: addr.host))
+            case .v6(let addr):
+                var mutAddr = addr.address
+                mutAddr.sin6_port = in_port_t(newValue ?? 0).bigEndian
+                self = .v6(.init(address: mutAddr, host: addr.host))
+            case .unixDomainSocket:
+                precondition(newValue == nil, "attempting to set a non-nil value to a unix socket is not valid")
+            }
         }
     }
 

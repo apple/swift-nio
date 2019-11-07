@@ -20,10 +20,11 @@ import Dispatch
 /// A `Scheduled` allows the user to either `cancel()` the execution of the scheduled task (if possible) or obtain a reference to the `EventLoopFuture` that
 /// will be notified once the execution is complete.
 public struct Scheduled<T> {
-    private let promise: EventLoopPromise<T>
+    /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
 
+    @inlinable
     public init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> Void) {
-        self.promise = promise
+        self._promise = promise
         promise.futureResult.whenFailure { error in
             guard let err = error as? EventLoopError else {
                 return
@@ -38,13 +39,15 @@ public struct Scheduled<T> {
     ///
     /// Whether this is successful depends on whether the execution of the task already begun.
     ///  This means that cancellation is not guaranteed.
+    @inlinable
     public func cancel() {
-        promise.fail(EventLoopError.cancelled)
+        self._promise.fail(EventLoopError.cancelled)
     }
 
     /// Returns the `EventLoopFuture` which will be notified once the execution of the scheduled task completes.
+    @inlinable
     public var futureResult: EventLoopFuture<T> {
-        return promise.futureResult
+        return self._promise.futureResult
     }
 }
 
@@ -356,7 +359,7 @@ extension TimeAmount {
 ///
 /// - note: `NIODeadline` should not be used to represent a time interval
 public struct NIODeadline: Equatable, Hashable {
-    @available(*, deprecated, message: "This typealias doesn't server any purpose, please use UInt64 directly.")
+    @available(*, deprecated, message: "This typealias doesn't serve any purpose, please use UInt64 directly.")
     public typealias Value = UInt64
 
     // This really should be an UInt63 but we model it as Int64 with >=0 assert
@@ -451,6 +454,7 @@ extension EventLoop {
     /// - parameters:
     ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: An `EventLoopFuture` containing the result of `task`'s execution.
+    @inlinable
     public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
 
@@ -473,11 +477,13 @@ extension EventLoop {
     /// - parameters:
     ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: An `EventLoopFuture` identical to the `EventLooopFuture` returned from `task`.
+    @inlinable
     public func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
         return self.submit(task).flatMap { $0 }
     }
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.
+    @inlinable
     public func makePromise<T>(of type: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
         return EventLoopPromise<T>(eventLoop: self, file: file, line: line)
     }
@@ -487,6 +493,7 @@ extension EventLoop {
     /// - parameters:
     ///     - error: the `Error` that is used by the `EventLoopFuture`.
     /// - returns: a failed `EventLoopFuture`.
+    @inlinable
     public func makeFailedFuture<T>(_ error: Error, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<T> {
         return EventLoopFuture<T>(eventLoop: self, error: error, file: file, line: line)
     }
@@ -496,6 +503,7 @@ extension EventLoop {
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
+    @inlinable
     public func makeSucceededFuture<Success>(_ value: Success, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Success> {
         return EventLoopFuture<Success>(eventLoop: self, value: value, file: file, line: line)
     }
