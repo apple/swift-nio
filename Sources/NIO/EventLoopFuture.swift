@@ -372,23 +372,10 @@ public struct EventLoopPromise<Value> {
 public final class EventLoopFuture<Value> {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
     @usableFromInline
-    internal var _value: Result<Value, Error>? {
-        didSet {
-            self._isFulfilled.store(true)
-        }
-    }
-
-    @usableFromInline
-    internal let _isFulfilled: UnsafeEmbeddedAtomic<Bool>
+    internal var _value: Result<Value, Error>?
 
     /// The `EventLoop` which is tied to the `EventLoopFuture` and is used to notify all registered callbacks.
     public let eventLoop: EventLoop
-
-    /// Whether this `EventLoopFuture` has been fulfilled. This is a thread-safe
-    /// computed-property.
-    internal var isFulfilled: Bool {
-        return self._isFulfilled.load()
-    }
 
     /// Callbacks that should be run when this `EventLoopFuture<Value>` gets a value.
     /// These callbacks may give values to other `EventLoopFuture`s; if that happens,
@@ -401,7 +388,6 @@ public final class EventLoopFuture<Value> {
     internal init(_eventLoop eventLoop: EventLoop, value: Result<Value, Error>?, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
         self._value = value
-        self._isFulfilled = UnsafeEmbeddedAtomic(value: value != nil)
 
         debugOnly {
             if let me = eventLoop as? SelectableEventLoop {
@@ -431,15 +417,13 @@ public final class EventLoopFuture<Value> {
         debugOnly {
             if let eventLoop = self.eventLoop as? SelectableEventLoop {
                 let creation = eventLoop.promiseCreationStoreRemove(future: self)
-                if !self.isFulfilled {
+                if self._value == nil {
                     fatalError("leaking promise created at \(creation)", file: creation.file, line: creation.line)
                 }
             } else {
-                precondition(self.isFulfilled, "leaking an unfulfilled Promise")
+                precondition(self._value != nil, "leaking an unfulfilled Promise")
             }
         }
-
-        self._isFulfilled.destroy()
     }
 }
 
