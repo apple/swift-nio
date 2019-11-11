@@ -1130,6 +1130,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - arguments:
     ///     - numberOfThreads: The number of `Threads` to use.
     public convenience init(numberOfThreads: Int) {
+        precondition(numberOfThreads > 0, "numberOfThreads must be positive")
         let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
         self.init(threadInitializers: initializers)
     }
