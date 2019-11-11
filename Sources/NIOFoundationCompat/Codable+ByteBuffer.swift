@@ -45,7 +45,10 @@ extension ByteBuffer {
     public mutating func readJSONDecodable<T: Decodable>(_ type: T.Type,
                                                          decoder: JSONDecoder = JSONDecoder(),
                                                          length: Int) throws -> T? {
-        guard let decoded = try self.getJSONDecodable(T.self, at: self.readerIndex, length: length) else {
+        guard let decoded = try self.getJSONDecodable(T.self,
+                                                      decoder: decoder,
+                                                      at: self.readerIndex,
+                                                      length: length) else {
             return nil
         }
         self.moveReaderIndex(forwardBy: length)

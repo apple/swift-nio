@@ -38,6 +38,7 @@ extension CodableByteBufferTest {
                 ("testFailingReadsDoNotChangeReaderIndex", testFailingReadsDoNotChangeReaderIndex),
                 ("testCustomEncoderIsRespected", testCustomEncoderIsRespected),
                 ("testCustomDecoderIsRespected", testCustomDecoderIsRespected),
+                ("testCustomCodersAreRespectedWhenUsingReadWriteJSONDecodable", testCustomCodersAreRespectedWhenUsingReadWriteJSONDecodable),
            ]
    }
 }
