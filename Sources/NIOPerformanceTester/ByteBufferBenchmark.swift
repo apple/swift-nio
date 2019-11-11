@@ -16,8 +16,8 @@ import Foundation
 import NIO
 
 final class ByteBufferBenchmark: Benchmark {
-    private let iterations : Int
-    private let bufferSize : Int
+    private let iterations: Int
+    private let bufferSize: Int
     private var circularBuffer: CircularBuffer<UInt8>
     private var buffer: ByteBuffer
 
@@ -40,7 +40,9 @@ final class ByteBufferBenchmark: Benchmark {
     func run() -> Int {
         for _ in 1...self.iterations {
             self.buffer.writeBytes(self.circularBuffer)
+            self.buffer.clear()
             self.buffer.setBytes(self.circularBuffer, at: 0)
+            self.buffer.clear()
         }
         return 1
     }
