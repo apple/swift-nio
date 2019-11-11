@@ -25,7 +25,7 @@ extension _ByteBufferSlice: Equatable {}
 struct _ByteBufferSlice {
     @usableFromInline var upperBound: ByteBuffer._Index
     @usableFromInline var _begin: _UInt24
-    @usableFromInline var lowerBound: ByteBuffer._Index {
+    @inlinable var lowerBound: ByteBuffer._Index {
         return UInt32(self._begin)
     }
     @inlinable var count: Int {
@@ -133,10 +133,12 @@ public struct ByteBufferAllocator {
 ///
 ///     var buf = ...
 ///     buf.setString("Hello World", at: 0)
+///     buf.moveWriterIndex(to: 11)
 ///     let helloWorld = buf.getString(at: 0, length: 11)
 ///
-///     buf.setInteger(17 as Int, at: 11)
-///     let seventeen: Int = buf.getInteger(at: 11)
+///     let written = buf.setInteger(17 as Int, at: 11)
+///     buf.moveWriterIndex(forwardBy: written)
+///     let seventeen: Int? = buf.getInteger(at: 11)
 ///
 /// If needed, `ByteBuffer` will automatically resize its storage to accommodate your `set` request.
 ///
@@ -412,10 +414,10 @@ public struct ByteBuffer {
 
     /// The number of bytes writable until `ByteBuffer` will need to grow its underlying storage which will likely
     /// trigger a copy of the bytes.
-    public var writableBytes: Int { return Int(_toCapacity(self._slice.count) - self._writerIndex) }
+    @inlinable public var writableBytes: Int { return Int(_toCapacity(self._slice.count) - self._writerIndex) }
 
     /// The number of bytes readable (`readableBytes` = `writerIndex` - `readerIndex`).
-    public var readableBytes: Int { return Int(self._writerIndex - self._readerIndex) }
+    @inlinable public var readableBytes: Int { return Int(self._writerIndex - self._readerIndex) }
 
     /// The current capacity of the storage of this `ByteBuffer`, this is not constant and does _not_ signify the number
     /// of bytes that have been written to this `ByteBuffer`.
@@ -643,12 +645,14 @@ public struct ByteBuffer {
 
     /// The reader index or the number of bytes previously read from this `ByteBuffer`. `readerIndex` is `0` for a
     /// newly allocated `ByteBuffer`.
+    @inlinable
     public var readerIndex: Int {
         return Int(self._readerIndex)
     }
 
     /// The write index or the number of bytes previously written to this `ByteBuffer`. `writerIndex` is `0` for a
     /// newly allocated `ByteBuffer`.
+    @inlinable
     public var writerIndex: Int {
         return Int(self._writerIndex)
     }

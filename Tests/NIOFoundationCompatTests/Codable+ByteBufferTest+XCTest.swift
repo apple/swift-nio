@@ -36,6 +36,9 @@ extension CodableByteBufferTest {
                 ("testReadWriteJSONDecodableWorks", testReadWriteJSONDecodableWorks),
                 ("testGetSetJSONDecodableWorks", testGetSetJSONDecodableWorks),
                 ("testFailingReadsDoNotChangeReaderIndex", testFailingReadsDoNotChangeReaderIndex),
+                ("testCustomEncoderIsRespected", testCustomEncoderIsRespected),
+                ("testCustomDecoderIsRespected", testCustomDecoderIsRespected),
+                ("testCustomCodersAreRespectedWhenUsingReadWriteJSONDecodable", testCustomCodersAreRespectedWhenUsingReadWriteJSONDecodable),
            ]
    }
 }
