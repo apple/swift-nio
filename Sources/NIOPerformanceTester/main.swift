@@ -738,7 +738,23 @@ try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_10k_frames",
 try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
                     benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never))
 
-try measureAndPrint(desc: "websocket_decode", benchmark: WebSocketFrameDecoderBenchmark(dataSize: 1024, runCount: 100_000))
+ try measureAndPrint(desc: "websocket_decode_125b_100k_frames",
+                     benchmark: WebSocketFrameDecoderBenchmark(dataSize: 125, runCount: 100_000))
+
+try measureAndPrint(desc: "websocket_decode_125b_with_а_masking_key_100k_frames",
+                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: 125, runCount: 100_000, maskingKey: [0x80, 0x08, 0x10, 0x01]))
+
+try measureAndPrint(desc: "websocket_decode_64kb_100k_frames",
+                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max), runCount: 100_000))
+
+try measureAndPrint(desc: "websocket_decode_64kb_with_а_masking_key_100k_frames",
+                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max), runCount: 100_000, maskingKey: [0x80, 0x08, 0x10, 0x01]))
+
+try measureAndPrint(desc: "websocket_decode_64kb_+1_100k_frames",
+                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max) + 1, runCount: 100_000))
+
+try measureAndPrint(desc: "websocket_decode_64kb_+1_with_а_masking_key_100k_frames",
+                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max) + 1, runCount: 100_000, maskingKey: [0x80, 0x08, 0x10, 0x01]))
 
 try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: ByteBufferBenchmark(iterations: 10000, bufferSize: 1024))
 
