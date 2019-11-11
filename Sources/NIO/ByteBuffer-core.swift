@@ -366,6 +366,7 @@ public struct ByteBuffer {
 
     @inline(never)
     @inlinable
+    @_specialize(where Bytes == CircularBuffer<UInt8>)
     mutating func _setSlowPath<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
         func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
             self._ensureAvailableCapacity(_Capacity(capacity), at: index)
