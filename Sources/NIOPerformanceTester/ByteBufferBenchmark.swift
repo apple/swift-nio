@@ -40,7 +40,6 @@ final class ByteBufferBenchmark: Benchmark {
     func run() -> Int {
         for _ in 1...self.iterations {
             self.buffer.writeBytes(self.circularBuffer)
-            self.buffer.clear()
             self.buffer.setBytes(self.circularBuffer, at: 0)
             self.buffer.clear()
         }
