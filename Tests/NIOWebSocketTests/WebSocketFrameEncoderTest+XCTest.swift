@@ -33,6 +33,13 @@ extension WebSocketFrameEncoderTest {
                 ("testEncodesExtensionDataCorrectly", testEncodesExtensionDataCorrectly),
                 ("testMasksDataCorrectly", testMasksDataCorrectly),
                 ("testFrameEncoderReusesHeaderBufferWherePossible", testFrameEncoderReusesHeaderBufferWherePossible),
+                ("testFrameEncoderCanPrependHeaderToApplicationBuffer", testFrameEncoderCanPrependHeaderToApplicationBuffer),
+                ("testFrameEncoderCanPrependHeaderToExtensionBuffer", testFrameEncoderCanPrependHeaderToExtensionBuffer),
+                ("testFrameEncoderCanPrependMediumHeader", testFrameEncoderCanPrependMediumHeader),
+                ("testFrameEncoderCanPrependLargeHeader", testFrameEncoderCanPrependLargeHeader),
+                ("testFrameEncoderFailsToPrependHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependHeaderWithInsufficientSpace),
+                ("testFrameEncoderFailsToPrependMediumHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependMediumHeaderWithInsufficientSpace),
+                ("testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace),
            ]
    }
 }

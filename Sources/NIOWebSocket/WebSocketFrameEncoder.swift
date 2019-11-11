@@ -61,51 +61,24 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let data = self.unwrapOutboundIn(data)
 
-        // Grab the header buffer. We nil it out while we're in this call to avoid the risk of CoWing when we
-        // write to it.
-        guard var buffer = self.headerBuffer else {
-            fatalError("Channel handler lifecycle violated: did not allocate header buffer")
-        }
-        self.headerBuffer = nil
-        buffer.clear()
+        // First, we explode the frame structure and apply the mask.
+        let frameHeader = FrameHeader(frame: data)
+        var (extensionData, applicationData) = self.mask(key: frameHeader.maskKey, extensionData: data.extensionData, applicationData: data.data)
 
-        // Calculate some information about the mask.
-        let maskBitMask: UInt8 = data.maskKey != nil ? 0x80 : 0x00
+        // Now we attempt to prepend the frame header to the first buffer. If we can't, we'll write to the header buffer. If we have
+        // an extension data buffer, that's the first buffer, and we'll also write it here.
+        if var unwrappedExtensionData = extensionData {
+            extensionData = nil  // Again, forcibly nil to drop the reference.
 
-        // Time to add the extra bytes. To avoid checking this twice, we also start writing stuff out here.
-        switch data.length {
-        case 0...maxOneByteSize:
-            buffer.writeInteger(data.firstByte)
-            buffer.writeInteger(UInt8(data.length) | maskBitMask)
-        case (maxOneByteSize + 1)...maxTwoByteSize:
-            buffer.writeInteger(data.firstByte)
-            buffer.writeInteger(UInt8(126) | maskBitMask)
-            buffer.writeInteger(UInt16(data.length))
-        case (maxTwoByteSize + 1)...maxNIOFrameSize:
-            buffer.writeInteger(data.firstByte)
-            buffer.writeInteger(UInt8(127) | maskBitMask)
-            buffer.writeInteger(UInt64(data.length))
-        default:
-            fatalError("NIO cannot serialize frames longer than \(maxNIOFrameSize)")
+            if !unwrappedExtensionData.prependFrameHeaderIfPossible(frameHeader) {
+                self.writeSeparateHeaderBuffer(frameHeader, context: context)
+            }
+            context.write(self.wrapOutboundOut(unwrappedExtensionData), promise: nil)
+        } else if !applicationData.prependFrameHeaderIfPossible(frameHeader) {
+            self.writeSeparateHeaderBuffer(frameHeader, context: context)
         }
 
-        if let maskKey = data.maskKey {
-            buffer.writeBytes(maskKey)
-        }
-
-        // Ok, frame header away! Before we send it we save it back onto ourselves in case we get recursively called.
-        self.headerBuffer = buffer
-        context.write(self.wrapOutboundOut(buffer), promise: nil)
-
-        // Next, let's mask the extension and application data and send
-        // them too.
-        let (extensionData, applicationData) = self.mask(key: data.maskKey, extensionData: data.extensionData, applicationData: data.data)
-
-        // Now we can send our byte buffers out. We attach the write promise to the last
-        // of the frame data.
-        if let extensionData = extensionData {
-            context.write(self.wrapOutboundOut(extensionData), promise: nil)
-        }
+        // Ok, now we need to write the application data buffer.
         context.write(self.wrapOutboundOut(applicationData), promise: promise)
     }
 
@@ -122,5 +95,124 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
         extensionData?.webSocketMask(key)
         applicationData.webSocketMask(key, indexOffset: (extensionData?.readableBytes ?? 0) % 4)
         return (extensionData, applicationData)
+    }
+
+    private func writeSeparateHeaderBuffer(_ frameHeader: FrameHeader, context: ChannelHandlerContext) {
+        // Grab the header buffer. We nil it out while we're in this call to avoid the risk of CoWing when we
+        // write to it.
+        guard var buffer = self.headerBuffer else {
+            fatalError("Channel handler lifecycle violated: did not allocate header buffer")
+        }
+        self.headerBuffer = nil
+
+        // We couldn't prepend the frame header, write it to the header buffer.
+        buffer.clear()
+        buffer.writeFrameHeader(frameHeader)
+
+        // Ok, frame header away! Before we send it we save it back onto ourselves in case we get recursively called.
+        self.headerBuffer = buffer
+        context.write(self.wrapOutboundOut(buffer), promise: nil)
+    }
+}
+
+
+extension ByteBuffer {
+    fileprivate mutating func prependFrameHeaderIfPossible(_ frameHeader: FrameHeader) -> Bool {
+        let written: Int? = self.modifyIfUniquelyOwned { buffer in
+            let startIndex = buffer.readerIndex - frameHeader.requiredBytes
+
+            guard startIndex >= 0 else {
+                return 0
+            }
+
+            let written = buffer.setFrameHeader(frameHeader, at: startIndex)
+            buffer.moveReaderIndex(to: startIndex)
+            return written
+        }
+
+        switch written {
+        case .none, .some(0):
+            return false
+        case .some(let x):
+            assert(x == frameHeader.requiredBytes)
+            return true
+        }
+    }
+
+    @discardableResult
+    fileprivate mutating func writeFrameHeader(_ frameHeader: FrameHeader) -> Int {
+        let written = self.setFrameHeader(frameHeader, at: self.writerIndex)
+        self.moveWriterIndex(forwardBy: written)
+        return written
+    }
+
+    @discardableResult
+    private mutating func setFrameHeader(_ frameHeader: FrameHeader, at index: Int) -> Int {
+        var writeIndex = index
+
+        // Calculate some information about the mask.
+        let maskBitMask: UInt8 = frameHeader.maskKey != nil ? 0x80 : 0x00
+        let frameLength = frameHeader.length
+
+        // Time to add the extra bytes. To avoid checking this twice, we also start writing stuff out here.
+        switch frameLength {
+        case 0...maxOneByteSize:
+            writeIndex += self.setInteger(frameHeader.firstByte, at: writeIndex)
+            writeIndex += self.setInteger(UInt8(frameLength) | maskBitMask, at: writeIndex)
+        case (maxOneByteSize + 1)...maxTwoByteSize:
+            writeIndex += self.setInteger(frameHeader.firstByte, at: writeIndex)
+            writeIndex += self.setInteger(UInt8(126) | maskBitMask, at: writeIndex)
+            writeIndex += self.setInteger(UInt16(frameLength), at: writeIndex)
+        case (maxTwoByteSize + 1)...maxNIOFrameSize:
+            writeIndex += self.setInteger(frameHeader.firstByte, at: writeIndex)
+            writeIndex += self.setInteger(UInt8(127) | maskBitMask, at: writeIndex)
+            writeIndex += self.setInteger(UInt64(frameLength), at: writeIndex)
+        default:
+            fatalError("NIO cannot serialize frames longer than \(maxNIOFrameSize)")
+        }
+
+        if let maskKey = frameHeader.maskKey {
+            writeIndex += self.setBytes(maskKey, at: writeIndex)
+        }
+
+        return writeIndex - index
+    }
+}
+
+
+/// A helper object that holds only a websocket frame header. Used to avoid accidentally CoWing on some paths.
+fileprivate struct FrameHeader {
+    var length: Int
+    var maskKey: WebSocketMaskingKey?
+    var firstByte: UInt8 = 0
+
+    init(frame: WebSocketFrame) {
+        self.maskKey = frame.maskKey
+        self.firstByte = frame.firstByte
+        self.length = frame.length
+    }
+
+    var requiredBytes: Int {
+        var size = 2  // First byte and initial length byte
+
+        switch self.length {
+        case 0...maxOneByteSize:
+            // Only requires the initial length byte
+            break
+        case (maxOneByteSize + 1)...maxTwoByteSize:
+            // Requires an extra UInt16
+            size += MemoryLayout<UInt16>.size
+        case (maxTwoByteSize + 1)...maxNIOFrameSize:
+            size += MemoryLayout<UInt64>.size
+        default:
+            fatalError("NIO cannot serialize frames longer than \(maxNIOFrameSize)")
+        }
+
+        if maskKey != nil {
+            size += 4  // Masking key
+        }
+
+
+        return size
     }
 }
