@@ -83,6 +83,13 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
         }
 
         @inlinable
+        public static func == (lhs: Index, rhs: Index) -> Bool {
+            return lhs._backingIndex == rhs._backingIndex &&
+                lhs._backingCheck == rhs._backingCheck &&
+                lhs.isIndexGEQHeadIndex == rhs.isIndexGEQHeadIndex
+        }
+
+        @inlinable
         public static func < (lhs: Index, rhs: Index) -> Bool {
             if lhs.isIndexGEQHeadIndex && rhs.isIndexGEQHeadIndex {
                 return lhs.backingIndex < rhs.backingIndex

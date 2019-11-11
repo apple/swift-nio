@@ -755,3 +755,7 @@ try measureAndPrint(desc: "websocket_decode_64kb_+1_100k_frames",
 
 try measureAndPrint(desc: "websocket_decode_64kb_+1_with_а_masking_key_100k_frames",
                     benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max) + 1, runCount: 100_000, maskingKey: [0x80, 0x08, 0x10, 0x01]))
+
+try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: ByteBufferBenchmark(iterations: 10000, bufferSize: 1024))
+
+try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1mb", benchmark: ByteBufferBenchmark(iterations: 20, bufferSize: 1024*1024))
