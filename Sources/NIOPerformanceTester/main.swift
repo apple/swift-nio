@@ -15,7 +15,6 @@
 import NIO
 import NIOHTTP1
 import NIOFoundationCompat
-import Foundation
 import Dispatch
 
 // MARK: Test Harness
@@ -29,12 +28,12 @@ assert({
     return true
     }())
 
-public func measure(_ fn: () throws -> Int) rethrows -> [TimeInterval] {
-    func measureOne(_ fn: () throws -> Int) rethrows -> TimeInterval {
-        let start = Date()
+public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
+    func measureOne(_ fn: () throws -> Int) rethrows -> Double {
+        let start = DispatchTime.now().uptimeNanoseconds
         _ = try fn()
-        let end = Date()
-        return end.timeIntervalSince(start)
+        let end = DispatchTime.now().uptimeNanoseconds
+        return Double(end - start) / Double(TimeAmount.seconds(1).nanoseconds)
     }
 
     _ = try measureOne(fn) /* pre-heat and throw away */
