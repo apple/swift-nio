@@ -133,10 +133,12 @@ public struct ByteBufferAllocator {
 ///
 ///     var buf = ...
 ///     buf.setString("Hello World", at: 0)
+///     buf.moveWriterIndex(to: 11)
 ///     let helloWorld = buf.getString(at: 0, length: 11)
 ///
-///     buf.setInteger(17 as Int, at: 11)
-///     let seventeen: Int = buf.getInteger(at: 11)
+///     let written = buf.setInteger(17 as Int, at: 11)
+///     buf.moveWriterIndex(forwardBy: written)
+///     let seventeen: Int? = buf.getInteger(at: 11)
 ///
 /// If needed, `ByteBuffer` will automatically resize its storage to accommodate your `set` request.
 ///
