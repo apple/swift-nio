@@ -382,12 +382,13 @@ public final class EventLoopFuture<Value> {
     /// they return any callbacks from those `EventLoopFuture`s so that we can run
     /// the entire chain from the top without recursing.
     @usableFromInline
-    internal var _callbacks: CallbackList = CallbackList()
+    internal var _callbacks: CallbackList
 
     @inlinable
     internal init(_eventLoop eventLoop: EventLoop, value: Result<Value, Error>?, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
         self._value = value
+        self._callbacks = .init()
 
         debugOnly {
             if let me = eventLoop as? SelectableEventLoop {

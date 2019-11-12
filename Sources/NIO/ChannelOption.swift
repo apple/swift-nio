@@ -266,9 +266,10 @@ extension ChannelOptions {
     /// `Channel` that needs to store `ChannelOption`s.
     public struct Storage {
         @usableFromInline
-        internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
+        internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))]
 
         public init() {
+            self._storage = []
             self._storage.reserveCapacity(2)
         }
 
