@@ -715,31 +715,37 @@ measureAndPrint(desc: "future_reduce_into_10k_futures") {
 try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark())
 
 try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .spaceAtFront, cowStrategy: .always))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
+
+try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow_masking",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .always))
 
 try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_100k_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_1m_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_100k_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_space_at_front_10k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .spaceAtFront, cowStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
+
+try measureAndPrint(desc: "websocket_encode_50b_space_at_front_10k_frames_masking",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .always))
 
 try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_1k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .spaceAtFront, cowStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_10k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_decode", benchmark: WebSocketFrameDecoderBenchmark(dataSize: 1024, runCount: 100_000))
 
-try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: ByteBufferBenchmark(iterations: 10000, bufferSize: 1024))
+try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: ByteBufferBenchmark(iterations: 10000, bufferSize: 4))
 
 try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1mb", benchmark: ByteBufferBenchmark(iterations: 20, bufferSize: 1024*1024))
