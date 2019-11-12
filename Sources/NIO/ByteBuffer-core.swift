@@ -202,8 +202,8 @@ public struct ByteBuffer {
     public typealias _Capacity = UInt32
 
     @usableFromInline var _storage: _Storage
-    @usableFromInline var _readerIndex: _Index = 0
-    @usableFromInline var _writerIndex: _Index = 0
+    @usableFromInline var _readerIndex: _Index
+    @usableFromInline var _writerIndex: _Index
     @usableFromInline var _slice: Slice
 
     // MARK: Internal _Storage for CoW
@@ -409,6 +409,8 @@ public struct ByteBuffer {
 
     fileprivate init(allocator: ByteBufferAllocator, startingCapacity: Int) {
         let startingCapacity = _toCapacity(startingCapacity)
+        self._readerIndex = 0
+        self._writerIndex = 0
         self._storage = _Storage.reallocated(minimumCapacity: startingCapacity, allocator: allocator)
         self._slice = self._storage.fullSlice
     }

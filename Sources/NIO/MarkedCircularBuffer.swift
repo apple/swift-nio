@@ -19,7 +19,7 @@
 /// safe to write.
 public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     @usableFromInline internal var _buffer: CircularBuffer<Element>
-    @usableFromInline internal var _markedIndexOffset: Int? = nil /* nil: nothing marked */
+    @usableFromInline internal var _markedIndexOffset: Int? /* nil: nothing marked */
 
     /// Create a new instance.
     ///

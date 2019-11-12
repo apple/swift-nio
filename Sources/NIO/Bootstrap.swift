@@ -59,9 +59,9 @@ public final class ServerBootstrap {
     private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _serverChannelOptions = ChannelOptions.Storage()
+    internal var _serverChannelOptions: ChannelOptions.Storage
     @usableFromInline
-    internal var _childChannelOptions = ChannelOptions.Storage()
+    internal var _childChannelOptions: ChannelOptions.Storage
 
     /// Create a `ServerBootstrap` for the `EventLoopGroup` `group`.
     ///
@@ -79,6 +79,8 @@ public final class ServerBootstrap {
     public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
         self.group = group
         self.childGroup = childGroup
+        self._serverChannelOptions = ChannelOptions.Storage()
+        self._childChannelOptions = ChannelOptions.Storage()
         self._serverChannelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     }
 
@@ -354,7 +356,7 @@ public final class ClientBootstrap {
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _channelOptions = ChannelOptions.Storage()
+    internal var _channelOptions: ChannelOptions.Storage
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Resolver?
 
@@ -364,6 +366,7 @@ public final class ClientBootstrap {
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
         self.group = group
+        self._channelOptions = ChannelOptions.Storage()
         self._channelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     }
 
@@ -578,13 +581,14 @@ public final class DatagramBootstrap {
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _channelOptions = ChannelOptions.Storage()
+    internal var _channelOptions: ChannelOptions.Storage
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
     ///
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
+        self._channelOptions = ChannelOptions.Storage()
         self.group = group
     }
 
@@ -723,13 +727,14 @@ public final class NIOPipeBootstrap {
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _channelOptions = ChannelOptions.Storage()
+    internal var _channelOptions: ChannelOptions.Storage
 
     /// Create a `NIOPipeBootstrap` on the `EventLoopGroup` `group`.
     ///
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
+        self._channelOptions = ChannelOptions.Storage()
         self.group = group
     }
 
