@@ -715,28 +715,34 @@ measureAndPrint(desc: "future_reduce_into_10k_futures") {
 try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark())
 
 try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .spaceAtFront, cowStrategy: .always))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
+
+try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow_masking",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .always))
 
 try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_100k_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_1m_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_100k_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_space_at_front_10k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .spaceAtFront, cowStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
+
+try measureAndPrint(desc: "websocket_encode_50b_space_at_front_10k_frames_masking",
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .always))
 
 try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_1k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .spaceAtFront, cowStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_10k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
 
  try measureAndPrint(desc: "websocket_decode_125b_100k_frames",
                      benchmark: WebSocketFrameDecoderBenchmark(dataSize: 125, runCount: 100_000))
