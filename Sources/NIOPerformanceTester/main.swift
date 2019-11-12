@@ -718,7 +718,7 @@ try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow",
                     benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow_masking",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .always))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .always))
 
 try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_100k_frames_cow",
                     benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))

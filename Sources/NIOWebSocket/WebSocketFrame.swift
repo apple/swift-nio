@@ -43,9 +43,9 @@ public struct WebSocketMaskingKey {
         }
 
         self._key = (buffer[buffer.startIndex],
-                    buffer[buffer.index(buffer.startIndex, offsetBy: 1)],
-                    buffer[buffer.index(buffer.startIndex, offsetBy: 2)],
-                    buffer[buffer.index(buffer.startIndex, offsetBy: 3)])
+                     buffer[buffer.index(buffer.startIndex, offsetBy: 1)],
+                     buffer[buffer.index(buffer.startIndex, offsetBy: 2)],
+                     buffer[buffer.index(buffer.startIndex, offsetBy: 3)])
     }
 
     /// Creates a websocket masking key from the network-encoded
@@ -56,9 +56,9 @@ public struct WebSocketMaskingKey {
     ///         masking key.
     internal init(networkRepresentation integer: UInt32) {
         self._key = (UInt8((integer & 0xFF000000) >> 24),
-                    UInt8((integer & 0x00FF0000) >> 16),
-                    UInt8((integer & 0x0000FF00) >> 8),
-                    UInt8(integer & 0x000000FF))
+                     UInt8((integer & 0x00FF0000) >> 16),
+                     UInt8((integer & 0x0000FF00) >> 8),
+                     UInt8(integer & 0x000000FF))
     }
 }
 
