@@ -746,6 +746,6 @@ try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
 
 try measureAndPrint(desc: "websocket_decode", benchmark: WebSocketFrameDecoderBenchmark(dataSize: 1024, runCount: 100_000))
 
-try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: ByteBufferBenchmark(iterations: 10000, bufferSize: 4))
+try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: ByteBufferBenchmark(iterations: 10000, bufferSize: 1024))
 
 try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1mb", benchmark: ByteBufferBenchmark(iterations: 20, bufferSize: 1024*1024))
