@@ -14,6 +14,15 @@
 
 import NIOConcurrencyHelpers
 
+@usableFromInline
+internal enum ZeroOneOrMore {
+    @usableFromInline
+    internal typealias Element = () -> CallbackList
+
+    case zero
+    case one(Element)
+    case more(Element, [Element])
+}
 /// Internal list of callbacks.
 ///
 /// Most of these are closures that pull a value from one future, call a user callback, push the
@@ -22,72 +31,58 @@ import NIOConcurrencyHelpers
 /// In particular, note that _run() here continues to obtain and execute lists of callbacks until it completes.
 /// This eliminates recursion when processing `flatMap()` chains.
 @usableFromInline
-internal struct CallbackList: ExpressibleByArrayLiteral {
+internal struct CallbackList {
     @usableFromInline
     internal typealias Element = () -> CallbackList
     @usableFromInline
-    internal var firstCallback: Element?
-    @usableFromInline
-    internal var furtherCallbacks: [Element]?
+    internal var callbacks: ZeroOneOrMore
 
     @inlinable
     internal init() {
-        self.firstCallback = nil
-        self.furtherCallbacks = nil
-    }
-
-    @inlinable
-    internal init(arrayLiteral: Element...) {
-        self.init()
-        if !arrayLiteral.isEmpty {
-            self.firstCallback = arrayLiteral[0]
-            if arrayLiteral.count > 1 {
-                self.furtherCallbacks = Array(arrayLiteral.dropFirst())
-            }
-        }
+        self.callbacks = .zero
     }
 
     @inlinable
     internal mutating func append(_ callback: @escaping () -> CallbackList) {
-        if self.firstCallback == nil {
-            self.firstCallback = callback
-        } else {
-            if self.furtherCallbacks != nil {
-                self.furtherCallbacks!.append(callback)
-            } else {
-                self.furtherCallbacks = [callback]
-            }
+        switch self.callbacks {
+        case .zero:
+            self.callbacks = .one(callback)
+        case .one(let existing):
+            self.callbacks = .more(existing, [callback])
+        case .more(let first, var others):
+            others.append(callback)
+            self.callbacks = .more(first, others)
         }
     }
 
     @inlinable
     internal func _allCallbacks() -> [Element] {
-        switch (self.firstCallback, self.furtherCallbacks) {
-        case (.none, _):
+        switch self.callbacks {
+        case .zero:
             return []
-        case (.some(let onlyCallback), .none):
+        case .one(let onlyCallback):
             return [onlyCallback]
-        case (.some(let first), .some(let others)):
+        case .more(let first, let others):
             return [first] + others
         }
     }
 
     @inlinable
     internal func _run() {
-        switch (self.firstCallback, self.furtherCallbacks) {
-        case (.none, _):
+        switch self.callbacks {
+        case .zero:
             return
-        case (.some(let onlyCallback), .none):
+        case .one(let onlyCallback):
             var onlyCallback = onlyCallback
             loop: while true {
                 let cbl = onlyCallback()
-                switch (cbl.firstCallback, cbl.furtherCallbacks) {
-                case (.none, _):
+                switch cbl.callbacks {
+                case .zero:
                     break loop
-                case (.some(let ocb), .none):
+                case .one(let ocb):
                     onlyCallback = ocb
                     continue loop
-                case (.some(_), .some(_)):
+                case .more:
                     var pending = cbl._allCallbacks()
                     while pending.count > 0 {
                         let list = pending
@@ -100,7 +95,7 @@ internal struct CallbackList: ExpressibleByArrayLiteral {
                     break loop
                 }
             }
-        case (.some(let first), .some(let others)):
+        case .more(let first, let others):
             var pending = [first]+others
             while pending.count > 0 {
                 let list = pending
