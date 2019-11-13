@@ -223,6 +223,24 @@ class NIOHTTP1TestServerTest: XCTestCase {
         doIt()
         assert(weakTestServer == nil, within: .milliseconds(500))
     }
+
+    func testStopClosesAcceptedChannel() {
+        let testServer = NIOHTTP1TestServer(group: self.group)
+
+        let responsePromise = self.group.next().makePromise(of: String.self)
+        var channel: Channel!
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort,
+                                                    responsePromise: responsePromise).wait())
+        self.sendRequest(channel: channel, uri: "/uri", message: "hello")
+
+        XCTAssertNoThrow(try testServer.readInbound().assertHead(expectedURI: "/uri"))
+        XCTAssertNoThrow(try testServer.readInbound().assertBody(expectedMessage: "hello"))
+        XCTAssertNoThrow(try testServer.readInbound().assertEnd())
+
+        XCTAssertNoThrow(try testServer.stop())
+        XCTAssertNotNil(channel)
+        XCTAssertNoThrow(try channel.closeFuture.wait())
+    }
 }
 
 private final class TestHTTPHandler: ChannelInboundHandler {
@@ -235,7 +253,9 @@ private final class TestHTTPHandler: ChannelInboundHandler {
         self.responsePromise = responsePromise
     }
 
-    public func channelActive(context: ChannelHandlerContext) {
+    public func handlerRemoved(context: ChannelHandlerContext) {
+        struct HandlerRemovedBeforeReceivingFullRequestError: Error {}
+        self.responsePromise.fail(HandlerRemovedBeforeReceivingFullRequestError())
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
