@@ -113,7 +113,7 @@ def print_comparison_markdown(results)
   puts "| name | current | previous | winner | diff |"
   puts "|#{Array.new(5, '--').join("|")}|"
   results.keys.each do |key|
-    puts "| #{key} | #{results[key]["current"]["mean"]} | #{results[key]["previous"]["mean"]} | #{results[key]["winner"]} | #{results[key]["diff"]}% |"
+    puts "| #{key} | #{results[key]["current"][::METRIC]} | #{results[key]["previous"][::METRIC]} | #{results[key]["winner"]} | #{results[key]["diff"]}% |"
   end
 end
 
@@ -129,8 +129,8 @@ def print_comparison_html(results)
   results.keys.each do |key|
     puts "  <tr>
     <td>#{key}</td>
-    <td>#{results[key]["current"]["mean"]}</td>
-    <td>#{results[key]["previous"]["mean"]}</td>
+    <td>#{results[key]["current"][::METRIC]}</td>
+    <td>#{results[key]["previous"][::METRIC]}</td>
     <td>#{results[key]["winner"]}</td>
     <td>#{results[key]["diff"]}%</td>
   </tr>"
