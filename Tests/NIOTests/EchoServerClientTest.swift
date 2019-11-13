@@ -577,8 +577,11 @@ class EchoServerClientTest : XCTestCase {
 
     func testPendingReadProcessedAfterWriteError() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let dpGroup = DispatchGroup()
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
 
+        let dpGroup = DispatchGroup()
         dpGroup.enter()
 
         let str = "hi there"
@@ -597,7 +600,7 @@ class EchoServerClientTest : XCTestCase {
             }
 
             private func writeUntilFailed(_ context: ChannelHandlerContext, _ buffer: ByteBuffer) {
-                context.writeAndFlush(NIOAny(buffer)).whenComplete { (_: Result<Void, Error>) in
+                context.writeAndFlush(NIOAny(buffer)).whenSuccess {
                     context.eventLoop.execute {
                         self.writeUntilFailed(context, buffer)
                     }
@@ -665,8 +668,6 @@ class EchoServerClientTest : XCTestCase {
         completeBuffer.writeString(str)
 
         try countingHandler.assertReceived(buffer: completeBuffer)
-
-        XCTAssertNoThrow(try group.syncShutdownGracefully())
     }
 
     func testChannelErrorEOFNotFiredThroughPipeline() throws {
