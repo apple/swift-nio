@@ -28,12 +28,12 @@ internal struct CallbackList: ExpressibleByArrayLiteral {
     @usableFromInline
     internal var firstCallback: Element?
     @usableFromInline
-    internal var furtherCallbacks: [Element]?
+    internal var furtherCallbacks: [Element]
 
     @inlinable
     internal init() {
         self.firstCallback = nil
-        self.furtherCallbacks = nil
+        self.furtherCallbacks = []
     }
 
     @inlinable
@@ -52,11 +52,7 @@ internal struct CallbackList: ExpressibleByArrayLiteral {
         if self.firstCallback == nil {
             self.firstCallback = callback
         } else {
-            if self.furtherCallbacks != nil {
-                self.furtherCallbacks!.append(callback)
-            } else {
-                self.furtherCallbacks = [callback]
-            }
+            self.furtherCallbacks.append(callback)
         }
     }
 
@@ -65,10 +61,8 @@ internal struct CallbackList: ExpressibleByArrayLiteral {
         switch (self.firstCallback, self.furtherCallbacks) {
         case (.none, _):
             return []
-        case (.some(let onlyCallback), .none):
-            return [onlyCallback]
-        case (.some(let first), .some(let others)):
-            return [first] + others
+        case (.some(let onlyCallback), let others):
+            return [onlyCallback] + others
         }
     }
 
@@ -77,17 +71,17 @@ internal struct CallbackList: ExpressibleByArrayLiteral {
         switch (self.firstCallback, self.furtherCallbacks) {
         case (.none, _):
             return
-        case (.some(let onlyCallback), .none):
+        case (.some(let onlyCallback), let others) where others.isEmpty:
             var onlyCallback = onlyCallback
             loop: while true {
                 let cbl = onlyCallback()
                 switch (cbl.firstCallback, cbl.furtherCallbacks) {
                 case (.none, _):
                     break loop
-                case (.some(let ocb), .none):
+                case (.some(let ocb), let others) where others.isEmpty:
                     onlyCallback = ocb
                     continue loop
-                case (.some(_), .some(_)):
+                case (.some(_), _):
                     var pending = cbl._allCallbacks()
                     while pending.count > 0 {
                         let list = pending
@@ -100,7 +94,7 @@ internal struct CallbackList: ExpressibleByArrayLiteral {
                     break loop
                 }
             }
-        case (.some(let first), .some(let others)):
+        case (.some(let first), let others):
             var pending = [first]+others
             while pending.count > 0 {
                 let list = pending
