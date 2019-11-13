@@ -605,12 +605,16 @@ public final class EventLoopTest : XCTestCase {
                 channel.connect(to: serverSocket.localAddress!)
             }
         }.wait() as Void)
+        let closeFutureFulfilledEventually = Atomic<Bool>(value: false)
         XCTAssertFalse(channel.closeFuture.isFulfilled)
+        channel.closeFuture.whenSuccess {
+            XCTAssertTrue(closeFutureFulfilledEventually.compareAndExchange(expected: false, desired: true))
+        }
         XCTAssertNoThrow(try group.syncShutdownGracefully())
         XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
         XCTAssertTrue(assertHandler.removed.load())
-        XCTAssertTrue(channel.closeFuture.isFulfilled)
         XCTAssertFalse(channel.isActive)
+        XCTAssertTrue(closeFutureFulfilledEventually.load())
     }
 
     public func testScheduleMultipleTasks() throws {
