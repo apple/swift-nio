@@ -276,6 +276,8 @@ extension NIOHTTP1TestServer {
                 guard self.inboundBuffer.isEmpty else {
                     throw NonEmptyInboundBufferOnStop()
                 }
+            }.always { _ in
+                self.currentClientChannel?.close(promise: nil)
             }
         }.wait()
     }
