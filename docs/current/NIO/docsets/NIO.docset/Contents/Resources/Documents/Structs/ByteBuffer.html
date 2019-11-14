@@ -21,7 +21,7 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIO 2.10.0 Docs
+          NIO 2.10.1 Docs
         </a>
          (90% documented)
       </p>
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E10%2E0%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E10%2E1%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -468,10 +468,12 @@ types (non-exhaustive list):</p>
 <p>Example:</p>
 <pre class="highlight swift"><code><span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
 <span class="n">buf</span><span class="o">.</span><span class="nf">setString</span><span class="p">(</span><span class="s">"Hello World"</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">buf</span><span class="o">.</span><span class="nf">moveWriterIndex</span><span class="p">(</span><span class="nv">to</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
 <span class="k">let</span> <span class="nv">helloWorld</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getString</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
 
-<span class="n">buf</span><span class="o">.</span><span class="nf">setInteger</span><span class="p">(</span><span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
-<span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getInteger</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">written</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">setInteger</span><span class="p">(</span><span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+<span class="n">buf</span><span class="o">.</span><span class="nf">moveWriterIndex</span><span class="p">(</span><span class="nv">forwardBy</span><span class="p">:</span> <span class="n">written</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span><span class="p">?</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getInteger</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
 </code></pre>
 
 <p>If needed, <code>ByteBuffer</code> will automatically resize its storage to accommodate your <code>set</code> request.</p>
@@ -561,7 +563,7 @@ behaviour and might yield arbitrary bytes (<em>not</em> <code>0</code> initialis
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -591,7 +593,7 @@ behaviour and might yield arbitrary bytes (<em>not</em> <code>0</code> initialis
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -634,7 +636,7 @@ trigger a copy of the bytes.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L415">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L420">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -665,7 +667,7 @@ trigger a copy of the bytes.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L418">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L423">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -696,7 +698,7 @@ of bytes that have been written to this <code>ByteBuffer</code>.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L422-L424">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L427-L429">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -750,7 +752,7 @@ a no-op.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L435-L450">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L440-L455">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -809,7 +811,7 @@ a no-op.</p>
                         <p>The value returned by <code>body</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L473-L477">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L478-L482">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -874,7 +876,7 @@ write to them otherwise you will trigger undefined behaviour. The writer index w
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L490-L493">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L495-L498">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -946,7 +948,7 @@ write to them otherwise you will trigger undefined behaviour. The writer index w
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L505-L512">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L510-L517">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -978,7 +980,7 @@ write to them otherwise you will trigger undefined behaviour. The writer index w
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L517-L519">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L522-L524">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1015,7 +1017,7 @@ uninitialised memory and it&rsquo;s undefined behaviour to read it. In most case
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L526-L528">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L531-L533">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1052,7 +1054,7 @@ uninitialised memory and it&rsquo;s undefined behaviour to read it. In most case
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L535-L538">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L540-L543">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1111,7 +1113,7 @@ uninitialised memory and it&rsquo;s undefined behaviour to read it. In most case
                         <p>The value returned by <code>body</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L548-L551">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L553-L556">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1171,7 +1173,7 @@ the bytes and you also must call <code>storageManagement.release()</code> if you
                         <p>The value returned by <code>body</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L565-L570">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L570-L575">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1202,7 +1204,7 @@ the bytes and you also must call <code>storageManagement.release()</code> if you
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L574-L577">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L579-L582">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1273,7 +1275,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
        not readable in the initial <code>ByteBuffer</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L591-L613">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L596-L618">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1309,7 +1311,7 @@ at index <code>0</code> after the call returns.</p>
                         <p><code>true</code> if one or more bytes have been discarded, <code>false</code> if there are no bytes to discard.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L619-L642">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L624-L647">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1341,7 +1343,7 @@ newly allocated <code>ByteBuffer</code>.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L647-L649">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L652-L654">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1373,7 +1375,7 @@ newly allocated <code>ByteBuffer</code>.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L654-L656">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L659-L661">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1411,7 +1413,7 @@ for a new use-case.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L664-L671">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L669-L676">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1468,7 +1470,7 @@ for a new use-case.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L682-L692">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L687-L697">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1545,7 +1547,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         <p>A <code>[UInt8]</code> value containing the bytes of interest or <code>nil</code> if the bytes <code>ByteBuffer</code> are not readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L28-L39">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L28-L39">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1599,7 +1601,7 @@ as <code>[UInt8]</code>.</p>
                         <p>A <code>[UInt8]</code> value containing <code>length</code> bytes or <code>nil</code> if there aren&rsquo;t at least <code>length</code> bytes readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L47-L52">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L47-L52">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1664,7 +1666,7 @@ as <code>[UInt8]</code>.</p>
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L62-L66">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L62-L66">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1729,7 +1731,7 @@ as <code>[UInt8]</code>.</p>
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L74-L78">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L74-L78">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1794,7 +1796,7 @@ as <code>[UInt8]</code>.</p>
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L87-L91">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L87-L91">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1861,7 +1863,7 @@ as <code>[UInt8]</code>.</p>
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L114-L123">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L114-L123">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1928,7 +1930,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
        the requested bytes are not readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L133-L141">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L133-L141">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1981,7 +1983,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         <p>A <code>String</code> value deserialized from this <code>ByteBuffer</code> or <code>nil</code> if there aren&rsquo;t at least <code>length</code> bytes readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L148-L153">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L148-L153">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2046,7 +2048,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L162-L166">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L162-L166">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2112,7 +2114,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L175-L184">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L175-L184">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2179,7 +2181,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
        are not readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L194-L201">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L194-L201">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2232,7 +2234,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         <p>A <code>DispatchData</code> value containing the bytes from this <code>ByteBuffer</code> or <code>nil</code> if there aren&rsquo;t at least <code>length</code> bytes readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L208-L213">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L208-L213">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2304,7 +2306,7 @@ by the number of bytes returned by <code>body</code>.</p>
                         <p>The number of bytes read.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L228-L232">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L228-L232">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2364,7 +2366,7 @@ by the number of bytes <code>body</code> returns in the first tuple component.</
                         <p>The value <code>body</code> returned in the second tuple component.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L243-L247">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L243-L247">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2425,7 +2427,7 @@ Will move the reader index by the number of bytes returned by <code>body</code> 
                         <p>The number of bytes read.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L259-L263">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L259-L263">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2485,7 +2487,7 @@ Will move the reader index by the number of bytes <code>body</code> returns in t
                         <p>The value <code>body</code> returned in the second tuple component.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L274-L278">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L274-L278">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2552,7 +2554,7 @@ Will move the reader index by the number of bytes <code>body</code> returns in t
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L288-L290">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L288-L290">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2618,7 +2620,7 @@ Will move the reader index by the number of bytes <code>body</code> returns in t
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L299-L303">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L299-L303">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2673,7 +2675,7 @@ Will move the reader index by the number of bytes <code>body</code> returns in t
                         <p>The number of bytes written to this <code>ByteBuffer</code> which is equal to the number of bytes read from <code>buffer</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L312-L317">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L312-L317">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2728,7 +2730,7 @@ Will move the reader index by the number of bytes <code>body</code> returns in t
                         <p>The number of bytes written or <code>bytes.count</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L326-L330">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L326-L330">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2783,7 +2785,7 @@ Will move the reader index by the number of bytes <code>body</code> returns in t
                         <p>The number of bytes written or <code>bytes.count</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L339-L343">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L339-L343">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2824,7 +2826,7 @@ Will move the reader index by the number of bytes <code>body</code> returns in t
                         <p>A <code>ByteBuffer</code> sharing storage containing the readable bytes only.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L352-L354">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L352-L354">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2887,7 +2889,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <p>A <code>ByteBuffer</code> sharing storage containing <code>length</code> bytes or <code>nil</code> if the not enough bytes were readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-aux.swift#L368-L373">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-aux.swift#L368-L373">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2929,7 +2931,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <p>A description of this <code>ByteBuffer</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L703-L714">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L708-L719">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -2968,7 +2970,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <p>A description of this <code>ByteBuffer</code> useful for debugging.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L724-L726">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L729-L731">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3004,7 +3006,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L734-L736">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L739-L741">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3036,7 +3038,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L741-L743">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L746-L748">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3092,7 +3094,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L752-L756">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L757-L761">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3148,7 +3150,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L765-L769">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L770-L774">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3204,7 +3206,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L778-L782">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L783-L787">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3260,7 +3262,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L791-L795">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L796-L800">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3294,7 +3296,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L802-L818">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L807-L823">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3359,7 +3361,7 @@ operation. If it cannot execute the block the returned value will be <code>nil</
                         <p>The return value of <code>body</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L835-L841">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L840-L846">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3429,7 +3431,7 @@ operation. If it cannot execute the block the returned value will be <code>nil</
                         <p>An integer value deserialized from this <code>ByteBuffer</code> or <code>nil</code> if there aren&rsquo;t enough bytes readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-int.swift#L33-L38">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-int.swift#L33-L38">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3509,7 +3511,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
        readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-int.swift#L50-L61">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-int.swift#L50-L61">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3578,7 +3580,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-int.swift#L71-L77">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-int.swift#L71-L77">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3657,7 +3659,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         <p>The number of bytes written.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-int.swift#L88-L93">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-int.swift#L88-L93">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3691,7 +3693,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-views.swift#L73-L75">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-views.swift#L73-L75">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3756,7 +3758,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         <p>A view into a portion of a <code>ByteBuffer</code> or <code>nil</code> if the requested bytes were not readable.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-views.swift#L83-L89">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-views.swift#L83-L89">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3805,7 +3807,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-views.swift#L94-L96">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-views.swift#L94-L96">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -3818,7 +3820,7 @@ The selected bytes must be readable or else <code>nil</code> will be returned.</
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-11-07)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-11-14)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

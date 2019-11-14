@@ -21,7 +21,7 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="index.html">
-          NIO 2.10.0 Docs
+          NIO 2.10.1 Docs
         </a>
          (90% documented)
       </p>
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E10%2E0%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E10%2E1%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -472,7 +472,7 @@ it is going.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/AddressedEnvelope.swift#L20-L28">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/AddressedEnvelope.swift#L20-L28">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -523,10 +523,12 @@ types (non-exhaustive list):</p>
 <p>Example:</p>
 <pre class="highlight swift"><code><span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
 <span class="n">buf</span><span class="o">.</span><span class="nf">setString</span><span class="p">(</span><span class="s">"Hello World"</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">buf</span><span class="o">.</span><span class="nf">moveWriterIndex</span><span class="p">(</span><span class="nv">to</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
 <span class="k">let</span> <span class="nv">helloWorld</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getString</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
 
-<span class="n">buf</span><span class="o">.</span><span class="nf">setInteger</span><span class="p">(</span><span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
-<span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getInteger</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">written</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">setInteger</span><span class="p">(</span><span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+<span class="n">buf</span><span class="o">.</span><span class="nf">moveWriterIndex</span><span class="p">(</span><span class="nv">forwardBy</span><span class="p">:</span> <span class="n">written</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span><span class="p">?</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getInteger</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
 </code></pre>
 
 <p>If needed, <code>ByteBuffer</code> will automatically resize its storage to accommodate your <code>set</code> request.</p>
@@ -595,7 +597,7 @@ behaviour and might yield arbitrary bytes (<em>not</em> <code>0</code> initialis
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L191-L693">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L193-L698">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -632,7 +634,7 @@ behaviour and might yield arbitrary bytes (<em>not</em> <code>0</code> initialis
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-core.swift#L63-L100">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-core.swift#L63-L100">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -670,7 +672,7 @@ behaviour and might yield arbitrary bytes (<em>not</em> <code>0</code> initialis
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ByteBuffer-views.swift#L19-L69">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ByteBuffer-views.swift#L19-L69">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -708,7 +710,7 @@ we have seen this happen on Darwin.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/Channel.swift#L358">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Channel.swift#L358">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -738,7 +740,7 @@ we have seen this happen on Darwin.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/Channel.swift#L361">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Channel.swift#L361">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -773,7 +775,7 @@ processing the request currently in flight.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/Channel.swift#L376-L379">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Channel.swift#L376-L379">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -808,7 +810,7 @@ processing the request currently in flight.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/ChannelOption.swift#L227-L262">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/ChannelOption.swift#L227-L262">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -845,7 +847,7 @@ expansions from happening frequently. Expansions will always force an allocation
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/CircularBuffer.swift#L18-L103">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/CircularBuffer.swift#L18-L111">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -883,7 +885,7 @@ will be notified once the execution is complete.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L22-L52">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/EventLoop.swift#L22-L52">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -921,7 +923,7 @@ will be notified once the execution is complete.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L181-L196">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/EventLoop.swift#L181-L196">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -957,7 +959,7 @@ will be notified once the execution is complete.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L254-L318">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/EventLoop.swift#L254-L318">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1005,7 +1007,7 @@ compute new timeouts for each step</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoop.swift#L361-L392">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/EventLoop.swift#L361-L392">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1071,7 +1073,7 @@ or <code>eventLoop.newFailedFuture(error:)</code>.</p></li>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/EventLoopFuture.swift#L153-L247">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/EventLoopFuture.swift#L153-L247">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1119,7 +1121,7 @@ need access to the bytes (in a <code><a href="Structs/ByteBuffer.html">ByteBuffe
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/FileRegion.swift#L26-L74">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/FileRegion.swift#L26-L74">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1154,7 +1156,7 @@ need access to the bytes (in a <code><a href="Structs/ByteBuffer.html">ByteBuffe
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/HappyEyeballs.swift#L39-L45">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/HappyEyeballs.swift#L39-L45">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1186,7 +1188,7 @@ to a given host and port.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/HappyEyeballs.swift#L49-L69">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/HappyEyeballs.swift#L49-L69">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1221,7 +1223,7 @@ to a given host and port.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/IO.swift#L16-L50">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/IO.swift#L16-L50">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1260,7 +1262,7 @@ safe to write.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/MarkedCircularBuffer.swift#L20-L130">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/MarkedCircularBuffer.swift#L20-L130">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1326,7 +1328,7 @@ certain type known at run-time. Canonical example:</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/NIOAny.swift#L45-L258">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/NIOAny.swift#L45-L258">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1375,7 +1377,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/NonBlockingFileIO.swift#L30-L297">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/NonBlockingFileIO.swift#L30-L297">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1410,7 +1412,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/RecvByteBufferAllocator.swift#L31-L47">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/RecvByteBufferAllocator.swift#L31-L47">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1441,7 +1443,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.0/Sources/NIO/RecvByteBufferAllocator.swift#L50-L166">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/RecvByteBufferAllocator.swift#L50-L166">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1454,7 +1456,7 @@ of blocking.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-11-07)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-11-14)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
