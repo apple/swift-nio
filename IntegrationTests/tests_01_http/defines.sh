@@ -120,7 +120,8 @@ function start_server() {
     tmp_server_pid=$(get_server_pid "$token")
     echo "local token_open_fds" >> "$token"
     echo "token_open_fds='$(get_number_of_open_fds_for_pid "$tmp_server_pid")'" >> "$token"
-    do_curl "$token" "http://$maybe_host:$curl_port/dynamic/pid"
+    local curl_host=${maybe_host:-localhost}
+    do_curl "$token" "http://$curl_host:$curl_port/dynamic/pid"
 }
 
 function get_htdocs() {

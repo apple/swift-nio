@@ -119,7 +119,7 @@ public final class EventLoopTest : XCTestCase {
         waitForExpectations(timeout: 1) { error in
             XCTAssertNil(error)
             XCTAssertEqual(counter.load(), count + 1)
-            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay + TimeAmount.Value(count) * delay)
+            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay + Int64(count) * delay)
         }
     }
 
@@ -331,7 +331,7 @@ public final class EventLoopTest : XCTestCase {
 
     public func testEventLoopMakeIterator() throws {
         let eventLoop = EmbeddedEventLoop()
-        var iterator = eventLoop.makeIterator()
+        let iterator = eventLoop.makeIterator()
         defer {
             XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
         }
@@ -600,22 +600,24 @@ public final class EventLoopTest : XCTestCase {
         let channel = try assertNoThrowWithValue(SocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
                                                                protocolFamily: serverSocket.localAddress!.protocolFamily))
         XCTAssertNoThrow(try channel.pipeline.addHandler(assertHandler).wait() as Void)
-        XCTAssertNoThrow(try channel.eventLoop.submit {
+        XCTAssertNoThrow(try channel.eventLoop.flatSubmit {
             channel.register().flatMap {
                 channel.connect(to: serverSocket.localAddress!)
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
+        let closeFutureFulfilledEventually = Atomic<Bool>(value: false)
         XCTAssertFalse(channel.closeFuture.isFulfilled)
+        channel.closeFuture.whenSuccess {
+            XCTAssertTrue(closeFutureFulfilledEventually.compareAndExchange(expected: false, desired: true))
+        }
         XCTAssertNoThrow(try group.syncShutdownGracefully())
         XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
         XCTAssertTrue(assertHandler.removed.load())
-        XCTAssertTrue(channel.closeFuture.isFulfilled)
         XCTAssertFalse(channel.isActive)
+        XCTAssertTrue(closeFutureFulfilledEventually.load())
     }
 
     public func testScheduleMultipleTasks() throws {
-        let nanos: NIODeadline = .now()
-        let amount: TimeAmount = .seconds(1)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
@@ -836,5 +838,120 @@ public final class EventLoopTest : XCTestCase {
             return
         }
         condition.unlock()
+    }
+
+    func testEdgeCasesNIODeadlineMinusNIODeadline() {
+        let smallestPossibleDeadline = NIODeadline.uptimeNanoseconds(.min)
+        let largestPossibleDeadline = NIODeadline.uptimeNanoseconds(.max)
+        let distantFuture = NIODeadline.distantFuture
+        let distantPast = NIODeadline.distantPast
+        let zeroDeadline = NIODeadline.uptimeNanoseconds(0)
+        let nowDeadline = NIODeadline.now()
+
+        let allDeadlines = [smallestPossibleDeadline, largestPossibleDeadline, distantPast, distantFuture,
+                            zeroDeadline, nowDeadline]
+
+        for deadline1 in allDeadlines {
+            for deadline2 in allDeadlines {
+                if deadline1 > deadline2 {
+                    XCTAssertGreaterThan(deadline1 - deadline2, TimeAmount.nanoseconds(0))
+                } else if deadline1 < deadline2 {
+                    XCTAssertLessThan(deadline1 - deadline2, TimeAmount.nanoseconds(0))
+                } else {
+                    // they're equal.
+                    XCTAssertEqual(deadline1 - deadline2, TimeAmount.nanoseconds(0))
+                }
+            }
+        }
+    }
+
+    func testEdgeCasesNIODeadlinePlusTimeAmount() {
+        let smallestPossibleTimeAmount = TimeAmount.nanoseconds(.min)
+        let largestPossibleTimeAmount = TimeAmount.nanoseconds(.max)
+        let zeroTimeAmount = TimeAmount.nanoseconds(0)
+
+        let smallestPossibleDeadline = NIODeadline.uptimeNanoseconds(.min)
+        let largestPossibleDeadline = NIODeadline.uptimeNanoseconds(.max)
+        let distantFuture = NIODeadline.distantFuture
+        let distantPast = NIODeadline.distantPast
+        let zeroDeadline = NIODeadline.uptimeNanoseconds(0)
+        let nowDeadline = NIODeadline.now()
+
+        for timeAmount in [smallestPossibleTimeAmount, largestPossibleTimeAmount, zeroTimeAmount] {
+            for deadline in [smallestPossibleDeadline, largestPossibleDeadline, distantPast, distantFuture,
+                             zeroDeadline, nowDeadline] {
+                let (partial, overflow) = Int64(deadline.uptimeNanoseconds).addingReportingOverflow(timeAmount.nanoseconds)
+                let expectedValue: UInt64
+                if overflow {
+                    XCTAssertGreaterThanOrEqual(timeAmount.nanoseconds, 0)
+                    XCTAssertGreaterThanOrEqual(deadline.uptimeNanoseconds, 0)
+                    // we cap at distantFuture torwards +inf
+                    expectedValue = NIODeadline.distantFuture.uptimeNanoseconds
+                } else if partial < 0 {
+                    // we cap at 0 towards -inf
+                    expectedValue = 0
+                } else {
+                    // otherwise we have a result
+                    expectedValue = .init(partial)
+                }
+                XCTAssertEqual((deadline + timeAmount).uptimeNanoseconds, expectedValue)
+            }
+        }
+    }
+
+    func testEdgeCasesNIODeadlineMinusTimeAmount() {
+        let smallestPossibleTimeAmount = TimeAmount.nanoseconds(.min)
+        let largestPossibleTimeAmount = TimeAmount.nanoseconds(.max)
+        let zeroTimeAmount = TimeAmount.nanoseconds(0)
+
+        let smallestPossibleDeadline = NIODeadline.uptimeNanoseconds(.min)
+        let largestPossibleDeadline = NIODeadline.uptimeNanoseconds(.max)
+        let distantFuture = NIODeadline.distantFuture
+        let distantPast = NIODeadline.distantPast
+        let zeroDeadline = NIODeadline.uptimeNanoseconds(0)
+        let nowDeadline = NIODeadline.now()
+
+        for timeAmount in [smallestPossibleTimeAmount, largestPossibleTimeAmount, zeroTimeAmount] {
+            for deadline in [smallestPossibleDeadline, largestPossibleDeadline, distantPast, distantFuture,
+                             zeroDeadline, nowDeadline] {
+                let (partial, overflow) = Int64(deadline.uptimeNanoseconds).subtractingReportingOverflow(timeAmount.nanoseconds)
+                let expectedValue: UInt64
+                if overflow {
+                    XCTAssertLessThan(timeAmount.nanoseconds, 0)
+                    XCTAssertGreaterThanOrEqual(deadline.uptimeNanoseconds, 0)
+                    // we cap at distantFuture torwards +inf
+                    expectedValue = NIODeadline.distantFuture.uptimeNanoseconds
+                } else if partial < 0 {
+                    // we cap at 0 towards -inf
+                    expectedValue = 0
+                } else {
+                    // otherwise we have a result
+                    expectedValue = .init(partial)
+                }
+                XCTAssertEqual((deadline - timeAmount).uptimeNanoseconds, expectedValue)
+            }
+        }
+    }
+
+    func testSuccessfulFlatSubmit() {
+        let eventLoop = EmbeddedEventLoop()
+        let future = eventLoop.flatSubmit {
+            eventLoop.makeSucceededFuture(1)
+        }
+        eventLoop.run()
+        XCTAssertNoThrow(XCTAssertEqual(1, try future.wait()))
+    }
+
+    func testFailingFlatSubmit() {
+        enum TestError: Error { case failed }
+
+        let eventLoop = EmbeddedEventLoop()
+        let future = eventLoop.flatSubmit { () -> EventLoopFuture<Int> in
+            eventLoop.makeFailedFuture(TestError.failed)
+        }
+        eventLoop.run()
+        XCTAssertThrowsError(try future.wait()) { error in
+            XCTAssertEqual(.failed, error as? TestError)
+        }
     }
 }

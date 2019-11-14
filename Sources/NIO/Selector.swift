@@ -20,7 +20,7 @@ private enum SelectorLifecycleState {
 
 private extension timespec {
     init(timeAmount amount: TimeAmount) {
-        let nsecPerSec: TimeAmount.Value = 1_000_000_000
+        let nsecPerSec: Int64 = 1_000_000_000
         let ns = amount.nanoseconds
         let sec = ns / nsecPerSec
         self = timespec(tv_sec: Int(sec), tv_nsec: Int(ns - sec * nsecPerSec))
@@ -55,7 +55,7 @@ struct SelectorEventSet: OptionSet, Equatable {
 
     /// It's impossible to actually register for no events, therefore `_none` should only be used to bootstrap a set
     /// of flags or to compare against spurious wakeups.
-    static let _none = SelectorEventSet(rawValue: 0)
+    static let _none = SelectorEventSet([])
 
     /// Connection reset or other errors.
     static let reset = SelectorEventSet(rawValue: 1 << 0)
@@ -68,6 +68,11 @@ struct SelectorEventSet: OptionSet, Equatable {
 
     /// Interest in/availability of data to be written
     static let write = SelectorEventSet(rawValue: 1 << 3)
+
+    /// EOF at the write/output end of a `Selectable`.
+    ///
+    /// - note: This is rarely used because in many cases, there is no signal that this happened.
+    static let writeEOF = SelectorEventSet(rawValue: 1 << 4)
 
     init(rawValue: SelectorEventSet.RawValue) {
         self.rawValue = rawValue
@@ -84,7 +89,7 @@ private struct KQueueEventFilterSet: OptionSet, Equatable {
 
     let rawValue: RawValue
 
-    static let _none = KQueueEventFilterSet(rawValue: 0)
+    static let _none = KQueueEventFilterSet([])
     // skipping `1 << 0` because kqueue doesn't have a direct match for `.reset` (`EPOLLHUP` for epoll)
     static let except = KQueueEventFilterSet(rawValue: 1 << 1)
     static let read = KQueueEventFilterSet(rawValue: 1 << 2)
@@ -107,7 +112,7 @@ private struct EpollFilterSet: OptionSet, Equatable {
 
     let rawValue: RawValue
 
-    static let _none = EpollFilterSet(rawValue: 0)
+    static let _none = EpollFilterSet([])
     static let hangup = EpollFilterSet(rawValue: 1 << 0)
     static let readHangup = EpollFilterSet(rawValue: 1 << 1)
     static let input = EpollFilterSet(rawValue: 1 << 2)
@@ -319,6 +324,7 @@ final class Selector<R: Registration> {
     }
 
     deinit {
+        assert(self.registrations.count == 0, "left-over registrations: \(self.registrations)")
         assert(self.lifecycleState == .closed, "Selector \(self.lifecycleState) (expected .closed) on deinit")
         Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
 
@@ -644,7 +650,7 @@ extension Selector: CustomStringConvertible {
 /// An event that is triggered once the `Selector` was able to select something.
 struct SelectorEvent<R> {
     public let registration: R
-    public let io: SelectorEventSet
+    public var io: SelectorEventSet
 
     /// Create new instance
     ///
@@ -680,6 +686,8 @@ extension Selector where R == NIORegistration {
             case .socketChannel(let chan, _):
                 return closeChannel(chan)
             case .datagramChannel(let chan, _):
+                return closeChannel(chan)
+            case .pipeChannel(let chan, _, _):
                 return closeChannel(chan)
             }
         }.map { future in

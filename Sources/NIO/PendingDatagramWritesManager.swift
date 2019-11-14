@@ -99,7 +99,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
             let addressLen = p.copySocketAddress(addresses.baseAddress! + c)
             iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
 
-            var msg = msghdr(msg_name: addresses.baseAddress! + c,
+            let msg = msghdr(msg_name: addresses.baseAddress! + c,
                              msg_namelen: addressLen,
                              msg_iov: iovecs.baseAddress! + c,
                              msg_iovlen: 1,
@@ -359,7 +359,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     private var state = PendingDatagramWritesState()
 
-    internal var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
+    internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag: Atomic<Bool> = Atomic(value: true)
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true

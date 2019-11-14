@@ -174,7 +174,7 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     func testDatagramChannelHasWatermark() throws {
-        _ = try self.firstChannel.setOption(ChannelOptions.writeBufferWaterMark, value: WriteBufferWaterMark(low: 1, high: 1024)).wait()
+        _ = try self.firstChannel.setOption(ChannelOptions.writeBufferWaterMark, value: ChannelOptions.Types.WriteBufferWaterMark(low: 1, high: 1024)).wait()
 
         var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeBytes([UInt8](repeating: 5, count: 256))
@@ -258,7 +258,7 @@ final class DatagramChannelTests: XCTestCase {
             // will cause EMSGSIZE.
             let bufferSize = 1024 * 5
             var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
-            buffer.writeWithUnsafeMutableBytes {
+            buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: bufferSize) {
                 _ = memset($0.baseAddress!, 4, $0.count)
                 return $0.count
             }
@@ -282,7 +282,7 @@ final class DatagramChannelTests: XCTestCase {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
         let bufferSize = 1024 * 1024 * 10
         var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
-        buffer.writeWithUnsafeMutableBytes {
+        buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: bufferSize) {
             _ = memset($0.baseAddress!, 4, $0.count)
             return $0.count
         }
@@ -305,7 +305,7 @@ final class DatagramChannelTests: XCTestCase {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
         let bufferSize = 1024 * 1024 * 10
         var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
-        buffer.writeWithUnsafeMutableBytes {
+        buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: bufferSize) {
             _ = memset($0.baseAddress!, 4, $0.count)
             return $0.count
         }
@@ -338,7 +338,7 @@ final class DatagramChannelTests: XCTestCase {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
         let bufferSize = 1024 * 1024 * 10
         var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
-        buffer.writeWithUnsafeMutableBytes {
+        buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: bufferSize) {
             _ = memset($0.baseAddress!, 4, $0.count)
             return $0.count
         }

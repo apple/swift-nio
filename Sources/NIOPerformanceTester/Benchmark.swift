@@ -13,14 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 protocol Benchmark: class {
-    init()
     func setUp() throws
     func tearDown()
     func run() throws -> Int
 }
 
-func measureAndPrint<B: Benchmark>(desc: String, benchmark: B.Type) throws {
-    let bench = B()
+func measureAndPrint<B: Benchmark>(desc: String, benchmark bench: B) throws {
     try bench.setUp()
     defer {
         bench.tearDown()

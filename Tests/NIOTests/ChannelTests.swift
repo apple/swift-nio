@@ -1590,10 +1590,10 @@ public final class ChannelTests: XCTestCase {
         usleep(100 * 1000);
 
         // Now we send close. This should deliver data.
-        try clientChannel.eventLoop.submit { () -> EventLoopFuture<Void> in
+        try clientChannel.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             handler.expectingData = true
             return clientChannel.close()
-        }.wait().wait()
+        }.wait()
         try serverChannel.close().wait()
     }
 
@@ -1933,7 +1933,7 @@ public final class ChannelTests: XCTestCase {
         // In here what we're doing is that we flip the order around and connect it first, make sure the server
         // has written something and then on registration something is available to be read. We then 'fake connect'
         // again which our special `Socket` subclass will let succeed.
-        _ = try sc.selectable.connect(to: bootstrap.localAddress!)
+        _ = try sc.socket.connect(to: bootstrap.localAddress!)
         try serverWriteHappenedPromise.futureResult.wait()
         try sc.pipeline.addHandler(ReadDoesNotHappen(hasRegisteredPromise: clientHasRegistered,
                                                        hasUnregisteredPromise: clientHasUnregistered,
@@ -1963,6 +1963,9 @@ public final class ChannelTests: XCTestCase {
             }
         }
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
 
         func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #file, line: UInt = #line,  _ body: (Channel) throws -> Void) {
             XCTAssertNoThrow(try {
@@ -2105,7 +2108,7 @@ public final class ChannelTests: XCTestCase {
 
         let allDone = clientEL.makePromise(of: Void.self)
 
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        XCTAssertNoThrow(try sc.eventLoop.flatSubmit {
             // this is pretty delicate at the moment:
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
             // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `flatMap` on the eventloop that the
@@ -2116,7 +2119,7 @@ public final class ChannelTests: XCTestCase {
             }.flatMap {
                 sc.connect(to: serverChannel.localAddress!)
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
@@ -2271,14 +2274,14 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        XCTAssertNoThrow(try sc.eventLoop.flatSubmit {
             sc.register().flatMap {
                 sc.connect(to: serverChannel.localAddress!)
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
 
         do {
-            try sc.eventLoop.submit { () -> EventLoopFuture<Void> in
+            try sc.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
                 let p = sc.eventLoop.makePromise(of: Void.self)
                 // this callback must be attached before we call the close
                 let f = p.futureResult.map {
@@ -2289,7 +2292,7 @@ public final class ChannelTests: XCTestCase {
                 }
                 sc.close(promise: p)
                 return f
-            }.wait().wait()
+            }.wait()
             XCTFail("shouldn't be reached")
         } catch ChannelError.alreadyClosed {
             // ok
@@ -2580,7 +2583,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
         }
         var numberOfAcceptedChannel = 0
-        var acceptedChannels: [EventLoopPromise<Channel>] = [singleThreadedELG.next().makePromise(),
+        let acceptedChannels: [EventLoopPromise<Channel>] = [singleThreadedELG.next().makePromise(),
                                                              singleThreadedELG.next().makePromise(),
                                                              singleThreadedELG.next().makePromise()]
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
@@ -2715,8 +2718,7 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
         }
-        var numberOfAcceptedChannel = 0
-        var acceptedChannel = singleThreadedELG.next().makePromise(of: Channel.self)
+        let acceptedChannel = singleThreadedELG.next().makePromise(of: Channel.self)
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
             .childChannelInitializer { channel in
                 acceptedChannel.succeed(channel)
@@ -2744,6 +2746,37 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(XCTAssertTrue(try getBoolSocketOption(channel: client,
                                                                level: IPPROTO_TCP,
                                                                name: TCP_NODELAY)))
+    }
+
+    func testDescriptionCanBeCalledFromNonEventLoopThreads() {
+        // regression test for https://github.com/apple/swift-nio/issues/1141
+        let q = DispatchQueue(label: "elsewhere")
+        XCTAssertNoThrow(try forEachActiveChannelType { channel in
+            let g = DispatchGroup()
+            q.async(group: g) {
+                // we spin here for a bit and read
+                for _ in 0..<10_000 {
+                    // this should trigger TSan if there's an issue.
+                    XCTAssert(String(describing: channel).count != 0)
+                }
+            }
+
+            // We need to write to BaseSocket's `descriptor` which can only be done by closing the channel.
+            XCTAssertNoThrow(try channel.syncCloseAcceptingAlreadyClosed())
+            g.wait()
+        })
+    }
+
+    func testFixedSizeRecvByteBufferAllocatorSizeIsConstant() {
+        let actualAllocator = ByteBufferAllocator()
+        var allocator = FixedSizeRecvByteBufferAllocator(capacity: 1)
+        let b1 = allocator.buffer(allocator: actualAllocator)
+        XCTAssertFalse(allocator.record(actualReadBytes: 1024))
+        let b2 = allocator.buffer(allocator: actualAllocator)
+        XCTAssertEqual(1, b1.capacity)
+        XCTAssertEqual(1, b2.capacity)
+        XCTAssertEqual(1, allocator.capacity)
+
     }
 }
 

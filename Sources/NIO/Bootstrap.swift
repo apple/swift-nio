@@ -59,9 +59,9 @@ public final class ServerBootstrap {
     private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _serverChannelOptions = ChannelOptions.Storage()
+    internal var _serverChannelOptions: ChannelOptions.Storage
     @usableFromInline
-    internal var _childChannelOptions = ChannelOptions.Storage()
+    internal var _childChannelOptions: ChannelOptions.Storage
 
     /// Create a `ServerBootstrap` for the `EventLoopGroup` `group`.
     ///
@@ -79,6 +79,8 @@ public final class ServerBootstrap {
     public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
         self.group = group
         self.childGroup = childGroup
+        self._serverChannelOptions = ChannelOptions.Storage()
+        self._childChannelOptions = ChannelOptions.Storage()
         self._serverChannelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     }
 
@@ -290,9 +292,9 @@ public final class ServerBootstrap {
             if childEventLoop === ctxEventLoop {
                 fireThroughPipeline(setupChildChannel())
             } else {
-                fireThroughPipeline(childEventLoop.submit {
+                fireThroughPipeline(childEventLoop.flatSubmit {
                     return setupChildChannel()
-                }.flatMap { $0 }.hop(to: ctxEventLoop))
+                }.hop(to: ctxEventLoop))
             }
         }
 
@@ -354,7 +356,7 @@ public final class ClientBootstrap {
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _channelOptions = ChannelOptions.Storage()
+    internal var _channelOptions: ChannelOptions.Storage
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Resolver?
 
@@ -364,6 +366,7 @@ public final class ClientBootstrap {
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
         self.group = group
+        self._channelOptions = ChannelOptions.Storage()
         self._channelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     }
 
@@ -475,7 +478,7 @@ public final class ClientBootstrap {
     ///
     /// - parameters:
     ///     - descriptor: The _Unix file descriptor_ representing the connected stream socket.
-    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel` immediately.
+    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
     public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
         let eventLoop = group.next()
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
@@ -506,7 +509,7 @@ public final class ClientBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit{ setupChannel() }.flatMap { $0 }
+            return eventLoop.flatSubmit { setupChannel() }
         }
     }
 
@@ -578,13 +581,14 @@ public final class DatagramBootstrap {
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _channelOptions = ChannelOptions.Storage()
+    internal var _channelOptions: ChannelOptions.Storage
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
     ///
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
+        self._channelOptions = ChannelOptions.Storage()
         self.group = group
     }
 
@@ -701,7 +705,125 @@ public final class DatagramBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit(setupChannel).flatMap { $0 }
+            return eventLoop.flatSubmit {
+                setupChannel()
+            }
+        }
+    }
+}
+
+/// A `NIOPipeBootstrap` is an easy way to bootstrap a `PipeChannel` which uses two (uni-directional) UNIX pipes
+/// and makes a `Channel` out of them.
+///
+/// Example bootstrapping a `Channel` using `stdin` and `stdout`:
+///
+///     let channel = try NIOPipeBootstrap(group: group)
+///                       .channelInitializer { channel in
+///                           channel.pipeline.addHandler(MyChannelHandler())
+///                       }
+///                       .withPipes(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO)
+///
+public final class NIOPipeBootstrap {
+    private let group: EventLoopGroup
+    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
+    @usableFromInline
+    internal var _channelOptions: ChannelOptions.Storage
+
+    /// Create a `NIOPipeBootstrap` on the `EventLoopGroup` `group`.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use.
+    public init(group: EventLoopGroup) {
+        self._channelOptions = ChannelOptions.Storage()
+        self.group = group
+    }
+
+    /// Initialize the connected `PipeChannel` with `initializer`. The most common task in initializer is to add
+    /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// The connected `Channel` will operate on `ByteBuffer` as inbound and outbound messages. Please note that
+    /// `IOData.fileRegion` is _not_ supported for `PipeChannel`s because `sendfile` only works on sockets.
+    ///
+    /// - parameters:
+    ///     - handler: A closure that initializes the provided `Channel`.
+    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
+        self.channelInitializer = handler
+        return self
+    }
+
+    /// Specifies a `ChannelOption` to be applied to the `PipeChannel`.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
+    @inlinable
+    public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
+        self._channelOptions.append(key: option, value: value)
+        return self
+    }
+
+    private func validateFileDescriptorIsNotAFile(_ descriptor: CInt) throws {
+        precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil,
+                     "limitation in SwiftNIO: cannot bootstrap PipeChannel on EventLoop")
+        var s: stat = .init()
+        try withUnsafeMutablePointer(to: &s) { ptr in
+            try Posix.fstat(descriptor: descriptor, outStat: ptr)
+        }
+        if (s.st_mode & S_IFREG) != 0 || (s.st_mode & S_IFDIR) != 0 {
+            throw ChannelError.operationUnsupported
+        }
+    }
+
+    /// Create the `PipeChannel` with the provided input and output file descriptors.
+    ///
+    /// - parameters:
+    ///     - inputDescriptor: The _Unix file descriptor_ for the input (ie. the read side).
+    ///     - outputDescriptor: The _Unix file descriptor_ for the output (ie. the write side).
+    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
+    public func withPipes(inputDescriptor: CInt, outputDescriptor: CInt) -> EventLoopFuture<Channel> {
+        let eventLoop = group.next()
+        do {
+            try self.validateFileDescriptorIsNotAFile(inputDescriptor)
+            try self.validateFileDescriptorIsNotAFile(outputDescriptor)
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
+
+        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+        let channel: PipeChannel
+        do {
+            let inputFH = NIOFileHandle(descriptor: inputDescriptor)
+            let outputFH = NIOFileHandle(descriptor: outputDescriptor)
+            channel = try PipeChannel(eventLoop: eventLoop as! SelectableEventLoop,
+                                      inputPipe: inputFH,
+                                      outputPipe: outputFH)
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
+
+        func setupChannel() -> EventLoopFuture<Channel> {
+            eventLoop.assertInEventLoop()
+            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
+            return channelInitializer(channel).hop(to: eventLoop).flatMap {
+                self._channelOptions.applyAllChannelOptions(to: channel)
+            }.flatMap {
+                let promise = eventLoop.makePromise(of: Void.self)
+                channel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            }.map {
+                channel
+            }.flatMapError { error in
+                channel.close0(error: error, mode: .all, promise: nil)
+                return channel.eventLoop.makeFailedFuture(error)
+            }
+        }
+
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
+            return eventLoop.flatSubmit {
+                setupChannel()
+            }
         }
     }
 }

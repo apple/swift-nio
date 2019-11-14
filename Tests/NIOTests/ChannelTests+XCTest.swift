@@ -79,6 +79,8 @@ extension ChannelTests {
                 ("testUnprocessedOutboundUserEventFailsOnServerSocketChannel", testUnprocessedOutboundUserEventFailsOnServerSocketChannel),
                 ("testAcceptHandlerDoesNotSwallowCloseErrorsWhenQuiescing", testAcceptHandlerDoesNotSwallowCloseErrorsWhenQuiescing),
                 ("testTCP_NODELAYisOnByDefault", testTCP_NODELAYisOnByDefault),
+                ("testDescriptionCanBeCalledFromNonEventLoopThreads", testDescriptionCanBeCalledFromNonEventLoopThreads),
+                ("testFixedSizeRecvByteBufferAllocatorSizeIsConstant", testFixedSizeRecvByteBufferAllocatorSizeIsConstant),
            ]
    }
 }

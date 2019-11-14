@@ -296,7 +296,7 @@ class SelectorTest: XCTestCase {
         // all of the following are boxed as we need mutable references to them, they can only be read/written on the
         // event loop `el`.
         let allServerChannels: Box<[Channel]> = Box([])
-        var allChannels: Box<[Channel]> = Box([])
+        let allChannels: Box<[Channel]> = Box([])
         let hasReConnectEventLoopTickFinished: Box<Bool> = Box(false)
         let numberOfConnectedChannels: Box<Int> = Box(0)
 
@@ -376,9 +376,9 @@ class SelectorTest: XCTestCase {
         }
         class FakeSocket: Socket {
             private let hasBeenClosedPromise: EventLoopPromise<Void>
-            init(hasBeenClosedPromise: EventLoopPromise<Void>, descriptor: CInt) {
+            init(hasBeenClosedPromise: EventLoopPromise<Void>, descriptor: CInt) throws {
                 self.hasBeenClosedPromise = hasBeenClosedPromise
-                super.init(descriptor: descriptor)
+                try super.init(descriptor: descriptor)
             }
             override func close() throws {
                 self.hasBeenClosedPromise.succeed(())
@@ -386,12 +386,10 @@ class SelectorTest: XCTestCase {
             }
         }
         var socketFDs: [CInt] = [-1, -1]
-        #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-        let err = socketpair(PF_LOCAL, SOCK_STREAM, 0, &socketFDs)
-        #else
-        let err = socketpair(PF_LOCAL, CInt(SOCK_STREAM.rawValue), 0, &socketFDs)
-        #endif
-        XCTAssertEqual(0, err)
+        XCTAssertNoThrow(try Posix.socketpair(domain: PF_LOCAL,
+                                              type: Posix.SOCK_STREAM,
+                                              protocol: 0,
+                                              socketVector: &socketFDs))
 
         let numberFires = Atomic<Int>(value: 0)
         let el = group.next() as! SelectableEventLoop

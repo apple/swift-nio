@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-import Darwin
-#else
-import Glibc
-#endif
-
 internal enum HeapType {
     case maxHeap
     case minHeap

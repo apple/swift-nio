@@ -57,6 +57,11 @@ extension EventLoopTest {
                 ("testSubtractingDeadlineFromPastAndFuturesDeadlinesWorks", testSubtractingDeadlineFromPastAndFuturesDeadlinesWorks),
                 ("testCallingSyncShutdownGracefullyMultipleTimesShouldNotHang", testCallingSyncShutdownGracefullyMultipleTimesShouldNotHang),
                 ("testCallingShutdownGracefullyMultipleTimesShouldExecuteAllCallbacks", testCallingShutdownGracefullyMultipleTimesShouldExecuteAllCallbacks),
+                ("testEdgeCasesNIODeadlineMinusNIODeadline", testEdgeCasesNIODeadlineMinusNIODeadline),
+                ("testEdgeCasesNIODeadlinePlusTimeAmount", testEdgeCasesNIODeadlinePlusTimeAmount),
+                ("testEdgeCasesNIODeadlineMinusTimeAmount", testEdgeCasesNIODeadlineMinusTimeAmount),
+                ("testSuccessfulFlatSubmit", testSuccessfulFlatSubmit),
+                ("testFailingFlatSubmit", testFailingFlatSubmit),
            ]
    }
 }

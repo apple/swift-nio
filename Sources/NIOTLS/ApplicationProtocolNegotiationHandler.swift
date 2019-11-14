@@ -60,7 +60,7 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
     public typealias InboundIn = Any
     public typealias InboundOut = Any
 
-    private let completionHandler: (ALPNResult) -> EventLoopFuture<Void>
+    private let completionHandler: (ALPNResult, Channel) -> EventLoopFuture<Void>
     private var waitingForUser: Bool
     private var eventBuffer: [NIOAny]
 
@@ -69,10 +69,21 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
     ///
     /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
     ///   negotiation has completed.
-    public init(alpnCompleteHandler: @escaping (ALPNResult) -> EventLoopFuture<Void>) {
+    public init(alpnCompleteHandler: @escaping (ALPNResult, Channel) -> EventLoopFuture<Void>) {
         self.completionHandler = alpnCompleteHandler
         self.waitingForUser = false
         self.eventBuffer = []
+    }
+
+    /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
+    /// callback.
+    ///
+    /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
+    ///   negotiation has completed.
+    public convenience init(alpnCompleteHandler: @escaping (ALPNResult) -> EventLoopFuture<Void>) {
+        self.init { result, _ in
+            alpnCompleteHandler(result)
+        }
     }
 
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
@@ -106,7 +117,7 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
             result = .fallback
         }
 
-        let switchFuture = completionHandler(result)
+        let switchFuture = self.completionHandler(result, context.channel)
         switchFuture.whenComplete { (_: Result<Void, Error>) in
             self.unbuffer(context: context)
             context.pipeline.removeHandler(self, promise: nil)

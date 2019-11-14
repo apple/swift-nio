@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
+
 /// A Registration on a `Selector`, which is interested in an `SelectorEventSet`.
 protocol Registration {
     /// The `SelectorEventSet` in which the `Registration` is interested.
@@ -204,7 +206,8 @@ extension sockaddr_storage {
 /// Base class for sockets.
 ///
 /// This should not be created directly but one of its sub-classes should be used, like `ServerSocket` or `Socket`.
-class BaseSocket: Selectable {
+class BaseSocket: Selectable, BaseSocketProtocol {
+    typealias SelectableType = BaseSocket
 
     private var descriptor: CInt
     public var isOpen: Bool {
@@ -248,20 +251,6 @@ class BaseSocket: Selectable {
         return addr.convert()
     }
 
-    private static func setNonBlocking(fileDescriptor: CInt) throws {
-        let flags = try Posix.fcntl(descriptor: fileDescriptor, command: F_GETFL, value: 0)
-        do {
-            let ret = try Posix.fcntl(descriptor: fileDescriptor, command: F_SETFL, value: flags | O_NONBLOCK)
-            assert(ret == 0, "unexpectedly, fcntl(\(fileDescriptor), F_SETFL, \(flags) | O_NONBLOCK) returned \(ret)")
-        } catch let error as IOError {
-            if error.errnoCode == EINVAL {
-                // Darwin seems to sometimes do this despite the docs claiming it can't happen
-                throw NIOFailedToSetSocketNonBlockingError()
-            }
-            throw error
-        }
-    }
-
     /// Create a new socket and return the file descriptor of it.
     ///
     /// - parameters:
@@ -270,7 +259,7 @@ class BaseSocket: Selectable {
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - returns: the file descriptor of the socket that was created.
     /// - throws: An `IOError` if creation of the socket failed.
-    static func makeSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> Int32 {
+    static func makeSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> CInt {
         var sockType = type
         #if os(Linux)
         if setNonBlocking {
@@ -316,9 +305,10 @@ class BaseSocket: Selectable {
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
-    init(descriptor: CInt) {
+    init(descriptor: CInt) throws {
         precondition(descriptor >= 0, "invalid file descriptor")
         self.descriptor = descriptor
+        try self.ignoreSIGPIPE(descriptor: descriptor)
     }
 
     deinit {
@@ -431,6 +421,6 @@ class BaseSocket: Selectable {
 
 extension BaseSocket: CustomStringConvertible {
     var description: String {
-        return "BaseSocket { fd=\(self.descriptor) } "
+        return "BaseSocket { fd=\(self.descriptor) }"
     }
 }

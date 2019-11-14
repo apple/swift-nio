@@ -1003,6 +1003,7 @@ public enum HTTPResponseStatus {
     case `continue`
     case switchingProtocols
     case processing
+    // TODO: add '103: Early Hints' (requires bumping SemVer major).
 
     // 2xx
     case ok
@@ -1012,11 +1013,11 @@ public enum HTTPResponseStatus {
     case noContent
     case resetContent
     case partialContent
-
-    // 3xx
     case multiStatus
     case alreadyReported
     case imUsed
+
+    // 3xx
     case multipleChoices
     case movedPermanently
     case found
@@ -1046,10 +1047,8 @@ public enum HTTPResponseStatus {
     case rangeNotSatisfiable
     case expectationFailed
     case imATeapot
-    case unprocessableEntity
-
-    // 5xx
     case misdirectedRequest
+    case unprocessableEntity
     case locked
     case failedDependency
     case upgradeRequired
@@ -1057,6 +1056,8 @@ public enum HTTPResponseStatus {
     case tooManyRequests
     case requestHeaderFieldsTooLarge
     case unavailableForLegalReasons
+
+    // 5xx
     case internalServerError
     case notImplemented
     case badGateway
@@ -1168,6 +1169,8 @@ public enum HTTPResponseStatus {
             self = .rangeNotSatisfiable
         case 417:
             self = .expectationFailed
+        case 418:
+            self = .imATeapot
         case 421:
             self = .misdirectedRequest
         case 422:

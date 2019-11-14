@@ -116,7 +116,7 @@ public struct NonBlockingFileIO {
                             allocator: ByteBufferAllocator,
                             eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
         precondition(chunkSize > 0, "chunkSize must be > 0 (is \(chunkSize))")
-        var remainingReads = 1 + (byteCount / chunkSize)
+        let remainingReads = 1 + (byteCount / chunkSize)
         let lastReadSize = byteCount % chunkSize
 
         func _read(remainingReads: Int) -> EventLoopFuture<Void> {
@@ -188,7 +188,7 @@ public struct NonBlockingFileIO {
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
             var bytesRead = 0
             while bytesRead < byteCount {
-                let n = try buf.writeWithUnsafeMutableBytes { ptr in
+                let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
                     let res = try fileHandle.withUnsafeFileDescriptor { descriptor in
                         try Posix.read(descriptor: descriptor,
                                        pointer: ptr.baseAddress!,

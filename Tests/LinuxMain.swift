@@ -24,6 +24,7 @@ import XCTest
 
 #if os(Linux) || os(FreeBSD)
    @testable import NIOConcurrencyHelpersTests
+   @testable import NIOFoundationCompatTests
    @testable import NIOHTTP1Tests
    @testable import NIOTLSTests
    @testable import NIOTestUtilsTests
@@ -47,6 +48,7 @@ import XCTest
          testCase(ChannelPipelineTest.allTests),
          testCase(ChannelTests.allTests),
          testCase(CircularBufferTests.allTests),
+         testCase(CodableByteBufferTest.allTests),
          testCase(CustomChannelTests.allTests),
          testCase(DatagramChannelTests.allTests),
          testCase(EchoServerClientTest.allTests),
@@ -63,6 +65,7 @@ import XCTest
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPRequestEncoderTests.allTests),
          testCase(HTTPResponseEncoderTests.allTests),
+         testCase(HTTPResponseStatusTests.allTests),
          testCase(HTTPServerClientTest.allTests),
          testCase(HTTPServerPipelineHandlerTest.allTests),
          testCase(HTTPServerProtocolErrorHandlerTest.allTests),
@@ -80,14 +83,17 @@ import XCTest
          testCase(NIOAnyDebugTest.allTests),
          testCase(NIOCloseOnErrorHandlerTest.allTests),
          testCase(NIOConcurrencyHelpersTests.allTests),
+         testCase(NIOHTTP1TestServerTest.allTests),
          testCase(NonBlockingFileIOTest.allTests),
          testCase(PendingDatagramWritesManagerTests.allTests),
+         testCase(PipeChannelTest.allTests),
          testCase(PriorityQueueTest.allTests),
          testCase(SNIHandlerTest.allTests),
          testCase(SelectorTest.allTests),
          testCase(SocketAddressTest.allTests),
          testCase(SocketChannelTest.allTests),
          testCase(SocketOptionProviderTest.allTests),
+         testCase(StreamChannelTest.allTests),
          testCase(SystemTest.allTests),
          testCase(ThreadTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),

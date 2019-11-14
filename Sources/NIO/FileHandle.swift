@@ -158,6 +158,6 @@ extension NIOFileHandle {
 
 extension NIOFileHandle: CustomStringConvertible {
     public var description: String {
-        return "FileHandle { descriptor: \(self.descriptor), isOpen: \(self.isOpen) }"
+        return "FileHandle { descriptor: \(self.descriptor) }"
     }
 }
