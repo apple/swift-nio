@@ -134,8 +134,8 @@
 ///
 /// A `ChannelHandler` can be added or removed at any time because a `ChannelPipeline` is thread safe.
 public final class ChannelPipeline: ChannelInvoker {
-    private var head: ChannelHandlerContext?
-    private var tail: ChannelHandlerContext?
+    private var head: Optional<ChannelHandlerContext>
+    private var tail: Optional<ChannelHandlerContext>
 
     private var idx: Int = 0
     internal private(set) var destroyed: Bool = false
@@ -146,7 +146,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// The `Channel` that this `ChannelPipeline` belongs to.
     ///
     /// - note: This will be nil after the channel has closed
-    private var _channel: Channel?
+    private var _channel: Optional<Channel>
 
     /// The `Channel` that this `ChannelPipeline` belongs to.
     internal var channel: Channel {
@@ -868,6 +868,8 @@ public final class ChannelPipeline: ChannelInvoker {
     public init(channel: Channel) {
         self._channel = channel
         self.eventLoop = channel.eventLoop
+        self.head = nil // we need to initialise these to `nil` so we can use `self` in the lines below
+        self.tail = nil // we need to initialise these to `nil` so we can use `self` in the lines below
 
         self.head = ChannelHandlerContext(name: HeadChannelHandler.name, handler: HeadChannelHandler.sharedInstance, pipeline: self)
         self.tail = ChannelHandlerContext(name: TailChannelHandler.name, handler: TailChannelHandler.sharedInstance, pipeline: self)
@@ -1057,8 +1059,8 @@ public enum ChannelPipelineError: Error {
 /// `ChannelHandler`.
 public final class ChannelHandlerContext: ChannelInvoker {
     // visible for ChannelPipeline to modify
-    fileprivate var next: ChannelHandlerContext?
-    fileprivate var prev: ChannelHandlerContext?
+    fileprivate var next: Optional<ChannelHandlerContext>
+    fileprivate var prev: Optional<ChannelHandlerContext>
 
     public let pipeline: ChannelPipeline
 
@@ -1112,6 +1114,8 @@ public final class ChannelHandlerContext: ChannelInvoker {
         self.pipeline = pipeline
         self.inboundHandler = handler as? _ChannelInboundHandler
         self.outboundHandler = handler as? _ChannelOutboundHandler
+        self.next = nil
+        self.prev = nil
         precondition(self.inboundHandler != nil || self.outboundHandler != nil, "ChannelHandlers need to either be inbound or outbound")
     }
 

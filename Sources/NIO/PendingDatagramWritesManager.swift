@@ -15,7 +15,7 @@ import NIOConcurrencyHelpers
 
 private struct PendingDatagramWrite {
     var data: ByteBuffer
-    var promise: EventLoopPromise<Void>?
+    var promise: Optional<EventLoopPromise<Void>>
     let address: SocketAddress
 
     /// A helper function that copies the underlying sockaddr structure into temporary storage,
