@@ -350,7 +350,7 @@ extension ChannelOptions.Types.SocketOption {
     /// Allow local address *and* port reuse
     public static let allowLocalPortReuse = ChannelOptions.Types.SocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_REUSEPORT)
     
-    public static let other = { (level: SocketOptionLevel, name: SocketOptionName) -> ChannelOptions.Types.SocketOption in
+    public static func other(_ level: SocketOptionLevel, _ name: SocketOptionName) -> ChannelOptions.Types.SocketOption {
         ChannelOptions.Types.SocketOption(level: level, name: name)
     }
     

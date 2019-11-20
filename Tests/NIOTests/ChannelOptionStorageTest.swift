@@ -88,6 +88,10 @@ class ChannelOptionStorageTest: XCTestCase {
         let allowLocalPortReuse = ChannelOptions.Types.SocketOption.allowLocalPortReuse
         XCTAssertEqual(allowLocalPortReuse.level, SOL_SOCKET)
         XCTAssertEqual(allowLocalPortReuse.name, SO_REUSEPORT)
+        
+        let other = ChannelOptions.Types.SocketOption.other(SOL_SOCKET, SO_ACCEPTCONN)
+        XCTAssertEqual(other.level, SOL_SOCKET)
+        XCTAssertEqual(other.name, SO_ACCEPTCONN)
     }
     
 }
