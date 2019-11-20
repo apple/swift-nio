@@ -336,26 +336,17 @@ extension ChannelOptions {
         /// Turn on debugging info recording
         public static let enableDebugging = ChannelOptions.Types.SocketOption(level: SOL_SOCKET, name: SO_DEBUG)
         
-        /// Socket has had listen()
-        public static let acceptConnections = ChannelOptions.Types.SocketOption(level: SOL_SOCKET, name: SO_ACCEPTCONN)
-        
         /// Allow local address reusue
         public static let allowLocalAddressReuse = ChannelOptions.Types.SocketOption(level: SOL_SOCKET, name: SO_REUSEADDR)
         
         /// Keep connections alive
         public static let keepAlive = ChannelOptions.Types.SocketOption(level: SOL_SOCKET, name: SO_KEEPALIVE)
         
-        /// Just use interface addresses
-        public static let dontRoute = ChannelOptions.Types.SocketOption(level: SOL_SOCKET, name: SO_DONTROUTE)
-        
         /// Permit sending of broadcast messages
         public static let enableBroadcastMessages = ChannelOptions.Types.SocketOption(level: SOL_SOCKET, name: SO_BROADCAST)
         
         /// Bypass hardware when possible
         public static let useLoopback = ChannelOptions.Types.SocketOption(level: SOL_SOCKET, name: SO_USELOOPBACK)
-        
-        /// Linger on close if data present
-        public static let linger = ChannelOptions.Types.SocketOption(level: SOL_SOCKET, name: SO_LINGER)
         
         /// Allow local address *and* port reuse
         public static let allowLocalPortReuse = ChannelOptions.Types.SocketOption(level: SOL_SOCKET, name: SO_REUSEPORT)
