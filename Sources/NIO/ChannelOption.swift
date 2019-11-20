@@ -331,7 +331,7 @@ extension ChannelOptions {
 // Provides convenience methods for `ChannelOption.socket`
 extension ChannelOptions {
     
-    public struct Socket {
+    public enum Socket {
         
         /// Turn on debugging info recording
         public static let enableDebugging = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_DEBUG)
