@@ -527,13 +527,13 @@ let fileIO = NonBlockingFileIO(threadPool: threadPool)
 let socketBootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(ChannelOptions.backlog, value: 256)
-    .serverChannelOption(ChannelOptions.Types.SocketOption.other(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    .serverChannelOption(ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer(childChannelInitializer(channel:))
 
     // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOption(ChannelOptions.Types.SocketOption.other(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    .childChannelOption(ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
     .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
 let pipeBootstrap = NIOPipeBootstrap(group: group)

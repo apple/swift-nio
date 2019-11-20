@@ -349,7 +349,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Types.SocketOption.other(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -406,7 +406,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Types.SocketOption.other(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -466,7 +466,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Types.SocketOption.other(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.addHandler(httpHandler)
@@ -522,7 +522,7 @@ class HTTPServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Types.SocketOption.other(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -564,7 +564,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Types.SocketOption.other(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.addHandler(httpHandler)
@@ -608,7 +608,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Types.SocketOption.other(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.addHandler(httpHandler)
