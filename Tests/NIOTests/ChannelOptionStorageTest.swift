@@ -27,7 +27,7 @@ class ChannelOptionStorageTest: XCTestCase {
     func testSetTwoOptionsOfDifferentType() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.Socket.allowLocalAddressReuse, value: 1)
+        cos.append(key: ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
         cos.append(key: ChannelOptions.backlog, value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
@@ -35,8 +35,8 @@ class ChannelOptionStorageTest: XCTestCase {
 
     func testSetTwoOptionsOfSameType() throws {
         let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [
-            (ChannelOptions.Socket.allowLocalAddressReuse, 1),
-            (ChannelOptions.Socket.allowLocalPortReuse, 2)
+            (ChannelOptions.Types.SocketOption.allowLocalAddressReuse, 1),
+            (ChannelOptions.Types.SocketOption.allowLocalPortReuse, 2)
         ]
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
@@ -54,38 +54,38 @@ class ChannelOptionStorageTest: XCTestCase {
     func testSetOneOptionTwice() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.Socket.allowLocalAddressReuse, value: 1)
-        cos.append(key: ChannelOptions.Socket.allowLocalAddressReuse, value: 2)
+        cos.append(key: ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 1)
+        cos.append(key: ChannelOptions.Types.SocketOption.allowLocalAddressReuse, value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(1, optionsCollector.allOptions.count)
-        XCTAssertEqual([ChannelOptions.Socket.allowLocalAddressReuse],
+        XCTAssertEqual([ChannelOptions.Types.SocketOption.allowLocalAddressReuse],
                        (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.0 })
         XCTAssertEqual([SocketOptionValue(2)],
                        (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.1 })
     }
     
     func testConvenienceSocketOptions() {
-        let enableDebugging = ChannelOptions.Socket.enableDebugging
+        let enableDebugging = ChannelOptions.Types.SocketOption.enableDebugging
         XCTAssertEqual(enableDebugging.level, SOL_SOCKET)
         XCTAssertEqual(enableDebugging.name, SO_DEBUG)
         
-        let allowLocalAddressReuse = ChannelOptions.Socket.allowLocalAddressReuse
+        let allowLocalAddressReuse = ChannelOptions.Types.SocketOption.allowLocalAddressReuse
         XCTAssertEqual(allowLocalAddressReuse.level, SOL_SOCKET)
         XCTAssertEqual(allowLocalAddressReuse.name, SO_REUSEADDR)
         
-        let keepAlive = ChannelOptions.Socket.keepAlive
+        let keepAlive = ChannelOptions.Types.SocketOption.keepAlive
         XCTAssertEqual(keepAlive.level, SOL_SOCKET)
         XCTAssertEqual(keepAlive.name, SO_KEEPALIVE)
         
-        let enableBroadcastMessages = ChannelOptions.Socket.enableBroadcastMessages
+        let enableBroadcastMessages = ChannelOptions.Types.SocketOption.enableBroadcastMessages
         XCTAssertEqual(enableBroadcastMessages.level, SOL_SOCKET)
         XCTAssertEqual(enableBroadcastMessages.name, SO_BROADCAST)
         
-        let useLoopback = ChannelOptions.Socket.useLoopback
+        let useLoopback = ChannelOptions.Types.SocketOption.useLoopback
         XCTAssertEqual(useLoopback.level, SOL_SOCKET)
         XCTAssertEqual(useLoopback.name, SO_USELOOPBACK)
         
-        let allowLocalPortReuse = ChannelOptions.Socket.allowLocalPortReuse
+        let allowLocalPortReuse = ChannelOptions.Types.SocketOption.allowLocalPortReuse
         XCTAssertEqual(allowLocalPortReuse.level, SOL_SOCKET)
         XCTAssertEqual(allowLocalPortReuse.name, SO_REUSEPORT)
     }

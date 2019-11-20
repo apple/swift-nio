@@ -225,7 +225,8 @@ extension ChannelOptions {
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions {
-    /// - seealso: `SocketOption`.
+    
+    @available(*, deprecated, message: "Please use `ChannelOptions.Types.SocketOption` directly")
     public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
         .init(level: level, name: name)
     }
@@ -329,28 +330,28 @@ extension ChannelOptions {
 }
 
 // Provides convenience methods for `ChannelOption.socket`
-extension ChannelOptions {
+extension ChannelOptions.Types.SocketOption {
     
-    public enum Socket {
-        
-        /// Turn on debugging info recording
-        public static let enableDebugging = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_DEBUG)
-        
-        /// Allow local address reusue
-        public static let allowLocalAddressReuse = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR)
-        
-        /// Keep connections alive
-        public static let keepAlive = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_KEEPALIVE)
-        
-        /// Permit sending of broadcast messages
-        public static let enableBroadcastMessages = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_BROADCAST)
-        
-        /// Bypass hardware when possible
-        public static let useLoopback = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_USELOOPBACK)
-        
-        /// Allow local address *and* port reuse
-        public static let allowLocalPortReuse = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT)
-        
+    /// Turn on debugging info recording
+    public static let enableDebugging = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_DEBUG)
+    
+    /// Allow local address reusue
+    public static let allowLocalAddressReuse = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR)
+    
+    /// Keep connections alive
+    public static let keepAlive = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_KEEPALIVE)
+    
+    /// Permit sending of broadcast messages
+    public static let enableBroadcastMessages = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_BROADCAST)
+    
+    /// Bypass hardware when possible
+    public static let useLoopback = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_USELOOPBACK)
+    
+    /// Allow local address *and* port reuse
+    public static let allowLocalPortReuse = ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT)
+    
+    public static let other = { (name: SocketOptionName) -> ChannelOptions.Types.SocketOption in
+        ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), name)
     }
     
 }
