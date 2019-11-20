@@ -67,10 +67,6 @@ class ChannelOptionStorageTest: XCTestCase {
         XCTAssertEqual(enableDebugging.level, SOL_SOCKET)
         XCTAssertEqual(enableDebugging.name, SO_DEBUG)
         
-        let acceptConnections = ChannelOptions.Socket.acceptConnections
-        XCTAssertEqual(acceptConnections.level, SOL_SOCKET)
-        XCTAssertEqual(acceptConnections.name, SO_ACCEPTCONN)
-        
         let allowLocalAddressReuse = ChannelOptions.Socket.allowLocalAddressReuse
         XCTAssertEqual(allowLocalAddressReuse.level, SOL_SOCKET)
         XCTAssertEqual(allowLocalAddressReuse.name, SO_REUSEADDR)
@@ -79,10 +75,6 @@ class ChannelOptionStorageTest: XCTestCase {
         XCTAssertEqual(keepAlive.level, SOL_SOCKET)
         XCTAssertEqual(keepAlive.name, SO_KEEPALIVE)
         
-        let dontRoute = ChannelOptions.Socket.dontRoute
-        XCTAssertEqual(dontRoute.level, SOL_SOCKET)
-        XCTAssertEqual(dontRoute.name, SO_DONTROUTE)
-        
         let enableBroadcastMessages = ChannelOptions.Socket.enableBroadcastMessages
         XCTAssertEqual(enableBroadcastMessages.level, SOL_SOCKET)
         XCTAssertEqual(enableBroadcastMessages.name, SO_BROADCAST)
@@ -90,10 +82,6 @@ class ChannelOptionStorageTest: XCTestCase {
         let useLoopback = ChannelOptions.Socket.useLoopback
         XCTAssertEqual(useLoopback.level, SOL_SOCKET)
         XCTAssertEqual(useLoopback.name, SO_DONTROUTE)
-        
-        let linger = ChannelOptions.Socket.linger
-        XCTAssertEqual(linger.level, SOL_SOCKET)
-        XCTAssertEqual(linger.name, SO_LINGER)
         
         let allowLocalPortReuse = ChannelOptions.Socket.allowLocalPortReuse
         XCTAssertEqual(allowLocalPortReuse.level, SOL_SOCKET)
