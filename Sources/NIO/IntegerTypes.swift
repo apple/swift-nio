@@ -16,7 +16,7 @@
 
 /// A 24-bit unsigned integer value type.
 @usableFromInline
-struct _UInt24: ExpressibleByIntegerLiteral {
+struct _UInt24 {
     @usableFromInline
     typealias IntegerLiteralType = UInt16
 
@@ -41,7 +41,7 @@ struct _UInt24: ExpressibleByIntegerLiteral {
         return .init(_b12: .max, b3: .max)
     }
 
-    static let min: _UInt24 = 0
+    static let min: _UInt24 = .init(integerLiteral: 0)
 }
 
 extension UInt32 {
@@ -85,37 +85,37 @@ extension _UInt24: CustomStringConvertible {
 // MARK: _UInt56
 
 /// A 56-bit unsigned integer value type.
-struct _UInt56: ExpressibleByIntegerLiteral {
+struct _UInt56 {
     typealias IntegerLiteralType = UInt32
 
     @usableFromInline var b1234: UInt32
     @usableFromInline var b56: UInt16
     @usableFromInline var b7: UInt8
 
-    private init(b1234: UInt32, b56: UInt16, b7: UInt8) {
-        self.b1234 = b1234
+    @inlinable init(_b1234: UInt32, b56: UInt16, b7: UInt8) {
+        self.b1234 = _b1234
         self.b56 = b56
         self.b7 = b7
     }
 
-    init(integerLiteral value: UInt32) {
-        self.init(b1234: value, b56: 0, b7: 0)
+    @inlinable init(integerLiteral value: UInt32) {
+        self.init(_b1234: value, b56: 0, b7: 0)
     }
 
     static let bitWidth: Int = 56
 
     static var max: _UInt56 {
-        return .init(b1234: .max, b56: .max, b7: .max)
+        return .init(_b1234: .max, b56: .max, b7: .max)
     }
 
-    static let min: _UInt56 = 0
+    static let min: _UInt56 = .init(integerLiteral: 0)
 }
 
 extension _UInt56 {
     init(_ value: UInt64) {
         assert(value & 0xff_00_00_00_00_00_00_00 == 0, "value \(value) too large for _UInt56")
-        self.init(b1234: UInt32(truncatingIfNeeded: (value &          0xff_ff_ff_ff) >> 0 ),
-                  b56:   UInt16(truncatingIfNeeded: (value &    0xff_ff_00_00_00_00) >> 32),
+        self.init(_b1234: UInt32(truncatingIfNeeded: (value &          0xff_ff_ff_ff) >> 0 ),
+                  b56:    UInt16(truncatingIfNeeded: (value &    0xff_ff_00_00_00_00) >> 32),
                   b7:     UInt8(                     value                           >> 48))
     }
 
