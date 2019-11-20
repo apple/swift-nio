@@ -27,15 +27,17 @@ class ChannelOptionStorageTest: XCTestCase {
     func testSetTwoOptionsOfDifferentType() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        cos.append(key: ChannelOptions.Socket.allowLocalAddressReuse, value: 1)
         cos.append(key: ChannelOptions.backlog, value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
     }
 
     func testSetTwoOptionsOfSameType() throws {
-        let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), 1),
-                                                            (ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), 2)]
+        let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [
+            (ChannelOptions.Socket.allowLocalAddressReuse, 1),
+            (ChannelOptions.Socket.allowLocalPortReuse, 2)
+        ]
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
         for kv in options {
@@ -52,11 +54,11 @@ class ChannelOptionStorageTest: XCTestCase {
     func testSetOneOptionTwice() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-        cos.append(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 2)
+        cos.append(key: ChannelOptions.Socket.allowLocalAddressReuse, value: 1)
+        cos.append(key: ChannelOptions.Socket.allowLocalAddressReuse, value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(1, optionsCollector.allOptions.count)
-        XCTAssertEqual([ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR)],
+        XCTAssertEqual([ChannelOptions.Socket.allowLocalAddressReuse],
                        (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.0 })
         XCTAssertEqual([SocketOptionValue(2)],
                        (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.1 })
@@ -81,7 +83,7 @@ class ChannelOptionStorageTest: XCTestCase {
         
         let useLoopback = ChannelOptions.Socket.useLoopback
         XCTAssertEqual(useLoopback.level, SOL_SOCKET)
-        XCTAssertEqual(useLoopback.name, SO_DONTROUTE)
+        XCTAssertEqual(useLoopback.name, SO_USELOOPBACK)
         
         let allowLocalPortReuse = ChannelOptions.Socket.allowLocalPortReuse
         XCTAssertEqual(allowLocalPortReuse.level, SOL_SOCKET)
