@@ -220,6 +220,202 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    func testLargeContendedFastAtomicSum() {
+        let noAsyncs: UInt64 = 64
+        let noCounts: UInt64 = 200_000
+
+        let q = DispatchQueue(label: "q", attributes: .concurrent)
+        let g = DispatchGroup()
+        let ai = NIOConcurrencyHelpers.FastAtomic<UInt64>.makeAtomic(value: 0)
+        for thread in 1...noAsyncs {
+            q.async(group: g) {
+                for _ in 0..<noCounts {
+                    _ = ai.add(thread)
+                }
+            }
+        }
+        g.wait()
+        XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
+    }
+
+    func testCompareAndExchangeBoolFastAtomic() {
+        let ab = FastAtomic<Bool>.makeAtomic(value: true)
+
+        XCTAssertFalse(ab.compareAndExchange(expected: false, desired: false))
+        XCTAssertTrue(ab.compareAndExchange(expected: true, desired: true))
+
+        XCTAssertFalse(ab.compareAndExchange(expected: false, desired: false))
+        XCTAssertTrue(ab.compareAndExchange(expected: true, desired: false))
+
+        XCTAssertTrue(ab.compareAndExchange(expected: false, desired: false))
+        XCTAssertTrue(ab.compareAndExchange(expected: false, desired: true))
+    }
+
+    func testAllOperationsBoolFastAtomic() {
+        let ab = FastAtomic<Bool>.makeAtomic(value: false)
+        XCTAssertEqual(false, ab.load())
+        ab.store(false)
+        XCTAssertEqual(false, ab.load())
+        ab.store(true)
+        XCTAssertEqual(true, ab.load())
+        ab.store(true)
+        XCTAssertEqual(true, ab.load())
+        XCTAssertEqual(true, ab.exchange(with: true))
+        XCTAssertEqual(true, ab.exchange(with: false))
+        XCTAssertEqual(false, ab.exchange(with: false))
+        XCTAssertTrue(ab.compareAndExchange(expected: false, desired: true))
+        XCTAssertFalse(ab.compareAndExchange(expected: false, desired: true))
+    }
+
+    func testCompareAndExchangeUIntsFastAtomic() {
+        func testFor<T: FastAtomicPrimitive & FixedWidthInteger & UnsignedInteger>(_ value: T.Type) {
+            let zero: T = 0
+            let max = ~zero
+
+            let ab = FastAtomic<T>.makeAtomic(value: max)
+
+            XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: max, desired: max))
+
+            XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: max, desired: zero))
+
+            XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: max))
+
+            var counter = max
+            for _ in 0..<255 {
+                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter-1))
+                counter = counter - 1
+            }
+        }
+
+        testFor(UInt8.self)
+        testFor(UInt16.self)
+        testFor(UInt32.self)
+        testFor(UInt64.self)
+        testFor(UInt.self)
+    }
+
+    func testCompareAndExchangeIntsFastAtomic() {
+        func testFor<T: FastAtomicPrimitive & FixedWidthInteger & SignedInteger>(_ value: T.Type) {
+            let zero: T = 0
+            let upperBound: T = 127
+
+            let ab = FastAtomic<T>.makeAtomic(value: upperBound)
+
+            XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: upperBound, desired: upperBound))
+
+            XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: upperBound, desired: zero))
+
+            XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: upperBound))
+
+            var counter = upperBound
+            for _ in 0..<255 {
+                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter-1))
+                XCTAssertFalse(ab.compareAndExchange(expected: counter, desired: counter))
+                counter = counter - 1
+            }
+        }
+
+        testFor(Int8.self)
+        testFor(Int16.self)
+        testFor(Int32.self)
+        testFor(Int64.self)
+        testFor(Int.self)
+    }
+
+    func testAddSubFastAtomic() {
+        func testFor<T: FastAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
+            let zero: T = 0
+
+            let ab = FastAtomic<T>.makeAtomic(value: zero)
+
+            XCTAssertEqual(0, ab.add(1))
+            XCTAssertEqual(1, ab.add(41))
+            XCTAssertEqual(42, ab.add(23))
+
+            XCTAssertEqual(65, ab.load())
+
+            XCTAssertEqual(65, ab.sub(23))
+            XCTAssertEqual(42, ab.sub(41))
+            XCTAssertEqual(1, ab.sub(1))
+
+            XCTAssertEqual(0, ab.load())
+        }
+
+        testFor(Int8.self)
+        testFor(Int16.self)
+        testFor(Int32.self)
+        testFor(Int64.self)
+        testFor(Int.self)
+        testFor(UInt8.self)
+        testFor(UInt16.self)
+        testFor(UInt32.self)
+        testFor(UInt64.self)
+        testFor(UInt.self)
+    }
+
+    func testExchangeFastAtomic() {
+        func testFor<T: FastAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
+            let zero: T = 0
+
+            let ab = FastAtomic<T>.makeAtomic(value: zero)
+
+            XCTAssertEqual(0, ab.exchange(with: 1))
+            XCTAssertEqual(1, ab.exchange(with: 42))
+            XCTAssertEqual(42, ab.exchange(with: 65))
+
+            XCTAssertEqual(65, ab.load())
+
+            XCTAssertEqual(65, ab.exchange(with: 42))
+            XCTAssertEqual(42, ab.exchange(with: 1))
+            XCTAssertEqual(1, ab.exchange(with: 0))
+
+            XCTAssertEqual(0, ab.load())
+        }
+
+        testFor(Int8.self)
+        testFor(Int16.self)
+        testFor(Int32.self)
+        testFor(Int64.self)
+        testFor(Int.self)
+        testFor(UInt8.self)
+        testFor(UInt16.self)
+        testFor(UInt32.self)
+        testFor(UInt64.self)
+        testFor(UInt.self)
+    }
+
+    func testLoadStoreFastAtomic() {
+        func testFor<T: FastAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
+            let zero: T = 0
+
+            let ab = FastAtomic<T>.makeAtomic(value: zero)
+
+            XCTAssertEqual(0, ab.load())
+            ab.store(42)
+            XCTAssertEqual(42, ab.load())
+            ab.store(0)
+            XCTAssertEqual(0, ab.load())
+        }
+
+        testFor(Int8.self)
+        testFor(Int16.self)
+        testFor(Int32.self)
+        testFor(Int64.self)
+        testFor(Int.self)
+        testFor(UInt8.self)
+        testFor(UInt16.self)
+        testFor(UInt32.self)
+        testFor(UInt64.self)
+        testFor(UInt.self)
+    }
+
+
     func testLockMutualExclusion() {
         let l = Lock()
 
