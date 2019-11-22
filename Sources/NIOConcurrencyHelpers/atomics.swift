@@ -335,11 +335,11 @@ extension UInt: AtomicPrimitive {
 ///
 /// It behaves very much like `Atomic<T>` but for objects, maintaining the correct retain counts.
 public final class AtomicBox<T: AnyObject> {
-    private let storage: Atomic<UInt>
+    private let storage: FastAtomic<UInt>
 
     public init(value: T) {
         let ptr = Unmanaged<T>.passRetained(value)
-        self.storage = Atomic(value: UInt(bitPattern: ptr.toOpaque()))
+        self.storage = FastAtomic.makeAtomic(value: UInt(bitPattern: ptr.toOpaque()))
     }
 
     deinit {
