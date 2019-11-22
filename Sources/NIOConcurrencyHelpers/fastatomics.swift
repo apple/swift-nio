@@ -21,7 +21,7 @@ import CNIOAtomics
 /// already have conformances implemented.
 public protocol FastAtomicPrimitive {
     associatedtype AtomicWrapper
-    static var fast_atomic_create_with_existing_storage: (UnsafeMutableRawPointer, Self) -> Void { get }
+    static var fast_atomic_create_with_existing_storage: (UnsafeMutablePointer<AtomicWrapper>, Self) -> Void { get }
     static var fast_atomic_compare_and_exchange: (UnsafeMutablePointer<AtomicWrapper>, Self, Self) -> Bool { get }
     static var fast_atomic_add: (UnsafeMutablePointer<AtomicWrapper>, Self) -> Self { get }
     static var fast_atomic_sub: (UnsafeMutablePointer<AtomicWrapper>, Self) -> Self { get }
@@ -159,12 +159,10 @@ public class FastAtomic<T: FastAtomicPrimitive> {
     @inlinable
     static func makeAtomic(value: T) -> FastAtomic {
         let manager = Manager(bufferClass: self, minimumCapacity: 1) { _, _ in }
-        let fastAtomic = unsafeDowncast(manager.buffer, to: FastAtomic<T>.self)
-
-        Manager(unsafeBufferObject: fastAtomic).withUnsafeMutablePointerToElements {
+        manager.withUnsafeMutablePointerToElements {
             T.fast_atomic_create_with_existing_storage($0, value)
         }
-        return fastAtomic
+        return manager.buffer as! FastAtomic<T>
     }
 
     /// Atomically compares the value against `expected` and, if they are equal,

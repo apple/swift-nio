@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -18,13 +18,12 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#include "../include/CNIOFastAtomics.h"
+#include "../include/CNIOAtomics.h"
 #include "cpp_magic.h"
 
 #define MAKE(type) /*
-*/ void catmc_fast_atomic_##type##_create_with_existing_storage(void *storage, type value) { /*
-*/     struct catmc_fast_atomic_##type *wrapper = storage; /*
-*/     atomic_init(&wrapper->value, value); /*
+*/ void catmc_fast_atomic_##type##_create_with_existing_storage(struct catmc_fast_atomic_##type *storage, type value) { /*
+*/     atomic_init(&storage->value, value); /*
 */ } /*
 */ /*
 */ bool catmc_fast_atomic_##type##_compare_and_exchange(struct catmc_fast_atomic_##type *wrapper, type expected, type desired) { /*
