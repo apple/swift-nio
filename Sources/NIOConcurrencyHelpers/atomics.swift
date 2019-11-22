@@ -267,125 +267,68 @@ public protocol AtomicPrimitive {
     static var atomic_store: (OpaquePointer, Self) -> Void { get }
 }
 
+extension AtomicPrimitive where Self: FastAtomicPrimitive {
+    public static var atomic_compare_and_exchange: (OpaquePointer, Self, Self) -> Bool { return { fast_atomic_compare_and_exchange(UnsafeMutablePointer($0), $1, $2) } }
+    public static var atomic_add: (OpaquePointer, Self) -> Self                        { return { fast_atomic_add(UnsafeMutablePointer($0), $1) } }
+    public static var atomic_sub: (OpaquePointer, Self) -> Self                        { return { fast_atomic_sub(UnsafeMutablePointer($0), $1) } }
+    public static var atomic_exchange: (OpaquePointer, Self) -> Self                   { return { fast_atomic_exchange(UnsafeMutablePointer($0), $1) } }
+    public static var atomic_load: (OpaquePointer) -> Self                             { return { fast_atomic_load(UnsafeMutablePointer($0)) } }
+    public static var atomic_store: (OpaquePointer, Self) -> Void                      { return { fast_atomic_store(UnsafeMutablePointer($0), $1) } }
+}
+
 extension Bool: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic__Bool_create
-    public static let atomic_destroy              = catmc_atomic__Bool_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic__Bool_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic__Bool_add
-    public static let atomic_sub                  = catmc_atomic__Bool_sub
-    public static let atomic_exchange             = catmc_atomic__Bool_exchange
-    public static let atomic_load                 = catmc_atomic__Bool_load
-    public static let atomic_store                = catmc_atomic__Bool_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic__Bool_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic__Bool_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension Int8: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_int_least8_t_create
-    public static let atomic_destroy              = catmc_atomic_int_least8_t_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_int_least8_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_int_least8_t_add
-    public static let atomic_sub                  = catmc_atomic_int_least8_t_sub
-    public static let atomic_exchange             = catmc_atomic_int_least8_t_exchange
-    public static let atomic_load                 = catmc_atomic_int_least8_t_load
-    public static let atomic_store                = catmc_atomic_int_least8_t_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_int_least8_t_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_int_least8_t_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension UInt8: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_uint_least8_t_create
-    public static let atomic_destroy              = catmc_atomic_uint_least8_t_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_uint_least8_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_uint_least8_t_add
-    public static let atomic_sub                  = catmc_atomic_uint_least8_t_sub
-    public static let atomic_exchange             = catmc_atomic_uint_least8_t_exchange
-    public static let atomic_load                 = catmc_atomic_uint_least8_t_load
-    public static let atomic_store                = catmc_atomic_uint_least8_t_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_uint_least8_t_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_uint_least8_t_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension Int16: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_int_least16_t_create
-    public static let atomic_destroy              = catmc_atomic_int_least16_t_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_int_least16_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_int_least16_t_add
-    public static let atomic_sub                  = catmc_atomic_int_least16_t_sub
-    public static let atomic_exchange             = catmc_atomic_int_least16_t_exchange
-    public static let atomic_load                 = catmc_atomic_int_least16_t_load
-    public static let atomic_store                = catmc_atomic_int_least16_t_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_int_least16_t_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_int_least16_t_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension UInt16: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_uint_least16_t_create
-    public static let atomic_destroy              = catmc_atomic_uint_least16_t_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_uint_least16_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_uint_least16_t_add
-    public static let atomic_sub                  = catmc_atomic_uint_least16_t_sub
-    public static let atomic_exchange             = catmc_atomic_uint_least16_t_exchange
-    public static let atomic_load                 = catmc_atomic_uint_least16_t_load
-    public static let atomic_store                = catmc_atomic_uint_least16_t_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_uint_least16_t_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_uint_least16_t_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension Int32: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_int_least32_t_create
-    public static let atomic_destroy              = catmc_atomic_int_least32_t_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_int_least32_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_int_least32_t_add
-    public static let atomic_sub                  = catmc_atomic_int_least32_t_sub
-    public static let atomic_exchange             = catmc_atomic_int_least32_t_exchange
-    public static let atomic_load                 = catmc_atomic_int_least32_t_load
-    public static let atomic_store                = catmc_atomic_int_least32_t_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_int_least32_t_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_int_least32_t_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension UInt32: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_uint_least32_t_create
-    public static let atomic_destroy              = catmc_atomic_uint_least32_t_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_uint_least32_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_uint_least32_t_add
-    public static let atomic_sub                  = catmc_atomic_uint_least32_t_sub
-    public static let atomic_exchange             = catmc_atomic_uint_least32_t_exchange
-    public static let atomic_load                 = catmc_atomic_uint_least32_t_load
-    public static let atomic_store                = catmc_atomic_uint_least32_t_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_uint_least32_t_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_uint_least32_t_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension Int64: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_long_long_create
-    public static let atomic_destroy              = catmc_atomic_long_long_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_long_long_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_long_long_add
-    public static let atomic_sub                  = catmc_atomic_long_long_sub
-    public static let atomic_exchange             = catmc_atomic_long_long_exchange
-    public static let atomic_load                 = catmc_atomic_long_long_load
-    public static let atomic_store                = catmc_atomic_long_long_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_long_long_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_long_long_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension UInt64: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_unsigned_long_long_create
-    public static let atomic_destroy              = catmc_atomic_unsigned_long_long_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_unsigned_long_long_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_unsigned_long_long_add
-    public static let atomic_sub                  = catmc_atomic_unsigned_long_long_sub
-    public static let atomic_exchange             = catmc_atomic_unsigned_long_long_exchange
-    public static let atomic_load                 = catmc_atomic_unsigned_long_long_load
-    public static let atomic_store                = catmc_atomic_unsigned_long_long_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_unsigned_long_long_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_unsigned_long_long_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension Int: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_long_create
-    public static let atomic_destroy              = catmc_atomic_long_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_long_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_long_add
-    public static let atomic_sub                  = catmc_atomic_long_sub
-    public static let atomic_exchange             = catmc_atomic_long_exchange
-    public static let atomic_load                 = catmc_atomic_long_load
-    public static let atomic_store                = catmc_atomic_long_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_long_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_long_destroy(UnsafeMutablePointer(p)) }
 }
 
 extension UInt: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_unsigned_long_create
-    public static let atomic_destroy              = catmc_atomic_unsigned_long_destroy
-    public static let atomic_compare_and_exchange = catmc_atomic_unsigned_long_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_unsigned_long_add
-    public static let atomic_sub                  = catmc_atomic_unsigned_long_sub
-    public static let atomic_exchange             = catmc_atomic_unsigned_long_exchange
-    public static let atomic_load                 = catmc_atomic_unsigned_long_load
-    public static let atomic_store                = catmc_atomic_unsigned_long_store
+    public static let atomic_create  = { OpaquePointer(catmc_atomic_unsigned_long_create($0)) }
+    public static let atomic_destroy = { (p: OpaquePointer) in catmc_atomic_unsigned_long_destroy(UnsafeMutablePointer(p)) }
 }
 
 /// `AtomicBox` is a heap-allocated box which allows atomic access to an instance of a Swift class.

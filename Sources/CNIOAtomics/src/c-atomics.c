@@ -22,9 +22,9 @@
 #include "cpp_magic.h"
 
 #define MAKE(type) /*
-*/ struct catmc_atomic_##type { /*
-*/     _Atomic type value; /*
-*/ }; /*
+*/ void catmc_atomic_##type##_create_with_existing_storage(struct catmc_atomic_##type *storage, type value) { /*
+*/     atomic_init(&storage->value, value); /*
+*/ } /*
 */ /*
 */ struct catmc_atomic_##type *catmc_atomic_##type##_create(type value) { /*
 */     struct catmc_atomic_##type *wrapper = malloc(sizeof(*wrapper)); /*
