@@ -844,12 +844,12 @@ extension ByteBuffer {
 
     /// Errors thrown when calling `copyBytes`.
     public struct CopyBytesError: Error {
-        internal enum BaseError: Error, Hashable {
+        private enum BaseError: Hashable {
             case negativeLength
             case unreadableSourceBytes
         }
 
-        internal var baseError: BaseError
+        private var baseError: BaseError
 
         /// The length of the bytes to copy was negative.
         public static let negativeLength: CopyBytesError = .init(baseError: .negativeLength)
