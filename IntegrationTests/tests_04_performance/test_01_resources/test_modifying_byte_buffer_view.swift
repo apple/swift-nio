@@ -30,9 +30,9 @@ func run(identifier: String) {
             view[0] = 42
             view.replaceSubrange(0..<4, with: [0x0, 0x1, 0x2, 0x3])
 
-            var mofifiedBuffer = ByteBuffer(view)
-            mofifiedBuffer.setBytes([0xa, 0xb, 0xc], at: mofifiedBuffer.readerIndex)
-            count &+= mofifiedBuffer.readableBytes
+            var modified = ByteBuffer(view)
+            modified.setBytes([0xa, 0xb, 0xc], at: modified.readerIndex)
+            count &+= modified.readableBytes
         }
 
         return count

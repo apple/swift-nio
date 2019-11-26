@@ -805,15 +805,6 @@ extension ByteBuffer {
 }
 
 extension ByteBuffer {
-    /// Errors thrown when calling `copyBytes`.
-    public enum CopyBytesError: Error, Equatable {
-        /// The length of the bytes to copy was negative.
-        case negativeLength
-
-        /// The bytes to copy are not readable.
-        case unreadableSourceBytes
-    }
-
     /// Copies `length` `bytes` starting at the `fromIndex` to `toIndex`. Does not move the writer index.
     ///
     /// - Note: Overlapping ranges, for example `copyBytes(at: 1, to: 2, length: 5)` are allowed.
@@ -825,19 +816,20 @@ extension ByteBuffer {
     @discardableResult
     @inlinable
     public mutating func copyBytes(at fromIndex: Int, to toIndex: Int, length: Int) throws -> Int {
-        guard length > 0 else {
-            if length == 0 {
-                return 0
-            } else {
-                throw CopyBytesError.negativeLength
-            }
+        switch length {
+        case ..<0:
+            throw CopyBytesError.negativeLength
+        case 0:
+            return 0
+        default:
+            ()
         }
         guard self.readerIndex <= fromIndex && fromIndex + length <= self.writerIndex else {
             throw CopyBytesError.unreadableSourceBytes
         }
 
-        let newEndIndex = max(self._writerIndex, _toIndex(toIndex + length))
         if !isKnownUniquelyReferenced(&self._storage) {
+            let newEndIndex = max(self._writerIndex, _toIndex(toIndex + length))
             self._copyStorageAndRebase(capacity: newEndIndex)
         }
 
@@ -848,6 +840,30 @@ extension ByteBuffer {
         }
 
         return length
+    }
+
+    /// Errors thrown when calling `copyBytes`.
+    public struct CopyBytesError: Error {
+        internal enum BaseError: Error, Hashable {
+            case negativeLength
+            case unreadableSourceBytes
+        }
+
+        internal var baseError: BaseError
+
+        /// The length of the bytes to copy was negative.
+        public static let negativeLength: CopyBytesError = .init(baseError: .negativeLength)
+
+        /// The bytes to copy are not readable.
+        public static let unreadableSourceBytes: CopyBytesError = .init(baseError: .unreadableSourceBytes)
+    }
+}
+
+extension ByteBuffer.CopyBytesError: Hashable { }
+
+extension ByteBuffer.CopyBytesError: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        return String(describing: self.baseError)
     }
 }
 
