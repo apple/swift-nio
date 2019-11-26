@@ -84,6 +84,7 @@ import XCTest
          testCase(NIOCloseOnErrorHandlerTest.allTests),
          testCase(NIOConcurrencyHelpersTests.allTests),
          testCase(NIOHTTP1TestServerTest.allTests),
+         testCase(NIOSingleStepByteToMessageDecoderTest.allTests),
          testCase(NonBlockingFileIOTest.allTests),
          testCase(PendingDatagramWritesManagerTests.allTests),
          testCase(PipeChannelTest.allTests),
