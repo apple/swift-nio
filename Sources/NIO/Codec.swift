@@ -795,7 +795,7 @@ extension MessageToByteHandler {
 /// A simplified version of `ByteToMessageDecoder` that can generate zero or one messages for each invocation of `decode` or `decodeLast`.
 /// Having `decode` and `decodeLast` return an optional message avoids re-entrancy problems, since the functions relinquish exclusive access
 /// to the `ByteBuffer` when returning. This allows for greatly simplified (and more performant) processing.
-/// Many `ByteToMessageDecoder`'s can trivially be translated to `OneShotByteToMessageDecoder`'s.
+/// Many `ByteToMessageDecoder`'s can trivially be translated to `NIOSingleStepByteToMessageDecoder`'s.
 public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     /// The type of the messages this `NIOSingleStepByteToMessageDecoder` decodes to.
     associatedtype InboundOut
@@ -821,8 +821,7 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
 
     ///     - buffer: The `ByteBuffer` from which we decode.
     ///     - seenEOF: `true` if EOF has been seen.
-    /// - returns: A message if one can be decoded or `nil` if no more messages can be produced. Any data left in the `ByteBuffer`
-    ///       after returning `nil` will be lost.
+    /// - returns: A message if one can be decoded or `nil` if no more messages can be produced.
     mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut?
 }
 
@@ -862,29 +861,38 @@ extension NIOSingleStepByteToMessageDecoder {
 ///
 /// ### Example
 ///
-/// Below is an example of a protocol (decoded by `MyCodec`) that is sent over HTTP. `RawBodyMessageHandler` should be in the pipeline
-/// before `DecodedBodyHTTPHandler`.
+/// Below is an example of a protocol decoded by `TwoByteStringCodec` that is sent over HTTP. `RawBodyMessageHandler` forwards the headers
+/// and trailers directly and uses `NIOSingleStepByteToMessageProcessor` to send whole decoded messages.
 ///
-///     private final class RawBodyMessageHandler: ChannelInboundHandler {
+///     class TwoByteStringCodec: NIOSingleStepByteToMessageDecoder {
+///         typealias InboundOut = String
+///
+///         public func decode(buffer: inout ByteBuffer) throws -> InboundOut? {
+///             return buffer.readString(length:2)
+///         }
+///
+///         public func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut? {
+///             return try self.decode(buffer: &buffer)
+///         }
+///     }
+///
+///     class RawBodyMessageHandler: ChannelInboundHandler {
 ///         typealias InboundIn = HTTPServerRequestPart // alias for HTTPPart<HTTPRequestHead, ByteBuffer>
 ///         // This converts the body from ByteBuffer to String, our message type
 ///         typealias InboundOut = HTTPPart<HTTPRequestHead, String>
 ///
-///         // We store the head so it can be passed into the decoder
-///         private var head: HTTPRequestHead?
-///         private var messageProcessor: NIOSingleStepByteToMessageProcessor<MyCodec>? = nil
+///         private var messageProcessor: NIOSingleStepByteToMessageProcessor<TwoByteStringCodec>? = nil
 ///
 ///         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
 ///             let req = self.unwrapInboundIn(data)
 ///             do {
 ///                 switch req {
 ///                 case .head(let head):
-///                     self.head = head
 ///                     // simply forward on the head
 ///                     context.fireChannelRead(self.wrapInboundOut(.head(head)))
 ///                 case .body(let body):
 ///                     if self.messageProcessor == nil {
-///                         self.messageProcessor = NIOSingleStepByteToMessageProcessor(MyCodec(header: self.head))
+///                         self.messageProcessor = NIOSingleStepByteToMessageProcessor(TwoByteStringCodec())
 ///                     }
 ///                     try self.messageProcessor!.process(buffer: body) { message in
 ///                         self.channelReadMessage(context: context, message: message)
@@ -900,13 +908,18 @@ extension NIOSingleStepByteToMessageDecoder {
 ///                 context.fireErrorCaught(error)
 ///             }
 ///         }
+///
+///         // Forward on the body messages as whole messages
+///         func channelReadMessage(context: ChannelHandlerContext, message: String) {
+///             context.fireChannelRead(self.wrapInboundOut(.body(message)))
+///         }
 ///     }
 ///
 ///     private class DecodedBodyHTTPHandler: ChannelInboundHandler {
 ///         typealias InboundIn = HTTPPart<HTTPRequestHead, String>
 ///         typealias OutboundOut = HTTPServerResponsePart
 ///
-///         var length: Int = 0
+///         var msgs: [String] = []
 ///
 ///         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
 ///             let message = self.unwrapInboundIn(data)
@@ -915,11 +928,14 @@ extension NIOSingleStepByteToMessageDecoder {
 ///             case .head(let head):
 ///                 print("head: \(head)")
 ///             case .body(let msg):
-///                 self.length += msg.count
+///                 self.msgs.append(msg)
 ///             case .end(let trailers):
 ///                 print("trailers: \(trailers)")
 ///                 var responseBuffer = context.channel.allocator.buffer(capacity: 32)
-///                 responseBuffer.writeString("Received \(self.length) messages\n")
+///                 for msg in msgs {
+///                     responseBuffer.writeString(msg)
+///                     responseBuffer.writeStaticString("\n")
+///                 }
 ///                 var headers = HTTPHeaders()
 ///                 headers.add(name: "content-length", value: String(responseBuffer.readableBytes))
 ///
@@ -933,6 +949,14 @@ extension NIOSingleStepByteToMessageDecoder {
 ///             }
 ///         }
 ///     }
+///
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     let bootstrap = ServerBootstrap(group: group).childChannelInitializer({channel in
+///         channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true, withErrorHandling: true).flatMap { _ in
+///             channel.pipeline.addHandlers([RawBodyMessageHandler(), DecodedBodyHTTPHandler()])
+///         }
+///     })
+///     let channelFuture = bootstrap.bind(host: "127.0.0.1", port: 0)
 ///
 public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMessageDecoder> {
     typealias Decoder = Decoder
