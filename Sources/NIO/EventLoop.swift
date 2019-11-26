@@ -1055,7 +1055,7 @@ extension EventLoopGroup {
     }
 }
 
-private let nextEventLoopGroupID = Atomic(value: 0)
+private let nextEventLoopGroupID = FastAtomic.makeAtomic(value: 0)
 
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
 typealias ThreadInitializer = (NIOThread) -> Void
@@ -1083,7 +1083,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
 
-    private let index = Atomic<Int>(value: 0)
+    private let index = FastAtomic<Int>.makeAtomic(value: 0)
     private let eventLoops: [SelectableEventLoop]
     private let shutdownLock: Lock = Lock()
     private var runState: RunState = .running

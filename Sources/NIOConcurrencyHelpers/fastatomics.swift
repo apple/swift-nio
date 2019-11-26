@@ -151,13 +151,31 @@ extension UInt: FastAtomicPrimitive {
     public static let fast_atomic_store                        = catmc_fast_atomic_unsigned_long_store
 }
 
-public class FastAtomic<T: FastAtomicPrimitive> {
+/// An encapsulation of an atomic primitive object.
+///
+/// Atomic objects support a wide range of atomic operations:
+///
+/// - Compare and swap
+/// - Add
+/// - Subtract
+/// - Exchange
+/// - Load current value
+/// - Store current value
+///
+/// Atomic primitives are useful when building constructs that need to
+/// communicate or cooperate across multiple threads. In the case of
+/// SwiftNIO this usually involves communicating across multiple event loops.
+///
+/// By necessity, all atomic values are references: after all, it makes no
+/// sense to talk about managing an atomic value when each time it's modified
+/// the thread that modified it gets a local copy!
+public final class FastAtomic<T: FastAtomicPrimitive> {
     @usableFromInline
     typealias Manager = ManagedBufferPointer<Void, T.AtomicWrapper>
 
     /// Create an atomic object with `value`
     @inlinable
-    static func makeAtomic(value: T) -> FastAtomic {
+    public static func makeAtomic(value: T) -> FastAtomic {
         let manager = Manager(bufferClass: self, minimumCapacity: 1) { _, _ in }
         manager.withUnsafeMutablePointerToElements {
             T.fast_atomic_create_with_existing_storage($0, value)

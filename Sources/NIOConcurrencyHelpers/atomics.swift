@@ -153,6 +153,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
 /// By necessity, all atomic values are references: after all, it makes no
 /// sense to talk about managing an atomic value when each time it's modified
 /// the thread that modified it gets a local copy!
+@available(*, deprecated, message:"please use FastAtomic instead")
 public final class Atomic<T: AtomicPrimitive> {
     @usableFromInline
     internal let embedded: UnsafeEmbeddedAtomic<T>

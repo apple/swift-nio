@@ -73,7 +73,7 @@ public final class EventLoopTest : XCTestCase {
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
-        let ran = Atomic<Bool>(value: false)
+        let ran = FastAtomic<Bool>.makeAtomic(value: false)
         let scheduled = eventLoopGroup.next().scheduleTask(in: .seconds(2)) {
             ran.store(true)
         }
@@ -102,7 +102,7 @@ public final class EventLoopTest : XCTestCase {
         }
 
         let expect = expectation(description: "Is cancelling RepatedTask")
-        let counter = Atomic<Int>(value: 0)
+        let counter = FastAtomic<Int>.makeAtomic(value: 0)
         let loop = eventLoopGroup.next()
         loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
             XCTAssertTrue(loop.inEventLoop)
@@ -583,8 +583,8 @@ public final class EventLoopTest : XCTestCase {
         class AssertHandler: ChannelInboundHandler {
             typealias InboundIn = Any
 
-            let groupIsShutdown = Atomic(value: false)
-            let removed = Atomic(value: false)
+            let groupIsShutdown = FastAtomic.makeAtomic(value: false)
+            let removed = FastAtomic.makeAtomic(value: false)
 
             public func handlerRemoved(context: ChannelHandlerContext) {
                 XCTAssertFalse(groupIsShutdown.load())
@@ -605,7 +605,7 @@ public final class EventLoopTest : XCTestCase {
                 channel.connect(to: serverSocket.localAddress!)
             }
         }.wait() as Void)
-        let closeFutureFulfilledEventually = Atomic<Bool>(value: false)
+        let closeFutureFulfilledEventually = FastAtomic<Bool>.makeAtomic(value: false)
         XCTAssertFalse(channel.closeFuture.isFulfilled)
         channel.closeFuture.whenSuccess {
             XCTAssertTrue(closeFutureFulfilledEventually.compareAndExchange(expected: false, desired: true))
