@@ -790,3 +790,247 @@ extension MessageToByteHandler {
         }
     }
 }
+
+
+/// A simplified version of `ByteToMessageDecoder` that can generate zero or one messages for each invocation of `decode` or `decodeLast`.
+/// Having `decode` and `decodeLast` return an optional message avoids re-entrancy problems, since the functions relinquish exclusive access
+/// to the `ByteBuffer` when returning. This allows for greatly simplified (and more performant) processing.
+/// Many `ByteToMessageDecoder`'s can trivially be translated to `OneShotByteToMessageDecoder`'s.
+public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
+    /// The type of the messages this `NIOSingleStepByteToMessageDecoder` decodes to.
+    associatedtype InboundOut
+
+    /// Decode from a `ByteBuffer`.
+    ///
+    /// This method will be called in a loop until either the input `ByteBuffer` has nothing to read left or `nil` is returned. If non-`nil` is
+    /// returned and the `ByteBuffer` contains more readable bytes, this method will immediately be invoked again, unless `decodeLast` needs
+    /// to be invoked instead.
+    ///
+    /// - parameters:
+    ///     - buffer: The `ByteBuffer` from which we decode.
+    /// - returns: A message if one can be decoded or `nil` if it should be called again once more data is present in the `ByteBuffer`.
+    mutating func decode(buffer: inout ByteBuffer) throws -> InboundOut?
+
+    /// Decode from a `ByteBuffer` when no more data is incoming. This method is called in a loop only once.
+    ///
+    /// Like with `decode`, this method will be called in a loop until either `nil` is returned from the method or until the input `ByteBuffer`
+    /// has no more readable bytes. If non-`nil` is returned and the `ByteBuffer` contains more readable bytes, this method will immediately
+    /// be invoked again.
+    ///
+    /// - parameters:
+
+    ///     - buffer: The `ByteBuffer` from which we decode.
+    ///     - seenEOF: `true` if EOF has been seen.
+    /// - returns: A message if one can be decoded or `nil` if no more messages can be produced. Any data left in the `ByteBuffer`
+    ///       after returning `nil` will be lost.
+    mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut?
+}
+
+
+// MARK: NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder
+extension NIOSingleStepByteToMessageDecoder {
+    public mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        if let message = try self.decode(buffer: &buffer) {
+            context.fireChannelRead(self.wrapInboundOut(message))
+            return .continue
+        } else {
+            return .needMoreData
+        }
+    }
+
+    public mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+        if let message = try self.decodeLast(buffer: &buffer, seenEOF: seenEOF) {
+            context.fireChannelRead(self.wrapInboundOut(message))
+            return .continue
+        } else {
+            return .needMoreData
+        }
+    }
+}
+
+
+/// `NIOSingleStepByteToMessageProcessor` uses a `NIOSingleStepByteToMessageDecoder` to produce messages
+/// from a stream of incoming bytes. It works like `ByteToMessageHandler` but is used outside of the channel pipeline. This allows
+/// processing of wrapped protocols in a general way.
+///
+/// A `NIOSingleStepByteToMessageProcessor` is first initialized with a `NIOSingleStepByteToMessageDecoder`. Then
+/// call `process` as each `ByteBuffer` is received from the stream. The closure is called repeatedly with each message produced by
+/// the decoder.
+///
+/// When your stream ends, call `finishProcessing` to ensure all buffered data is passed to your decoder. This will call `decodeLast`
+/// one or more times with any remaining data.
+///
+/// ### Example
+///
+/// Below is an example of a protocol (decoded by `MyCodec`) that is sent over HTTP. `RawBodyMessageHandler` should be in the pipeline
+/// before `DecodedBodyHTTPHandler`.
+///
+///     private final class RawBodyMessageHandler: ChannelInboundHandler {
+///         typealias InboundIn = HTTPServerRequestPart // alias for HTTPPart<HTTPRequestHead, ByteBuffer>
+///         // This converts the body from ByteBuffer to String, our message type
+///         typealias InboundOut = HTTPPart<HTTPRequestHead, String>
+///
+///         // We store the head so it can be passed into the decoder
+///         private var head: HTTPRequestHead?
+///         private var messageProcessor: NIOSingleStepByteToMessageProcessor<MyCodec>? = nil
+///
+///         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+///             let req = self.unwrapInboundIn(data)
+///             do {
+///                 switch req {
+///                 case .head(let head):
+///                     self.head = head
+///                     // simply forward on the head
+///                     context.fireChannelRead(self.wrapInboundOut(.head(head)))
+///                 case .body(let body):
+///                     if self.messageProcessor == nil {
+///                         self.messageProcessor = NIOSingleStepByteToMessageProcessor(MyCodec(header: self.head))
+///                     }
+///                     try self.messageProcessor!.process(buffer: body) { message in
+///                         self.channelReadMessage(context: context, message: message)
+///                     }
+///                 case .end(let trailers):
+///                     // Forward on any remaining messages and the trailers
+///                     try self.messageProcessor?.finishProcessing(seenEOF: false) { message in
+///                         self.channelReadMessage(context: context, message: message)
+///                     }
+///                     context.fireChannelRead(self.wrapInboundOut(.end(trailers)))
+///                 }
+///             } catch {
+///                 context.fireErrorCaught(error)
+///             }
+///         }
+///     }
+///
+///     private class DecodedBodyHTTPHandler: ChannelInboundHandler {
+///         typealias InboundIn = HTTPPart<HTTPRequestHead, String>
+///         typealias OutboundOut = HTTPServerResponsePart
+///
+///         var length: Int = 0
+///
+///         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+///             let message = self.unwrapInboundIn(data)
+///
+///             switch message {
+///             case .head(let head):
+///                 print("head: \(head)")
+///             case .body(let msg):
+///                 self.length += msg.count
+///             case .end(let trailers):
+///                 print("trailers: \(trailers)")
+///                 var responseBuffer = context.channel.allocator.buffer(capacity: 32)
+///                 responseBuffer.writeString("Received \(self.length) messages\n")
+///                 var headers = HTTPHeaders()
+///                 headers.add(name: "content-length", value: String(responseBuffer.readableBytes))
+///
+///                 context.write(self.wrapOutboundOut(HTTPServerResponsePart.head(
+///                     HTTPResponseHead(version: .init(major: 1, minor: 1),
+///                                      status: .ok, headers: headers))), promise: nil)
+///
+///                 context.write(self.wrapOutboundOut(HTTPServerResponsePart.body(
+///                     .byteBuffer(responseBuffer))), promise: nil)
+///                 _ = context.writeAndFlush(self.wrapOutboundOut(HTTPServerResponsePart.end(nil)))
+///             }
+///         }
+///     }
+///
+public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMessageDecoder> {
+    typealias Decoder = Decoder
+
+    private enum DecodeMode {
+        /// This is a usual decode, ie. not the last chunk
+        case normal
+        /// Last chunk
+        case last
+    }
+
+    private var decoder: Decoder
+    private let maximumBufferSize: Int?
+    internal private(set) var buffer: ByteBuffer?
+
+    /// Initialize a `NIOSingleStepByteToMessageProcessor`.
+    ///
+    /// - parameters:
+    ///     - decoder: The `NIOSingleStepByteToMessageDecoder` to decode the bytes into message.
+    ///     - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
+    public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
+        self.decoder = decoder
+        self.maximumBufferSize = maximumBufferSize
+    }
+
+    private func append(_ buffer: ByteBuffer) {
+        if self.buffer == nil {
+            self.buffer = buffer
+        } else {
+            var buffer = buffer
+            self.buffer!.writeBuffer(&buffer)
+        }
+    }
+
+    private func decodeLoop(decodeMode: DecodeMode, seenEOF: Bool = false, _ messageReceiver: (Decoder.InboundOut) -> Void) throws {
+        // we want to call decodeLast once with an empty buffer if we have nothing
+        if decodeMode == .last && (self.buffer == nil || self.buffer!.readableBytes == 0) {
+            var emptyBuffer = self.buffer == nil ? ByteBufferAllocator().buffer(capacity: 0) : self.buffer!
+            let message = try self.decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF)
+            if message != nil {
+                messageReceiver(message!)
+            }
+            return
+        }
+
+        if self.buffer == nil {
+            return
+        }
+
+        var decodingState: DecodingState = .continue
+        while self.buffer!.readableBytes > 0 && decodingState == .continue {
+            let message: Decoder.InboundOut?
+            if decodeMode == .normal {
+                message = try self.decoder.decode(buffer: &self.buffer!)
+                if message == nil, let maximumBufferSize = self.maximumBufferSize, self.buffer!.readableBytes > maximumBufferSize {
+                    throw ByteToMessageDecoderError.PayloadTooLargeError()
+                }
+            } else {
+                message = try self.decoder.decodeLast(buffer: &self.buffer!, seenEOF: seenEOF)
+            }
+            if message != nil {
+                messageReceiver(message!)
+            } else {
+                decodingState = .needMoreData
+            }
+            if self.buffer!.readableBytes > 0 {
+                if self.decoder.shouldReclaimBytes(buffer: self.buffer!) {
+                    self.buffer!.discardReadBytes()
+                }
+            }
+        }
+
+        if self.buffer!.readableBytes == 0 {
+            self.buffer!.discardReadBytes()
+        }
+    }
+}
+
+
+// MARK: NIOSingleStepByteToMessageProcessor Public API
+extension NIOSingleStepByteToMessageProcessor where Decoder: NIOSingleStepByteToMessageDecoder {
+    /// Feed data into the `NIOSingleStepByteToMessageProcessor`
+    ///
+    /// - parameters:
+    ///     - buffer: The `ByteBuffer` containing the next data in the stream
+    ///     - messageReceiver: A closure called for each message produced by the `Decoder`
+    public func process(buffer: ByteBuffer, _ messageReceiver: (Decoder.InboundOut) -> Void) throws {
+        self.append(buffer)
+        try self.decodeLoop(decodeMode: .normal, messageReceiver)
+    }
+
+    /// Call when there is no data left in the stream. Calls `Decoder`.`decodeLast` one or more times. If there is no data left
+    /// `decodeLast` will be called one time with an empty `ByteBuffer`.
+    ///
+    /// - parameters:
+    ///     - seenEOF: Whether an EOF was seen on the stream.
+    ///     - messageReceiver: A closure called for each message produced by the `Decoder`.
+    public func finishProcessing(seenEOF: Bool, _ messageReceiver: (Decoder.InboundOut) -> Void) throws {
+        try self.decodeLoop(decodeMode: .last, seenEOF: seenEOF, messageReceiver)
+    }
+}
