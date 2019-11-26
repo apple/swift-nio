@@ -31,124 +31,124 @@ public protocol FastAtomicPrimitive {
 }
 
 extension Bool: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic__Bool
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic__Bool_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic__Bool_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic__Bool_add
-    public static let fast_atomic_sub                          = catmc_atomic__Bool_sub
-    public static let fast_atomic_exchange                     = catmc_atomic__Bool_exchange
-    public static let fast_atomic_load                         = catmc_atomic__Bool_load
-    public static let fast_atomic_store                        = catmc_atomic__Bool_store
+    public typealias AtomicWrapper = catmc_fast_atomic__Bool
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic__Bool_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic__Bool_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic__Bool_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic__Bool_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic__Bool_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic__Bool_load
+    public static let fast_atomic_store                        = catmc_fast_atomic__Bool_store
 }
 
 extension Int8: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_int_least8_t
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_int_least8_t_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_int_least8_t_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_int_least8_t_add
-    public static let fast_atomic_sub                          = catmc_atomic_int_least8_t_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_int_least8_t_exchange
-    public static let fast_atomic_load                         = catmc_atomic_int_least8_t_load
-    public static let fast_atomic_store                        = catmc_atomic_int_least8_t_store
+    public typealias AtomicWrapper = catmc_fast_atomic_int_least8_t
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_int_least8_t_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_int_least8_t_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_int_least8_t_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_int_least8_t_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_int_least8_t_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_int_least8_t_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_int_least8_t_store
 }
 
 extension UInt8: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_uint_least8_t
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_uint_least8_t_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_uint_least8_t_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_uint_least8_t_add
-    public static let fast_atomic_sub                          = catmc_atomic_uint_least8_t_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_uint_least8_t_exchange
-    public static let fast_atomic_load                         = catmc_atomic_uint_least8_t_load
-    public static let fast_atomic_store                        = catmc_atomic_uint_least8_t_store
+    public typealias AtomicWrapper = catmc_fast_atomic_uint_least8_t
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_uint_least8_t_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_uint_least8_t_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_uint_least8_t_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_uint_least8_t_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_uint_least8_t_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_uint_least8_t_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_uint_least8_t_store
 }
 
 extension Int16: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_int_least16_t
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_int_least16_t_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_int_least16_t_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_int_least16_t_add
-    public static let fast_atomic_sub                          = catmc_atomic_int_least16_t_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_int_least16_t_exchange
-    public static let fast_atomic_load                         = catmc_atomic_int_least16_t_load
-    public static let fast_atomic_store                        = catmc_atomic_int_least16_t_store
+    public typealias AtomicWrapper = catmc_fast_atomic_int_least16_t
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_int_least16_t_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_int_least16_t_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_int_least16_t_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_int_least16_t_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_int_least16_t_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_int_least16_t_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_int_least16_t_store
 }
 
 extension UInt16: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_uint_least16_t
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_uint_least16_t_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_uint_least16_t_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_uint_least16_t_add
-    public static let fast_atomic_sub                          = catmc_atomic_uint_least16_t_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_uint_least16_t_exchange
-    public static let fast_atomic_load                         = catmc_atomic_uint_least16_t_load
-    public static let fast_atomic_store                        = catmc_atomic_uint_least16_t_store
+    public typealias AtomicWrapper = catmc_fast_atomic_uint_least16_t
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_uint_least16_t_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_uint_least16_t_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_uint_least16_t_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_uint_least16_t_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_uint_least16_t_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_uint_least16_t_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_uint_least16_t_store
 }
 
 extension Int32: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_int_least32_t
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_int_least32_t_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_int_least32_t_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_int_least32_t_add
-    public static let fast_atomic_sub                          = catmc_atomic_int_least32_t_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_int_least32_t_exchange
-    public static let fast_atomic_load                         = catmc_atomic_int_least32_t_load
-    public static let fast_atomic_store                        = catmc_atomic_int_least32_t_store
+    public typealias AtomicWrapper = catmc_fast_atomic_int_least32_t
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_int_least32_t_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_int_least32_t_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_int_least32_t_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_int_least32_t_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_int_least32_t_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_int_least32_t_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_int_least32_t_store
 }
 
 extension UInt32: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_uint_least32_t
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_uint_least32_t_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_uint_least32_t_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_uint_least32_t_add
-    public static let fast_atomic_sub                          = catmc_atomic_uint_least32_t_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_uint_least32_t_exchange
-    public static let fast_atomic_load                         = catmc_atomic_uint_least32_t_load
-    public static let fast_atomic_store                        = catmc_atomic_uint_least32_t_store
+    public typealias AtomicWrapper = catmc_fast_atomic_uint_least32_t
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_uint_least32_t_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_uint_least32_t_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_uint_least32_t_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_uint_least32_t_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_uint_least32_t_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_uint_least32_t_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_uint_least32_t_store
 }
 
 extension Int64: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_long_long
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_long_long_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_long_long_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_long_long_add
-    public static let fast_atomic_sub                          = catmc_atomic_long_long_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_long_long_exchange
-    public static let fast_atomic_load                         = catmc_atomic_long_long_load
-    public static let fast_atomic_store                        = catmc_atomic_long_long_store
+    public typealias AtomicWrapper = catmc_fast_atomic_long_long
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_long_long_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_long_long_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_long_long_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_long_long_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_long_long_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_long_long_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_long_long_store
 }
 
 extension UInt64: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_unsigned_long_long
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_unsigned_long_long_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_unsigned_long_long_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_unsigned_long_long_add
-    public static let fast_atomic_sub                          = catmc_atomic_unsigned_long_long_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_unsigned_long_long_exchange
-    public static let fast_atomic_load                         = catmc_atomic_unsigned_long_long_load
-    public static let fast_atomic_store                        = catmc_atomic_unsigned_long_long_store
+    public typealias AtomicWrapper = catmc_fast_atomic_unsigned_long_long
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_unsigned_long_long_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_unsigned_long_long_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_unsigned_long_long_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_unsigned_long_long_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_unsigned_long_long_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_unsigned_long_long_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_unsigned_long_long_store
 }
 
 extension Int: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_long
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_long_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_long_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_long_add
-    public static let fast_atomic_sub                          = catmc_atomic_long_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_long_exchange
-    public static let fast_atomic_load                         = catmc_atomic_long_load
-    public static let fast_atomic_store                        = catmc_atomic_long_store
+    public typealias AtomicWrapper = catmc_fast_atomic_long
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_long_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_long_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_long_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_long_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_long_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_long_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_long_store
 }
 
 extension UInt: FastAtomicPrimitive {
-    public typealias AtomicWrapper = catmc_atomic_unsigned_long
-    public static let fast_atomic_create_with_existing_storage = catmc_atomic_unsigned_long_create_with_existing_storage
-    public static let fast_atomic_compare_and_exchange         = catmc_atomic_unsigned_long_compare_and_exchange
-    public static let fast_atomic_add                          = catmc_atomic_unsigned_long_add
-    public static let fast_atomic_sub                          = catmc_atomic_unsigned_long_sub
-    public static let fast_atomic_exchange                     = catmc_atomic_unsigned_long_exchange
-    public static let fast_atomic_load                         = catmc_atomic_unsigned_long_load
-    public static let fast_atomic_store                        = catmc_atomic_unsigned_long_store
+    public typealias AtomicWrapper = catmc_fast_atomic_unsigned_long
+    public static let fast_atomic_create_with_existing_storage = catmc_fast_atomic_unsigned_long_create_with_existing_storage
+    public static let fast_atomic_compare_and_exchange         = catmc_fast_atomic_unsigned_long_compare_and_exchange
+    public static let fast_atomic_add                          = catmc_fast_atomic_unsigned_long_add
+    public static let fast_atomic_sub                          = catmc_fast_atomic_unsigned_long_sub
+    public static let fast_atomic_exchange                     = catmc_fast_atomic_unsigned_long_exchange
+    public static let fast_atomic_load                         = catmc_fast_atomic_unsigned_long_load
+    public static let fast_atomic_store                        = catmc_fast_atomic_unsigned_long_store
 }
 
 public class FastAtomic<T: FastAtomicPrimitive> {

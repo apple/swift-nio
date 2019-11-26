@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -22,42 +22,32 @@
 #include "cpp_magic.h"
 
 #define MAKE(type) /*
-*/ struct catmc_atomic_##type { /*
-*/     _Atomic type value; /*
-*/ }; /*
-*/ /*
-*/ struct catmc_atomic_##type *catmc_atomic_##type##_create(type value) { /*
-*/     struct catmc_atomic_##type *wrapper = malloc(sizeof(*wrapper)); /*
-*/     atomic_init(&wrapper->value, value); /*
-*/     return wrapper; /*
+*/ void catmc_fast_atomic_##type##_create_with_existing_storage(struct catmc_fast_atomic_##type *storage, type value) { /*
+*/     atomic_init(&storage->value, value); /*
 */ } /*
 */ /*
-*/ void catmc_atomic_##type##_destroy(struct catmc_atomic_##type *wrapper) { /*
-*/     free(wrapper); /*
-*/ } /*
-*/ /*
-*/ bool catmc_atomic_##type##_compare_and_exchange(struct catmc_atomic_##type *wrapper, type expected, type desired) { /*
+*/ bool catmc_fast_atomic_##type##_compare_and_exchange(struct catmc_fast_atomic_##type *wrapper, type expected, type desired) { /*
 */     type expected_copy = expected; /*
 */     return atomic_compare_exchange_strong(&wrapper->value, &expected_copy, desired); /*
 */ } /*
 */ /*
-*/ type catmc_atomic_##type##_add(struct catmc_atomic_##type *wrapper, type value) { /*
+*/ type catmc_fast_atomic_##type##_add(struct catmc_fast_atomic_##type *wrapper, type value) { /*
 */     return atomic_fetch_add_explicit(&wrapper->value, value, memory_order_relaxed); /*
 */ } /*
 */ /*
-*/ type catmc_atomic_##type##_sub(struct catmc_atomic_##type *wrapper, type value) { /*
+*/ type catmc_fast_atomic_##type##_sub(struct catmc_fast_atomic_##type *wrapper, type value) { /*
 */     return atomic_fetch_sub_explicit(&wrapper->value, value, memory_order_relaxed); /*
 */ } /*
 */ /*
-*/ type catmc_atomic_##type##_exchange(struct catmc_atomic_##type *wrapper, type value) { /*
+*/ type catmc_fast_atomic_##type##_exchange(struct catmc_fast_atomic_##type *wrapper, type value) { /*
 */     return atomic_exchange_explicit(&wrapper->value, value, memory_order_relaxed); /*
 */ } /*
 */ /*
-*/ type catmc_atomic_##type##_load(struct catmc_atomic_##type *wrapper) { /*
+*/ type catmc_fast_atomic_##type##_load(struct catmc_fast_atomic_##type *wrapper) { /*
 */     return atomic_load_explicit(&wrapper->value, memory_order_relaxed); /*
 */ } /*
 */ /*
-*/ void catmc_atomic_##type##_store(struct catmc_atomic_##type *wrapper, type value) { /*
+*/ void catmc_fast_atomic_##type##_store(struct catmc_fast_atomic_##type *wrapper, type value) { /*
 */     atomic_store_explicit(&wrapper->value, value, memory_order_relaxed); /*
 */ }
 
