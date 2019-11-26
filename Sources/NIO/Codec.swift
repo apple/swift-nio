@@ -1002,9 +1002,8 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
             return
         }
 
-        if self.buffer == nil {
-            return
-        }
+        // buffer can only be nil if we're called from finishProcessing which is handled above
+        assert(self.buffer != nil)
 
         var decodingState: DecodingState = .continue
         while self.buffer!.readableBytes > 0 && decodingState == .continue {
