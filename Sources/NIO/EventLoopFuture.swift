@@ -22,7 +22,7 @@ import NIOConcurrencyHelpers
 /// In particular, note that _run() here continues to obtain and execute lists of callbacks until it completes.
 /// This eliminates recursion when processing `flatMap()` chains.
 @usableFromInline
-internal struct CallbackList: ExpressibleByArrayLiteral {
+internal struct CallbackList {
     @usableFromInline
     internal typealias Element = () -> CallbackList
     @usableFromInline
@@ -34,17 +34,6 @@ internal struct CallbackList: ExpressibleByArrayLiteral {
     internal init() {
         self.firstCallback = nil
         self.furtherCallbacks = nil
-    }
-
-    @inlinable
-    internal init(arrayLiteral: Element...) {
-        self.init()
-        if !arrayLiteral.isEmpty {
-            self.firstCallback = arrayLiteral[0]
-            if arrayLiteral.count > 1 {
-                self.furtherCallbacks = Array(arrayLiteral.dropFirst())
-            }
-        }
     }
 
     @inlinable
