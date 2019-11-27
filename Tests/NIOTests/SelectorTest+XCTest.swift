@@ -24,6 +24,7 @@ import XCTest
 
 extension SelectorTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (SelectorTest) -> () throws -> Void)] {
       return [
                 ("testDeregisterWhileProcessingEvents", testDeregisterWhileProcessingEvents),

@@ -2441,6 +2441,15 @@ class ByteBufferTest: XCTestCase {
             XCTAssertTrue(error is MyError)
         }
     }
+
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
+    func testDeprecatedSetBytes() {
+        self.buf.clear()
+        self.buf.writeString("hello")
+        self.buf.set(buffer: self.buf, at: 5)
+        self.buf.moveWriterIndex(forwardBy: 5)
+        XCTAssertEqual("hellohello", self.buf.readString(length: 10))
+    }
 }
 
 private enum AllocationExpectationState: Int {
