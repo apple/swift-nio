@@ -904,6 +904,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The modification operation to execute, with this `ByteBuffer` passed `inout` as an argument.
     /// - returns: The return value of `body`.
+    @inlinable
     public mutating func modifyIfUniquelyOwned<T>(_ body: (inout ByteBuffer) throws -> T) rethrows -> T? {
         if isKnownUniquelyReferenced(&self._storage) {
             return try body(&self)
