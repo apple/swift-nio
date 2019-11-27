@@ -25,6 +25,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         return n*(n+1)/2
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testLargeContendedAtomicSum() {
         let noAsyncs: UInt64 = 64
         let noCounts: UInt64 = 200_000
@@ -43,6 +44,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testCompareAndExchangeBool() {
         let ab = Atomic<Bool>(value: true)
 
@@ -56,6 +58,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertTrue(ab.compareAndExchange(expected: false, desired: true))
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testAllOperationsBool() {
         let ab = Atomic<Bool>(value: false)
         XCTAssertEqual(false, ab.load())
@@ -72,6 +75,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertFalse(ab.compareAndExchange(expected: false, desired: true))
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testCompareAndExchangeUInts() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger & UnsignedInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -102,6 +106,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testCompareAndExchangeInts() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger & SignedInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -133,6 +138,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(Int.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testAddSub() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -164,6 +170,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testExchange() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -195,6 +202,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testLoadStore() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
