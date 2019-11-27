@@ -988,6 +988,21 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
         }
     }
 
+    private func withNonCoWBuffer(_ body: (inout ByteBuffer) throws -> Decoder.InboundOut?) throws -> Decoder.InboundOut? {
+        guard var buffer = self.buffer else {
+            return nil
+        }
+
+        if buffer.readableBytes == 0 {
+            return nil
+        }
+
+        self.buffer = nil  // To avoid CoW
+        let result = try body(&buffer)
+        self.buffer = buffer
+        return result
+    }
+
     private func decodeLoop(decodeMode: DecodeMode, seenEOF: Bool = false, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
         // we want to call decodeLast once with an empty buffer if we have nothing
         if decodeMode == .last && (self.buffer == nil || self.buffer!.readableBytes == 0) {
@@ -1001,27 +1016,29 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
         // buffer can only be nil if we're called from finishProcessing which is handled above
         assert(self.buffer != nil)
 
-        var decodingState: DecodingState = .continue
-        while self.buffer!.readableBytes > 0 && decodingState == .continue {
-            let messageOpt: Decoder.InboundOut?
-            if decodeMode == .normal {
-                messageOpt = try self.decoder.decode(buffer: &self.buffer!)
-                if messageOpt == nil, let maximumBufferSize = self.maximumBufferSize, self.buffer!.readableBytes > maximumBufferSize {
-                    throw ByteToMessageDecoderError.PayloadTooLargeError()
+        var messageOpt: Decoder.InboundOut?
+        repeat {
+            messageOpt = try self.withNonCoWBuffer() { buffer in
+                defer {
+                    if buffer.readableBytes > 0 {
+                        if self.decoder.shouldReclaimBytes(buffer: buffer) {
+                            buffer.discardReadBytes()
+                        }
+                    }
                 }
-            } else {
-                messageOpt = try self.decoder.decodeLast(buffer: &self.buffer!, seenEOF: seenEOF)
+                if decodeMode == .normal {
+                    return try self.decoder.decode(buffer: &buffer)
+                } else {
+                    return try self.decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
+                }
             }
             if let message = messageOpt {
                 try messageReceiver(message)
-            } else {
-                decodingState = .needMoreData
             }
-            if self.buffer!.readableBytes > 0 {
-                if self.decoder.shouldReclaimBytes(buffer: self.buffer!) {
-                    self.buffer!.discardReadBytes()
-                }
-            }
+        } while messageOpt != nil
+
+        if let maximumBufferSize = self.maximumBufferSize, self.buffer!.readableBytes > maximumBufferSize {
+            throw ByteToMessageDecoderError.PayloadTooLargeError()
         }
 
         if self.buffer!.readableBytes == 0 {
