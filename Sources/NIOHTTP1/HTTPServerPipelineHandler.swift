@@ -64,6 +64,9 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     public typealias OutboundOut = HTTPServerResponsePart
 
     public init() {
+        self.nextExpectedInboundMessage = nil
+        self.nextExpectedOutboundMessage = nil
+
         debugOnly {
             self.nextExpectedInboundMessage = .head
             self.nextExpectedOutboundMessage = .head
@@ -172,9 +175,9 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     private var lifecycleState: LifecycleState = .acceptingEvents
 
     // always `nil` in release builds, never `nil` in debug builds
-    private var nextExpectedInboundMessage: NextExpectedMessageType?
+    private var nextExpectedInboundMessage: Optional<NextExpectedMessageType>
     // always `nil` in release builds, never `nil` in debug builds
-    private var nextExpectedOutboundMessage: NextExpectedMessageType?
+    private var nextExpectedOutboundMessage: Optional<NextExpectedMessageType>
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.lifecycleState {
