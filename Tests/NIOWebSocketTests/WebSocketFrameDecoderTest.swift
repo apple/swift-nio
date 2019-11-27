@@ -83,12 +83,12 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
             while let d = try self.encoderChannel.readOutbound(as: ByteBuffer.self) {
                 XCTAssertNoThrow(try self.decoderChannel.writeInbound(d))
             }
-            
+
             guard let producedFrame: WebSocketFrame = try self.decoderChannel.readInbound() else {
                 XCTFail("Did not produce a frame")
                 return nil
             }
-            
+
             // Should only have gotten one frame!
             XCTAssertNoThrow(XCTAssertNil(try self.decoderChannel.readInbound(as: WebSocketFrame.self)))
             return producedFrame
