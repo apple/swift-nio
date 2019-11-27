@@ -210,3 +210,5 @@ extension ByteBufferView: DataProtocol {
         return .init(self)
     }
 }
+
+extension ByteBufferView: MutableDataProtocol {}
