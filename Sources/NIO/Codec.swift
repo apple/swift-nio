@@ -1042,6 +1042,7 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
             throw ByteToMessageDecoderError.PayloadTooLargeError()
         }
 
+        // force unwrapping is safe because nil case is handled already and asserted above
         if self._buffer!.readableBytes == 0 {
             self._buffer!.discardReadBytes()
         }
