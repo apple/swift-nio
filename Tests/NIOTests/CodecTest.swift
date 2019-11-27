@@ -1730,15 +1730,15 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
 
         XCTAssertEqual(512, messageReceiver.retrieveMessage()!.readableBytes)
 
-        XCTAssertEqual(1, processor.buffer!.readableBytes)
-        XCTAssertEqual(512, processor.buffer!.readerIndex)
+        XCTAssertEqual(1, processor._buffer!.readableBytes)
+        XCTAssertEqual(512, processor._buffer!.readerIndex)
 
         // Now we're going to send in another 513 bytes. This will cause another chunk to be passed in,
         // but now we'll shrink the buffer.
         XCTAssertNoThrow(try processor.process(buffer: buffer, messageReceiver.receiveMessage))
 
-        XCTAssertEqual(2, processor.buffer!.readableBytes)
-        XCTAssertEqual(0, processor.buffer!.readerIndex)
+        XCTAssertEqual(2, processor._buffer!.readableBytes)
+        XCTAssertEqual(0, processor._buffer!.readerIndex)
     }
 
     func testMemoryIsReclaimedIfLotsIsAvailable() throws {
@@ -1755,15 +1755,15 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try processor.process(buffer: buffer, messageReceiver.receiveMessage))
         XCTAssertEqual(0, messageReceiver.count)
 
-        XCTAssertEqual(5119, processor.buffer!.readableBytes)
-        XCTAssertEqual(0, processor.buffer!.readerIndex)
+        XCTAssertEqual(5119, processor._buffer!.readableBytes)
+        XCTAssertEqual(0, processor._buffer!.readerIndex)
 
         // Now we're going to send in one more byte. This will cause a chunk to be passed on,
         // shrinking the held memory to 3072 bytes. However, memory will be reclaimed.
         XCTAssertNoThrow(try processor.process(buffer: buffer.getSlice(at: 0, length: 1)!, messageReceiver.receiveMessage))
         XCTAssertEqual(2048, messageReceiver.retrieveMessage()!.readableBytes)
-        XCTAssertEqual(3072, processor.buffer!.readableBytes)
-        XCTAssertEqual(0, processor.buffer!.readerIndex)
+        XCTAssertEqual(3072, processor._buffer!.readableBytes)
+        XCTAssertEqual(0, processor._buffer!.readerIndex)
     }
 
     func testLeftOversMakeDecodeLastCalled() {
@@ -1944,7 +1944,7 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         buffer.writeString(String(repeating: "*", count: max + 1))
         XCTAssertNoThrow(try processor.process(buffer: buffer, messageReceiver.receiveMessage))
         XCTAssertNoThrow(try processor.finishProcessing(seenEOF: false, messageReceiver.receiveMessage))
-        XCTAssertEqual(0, processor.buffer!.readableBytes)
+        XCTAssertEqual(0, processor._buffer!.readableBytes)
         XCTAssertGreaterThan(decoder.decodeCalls, 0)
     }
 }

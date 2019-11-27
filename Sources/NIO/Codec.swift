@@ -811,11 +811,14 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     /// - returns: A message if one can be decoded or `nil` if it should be called again once more data is present in the `ByteBuffer`.
     mutating func decode(buffer: inout ByteBuffer) throws -> InboundOut?
 
-    /// Decode from a `ByteBuffer` when no more data is incoming. This method is called in a loop only once.
+    /// Decode from a `ByteBuffer` when no more data is incoming.
     ///
     /// Like with `decode`, this method will be called in a loop until either `nil` is returned from the method or until the input `ByteBuffer`
     /// has no more readable bytes. If non-`nil` is returned and the `ByteBuffer` contains more readable bytes, this method will immediately
     /// be invoked again.
+    ///
+    /// Once `nil` is returned, neither `decode` nor `decodeLast` will be called again. If there are no bytes left, `decodeLast` will be called
+    /// once with an empty buffer.
     ///
     /// - parameters:
     ///     - buffer: The `ByteBuffer` from which we decode.
@@ -967,7 +970,7 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
 
     private var decoder: Decoder
     private let maximumBufferSize: Int?
-    internal private(set) var buffer: ByteBuffer?
+    internal private(set) var _buffer: ByteBuffer?
 
     /// Initialize a `NIOSingleStepByteToMessageProcessor`.
     ///
@@ -980,16 +983,16 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
     }
 
     private func append(_ buffer: ByteBuffer) {
-        if self.buffer == nil {
-            self.buffer = buffer
+        if self._buffer == nil || self._buffer!.readableBytes == 0 {
+            self._buffer = buffer
         } else {
             var buffer = buffer
-            self.buffer!.writeBuffer(&buffer)
+            self._buffer!.writeBuffer(&buffer)
         }
     }
 
     private func withNonCoWBuffer(_ body: (inout ByteBuffer) throws -> Decoder.InboundOut?) throws -> Decoder.InboundOut? {
-        guard var buffer = self.buffer else {
+        guard var buffer = self._buffer else {
             return nil
         }
 
@@ -997,16 +1000,16 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
             return nil
         }
 
-        self.buffer = nil  // To avoid CoW
+        self._buffer = nil  // To avoid CoW
         let result = try body(&buffer)
-        self.buffer = buffer
+        self._buffer = buffer
         return result
     }
 
     private func decodeLoop(decodeMode: DecodeMode, seenEOF: Bool = false, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
         // we want to call decodeLast once with an empty buffer if we have nothing
-        if decodeMode == .last && (self.buffer == nil || self.buffer!.readableBytes == 0) {
-            var emptyBuffer = self.buffer == nil ? ByteBufferAllocator().buffer(capacity: 0) : self.buffer!
+        if decodeMode == .last && (self._buffer == nil || self._buffer!.readableBytes == 0) {
+            var emptyBuffer = self._buffer == nil ? ByteBufferAllocator().buffer(capacity: 0) : self._buffer!
             if let message = try self.decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF) {
                 try messageReceiver(message)
             }
@@ -1014,7 +1017,7 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
         }
 
         // buffer can only be nil if we're called from finishProcessing which is handled above
-        assert(self.buffer != nil)
+        assert(self._buffer != nil)
 
         var messageOpt: Decoder.InboundOut?
         repeat {
@@ -1037,12 +1040,12 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
             }
         } while messageOpt != nil
 
-        if let maximumBufferSize = self.maximumBufferSize, self.buffer!.readableBytes > maximumBufferSize {
+        if let maximumBufferSize = self.maximumBufferSize, self._buffer!.readableBytes > maximumBufferSize {
             throw ByteToMessageDecoderError.PayloadTooLargeError()
         }
 
-        if self.buffer!.readableBytes == 0 {
-            self.buffer!.discardReadBytes()
+        if self._buffer!.readableBytes == 0 {
+            self._buffer!.discardReadBytes()
         }
     }
 }
