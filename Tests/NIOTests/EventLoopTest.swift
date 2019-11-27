@@ -439,7 +439,7 @@ public final class EventLoopTest : XCTestCase {
             }
             .bind(host: "127.0.0.1", port: 0).wait())
         defer {
-            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+            XCTAssertFalse(serverChannel.isActive)
         }
         let connectPromise = loop.makePromise(of: Void.self)
 
@@ -462,8 +462,17 @@ public final class EventLoopTest : XCTestCase {
 
         XCTAssertNoThrow(try serverChannelUp.futureResult.wait())
 
+        let g = DispatchGroup()
+        let q = DispatchQueue(label: "\(#file)/\(#line)")
+        g.enter()
         // Now we're going to start closing the event loop. This should not immediately succeed.
-        let loopCloseFut = loop.closeGently()
+        loop.initiateClose(queue: q) { result in
+            func workaroundSR9815() {
+                XCTAssertNoThrow(try result.get())
+            }
+            workaroundSR9815()
+            g.leave()
+        }
 
         // Now we're going to attempt to register a new channel. This should immediately fail.
         let newChannel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
@@ -478,13 +487,13 @@ public final class EventLoopTest : XCTestCase {
         }
 
         // Confirm that the loop still hasn't closed.
-        XCTAssertFalse(loopCloseFut.isFulfilled)
+        XCTAssertEqual(.timedOut, g.wait(timeout: .now()))
 
         // Now let it close.
         promiseQueue.sync {
             promises.forEach { $0.succeed(()) }
         }
-        XCTAssertNoThrow(try loopCloseFut.wait())
+        XCTAssertNoThrow(g.wait())
     }
 
     public func testEventLoopThreads() throws {
