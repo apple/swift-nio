@@ -32,7 +32,7 @@ public struct ByteBufferView: RandomAccessCollection {
 
     /// Creates a `ByteBufferView` from the readable bytes of the given `buffer`.
     public init(_ buffer: ByteBuffer) {
-        self = ByteBufferView(buffer: buffer, range: buffer.readerIndex ..< buffer.readerIndex + buffer.readableBytes)
+        self = ByteBufferView(buffer: buffer, range: buffer.readerIndex ..< buffer.writerIndex)
     }
 
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
@@ -137,7 +137,7 @@ extension ByteBufferView: RangeReplaceableCollection {
 extension ByteBuffer {
     /// A view into the readable bytes of the `ByteBuffer`.
     public var readableBytesView: ByteBufferView {
-        return ByteBufferView(buffer: self, range: self.readerIndex ..< self.readerIndex + self.readableBytes)
+        return ByteBufferView(self)
     }
 
     /// Returns a view into some portion of the readable bytes of a `ByteBuffer`.
