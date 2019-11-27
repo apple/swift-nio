@@ -30,6 +30,7 @@ extension NIOHTTP1TestServerTest {
                 ("testSimpleRequest", testSimpleRequest),
                 ("testConcurrentRequests", testConcurrentRequests),
                 ("testTestWebServerCanBeReleased", testTestWebServerCanBeReleased),
+                ("testStopClosesAcceptedChannel", testStopClosesAcceptedChannel),
            ]
    }
 }
