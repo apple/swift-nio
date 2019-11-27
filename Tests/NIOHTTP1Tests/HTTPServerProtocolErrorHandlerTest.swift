@@ -80,6 +80,10 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
 
     func testDoesNotSendAResponseIfResponseHasAlreadyStarted() throws {
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false, withErrorHandling: true).wait())
         let res = HTTPServerResponsePart.head(.init(version: HTTPVersion(major: 1, minor: 1),
                                                     status: .ok,
@@ -91,6 +95,9 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         let allOutboundString = allOutbound.readString(length: allOutbound.readableBytes)
         // there should be no HTTP/1.1 400 or anything in here
         XCTAssertEqual("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n", allOutboundString)
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            XCTAssertEqual(.invalidEOFState, error as? HTTPParserError)
+        }
     }
 
     func testCanHandleErrorsWhenResponseHasStarted() throws {

@@ -180,7 +180,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
         }
-        
+
         // Read the server request.
         if let requestString = try clientChannel.readByteBufferOutputAsString() {
             XCTAssertEqual(requestString, self.basicRequest() + "\r\nConnection: upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: \(requestKey)\r\nSec-WebSocket-Version: 13\r\n\r\n")
@@ -231,7 +231,6 @@ class WebSocketClientEndToEndTests: XCTestCase {
                                                    clientUpgraders: [basicUpgrader]) { _ in
         }
 
-        
         // Push the successful server response but with a missing accept key.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: websocket\r\n\r\n"
         
@@ -262,7 +261,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
         let clientChannel = try setUpClientChannel(clientHTTPHandler: BasicHTTPHandler(),
                                                    clientUpgraders: [basicUpgrader]) { _ in
         }
-        
+
         // Push the successful server response but with an incorrect response key.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept:\(responseKey)\r\n\r\n"
 
@@ -293,7 +292,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
         let clientChannel = try setUpClientChannel(clientHTTPHandler: BasicHTTPHandler(),
                                                    clientUpgraders: [basicUpgrader]) { _ in
         }
-        
+
         // Push the successful server response with an incorrect protocol.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: myProtocol\r\nSec-WebSocket-Accept:\(responseKey)\r\n\r\n"
         
@@ -379,6 +378,9 @@ class WebSocketClientEndToEndTests: XCTestCase {
     private func encodeFrame(dataString: String, opcode: WebSocketOpcode) throws -> (WebSocketFrame, [UInt8]) {
         
         let serverChannel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try serverChannel.finish())
+        }
         
         var buffer = serverChannel.allocator.buffer(capacity: 11)
         buffer.writeString(dataString)
@@ -394,6 +396,9 @@ class WebSocketClientEndToEndTests: XCTestCase {
     func testReceiveAFewFrames() throws {
         
         let (clientChannel, recorder) = try self.runSuccessfulUpgrade()
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish(acceptAlreadyClosed: true))
+        }
         
         // Listen out for a frame or two, to confirm that the Websocket pipeline works.
         let (binaryFrame, binaryFrameAsBytes) = try self.encodeFrame(dataString: "hello, back", opcode: .binary)

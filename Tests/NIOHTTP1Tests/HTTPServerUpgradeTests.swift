@@ -263,7 +263,6 @@ private class UpgradeDelayer: HTTPServerProtocolUpgrader {
     let requiredUpgradeHeaders: [String] = []
 
     private var upgradePromise: EventLoopPromise<Void>?
-    private var context: ChannelHandlerContext?
 
     public init(forProtocol `protocol`: String) {
         self.supportedProtocol = `protocol`
@@ -277,7 +276,6 @@ private class UpgradeDelayer: HTTPServerProtocolUpgrader {
 
     public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         self.upgradePromise = context.eventLoop.makePromise()
-        self.context = context
         return self.upgradePromise!.futureResult
     }
 
@@ -1281,7 +1279,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
 
         let delayer = UpgradeDelayer(forProtocol: "myproto")
-
+        defer {
+            delayer.unblockUpgrade()
+        }
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: (upgraders: [delayer], completionHandler: { context in })).wait())
 
         // Let's send in an upgrade request.
@@ -1326,6 +1326,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
 
         let delayer = UpgradeDelayer(forProtocol: "myproto")
+        defer {
+            delayer.unblockUpgrade()
+        }
 
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: (upgraders: [delayer], completionHandler: { context in })).wait())
 
