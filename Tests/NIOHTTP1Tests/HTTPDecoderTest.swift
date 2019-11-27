@@ -19,16 +19,17 @@ import NIOTestUtils
 
 class HTTPDecoderTest: XCTestCase {
     private var channel: EmbeddedChannel!
-    private var loop: EmbeddedEventLoop!
+    private var loop: EmbeddedEventLoop {
+        return self.channel.embeddedEventLoop
+    }
 
     override func setUp() {
         self.channel = EmbeddedChannel()
-        self.loop = channel.embeddedEventLoop
     }
 
     override func tearDown() {
+        XCTAssertNoThrow(try self.channel?.finish(acceptAlreadyClosed: true))
         self.channel = nil
-        self.loop = nil
     }
 
     func testDoesNotDecodeRealHTTP09Request() throws {
@@ -482,6 +483,9 @@ class HTTPDecoderTest: XCTestCase {
     func testIllegalHeaderNamesCauseError() {
         func writeToFreshRequestDecoderChannel(_ string: String) throws {
             let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            defer {
+                XCTAssertNoThrow(try channel.finish())
+            }
             var buffer = channel.allocator.buffer(capacity: 256)
             buffer.writeString(string)
             try channel.writeInbound(buffer)
@@ -506,6 +510,9 @@ class HTTPDecoderTest: XCTestCase {
     func testNonASCIIWorksAsHeaderValue() {
         func writeToFreshRequestDecoderChannel(_ string: String) throws -> HTTPServerRequestPart? {
             let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            defer {
+                XCTAssertNoThrow(try channel.finish())
+            }
             var buffer = channel.allocator.buffer(capacity: 256)
             buffer.writeString(string)
             try channel.writeInbound(buffer)
@@ -524,6 +531,9 @@ class HTTPDecoderTest: XCTestCase {
         let data: StaticString = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
 
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
         var dataBuffer = channel.allocator.buffer(capacity: 128)
         dataBuffer.writeStaticString(data)
 
@@ -538,6 +548,9 @@ class HTTPDecoderTest: XCTestCase {
 
     func testHTTPResponseWithoutHeaders() {
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
         var buffer = channel.allocator.buffer(capacity: 128)
         buffer.writeStaticString("HTTP/1.0 200 ok\r\n\r\n")
 
@@ -747,6 +760,9 @@ class HTTPDecoderTest: XCTestCase {
 
     func testAppropriateErrorWhenReceivingUnsolicitedResponse() throws {
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("HTTP/1.1 200 OK\r\nServer: a-bad-server/1.0.0\r\n\r\n")
 
@@ -760,6 +776,9 @@ class HTTPDecoderTest: XCTestCase {
 
     func testAppropriateErrorWhenReceivingUnsolicitedResponseDoesNotRecover() throws {
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("HTTP/1.1 200 OK\r\nServer: a-bad-server/1.0.0\r\n\r\n")
 

@@ -134,7 +134,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
     override func tearDown() {
         if let channel = self.channel {
-            XCTAssertNoThrow(try channel.finish())
+            XCTAssertNoThrow(try channel.finish(acceptAlreadyClosed: true))
             self.channel = nil
         }
         self.requestHead = nil
@@ -504,7 +504,6 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertTrue(self.channel.isActive)
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
         XCTAssertFalse(self.channel.isActive)
-        self.channel = nil
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
@@ -530,7 +529,6 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertTrue(self.channel.isActive)
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
         XCTAssertFalse(self.channel.isActive)
-        self.channel = nil
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
@@ -560,7 +558,6 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
         XCTAssertFalse(self.channel.isActive)
-        self.channel = nil
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
@@ -590,7 +587,6 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                        self.writeRecorder.writes)
 
         XCTAssertFalse(self.channel.isActive)
-        self.channel = nil
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
@@ -619,7 +615,6 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                        self.writeRecorder.writes)
 
         XCTAssertFalse(self.channel.isActive)
-        self.channel = nil
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
@@ -656,7 +651,6 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
         XCTAssertFalse(self.channel.isActive)
-        self.channel = nil
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
@@ -694,7 +688,6 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
         XCTAssertFalse(self.channel.isActive)
-        self.channel = nil
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
@@ -734,7 +727,6 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                         .channelRead(HTTPServerRequestPart.end(nil))])
 
         XCTAssertFalse(self.channel.isActive)
-        self.channel = nil
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 

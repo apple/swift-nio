@@ -25,6 +25,7 @@ private class CloseSwallower: ChannelOutboundHandler, RemovableChannelHandler {
 
     public func allowClose() {
         self.context!.close(promise: self.closePromise)
+        self.context = nil
     }
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
