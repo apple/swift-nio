@@ -22,10 +22,11 @@ final class WebSocketFrameEncoderBenchmark {
     private let runCount: Int
     private let dataStrategy: DataStrategy
     private let cowStrategy: CoWStrategy
-    private var maskingKey: WebSocketMaskingKey?
-    private var frame: WebSocketFrame?
+    private var maskingKey: Optional<WebSocketMaskingKey>
+    private var frame: Optional<WebSocketFrame>
 
     init(dataSize: Int, runCount: Int, dataStrategy: DataStrategy, cowStrategy: CoWStrategy, maskingKeyStrategy: MaskingKeyStrategy) {
+        self.frame = nil
         self.channel = EmbeddedChannel()
         self.dataSize = dataSize
         self.runCount = runCount

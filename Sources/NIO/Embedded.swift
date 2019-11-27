@@ -156,7 +156,7 @@ class EmbeddedChannelCore: ChannelCore {
 
     var eventLoop: EventLoop
     var closePromise: EventLoopPromise<Void>
-    var error: Error?
+    var error: Optional<Error>
 
     private let pipeline: ChannelPipeline
 
@@ -164,6 +164,7 @@ class EmbeddedChannelCore: ChannelCore {
         closePromise = eventLoop.makePromise()
         self.pipeline = pipeline
         self.eventLoop = eventLoop
+        self.error = nil
     }
 
     deinit {

@@ -58,14 +58,15 @@ public final class RepeatedTask {
     private let delay: TimeAmount
     private let eventLoop: EventLoop
     private let cancellationPromise: EventLoopPromise<Void>?
-    private var scheduled: Scheduled<EventLoopFuture<Void>>?
-    private var task: ((RepeatedTask) -> EventLoopFuture<Void>)?
+    private var scheduled: Optional<Scheduled<EventLoopFuture<Void>>>
+    private var task: Optional<(RepeatedTask) -> EventLoopFuture<Void>>
 
     internal init(interval: TimeAmount, eventLoop: EventLoop, cancellationPromise: EventLoopPromise<Void>? = nil, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
         self.delay = interval
         self.eventLoop = eventLoop
         self.cancellationPromise = cancellationPromise
         self.task = task
+        self.scheduled = nil
     }
 
     internal func begin(in delay: TimeAmount) {

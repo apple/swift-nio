@@ -227,7 +227,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     var readPending = false
-    var pendingConnect: EventLoopPromise<Void>?
+    var pendingConnect: Optional<EventLoopPromise<Void>>
     var recvAllocator: RecvByteBufferAllocator
     var maxMessagesPerRead: UInt = 4
 
@@ -390,6 +390,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         // As the socket may already be connected we should ensure we start with the correct addresses cached.
         self.addressesCached.store(Box((local: try? socket.localAddress(), remote: try? socket.remoteAddress())))
         self.socketDescription = socket.description
+        self.pendingConnect = nil
         self._pipeline = ChannelPipeline(channel: self)
     }
 
