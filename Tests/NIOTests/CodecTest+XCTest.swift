@@ -24,6 +24,7 @@ import XCTest
 
 extension ByteToMessageDecoderTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (ByteToMessageDecoderTest) -> () throws -> Void)] {
       return [
                 ("testDecoder", testDecoder),
@@ -66,6 +67,7 @@ extension ByteToMessageDecoderTest {
 
 extension MessageToByteEncoderTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (MessageToByteEncoderTest) -> () throws -> Void)] {
       return [
                 ("testEncoderOverrideAllocateOutBuffer", testEncoderOverrideAllocateOutBuffer),
@@ -76,6 +78,7 @@ extension MessageToByteEncoderTest {
 
 extension MessageToByteHandlerTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (MessageToByteHandlerTest) -> () throws -> Void)] {
       return [
                 ("testThrowingEncoderFailsPromises", testThrowingEncoderFailsPromises),

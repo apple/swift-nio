@@ -22,7 +22,7 @@ import NIOConcurrencyHelpers
 /// In particular, note that _run() here continues to obtain and execute lists of callbacks until it completes.
 /// This eliminates recursion when processing `flatMap()` chains.
 @usableFromInline
-internal struct CallbackList: ExpressibleByArrayLiteral {
+internal struct CallbackList {
     @usableFromInline
     internal typealias Element = () -> CallbackList
     @usableFromInline
@@ -34,17 +34,6 @@ internal struct CallbackList: ExpressibleByArrayLiteral {
     internal init() {
         self.firstCallback = nil
         self.furtherCallbacks = nil
-    }
-
-    @inlinable
-    internal init(arrayLiteral: Element...) {
-        self.init()
-        if !arrayLiteral.isEmpty {
-            self.firstCallback = arrayLiteral[0]
-            if arrayLiteral.count > 1 {
-                self.furtherCallbacks = Array(arrayLiteral.dropFirst())
-            }
-        }
     }
 
     @inlinable
@@ -382,12 +371,13 @@ public final class EventLoopFuture<Value> {
     /// they return any callbacks from those `EventLoopFuture`s so that we can run
     /// the entire chain from the top without recursing.
     @usableFromInline
-    internal var _callbacks: CallbackList = CallbackList()
+    internal var _callbacks: CallbackList
 
     @inlinable
     internal init(_eventLoop eventLoop: EventLoop, value: Result<Value, Error>?, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
         self._value = value
+        self._callbacks = .init()
 
         debugOnly {
             if let me = eventLoop as? SelectableEventLoop {

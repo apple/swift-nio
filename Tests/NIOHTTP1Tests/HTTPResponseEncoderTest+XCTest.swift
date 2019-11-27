@@ -24,6 +24,7 @@ import XCTest
 
 extension HTTPResponseEncoderTests {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (HTTPResponseEncoderTests) -> () throws -> Void)] {
       return [
                 ("testNoAutoHeadersFor101", testNoAutoHeadersFor101),

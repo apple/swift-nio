@@ -34,7 +34,7 @@ shift $((OPTIND-1))
 tests_to_run=("$here"/test_*.swift)
 
 if [[ $# -gt 0 ]]; then
-    tests_to_run=$@
+    tests_to_run=("$@")
 fi
 
 "$here/../../allocation-counter-tests-framework/run-allocation-counter.sh" \

@@ -24,6 +24,7 @@ import XCTest
 
 extension SNIHandlerTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (SNIHandlerTest) -> () throws -> Void)] {
       return [
                 ("testLibre227NoSNIDripFeed", testLibre227NoSNIDripFeed),

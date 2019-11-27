@@ -22,15 +22,17 @@ final class WebSocketFrameEncoderBenchmark {
     private let runCount: Int
     private let dataStrategy: DataStrategy
     private let cowStrategy: CoWStrategy
+    private var maskingKey: WebSocketMaskingKey?
     private var frame: WebSocketFrame?
 
-    init(dataSize: Int, runCount: Int, dataStrategy: DataStrategy, cowStrategy: CoWStrategy) {
+    init(dataSize: Int, runCount: Int, dataStrategy: DataStrategy, cowStrategy: CoWStrategy, maskingKeyStrategy: MaskingKeyStrategy) {
         self.channel = EmbeddedChannel()
         self.dataSize = dataSize
         self.runCount = runCount
         self.dataStrategy = dataStrategy
         self.cowStrategy = cowStrategy
         self.data = ByteBufferAllocator().buffer(size: dataSize, dataStrategy: dataStrategy)
+        self.maskingKey = maskingKeyStrategy == MaskingKeyStrategy.always ? [0x80, 0x08, 0x10, 0x01] : nil
     }
 }
 
@@ -51,6 +53,14 @@ extension WebSocketFrameEncoderBenchmark {
 }
 
 
+extension WebSocketFrameEncoderBenchmark {
+    enum MaskingKeyStrategy {
+        case always
+        case never
+    }
+}
+
+
 extension WebSocketFrameEncoderBenchmark: Benchmark {
     func setUp() throws {
         // We want the pipeline walk to have some cost.
@@ -59,7 +69,7 @@ extension WebSocketFrameEncoderBenchmark: Benchmark {
             try! self.channel.pipeline.addHandler(NoOpOutboundHandler()).wait()
         }
         try! self.channel.pipeline.addHandler(WebSocketFrameEncoder()).wait()
-        self.frame = WebSocketFrame(opcode: .binary, data: self.data, extensionData: nil)
+        self.frame = WebSocketFrame(opcode: .binary, maskKey: self.maskingKey, data: self.data, extensionData: nil)
     }
 
     func tearDown() {
@@ -88,7 +98,7 @@ extension WebSocketFrameEncoderBenchmark: Benchmark {
             // To avoid CoWs this has to be a new buffer every time. This is expensive, sadly, so tests using this strategy
             // must do fewer iterations.
             let data = self.channel.allocator.buffer(size: self.dataSize, dataStrategy: self.dataStrategy)
-            let frame = WebSocketFrame(opcode: .binary, data: data, extensionData: nil)
+            let frame = WebSocketFrame(opcode: .binary, maskKey: self.maskingKey, data: data, extensionData: nil)
             self.channel.write(frame, promise: nil)
         }
         return 1

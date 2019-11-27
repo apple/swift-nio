@@ -35,17 +35,17 @@ private extension UInt8 {
 /// a more convenient method of interacting with a masking key than simply by passing
 /// around a four-tuple.
 public struct WebSocketMaskingKey {
-    private let key: (UInt8, UInt8, UInt8, UInt8)
+    @usableFromInline internal let _key: (UInt8, UInt8, UInt8, UInt8)
 
     public init?<T: Collection>(_ buffer: T) where T.Element == UInt8 {
         guard buffer.count == 4 else {
             return nil
         }
 
-        self.key = (buffer[buffer.startIndex],
-                    buffer[buffer.index(buffer.startIndex, offsetBy: 1)],
-                    buffer[buffer.index(buffer.startIndex, offsetBy: 2)],
-                    buffer[buffer.index(buffer.startIndex, offsetBy: 3)])
+        self._key = (buffer[buffer.startIndex],
+                     buffer[buffer.index(buffer.startIndex, offsetBy: 1)],
+                     buffer[buffer.index(buffer.startIndex, offsetBy: 2)],
+                     buffer[buffer.index(buffer.startIndex, offsetBy: 3)])
     }
 
     /// Creates a websocket masking key from the network-encoded
@@ -55,10 +55,10 @@ public struct WebSocketMaskingKey {
     ///     - integer: The encoded network representation of the
     ///         masking key.
     internal init(networkRepresentation integer: UInt32) {
-        self.key = (UInt8((integer & 0xFF000000) >> 24),
-                    UInt8((integer & 0x00FF0000) >> 16),
-                    UInt8((integer & 0x0000FF00) >> 8),
-                    UInt8(integer & 0x000000FF))
+        self._key = (UInt8((integer & 0xFF000000) >> 24),
+                     UInt8((integer & 0x00FF0000) >> 16),
+                     UInt8((integer & 0x0000FF00) >> 8),
+                     UInt8(integer & 0x000000FF))
     }
 }
 
@@ -73,7 +73,7 @@ extension WebSocketMaskingKey: ExpressibleByArrayLiteral {
 
 extension WebSocketMaskingKey: Equatable {
     public static func ==(lhs: WebSocketMaskingKey, rhs: WebSocketMaskingKey) -> Bool {
-        return lhs.key == rhs.key
+        return lhs._key == rhs._key
     }
 }
 
@@ -91,15 +91,26 @@ extension WebSocketMaskingKey: Collection {
     public subscript(index: Int) -> UInt8 {
         switch index {
         case 0:
-            return self.key.0
+            return self._key.0
         case 1:
-            return self.key.1
+            return self._key.1
         case 2:
-            return self.key.2
+            return self._key.2
         case 3:
-            return self.key.3
+            return self._key.3
         default:
             fatalError("Invalid index on WebSocketMaskingKey: \(index)")
+        }
+    }
+
+    @inlinable
+    public func withContiguousStorageIfAvailable<R>(_ body: (UnsafeBufferPointer<UInt8>) throws -> R) rethrows -> R? {
+        return try withUnsafeBytes(of: self._key) { ptr in
+            // this is boilerplate necessary to convert from UnsafeRawBufferPointer to UnsafeBufferPointer<UInt8>
+            // we know ptr is bound since we defined self._key as let
+            let typedPointer = ptr.baseAddress?.assumingMemoryBound(to: UInt8.self)
+            let typedBufferPointer = UnsafeBufferPointer(start: typedPointer, count: ptr.count)
+            return try body(typedBufferPointer)
         }
     }
 }
