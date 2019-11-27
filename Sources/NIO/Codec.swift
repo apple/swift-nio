@@ -1019,26 +1019,24 @@ public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMes
         // buffer can only be nil if we're called from finishProcessing which is handled above
         assert(self._buffer != nil)
 
-        var messageOpt: Decoder.InboundOut?
-        repeat {
-            messageOpt = try self.withNonCoWBuffer() { buffer in
-                defer {
-                    if buffer.readableBytes > 0 {
-                        if self.decoder.shouldReclaimBytes(buffer: buffer) {
-                            buffer.discardReadBytes()
-                        }
+        func decodeOnce(buffer: inout ByteBuffer) throws -> Decoder.InboundOut? {
+            defer {
+                if buffer.readableBytes > 0 {
+                    if self.decoder.shouldReclaimBytes(buffer: buffer) {
+                        buffer.discardReadBytes()
                     }
                 }
-                if decodeMode == .normal {
-                    return try self.decoder.decode(buffer: &buffer)
-                } else {
-                    return try self.decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
-                }
             }
-            if let message = messageOpt {
-                try messageReceiver(message)
+            if decodeMode == .normal {
+                return try self.decoder.decode(buffer: &buffer)
+            } else {
+                return try self.decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
             }
-        } while messageOpt != nil
+        }
+
+        while let message = try self.withNonCoWBuffer(decodeOnce) {
+            try messageReceiver(message)
+        }
 
         if let maximumBufferSize = self.maximumBufferSize, self._buffer!.readableBytes > maximumBufferSize {
             throw ByteToMessageDecoderError.PayloadTooLargeError()
