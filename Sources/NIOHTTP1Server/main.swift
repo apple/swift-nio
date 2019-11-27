@@ -555,7 +555,6 @@ let channel = try { () -> Channel in
     case .ip(let host, let port):
         return try socketBootstrap.bind(host: host, port: port).wait()
     case .unixDomainSocket(let path):
-        print("hi \(path)")
         return try socketBootstrap.bind(unixDomainSocketPath: path).wait()
     case .stdio:
         return try pipeBootstrap.withPipes(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO).wait()
