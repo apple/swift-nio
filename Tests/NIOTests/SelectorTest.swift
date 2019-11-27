@@ -391,7 +391,7 @@ class SelectorTest: XCTestCase {
                                               protocol: 0,
                                               socketVector: &socketFDs))
 
-        let numberFires = FastAtomic<Int>.makeAtomic(value: 0)
+        let numberFires = NIOAtomic<Int>.makeAtomic(value: 0)
         let el = group.next() as! SelectableEventLoop
         let channelHasBeenClosedPromise = el.makePromise(of: Void.self)
         let channel = try SocketChannel(socket: FakeSocket(hasBeenClosedPromise: channelHasBeenClosedPromise,

@@ -22,32 +22,32 @@
 #include "cpp_magic.h"
 
 #define MAKE(type) /*
-*/ void catmc_fast_atomic_##type##_create_with_existing_storage(struct catmc_fast_atomic_##type *storage, type value) { /*
+*/ void catmc_nio_atomic_##type##_create_with_existing_storage(struct catmc_nio_atomic_##type *storage, type value) { /*
 */     atomic_init(&storage->value, value); /*
 */ } /*
 */ /*
-*/ bool catmc_fast_atomic_##type##_compare_and_exchange(struct catmc_fast_atomic_##type *wrapper, type expected, type desired) { /*
+*/ bool catmc_nio_atomic_##type##_compare_and_exchange(struct catmc_nio_atomic_##type *wrapper, type expected, type desired) { /*
 */     type expected_copy = expected; /*
 */     return atomic_compare_exchange_strong(&wrapper->value, &expected_copy, desired); /*
 */ } /*
 */ /*
-*/ type catmc_fast_atomic_##type##_add(struct catmc_fast_atomic_##type *wrapper, type value) { /*
+*/ type catmc_nio_atomic_##type##_add(struct catmc_nio_atomic_##type *wrapper, type value) { /*
 */     return atomic_fetch_add_explicit(&wrapper->value, value, memory_order_relaxed); /*
 */ } /*
 */ /*
-*/ type catmc_fast_atomic_##type##_sub(struct catmc_fast_atomic_##type *wrapper, type value) { /*
+*/ type catmc_nio_atomic_##type##_sub(struct catmc_nio_atomic_##type *wrapper, type value) { /*
 */     return atomic_fetch_sub_explicit(&wrapper->value, value, memory_order_relaxed); /*
 */ } /*
 */ /*
-*/ type catmc_fast_atomic_##type##_exchange(struct catmc_fast_atomic_##type *wrapper, type value) { /*
+*/ type catmc_nio_atomic_##type##_exchange(struct catmc_nio_atomic_##type *wrapper, type value) { /*
 */     return atomic_exchange_explicit(&wrapper->value, value, memory_order_relaxed); /*
 */ } /*
 */ /*
-*/ type catmc_fast_atomic_##type##_load(struct catmc_fast_atomic_##type *wrapper) { /*
+*/ type catmc_nio_atomic_##type##_load(struct catmc_nio_atomic_##type *wrapper) { /*
 */     return atomic_load_explicit(&wrapper->value, memory_order_relaxed); /*
 */ } /*
 */ /*
-*/ void catmc_fast_atomic_##type##_store(struct catmc_fast_atomic_##type *wrapper, type value) { /*
+*/ void catmc_nio_atomic_##type##_store(struct catmc_nio_atomic_##type *wrapper, type value) { /*
 */     atomic_store_explicit(&wrapper->value, value, memory_order_relaxed); /*
 */ }
 

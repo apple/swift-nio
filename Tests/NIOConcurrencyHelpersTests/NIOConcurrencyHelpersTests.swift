@@ -228,13 +228,13 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
-    func testLargeContendedFastAtomicSum() {
+    func testLargeContendedNIOAtomicSum() {
         let noAsyncs: UInt64 = 64
         let noCounts: UInt64 = 200_000
 
         let q = DispatchQueue(label: "q", attributes: .concurrent)
         let g = DispatchGroup()
-        let ai = NIOConcurrencyHelpers.FastAtomic<UInt64>.makeAtomic(value: 0)
+        let ai = NIOConcurrencyHelpers.NIOAtomic<UInt64>.makeAtomic(value: 0)
         for thread in 1...noAsyncs {
             q.async(group: g) {
                 for _ in 0..<noCounts {
@@ -246,8 +246,8 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
     }
 
-    func testCompareAndExchangeBoolFastAtomic() {
-        let ab = FastAtomic<Bool>.makeAtomic(value: true)
+    func testCompareAndExchangeBoolNIOAtomic() {
+        let ab = NIOAtomic<Bool>.makeAtomic(value: true)
 
         XCTAssertFalse(ab.compareAndExchange(expected: false, desired: false))
         XCTAssertTrue(ab.compareAndExchange(expected: true, desired: true))
@@ -259,8 +259,8 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertTrue(ab.compareAndExchange(expected: false, desired: true))
     }
 
-    func testAllOperationsBoolFastAtomic() {
-        let ab = FastAtomic<Bool>.makeAtomic(value: false)
+    func testAllOperationsBoolNIOAtomic() {
+        let ab = NIOAtomic<Bool>.makeAtomic(value: false)
         XCTAssertEqual(false, ab.load())
         ab.store(false)
         XCTAssertEqual(false, ab.load())
@@ -275,12 +275,12 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertFalse(ab.compareAndExchange(expected: false, desired: true))
     }
 
-    func testCompareAndExchangeUIntsFastAtomic() {
-        func testFor<T: FastAtomicPrimitive & FixedWidthInteger & UnsignedInteger>(_ value: T.Type) {
+    func testCompareAndExchangeUIntsNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger & UnsignedInteger>(_ value: T.Type) {
             let zero: T = 0
             let max = ~zero
 
-            let ab = FastAtomic<T>.makeAtomic(value: max)
+            let ab = NIOAtomic<T>.makeAtomic(value: max)
 
             XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
             XCTAssertTrue(ab.compareAndExchange(expected: max, desired: max))
@@ -305,12 +305,12 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
-    func testCompareAndExchangeIntsFastAtomic() {
-        func testFor<T: FastAtomicPrimitive & FixedWidthInteger & SignedInteger>(_ value: T.Type) {
+    func testCompareAndExchangeIntsNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger & SignedInteger>(_ value: T.Type) {
             let zero: T = 0
             let upperBound: T = 127
 
-            let ab = FastAtomic<T>.makeAtomic(value: upperBound)
+            let ab = NIOAtomic<T>.makeAtomic(value: upperBound)
 
             XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
             XCTAssertTrue(ab.compareAndExchange(expected: upperBound, desired: upperBound))
@@ -336,11 +336,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(Int.self)
     }
 
-    func testAddSubFastAtomic() {
-        func testFor<T: FastAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
+    func testAddSubNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
 
-            let ab = FastAtomic<T>.makeAtomic(value: zero)
+            let ab = NIOAtomic<T>.makeAtomic(value: zero)
 
             XCTAssertEqual(0, ab.add(1))
             XCTAssertEqual(1, ab.add(41))
@@ -367,11 +367,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
-    func testExchangeFastAtomic() {
-        func testFor<T: FastAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
+    func testExchangeNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
 
-            let ab = FastAtomic<T>.makeAtomic(value: zero)
+            let ab = NIOAtomic<T>.makeAtomic(value: zero)
 
             XCTAssertEqual(0, ab.exchange(with: 1))
             XCTAssertEqual(1, ab.exchange(with: 42))
@@ -398,11 +398,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
-    func testLoadStoreFastAtomic() {
-        func testFor<T: FastAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
+    func testLoadStoreNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
 
-            let ab = FastAtomic<T>.makeAtomic(value: zero)
+            let ab = NIOAtomic<T>.makeAtomic(value: zero)
 
             XCTAssertEqual(0, ab.load())
             ab.store(42)

@@ -313,8 +313,8 @@ class EchoServerClientTest : XCTestCase {
 
     private final class CloseInInActiveAndUnregisteredChannelHandler: ChannelInboundHandler {
         typealias InboundIn = Never
-        let alreadyClosedInChannelInactive = FastAtomic<Bool>.makeAtomic(value: false)
-        let alreadyClosedInChannelUnregistered = FastAtomic<Bool>.makeAtomic(value: false)
+        let alreadyClosedInChannelInactive = NIOAtomic<Bool>.makeAtomic(value: false)
+        let alreadyClosedInChannelUnregistered = NIOAtomic<Bool>.makeAtomic(value: false)
         let channelUnregisteredPromise: EventLoopPromise<Void>
         let channelInactivePromise: EventLoopPromise<Void>
 
@@ -723,8 +723,8 @@ class EchoServerClientTest : XCTestCase {
             defer {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
-            let acceptedRemotePort: FastAtomic<Int> = .makeAtomic(value: -1)
-            let acceptedLocalPort: FastAtomic<Int> = .makeAtomic(value: -2)
+            let acceptedRemotePort: NIOAtomic<Int> = .makeAtomic(value: -1)
+            let acceptedLocalPort: NIOAtomic<Int> = .makeAtomic(value: -2)
             let sem = DispatchSemaphore(value: 0)
 
             let serverChannel: Channel

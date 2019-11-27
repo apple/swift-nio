@@ -151,8 +151,8 @@ class ChannelPipelineTest: XCTestCase {
     }
 
     private final class DummyHandler: ChannelHandler {
-        let handlerAddedCalled = FastAtomic<Bool>.makeAtomic(value: false)
-        let handlerRemovedCalled = FastAtomic<Bool>.makeAtomic(value: false)
+        let handlerAddedCalled = NIOAtomic<Bool>.makeAtomic(value: false)
+        let handlerRemovedCalled = NIOAtomic<Bool>.makeAtomic(value: false)
 
         public func handlerAdded(context: ChannelHandlerContext) {
             handlerAddedCalled.store(true)
