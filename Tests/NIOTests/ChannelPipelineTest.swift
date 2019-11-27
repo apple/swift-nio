@@ -85,6 +85,9 @@ class ChannelPipelineTest: XCTestCase {
         let handler3 = SimpleTypedHandler3()
         
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
         try channel.pipeline.addHandlers([
             handler1,
             handler2,
@@ -107,6 +110,9 @@ class ChannelPipelineTest: XCTestCase {
         let otherHandler = SimpleTypedHandler2()
 
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
         try channel.pipeline.addHandlers([
             sameTypeHandler1,
             sameTypeHandler2,
@@ -122,6 +128,9 @@ class ChannelPipelineTest: XCTestCase {
         let handler2 = SimpleTypedHandler2()
         
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
         try channel.pipeline.addHandlers([
             handler1,
             handler2,
@@ -133,6 +142,9 @@ class ChannelPipelineTest: XCTestCase {
     func testAddAfterClose() throws {
 
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish(acceptAlreadyClosed: true))
+        }
         XCTAssertNoThrow(try channel.close().wait())
 
         channel.pipeline.removeHandlers()
@@ -271,6 +283,9 @@ class ChannelPipelineTest: XCTestCase {
     func testWriteAfterClose() throws {
 
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish(acceptAlreadyClosed: true).isClean))
+        }
         XCTAssertNoThrow(try channel.close().wait())
         let loop = channel.eventLoop as! EmbeddedEventLoop
         loop.run()
@@ -610,13 +625,8 @@ class ChannelPipelineTest: XCTestCase {
     func testAddBeforeWhileClosed() {
         let channel = EmbeddedChannel()
         defer {
-            do {
-                _ = try channel.finish()
-                XCTFail("Did not throw")
-            } catch ChannelError.alreadyClosed {
-                // Ok
-            } catch {
-                XCTFail("unexpected error \(error)")
+            XCTAssertThrowsError(try channel.finish()) { error in
+                XCTAssertEqual(.alreadyClosed, error as? ChannelError)
             }
         }
 
@@ -1071,6 +1081,9 @@ class ChannelPipelineTest: XCTestCase {
         }
 
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+        }
         let allHandlers = [Handler(), Handler(), Handler()]
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[0], name: "the first one to remove").wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[1]).wait())
@@ -1094,6 +1107,10 @@ class ChannelPipelineTest: XCTestCase {
         }
 
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+        }
+
         let allHandlers = [NonRemovableHandler(), NonRemovableHandler(), NonRemovableHandler()]
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[0], name: "1").wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[1], name: "2").wait())
@@ -1119,6 +1136,9 @@ class ChannelPipelineTest: XCTestCase {
     func testAddMultipleHandlers() {
         typealias Handler = TestAddMultipleHandlersHandlerWorkingAroundSR9956
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+        }
         let a = Handler()
         let b = Handler()
         let c = Handler()
@@ -1155,6 +1175,9 @@ class ChannelPipelineTest: XCTestCase {
             typealias OutboundIn = Never
         }
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+        }
         let parser = HTTPRequestParser()
         let serializer = HTTPResponseSerializer()
         let handler = HTTPHandler()

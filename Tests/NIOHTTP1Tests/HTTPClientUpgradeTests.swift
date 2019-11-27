@@ -162,8 +162,7 @@ private final class UpgradeDelayClientUpgrader: NIOHTTPClientProtocolUpgrader {
     fileprivate let upgradedHandler = SimpleUpgradedHandler()
     
     private var upgradePromise: EventLoopPromise<Void>?
-    private var context: ChannelHandlerContext?
-    
+
     fileprivate init(forProtocol `protocol`: String,
                      requiredUpgradeHeaders: [String] = [],
                      upgradeHeaders: [(String,String)] = []) {
@@ -184,7 +183,6 @@ private final class UpgradeDelayClientUpgrader: NIOHTTPClientProtocolUpgrader {
 
     fileprivate func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void> {
         self.upgradePromise = context.eventLoop.makePromise()
-        self.context = context
         return self.upgradePromise!.futureResult.flatMap {
             context.pipeline.addHandler(self.upgradedHandler)
         }
@@ -304,6 +302,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
         }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
+        }
         
         // Read the server request.
         if let requestString = try clientChannel.readByteBufferOutputAsString() {
@@ -341,9 +342,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         XCTAssertEqual(1, clientUpgrader.upgradeContextResponseCallCount)
         
         XCTAssert(upgradeHandlerCallbackFired)
-        
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
     
     func testUpgradeWithRequiredHeadersShowsInRequest() throws {
@@ -362,6 +360,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let clientChannel = try setUpClientChannel(clientHTTPHandler: ExplodingHTTPHandler(),
                                                    clientUpgraders: [clientUpgrader]) { _ in
         }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
+        }
 
         // Read the server request and check that it has the required header also added to the connection header.
         if let requestString = try clientChannel.readByteBufferOutputAsString() {
@@ -374,9 +375,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         XCTAssertEqual(1, clientUpgrader.addCustomUpgradeRequestHeadersCallCount)
         XCTAssertEqual(0, clientUpgrader.shouldAllowUpgradeCallCount)
         XCTAssertEqual(0, clientUpgrader.upgradeContextResponseCallCount)
-
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
     
     func testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols() throws {
@@ -410,6 +408,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
         }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
+        }
         
         // Read the server request.
         if let requestString = try clientChannel.readByteBufferOutputAsString() {
@@ -438,9 +439,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
-        
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
     
     // MARK: Test requests and responses with other specific actions.
@@ -458,6 +456,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                                                     
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
+        }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
         }
         
         let response = "HTTP/1.1 200 OK\r\n\r\n"
@@ -480,9 +481,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
-        
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
     
     func testFirstResponseReturnsServerError() throws {
@@ -498,6 +496,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                                                     
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
+        }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
         }
         
         let response = "HTTP/1.1 404 Not Found\r\n\r\n"
@@ -523,9 +524,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
-        
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
 
     func testUpgradeResponseMissingAllProtocols() throws {
@@ -541,6 +539,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                                                     
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
+        }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
         }
         
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\n\r\n"
@@ -568,9 +569,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
-            
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
     
     func testUpgradeOnlyHandlesKnownProtocols() throws {
@@ -586,6 +584,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                                                     
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
+        }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
         }
         
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: unknownProtocol\r\n\r\n"
@@ -613,9 +614,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
-            
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
     
     func testUpgradeResponseCanBeRejectedByClientUpgrader() throws {
@@ -633,6 +631,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                                                     
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
+        }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
         }
         
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
@@ -662,9 +663,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
-            
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
     
     func testUpgradeIsCaseInsensitive() throws {
@@ -680,6 +678,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                                                     
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
+        }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
         }
         
         let response = "HTTP/1.1 101 Switching Protocols\r\nCoNnEcTiOn: uPgRaDe\r\nuPgRaDe: \(upgradeProtocol)\r\n\r\n"
@@ -704,9 +705,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
-
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
 
     // MARK: Test when client pipeline experiences delay.
@@ -717,13 +715,17 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         var upgradeHandlerCallbackFired = false
         
         let clientUpgrader = UpgradeDelayClientUpgrader(forProtocol: upgradeProtocol)
-        
+
         let clientChannel = try setUpClientChannel(clientHTTPHandler: ExplodingHTTPHandler(),
                                                    clientUpgraders: [clientUpgrader]) { (context) in
                                                     
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
         }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
+        }
+
         
         // Push the successful server response.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
@@ -757,9 +759,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
-        
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
     
     func testFiresOutboundErrorDuringAddingHandlers() throws {
@@ -776,6 +775,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                                                     
                                                     // This is called before the upgrader gets called.
                                                     upgradeHandlerCallbackFired = true
+        }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
         }
         
         // Push the successful server response.
@@ -811,9 +813,6 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Check that the upgrade was still successful, despite the interruption.
         XCTAssert(upgradeHandlerCallbackFired)
         XCTAssertEqual(1, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
-        
-        // Close the pipeline.
-        XCTAssertNoThrow(try clientChannel.close().wait())
     }
     
     func testFiresInboundErrorBeforeSendsRequestUpgrade() throws {
@@ -824,6 +823,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let clientHandler = RecordingHTTPHandler()
         
         let clientChannel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
+        }
         
         let upgrader = NIOHTTPClientUpgradeHandler(upgraders: [clientUpgrader],
                                                    httpHandlers: [clientHandler],

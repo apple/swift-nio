@@ -95,7 +95,7 @@ private extension Sequence where Element == UInt8 {
 /// be done asynchronously, providing more flexibility about how the user configures the
 /// pipeline.
 public final class SNIHandler: ByteToMessageDecoder {
-    public var cumulationBuffer: ByteBuffer?
+    public var cumulationBuffer: Optional<ByteBuffer>
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
 
@@ -103,6 +103,7 @@ public final class SNIHandler: ByteToMessageDecoder {
     private var waitingForUser: Bool
 
     public init(sniCompleteHandler: @escaping (SNIResult) -> EventLoopFuture<Void>) {
+        self.cumulationBuffer = nil
         self.completionHandler = sniCompleteHandler
         self.waitingForUser = false
     }

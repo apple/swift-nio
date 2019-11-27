@@ -28,9 +28,17 @@ extension EmbeddedChannel {
 
     func readAllOutboundBytes() throws -> [UInt8] {
         var buffer = try self.readAllOutboundBuffers()
-        return buffer.readBytes(length: buffer.readableBytes)!
+        return buffer.readAllBytes()
     }
 }
+
+
+extension ByteBuffer {
+    mutating func readAllBytes() -> [UInt8] {
+        return self.readBytes(length: self.readableBytes)!
+    }
+}
+
 
 public final class WebSocketFrameEncoderTest: XCTestCase {
     public var channel: EmbeddedChannel!
@@ -140,5 +148,176 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.readOutbound(as: ByteBuffer.self))  // Throw away the body data again.
         XCTAssertEqual(originalPointer, newPointer)
         XCTAssertNotNil(originalPointer)
+    }
+
+    func testFrameEncoderCanPrependHeaderToApplicationBuffer() {
+        let dataBytes: [UInt8] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
+
+        // We need 6 spare bytes for this header.
+        self.buffer.moveWriterIndex(forwardBy: 6)
+        self.buffer.moveReaderIndex(forwardBy: 6)
+        self.buffer.writeBytes(dataBytes)
+
+        let originalBuffer = self.buffer!
+        self.buffer = nil  // gotta nil out here to enable prepending
+
+        let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: originalBuffer)
+        self.channel.writeAndFlush(frame, promise: nil)
+
+        var result: ByteBuffer? = nil
+        XCTAssertNoThrow(result = try self.channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+
+        XCTAssertEqual(result?.readAllBytes(),
+                       [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01, 0x81, 0x0A, 0x13, 0x05, 0x85, 0x0E, 0x17, 0x09, 0x89, 0x02])
+    }
+
+    func testFrameEncoderCanPrependHeaderToExtensionBuffer() {
+        let dataBytes: [UInt8] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
+
+        // We need 6 spare bytes, but let's leave even more room.
+        self.buffer.moveWriterIndex(forwardBy: 16)
+        self.buffer.moveReaderIndex(forwardBy: 16)
+        self.buffer.writeBytes(dataBytes)
+
+        let originalBuffer = self.buffer!
+        self.buffer = nil  // gotta nil out here to enable prepending
+
+        // We need an extra buffer for application data, but it'll be empty.
+        let applicationOriginalBuffer = ByteBufferAllocator().buffer(capacity: 1024)
+
+        let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: applicationOriginalBuffer, extensionData: originalBuffer)
+        self.channel.writeAndFlush(frame, promise: nil)
+
+        var extensionBuffer: ByteBuffer? = nil
+        var applicationBuffer: ByteBuffer? = nil
+        XCTAssertNoThrow(extensionBuffer = try self.channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(applicationBuffer = try self.channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+
+        XCTAssertEqual(extensionBuffer?.readAllBytes(),
+                       [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01, 0x81, 0x0A, 0x13, 0x05, 0x85, 0x0E, 0x17, 0x09, 0x89, 0x02])
+        XCTAssertEqual(applicationBuffer?.readAllBytes(), [])
+    }
+
+    func testFrameEncoderCanPrependMediumHeader() {
+        let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
+
+        // We need 8 spare bytes for this header.
+        self.buffer.moveWriterIndex(forwardBy: 8)
+        self.buffer.moveReaderIndex(forwardBy: 8)
+        self.buffer.writeBytes(repeatElement(0, count: 126))
+
+        let originalBuffer = self.buffer!
+        self.buffer = nil  // gotta nil out here to enable prepending
+
+        let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: originalBuffer)
+        self.channel.writeAndFlush(frame, promise: nil)
+
+        var result: ByteBuffer? = nil
+        XCTAssertNoThrow(result = try self.channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+
+        // The header size should be 8 bytes: leading byte, length, 2 extra length bytes, 4 byte mask.
+        XCTAssertEqual(result?.readBytes(length: 8),
+                       [0x82, 0xFE, 0x00, 0x7E, 0x80, 0x08, 0x10, 0x01,])
+    }
+
+    func testFrameEncoderCanPrependLargeHeader() {
+        let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
+
+        // We need 14 spare bytes for this header.
+        self.buffer.moveWriterIndex(forwardBy: 14)
+        self.buffer.moveReaderIndex(forwardBy: 14)
+        self.buffer.writeBytes(repeatElement(0, count: Int(UInt16.max) + 1))
+
+        let originalBuffer = self.buffer!
+        self.buffer = nil  // gotta nil out here to enable prepending
+
+        let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: originalBuffer)
+        self.channel.writeAndFlush(frame, promise: nil)
+
+        var result: ByteBuffer? = nil
+        XCTAssertNoThrow(result = try self.channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+
+        // The header size should be 14 bytes: leading byte, length, 8 extra length bytes, 4 byte mask.
+        XCTAssertEqual(result?.readBytes(length: 14),
+                       [0x82, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x80, 0x08, 0x10, 0x01,])
+    }
+
+    func testFrameEncoderFailsToPrependHeaderWithInsufficientSpace() {
+        let dataBytes: [UInt8] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
+
+        // We need 6 spare bytes for this header, so let's only free up 5.
+        self.buffer.moveWriterIndex(forwardBy: 5)
+        self.buffer.moveReaderIndex(forwardBy: 5)
+        self.buffer.writeBytes(dataBytes)
+
+        let originalBuffer = self.buffer!
+        self.buffer = nil  // gotta nil out here to enable prepending
+
+        let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: originalBuffer)
+        self.channel.writeAndFlush(frame, promise: nil)
+
+        var result: ByteBuffer? = nil
+        XCTAssertNoThrow(result = try self.channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNotNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+
+        // This will only be the frame header.
+        XCTAssertEqual(result?.readAllBytes(),
+                       [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01])
+    }
+
+    func testFrameEncoderFailsToPrependMediumHeaderWithInsufficientSpace() {
+        let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
+
+        // We need 8 spare bytes for this header, so let's only leave 7.
+        self.buffer.moveWriterIndex(forwardBy: 7)
+        self.buffer.moveReaderIndex(forwardBy: 7)
+        self.buffer.writeBytes(repeatElement(0, count: 126))
+
+        let originalBuffer = self.buffer!
+        self.buffer = nil  // gotta nil out here to enable prepending
+
+        let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: originalBuffer)
+        self.channel.writeAndFlush(frame, promise: nil)
+
+        var result: ByteBuffer? = nil
+        XCTAssertNoThrow(result = try self.channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNotNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+
+        // This will only be the frame header.
+        XCTAssertEqual(result?.readAllBytes(),
+                       [0x82, 0xFE, 0x00, 0x7E, 0x80, 0x08, 0x10, 0x01,])
+    }
+
+    func testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace() {
+        let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
+
+        // We need 14 spare bytes for this header, so let's only leave 13
+        self.buffer.moveWriterIndex(forwardBy: 13)
+        self.buffer.moveReaderIndex(forwardBy: 13)
+        self.buffer.writeBytes(repeatElement(0, count: Int(UInt16.max) + 1))
+
+        let originalBuffer = self.buffer!
+        self.buffer = nil  // gotta nil out here to enable prepending
+
+        let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: originalBuffer)
+        self.channel.writeAndFlush(frame, promise: nil)
+
+        var result: ByteBuffer? = nil
+        XCTAssertNoThrow(result = try self.channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNotNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
+
+        // This will only be the frame header.
+        XCTAssertEqual(result?.readAllBytes(),
+                       [0x82, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x80, 0x08, 0x10, 0x01,])
     }
 }

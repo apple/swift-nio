@@ -50,16 +50,17 @@ private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboun
 /// Mostly tests assertions in [RFC 7230 § 3.3.3](https://tools.ietf.org/html/rfc7230#section-3.3.3).
 class HTTPDecoderLengthTest: XCTestCase {
     private var channel: EmbeddedChannel!
-    private var loop: EmbeddedEventLoop!
+    private var loop: EmbeddedEventLoop {
+        return self.channel.embeddedEventLoop
+    }
 
     override func setUp() {
         self.channel = EmbeddedChannel()
-        self.loop = channel.embeddedEventLoop
     }
 
     override func tearDown() {
+        XCTAssertNoThrow(try self.channel?.finish(acceptAlreadyClosed: true))
         self.channel = nil
-        self.loop = nil
     }
 
     /// The mechanism by which EOF is being sent.

@@ -12,6 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// The type of all `channelInitializer` callbacks.
+internal typealias ChannelInitializerCallback = (Channel) -> EventLoopFuture<Void>
+
 /// A `ServerBootstrap` is an easy way to bootstrap a `ServerSocketChannel` when creating network servers.
 ///
 /// Example:
@@ -56,8 +59,8 @@ public final class ServerBootstrap {
 
     private let group: EventLoopGroup
     private let childGroup: EventLoopGroup
-    private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
-    private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
+    private var serverChannelInit: Optional<ChannelInitializerCallback>
+    private var childChannelInit: Optional<ChannelInitializerCallback>
     @usableFromInline
     internal var _serverChannelOptions: ChannelOptions.Storage
     @usableFromInline
@@ -81,6 +84,8 @@ public final class ServerBootstrap {
         self.childGroup = childGroup
         self._serverChannelOptions = ChannelOptions.Storage()
         self._childChannelOptions = ChannelOptions.Storage()
+        self.serverChannelInit = nil
+        self.childChannelInit = nil
         self._serverChannelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     }
 
@@ -354,11 +359,11 @@ private extension Channel {
 public final class ClientBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
+    private var channelInitializer: Optional<ChannelInitializerCallback>
     @usableFromInline
     internal var _channelOptions: ChannelOptions.Storage
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
-    private var resolver: Resolver?
+    private var resolver: Optional<Resolver>
 
     /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -368,6 +373,8 @@ public final class ClientBootstrap {
         self.group = group
         self._channelOptions = ChannelOptions.Storage()
         self._channelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+        self.channelInitializer = nil
+        self.resolver = nil
     }
 
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
@@ -579,7 +586,7 @@ public final class ClientBootstrap {
 public final class DatagramBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
+    private var channelInitializer: Optional<ChannelInitializerCallback>
     @usableFromInline
     internal var _channelOptions: ChannelOptions.Storage
 
@@ -590,6 +597,7 @@ public final class DatagramBootstrap {
     public init(group: EventLoopGroup) {
         self._channelOptions = ChannelOptions.Storage()
         self.group = group
+        self.channelInitializer = nil
     }
 
     /// Initialize the bound `DatagramChannel` with `initializer`. The most common task in initializer is to add
@@ -725,7 +733,7 @@ public final class DatagramBootstrap {
 ///
 public final class NIOPipeBootstrap {
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
+    private var channelInitializer: Optional<ChannelInitializerCallback>
     @usableFromInline
     internal var _channelOptions: ChannelOptions.Storage
 
@@ -736,6 +744,7 @@ public final class NIOPipeBootstrap {
     public init(group: EventLoopGroup) {
         self._channelOptions = ChannelOptions.Storage()
         self.group = group
+        self.channelInitializer = nil
     }
 
     /// Initialize the connected `PipeChannel` with `initializer`. The most common task in initializer is to add

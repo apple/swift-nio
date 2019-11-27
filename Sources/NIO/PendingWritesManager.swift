@@ -15,7 +15,7 @@ import NIOConcurrencyHelpers
 
 private struct PendingStreamWrite {
     var data: IOData
-    var promise: EventLoopPromise<Void>?
+    var promise: Optional<EventLoopPromise<Void>>
 }
 
 /// Does the setup required to issue a writev.
