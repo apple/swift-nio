@@ -24,6 +24,7 @@ import XCTest
 
 extension ByteBufferTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (ByteBufferTest) -> () throws -> Void)] {
       return [
                 ("testAllocateAndCount", testAllocateAndCount),
@@ -173,6 +174,7 @@ extension ByteBufferTest {
                 ("testByteBufferAllocatorSize1Capacity", testByteBufferAllocatorSize1Capacity),
                 ("testByteBufferModifiedWithoutAllocationLogic", testByteBufferModifiedWithoutAllocationLogic),
                 ("testByteBufferModifyIfUniquelyOwnedMayThrow", testByteBufferModifyIfUniquelyOwnedMayThrow),
+                ("testDeprecatedSetBytes", testDeprecatedSetBytes),
            ]
    }
 }

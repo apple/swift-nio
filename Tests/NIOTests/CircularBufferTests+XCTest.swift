@@ -24,6 +24,7 @@ import XCTest
 
 extension CircularBufferTests {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (CircularBufferTests) -> () throws -> Void)] {
       return [
                 ("testTrivial", testTrivial),

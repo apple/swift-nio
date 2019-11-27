@@ -24,6 +24,7 @@ import XCTest
 
 extension AdaptiveRecvByteBufferAllocatorTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (AdaptiveRecvByteBufferAllocatorTest) -> () throws -> Void)] {
       return [
                 ("testAdaptive", testAdaptive),
