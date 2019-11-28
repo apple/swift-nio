@@ -797,7 +797,8 @@ extension MessageToByteHandler {
 /// to the `ByteBuffer` when returning. This allows for greatly simplified processing.
 /// Many `ByteToMessageDecoder`'s can trivially be translated to `NIOSingleStepByteToMessageDecoder`'s.
 public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
-    /// The type of the messages this `NIOSingleStepByteToMessageDecoder` decodes to.
+    /// The decoded type this `NIOSingleStepByteToMessageDecoder` decodes to. To conform to `ByteToMessageDecoder` it must be called
+    /// `InboundOut` - see https://bugs.swift.org/browse/SR-11868.
     associatedtype InboundOut
 
     /// Decode from a `ByteBuffer`.
@@ -851,7 +852,7 @@ extension NIOSingleStepByteToMessageDecoder {
 
 
 /// `NIOSingleStepByteToMessageProcessor` uses a `NIOSingleStepByteToMessageDecoder` to produce messages
-/// from a stream of incoming bytes. It works like `ByteToMessageHandler` but is used outside of the channel pipeline. This allows
+/// from a stream of incoming bytes. It works like `ByteToMessageHandler` but may be used outside of the channel pipeline. This allows
 /// processing of wrapped protocols in a general way.
 ///
 /// A `NIOSingleStepByteToMessageProcessor` is first initialized with a `NIOSingleStepByteToMessageDecoder`. Then
@@ -947,7 +948,7 @@ extension NIOSingleStepByteToMessageDecoder {
 ///
 ///                 context.write(self.wrapOutboundOut(HTTPServerResponsePart.body(
 ///                     .byteBuffer(responseBuffer))), promise: nil)
-///                 _ = context.writeAndFlush(self.wrapOutboundOut(HTTPServerResponsePart.end(nil)))
+///                 context.writeAndFlush(self.wrapOutboundOut(HTTPServerResponsePart.end(nil)), promise: nil)
 ///             }
 ///         }
 ///     }

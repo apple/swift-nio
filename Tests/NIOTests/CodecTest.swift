@@ -1593,10 +1593,7 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         typealias InboundOut = Int32
 
         func decode(buffer: inout ByteBuffer) throws -> InboundOut? {
-            guard buffer.readableBytes >= MemoryLayout<Int32>.size else {
-                return nil
-            }
-            return buffer.readInteger()!
+            return buffer.readInteger()
         }
 
         func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut? {
@@ -1791,7 +1788,7 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
             String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
         })
         XCTAssertEqual("56", messageReceiver.retrieveMessage().map {
-        String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
+            String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
         })
         XCTAssertEqual("78", messageReceiver.retrieveMessage().map {
             String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
