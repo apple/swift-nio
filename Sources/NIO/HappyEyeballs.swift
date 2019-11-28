@@ -230,7 +230,7 @@ internal class HappyEyeballsConnector {
     /// A reference to the task that will execute after the resolution delay expires, if
     /// one is scheduled. This is held to ensure that we can cancel this task if the AAAA
     /// response comes in before the resolution delay expires.
-    private var resolutionTask: Scheduled<Void>?
+    private var resolutionTask: Optional<Scheduled<Void>>
 
     /// The amount of time to wait for a connection to succeed before beginning a new connection
     /// attempt. By default this is 250ms.
@@ -239,13 +239,13 @@ internal class HappyEyeballsConnector {
     /// A reference to the task that will execute after the connection delay expires, if one
     /// is scheduled. This is held to ensure that we can cancel this task if a connection
     /// succeeds before the connection delay expires.
-    private var connectionTask: Scheduled<Void>?
+    private var connectionTask: Optional<Scheduled<Void>>
 
     /// The amount of time to allow for the overall connection process before timing it out.
     private let connectTimeout: TimeAmount
 
     /// A reference to the task that will time us out.
-    private var timeoutTask: Scheduled<Void>?
+    private var timeoutTask: Optional<Scheduled<Void>>
 
     /// The promise that will hold the final connected channel.
     private let resolutionPromise: EventLoopPromise<Channel>
@@ -286,6 +286,9 @@ internal class HappyEyeballsConnector {
         self.port = port
         self.connectTimeout = connectTimeout
         self.channelBuilderCallback = channelBuilderCallback
+        self.resolutionTask = nil
+        self.connectionTask = nil
+        self.timeoutTask = nil
 
         self.state = .idle
         self.resolutionPromise = self.loop.makePromise()

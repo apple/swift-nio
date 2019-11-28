@@ -15,7 +15,7 @@ import NIOConcurrencyHelpers
 
 private struct PendingStreamWrite {
     var data: IOData
-    var promise: EventLoopPromise<Void>?
+    var promise: Optional<EventLoopPromise<Void>>
 }
 
 /// Does the setup required to issue a writev.
@@ -277,7 +277,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
-    internal let channelWritabilityFlag: Atomic<Bool> = Atomic(value: true)
+    internal let channelWritabilityFlag: NIOAtomic<Bool> = .makeAtomic(value: true)
 
     internal var writeSpinCount: UInt = 16
 
@@ -451,7 +451,7 @@ internal protocol PendingWritesManager {
     var isFlushPending: Bool { get }
     var writeSpinCount: UInt { get }
     var currentBestWriteMechanism: WriteMechanism { get }
-    var channelWritabilityFlag: Atomic<Bool> { get }
+    var channelWritabilityFlag: NIOAtomic<Bool> { get }
 }
 
 extension PendingWritesManager {

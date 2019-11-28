@@ -24,6 +24,7 @@ import XCTest
 
 extension MulticastTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (MulticastTest) -> () throws -> Void)] {
       return [
                 ("testCanJoinBasicMulticastGroupIPv4", testCanJoinBasicMulticastGroupIPv4),

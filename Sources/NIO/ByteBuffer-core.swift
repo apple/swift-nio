@@ -284,7 +284,7 @@ public struct ByteBuffer {
         }
     }
 
-    private mutating func _copyStorageAndRebase(capacity: _Capacity, resetIndices: Bool = false) {
+    @usableFromInline mutating func _copyStorageAndRebase(capacity: _Capacity, resetIndices: Bool = false) {
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
         let storageRebaseAmount = self._slice.lowerBound + indexRebaseAmount
         let newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
@@ -359,11 +359,15 @@ public struct ByteBuffer {
             let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
             self._copyStorageAndRebase(extraCapacity: extraCapacity)
         }
-
         self._ensureAvailableCapacity(_Capacity(bytesCount), at: index)
+        self._setBytesAssumingUniqueBufferAccess(bytes, at: index)
+        return _toCapacity(bytesCount)
+    }
+
+    @inlinable
+    mutating func _setBytesAssumingUniqueBufferAccess(_ bytes: UnsafeRawBufferPointer, at index: _Index) {
         let targetPtr = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer.dropFirst(Int(index)))
         targetPtr.copyMemory(from: bytes)
-        return _toCapacity(Int(bytesCount))
     }
 
     @inline(never)
@@ -733,14 +737,14 @@ extension ByteBuffer: CustomStringConvertible {
 
 /* change types to the user visible `Int` */
 extension ByteBuffer {
-    /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
+    /// Copy the collection of `bytes` into the `ByteBuffer` at `index`. Does not move the writer index.
     @discardableResult
     @inlinable
     public mutating func setBytes<Bytes: Sequence>(_ bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
         return Int(self._setBytes(bytes, at: _toIndex(index)))
     }
 
-    /// Copy `bytes` into the `ByteBuffer` at `index`.
+    /// Copy `bytes` into the `ByteBuffer` at `index`. Does not move the writer index.
     @discardableResult
     @inlinable
     public mutating func setBytes(_ bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
@@ -800,6 +804,69 @@ extension ByteBuffer {
     }
 }
 
+extension ByteBuffer {
+    /// Copies `length` `bytes` starting at the `fromIndex` to `toIndex`. Does not move the writer index.
+    ///
+    /// - Note: Overlapping ranges, for example `copyBytes(at: 1, to: 2, length: 5)` are allowed.
+    /// - Precondition: The range represented by `fromIndex` and `length` must be readable bytes,
+    ///     that is: `fromIndex >= readerIndex` and `fromIndex + length <= writerIndex`.
+    /// - Parameter fromIndex: The index of the first byte to copy.
+    /// - Parameter toIndex: The index into to which the first byte will be copied.
+    /// - Parameter length: The number of bytes which should be copied.
+    @discardableResult
+    @inlinable
+    public mutating func copyBytes(at fromIndex: Int, to toIndex: Int, length: Int) throws -> Int {
+        switch length {
+        case ..<0:
+            throw CopyBytesError.negativeLength
+        case 0:
+            return 0
+        default:
+            ()
+        }
+        guard self.readerIndex <= fromIndex && fromIndex + length <= self.writerIndex else {
+            throw CopyBytesError.unreadableSourceBytes
+        }
+
+        if !isKnownUniquelyReferenced(&self._storage) {
+            let newEndIndex = max(self._writerIndex, _toIndex(toIndex + length))
+            self._copyStorageAndRebase(capacity: newEndIndex)
+        }
+
+        self._ensureAvailableCapacity(_Capacity(length), at: _toIndex(toIndex))
+        self.withVeryUnsafeBytes { ptr in
+            let srcPtr = UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: fromIndex), count: length)
+            self._setBytesAssumingUniqueBufferAccess(srcPtr, at: _toIndex(toIndex))
+        }
+
+        return length
+    }
+
+    /// Errors thrown when calling `copyBytes`.
+    public struct CopyBytesError: Error {
+        private enum BaseError: Hashable {
+            case negativeLength
+            case unreadableSourceBytes
+        }
+
+        private var baseError: BaseError
+
+        /// The length of the bytes to copy was negative.
+        public static let negativeLength: CopyBytesError = .init(baseError: .negativeLength)
+
+        /// The bytes to copy are not readable.
+        public static let unreadableSourceBytes: CopyBytesError = .init(baseError: .unreadableSourceBytes)
+    }
+}
+
+extension ByteBuffer.CopyBytesError: Hashable { }
+
+extension ByteBuffer.CopyBytesError: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        return String(describing: self.baseError)
+    }
+}
+
 extension ByteBuffer: Equatable {
     // TODO: I don't think this makes sense. This should compare bytes 0..<writerIndex instead.
 
@@ -837,6 +904,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The modification operation to execute, with this `ByteBuffer` passed `inout` as an argument.
     /// - returns: The return value of `body`.
+    @inlinable
     public mutating func modifyIfUniquelyOwned<T>(_ body: (inout ByteBuffer) throws -> T) rethrows -> T? {
         if isKnownUniquelyReferenced(&self._storage) {
             return try body(&self)

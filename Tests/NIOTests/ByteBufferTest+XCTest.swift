@@ -24,6 +24,7 @@ import XCTest
 
 extension ByteBufferTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (ByteBufferTest) -> () throws -> Void)] {
       return [
                 ("testAllocateAndCount", testAllocateAndCount),
@@ -85,6 +86,13 @@ extension ByteBufferTest {
                 ("testWriteBuffer", testWriteBuffer),
                 ("testMisalignedIntegerRead", testMisalignedIntegerRead),
                 ("testSetAndWriteBytes", testSetAndWriteBytes),
+                ("testCopyBytesWithNegativeLength", testCopyBytesWithNegativeLength),
+                ("testCopyBytesNonReadable", testCopyBytesNonReadable),
+                ("testCopyBytes", testCopyBytes),
+                ("testCopyZeroBytesOutOfBoundsIsOk", testCopyZeroBytesOutOfBoundsIsOk),
+                ("testCopyBytesBeyondWriterIndex", testCopyBytesBeyondWriterIndex),
+                ("testCopyBytesOverSelf", testCopyBytesOverSelf),
+                ("testCopyBytesCoWs", testCopyBytesCoWs),
                 ("testWriteABunchOfCollections", testWriteABunchOfCollections),
                 ("testSetABunchOfCollections", testSetABunchOfCollections),
                 ("testTryStringTooLong", testTryStringTooLong),
@@ -131,6 +139,15 @@ extension ByteBufferTest {
                 ("testViewsStartIndexIsStable", testViewsStartIndexIsStable),
                 ("testSlicesOfByteBufferViewsAreByteBufferViews", testSlicesOfByteBufferViewsAreByteBufferViews),
                 ("testReadableBufferViewRangeEqualCapacity", testReadableBufferViewRangeEqualCapacity),
+                ("testBufferViewCoWs", testBufferViewCoWs),
+                ("testBufferViewMutationViaSubscriptIndex", testBufferViewMutationViaSubscriptIndex),
+                ("testBufferViewReplaceBeyondEndOfRange", testBufferViewReplaceBeyondEndOfRange),
+                ("testBufferViewReplaceWithSubrangeOfSelf", testBufferViewReplaceWithSubrangeOfSelf),
+                ("testBufferViewMutationViaSubscriptRange", testBufferViewMutationViaSubscriptRange),
+                ("testBufferViewReplaceSubrangeWithEqualLengthBytes", testBufferViewReplaceSubrangeWithEqualLengthBytes),
+                ("testBufferViewReplaceSubrangeWithFewerBytes", testBufferViewReplaceSubrangeWithFewerBytes),
+                ("testBufferViewReplaceSubrangeWithMoreBytes", testBufferViewReplaceSubrangeWithMoreBytes),
+                ("testBufferViewEmpty", testBufferViewEmpty),
                 ("testByteBuffersCanBeInitializedFromByteBufferViews", testByteBuffersCanBeInitializedFromByteBufferViews),
                 ("testReserveCapacityWhenOversize", testReserveCapacityWhenOversize),
                 ("testReserveCapacitySameCapacity", testReserveCapacitySameCapacity),
@@ -157,6 +174,7 @@ extension ByteBufferTest {
                 ("testByteBufferAllocatorSize1Capacity", testByteBufferAllocatorSize1Capacity),
                 ("testByteBufferModifiedWithoutAllocationLogic", testByteBufferModifiedWithoutAllocationLogic),
                 ("testByteBufferModifyIfUniquelyOwnedMayThrow", testByteBufferModifyIfUniquelyOwnedMayThrow),
+                ("testDeprecatedSetBytes", testDeprecatedSetBytes),
            ]
    }
 }

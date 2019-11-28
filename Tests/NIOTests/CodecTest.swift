@@ -441,7 +441,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
         }))
         XCTAssertNoThrow(XCTAssertEqual("56", try channel.readInbound(as: ByteBuffer.self).map {
-        String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
+            String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
         }))
         XCTAssertNoThrow(XCTAssertEqual("78", try channel.readInbound(as: ByteBuffer.self).map {
             String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)

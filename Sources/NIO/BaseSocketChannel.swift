@@ -34,7 +34,7 @@ private struct SocketChannelLifecycleManager {
     // MARK: properties
     private let eventLoop: EventLoop
     // this is queried from the Channel, ie. must be thread-safe
-    internal let isActiveAtomic: Atomic<Bool>
+    internal let isActiveAtomic: NIOAtomic<Bool>
     // these are only to be accessed on the EventLoop
 
     // have we seen the `.readEOF` notification
@@ -57,7 +57,7 @@ private struct SocketChannelLifecycleManager {
 
     // MARK: API
     // isActiveAtomic needs to be injected as it's accessed from arbitrary threads and `SocketChannelLifecycleManager` is usually held mutable
-    internal init(eventLoop: EventLoop, isActiveAtomic: Atomic<Bool>) {
+    internal init(eventLoop: EventLoop, isActiveAtomic: NIOAtomic<Bool>) {
         self.eventLoop = eventLoop
         self.isActiveAtomic = isActiveAtomic
     }
@@ -213,7 +213,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     internal let selectableEventLoop: SelectableEventLoop
     private let addressesCached: AtomicBox<Box<(local:SocketAddress?, remote:SocketAddress?)>> = AtomicBox(value: Box((local: nil, remote: nil)))
     private let bufferAllocatorCached: AtomicBox<Box<ByteBufferAllocator>>
-    private let isActiveAtomic: Atomic<Bool> = Atomic(value: false)
+    private let isActiveAtomic: NIOAtomic<Bool> = .makeAtomic(value: false)
     private var _pipeline: ChannelPipeline! = nil // this is really a constant (set in .init) but needs `self` to be constructed and therefore a `var`. Do not change as this needs to accessed from arbitrary threads
     // just a thread-safe way of having something to print about the socket from any thread
     internal let socketDescription: String
@@ -227,7 +227,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     var readPending = false
-    var pendingConnect: EventLoopPromise<Void>?
+    var pendingConnect: Optional<EventLoopPromise<Void>>
     var recvAllocator: RecvByteBufferAllocator
     var maxMessagesPerRead: UInt = 4
 
@@ -390,6 +390,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         // As the socket may already be connected we should ensure we start with the correct addresses cached.
         self.addressesCached.store(Box((local: try? socket.localAddress(), remote: try? socket.remoteAddress())))
         self.socketDescription = socket.description
+        self.pendingConnect = nil
         self._pipeline = ChannelPipeline(channel: self)
     }
 

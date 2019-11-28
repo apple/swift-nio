@@ -15,7 +15,7 @@ import NIOConcurrencyHelpers
 
 private struct PendingDatagramWrite {
     var data: ByteBuffer
-    var promise: EventLoopPromise<Void>?
+    var promise: Optional<EventLoopPromise<Void>>
     let address: SocketAddress
 
     /// A helper function that copies the underlying sockaddr structure into temporary storage,
@@ -360,7 +360,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private var state = PendingDatagramWritesState()
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
-    internal let channelWritabilityFlag: Atomic<Bool> = Atomic(value: true)
+    internal let channelWritabilityFlag: NIOAtomic<Bool> = .makeAtomic(value: true)
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true
 
