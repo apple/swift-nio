@@ -200,7 +200,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
 
         let readCountHandler = ReadCountHandler()
 
-        let backoffProviderCalled = Atomic<Int>(value: 0)
+        let backoffProviderCalled = NIOAtomic<Int>.makeAtomic(value: 0)
         let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { err in
             if backoffProviderCalled.add(1) == 0 {
                 return .seconds(1)

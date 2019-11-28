@@ -153,6 +153,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
 /// By necessity, all atomic values are references: after all, it makes no
 /// sense to talk about managing an atomic value when each time it's modified
 /// the thread that modified it gets a local copy!
+@available(*, deprecated, message:"please use NIOAtomic instead")
 public final class Atomic<T: AtomicPrimitive> {
     @usableFromInline
     internal let embedded: UnsafeEmbeddedAtomic<T>
@@ -392,11 +393,11 @@ extension UInt: AtomicPrimitive {
 ///
 /// It behaves very much like `Atomic<T>` but for objects, maintaining the correct retain counts.
 public final class AtomicBox<T: AnyObject> {
-    private let storage: Atomic<UInt>
+    private let storage: NIOAtomic<UInt>
 
     public init(value: T) {
         let ptr = Unmanaged<T>.passRetained(value)
-        self.storage = Atomic(value: UInt(bitPattern: ptr.toOpaque()))
+        self.storage = NIOAtomic.makeAtomic(value: UInt(bitPattern: ptr.toOpaque()))
     }
 
     deinit {
