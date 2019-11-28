@@ -25,6 +25,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         return n*(n+1)/2
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testLargeContendedAtomicSum() {
         let noAsyncs: UInt64 = 64
         let noCounts: UInt64 = 200_000
@@ -43,6 +44,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testCompareAndExchangeBool() {
         let ab = Atomic<Bool>(value: true)
 
@@ -56,6 +58,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertTrue(ab.compareAndExchange(expected: false, desired: true))
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testAllOperationsBool() {
         let ab = Atomic<Bool>(value: false)
         XCTAssertEqual(false, ab.load())
@@ -72,6 +75,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertFalse(ab.compareAndExchange(expected: false, desired: true))
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testCompareAndExchangeUInts() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger & UnsignedInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -102,6 +106,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testCompareAndExchangeInts() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger & SignedInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -133,6 +138,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(Int.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testAddSub() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -164,6 +170,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testExchange() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -195,6 +202,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testLoadStore() {
         func testFor<T: AtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -219,6 +227,202 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt64.self)
         testFor(UInt.self)
     }
+
+    func testLargeContendedNIOAtomicSum() {
+        let noAsyncs: UInt64 = 64
+        let noCounts: UInt64 = 200_000
+
+        let q = DispatchQueue(label: "q", attributes: .concurrent)
+        let g = DispatchGroup()
+        let ai = NIOConcurrencyHelpers.NIOAtomic<UInt64>.makeAtomic(value: 0)
+        for thread in 1...noAsyncs {
+            q.async(group: g) {
+                for _ in 0..<noCounts {
+                    _ = ai.add(thread)
+                }
+            }
+        }
+        g.wait()
+        XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
+    }
+
+    func testCompareAndExchangeBoolNIOAtomic() {
+        let ab = NIOAtomic<Bool>.makeAtomic(value: true)
+
+        XCTAssertFalse(ab.compareAndExchange(expected: false, desired: false))
+        XCTAssertTrue(ab.compareAndExchange(expected: true, desired: true))
+
+        XCTAssertFalse(ab.compareAndExchange(expected: false, desired: false))
+        XCTAssertTrue(ab.compareAndExchange(expected: true, desired: false))
+
+        XCTAssertTrue(ab.compareAndExchange(expected: false, desired: false))
+        XCTAssertTrue(ab.compareAndExchange(expected: false, desired: true))
+    }
+
+    func testAllOperationsBoolNIOAtomic() {
+        let ab = NIOAtomic<Bool>.makeAtomic(value: false)
+        XCTAssertEqual(false, ab.load())
+        ab.store(false)
+        XCTAssertEqual(false, ab.load())
+        ab.store(true)
+        XCTAssertEqual(true, ab.load())
+        ab.store(true)
+        XCTAssertEqual(true, ab.load())
+        XCTAssertEqual(true, ab.exchange(with: true))
+        XCTAssertEqual(true, ab.exchange(with: false))
+        XCTAssertEqual(false, ab.exchange(with: false))
+        XCTAssertTrue(ab.compareAndExchange(expected: false, desired: true))
+        XCTAssertFalse(ab.compareAndExchange(expected: false, desired: true))
+    }
+
+    func testCompareAndExchangeUIntsNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger & UnsignedInteger>(_ value: T.Type) {
+            let zero: T = 0
+            let max = ~zero
+
+            let ab = NIOAtomic<T>.makeAtomic(value: max)
+
+            XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: max, desired: max))
+
+            XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: max, desired: zero))
+
+            XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: max))
+
+            var counter = max
+            for _ in 0..<255 {
+                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter-1))
+                counter = counter - 1
+            }
+        }
+
+        testFor(UInt8.self)
+        testFor(UInt16.self)
+        testFor(UInt32.self)
+        testFor(UInt64.self)
+        testFor(UInt.self)
+    }
+
+    func testCompareAndExchangeIntsNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger & SignedInteger>(_ value: T.Type) {
+            let zero: T = 0
+            let upperBound: T = 127
+
+            let ab = NIOAtomic<T>.makeAtomic(value: upperBound)
+
+            XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: upperBound, desired: upperBound))
+
+            XCTAssertFalse(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: upperBound, desired: zero))
+
+            XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: zero))
+            XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: upperBound))
+
+            var counter = upperBound
+            for _ in 0..<255 {
+                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter-1))
+                XCTAssertFalse(ab.compareAndExchange(expected: counter, desired: counter))
+                counter = counter - 1
+            }
+        }
+
+        testFor(Int8.self)
+        testFor(Int16.self)
+        testFor(Int32.self)
+        testFor(Int64.self)
+        testFor(Int.self)
+    }
+
+    func testAddSubNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
+            let zero: T = 0
+
+            let ab = NIOAtomic<T>.makeAtomic(value: zero)
+
+            XCTAssertEqual(0, ab.add(1))
+            XCTAssertEqual(1, ab.add(41))
+            XCTAssertEqual(42, ab.add(23))
+
+            XCTAssertEqual(65, ab.load())
+
+            XCTAssertEqual(65, ab.sub(23))
+            XCTAssertEqual(42, ab.sub(41))
+            XCTAssertEqual(1, ab.sub(1))
+
+            XCTAssertEqual(0, ab.load())
+        }
+
+        testFor(Int8.self)
+        testFor(Int16.self)
+        testFor(Int32.self)
+        testFor(Int64.self)
+        testFor(Int.self)
+        testFor(UInt8.self)
+        testFor(UInt16.self)
+        testFor(UInt32.self)
+        testFor(UInt64.self)
+        testFor(UInt.self)
+    }
+
+    func testExchangeNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
+            let zero: T = 0
+
+            let ab = NIOAtomic<T>.makeAtomic(value: zero)
+
+            XCTAssertEqual(0, ab.exchange(with: 1))
+            XCTAssertEqual(1, ab.exchange(with: 42))
+            XCTAssertEqual(42, ab.exchange(with: 65))
+
+            XCTAssertEqual(65, ab.load())
+
+            XCTAssertEqual(65, ab.exchange(with: 42))
+            XCTAssertEqual(42, ab.exchange(with: 1))
+            XCTAssertEqual(1, ab.exchange(with: 0))
+
+            XCTAssertEqual(0, ab.load())
+        }
+
+        testFor(Int8.self)
+        testFor(Int16.self)
+        testFor(Int32.self)
+        testFor(Int64.self)
+        testFor(Int.self)
+        testFor(UInt8.self)
+        testFor(UInt16.self)
+        testFor(UInt32.self)
+        testFor(UInt64.self)
+        testFor(UInt.self)
+    }
+
+    func testLoadStoreNIOAtomic() {
+        func testFor<T: NIOAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
+            let zero: T = 0
+
+            let ab = NIOAtomic<T>.makeAtomic(value: zero)
+
+            XCTAssertEqual(0, ab.load())
+            ab.store(42)
+            XCTAssertEqual(42, ab.load())
+            ab.store(0)
+            XCTAssertEqual(0, ab.load())
+        }
+
+        testFor(Int8.self)
+        testFor(Int16.self)
+        testFor(Int32.self)
+        testFor(Int64.self)
+        testFor(Int.self)
+        testFor(UInt8.self)
+        testFor(UInt16.self)
+        testFor(UInt32.self)
+        testFor(UInt64.self)
+        testFor(UInt.self)
+    }
+
 
     func testLockMutualExclusion() {
         let l = Lock()
