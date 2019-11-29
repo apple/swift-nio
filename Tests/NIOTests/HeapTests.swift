@@ -144,8 +144,37 @@ class HeapTests: XCTestCase {
     }
 
     func testRemoveElement() throws {
-        var h = Heap<Int>(type: .maxHeap, storage: [84, 22, 19, 21, 3, 10, 6, 5, 20])!
+        var h = Heap<Int>(type: .maxHeap)
+        for f in [84, 22, 19, 21, 3, 10, 6, 5, 20] {
+            h.append(f)
+        }
         _ = h.remove(value: 10)
         XCTAssertTrue(h.checkHeapProperty(), "\(h.debugDescription)")
+    }
+}
+
+extension Heap {
+    internal func checkHeapProperty() -> Bool {
+        func checkHeapProperty(index: Int) -> Bool {
+            let li = self.leftIndex(index)
+            let ri = self.rightIndex(index)
+            if index >= self.storage.count {
+                return true
+            } else {
+                let me = self.storage[index]
+                var lCond = true
+                var rCond = true
+                if li < self.storage.count {
+                    let l = self.storage[li]
+                    lCond = !self.comparator(l, me)
+                }
+                if ri < self.storage.count {
+                    let r = self.storage[ri]
+                    rCond = !self.comparator(r, me)
+                }
+                return lCond && rCond && checkHeapProperty(index: li) && checkHeapProperty(index: ri)
+            }
+        }
+        return checkHeapProperty(index: 0)
     }
 }
