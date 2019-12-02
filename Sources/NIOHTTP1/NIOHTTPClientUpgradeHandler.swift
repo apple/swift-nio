@@ -311,8 +311,6 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
                 upgrader.upgrade(context: context, upgradeResponse: response)
             }
             .map {
-                self.upgradeState = .upgradeComplete
-                
                 // We unbuffer any buffered data here.
                 
                 // If we received any, we fire readComplete.
@@ -324,7 +322,11 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
                 if fireReadComplete {
                     context.fireChannelReadComplete()
                 }
-
+                
+                // We wait with the state change until _after_ the channel reads here.
+                // This is to prevent firing writes in response to these reads after we went to .upgradeComplete
+                // See: https://github.com/apple/swift-nio/issues/1279
+                self.upgradeState = .upgradeComplete
             }
             .whenComplete { _ in
                 context.pipeline.removeHandler(context: context, promise: nil)
