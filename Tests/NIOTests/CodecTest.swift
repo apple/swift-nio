@@ -123,33 +123,6 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         }
     }
 
-    private final class PairOfBytesDecoder: ByteToMessageDecoder {
-        typealias InboundOut = ByteBuffer
-
-        private let lastPromise: EventLoopPromise<ByteBuffer>
-        var decodeLastCalls = 0
-
-        init(lastPromise: EventLoopPromise<ByteBuffer>) {
-            self.lastPromise = lastPromise
-        }
-
-        func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-            if let slice = buffer.readSlice(length: 2) {
-                context.fireChannelRead(self.wrapInboundOut(slice))
-                return .continue
-            } else {
-                return .needMoreData
-            }
-        }
-
-        func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-            self.decodeLastCalls += 1
-            XCTAssertEqual(1, self.decodeLastCalls)
-            self.lastPromise.succeed(buffer)
-            return .needMoreData
-        }
-    }
-
     func testDecoder() throws {
         let channel = EmbeddedChannel()
 
@@ -1588,6 +1561,32 @@ public final class MessageToByteEncoderTest: XCTestCase {
     }
 }
 
+private class PairOfBytesDecoder: ByteToMessageDecoder {
+    typealias InboundOut = ByteBuffer
+
+    private let lastPromise: EventLoopPromise<ByteBuffer>
+    var decodeLastCalls = 0
+
+    init(lastPromise: EventLoopPromise<ByteBuffer>) {
+        self.lastPromise = lastPromise
+    }
+
+    func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        if let slice = buffer.readSlice(length: 2) {
+            context.fireChannelRead(self.wrapInboundOut(slice))
+            return .continue
+        } else {
+            return .needMoreData
+        }
+    }
+
+    func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+        self.decodeLastCalls += 1
+        XCTAssertEqual(1, self.decodeLastCalls)
+        self.lastPromise.succeed(buffer)
+        return .needMoreData
+    }
+}
 
 public final class MessageToByteHandlerTest: XCTestCase {
     private struct ThrowingMessageToByteEncoder: MessageToByteEncoder {
