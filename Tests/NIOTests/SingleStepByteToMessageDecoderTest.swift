@@ -372,4 +372,54 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual(0, processor._buffer!.readableBytes)
         XCTAssertGreaterThan(decoder.decodeCalls, 0)
     }
+
+    func testReentrancy() {
+        class ReentrantWriteProducingHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = String
+            var processor: NIOSingleStepByteToMessageProcessor<OneByteStringDecoder>? = nil
+            var produced = 0
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                if self.processor == nil {
+                    self.processor = NIOSingleStepByteToMessageProcessor(OneByteStringDecoder())
+                }
+                do {
+                    try self.processor!.process(buffer: self.unwrapInboundIn(data)) { message in
+                        self.produced += 1
+                        // Produce an extra write the first time we are called to test reentrancy
+                        if self.produced == 1 {
+                            var buf = ByteBufferAllocator().buffer(capacity: 1)
+                            buf.writeStaticString("X")
+                            XCTAssertNoThrow(try (context.channel as! EmbeddedChannel).writeInbound(buf))
+                        }
+                        context.fireChannelRead(self.wrapInboundOut(message))
+                    }
+                } catch {
+                    context.fireErrorCaught(error)
+                }
+            }
+        }
+
+        class OneByteStringDecoder: NIOSingleStepByteToMessageDecoder {
+            typealias InboundOut = String
+
+            func decode(buffer: inout ByteBuffer) throws -> String? {
+                return buffer.readString(length: 1)
+            }
+
+            func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> String? {
+                XCTAssertTrue(seenEOF)
+                return try self.decode(buffer: &buffer)
+            }
+        }
+
+        let channel = EmbeddedChannel(handler: ReentrantWriteProducingHandler())
+        var buffer = channel.allocator.buffer(capacity: 16)
+        buffer.writeStaticString("a")
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertEqual("X", try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertEqual("a", try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
 }

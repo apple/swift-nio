@@ -16,7 +16,9 @@
 /// A simplified version of `ByteToMessageDecoder` that can generate zero or one messages for each invocation of `decode` or `decodeLast`.
 /// Having `decode` and `decodeLast` return an optional message avoids re-entrancy problems, since the functions relinquish exclusive access
 /// to the `ByteBuffer` when returning. This allows for greatly simplified processing.
-/// Many `ByteToMessageDecoder`'s can trivially be translated to `NIOSingleStepByteToMessageDecoder`'s.
+///
+/// Many `ByteToMessageDecoder`'s can trivially be translated to `NIOSingleStepByteToMessageDecoder`'s. You should not implement
+/// `ByteToMessageDecoder`'s decode` and `decodeLast` methods.
 public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     /// The decoded type this `NIOSingleStepByteToMessageDecoder` decodes to. To conform to `ByteToMessageDecoder` it must be called
     /// `InboundOut` - see https://bugs.swift.org/browse/SR-11868.
@@ -182,7 +184,7 @@ extension NIOSingleStepByteToMessageDecoder {
 ///     })
 ///     let channelFuture = bootstrap.bind(host: "127.0.0.1", port: 0)
 ///
-public class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMessageDecoder> {
+public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMessageDecoder> {
     private enum DecodeMode {
         /// This is a usual decode, ie. not the last chunk
         case normal
