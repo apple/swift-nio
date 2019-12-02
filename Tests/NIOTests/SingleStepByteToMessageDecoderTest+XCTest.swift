@@ -35,6 +35,7 @@ extension NIOSingleStepByteToMessageDecoderTest {
                 ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed),
                 ("testPayloadTooLarge", testPayloadTooLarge),
                 ("testPayloadTooLargeButHandlerOk", testPayloadTooLargeButHandlerOk),
+                ("testReentrancy", testReentrancy),
            ]
    }
 }
