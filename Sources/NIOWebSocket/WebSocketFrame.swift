@@ -306,7 +306,7 @@ extension WebSocketFrame: Equatable {}
 extension WebSocketFrame {
     fileprivate class _Storage {
         var data: ByteBuffer
-        var extensionData: ByteBuffer?
+        var extensionData: Optional<ByteBuffer>
 
         fileprivate init(data: ByteBuffer, extensionData: ByteBuffer?) {
             self.data = data

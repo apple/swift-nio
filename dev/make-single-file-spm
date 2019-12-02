@@ -151,7 +151,7 @@ all_dependencies=()
 all_dependency_modules=()
 number_of_lines=0
 
-while IFS="\n" read -r line; do
+while IFS="" read -r line; do
     if [[ "$line" =~ ^//\ MODULE:\ (.*)$ ]]; then
         module=${BASH_REMATCH[1]}
 

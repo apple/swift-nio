@@ -326,7 +326,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     private let pendingWrites: PendingDatagramWritesManager
 
     /// Support for vector reads, if enabled.
-    private var vectorReadManager: DatagramVectorReadManager?
+    private var vectorReadManager: Optional<DatagramVectorReadManager>
 
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
@@ -357,6 +357,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
+        self.vectorReadManager = nil
         let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_DGRAM)
         do {
             try socket.setNonBlocking()
@@ -377,6 +378,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
+        self.vectorReadManager = nil
         try socket.setNonBlocking()
         self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
                                                           iovecs: eventLoop.iovecs,

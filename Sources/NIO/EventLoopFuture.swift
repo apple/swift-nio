@@ -22,29 +22,18 @@ import NIOConcurrencyHelpers
 /// In particular, note that _run() here continues to obtain and execute lists of callbacks until it completes.
 /// This eliminates recursion when processing `flatMap()` chains.
 @usableFromInline
-internal struct CallbackList: ExpressibleByArrayLiteral {
+internal struct CallbackList {
     @usableFromInline
     internal typealias Element = () -> CallbackList
     @usableFromInline
-    internal var firstCallback: Element?
+    internal var firstCallback: Optional<Element>
     @usableFromInline
-    internal var furtherCallbacks: [Element]?
+    internal var furtherCallbacks: Optional<[Element]>
 
     @inlinable
     internal init() {
         self.firstCallback = nil
         self.furtherCallbacks = nil
-    }
-
-    @inlinable
-    internal init(arrayLiteral: Element...) {
-        self.init()
-        if !arrayLiteral.isEmpty {
-            self.firstCallback = arrayLiteral[0]
-            if arrayLiteral.count > 1 {
-                self.furtherCallbacks = Array(arrayLiteral.dropFirst())
-            }
-        }
     }
 
     @inlinable
@@ -372,7 +361,7 @@ public struct EventLoopPromise<Value> {
 public final class EventLoopFuture<Value> {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
     @usableFromInline
-    internal var _value: Result<Value, Error>?
+    internal var _value: Optional<Result<Value, Error>>
 
     /// The `EventLoop` which is tied to the `EventLoopFuture` and is used to notify all registered callbacks.
     public let eventLoop: EventLoop

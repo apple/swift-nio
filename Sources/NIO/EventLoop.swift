@@ -58,14 +58,15 @@ public final class RepeatedTask {
     private let delay: TimeAmount
     private let eventLoop: EventLoop
     private let cancellationPromise: EventLoopPromise<Void>?
-    private var scheduled: Scheduled<EventLoopFuture<Void>>?
-    private var task: ((RepeatedTask) -> EventLoopFuture<Void>)?
+    private var scheduled: Optional<Scheduled<EventLoopFuture<Void>>>
+    private var task: Optional<(RepeatedTask) -> EventLoopFuture<Void>>
 
     internal init(interval: TimeAmount, eventLoop: EventLoop, cancellationPromise: EventLoopPromise<Void>? = nil, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
         self.delay = interval
         self.eventLoop = eventLoop
         self.cancellationPromise = cancellationPromise
         self.task = task
+        self.scheduled = nil
     }
 
     internal func begin(in delay: TimeAmount) {
@@ -286,7 +287,7 @@ public struct TimeAmount: Equatable {
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func milliseconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * 1000 * 1000)
+        return TimeAmount(amount * (1000 * 1000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of seconds.
@@ -295,7 +296,7 @@ public struct TimeAmount: Equatable {
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func seconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * 1000 * 1000 * 1000)
+        return TimeAmount(amount * (1000 * 1000 * 1000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of minutes.
@@ -304,7 +305,7 @@ public struct TimeAmount: Equatable {
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func minutes(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * 1000 * 1000 * 1000 * 60)
+        return TimeAmount(amount * (1000 * 1000 * 1000 * 60))
     }
 
     /// Creates a new `TimeAmount` for the given amount of hours.
@@ -313,7 +314,7 @@ public struct TimeAmount: Equatable {
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func hours(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * 1000 * 1000 * 1000 * 60 * 60)
+        return TimeAmount(amount * (1000 * 1000 * 1000 * 60 * 60))
     }
 }
 
@@ -642,28 +643,48 @@ private func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
     #endif
 }
 
-/// The different state in the lifecycle of an `EventLoop`.
-private enum EventLoopLifecycleState {
-    /// `EventLoop` is open and so can process more work.
-    case open
-    /// `EventLoop` is currently in the process of closing.
-    case closing
-    /// `EventLoop` is closed.
-    case closed
-}
-
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
 /// The whole processing of I/O and tasks is done by a `NIOThread` that is tied to the `SelectableEventLoop`. This `NIOThread`
 /// is guaranteed to never change!
 @usableFromInline
 internal final class SelectableEventLoop: EventLoop {
+    /// The different state in the lifecycle of an `EventLoop` seen from _outside_ the `EventLoop`.
+    private enum ExternalState {
+        /// `EventLoop` is open and so can process more work.
+        case open
+        /// `EventLoop` is currently in the process of closing.
+        case closing
+        /// `EventLoop` is closed.
+        case closed
+        /// `EventLoop` is closed and is currently trying to reclaim resources (such as the EventLoop thread).
+        case reclaimingResources
+        /// `EventLoop` is closed and all the resources (such as the EventLoop thread) have been reclaimed.
+        case resourcesReclaimed
+    }
+
+    /// The different state in the lifecycle of an `EventLoop` seen from _inside_ the `EventLoop`.
+    private enum InternalState {
+        case runningAndAcceptingNewRegistrations
+        case runningButNotAcceptingNewRegistrations
+        case noLongerRunning
+    }
+
     private let selector: NIO.Selector<NIORegistration>
     private let thread: NIOThread
     private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
     private var tasksCopy = ContiguousArray<() -> Void>()
 
     private let tasksLock = Lock()
-    private var lifecycleState: EventLoopLifecycleState = .open
+    private let _externalStateLock = Lock()
+    private var externalStateLock: Lock {
+        // The assert is here to check that we never try to read the external state on the EventLoop unless we're
+        // shutting down.
+        assert(!self.inEventLoop || self.internalState != .runningAndAcceptingNewRegistrations,
+               "lifecycle lock taken whilst up and running and in EventLoop")
+        return self._externalStateLock
+    }
+    private var internalState: InternalState = .runningAndAcceptingNewRegistrations // protected by the EventLoop thread
+    private var externalState: ExternalState = .open // protected by externalStateLock
 
     private let _iovecs: UnsafeMutablePointer<IOVector>
     private let _storageRefs: UnsafeMutablePointer<Unmanaged<AnyObject>>
@@ -713,6 +734,10 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     deinit {
+        assert(self.internalState == .noLongerRunning,
+               "illegal internal state on deinit: \(self.internalState)")
+        assert(self.externalState == .resourcesReclaimed,
+               "illegal external state on shutdown: \(self.externalState)")
         _iovecs.deallocate()
         _storageRefs.deallocate()
         _msgs.deallocate()
@@ -722,7 +747,12 @@ internal final class SelectableEventLoop: EventLoop {
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
     internal var isOpen: Bool {
         self.assertInEventLoop()
-        return self.lifecycleState == .open
+        switch self.internalState {
+        case .noLongerRunning, .runningButNotAcceptingNewRegistrations:
+            return false
+        case .runningAndAcceptingNewRegistrations:
+            return true
+        }
     }
 
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it
@@ -731,7 +761,7 @@ internal final class SelectableEventLoop: EventLoop {
         self.assertInEventLoop()
 
         // Don't allow registration when we're closed.
-        guard self.lifecycleState == .open else {
+        guard self.isOpen else {
             throw EventLoopError.shutdown
         }
 
@@ -741,7 +771,7 @@ internal final class SelectableEventLoop: EventLoop {
     /// Deregister the given `SelectableChannel` from this `SelectableEventLoop`.
     public func deregister<C: SelectableChannel>(channel: C, mode: CloseMode = .all) throws {
         self.assertInEventLoop()
-        guard lifecycleState == .open else {
+        guard self.isOpen else {
             // It's possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
             return
         }
@@ -882,7 +912,7 @@ internal final class SelectableEventLoop: EventLoop {
             }
         }
         var nextReadyTask: ScheduledTask? = nil
-        while lifecycleState != .closed {
+        while self.internalState != .noLongerRunning {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
@@ -952,33 +982,76 @@ internal final class SelectableEventLoop: EventLoop {
         try self.selector.close()
     }
 
-    fileprivate func close0() throws {
-        if inEventLoop {
-            self.lifecycleState = .closed
+    internal func initiateClose(queue: DispatchQueue, completionHandler: @escaping (Result<Void, Error>) -> Void) {
+        func doClose() {
+            self.assertInEventLoop()
+            // There should only ever be one call into this function so we need to be up and running, ...
+            assert(self.internalState == .runningAndAcceptingNewRegistrations)
+            self.internalState = .runningButNotAcceptingNewRegistrations
+
+            self.externalStateLock.withLock {
+                // ... but before this call happened, the lifecycle state should have been changed on some other thread.
+                assert(self.externalState == .closing)
+            }
+
+            self.selector.closeGently(eventLoop: self).whenComplete { result in
+                self.assertInEventLoop()
+                assert(self.internalState == .runningButNotAcceptingNewRegistrations)
+                self.internalState = .noLongerRunning
+                self.execute {} // force a new event loop tick, so the event loop definitely stops looping very soon.
+                self.externalStateLock.withLock {
+                    assert(self.externalState == .closing)
+                    self.externalState = .closed
+                }
+                queue.async {
+                    completionHandler(result)
+                }
+            }
+        }
+        if self.inEventLoop {
+            queue.async {
+                self.initiateClose(queue: queue, completionHandler: completionHandler)
+            }
         } else {
+            let goAhead = self.externalStateLock.withLock { () -> Bool in
+                if self.externalState == .open {
+                    self.externalState = .closing
+                    return true
+                } else {
+                    return false
+                }
+            }
+            guard goAhead else {
+                queue.async {
+                    completionHandler(Result.failure(EventLoopError.shutdown))
+                }
+                return
+            }
             self.execute {
-                self.lifecycleState = .closed
+                doClose()
             }
         }
     }
 
-    /// Gently close this `SelectableEventLoop` which means we will close all `SelectableChannel`s before finally close this `SelectableEventLoop` as well.
-    public func closeGently() -> EventLoopFuture<Void> {
-        func closeGently0() -> EventLoopFuture<Void> {
-            guard self.lifecycleState == .open else {
-                return self.makeFailedFuture(EventLoopError.shutdown)
+    internal func syncFinaliseClose() {
+        let goAhead = self.externalStateLock.withLock { () -> Bool in
+            switch self.externalState {
+            case .closed:
+                self.externalState = .reclaimingResources
+                return true
+            case .resourcesReclaimed, .reclaimingResources:
+                return false
+            default:
+                preconditionFailure("illegal lifecycle state in syncFinaliseClose: \(self.externalState)")
             }
-            self.lifecycleState = .closing
-            return self.selector.closeGently(eventLoop: self)
         }
-        if self.inEventLoop {
-            return closeGently0()
-        } else {
-            let p = self.makePromise(of: Void.self)
-            self.execute {
-                closeGently0().cascade(to: p)
-            }
-            return p.futureResult
+        guard goAhead else {
+            return
+        }
+        self.thread.join()
+        self.externalStateLock.withLock {
+            precondition(self.externalState == .reclaimingResources)
+            self.externalState = .resourcesReclaimed
         }
     }
 
@@ -1055,7 +1128,7 @@ extension EventLoopGroup {
     }
 }
 
-private let nextEventLoopGroupID = Atomic(value: 0)
+private let nextEventLoopGroupID = NIOAtomic.makeAtomic(value: 0)
 
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
 typealias ThreadInitializer = (NIOThread) -> Void
@@ -1083,7 +1156,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
 
-    private let index = Atomic<Int>(value: 0)
+    private let index = NIOAtomic<Int>.makeAtomic(value: 0)
     private let eventLoops: [SelectableEventLoop]
     private let shutdownLock: Lock = Lock()
     private var runState: RunState = .running
@@ -1097,7 +1170,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         var _loop: SelectableEventLoop! = nil
 
         loopUpAndRunningGroup.enter()
-        NIOThread.spawnAndRun(name: name) { t in
+        NIOThread.spawnAndRun(name: name, detachThread: false) { t in
             initializer(t)
 
             do {
@@ -1174,13 +1247,6 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         return eventLoops[abs(index.add(1) % eventLoops.count)]
     }
 
-    internal func unsafeClose() throws {
-        for loop in eventLoops {
-            // TODO: Should we log this somehow or just rethrow the first error ?
-            try loop.close0()
-        }
-    }
-
     /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
     /// shut down and release their resources.
     ///
@@ -1227,41 +1293,49 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             return
         }
 
-        var error: Error? = nil
+        var result: Result<Void, Error> = .success(())
 
         for loop in self.eventLoops {
             g.enter()
-            loop.closeGently().recover { err in
-                q.sync { error = err }
-            }.whenComplete { (_: Result<Void, Error>) in
+            loop.initiateClose(queue: q) { closeResult in
+                switch closeResult {
+                case .success:
+                    ()
+                case .failure(let error):
+                    result = .failure(error)
+                }
                 g.leave()
             }
         }
 
         g.notify(queue: q) {
-            let failure = self.eventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
-
-            // TODO: For Swift NIO 2.0 we should join in the threads used by the EventLoop before invoking the callback
-            //       to ensure they're really gone (#581).
-            if failure {
-                error = EventLoopError.shutdownFailed
+            for loop in self.eventLoops {
+                loop.syncFinaliseClose()
             }
-
-            handler(error)
-
-            let callbacks: [(DispatchQueue, (Error?) -> Void)] = self.shutdownLock.withLock {
-                guard case .closing(let callbacks) = self.runState else {
-                    fatalError("runState was \(self.runState), expected .closing")
+            var overallError: Error?
+            var queueCallbackPairs: [(DispatchQueue, (Error?) -> Void)]? = nil
+            self.shutdownLock.withLock {
+                switch self.runState {
+                case .closed, .running:
+                    preconditionFailure("MultiThreadedEventLoopGroup in illegal state when closing: \(self.runState)")
+                case .closing(let callbacks):
+                    queueCallbackPairs = callbacks
+                    switch result {
+                    case .success:
+                        overallError = nil
+                    case .failure(let error):
+                        overallError = error
+                    }
+                    self.runState = .closed(overallError)
                 }
-
-                self.runState = .closed(error)
-
-                return callbacks
             }
 
-            for (q, handler) in callbacks {
-                q.async {
-                    handler(error)
+            queue.async {
+                handler(overallError)
+            }
+            for queueCallbackPair in queueCallbackPairs! {
+                queueCallbackPair.0.async {
+                    queueCallbackPair.1(overallError)
                 }
             }
         }

@@ -20,30 +20,23 @@ internal struct PriorityQueue<Element: Comparable> {
     }
 
     public mutating func remove(_ key: Element) {
-        assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         self.heap.remove(value: key)
-        assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
     }
 
     public mutating func push(_ key: Element) {
-        assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         self.heap.append(key)
-        assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
     }
 
     public func peek() -> Element? {
-        assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         return self.heap.storage.first
     }
 
     public var isEmpty: Bool {
-        assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         return self.heap.storage.isEmpty
     }
 
     @discardableResult
     public mutating func pop() -> Element? {
-        assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         return self.heap.removeRoot()
     }
 

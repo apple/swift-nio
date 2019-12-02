@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket> {
-    internal var connectTimeoutScheduled: Scheduled<Void>?
+    internal var connectTimeoutScheduled: Optional<Scheduled<Void>>
     private var allowRemoteHalfClosure: Bool = false
     private var inputShutdown: Bool = false
     private var outputShutdown: Bool = false
@@ -24,6 +24,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                   eventLoop: SelectableEventLoop,
                   recvAllocator: RecvByteBufferAllocator) throws {
         self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+        self.connectTimeoutScheduled = nil
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: recvAllocator)
     }
 

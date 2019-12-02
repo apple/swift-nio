@@ -24,6 +24,7 @@ import XCTest
 
 extension NIOConcurrencyHelpersTests {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (NIOConcurrencyHelpersTests) -> () throws -> Void)] {
       return [
                 ("testLargeContendedAtomicSum", testLargeContendedAtomicSum),
@@ -34,6 +35,14 @@ extension NIOConcurrencyHelpersTests {
                 ("testAddSub", testAddSub),
                 ("testExchange", testExchange),
                 ("testLoadStore", testLoadStore),
+                ("testLargeContendedNIOAtomicSum", testLargeContendedNIOAtomicSum),
+                ("testCompareAndExchangeBoolNIOAtomic", testCompareAndExchangeBoolNIOAtomic),
+                ("testAllOperationsBoolNIOAtomic", testAllOperationsBoolNIOAtomic),
+                ("testCompareAndExchangeUIntsNIOAtomic", testCompareAndExchangeUIntsNIOAtomic),
+                ("testCompareAndExchangeIntsNIOAtomic", testCompareAndExchangeIntsNIOAtomic),
+                ("testAddSubNIOAtomic", testAddSubNIOAtomic),
+                ("testExchangeNIOAtomic", testExchangeNIOAtomic),
+                ("testLoadStoreNIOAtomic", testLoadStoreNIOAtomic),
                 ("testLockMutualExclusion", testLockMutualExclusion),
                 ("testWithLockMutualExclusion", testWithLockMutualExclusion),
                 ("testConditionLockMutualExclusion", testConditionLockMutualExclusion),

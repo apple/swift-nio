@@ -129,6 +129,7 @@ void replacement_free(void *ptr) {
 
 void *replacement_malloc(size_t size) {
     inc_malloc_counter();
+    add_malloc_bytes_counter((intptr_t) size);
 
     JUMP_INTO_LIBC_FUN(malloc, size);
 }
@@ -143,6 +144,7 @@ void *replacement_realloc(void *ptr, size_t size) {
     }
     inc_free_counter();
     inc_malloc_counter();
+    add_malloc_bytes_counter((intptr_t) size);
 
     JUMP_INTO_LIBC_FUN(realloc, ptr, size);
 }
