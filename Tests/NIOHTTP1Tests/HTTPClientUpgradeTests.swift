@@ -22,9 +22,9 @@ extension EmbeddedChannel {
     fileprivate func readByteBufferOutputAsString() throws -> String? {
         
         if let requestData: IOData = try self.readOutbound(),
-            case .byteBuffer(let requestBuffer) = requestData {
+            case .byteBuffer(var requestBuffer) = requestData {
             
-            return requestBuffer.getString(at: 0, length: requestBuffer.readableBytes)
+            return requestBuffer.readString(length: requestBuffer.readableBytes)
         }
         
         return nil
@@ -490,8 +490,9 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         // Read the server request.
         if let requestString = try clientChannel.readByteBufferOutputAsString() {
-                        
             XCTAssertEqual(requestString, "GET / HTTP/1.1\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 0\r\nConnection: upgrade\r\nUpgrade: myproto\r\n\r\n")
+            XCTAssertNoThrow(XCTAssertEqual(try clientChannel.readByteBufferOutputAsString(), ""))  // Empty body
+            XCTAssertNoThrow(XCTAssertNil(try clientChannel.readByteBufferOutputAsString()))
         } else {
             XCTFail()
         }
@@ -509,7 +510,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
-        XCTAssertEqual(try clientChannel.readByteBufferOutputAsString()!, "Test")
+        XCTAssertNoThrow(XCTAssertEqual(try clientChannel.readByteBufferOutputAsString(), "Test"))
     }
     
     // MARK: Test requests and responses with other specific actions.
