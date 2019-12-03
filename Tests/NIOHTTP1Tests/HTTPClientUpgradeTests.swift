@@ -54,39 +54,6 @@ private func setUpClientChannel(clientHTTPHandler: RemovableChannelHandler,
     return channel
 }
 
-private final class ChannelReadWriteHandler: ChannelInboundHandler {
-    typealias InboundIn = Never
-    typealias OutboundOut = Never
-    
-    var messagesReceived = 0
-    
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.messagesReceived += 1
-        context.writeAndFlush(data, promise: nil)
-    }
-}
-
-private final class AddHandlerClientUpgrader<T: ChannelInboundHandler>: NIOHTTPClientProtocolUpgrader {
-    fileprivate let requiredUpgradeHeaders: [String] = []
-    fileprivate let supportedProtocol: String
-    fileprivate let handler: T
-
-    fileprivate init(forProtocol `protocol`: String, addingHandler handler: T) {
-        self.supportedProtocol = `protocol`
-        self.handler = handler
-    }
-    
-    func addCustom(upgradeRequestHeaders: inout HTTPHeaders) { }
-    
-    func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
-        return true
-    }
-    
-    func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void> {
-        return context.pipeline.addHandler(handler)
-    }
-}
-
 private final class SuccessfulClientUpgrader: NIOHTTPClientProtocolUpgrader {
     
     fileprivate let supportedProtocol: String
@@ -475,6 +442,40 @@ class HTTPClientUpgradeTestCase: XCTestCase {
     }
     
     func testUpgradeCompleteFlush() throws {
+        final class ChannelReadWriteHandler: ChannelDuplexHandler {
+            typealias OutboundIn = Any
+            typealias InboundIn = Any
+            typealias OutboundOut = Any
+            
+            var messagesReceived = 0
+            
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                self.messagesReceived += 1
+                context.writeAndFlush(data, promise: nil)
+            }
+        }
+
+        final class AddHandlerClientUpgrader<T: ChannelInboundHandler>: NIOHTTPClientProtocolUpgrader {
+            fileprivate let requiredUpgradeHeaders: [String] = []
+            fileprivate let supportedProtocol: String
+            fileprivate let handler: T
+
+            fileprivate init(forProtocol `protocol`: String, addingHandler handler: T) {
+                self.supportedProtocol = `protocol`
+                self.handler = handler
+            }
+            
+            func addCustom(upgradeRequestHeaders: inout HTTPHeaders) { }
+            
+            func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
+                return true
+            }
+            
+            func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void> {
+                return context.pipeline.addHandler(handler)
+            }
+        }
+        
         var upgradeHandlerCallbackFired = false
         let handler = ChannelReadWriteHandler()
         let upgrader = AddHandlerClientUpgrader(forProtocol: "myproto", addingHandler: handler)
@@ -508,6 +509,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
+        XCTAssertEqual(try clientChannel.readByteBufferOutputAsString()!, "Test")
     }
     
     // MARK: Test requests and responses with other specific actions.
