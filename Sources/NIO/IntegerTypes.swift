@@ -73,7 +73,12 @@ extension _UInt24 {
     }
 }
 
-extension _UInt24: Equatable {}
+extension _UInt24: Equatable {
+    @inlinable
+    public static func ==(lhs: _UInt24, rhs: _UInt24) -> Bool {
+        return lhs.b3 == rhs.b3 && lhs.b12 == rhs.b12
+    }
+}
 
 extension _UInt24: CustomStringConvertible {
     @usableFromInline
@@ -140,7 +145,12 @@ extension Int {
     }
 }
 
-extension _UInt56: Equatable {}
+extension _UInt56: Equatable {
+    @inlinable
+    public static func ==(lhs: _UInt56, rhs: _UInt56) -> Bool {
+        return lhs.b1234 == rhs.b1234 && lhs.b56 == rhs.b56 && lhs.b7 == rhs.b7
+    }
+}
 
 extension _UInt56: CustomStringConvertible {
     var description: String {
