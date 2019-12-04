@@ -30,6 +30,7 @@ extension HTTPClientUpgradeTestCase {
                 ("testSimpleUpgradeSucceeds", testSimpleUpgradeSucceeds),
                 ("testUpgradeWithRequiredHeadersShowsInRequest", testUpgradeWithRequiredHeadersShowsInRequest),
                 ("testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols", testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols),
+                ("testUpgradeCompleteFlush", testUpgradeCompleteFlush),
                 ("testNoUpgradeAsNoServerUpgrade", testNoUpgradeAsNoServerUpgrade),
                 ("testFirstResponseReturnsServerError", testFirstResponseReturnsServerError),
                 ("testUpgradeResponseMissingAllProtocols", testUpgradeResponseMissingAllProtocols),

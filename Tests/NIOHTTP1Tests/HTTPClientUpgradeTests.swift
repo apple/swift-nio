@@ -22,9 +22,9 @@ extension EmbeddedChannel {
     fileprivate func readByteBufferOutputAsString() throws -> String? {
         
         if let requestData: IOData = try self.readOutbound(),
-            case .byteBuffer(let requestBuffer) = requestData {
+            case .byteBuffer(var requestBuffer) = requestData {
             
-            return requestBuffer.getString(at: 0, length: requestBuffer.readableBytes)
+            return requestBuffer.readString(length: requestBuffer.readableBytes)
         }
         
         return nil
@@ -44,7 +44,7 @@ private func setUpClientChannel(clientHTTPHandler: RemovableChannelHandler,
             upgradeCompletionHandler(context)
     })
 
-    try channel.pipeline.addHTTPClientHandlers(withClientUpgrade: config).flatMap({
+    try channel.pipeline.addHTTPClientHandlers(leftOverBytesStrategy: .forwardBytes, withClientUpgrade: config).flatMap({
         channel.pipeline.addHandler(clientHTTPHandler)
     }).wait()
     
@@ -439,6 +439,78 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         XCTAssertNoThrow(try clientChannel.pipeline
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
+    }
+    
+    func testUpgradeCompleteFlush() throws {
+        final class ChannelReadWriteHandler: ChannelDuplexHandler {
+            typealias OutboundIn = Any
+            typealias InboundIn = Any
+            typealias OutboundOut = Any
+            
+            var messagesReceived = 0
+            
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                self.messagesReceived += 1
+                context.writeAndFlush(data, promise: nil)
+            }
+        }
+
+        final class AddHandlerClientUpgrader<T: ChannelInboundHandler>: NIOHTTPClientProtocolUpgrader {
+            fileprivate let requiredUpgradeHeaders: [String] = []
+            fileprivate let supportedProtocol: String
+            fileprivate let handler: T
+
+            fileprivate init(forProtocol `protocol`: String, addingHandler handler: T) {
+                self.supportedProtocol = `protocol`
+                self.handler = handler
+            }
+            
+            func addCustom(upgradeRequestHeaders: inout HTTPHeaders) { }
+            
+            func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
+                return true
+            }
+            
+            func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void> {
+                return context.pipeline.addHandler(handler)
+            }
+        }
+        
+        var upgradeHandlerCallbackFired = false
+        let handler = ChannelReadWriteHandler()
+        let upgrader = AddHandlerClientUpgrader(forProtocol: "myproto", addingHandler: handler)
+        let clientChannel = try setUpClientChannel(clientHTTPHandler: ExplodingHTTPHandler(),
+                                                   clientUpgraders: [upgrader]) { (context) in
+                                                    
+                                                    upgradeHandlerCallbackFired = true
+        }
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
+        }
+        
+        // Read the server request.
+        if let requestString = try clientChannel.readByteBufferOutputAsString() {
+            XCTAssertEqual(requestString, "GET / HTTP/1.1\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 0\r\nConnection: upgrade\r\nUpgrade: myproto\r\n\r\n")
+            XCTAssertNoThrow(XCTAssertEqual(try clientChannel.readByteBufferOutputAsString(), ""))  // Empty body
+            XCTAssertNoThrow(XCTAssertNil(try clientChannel.readByteBufferOutputAsString()))
+        } else {
+            XCTFail()
+        }
+        
+        // Push the successful server response.
+        let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: myproto\r\n\r\nTest"
+                
+        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        
+        clientChannel.embeddedEventLoop.run()
+                
+        XCTAssert(upgradeHandlerCallbackFired)
+        
+        XCTAssertEqual(handler.messagesReceived, 1)
+        
+        XCTAssertNoThrow(try clientChannel.pipeline
+            .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
+        XCTAssertNoThrow(XCTAssertEqual(try clientChannel.readByteBufferOutputAsString(), "Test"))
     }
     
     // MARK: Test requests and responses with other specific actions.
