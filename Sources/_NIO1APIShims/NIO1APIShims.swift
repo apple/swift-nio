@@ -395,12 +395,12 @@ extension CircularBuffer {
 
     @available(*, deprecated, message: "please use CircularBuffer.Index instead of Int")
     public func index(after: Int) -> Int {
-        return after &+ 1
+        return after + 1
     }
 
     @available(*, deprecated, message: "please use CircularBuffer.Index instead of Int")
     public func index(before: Int) -> Int {
-        return before &- 1
+        return before - 1
     }
 
     @available(*, deprecated, message: "please use CircularBuffer.Index instead of Int")
