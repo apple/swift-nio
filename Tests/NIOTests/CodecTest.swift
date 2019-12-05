@@ -1557,8 +1557,44 @@ public final class MessageToByteEncoderTest: XCTestCase {
         }
 
         XCTAssertTrue(try channel.finish().isClean)
-
     }
+
+    func testB2MHIsHappyNeverBeingAddedToAPipeline() {
+        @inline(never)
+        func createAndReleaseIt() {
+            struct Decoder: ByteToMessageDecoder {
+                typealias InboundOut = Never
+
+                func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                    XCTFail()
+                    return .needMoreData
+                }
+
+                func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                    XCTFail()
+                    return .needMoreData
+                }
+            }
+            _ = ByteToMessageHandler(Decoder())
+        }
+        createAndReleaseIt()
+    }
+
+    func testM2BHIsHappyNeverBeingAddedToAPipeline() {
+        @inline(never)
+        func createAndReleaseIt() {
+            struct Encoder: MessageToByteEncoder {
+                typealias OutboundIn = Void
+
+                func encode(data: Void, out: inout ByteBuffer) throws {
+                    XCTFail()
+                }
+            }
+            _ = MessageToByteHandler(Encoder())
+        }
+        createAndReleaseIt()
+    }
+
 }
 
 private class PairOfBytesDecoder: ByteToMessageDecoder {
