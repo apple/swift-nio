@@ -72,6 +72,8 @@ extension MessageToByteEncoderTest {
       return [
                 ("testEncoderOverrideAllocateOutBuffer", testEncoderOverrideAllocateOutBuffer),
                 ("testEncoder", testEncoder),
+                ("testB2MHIsHappyNeverBeingAddedToAPipeline", testB2MHIsHappyNeverBeingAddedToAPipeline),
+                ("testM2BHIsHappyNeverBeingAddedToAPipeline", testM2BHIsHappyNeverBeingAddedToAPipeline),
            ]
    }
 }
