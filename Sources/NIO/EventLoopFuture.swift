@@ -56,8 +56,24 @@ internal struct CallbackList {
             return []
         case (.some(let onlyCallback), .none):
             return [onlyCallback]
+        default:
+            var array: [Element] = []
+            self.appendAllCallbacks(&array)
+            return array
+        }
+    }
+
+    @inlinable
+    internal func appendAllCallbacks(_ array: inout [Element]) {
+        switch (self.firstCallback, self.furtherCallbacks) {
+        case (.none, _):
+            return
+        case (.some(let onlyCallback), .none):
+            array.append(onlyCallback)
         case (.some(let first), .some(let others)):
-            return [first] + others
+            array.reserveCapacity(array.count + 1 /* some extra space */ + others.count)
+            array.append(first)
+            array.append(contentsOf: others)
         }
     }
 
@@ -83,7 +99,7 @@ internal struct CallbackList {
                         pending = []
                         for f in list {
                             let next = f()
-                            pending.append(contentsOf: next._allCallbacks())
+                            next.appendAllCallbacks(&pending)
                         }
                     }
                     break loop
@@ -96,7 +112,7 @@ internal struct CallbackList {
                 pending = []
                 for f in list {
                     let next = f()
-                    pending.append(contentsOf: next._allCallbacks())
+                    next.appendAllCallbacks(&pending)
                 }
             }
         }
