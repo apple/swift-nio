@@ -526,20 +526,18 @@ public final class ClientBootstrap {
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
         let channelOptions = self._channelOptions
 
-        let promise = eventLoop.makePromise(of: Channel.self)
         let channel: SocketChannel
         do {
             channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
-        } catch let err {
-            promise.fail(err)
-            return promise.futureResult
+        } catch {
+            return eventLoop.makeFailedFuture(error)
         }
 
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
             // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
-            channelInitializer(channel).hop(to: eventLoop).flatMap {
+            return channelInitializer(channel).hop(to: eventLoop).flatMap {
                 channelOptions.applyAllChannelOptions(to: channel)
             }.flatMap {
                 channel.registerAndDoSynchronously(body)
@@ -548,8 +546,7 @@ public final class ClientBootstrap {
             }.flatMapError { error in
                 channel.close0(error: error, mode: .all, promise: nil)
                 return channel.eventLoop.makeFailedFuture(error)
-            }.cascade(to: promise)
-            return promise.futureResult
+            }
         }
 
         if eventLoop.inEventLoop {
