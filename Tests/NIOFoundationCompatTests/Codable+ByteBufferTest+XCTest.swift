@@ -24,6 +24,7 @@ import XCTest
 
 extension CodableByteBufferTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (CodableByteBufferTest) -> () throws -> Void)] {
       return [
                 ("testSimpleDecode", testSimpleDecode),
@@ -38,6 +39,7 @@ extension CodableByteBufferTest {
                 ("testFailingReadsDoNotChangeReaderIndex", testFailingReadsDoNotChangeReaderIndex),
                 ("testCustomEncoderIsRespected", testCustomEncoderIsRespected),
                 ("testCustomDecoderIsRespected", testCustomDecoderIsRespected),
+                ("testCustomCodersAreRespectedWhenUsingReadWriteJSONDecodable", testCustomCodersAreRespectedWhenUsingReadWriteJSONDecodable),
            ]
    }
 }

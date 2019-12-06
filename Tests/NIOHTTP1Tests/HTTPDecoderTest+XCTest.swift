@@ -24,6 +24,7 @@ import XCTest
 
 extension HTTPDecoderTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (HTTPDecoderTest) -> () throws -> Void)] {
       return [
                 ("testDoesNotDecodeRealHTTP09Request", testDoesNotDecodeRealHTTP09Request),

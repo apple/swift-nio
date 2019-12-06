@@ -22,9 +22,9 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     public typealias InboundIn = Channel
     public typealias OutboundIn = Channel
 
-    private var nextReadDeadlineNS: NIODeadline?
+    private var nextReadDeadlineNS: Optional<NIODeadline>
     private let backoffProvider: (IOError) -> TimeAmount?
-    private var scheduledRead: Scheduled<Void>?
+    private var scheduledRead: Optional<Scheduled<Void>>
 
     /// Default implementation used as `backoffProvider` which delays accept by 1 second.
     public static func defaultBackoffProvider(error: IOError) -> TimeAmount? {
@@ -37,6 +37,8 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     ///     - backoffProvider: returns a `TimeAmount` which will be the amount of time to wait before attempting another `read`.
     public init(backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider) {
         self.backoffProvider = backoffProvider
+        self.nextReadDeadlineNS = nil
+        self.scheduledRead = nil
     }
 
     public func read(context: ChannelHandlerContext) {
@@ -174,14 +176,17 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     private var reading = false
     private var lastReadTime: NIODeadline = .distantPast
     private var lastWriteCompleteTime: NIODeadline = .distantPast
-    private var scheduledReaderTask: Scheduled<Void>?
-    private var scheduledWriterTask: Scheduled<Void>?
-    private var scheduledAllTask: Scheduled<Void>?
+    private var scheduledReaderTask: Optional<Scheduled<Void>>
+    private var scheduledWriterTask: Optional<Scheduled<Void>>
+    private var scheduledAllTask: Optional<Scheduled<Void>>
 
     public init(readTimeout: TimeAmount? = nil, writeTimeout: TimeAmount? = nil, allTimeout: TimeAmount? = nil) {
         self.readTimeout = readTimeout
         self.writeTimeout = writeTimeout
         self.allTimeout = allTimeout
+        self.scheduledAllTask = nil
+        self.scheduledReaderTask = nil
+        self.scheduledWriterTask = nil
     }
 
     public func handlerAdded(context: ChannelHandlerContext) {

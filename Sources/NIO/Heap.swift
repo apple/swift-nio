@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-import Darwin
-#else
-import Glibc
-#endif
-
 internal enum HeapType {
     case maxHeap
     case minHeap
@@ -35,16 +29,7 @@ internal enum HeapType {
 internal struct Heap<T: Comparable> {
     internal let type: HeapType
     internal private(set) var storage: ContiguousArray<T> = []
-    private let comparator: (T, T) -> Bool
-
-    internal init?(type: HeapType, storage: ContiguousArray<T>) {
-        self.comparator = type.comparator(type: T.self)
-        self.storage = storage
-        self.type = type
-        if !self.checkHeapProperty() {
-            return nil
-        }
-    }
+    internal let comparator: (T, T) -> Bool
 
     public init(type: HeapType) {
         self.comparator = type.comparator(type: T.self)
@@ -57,12 +42,12 @@ internal struct Heap<T: Comparable> {
     }
 
     // named `LEFT` in CLRS
-    private func leftIndex(_ i: Int) -> Int {
+    internal func leftIndex(_ i: Int) -> Int {
         return 2*i + 1
     }
 
     // named `RIGHT` in CLRS
-    private func rightIndex(_ i: Int) -> Int {
+    internal func rightIndex(_ i: Int) -> Int {
         return 2*i + 2
     }
 
@@ -144,30 +129,6 @@ internal struct Heap<T: Comparable> {
             self.heapify(index)
         }
         return element
-    }
-
-    internal func checkHeapProperty() -> Bool {
-        func checkHeapProperty(index: Int) -> Bool {
-            let li = self.leftIndex(index)
-            let ri = self.rightIndex(index)
-            if index >= self.storage.count {
-                return true
-            } else {
-                let me = self.storage[index]
-                var lCond = true
-                var rCond = true
-                if li < self.storage.count {
-                    let l = self.storage[li]
-                    lCond = !self.comparator(l, me)
-                }
-                if ri < self.storage.count {
-                    let r = self.storage[ri]
-                    rCond = !self.comparator(r, me)
-                }
-                return lCond && rCond && checkHeapProperty(index: li) && checkHeapProperty(index: ri)
-            }
-        }
-        return checkHeapProperty(index: 0)
     }
 }
 

@@ -23,8 +23,8 @@ public typealias SocketOptionName = Int32
     public typealias SocketOptionLevel = Int
     public typealias SocketOptionValue = Int
 #else
-    public typealias SocketOptionLevel = Int32
-    public typealias SocketOptionValue = Int32
+    public typealias SocketOptionLevel = CInt
+    public typealias SocketOptionValue = CInt
 #endif
 
 @available(*, deprecated, renamed: "ChannelOptions.Types.SocketOption")
@@ -63,8 +63,8 @@ public typealias ConnectTimeoutOption = ChannelOptions.Types.ConnectTimeoutOptio
 @available(*, deprecated, renamed: "ChannelOptions.Types.AllowRemoteHalfClosureOption")
 public typealias AllowRemoteHalfClosureOption = ChannelOptions.Types.AllowRemoteHalfClosureOption
 
-public extension ChannelOptions {
-    enum Types {
+extension ChannelOptions {
+    public enum Types {
 
         /// `SocketOption` allows users to specify configuration settings that are directly applied to the underlying socket file descriptor.
         ///
@@ -266,9 +266,10 @@ extension ChannelOptions {
     /// `Channel` that needs to store `ChannelOption`s.
     public struct Storage {
         @usableFromInline
-        internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
+        internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))]
 
         public init() {
+            self._storage = []
             self._storage.reserveCapacity(2)
         }
 

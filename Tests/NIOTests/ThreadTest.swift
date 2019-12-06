@@ -228,20 +228,25 @@ class ThreadTest: XCTestCase {
                 s.signal()
             }
         }
-        weak var weakSome: SomeClass? = nil
+
         for _ in 0..<numberOfThreads {
             NIOThread.spawnAndRun { (_: NIOThread) in
                 let some = SomeClass(sem: s)
-                weakSome = some
                 let tsv = ThreadSpecificVariable<SomeClass>()
                 tsv.currentValue = some
                 XCTAssertNotNil(tsv.currentValue)
             }
         }
+
+        let timeout: DispatchTime = .now() + .seconds(1)
         for _ in 0..<numberOfThreads {
-            s.wait()
+            switch s.wait(timeout: timeout) {
+            case .success:
+                ()
+            case .timedOut:
+                XCTFail("timed out")
+            }
         }
-        assert(weakSome == nil, within: .seconds(1))
     }
 
     func testThreadSpecificDoesNotLeakWhenOutOfScopeButSetOnMultipleThreads() throws {

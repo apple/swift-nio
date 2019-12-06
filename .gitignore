@@ -4,7 +4,8 @@
 /*.xcodeproj
 Package.pins
 *.pem
-/docs
+/docs/1.*
+/docs/2.*
 Package.resolved
 .podspecs
 DerivedData

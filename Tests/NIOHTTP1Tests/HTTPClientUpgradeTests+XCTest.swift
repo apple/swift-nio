@@ -24,11 +24,13 @@ import XCTest
 
 extension HTTPClientUpgradeTestCase {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (HTTPClientUpgradeTestCase) -> () throws -> Void)] {
       return [
                 ("testSimpleUpgradeSucceeds", testSimpleUpgradeSucceeds),
                 ("testUpgradeWithRequiredHeadersShowsInRequest", testUpgradeWithRequiredHeadersShowsInRequest),
                 ("testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols", testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols),
+                ("testUpgradeCompleteFlush", testUpgradeCompleteFlush),
                 ("testNoUpgradeAsNoServerUpgrade", testNoUpgradeAsNoServerUpgrade),
                 ("testFirstResponseReturnsServerError", testFirstResponseReturnsServerError),
                 ("testUpgradeResponseMissingAllProtocols", testUpgradeResponseMissingAllProtocols),

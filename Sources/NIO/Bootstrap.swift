@@ -12,6 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// The type of all `channelInitializer` callbacks.
+internal typealias ChannelInitializerCallback = (Channel) -> EventLoopFuture<Void>
+
 /// A `ServerBootstrap` is an easy way to bootstrap a `ServerSocketChannel` when creating network servers.
 ///
 /// Example:
@@ -56,12 +59,12 @@ public final class ServerBootstrap {
 
     private let group: EventLoopGroup
     private let childGroup: EventLoopGroup
-    private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
-    private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
+    private var serverChannelInit: Optional<ChannelInitializerCallback>
+    private var childChannelInit: Optional<ChannelInitializerCallback>
     @usableFromInline
-    internal var _serverChannelOptions = ChannelOptions.Storage()
+    internal var _serverChannelOptions: ChannelOptions.Storage
     @usableFromInline
-    internal var _childChannelOptions = ChannelOptions.Storage()
+    internal var _childChannelOptions: ChannelOptions.Storage
 
     /// Create a `ServerBootstrap` for the `EventLoopGroup` `group`.
     ///
@@ -79,6 +82,10 @@ public final class ServerBootstrap {
     public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
         self.group = group
         self.childGroup = childGroup
+        self._serverChannelOptions = ChannelOptions.Storage()
+        self._childChannelOptions = ChannelOptions.Storage()
+        self.serverChannelInit = nil
+        self.childChannelInit = nil
         self._serverChannelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     }
 
@@ -352,11 +359,11 @@ private extension Channel {
 public final class ClientBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
+    private var channelInitializer: Optional<ChannelInitializerCallback>
     @usableFromInline
-    internal var _channelOptions = ChannelOptions.Storage()
+    internal var _channelOptions: ChannelOptions.Storage
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
-    private var resolver: Resolver?
+    private var resolver: Optional<Resolver>
 
     /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -364,7 +371,10 @@ public final class ClientBootstrap {
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
         self.group = group
+        self._channelOptions = ChannelOptions.Storage()
         self._channelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+        self.channelInitializer = nil
+        self.resolver = nil
     }
 
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
@@ -516,20 +526,18 @@ public final class ClientBootstrap {
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
         let channelOptions = self._channelOptions
 
-        let promise = eventLoop.makePromise(of: Channel.self)
         let channel: SocketChannel
         do {
             channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
-        } catch let err {
-            promise.fail(err)
-            return promise.futureResult
+        } catch {
+            return eventLoop.makeFailedFuture(error)
         }
 
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
             // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
-            channelInitializer(channel).hop(to: eventLoop).flatMap {
+            return channelInitializer(channel).hop(to: eventLoop).flatMap {
                 channelOptions.applyAllChannelOptions(to: channel)
             }.flatMap {
                 channel.registerAndDoSynchronously(body)
@@ -538,8 +546,7 @@ public final class ClientBootstrap {
             }.flatMapError { error in
                 channel.close0(error: error, mode: .all, promise: nil)
                 return channel.eventLoop.makeFailedFuture(error)
-            }.cascade(to: promise)
-            return promise.futureResult
+            }
         }
 
         if eventLoop.inEventLoop {
@@ -576,16 +583,18 @@ public final class ClientBootstrap {
 public final class DatagramBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
+    private var channelInitializer: Optional<ChannelInitializerCallback>
     @usableFromInline
-    internal var _channelOptions = ChannelOptions.Storage()
+    internal var _channelOptions: ChannelOptions.Storage
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
     ///
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
+        self._channelOptions = ChannelOptions.Storage()
         self.group = group
+        self.channelInitializer = nil
     }
 
     /// Initialize the bound `DatagramChannel` with `initializer`. The most common task in initializer is to add
@@ -721,16 +730,18 @@ public final class DatagramBootstrap {
 ///
 public final class NIOPipeBootstrap {
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
+    private var channelInitializer: Optional<ChannelInitializerCallback>
     @usableFromInline
-    internal var _channelOptions = ChannelOptions.Storage()
+    internal var _channelOptions: ChannelOptions.Storage
 
     /// Create a `NIOPipeBootstrap` on the `EventLoopGroup` `group`.
     ///
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
+        self._channelOptions = ChannelOptions.Storage()
         self.group = group
+        self.channelInitializer = nil
     }
 
     /// Initialize the connected `PipeChannel` with `initializer`. The most common task in initializer is to add

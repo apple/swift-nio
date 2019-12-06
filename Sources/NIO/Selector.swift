@@ -55,7 +55,7 @@ struct SelectorEventSet: OptionSet, Equatable {
 
     /// It's impossible to actually register for no events, therefore `_none` should only be used to bootstrap a set
     /// of flags or to compare against spurious wakeups.
-    static let _none = SelectorEventSet(rawValue: 0)
+    static let _none = SelectorEventSet([])
 
     /// Connection reset or other errors.
     static let reset = SelectorEventSet(rawValue: 1 << 0)
@@ -89,7 +89,7 @@ private struct KQueueEventFilterSet: OptionSet, Equatable {
 
     let rawValue: RawValue
 
-    static let _none = KQueueEventFilterSet(rawValue: 0)
+    static let _none = KQueueEventFilterSet([])
     // skipping `1 << 0` because kqueue doesn't have a direct match for `.reset` (`EPOLLHUP` for epoll)
     static let except = KQueueEventFilterSet(rawValue: 1 << 1)
     static let read = KQueueEventFilterSet(rawValue: 1 << 2)
@@ -112,7 +112,7 @@ private struct EpollFilterSet: OptionSet, Equatable {
 
     let rawValue: RawValue
 
-    static let _none = EpollFilterSet(rawValue: 0)
+    static let _none = EpollFilterSet([])
     static let hangup = EpollFilterSet(rawValue: 1 << 0)
     static let readHangup = EpollFilterSet(rawValue: 1 << 1)
     static let input = EpollFilterSet(rawValue: 1 << 2)

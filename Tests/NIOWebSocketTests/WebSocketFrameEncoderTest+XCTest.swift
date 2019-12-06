@@ -24,6 +24,7 @@ import XCTest
 
 extension WebSocketFrameEncoderTest {
 
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (WebSocketFrameEncoderTest) -> () throws -> Void)] {
       return [
                 ("testBasicFrameEncoding", testBasicFrameEncoding),
@@ -33,6 +34,13 @@ extension WebSocketFrameEncoderTest {
                 ("testEncodesExtensionDataCorrectly", testEncodesExtensionDataCorrectly),
                 ("testMasksDataCorrectly", testMasksDataCorrectly),
                 ("testFrameEncoderReusesHeaderBufferWherePossible", testFrameEncoderReusesHeaderBufferWherePossible),
+                ("testFrameEncoderCanPrependHeaderToApplicationBuffer", testFrameEncoderCanPrependHeaderToApplicationBuffer),
+                ("testFrameEncoderCanPrependHeaderToExtensionBuffer", testFrameEncoderCanPrependHeaderToExtensionBuffer),
+                ("testFrameEncoderCanPrependMediumHeader", testFrameEncoderCanPrependMediumHeader),
+                ("testFrameEncoderCanPrependLargeHeader", testFrameEncoderCanPrependLargeHeader),
+                ("testFrameEncoderFailsToPrependHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependHeaderWithInsufficientSpace),
+                ("testFrameEncoderFailsToPrependMediumHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependMediumHeaderWithInsufficientSpace),
+                ("testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace),
            ]
    }
 }

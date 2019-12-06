@@ -188,6 +188,32 @@ class CodableByteBufferTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual(["date": expectedDate], try decoder.decode(Dictionary<String, Date>.self, from: self.buffer)))
         XCTAssertEqual(XCTWaiter().wait(for: [strategyExpectation], timeout: 0.0), .completed)
     }
+
+    func testCustomCodersAreRespectedWhenUsingReadWriteJSONDecodable() {
+        let expectedDate = Date(timeIntervalSinceReferenceDate: 86400)
+        let decoderStrategyExpectation = XCTestExpectation(description: "Custom decoding strategy invoked")
+        let encoderStrategyExpectation = XCTestExpectation(description: "Custom encoding strategy invoked")
+
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        encoder.dateEncodingStrategy = .custom({ date, encoder in
+            encoderStrategyExpectation.fulfill()
+            var container = encoder.singleValueContainer()
+            try container.encode(date.timeIntervalSinceReferenceDate)
+        })
+        decoder.dateDecodingStrategy = .custom({ decoder in
+            decoderStrategyExpectation.fulfill()
+            let container = try decoder.singleValueContainer()
+            return Date(timeIntervalSinceReferenceDate: try container.decode(Double.self))
+        })
+        XCTAssertNoThrow(try self.buffer.writeJSONEncodable(["date": expectedDate], encoder: encoder))
+        XCTAssertNoThrow(XCTAssertEqual(["date": expectedDate],
+                                        try self.buffer.readJSONDecodable(Dictionary<String, Date>.self,
+                                                                          decoder: decoder,
+                                                                          length: self.buffer.readableBytes)))
+        XCTAssertEqual(XCTWaiter().wait(for: [decoderStrategyExpectation], timeout: 0.0), .completed)
+        XCTAssertEqual(XCTWaiter().wait(for: [encoderStrategyExpectation], timeout: 0.0), .completed)
+    }
 }
 
 struct StringAndInt: Codable, Equatable {

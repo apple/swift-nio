@@ -13,6 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef ATOMIC_COUNTER
+#define ATOMIC_COUNTER
+
+#include <stdatomic.h>
 
 void inc_free_counter(void);
 void reset_free_counter(void);
@@ -21,5 +24,9 @@ long read_free_counter(void);
 void inc_malloc_counter(void);
 void reset_malloc_counter(void);
 long read_malloc_counter(void);
+
+void add_malloc_bytes_counter(intptr_t v);
+void reset_malloc_bytes_counter(void);
+intptr_t read_malloc_bytes_counter(void);
 
 #endif

@@ -156,7 +156,7 @@ class EmbeddedChannelCore: ChannelCore {
 
     var eventLoop: EventLoop
     var closePromise: EventLoopPromise<Void>
-    var error: Error?
+    var error: Optional<Error>
 
     private let pipeline: ChannelPipeline
 
@@ -164,6 +164,7 @@ class EmbeddedChannelCore: ChannelCore {
         closePromise = eventLoop.makePromise()
         self.pipeline = pipeline
         self.eventLoop = eventLoop
+        self.error = nil
     }
 
     deinit {
@@ -271,6 +272,9 @@ class EmbeddedChannelCore: ChannelCore {
 /// actual IO nor has a proper eventing mechanism. The prime use-case for
 /// `EmbeddedChannel` is in unit tests when you want to feed the inbound events
 /// and check the outbound events manually.
+///
+/// Please remember to call `finish()` when you are no longer using this
+/// `EmbeddedChannel`.
 ///
 /// To feed events through an `EmbeddedChannel`'s `ChannelPipeline` use
 /// `EmbeddedChannel.writeInbound` which accepts data of any type. It will then
@@ -391,15 +395,23 @@ public final class EmbeddedChannel: Channel {
 
     /// Synchronously closes the `EmbeddedChannel`.
     ///
-    /// This method will throw if the `Channel` hit any unconsumed errors or if the `close` fails. Errors in the
-    /// `EmbeddedChannel` can be consumed using `throwIfErrorCaught`.
+    /// Errors in the `EmbeddedChannel` can be consumed using `throwIfErrorCaught`.
     ///
+    /// - parameters:
+    ///     - acceptAlreadyClosed: Whether `finish` should throw if the `EmbeddedChannel` has been previously `close`d.
     /// - returns: The `LeftOverState` of the `EmbeddedChannel`. If all the inbound and outbound events have been
     ///            consumed (using `readInbound` / `readOutbound`) and there are no pending outbound events (unflushed
     ///            writes) this will be `.clean`. If there are any unconsumed inbound, outbound, or pending outbound
     ///            events, the `EmbeddedChannel` will returns those as `.leftOvers(inbound:outbound:pendingOutbound:)`.
-    public func finish() throws -> LeftOverState {
-        try close().wait()
+    public func finish(acceptAlreadyClosed: Bool) throws -> LeftOverState {
+        do {
+            try close().wait()
+        } catch let error as ChannelError {
+            guard error == .alreadyClosed && acceptAlreadyClosed else {
+                throw error
+            }
+        }
+        self.embeddedEventLoop.advanceTime(by: .nanoseconds(.max))
         self.embeddedEventLoop.run()
         try throwIfErrorCaught()
         let c = self.channelcore
@@ -410,6 +422,19 @@ public final class EmbeddedChannel: Channel {
                               outbound: c.outboundBuffer,
                               pendingOutbound: c.pendingOutboundBuffer.map { $0.0 })
         }
+    }
+
+    /// Synchronously closes the `EmbeddedChannel`.
+    ///
+    /// This method will throw if the `Channel` hit any unconsumed errors or if the `close` fails. Errors in the
+    /// `EmbeddedChannel` can be consumed using `throwIfErrorCaught`.
+    ///
+    /// - returns: The `LeftOverState` of the `EmbeddedChannel`. If all the inbound and outbound events have been
+    ///            consumed (using `readInbound` / `readOutbound`) and there are no pending outbound events (unflushed
+    ///            writes) this will be `.clean`. If there are any unconsumed inbound, outbound, or pending outbound
+    ///            events, the `EmbeddedChannel` will returns those as `.leftOvers(inbound:outbound:pendingOutbound:)`.
+    public func finish() throws -> LeftOverState {
+        return try self.finish(acceptAlreadyClosed: false)
     }
 
     private var _pipeline: ChannelPipeline!
