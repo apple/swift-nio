@@ -27,7 +27,7 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
 
     @inlinable
     internal var mask: Int {
-        return self._buffer.count - 1
+        return self._buffer.count &- 1
     }
 
     @inlinable
@@ -52,7 +52,7 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
 
     @inlinable
     internal func indexAdvanced(index: Int, by: Int) -> Int {
-        return (index + by) & self.mask
+        return (index &+ by) & self.mask
     }
 
     /// An opaque `CircularBuffer` index.
@@ -211,13 +211,13 @@ extension CircularBuffer: Collection, MutableCollection {
 
         switch (start.isIndexGEQHeadIndex, end.isIndexGEQHeadIndex) {
         case (true, true):
-            return end.backingIndex - start.backingIndex
+            return end.backingIndex &- start.backingIndex
         case (true, false):
-            return backingCount - (start.backingIndex - end.backingIndex)
+            return backingCount &- (start.backingIndex &- end.backingIndex)
         case (false, true):
-            return -(backingCount - (end.backingIndex - start.backingIndex))
+            return -(backingCount &- (end.backingIndex &- start.backingIndex))
         case (false, false):
-            return end.backingIndex - start.backingIndex
+            return end.backingIndex &- start.backingIndex
         }
     }
 }
@@ -227,7 +227,7 @@ extension CircularBuffer: RandomAccessCollection {
     /// Returns the index offset by `distance` from `index`.
     @inlinable
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
-        return .init(backingIndex: (i.backingIndex + distance) & self.mask,
+        return .init(backingIndex: (i.backingIndex &+ distance) & self.mask,
                      backingCount: self.count,
                      backingIndexOfHead: self.headBackingIndex)
     }
@@ -332,10 +332,10 @@ extension CircularBuffer {
         if self.headBackingIndex > 0 {
             newBacking.append(contentsOf: self._buffer[0..<self.headBackingIndex])
         }
-        let repeatitionCount = newCapacity - newBacking.count
+        let repeatitionCount = newCapacity &- newBacking.count
         newBacking.append(contentsOf: repeatElement(nil, count: repeatitionCount))
         self.headBackingIndex = 0
-        self.tailBackingIndex = newBacking.count - repeatitionCount
+        self.tailBackingIndex = newBacking.count &- repeatitionCount
         self._buffer = newBacking
         assert(self.verifyInvariants())
     }
@@ -363,9 +363,9 @@ extension CircularBuffer {
     @inlinable
     public var count: Int {
         if self.tailBackingIndex >= self.headBackingIndex {
-            return self.tailBackingIndex - self.headBackingIndex
+            return self.tailBackingIndex &- self.headBackingIndex
         } else {
-            return self._buffer.count - (self.headBackingIndex - self.tailBackingIndex)
+            return self._buffer.count &- (self.headBackingIndex &- self.tailBackingIndex)
         }
     }
 
@@ -600,13 +600,13 @@ extension CircularBuffer: RangeReplaceableCollection {
             newBuffer.append(contentsOf: newElements.lazy.map { $0 })
             newBuffer.append(contentsOf: self[subrange.upperBound..<self.endIndex].lazy.map { $0 })
 
-            let repetitionCount = newCapacity - newBuffer.count
+            let repetitionCount = newCapacity &- newBuffer.count
             if repetitionCount > 0 {
                 newBuffer.append(contentsOf: repeatElement(nil, count: repetitionCount))
             }
             self._buffer = newBuffer
             self.headBackingIndex = 0
-            self.tailBackingIndex = newBuffer.count - repetitionCount
+            self.tailBackingIndex = newBuffer.count &- repetitionCount
         }
         assert(self.verifyInvariants())
     }
