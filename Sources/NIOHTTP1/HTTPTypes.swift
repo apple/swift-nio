@@ -420,6 +420,25 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
         }
     }
 
+    /// Retrieves the first value for a given header field name from the block.
+    ///
+    /// This method uses case-insensitive comparisons for the header field name. It
+    /// does not return the first value from a maximally-decomposed list of the header fields,
+    /// but instead returns the first value from the original representation: that means
+    /// that a comma-separated header field list may contain more than one entry, some of
+    /// which contain commas and some do not. If you want a representation of the header fields
+    /// suitable for performing computation on, consider `getCanonicalForm`.
+    ///
+    /// - Parameter name: The header field name whose first value should be retrieved.
+    /// - Returns: The first value for the header field name.
+    public func first(name: String) -> String? {
+        guard !self.headers.isEmpty else {
+            return nil
+        }
+
+        return self.headers.first { header in header.0.isEqualCaseInsensitiveASCIIBytes(to: name) }?.1
+    }
+
     /// Checks if a header is present
     ///
     /// - parameters:
