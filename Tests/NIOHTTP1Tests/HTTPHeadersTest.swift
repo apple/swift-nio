@@ -174,6 +174,20 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertTrue(headers.contains(name: "X-Header"))
         XCTAssertFalse(headers.contains(name: "X-NonExistingHeader"))
     }
+
+    func testFirst() throws {
+        let headers = HTTPHeaders([
+            (":method", "GET"),
+            ("foo", "bar"),
+            ("foo", "baz"),
+            ("custom-key", "value-1,value-2")
+        ])
+
+        XCTAssertEqual(headers.first(name: ":method"), "GET")
+        XCTAssertEqual(headers.first(name: "Foo"), "bar")
+        XCTAssertEqual(headers.first(name: "custom-key"), "value-1,value-2")
+        XCTAssertNil(headers.first(name: "not-present"))
+    }
     
     func testKeepAliveStateStartsWithClose() {
         var headers = HTTPHeaders([("Connection", "close")])
