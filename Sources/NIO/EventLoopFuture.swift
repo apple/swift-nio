@@ -50,14 +50,30 @@ internal struct CallbackList {
     }
 
     @inlinable
-    internal func _allCallbacks() -> [Element] {
+    internal func _allCallbacks() -> CircularBuffer<Element> {
         switch (self.firstCallback, self.furtherCallbacks) {
         case (.none, _):
             return []
         case (.some(let onlyCallback), .none):
             return [onlyCallback]
+        default:
+            var array: CircularBuffer<Element> = []
+            self.appendAllCallbacks(&array)
+            return array
+        }
+    }
+
+    @inlinable
+    internal func appendAllCallbacks(_ array: inout CircularBuffer<Element>) {
+        switch (self.firstCallback, self.furtherCallbacks) {
+        case (.none, _):
+            return
+        case (.some(let onlyCallback), .none):
+            array.append(onlyCallback)
         case (.some(let first), .some(let others)):
-            return [first] + others
+            array.reserveCapacity(array.count + 1 + others.count)
+            array.append(first)
+            array.append(contentsOf: others)
         }
     }
 
@@ -78,30 +94,21 @@ internal struct CallbackList {
                     continue loop
                 case (.some(_), .some(_)):
                     var pending = cbl._allCallbacks()
-                    while pending.count > 0 {
-                        let list = pending
-                        pending = []
-                        for f in list {
-                            let next = f()
-                            pending.append(contentsOf: next._allCallbacks())
-                        }
+                    while let f = pending.popFirst() {
+                        let next = f()
+                        next.appendAllCallbacks(&pending)
                     }
                     break loop
                 }
             }
-        case (.some(let first), .some(let others)):
-            var pending = [first]+others
-            while pending.count > 0 {
-                let list = pending
-                pending = []
-                for f in list {
-                    let next = f()
-                    pending.append(contentsOf: next._allCallbacks())
-                }
+        default:
+            var pending = self._allCallbacks()
+            while let f = pending.popFirst() {
+                let next = f()
+                next.appendAllCallbacks(&pending)
             }
         }
     }
-
 }
 
 /// Internal error for operations that return results that were not replaced
