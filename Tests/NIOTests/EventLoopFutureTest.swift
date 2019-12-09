@@ -1112,4 +1112,132 @@ class EventLoopFutureTest : XCTestCase {
             XCTAssert(type(of: error) == EventLoopFutureTestError.self)
         }
     }
+
+    func testAndAllCompleteWithZeroFutures() {
+        let eventLoop = EmbeddedEventLoop()
+        let done = DispatchWorkItem {}
+        EventLoopFuture<Void>.andAllComplete([], on: eventLoop).whenComplete { (result: Result<Void, Error>) in
+            _ = result.mapError { error -> Error in
+                XCTFail("unexpected error \(error)")
+                return error
+            }
+            done.perform()
+        }
+        done.wait()
+    }
+
+    func testAndAllSucceedWithZeroFutures() {
+        let eventLoop = EmbeddedEventLoop()
+        let done = DispatchWorkItem {}
+        EventLoopFuture<Void>.andAllSucceed([], on: eventLoop).whenComplete { result in
+            _ = result.mapError { error -> Error in
+                XCTFail("unexpected error \(error)")
+                return error
+            }
+            done.perform()
+        }
+        done.wait()
+    }
+
+    func testAndAllCompleteWithPreSucceededFutures() {
+        let eventLoop = EmbeddedEventLoop()
+        let succeeded = eventLoop.makeSucceededFuture(())
+
+        for i in 0..<10 {
+            XCTAssertNoThrow(try EventLoopFuture<Void>.andAllComplete(Array(repeating: succeeded, count: i),
+                                                                      on: eventLoop).wait())
+        }
+    }
+
+    func testAndAllCompleteWithPreFailedFutures() {
+        struct Dummy: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let failed: EventLoopFuture<Void> = eventLoop.makeFailedFuture(Dummy())
+
+        for i in 0..<10 {
+            XCTAssertNoThrow(try EventLoopFuture<Void>.andAllComplete(Array(repeating: failed, count: i),
+                                                                      on: eventLoop).wait())
+        }
+    }
+
+    func testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures() {
+        struct Dummy: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let succeeded = eventLoop.makeSucceededFuture(())
+        let incompletes = [eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+                           eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+                           eventLoop.makePromise(of: Void.self)]
+        var futures: [EventLoopFuture<Void>] = []
+
+        for i in 0..<10 {
+            if i % 2 == 0 {
+                futures.append(succeeded)
+            } else {
+                futures.append(incompletes[i/2].futureResult)
+            }
+        }
+
+        let overall = EventLoopFuture<Void>.andAllComplete(futures, on: eventLoop)
+        XCTAssertFalse(overall.isFulfilled)
+        for (idx, incomplete) in incompletes.enumerated() {
+            XCTAssertFalse(overall.isFulfilled)
+            if idx % 2 == 0 {
+                incomplete.succeed(())
+            } else {
+                incomplete.fail(Dummy())
+            }
+        }
+        XCTAssertNoThrow(try overall.wait())
+    }
+
+    func testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures() {
+        struct Dummy: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let succeeded = eventLoop.makeSucceededFuture(())
+        let incompletes = [eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+                           eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+                           eventLoop.makePromise(of: Void.self)]
+        var futures: [EventLoopFuture<Void>] = []
+
+        for i in 0..<10 {
+            if i % 2 == 0 {
+                futures.append(succeeded)
+            } else {
+                futures.append(incompletes[i/2].futureResult)
+            }
+        }
+
+        let overall = EventLoopFuture<Void>.whenAllComplete(futures, on: eventLoop)
+        XCTAssertFalse(overall.isFulfilled)
+        for (idx, incomplete) in incompletes.enumerated() {
+            XCTAssertFalse(overall.isFulfilled)
+            if idx % 2 == 0 {
+                incomplete.succeed(())
+            } else {
+                incomplete.fail(Dummy())
+            }
+        }
+        let expected: [Result<Void, Error>] = [.success(()), .success(()),
+                                               .success(()), .failure(Dummy()),
+                                               .success(()), .success(()),
+                                               .success(()), .failure(Dummy()),
+                                               .success(()), .success(())]
+        func assertIsEqual(_ expecteds: [Result<Void, Error>], _ actuals: [Result<Void, Error>]) {
+            XCTAssertEqual(expecteds.count, actuals.count, "counts not equal")
+            for i in expecteds.indices {
+                let expected = expecteds[i]
+                let actual = actuals[i]
+                switch (expected, actual) {
+                case (.success(()), .success(())):
+                    ()
+                case (.failure(let le), .failure(let re)):
+                    XCTAssert(le is Dummy)
+                    XCTAssert(re is Dummy)
+                default:
+                    XCTFail("\(expecteds) and \(actuals) not equal")
+                }
+            }
+        }
+        XCTAssertNoThrow(assertIsEqual(expected, try overall.wait()))
+    }
 }

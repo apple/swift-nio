@@ -77,6 +77,12 @@ extension EventLoopFutureTest {
                 ("testPromiseCompletedWithFailedFuture", testPromiseCompletedWithFailedFuture),
                 ("testPromiseCompletedWithSuccessfulResult", testPromiseCompletedWithSuccessfulResult),
                 ("testPromiseCompletedWithFailedResult", testPromiseCompletedWithFailedResult),
+                ("testAndAllCompleteWithZeroFutures", testAndAllCompleteWithZeroFutures),
+                ("testAndAllSucceedWithZeroFutures", testAndAllSucceedWithZeroFutures),
+                ("testAndAllCompleteWithPreSucceededFutures", testAndAllCompleteWithPreSucceededFutures),
+                ("testAndAllCompleteWithPreFailedFutures", testAndAllCompleteWithPreFailedFutures),
+                ("testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures", testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures),
+                ("testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures", testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures),
            ]
    }
 }
