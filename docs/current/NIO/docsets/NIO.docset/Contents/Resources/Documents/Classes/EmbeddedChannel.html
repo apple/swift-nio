@@ -21,7 +21,7 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIO 2.10.1 Docs
+          NIO 2.11.0 Docs
         </a>
          (90% documented)
       </p>
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E10%2E1%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E11%2E0%2FNIO%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -135,6 +135,9 @@
                 <a class="nav-group-task-link" href="../Classes/NIOPipeBootstrap.html">NIOPipeBootstrap</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOSingleStepByteToMessageProcessor.html">NIOSingleStepByteToMessageProcessor</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Classes/NIOThreadPool.html">NIOThreadPool</a>
               </li>
               <li class="nav-group-task">
@@ -205,6 +208,17 @@
             </ul>
           </li>
           <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/_UInt24.html">_UInt24</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/_UInt56.html">_UInt56</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
             <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
@@ -253,6 +267,9 @@
                 <a class="nav-group-task-link" href="../Protocols/MulticastChannel.html">MulticastChannel</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/NIOSingleStepByteToMessageDecoder.html">NIOSingleStepByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a>
               </li>
               <li class="nav-group-task">
@@ -289,6 +306,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/ByteBuffer.html">ByteBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBuffer/CopyBytesError.html">– CopyBytesError</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a>
@@ -444,6 +464,9 @@ actual IO nor has a proper eventing mechanism. The prime use-case for
 <code>EmbeddedChannel</code> is in unit tests when you want to feed the inbound events
 and check the outbound events manually.</p>
 
+<p>Please remember to call <code>finish()</code> when you are no longer using this
+<code>EmbeddedChannel</code>.</p>
+
 <p>To feed events through an <code>EmbeddedChannel</code>&lsquo;s <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code> use
 <code>EmbeddedChannel.writeInbound</code> which accepts data of any type. It will then
 forward that data through the <code><a href="../Classes/ChannelPipeline.html">ChannelPipeline</a></code> and the subsequent
@@ -508,7 +531,7 @@ return if it&rsquo;s either <code>.clean</code> (no left overs) or that it has <
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L300-L322">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L304-L326">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -545,7 +568,7 @@ buffer will be returned from <code>writeInbound</code>/<code>writeOutbound</code
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L331-L351">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L335-L355">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -577,7 +600,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L355-L365">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L359-L369">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -614,7 +637,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L372">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L376">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -648,7 +671,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L375">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L379">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -682,7 +705,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L380-L382">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L384-L386">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -716,7 +739,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L385-L387">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L389-L391">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -750,7 +773,65 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L390">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L394">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EmbeddedChannelC6finish19acceptAlreadyClosedAC13LeftOverStateOSb_tKF"></a>
+                    <a name="//apple_ref/swift/Method/finish(acceptAlreadyClosed:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EmbeddedChannelC6finish19acceptAlreadyClosedAC13LeftOverStateOSb_tKF">finish(acceptAlreadyClosed:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Synchronously closes the <code>EmbeddedChannel</code>.</p>
+
+<p>Errors in the <code>EmbeddedChannel</code> can be consumed using <code>throwIfErrorCaught</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">finish</span><span class="p">(</span><span class="nv">acceptAlreadyClosed</span><span class="p">:</span> <span class="kt">Bool</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EmbeddedChannel/LeftOverState.html">LeftOverState</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>acceptAlreadyClosed</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Whether <code>finish</code> should throw if the <code>EmbeddedChannel</code> has been previously <code>close</code>d.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The <code><a href="../Classes/EmbeddedChannel/LeftOverState.html">LeftOverState</a></code> of the <code>EmbeddedChannel</code>. If all the inbound and outbound events have been
+       consumed (using <code>readInbound</code> / <code>readOutbound</code>) and there are no pending outbound events (unflushed
+       writes) this will be <code>.clean</code>. If there are any unconsumed inbound, outbound, or pending outbound
+       events, the <code>EmbeddedChannel</code> will returns those as <code>.leftOvers(inbound:outbound:pendingOutbound:)</code>.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L406-L425">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -790,7 +871,7 @@ item in the respective buffer is of a different type.</p>
        events, the <code>EmbeddedChannel</code> will returns those as <code>.leftOvers(inbound:outbound:pendingOutbound:)</code>.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L401-L413">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L436-L438">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -824,7 +905,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L418">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L443">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -858,7 +939,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L421-L423">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L446-L448">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -889,7 +970,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L427">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L452">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -923,7 +1004,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L430">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L455">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -957,7 +1038,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L433">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L458">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -987,7 +1068,7 @@ item in the respective buffer is of a different type.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L436">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L461">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1035,7 +1116,7 @@ first <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L450-L452">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L475-L477">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1077,7 +1158,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L464-L466">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L489-L491">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1108,7 +1189,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L477-L482">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L502-L507">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1139,7 +1220,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L494-L497">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L519-L522">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1171,7 +1252,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L502-L507">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L527-L532">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1234,7 +1315,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L527-L538">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L552-L563">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1268,7 +1349,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L541-L544">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L566-L569">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1302,7 +1383,7 @@ last <code><a href="../Protocols/ChannelHandler.html">ChannelHandler</a></code> 
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L547-L552">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L572-L577">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1365,7 +1446,7 @@ happens when it travels the <code><a href="../Classes/ChannelPipeline.html">Chan
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L561-L566">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L586-L591">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1428,7 +1509,7 @@ which happens when it travels the <code><a href="../Classes/ChannelPipeline.html
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIO/Embedded.swift#L575-L580">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIO/Embedded.swift#L600-L605">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1441,7 +1522,7 @@ which happens when it travels the <code><a href="../Classes/ChannelPipeline.html
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-11-14)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-12-09)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

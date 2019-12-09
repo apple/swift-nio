@@ -21,9 +21,9 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIOConcurrencyHelpers 2.10.1 Docs
+          NIOConcurrencyHelpers 2.11.0 Docs
         </a>
-         (32% documented)
+         (25% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E10%2E1%2Fdocsets%2FNIOConcurrencyHelpers%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E11%2E0%2FNIOConcurrencyHelpers%2Fdocsets%2FNIOConcurrencyHelpers%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -70,6 +70,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Classes/Lock.html">Lock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOAtomic.html">NIOAtomic</a>
               </li>
             </ul>
           </li>
@@ -117,6 +120,9 @@
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Protocols/AtomicPrimitive.html">AtomicPrimitive</a>
               </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/NIOAtomicPrimitive.html">NIOAtomicPrimitive</a>
+              </li>
             </ul>
           </li>
           <li class="nav-group-name">
@@ -136,13 +142,18 @@
             <h1>AtomicBox</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">AtomicBox</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">T</span> <span class="p">:</span> <span class="kt">AnyObject</span></code></pre>
+                  <pre class="highlight swift"><code><span class="kd">@available</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">deprecated</span><span class="p">,</span> <span class="nv">message</span><span class="p">:</span> <span class="s">"AtomicBox is deprecated without replacement because the original implementation doesn't work."</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">AtomicBox</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">T</span> <span class="p">:</span> <span class="kt">AnyObject</span></code></pre>
 
                 </div>
               </div>
-            <p><code>AtomicBox</code> is a heap-allocated box which allows atomic access to an instance of a Swift class.</p>
+            <p><code>AtomicBox</code> is a heap-allocated box which allows lock-free access to an instance of a Swift class.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    The use of <code>AtomicBox</code> should be avoided because it requires an implementation of a spin-lock
+       (more precisely a CAS loop) to operate correctly.
 
-<p>It behaves very much like <code><a href="../Classes/Atomic.html">Atomic&lt;T&gt;</a></code> but for objects, maintaining the correct retain counts.</p>
+</div>
 
           </div>
         </section>
@@ -176,7 +187,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L397-L400">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L412-L415">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -202,6 +213,12 @@ means that the compare-and-swap will always succeed if <code>expected</code> is 
 value. Additionally, it uses a <em>sequentially consistent ordering</em>. For more
 details on atomic memory models, check the documentation for C11&rsquo;s
 <code>stdatomic.h</code>.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>The implementation of <code>exchange</code> contains a <em>Compare and Exchange loop</em>, ie. it may busy wait with
+       100% CPU load.</p>
+
+</div>
 
                       </div>
                       <div class="declaration">
@@ -251,7 +268,7 @@ succeeds.</p>
 match the current value and so no exchange occurred.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L423-L437">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L442-L467">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -274,6 +291,12 @@ match the current value and so no exchange occurred.</p>
 <p>This implementation uses a <em>relaxed</em> memory ordering. This guarantees nothing
 more than that this operation is atomic: there is no guarantee that any other
 event will be ordered before or after this one.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>The implementation of <code>exchange</code> contains a <em>Compare and Exchange loop</em>, ie. it may busy wait with
+       100% CPU load.</p>
+
+</div>
 
                       </div>
                       <div class="declaration">
@@ -308,7 +331,7 @@ event will be ordered before or after this one.</p>
                         <p>The value previously held by this object.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L447-L452">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L480-L501">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -331,6 +354,12 @@ event will be ordered before or after this one.</p>
 <p>This implementation uses a <em>relaxed</em> memory ordering. This guarantees nothing
 more than that this operation is atomic: there is no guarantee that any other
 event will be ordered before or after this one.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>The implementation of <code>exchange</code> contains a <em>Compare and Exchange loop</em>, ie. it may busy wait with
+       100% CPU load.</p>
+
+</div>
 
                       </div>
                       <div class="declaration">
@@ -346,7 +375,7 @@ event will be ordered before or after this one.</p>
                         <p>The value of this object</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L461-L465">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L513-L536">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -369,6 +398,12 @@ event will be ordered before or after this one.</p>
 <p>This implementation uses a <em>relaxed</em> memory ordering. This guarantees nothing
 more than that this operation is atomic: there is no guarantee that any other
 event will be ordered before or after this one.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>The implementation of <code>exchange</code> contains a <em>Compare and Exchange loop</em>, ie. it may busy wait with
+       100% CPU load.</p>
+
+</div>
 
                       </div>
                       <div class="declaration">
@@ -399,7 +434,7 @@ event will be ordered before or after this one.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L474-L476">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L548-L550">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -412,7 +447,7 @@ event will be ordered before or after this one.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-11-14)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-12-09)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

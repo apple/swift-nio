@@ -21,9 +21,9 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="index.html">
-          NIOConcurrencyHelpers 2.10.1 Docs
+          NIOConcurrencyHelpers 2.11.0 Docs
         </a>
-         (32% documented)
+         (25% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E10%2E1%2Fdocsets%2FNIOConcurrencyHelpers%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E11%2E0%2FNIOConcurrencyHelpers%2Fdocsets%2FNIOConcurrencyHelpers%2Exml">
             <img class="header-icon" src="img/dash.png"/>
             Install in Dash
           </a>
@@ -70,6 +70,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Classes/Lock.html">Lock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/NIOAtomic.html">NIOAtomic</a>
               </li>
             </ul>
           </li>
@@ -117,6 +120,9 @@
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Protocols/AtomicPrimitive.html">AtomicPrimitive</a>
               </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/NIOAtomicPrimitive.html">NIOAtomicPrimitive</a>
+              </li>
             </ul>
           </li>
           <li class="nav-group-name">
@@ -141,6 +147,45 @@
 
         <section class="section">
           <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:21NIOConcurrencyHelpers18NIOAtomicPrimitiveP"></a>
+                    <a name="//apple_ref/swift/Protocol/NIOAtomicPrimitive" class="dashAnchor"></a>
+                    <a class="token" href="#/s:21NIOConcurrencyHelpers18NIOAtomicPrimitiveP">NIOAtomicPrimitive</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The protocol that all types that can be made atomic must conform to.</p>
+
+<p><strong>Do not add conformance to this protocol for arbitrary types</strong>. Only a small range
+of types have appropriate atomic operations supported by the CPU, and those types
+already have conformances implemented.</p>
+
+                        <a href="Protocols/NIOAtomicPrimitive.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">NIOAtomicPrimitive</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/NIOAtomic.swift#L22-L31">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
             <div class="task-group">
               <ul class="item-container">
                 <li class="item">
@@ -173,7 +218,7 @@ already have conformances implemented.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L259-L268">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L272-L281">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -186,7 +231,7 @@ already have conformances implemented.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-11-14)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-12-09)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

@@ -21,9 +21,9 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIOConcurrencyHelpers 2.10.1 Docs
+          NIOConcurrencyHelpers 2.11.0 Docs
         </a>
-         (32% documented)
+         (25% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E10%2E1%2Fdocsets%2FNIOConcurrencyHelpers%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E11%2E0%2FNIOConcurrencyHelpers%2Fdocsets%2FNIOConcurrencyHelpers%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -70,6 +70,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Classes/Lock.html">Lock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOAtomic.html">NIOAtomic</a>
               </li>
             </ul>
           </li>
@@ -117,6 +120,9 @@
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Protocols/AtomicPrimitive.html">AtomicPrimitive</a>
               </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/NIOAtomicPrimitive.html">NIOAtomicPrimitive</a>
+              </li>
             </ul>
           </li>
           <li class="nav-group-name">
@@ -136,7 +142,7 @@
             <h1>UInt</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">UInt</span><span class="p">:</span> <span class="kt"><a href="../Protocols/AtomicPrimitive.html">AtomicPrimitive</a></span></code></pre>
+                  <pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">UInt</span><span class="p">:</span> <span class="kt"><a href="../Protocols/NIOAtomicPrimitive.html">NIOAtomicPrimitive</a></span></code></pre>
 
                 </div>
               </div>
@@ -146,6 +152,250 @@
 
         <section class="section">
           <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:Su21NIOConcurrencyHelpersE13AtomicWrappera"></a>
+                    <a name="//apple_ref/swift/Alias/AtomicWrapper" class="dashAnchor"></a>
+                    <a class="token" href="#/s:Su21NIOConcurrencyHelpersE13AtomicWrappera">AtomicWrapper</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">typealias</span> <span class="kt">AtomicWrapper</span> <span class="o">=</span> <span class="n">catmc_nio_atomic_unsigned_long</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/NIOAtomic.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:Su21NIOConcurrencyHelpersE39nio_atomic_create_with_existing_storageyySpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ"></a>
+                    <a name="//apple_ref/swift/Variable/nio_atomic_create_with_existing_storage" class="dashAnchor"></a>
+                    <a class="token" href="#/s:Su21NIOConcurrencyHelpersE39nio_atomic_create_with_existing_storageyySpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ">nio_atomic_create_with_existing_storage</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">nio_atomic_create_with_existing_storage</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutablePointer</span><span class="o">&lt;</span><span class="n">catmc_nio_atomic_unsigned_long</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">UInt</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/NIOAtomic.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:Su21NIOConcurrencyHelpersE31nio_atomic_compare_and_exchangeySbSpySo06catmc_c1_D14_unsigned_longVG_S2utcvpZ"></a>
+                    <a name="//apple_ref/swift/Variable/nio_atomic_compare_and_exchange" class="dashAnchor"></a>
+                    <a class="token" href="#/s:Su21NIOConcurrencyHelpersE31nio_atomic_compare_and_exchangeySbSpySo06catmc_c1_D14_unsigned_longVG_S2utcvpZ">nio_atomic_compare_and_exchange</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">nio_atomic_compare_and_exchange</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutablePointer</span><span class="o">&lt;</span><span class="n">catmc_nio_atomic_unsigned_long</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">UInt</span><span class="p">,</span> <span class="kt">UInt</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/NIOAtomic.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:Su21NIOConcurrencyHelpersE14nio_atomic_addySuSpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ"></a>
+                    <a name="//apple_ref/swift/Variable/nio_atomic_add" class="dashAnchor"></a>
+                    <a class="token" href="#/s:Su21NIOConcurrencyHelpersE14nio_atomic_addySuSpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ">nio_atomic_add</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">nio_atomic_add</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutablePointer</span><span class="o">&lt;</span><span class="n">catmc_nio_atomic_unsigned_long</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">UInt</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">UInt</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/NIOAtomic.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:Su21NIOConcurrencyHelpersE14nio_atomic_subySuSpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ"></a>
+                    <a name="//apple_ref/swift/Variable/nio_atomic_sub" class="dashAnchor"></a>
+                    <a class="token" href="#/s:Su21NIOConcurrencyHelpersE14nio_atomic_subySuSpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ">nio_atomic_sub</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">nio_atomic_sub</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutablePointer</span><span class="o">&lt;</span><span class="n">catmc_nio_atomic_unsigned_long</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">UInt</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">UInt</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/NIOAtomic.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:Su21NIOConcurrencyHelpersE19nio_atomic_exchangeySuSpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ"></a>
+                    <a name="//apple_ref/swift/Variable/nio_atomic_exchange" class="dashAnchor"></a>
+                    <a class="token" href="#/s:Su21NIOConcurrencyHelpersE19nio_atomic_exchangeySuSpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ">nio_atomic_exchange</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">nio_atomic_exchange</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutablePointer</span><span class="o">&lt;</span><span class="n">catmc_nio_atomic_unsigned_long</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">UInt</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">UInt</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/NIOAtomic.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:Su21NIOConcurrencyHelpersE15nio_atomic_loadySuSpySo06catmc_c1_D14_unsigned_longVGcvpZ"></a>
+                    <a name="//apple_ref/swift/Variable/nio_atomic_load" class="dashAnchor"></a>
+                    <a class="token" href="#/s:Su21NIOConcurrencyHelpersE15nio_atomic_loadySuSpySo06catmc_c1_D14_unsigned_longVGcvpZ">nio_atomic_load</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">nio_atomic_load</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutablePointer</span><span class="o">&lt;</span><span class="n">catmc_nio_atomic_unsigned_long</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">UInt</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/NIOAtomic.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:Su21NIOConcurrencyHelpersE16nio_atomic_storeyySpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ"></a>
+                    <a name="//apple_ref/swift/Variable/nio_atomic_store" class="dashAnchor"></a>
+                    <a class="token" href="#/s:Su21NIOConcurrencyHelpersE16nio_atomic_storeyySpySo06catmc_c1_D14_unsigned_longVG_SutcvpZ">nio_atomic_store</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">nio_atomic_store</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutablePointer</span><span class="o">&lt;</span><span class="n">catmc_nio_atomic_unsigned_long</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">UInt</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/NIOAtomic.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
             <div class="task-group">
               <ul class="item-container">
                 <li class="item">
@@ -173,7 +423,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -203,7 +453,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -233,7 +483,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -263,7 +513,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -293,7 +543,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -323,7 +573,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -353,7 +603,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -383,7 +633,7 @@
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.10.1/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.11.0/Sources/NIOConcurrencyHelpers/atomics.swift#L">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -396,7 +646,7 @@
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-11-14)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-12-09)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
