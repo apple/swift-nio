@@ -332,7 +332,7 @@ private extension Channel {
 
 /// `NIOTCPClientBootstrap` is implemented by various underlying transport mechanisms. Typically,
 /// this will be the BSD Sockets API implemented by `ClientBootstrap`.
-public protocol NIOTCPClientBootstrap {
+internal protocol NIOTCPClientBootstrap {
     /// Initialize the connected `Channel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///

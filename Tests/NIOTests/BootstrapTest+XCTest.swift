@@ -32,7 +32,7 @@ extension BootstrapTest {
                 ("testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
                 ("testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
                 ("testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
-                ("testClientStreamBootstrapAllowsConformanceCorrectly", testClientStreamBootstrapAllowsConformanceCorrectly),
+                ("testTCPClientBootstrapAllowsConformanceCorrectly", testTCPClientBootstrapAllowsConformanceCorrectly),
            ]
    }
 }

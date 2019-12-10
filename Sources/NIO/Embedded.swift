@@ -61,7 +61,7 @@ public final class EmbeddedEventLoop: EventLoop {
     public init() { }
 
     /// Provide a valid `ClientBootstrap` to setup an `EmbeddedEventLoop`.
-    public func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
+    internal func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
         return ClientBootstrap(group: self)
     }
 

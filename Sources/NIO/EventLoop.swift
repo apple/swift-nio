@@ -745,7 +745,7 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     /// Provide a valid `ClientBootstrap` to setup this `SelectableEventLoop` with a `SocketChannel`.
-    public func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
+    internal func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
         return ClientBootstrap(group: self)
     }
 
@@ -1134,7 +1134,7 @@ extension EventLoopGroup {
 }
 
 /// The default, non-functional implementation used to encourage EventLoopGroup implementations to conform to `NIOTCPClientBootstrap`.
-struct CannotBootstrap: NIOTCPClientBootstrap {
+internal struct CannotBootstrap: NIOTCPClientBootstrap {
     /// Thrown when an EventLoopGroup has not implemented `NIOTCPClientBootstrap` properly.
     public struct CannotBootstrapError: Error {
         let message: String
@@ -1167,9 +1167,9 @@ struct CannotBootstrap: NIOTCPClientBootstrap {
     }
 }
 
-extension EventLoopGroup {
+internal extension EventLoopGroup {
     /// If implemented, this provides the corresponding `Bootstrap` to create the `Channel` associated with this `EventLoopGroup`
-    public func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
+    func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
         return CannotBootstrap(group: self)
     }
 }
@@ -1271,7 +1271,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     }
 
     /// Provide a `ClientBootstrap` to setup this `MultiThreadedEventLoopGroup` with a `SocketChannel`.
-    public func makeTCPClientBootstrap() -> NIOTCPClientBootstrap? {
+    internal func makeTCPClientBootstrap() -> NIOTCPClientBootstrap? {
         return ClientBootstrap(group: self)
     }
 
