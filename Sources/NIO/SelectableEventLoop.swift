@@ -202,7 +202,11 @@ internal final class SelectableEventLoop: EventLoop {
             self._tasksLock.withLockVoid {
                 self._scheduledTasks.remove(task)
             }
-            self._wakeupSelector()
+            // We don't need to wake up the selector here, the scheduled task will never be picked up. Waking up the
+            // selector would mean that we may be able to recalculate the shutdown to a later date. The cost of not
+            // doing the recalculation is one potentially unnecessary wakeup which is exactly what we're
+            // saving here. So in the worst case, we didn't do a performance optimisation, in the best case, we saved
+            // one.
         })
 
         self._schedule0(task)
@@ -229,7 +233,13 @@ internal final class SelectableEventLoop: EventLoop {
         self._tasksLock.withLockVoid {
             self._scheduledTasks.push(task)
         }
-        self._wakeupSelector()
+
+        // We only need to wake up the selector if we're not in the EventLoop. If we're in the EventLoop already, we're
+        // either doing IO tasks (which happens before checking the scheduled tasks) or we're running a scheduled task
+        // already which means that we'll check at least once more if there are other scheduled tasks runnable.
+        if !self.inEventLoop {
+            self._wakeupSelector()
+        }
     }
 
     /// Wake the `Selector` which means `Selector.whenReady(...)` will unblock.
