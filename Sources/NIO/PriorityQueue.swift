@@ -12,46 +12,56 @@
 //
 //===----------------------------------------------------------------------===//
 
+@usableFromInline
 internal struct PriorityQueue<Element: Comparable> {
-    private var heap: Heap<Element>
+    @usableFromInline
+    internal var _heap: Heap<Element>
 
-    public init(ascending: Bool = false) {
-        self.heap = Heap(type: ascending ? .minHeap : .maxHeap)
+    internal init(ascending: Bool = false) {
+        self._heap = Heap(type: ascending ? .minHeap : .maxHeap)
     }
 
-    public mutating func remove(_ key: Element) {
-        self.heap.remove(value: key)
+    @inlinable
+    internal mutating func remove(_ key: Element) {
+        self._heap.remove(value: key)
     }
 
-    public mutating func push(_ key: Element) {
-        self.heap.append(key)
+    @inlinable
+    internal mutating func push(_ key: Element) {
+        self._heap.append(key)
     }
 
-    public func peek() -> Element? {
-        return self.heap.storage.first
+    @inlinable
+    internal func peek() -> Element? {
+        return self._heap.storage.first
     }
 
-    public var isEmpty: Bool {
-        return self.heap.storage.isEmpty
+    @inlinable
+    internal var isEmpty: Bool {
+        return self._heap.storage.isEmpty
     }
 
+    @inlinable
     @discardableResult
-    public mutating func pop() -> Element? {
-        return self.heap.removeRoot()
+    internal mutating func pop() -> Element? {
+        return self._heap.removeRoot()
     }
 
-    public mutating func clear() {
-        self.heap = Heap(type: self.heap.type)
+    @inlinable
+    internal mutating func clear() {
+        self._heap = Heap(type: self._heap.type)
     }
 }
 
 extension PriorityQueue: Equatable {
+    @usableFromInline
     internal static func ==(lhs: PriorityQueue, rhs: PriorityQueue) -> Bool {
         return lhs.count == rhs.count && lhs.elementsEqual(rhs)
     }
 }
 
 extension PriorityQueue: Sequence {
+    @usableFromInline
     struct Iterator: IteratorProtocol {
 
         private var queue: PriorityQueue<Element>
@@ -64,6 +74,7 @@ extension PriorityQueue: Sequence {
         }
     }
 
+    @usableFromInline
     func makeIterator() -> Iterator {
         return Iterator(queue: self)
     }
@@ -71,11 +82,12 @@ extension PriorityQueue: Sequence {
 
 extension PriorityQueue {
     var count: Int {
-        return self.heap.count
+        return self._heap.count
     }
 }
 
 extension PriorityQueue: CustomStringConvertible {
+    @usableFromInline
     var description: String {
         return "PriorityQueue(count: \(self.underestimatedCount)): \(Array(self))"
     }
