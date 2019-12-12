@@ -61,6 +61,10 @@ extension EventLoopTest {
                 ("testEdgeCasesNIODeadlineMinusTimeAmount", testEdgeCasesNIODeadlineMinusTimeAmount),
                 ("testSuccessfulFlatSubmit", testSuccessfulFlatSubmit),
                 ("testFailingFlatSubmit", testFailingFlatSubmit),
+                ("testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyTask", testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyTask),
+                ("testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyIOOperation", testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyIOOperation),
+                ("testCancellingTheLastOutstandingTask", testCancellingTheLastOutstandingTask),
+                ("testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask", testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask),
            ]
    }
 }
