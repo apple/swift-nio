@@ -168,6 +168,18 @@ There are currently several example projects that demonstrate how to use SwiftNI
 - **WebSocket client** https://github.com/apple/swift-nio/tree/master/Sources/NIOWebSocketClient
 - **WebSocket server** https://github.com/apple/swift-nio/tree/master/Sources/NIOWebSocketServer
 
+To build & run them, run following command, replace TARGET_NAME with the folder name under `./Sources`
+
+```bash
+swift run TARGET_NAME
+```
+
+For example, to run NIOHTTP1Server, run following command:
+
+```bash
+swift run NIOHTTP1Server
+```
+
 ## Getting Started
 
 SwiftNIO primarily uses [SwiftPM](https://swift.org/package-manager/) as its build tool, so we recommend using that as well. If you want to depend on SwiftNIO in your own project, it's as simple as adding a `dependencies` clause to your `Package.swift`:
