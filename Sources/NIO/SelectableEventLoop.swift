@@ -206,7 +206,7 @@ internal final class SelectableEventLoop: EventLoop {
             // selector would mean that we may be able to recalculate the shutdown to a later date. The cost of not
             // doing the recalculation is one potentially unnecessary wakeup which is exactly what we're
             // saving here. So in the worst case, we didn't do a performance optimisation, in the best case, we saved
-            // one.
+            // one wakeup.
         })
 
         self._schedule0(task)
