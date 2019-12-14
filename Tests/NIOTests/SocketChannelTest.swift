@@ -747,6 +747,13 @@ public final class SocketChannelTest : XCTestCase {
     }
 
     func testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide() throws {
+        guard isEarlyEOFDeliveryWorkingOnThisOS else {
+            #if os(Linux)
+            preconditionFailure("this should only ever be entered on Darwin.")
+            #else
+            return
+            #endif
+        }
         // This test makes sure that we notice EOFs early, even if we never register for read (by dropping all the reads
         // on the floor. This is the same test as below but this one is for TCP servers.
         for mode in [DropAllReadsOnTheFloorHandler.Mode.halfClosureEnabled, .halfClosureDisabled] {
@@ -796,6 +803,13 @@ public final class SocketChannelTest : XCTestCase {
     }
 
     func testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide() throws {
+        guard isEarlyEOFDeliveryWorkingOnThisOS else {
+            #if os(Linux)
+            preconditionFailure("this should only ever be entered on Darwin.")
+            #else
+            return
+            #endif
+        }
         // This test makes sure that we notice EOFs early, even if we never register for read (by dropping all the reads
         // on the floor. This is the same test as above but this one is for TCP clients.
         enum Mode {

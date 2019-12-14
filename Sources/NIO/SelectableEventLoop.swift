@@ -53,7 +53,7 @@ internal final class SelectableEventLoop: EventLoop {
         case noLongerRunning
     }
 
-    private let selector: NIO.Selector<NIORegistration>
+    /* private but tests */ internal let _selector: NIO.Selector<NIORegistration>
     private let thread: NIOThread
     @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
@@ -105,7 +105,7 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     internal init(thread: NIOThread) throws {
-        self.selector = try NIO.Selector()
+        self._selector = try NIO.Selector()
         self.thread = thread
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
@@ -156,7 +156,7 @@ internal final class SelectableEventLoop: EventLoop {
             throw EventLoopError.shutdown
         }
 
-        try channel.register(selector: self.selector, interested: channel.interestedEvent)
+        try channel.register(selector: self._selector, interested: channel.interestedEvent)
     }
 
     /// Deregister the given `SelectableChannel` from this `SelectableEventLoop`.
@@ -167,7 +167,7 @@ internal final class SelectableEventLoop: EventLoop {
             return
         }
 
-        try channel.deregister(selector: self.selector, mode: mode)
+        try channel.deregister(selector: self._selector, mode: mode)
     }
 
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. This should be done whenever `channel.interestedEvents` has changed and it should be taken into account when
@@ -175,7 +175,7 @@ internal final class SelectableEventLoop: EventLoop {
     internal func reregister<C: SelectableChannel>(channel: C) throws {
         self.assertInEventLoop()
 
-        try channel.reregister(selector: self.selector, interested: channel.interestedEvent)
+        try channel.reregister(selector: self._selector, interested: channel.interestedEvent)
     }
 
     /// - see: `EventLoop.inEventLoop`
@@ -246,7 +246,7 @@ internal final class SelectableEventLoop: EventLoop {
     @usableFromInline
     internal func _wakeupSelector() {
         do {
-            try selector.wakeup()
+            try _selector.wakeup()
         } catch let err {
             fatalError("Error during Selector.wakeup(): \(err)")
         }
@@ -323,7 +323,7 @@ internal final class SelectableEventLoop: EventLoop {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
-                try selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
+                try _selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
                     switch ev.registration {
                     case .serverSocketChannel(let chan, _):
                         self.handleEvent(ev.io, channel: chan)
@@ -386,7 +386,7 @@ internal final class SelectableEventLoop: EventLoop {
         }
 
         // This EventLoop was closed so also close the underlying selector.
-        try self.selector.close()
+        try self._selector.close()
     }
 
     internal func initiateClose(queue: DispatchQueue, completionHandler: @escaping (Result<Void, Error>) -> Void) {
@@ -401,7 +401,7 @@ internal final class SelectableEventLoop: EventLoop {
                 assert(self.externalState == .closing)
             }
 
-            self.selector.closeGently(eventLoop: self).whenComplete { result in
+            self._selector.closeGently(eventLoop: self).whenComplete { result in
                 self.assertInEventLoop()
                 assert(self.internalState == .runningButNotAcceptingNewRegistrations)
                 self.internalState = .noLongerRunning
@@ -476,7 +476,7 @@ extension SelectableEventLoop: CustomStringConvertible {
     @usableFromInline
     var description: String {
         return self._tasksLock.withLock {
-            return "SelectableEventLoop { selector = \(self.selector), scheduledTasks = \(self._scheduledTasks.description) }"
+            return "SelectableEventLoop { selector = \(self._selector), scheduledTasks = \(self._scheduledTasks.description) }"
         }
     }
 }
