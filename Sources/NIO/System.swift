@@ -297,7 +297,9 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func accept(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>) throws -> CInt? {
+    public static func accept(descriptor: CInt,
+                              addr: UnsafeMutablePointer<sockaddr>?,
+                              len: UnsafeMutablePointer<socklen_t>?) throws -> CInt? {
         let result: IOResult<CInt> = try wrapSyscallMayBlock {
             let fd = sysAccept(descriptor, addr, len)
 

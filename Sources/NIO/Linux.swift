@@ -121,7 +121,10 @@ internal enum Linux {
     static let SOCK_NONBLOCK = CInt(bitPattern: Glibc.SOCK_NONBLOCK.rawValue)
 #endif
     @inline(never)
-    public static func accept4(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>, flags: Int32) throws -> CInt? {
+    public static func accept4(descriptor: CInt,
+                               addr: UnsafeMutablePointer<sockaddr>?,
+                               len: UnsafeMutablePointer<socklen_t>?,
+                               flags: CInt) throws -> CInt? {
         let result: IOResult<CInt> = try wrapSyscallMayBlock {
             CNIOLinux.CNIOLinux_accept4(descriptor, addr, len, flags)
         }
