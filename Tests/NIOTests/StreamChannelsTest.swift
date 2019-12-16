@@ -14,6 +14,7 @@
 
 import XCTest
 @testable import NIO
+import NIOConcurrencyHelpers
 
 class StreamChannelTest: XCTestCase {
     var buffer: ByteBuffer! = nil
@@ -246,6 +247,86 @@ class StreamChannelTest: XCTestCase {
         }
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
     }
+
+    func testLotsOfWritesWhilstOtherSideNotReading() {
+        // This is a regression test for a problem where we would spin on EVFILT_EXCEPT despite the fact that there
+        // was no EOF or any other exceptional event present. So this is a regression test for rdar://53656794 and https://github.com/apple/swift-nio/pull/526.
+        class FailOnReadHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            let areReadsOkayNow: NIOAtomic<Bool>
+
+            init(areReadOkayNow: NIOAtomic<Bool>) {
+                self.areReadsOkayNow = areReadOkayNow
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                guard self.areReadsOkayNow.load() else {
+                    XCTFail("unexpected read of \(self.unwrapInboundIn(data))")
+                    return
+                }
+            }
+
+            func channelReadComplete(context: ChannelHandlerContext) {
+                guard self.areReadsOkayNow.load() else {
+                    XCTFail("unexpected readComplete")
+                    return
+                }
+            }
+        }
+
+        func runTest(receiver: Channel, sender: Channel) throws {
+            let sends = NIOAtomic<Int>.makeAtomic(value: 0)
+            precondition(receiver.eventLoop !== sender.eventLoop,
+                         "this test cannot run if sender and receiver live on the same EventLoop. \(receiver)")
+            XCTAssertNoThrow(try receiver.setOption(ChannelOptions.autoRead, value: false).wait())
+            let areReadsOkayNow: NIOAtomic<Bool> = .makeAtomic(value: false)
+            XCTAssertNoThrow(try receiver.pipeline.addHandler(FailOnReadHandler(areReadOkayNow: areReadsOkayNow)).wait())
+
+            // We will immediately send exactly the amount of data that fits in the receiver's receive buffer.
+            let receiveBufferSize = Int((try? receiver.getOption(ChannelOptions.socket(.init(SOL_SOCKET),
+                                                                                       .init(SO_RCVBUF))).wait()) ?? 8192)
+            var buffer = sender.allocator.buffer(capacity: receiveBufferSize)
+            buffer.writeBytes(Array(repeating: UInt8(ascii: "X"), count: receiveBufferSize))
+
+            XCTAssertNoThrow(try sender.eventLoop.submit {
+                func send() {
+                    var allBuffer = buffer
+                    // When we run through this for the first time, we send exactly the receive buffer size, after that
+                    // we send one byte at a time. Sending the receive buffer will trigger the EVFILT_EXCEPT loop
+                    // (rdar://53656794) for UNIX Domain Sockets and the additional 1 byte send loop will also pretty
+                    // reliably trigger it for TCP sockets.
+                    let myBuffer = allBuffer.readSlice(length: sends.load() == 0 ? receiveBufferSize : 1)!
+                    sender.writeAndFlush(myBuffer).map {
+                        _ = sends.add(1)
+                        sender.eventLoop.scheduleTask(in: .microseconds(1)) {
+                            send()
+                        }
+                    }.whenFailure { error in
+                        XCTAssert(areReadsOkayNow.load(), "error before the channel should go down")
+                        guard case .some(.ioOnClosedChannel) = error as? ChannelError else {
+                            XCTFail("unexpected error: \(error)")
+                            return
+                        }
+                    }
+                }
+                send()
+            }.wait())
+
+            for _ in 0..<10 {
+                // We just spin here for a little while to check that there are no bogus events available on the
+                // selector.
+                XCTAssertNoThrow(try (receiver.eventLoop as! SelectableEventLoop)
+                    ._selector.testsOnly_withUnsafeSelectorFD { fd in
+                        try assertNoSelectorChanges(fd: fd)
+                    }, "after \(sends.load()) sends, we got an unexpected selector event for \(receiver)")
+                usleep(10000)
+            }
+            // We'll soon close the channels, so reads are now acceptable (from the EOF that we may read).
+            XCTAssertTrue(areReadsOkayNow.compareAndExchange(expected: false, desired: true))
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(forceSeparateEventLoops: true, runTest))
+    }
 }
 
 final class AccumulateAllReads: ChannelInboundHandler {
@@ -275,4 +356,27 @@ final class AccumulateAllReads: ChannelInboundHandler {
         self.allDonePromise.succeed(self.accumulator)
         self.accumulator = nil
     }
+}
+
+private func assertNoSelectorChanges(fd: CInt, file: StaticString = #file, line: UInt = #line) throws {
+    struct UnexpectedSelectorChanges: Error, CustomStringConvertible {
+        let description: String
+    }
+
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(FreeBSD)
+    var ev: kevent = .init()
+    var nothing: timespec = .init()
+    let numberOfEvents = try KQueue.kevent(kq: fd, changelist: nil, nchanges: 0, eventlist: &ev, nevents: 1, timeout: &nothing)
+    guard numberOfEvents == 0 else {
+        throw UnexpectedSelectorChanges(description: "\(ev)")
+    }
+    #elseif os(Linux) || os(Android)
+    var ev = Epoll.epoll_event()
+    let numberOfEvents = try Epoll.epoll_wait(epfd: fd, events: &ev, maxevents: 1, timeout: 0)
+    guard numberOfEvents == 0 else {
+        throw UnexpectedSelectorChanges(description: "\(ev)")
+    }
+    #else
+    #warning("assertNoSelectorChanges unsupported on this OS.")
+    #endif
 }

@@ -519,17 +519,29 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
 }
 
 func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
+                                           forceSeparateEventLoops: Bool = false,
                                            file: StaticString = #file,
                                            line: UInt = #line,
                                            _ body: (Channel, Channel) throws -> R) throws -> R {
-    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    let serverGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
-        XCTAssertNoThrow(try group.syncShutdownGracefully())
+        XCTAssertNoThrow(try serverGroup.syncShutdownGracefully())
     }
-    let channelEL = group.next()
+    let clientGroup: MultiThreadedEventLoopGroup
+    if forceSeparateEventLoops {
+        clientGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    } else {
+        clientGroup = serverGroup
+    }
+    defer {
+        // this may fail if clientGroup === serverGroup
+        try? clientGroup.syncShutdownGracefully()
+    }
+    let serverChannelEL = serverGroup.next()
+    let clientChannelEL = clientGroup.next()
 
-    let tcpAcceptedChannel = channelEL.makePromise(of: Channel.self)
-    let tcpServerChannel = try assertNoThrowWithValue(ServerBootstrap(group: channelEL)
+    let tcpAcceptedChannel = serverChannelEL.makePromise(of: Channel.self)
+    let tcpServerChannel = try assertNoThrowWithValue(ServerBootstrap(group: serverChannelEL)
         .childChannelInitializer { channel in
             let accepted = channel.eventLoop.makePromise(of: Void.self)
             accepted.futureResult.map {
@@ -543,7 +555,7 @@ func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
         XCTAssertNoThrow(try tcpServerChannel.syncCloseAcceptingAlreadyClosed())
     }
 
-    let tcpClientChannel = try assertNoThrowWithValue(ClientBootstrap(group: channelEL)
+    let tcpClientChannel = try assertNoThrowWithValue(ClientBootstrap(group: clientChannelEL)
         .channelInitializer { channel in
             XCTAssert(channel.eventLoop.inEventLoop)
             return channel.eventLoop.makeSucceededFuture(())
@@ -557,27 +569,44 @@ func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
     return try body(try tcpAcceptedChannel.futureResult.wait(), tcpClientChannel)
 }
 
-func withCrossConnectedTCPChannels<R>(file: StaticString = #file,
+func withCrossConnectedTCPChannels<R>(forceSeparateEventLoops: Bool = false,
+                                      file: StaticString = #file,
                                       line: UInt = #line,
                                       _ body: (Channel, Channel) throws -> R) throws -> R {
-    return try withCrossConnectedSockAddrChannels(bindTarget: .init(ipAddress: "127.0.0.1", port: 0), body)
+    return try withCrossConnectedSockAddrChannels(bindTarget: .init(ipAddress: "127.0.0.1", port: 0),
+                                                  forceSeparateEventLoops: forceSeparateEventLoops,
+                                                  body)
 }
 
-func withCrossConnectedUnixDomainSocketChannels<R>(file: StaticString = #file,
+func withCrossConnectedUnixDomainSocketChannels<R>(forceSeparateEventLoops: Bool = false,
+                                                   file: StaticString = #file,
                                                    line: UInt = #line,
                                                    _ body: (Channel, Channel) throws -> R) throws -> R {
     return try withTemporaryDirectory { tempDir in
         let bindTarget = try SocketAddress(unixDomainSocketPath: tempDir + "/s")
-        return try withCrossConnectedSockAddrChannels(bindTarget: bindTarget, body)
+        return try withCrossConnectedSockAddrChannels(bindTarget: bindTarget,
+                                                      forceSeparateEventLoops: forceSeparateEventLoops,
+                                                      body)
     }
 }
 
-func withCrossConnectedPipeChannels<R>(file: StaticString = #file,
+func withCrossConnectedPipeChannels<R>(forceSeparateEventLoops: Bool = false,
+                                       file: StaticString = #file,
                                        line: UInt = #line,
                                        _ body: (Channel, Channel) throws -> R) throws -> R {
-    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    let channel1Group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
-        XCTAssertNoThrow(try group.syncShutdownGracefully(), file: file, line: line)
+        XCTAssertNoThrow(try channel1Group.syncShutdownGracefully(), file: file, line: line)
+    }
+    let channel2Group: MultiThreadedEventLoopGroup
+    if forceSeparateEventLoops {
+        channel2Group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    } else {
+        channel2Group = channel1Group
+    }
+    defer {
+        // may fail if pipe1Group == pipe2Group
+        try? channel2Group.syncShutdownGracefully()
     }
 
     var result: R? = nil
@@ -588,13 +617,13 @@ func withCrossConnectedPipeChannels<R>(file: StaticString = #file,
                 try pipe1Write.withUnsafeFileDescriptor { pipe1Write in
                     try pipe2Read.withUnsafeFileDescriptor { pipe2Read in
                         try pipe2Write.withUnsafeFileDescriptor { pipe2Write in
-                            let channel1 = try NIOPipeBootstrap(group: group)
+                            let channel1 = try NIOPipeBootstrap(group: channel1Group)
                                 .withPipes(inputDescriptor: pipe1Read, outputDescriptor: pipe2Write)
                                 .wait()
                             defer {
                                 XCTAssertNoThrow(try channel1.syncCloseAcceptingAlreadyClosed())
                             }
-                            let channel2 = try NIOPipeBootstrap(group: group)
+                            let channel2 = try NIOPipeBootstrap(group: channel2Group)
                                 .withPipes(inputDescriptor: pipe2Read, outputDescriptor: pipe1Write)
                                 .wait()
                             defer {
@@ -616,12 +645,13 @@ func withCrossConnectedPipeChannels<R>(file: StaticString = #file,
     return result!
 }
 
-func forEachCrossConnectedStreamChannelPair<R>(file: StaticString = #file,
+func forEachCrossConnectedStreamChannelPair<R>(forceSeparateEventLoops: Bool = false,
+                                               file: StaticString = #file,
                                                line: UInt = #line,
                                                _ body: (Channel, Channel) throws -> R) throws -> [R] {
-    let r1 = try withCrossConnectedTCPChannels(body)
-    let r2 = try withCrossConnectedPipeChannels(body)
-    let r3 = try withCrossConnectedUnixDomainSocketChannels(body)
+    let r1 = try withCrossConnectedTCPChannels(forceSeparateEventLoops: forceSeparateEventLoops, body)
+    let r2 = try withCrossConnectedPipeChannels(forceSeparateEventLoops: forceSeparateEventLoops, body)
+    let r3 = try withCrossConnectedUnixDomainSocketChannels(forceSeparateEventLoops: forceSeparateEventLoops, body)
     return [r1, r2, r3]
 }
 

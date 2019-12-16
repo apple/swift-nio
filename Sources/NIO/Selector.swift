@@ -124,6 +124,14 @@ private struct EpollFilterSet: OptionSet, Equatable {
     }
 }
 
+internal let isEarlyEOFDeliveryWorkingOnThisOS: Bool = {
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    return false // rdar://53656794 , once fixed we need to do an OS version check here.
+    #else
+    return true
+    #endif
+}()
+
 extension KQueueEventFilterSet {
     /// Convert NIO's `SelectorEventSet` set to a `KQueueEventFilterSet`
     init(selectorEventSet: SelectorEventSet) {
@@ -136,7 +144,7 @@ extension KQueueEventFilterSet {
             kqueueFilterSet.formUnion(.write)
         }
 
-        if selectorEventSet.contains(.readEOF) {
+        if isEarlyEOFDeliveryWorkingOnThisOS && selectorEventSet.contains(.readEOF) {
             kqueueFilterSet.formUnion(.except)
         }
         self = kqueueFilterSet
@@ -256,7 +264,7 @@ final class Selector<R: Registration> {
     private typealias EventType = kevent
     #endif
 
-    private let fd: Int32
+    private let fd: CInt
     private var eventsCapacity = 64
     private var events: UnsafeMutablePointer<EventType>
     private var registrations = [Int: R]()
@@ -272,6 +280,10 @@ final class Selector<R: Registration> {
     private static func deallocateEventsArray(events: UnsafeMutablePointer<EventType>, capacity: Int) {
         events.deinitialize(count: capacity)
         events.deallocate()
+    }
+
+    internal func testsOnly_withUnsafeSelectorFD<T>(_ body: (CInt) throws -> T) rethrows -> T {
+        return try body(self.fd)
     }
 
     private func growEventArrayIfNeeded(ready: Int) {
