@@ -12,11 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+@usableFromInline
 internal enum HeapType {
     case maxHeap
     case minHeap
 
-    public func comparator<T: Comparable>(type: T.Type) -> (T, T) -> Bool {
+    @inlinable
+    internal func comparator<T: Comparable>(type: T.Type) -> (T, T) -> Bool {
         switch self {
         case .maxHeap:
             return (>)
@@ -26,13 +28,17 @@ internal enum HeapType {
     }
 }
 
-internal struct Heap<T: Comparable> {
+@usableFromInline
+internal struct Heap<Element: Comparable> {
+    @usableFromInline
     internal let type: HeapType
-    internal private(set) var storage: ContiguousArray<T> = []
-    internal let comparator: (T, T) -> Bool
+    @usableFromInline
+    internal private(set) var storage: ContiguousArray<Element> = []
+    internal let comparator: (Element, Element) -> Bool
 
-    public init(type: HeapType) {
-        self.comparator = type.comparator(type: T.self)
+    @usableFromInline
+    internal init(type: HeapType) {
+        self.comparator = type.comparator(type: Element.self)
         self.type = type
     }
 
@@ -74,7 +80,7 @@ internal struct Heap<T: Comparable> {
     }
 
     // named `HEAP-INCREASE-KEY` in CRLS
-    private mutating func heapRootify(index: Int, key: T) {
+    private mutating func heapRootify(index: Int, key: Element) {
         var index = index
         if self.comparator(storage[index], key) {
             fatalError("New key must be closer to the root than current key")
@@ -87,7 +93,8 @@ internal struct Heap<T: Comparable> {
         }
     }
 
-    public mutating func append(_ value: T) {
+    @usableFromInline
+    internal mutating func append(_ value: Element) {
         var i = self.storage.count
         self.storage.append(value)
         while i > 0 && self.comparator(self.storage[i], self.storage[self.parentIndex(i)]) {
@@ -97,12 +104,14 @@ internal struct Heap<T: Comparable> {
     }
 
     @discardableResult
-    public mutating func removeRoot() -> T? {
+    @usableFromInline
+    internal mutating func removeRoot() -> Element? {
         return self.remove(index: 0)
     }
 
     @discardableResult
-    public mutating func remove(value: T) -> Bool {
+    @usableFromInline
+    internal mutating func remove(value: Element) -> Bool {
         if let idx = self.storage.firstIndex(of: value) {
             self.remove(index: idx)
             return true
@@ -112,7 +121,7 @@ internal struct Heap<T: Comparable> {
     }
 
     @discardableResult
-    private mutating func remove(index: Int) -> T? {
+    private mutating func remove(index: Int) -> Element? {
         guard self.storage.count > 0 else {
             return nil
         }
@@ -133,6 +142,7 @@ internal struct Heap<T: Comparable> {
 }
 
 extension Heap: CustomDebugStringConvertible {
+    @usableFromInline
     var debugDescription: String {
         guard self.storage.count > 0 else {
             return "<empty heap>"
@@ -190,35 +200,35 @@ extension Heap: CustomDebugStringConvertible {
     }
 }
 
-struct HeapIterator<T: Comparable>: IteratorProtocol {
-    typealias Element = T
+@usableFromInline
+struct HeapIterator<Element: Comparable>: IteratorProtocol {
+    private var heap: Heap<Element>
 
-    private var heap: Heap<T>
-
-    init(heap: Heap<T>) {
+    init(heap: Heap<Element>) {
         self.heap = heap
     }
 
-    mutating func next() -> T? {
+    @usableFromInline
+    mutating func next() -> Element? {
         return self.heap.removeRoot()
     }
 }
 
 extension Heap: Sequence {
-    typealias Element = T
-
     var startIndex: Int { return self.storage.startIndex }
     var endIndex: Int { return self.storage.endIndex }
 
+    @usableFromInline
     var underestimatedCount: Int {
         return self.storage.count
     }
 
-    func makeIterator() -> HeapIterator<T> {
+    @usableFromInline
+    func makeIterator() -> HeapIterator<Element> {
         return HeapIterator(heap: self)
     }
 
-    subscript(position: Int) -> T {
+    subscript(position: Int) -> Element {
         return self.storage[position]
     }
 

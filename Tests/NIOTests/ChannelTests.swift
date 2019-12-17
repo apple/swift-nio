@@ -1653,6 +1653,13 @@ public final class ChannelTests: XCTestCase {
     }
 
     func testCloseInSameReadThatEOFGetsDelivered() throws {
+        guard isEarlyEOFDeliveryWorkingOnThisOS else {
+            #if os(Linux)
+            preconditionFailure("this should only ever be entered on Darwin.")
+            #else
+            return
+            #endif
+        }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1698,13 +1705,20 @@ public final class ChannelTests: XCTestCase {
         buf.writeStaticString("012345678")
         XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
         XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
-        XCTAssertNoThrow(try clientChannel.close().wait())
+        XCTAssertNoThrow(try clientChannel.close().wait()) // autoRead=off so this EOF will trigger the channelRead
         XCTAssertNoThrow(try allDone.futureResult.wait())
 
         XCTAssertNoThrow(try serverChannel.close().wait())
     }
 
     func testEOFReceivedWithoutReadRequests() throws {
+        guard isEarlyEOFDeliveryWorkingOnThisOS else {
+            #if os(Linux)
+            preconditionFailure("this should only ever be entered on Darwin.")
+            #else
+            return
+            #endif
+        }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())

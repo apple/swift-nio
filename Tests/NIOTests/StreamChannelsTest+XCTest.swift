@@ -35,6 +35,7 @@ extension StreamChannelTest {
                 ("testDoubleShutdownOutput", testDoubleShutdownOutput),
                 ("testWriteFailsAfterOutputClosed", testWriteFailsAfterOutputClosed),
                 ("testVectorWrites", testVectorWrites),
+                ("testLotsOfWritesWhilstOtherSideNotReading", testLotsOfWritesWhilstOtherSideNotReading),
            ]
    }
 }

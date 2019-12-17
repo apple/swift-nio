@@ -134,11 +134,11 @@ class BootstrapTest: XCTestCase {
             .channelInitializer { channel in
                 XCTAssert(channel.eventLoop.inEventLoop)
                 return self.freshEventLoop().makeSucceededFuture(())
-        }
-        .bind(host: "127.0.0.1", port: 0)
-        .wait()
-        .close()
-        .wait())
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+            .close()
+            .wait())
     }
 
     func testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
@@ -204,5 +204,46 @@ class BootstrapTest: XCTestCase {
         }
         XCTAssertNoThrow(try childChannelDone.futureResult.wait())
         XCTAssertNoThrow(try serverChannelDone.futureResult.wait())
+    }
+
+    func testTCPClientBootstrapAllowsConformanceCorrectly() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        func restrictBootstrapType(clientBootstrap: NIOTCPClientBootstrap) throws {
+            let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
+            let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+                .childChannelInitializer { channel in
+                    serverAcceptedChannelPromise.succeed(channel)
+                    return channel.eventLoop.makeSucceededFuture(())
+            }.bind(host: "127.0.0.1", port: 0).wait())
+
+            let clientChannel = try assertNoThrowWithValue(clientBootstrap
+                .channelInitializer({ (channel: Channel) in channel.eventLoop.makeSucceededFuture(()) })
+                .connect(host: "127.0.0.1", port: serverChannel.localAddress!.port!).wait())
+
+            var buffer = clientChannel.allocator.buffer(capacity: 1)
+            buffer.writeString("a")
+            try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
+
+            let serverAcceptedChannel = try serverAcceptedChannelPromise.futureResult.wait()
+
+            // Start shutting stuff down.
+            XCTAssertNoThrow(try clientChannel.close().wait())
+
+            // Wait for the close promises. These fire last.
+            XCTAssertNoThrow(try EventLoopFuture.andAllSucceed([clientChannel.closeFuture,
+                                                                serverAcceptedChannel.closeFuture],
+                                                                on: group.next()).wait())
+        }
+
+        if let bootstrap = group.makeTCPClientBootstrap() {
+            try restrictBootstrapType(clientBootstrap: bootstrap)
+        } else {
+            XCTFail("Did not generate a valid Bootstrap")
+        }
     }
 }

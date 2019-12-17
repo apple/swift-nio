@@ -17,6 +17,33 @@ Repository | NIO 2 (Swift 5+) | NIO 1 (Swift 4+)
 [https://github.com/apple/swift-nio-extras][repo-nio-extras] <br>useful additions around SwiftNIO | `from: "1.0.0"` | `from: "0.1.0"`
 [https://github.com/apple/swift-nio-transport-services][repo-nio-transport-services] <br> first-class support for macOS, iOS, and tvOS | `from: "1.0.0"` | `from: "0.1.0"`
 
+### Protocol Implementations
+
+Below you can find a list of a few protocol implementations that are done with SwiftNIO. This is a non-exhaustive list of protocols that are either part of the SwiftNIO project or are accepted into the [SSWG](https://swift.org/server)'s incubation process. All of the libraries listed below do all of their I/O in a non-blocking fashion using SwiftNIO.
+
+#### Low-level protocol implementations
+
+Low-level protocol implementations are often a collection of [`ChannelHandler`][ch]s that implement a protocol but still require the user to have a good understanding of SwiftNIO. Often, low-level protocol implementations will then be wrapped in high-level libraries with a nicer, more user-friendly API.
+
+Protocol | Client | Server | Repository | Module | Comment
+--- |  --- | --- | --- | --- | ---
+HTTP/1 | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOHTTP1`](https://apple.github.io/swift-nio/docs/current/NIOHTTP1/index.html) | official NIO project
+HTTP/2 | ✅| ✅ | [apple/swift-nio-http2](https://github.com/apple/swift-nio-http2) | [`NIOHTTP2`](https://apple.github.io/swift-nio-http2/docs/current/NIOHTTP2/index.html) | official NIO project
+WebSocket | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOWebSocket`](https://apple.github.io/swift-nio/docs/current/NIOWebSocket/index.html) | official NIO project
+TLS | ✅ | ✅ | [apple/swift-nio-ssl](https://github.com/apple/swift-nio-ssl) | [`NIOSSL`](https://apple.github.io/swift-nio-ssl/docs/current/NIOSSL/index.html) | official NIO project
+
+#### High-level implementations
+
+High-level implementations are usually libraries that come with an API that doesn't expose SwiftNIO's [`ChannelPipeline`][cp] and can therefore be used with very little (or no) SwiftNIO-specific knowledge. The implementations listed below do still do all of their I/O in SwiftNIO and integrate really well with the SwiftNIO ecosystem.
+
+Protocol | Client | Server | Repository | Module | Comment
+--- |  --- | --- | --- | --- | ---
+HTTP | ✅| ❌ | [swift-server/async-http-client](https://github.com/swift-server/async-http-client) | `AsyncHTTPClient` | SSWG community project
+gRPC | ✅| ✅ | [grpc/grpc-swift](https://github.com/grpc/grpc-swift) | `GRPC` | also offers a low-level API; community project
+APNS | ✅ | ❌ | [kylebrowning/APNSwift](https://github.com/kylebrowning/APNSwift) | `APNSwift` | SSWG community project
+PostgreSQL | ✅ | ❌ | [vapor/postgres-nio](https://github.com/vapor/postgres-nio) | `PostgresNIO` | SSWG community project
+Redis | ✅ | ❌ | [mordil/swift-redi-stack](https://gitlab.com/Mordil/swift-redi-stack) | `RediStack` | SSWG community project
+
 ### Supported Platforms
 
 SwiftNIO aims to support all of the platforms where Swift is supported. Currently, it is developed and tested on macOS and Linux, and is known to support the following operating system versions:
@@ -167,6 +194,18 @@ There are currently several example projects that demonstrate how to use SwiftNI
 - **HTTP server** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Server
 - **WebSocket client** https://github.com/apple/swift-nio/tree/master/Sources/NIOWebSocketClient
 - **WebSocket server** https://github.com/apple/swift-nio/tree/master/Sources/NIOWebSocketServer
+
+To build & run them, run following command, replace TARGET_NAME with the folder name under `./Sources`
+
+```bash
+swift run TARGET_NAME
+```
+
+For example, to run NIOHTTP1Server, run following command:
+
+```bash
+swift run NIOHTTP1Server
+```
 
 ## Getting Started
 
