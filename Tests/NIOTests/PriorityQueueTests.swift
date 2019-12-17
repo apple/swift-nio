@@ -148,7 +148,7 @@ class PriorityQueueTest: XCTestCase {
         pq2.push(2)
         pq2.push(3)
         XCTAssertEqual(pq1.description, "PriorityQueue(count: 0): \(Array(pq1))")
-        XCTAssertEqual(pq1.description, "PriorityQueue(count: 3): \(Array(pq2))")
+        XCTAssertEqual(pq2.description, "PriorityQueue(count: 3): \(Array(pq2))")
     }
 }
 
