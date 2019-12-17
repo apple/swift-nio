@@ -52,9 +52,11 @@ needs to be listed here.
 - Jason Toffaletti <jtoffaletti@apple.com>
 - Jim Dovey <jimdovey@mac.com>
 - Joachim M. <joachim.me86@gmail.com>
+- Joe Smith <yasumoto7@gmail.com>
 - Johannes Weiss <johannesweiss@apple.com>
 - John Connolly <connoljo2@gmail.com>
 - John Holdsworth <github@johnholdsworth.com>
+- John Lin <johnlinvc@gmail.com>
 - Jovan Milenkovic <jovan.milenkovic@htecgroup.com>
 - Julian Lettner <julian.lettner@apple.com>
 - Kamil Borzym <kamil.borzym@gmail.com>
@@ -83,8 +85,11 @@ needs to be listed here.
 - Norman Maurer <norman_maurer@apple.com>
 - Ole Begemann <ole@oleb.net>
 - OleG <emptystamp@gmail.com>
+- Petro Rovenskyy <petro.rovenskyy@gmail.com>
 - Portia <portia-s@users.noreply.github.com>
 - Pushkar N Kulkarni <pushkar.nk@in.ibm.com>
+- Pushparaj Zala <pr92zala@gmail.com>
+- Richard Low <ral@apple.com>
 - Romain Pouclet <rpouclet@apple.com>
 - Rukshani Athapathu <arukshani@users.noreply.github.com>
 - Sebastian Thiebaud <770074+SebastianThiebaud@users.noreply.github.com>
