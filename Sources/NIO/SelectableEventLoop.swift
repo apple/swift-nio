@@ -209,7 +209,12 @@ internal final class SelectableEventLoop: EventLoop {
             // one wakeup.
         })
 
-        self._schedule0(task)
+        do {
+            try self._schedule0(task)
+        } catch {
+            scheduled._promise.fail(error)
+        }
+
         return scheduled
     }
 
@@ -222,14 +227,15 @@ internal final class SelectableEventLoop: EventLoop {
     // - see: `EventLoop.execute`
     @inlinable
     internal func execute(_ task: @escaping () -> Void) {
-        self._schedule0(ScheduledTask(task, { error in
+        // nothing we can do if we fail enqueuing here.
+       try? self._schedule0(ScheduledTask(task, { error in
             // do nothing
         }, .now()))
     }
 
     /// Add the `ScheduledTask` to be executed.
     @usableFromInline
-    internal func _schedule0(_ task: ScheduledTask) {
+    internal func _schedule0(_ task: ScheduledTask) throws {
         self._tasksLock.withLockVoid {
             self._scheduledTasks.push(task)
         }
@@ -238,18 +244,14 @@ internal final class SelectableEventLoop: EventLoop {
         // either doing IO tasks (which happens before checking the scheduled tasks) or we're running a scheduled task
         // already which means that we'll check at least once more if there are other scheduled tasks runnable.
         if !self.inEventLoop {
-            self._wakeupSelector()
+            try self._wakeupSelector()
         }
     }
 
     /// Wake the `Selector` which means `Selector.whenReady(...)` will unblock.
     @usableFromInline
-    internal func _wakeupSelector() {
-        do {
-            try _selector.wakeup()
-        } catch let err {
-            fatalError("Error during Selector.wakeup(): \(err)")
-        }
+    internal func _wakeupSelector() throws {
+        try _selector.wakeup()
     }
 
     /// Handle the given `SelectorEventSet` for the `SelectableChannel`.
