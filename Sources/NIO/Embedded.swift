@@ -60,6 +60,11 @@ public final class EmbeddedEventLoop: EventLoop {
     /// Initialize a new `EmbeddedEventLoop`.
     public init() { }
 
+    /// Provide a valid `ClientBootstrap` to setup an `EmbeddedEventLoop`.
+    internal func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
+        return ClientBootstrap(group: self)
+    }
+
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
     public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {

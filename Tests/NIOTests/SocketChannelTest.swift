@@ -237,12 +237,16 @@ public final class SocketChannelTest : XCTestCase {
                                                                eventLoop: eventLoop as! SelectableEventLoop))
         let promise = channel.eventLoop.makePromise(of: Void.self)
 
-        XCTAssertNoThrow(try channel.pipeline.addHandler(ActiveVerificationHandler(promise)).flatMap {
-            channel.register()
-        }.flatMap {
-            channel.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 9999))
-        }.flatMap {
-            channel.close()
+        XCTAssertNoThrow(try channel.eventLoop.flatSubmit {
+            // We need to hop to the EventLoop here to make sure that we don't get an ECONNRESET before we manage
+            // to close.
+            channel.pipeline.addHandler(ActiveVerificationHandler(promise)).flatMap {
+                channel.register()
+            }.flatMap {
+                channel.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 9999))
+            }.flatMap {
+                channel.close()
+            }
         }.wait())
 
         XCTAssertNoThrow(try channel.closeFuture.wait())
@@ -747,6 +751,13 @@ public final class SocketChannelTest : XCTestCase {
     }
 
     func testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide() throws {
+        guard isEarlyEOFDeliveryWorkingOnThisOS else {
+            #if os(Linux)
+            preconditionFailure("this should only ever be entered on Darwin.")
+            #else
+            return
+            #endif
+        }
         // This test makes sure that we notice EOFs early, even if we never register for read (by dropping all the reads
         // on the floor. This is the same test as below but this one is for TCP servers.
         for mode in [DropAllReadsOnTheFloorHandler.Mode.halfClosureEnabled, .halfClosureDisabled] {
@@ -796,6 +807,13 @@ public final class SocketChannelTest : XCTestCase {
     }
 
     func testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide() throws {
+        guard isEarlyEOFDeliveryWorkingOnThisOS else {
+            #if os(Linux)
+            preconditionFailure("this should only ever be entered on Darwin.")
+            #else
+            return
+            #endif
+        }
         // This test makes sure that we notice EOFs early, even if we never register for read (by dropping all the reads
         // on the floor. This is the same test as above but this one is for TCP clients.
         enum Mode {

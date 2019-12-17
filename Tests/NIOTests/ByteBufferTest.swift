@@ -1358,18 +1358,12 @@ class ByteBufferTest: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buf = alloc.buffer(capacity: 16)
 
-        var bufPtrValPre: UInt = 1
-        var bufPtrValPost: UInt = 2
-
         XCTAssertLessThan(buf.capacity, 32)
         let preCapacity = buf.capacity
 
-        bufPtrValPre = buf.storagePointerIntegerValue()
         buf.clear(minimumCapacity: 32)
-        bufPtrValPost = buf.storagePointerIntegerValue()
         let postCapacity = buf.capacity
 
-        XCTAssertNotEqual(bufPtrValPre, bufPtrValPost)
         XCTAssertGreaterThanOrEqual(buf.capacity, 32)
         XCTAssertNotEqual(preCapacity, postCapacity)
     }
