@@ -89,6 +89,6 @@ extension PriorityQueue {
 extension PriorityQueue: CustomStringConvertible {
     @usableFromInline
     var description: String {
-        return "PriorityQueue(count: \(self.underestimatedCount)): \(Array(self))"
+        return "PriorityQueue(count: \(self.count)): \(Array(self))"
     }
 }

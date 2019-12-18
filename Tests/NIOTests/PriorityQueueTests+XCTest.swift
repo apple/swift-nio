@@ -33,6 +33,7 @@ extension PriorityQueueTest {
                 ("testSomeStringsDesc", testSomeStringsDesc),
                 ("testBuildAndRemoveFromRandomPriorityQueues", testBuildAndRemoveFromRandomPriorityQueues),
                 ("testPartialOrder", testPartialOrder),
+                ("testDescription", testDescription),
            ]
    }
 }
