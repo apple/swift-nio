@@ -60,16 +60,28 @@ class HTTPRequestEncoderTests: XCTestCase {
         writtenData.assertContainsOnly("GET /uri HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
     }
 
-    func testNoContentLengthHeadersForHEAD() throws {
+    func testContentLengthHeadersForHEAD() throws {
         let headers = HTTPHeaders([("content-length", "0")])
         let writtenData = try sendRequest(withMethod: .HEAD, andHeaders: headers)
-        writtenData.assertContainsOnly("HEAD /uri HTTP/1.1\r\n\r\n")
+        writtenData.assertContainsOnly("HEAD /uri HTTP/1.1\r\ncontent-length: 0\r\n\r\n")
     }
 
-    func testNoTransferEncodingHeadersForHEAD() throws {
+    func testTransferEncodingHeadersForHEAD() throws {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
         let writtenData = try sendRequest(withMethod: .HEAD, andHeaders: headers)
-        writtenData.assertContainsOnly("HEAD /uri HTTP/1.1\r\n\r\n")
+        writtenData.assertContainsOnly("HEAD /uri HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
+    }
+
+    func testNoContentLengthHeadersForTRACE() throws {
+        let headers = HTTPHeaders([("content-length", "0")])
+        let writtenData = try sendRequest(withMethod: .TRACE, andHeaders: headers)
+        writtenData.assertContainsOnly("TRACE /uri HTTP/1.1\r\n\r\n")
+    }
+
+    func testNoTransferEncodingHeadersForTRACE() throws {
+        let headers = HTTPHeaders([("transfer-encoding", "chunked")])
+        let writtenData = try sendRequest(withMethod: .TRACE, andHeaders: headers)
+        writtenData.assertContainsOnly("TRACE /uri HTTP/1.1\r\n\r\n")
     }
 
     func testNoChunkedEncodingForHTTP10() throws {
