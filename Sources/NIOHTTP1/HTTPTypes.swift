@@ -616,11 +616,11 @@ public enum HTTPMethod: Equatable {
     /// Whether requests with this verb may have a request body.
     internal var hasRequestBody: HasBody {
         switch self {
-        case .HEAD, .DELETE, .TRACE:
+        case .TRACE:
             return .no
         case .POST, .PUT, .PATCH:
             return .yes
-        case .GET, .CONNECT, .OPTIONS:
+        case .GET, .CONNECT, .OPTIONS, .HEAD, .DELETE:
             fallthrough
         default:
             return .unlikely
