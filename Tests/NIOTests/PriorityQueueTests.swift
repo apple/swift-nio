@@ -140,6 +140,16 @@ class PriorityQueueTest: XCTestCase {
         XCTAssertEqual(clearlyTheLargest, pq.pop()!)
         XCTAssert(pq.isEmpty)
     }
+    
+    func testDescription() {
+        let pq1 = PriorityQueue<Int>()
+        var pq2 = PriorityQueue<Int>()
+        pq2.push(1)
+        pq2.push(2)
+        pq2.push(3)
+        XCTAssertEqual(pq1.description, "PriorityQueue(count: 0): \(Array(pq1))")
+        XCTAssertEqual(pq2.description, "PriorityQueue(count: 3): \(Array(pq2))")
+    }
 }
 
 /// This data type is only partially ordered. Ie. from `a < b` and `a != b` we can't imply `a > b`.
