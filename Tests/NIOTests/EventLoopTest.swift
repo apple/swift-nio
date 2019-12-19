@@ -1047,4 +1047,33 @@ public final class EventLoopTest : XCTestCase {
         }
         g.wait()
     }
+
+    func testSelectableEventLoopDescription() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+
+        let el: EventLoop = elg.next()
+        let expectedPrefix = "SelectableEventLoop { selector = Selector { descriptor ="
+        let expectedContains = "thread = NIOThread(name = NIO-ELT-"
+        let expectedSuffix = ", scheduledTasks = PriorityQueue(count: 0): [] }"
+        let desc = el.description
+        XCTAssert(el.description.starts(with: expectedPrefix), desc)
+        XCTAssert(el.description.reversed().starts(with: expectedSuffix.reversed()), desc)
+        // let's check if any substring contains the `expectedContains`
+        XCTAssert(desc.indices.contains { startIndex in
+            desc[startIndex...].starts(with: expectedContains)
+        }, desc)
+    }
+
+    func testMultiThreadedEventLoopGroupDescription() {
+        let elg: EventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+
+        XCTAssert(elg.description.starts(with: "MultiThreadedEventLoopGroup { threadPattern = NIO-ELT-"),
+                  elg.description)
+    }
 }
