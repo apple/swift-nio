@@ -1057,7 +1057,7 @@ public final class EventLoopTest : XCTestCase {
         let el: EventLoop = elg.next()
         let expectedPrefix = "SelectableEventLoop { selector = Selector { descriptor ="
         let expectedContains = "thread = NIOThread(name = NIO-ELT-"
-        let expectedSuffix = ", scheduledTasks = PriorityQueue(count: 0): [] }"
+        let expectedSuffix = " }"
         let desc = el.description
         XCTAssert(el.description.starts(with: expectedPrefix), desc)
         XCTAssert(el.description.reversed().starts(with: expectedSuffix.reversed()), desc)

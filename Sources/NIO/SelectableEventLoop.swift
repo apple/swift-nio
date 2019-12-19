@@ -474,9 +474,14 @@ internal final class SelectableEventLoop: EventLoop {
     }
 }
 
-extension SelectableEventLoop: CustomStringConvertible {
+extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvertible {
     @usableFromInline
     var description: String {
+        return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread) }"
+    }
+
+    @usableFromInline
+    var debugDescription: String {
         return self._tasksLock.withLock {
             return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
         }
