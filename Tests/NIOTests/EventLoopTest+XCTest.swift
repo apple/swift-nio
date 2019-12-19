@@ -65,6 +65,8 @@ extension EventLoopTest {
                 ("testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyIOOperation", testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyIOOperation),
                 ("testCancellingTheLastOutstandingTask", testCancellingTheLastOutstandingTask),
                 ("testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask", testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask),
+                ("testSelectableEventLoopDescription", testSelectableEventLoopDescription),
+                ("testMultiThreadedEventLoopGroupDescription", testMultiThreadedEventLoopGroupDescription),
            ]
    }
 }

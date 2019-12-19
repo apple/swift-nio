@@ -478,7 +478,7 @@ extension SelectableEventLoop: CustomStringConvertible {
     @usableFromInline
     var description: String {
         return self._tasksLock.withLock {
-            return "SelectableEventLoop { selector = \(self._selector), scheduledTasks = \(self._scheduledTasks.description) }"
+            return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
         }
     }
 }

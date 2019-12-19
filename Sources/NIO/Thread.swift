@@ -36,6 +36,7 @@ private func sys_pthread_setname_np(_ p: pthread_t, _ pointer: UnsafePointer<Int
 ///
 /// All methods exposed are thread-safe.
 final class NIOThread {
+    private let desiredName: String?
 
     /// The pthread_t used by this instance.
     private let pthread: pthread_t
@@ -44,8 +45,9 @@ final class NIOThread {
     ///
     /// - arguments:
     ///     - pthread: The `pthread_t` that is wrapped and used by the `NIOThread`.
-    private init(pthread: pthread_t) {
+    private init(pthread: pthread_t, desiredName: String?) {
         self.pthread = pthread
+        self.desiredName = desiredName
     }
 
     /// Execute the given body with the `pthread_t` that is used by this `NIOThread` as argument.
@@ -60,14 +62,20 @@ final class NIOThread {
     }
 
     /// Get current name of the `NIOThread` or `nil` if not set.
-    var name: String? {
+    var currentName: String? {
         get {
             // 64 bytes should be good enough as on Linux the limit is usually 16 and it's very unlikely a user will ever set something longer anyway.
             var chars: [CChar] = Array(repeating: 0, count: 64)
-            guard sys_pthread_getname_np(pthread, &chars, chars.count) == 0 else {
-                return nil
+            return chars.withUnsafeMutableBufferPointer { ptr in
+                guard sys_pthread_getname_np(self.pthread, ptr.baseAddress!, ptr.count) == 0 else {
+                    return nil
+                }
+
+                return String(decoding: UnsafeRawBufferPointer(UnsafeBufferPointer<CChar>(rebasing: ptr.prefix { char in
+                                  char != 0
+                              })),
+                              as: Unicode.UTF8.self)
             }
-            return String(cString: chars)
         }
     }
 
@@ -107,7 +115,7 @@ final class NIOThread {
                 // this is non-critical so we ignore the result here, we've seen EPERM in containers.
             }
 
-            body(NIOThread(pthread: pt))
+            body(NIOThread(pthread: pt, desiredName: name))
             return nil
         }, Unmanaged.passRetained(box).toOpaque())
 
@@ -126,7 +134,36 @@ final class NIOThread {
 
     /// Returns the current running `NIOThread`.
     static var current: NIOThread {
-        return NIOThread(pthread: pthread_self())
+        return NIOThread(pthread: pthread_self(), desiredName: nil)
+    }
+}
+
+extension NIOThread: CustomStringConvertible {
+    var description: String {
+        let desiredName = self.desiredName
+        let actualName = self.currentName
+
+        switch (desiredName, actualName) {
+        case (.some(let desiredName), .some(desiredName)):
+            // We know the current, actual name and the desired name and they match. This is hopefully the most common
+            // situation.
+            return "NIOThread(name = \(desiredName))"
+        case (.some(let desiredName), .some(let actualName)):
+            // We know both names but they're not equal. That's odd but not impossible, some misbehaved library might
+            // have changed the name.
+            return "NIOThread(desiredName = \(desiredName), actualName = \(actualName))"
+        case (.some(let desiredName), .none):
+            // We only know the desired name and can't get the actual thread name. The OS might not be able to provide
+            // the name to us.
+            return "NIOThread(desiredName = \(desiredName))"
+        case (.none, .some(let actualName)):
+            // We only know the actual name. This can happen when we don't have a reference to the actually spawned
+            // thread but rather ask for the current thread and then print it.
+            return "NIOThread(actualName = \(actualName))"
+        case (.none, .none):
+            // We know nothing, sorry.
+            return "NIOThread(n/a)"
+        }
     }
 }
 

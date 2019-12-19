@@ -249,6 +249,12 @@ public protocol EventLoop: EventLoopGroup {
     func preconditionInEventLoop(file: StaticString, line: UInt)
 }
 
+extension EventLoopGroup {
+    public var description: String {
+        return String(describing: self)
+    }
+}
+
 /// Represents a time _interval_.
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
@@ -754,6 +760,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
 
+    private let myGroupID: Int
     private let index = NIOAtomic<Int>.makeAtomic(value: 0)
     private let eventLoops: [SelectableEventLoop]
     private let shutdownLock: Lock = Lock()
@@ -812,6 +819,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///     - threadInitializers: The `ThreadInitializer`s to use.
     internal init(threadInitializers: [ThreadInitializer]) {
         let myGroupID = nextEventLoopGroupID.add(1)
+        self.myGroupID = myGroupID
         var idx = 0
         self.eventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
@@ -942,6 +950,12 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                 }
             }
         }
+    }
+}
+
+extension MultiThreadedEventLoopGroup: CustomStringConvertible {
+    public var description: String {
+        return "MultiThreadedEventLoopGroup { threadPattern = NIO-ELT-\(self.myGroupID)-#* }"
     }
 }
 
