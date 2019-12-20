@@ -695,4 +695,137 @@ class NonBlockingFileIOTest: XCTestCase {
                 }()
             })
     }
+
+    func testReadFromOffset() {
+        XCTAssertNoThrow(try withTemporaryFile(content: "hello world") { (fileHandle, path) in
+            let buffer = self.fileIO.read(fileHandle: fileHandle,
+                                          fromOffset: 6,
+                                          byteCount: 5,
+                                          allocator: ByteBufferAllocator(),
+                                          eventLoop: self.eventLoop)
+            XCTAssertNoThrow(try XCTAssertEqual("world",
+                                                String(decoding: buffer.wait().readableBytesView,
+                                                       as: Unicode.UTF8.self)))
+        })
+    }
+
+    func testReadChunkedFromOffset() {
+        XCTAssertNoThrow(try withTemporaryFile(content: "hello world") { (fileHandle, path) in
+            var numberOfCalls = 0
+            try self.fileIO.readChunked(fileHandle: fileHandle,
+                                        fromOffset: 6,
+                                        byteCount: 5,
+                                        chunkSize: 2,
+                                        allocator: .init(),
+                                        eventLoop: self.eventLoop) { buffer in
+                numberOfCalls += 1
+                switch numberOfCalls {
+                case 1:
+                    XCTAssertEqual("wo", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
+                case 2:
+                    XCTAssertEqual("rl", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
+                case 3:
+                    XCTAssertEqual("d", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
+                default:
+                    XCTFail()
+                }
+                return self.eventLoop.makeSucceededFuture(())
+            }.wait()
+        })
+    }
+
+    func testReadChunkedFromNegativeOffsetFails() {
+        XCTAssertThrowsError(try withTemporaryFile(content: "hello world") { (fileHandle, path) in
+            try self.fileIO.readChunked(fileHandle: fileHandle,
+                                        fromOffset: -1,
+                                        byteCount: 5,
+                                        chunkSize: 2,
+                                        allocator: .init(),
+                                        eventLoop: self.eventLoop) { _ in
+                XCTFail("shouldn't be called")
+                return self.eventLoop.makeSucceededFuture(())
+            }.wait()
+        }) { error in
+            XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
+        }
+    }
+
+    func testReadChunkedFromOffsetAfterEOFDeliversExactlyOneChunk() {
+        var numberOfCalls = 0
+        XCTAssertNoThrow(try withTemporaryFile(content: "hello world") { (fileHandle, path) in
+            try self.fileIO.readChunked(fileHandle: fileHandle,
+                                        fromOffset: 100,
+                                        byteCount: 5,
+                                        chunkSize: 2,
+                                        allocator: .init(),
+                                        eventLoop: self.eventLoop) { buffer in
+                numberOfCalls += 1
+                XCTAssertEqual(1, numberOfCalls)
+                XCTAssertEqual(0, buffer.readableBytes)
+                return self.eventLoop.makeSucceededFuture(())
+            }.wait()
+        })
+    }
+
+    func testReadChunkedFromEOFDeliversExactlyOneChunk() {
+        var numberOfCalls = 0
+        XCTAssertNoThrow(try withTemporaryFile(content: "") { (fileHandle, path) in
+            try self.fileIO.readChunked(fileHandle: fileHandle,
+                                        byteCount: 5,
+                                        chunkSize: 2,
+                                        allocator: .init(),
+                                        eventLoop: self.eventLoop) { buffer in
+                numberOfCalls += 1
+                XCTAssertEqual(1, numberOfCalls)
+                XCTAssertEqual(0, buffer.readableBytes)
+                return self.eventLoop.makeSucceededFuture(())
+            }.wait()
+        })
+    }
+
+    func testReadFromOffsetAfterEOFDeliversExactlyOneChunk() {
+        XCTAssertNoThrow(try withTemporaryFile(content: "hello world") { (fileHandle, path) in
+            XCTAssertEqual(0,
+                           try self.fileIO.read(fileHandle: fileHandle,
+                                                fromOffset: 100,
+                                                byteCount: 5,
+                                                allocator: .init(),
+                                                eventLoop: self.eventLoop).wait().readableBytes)
+        })
+    }
+
+    func testReadFromEOFDeliversExactlyOneChunk() {
+        XCTAssertNoThrow(try withTemporaryFile(content: "") { (fileHandle, path) in
+            XCTAssertEqual(0,
+                           try self.fileIO.read(fileHandle: fileHandle,
+                                                byteCount: 5,
+                                                allocator: .init(),
+                                                eventLoop: self.eventLoop).wait().readableBytes)
+        })
+    }
+
+    func testReadChunkedFromOffsetFileRegion() {
+        XCTAssertNoThrow(try withTemporaryFile(content: "hello world") { (fileHandle, path) in
+            var numberOfCalls = 0
+            let fileRegion = FileRegion(fileHandle: fileHandle, readerIndex: 6, endIndex: 11)
+            try self.fileIO.readChunked(fileRegion: fileRegion,
+                                        chunkSize: 2,
+                                        allocator: .init(),
+                                        eventLoop: self.eventLoop) { buffer in
+                numberOfCalls += 1
+                switch numberOfCalls {
+                case 1:
+                    XCTAssertEqual("wo", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
+                case 2:
+                    XCTAssertEqual("rl", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
+                case 3:
+                    XCTAssertEqual("d", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
+                default:
+                    XCTFail()
+                }
+                return self.eventLoop.makeSucceededFuture(())
+            }.wait()
+        })
+    }
+
 }

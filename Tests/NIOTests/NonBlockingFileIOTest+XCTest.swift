@@ -57,6 +57,14 @@ extension NonBlockingFileIOTest {
                 ("testOpeningFilesForWritingAndReading", testOpeningFilesForWritingAndReading),
                 ("testOpeningFilesForWritingDoesNotImplyTruncation", testOpeningFilesForWritingDoesNotImplyTruncation),
                 ("testOpeningFilesForWritingCanUseTruncation", testOpeningFilesForWritingCanUseTruncation),
+                ("testReadFromOffset", testReadFromOffset),
+                ("testReadChunkedFromOffset", testReadChunkedFromOffset),
+                ("testReadChunkedFromNegativeOffsetFails", testReadChunkedFromNegativeOffsetFails),
+                ("testReadChunkedFromOffsetAfterEOFDeliversExactlyOneChunk", testReadChunkedFromOffsetAfterEOFDeliversExactlyOneChunk),
+                ("testReadChunkedFromEOFDeliversExactlyOneChunk", testReadChunkedFromEOFDeliversExactlyOneChunk),
+                ("testReadFromOffsetAfterEOFDeliversExactlyOneChunk", testReadFromOffsetAfterEOFDeliversExactlyOneChunk),
+                ("testReadFromEOFDeliversExactlyOneChunk", testReadFromEOFDeliversExactlyOneChunk),
+                ("testReadChunkedFromOffsetFileRegion", testReadChunkedFromOffsetFileRegion),
            ]
    }
 }
