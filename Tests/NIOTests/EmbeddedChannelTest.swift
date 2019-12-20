@@ -20,27 +20,27 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
-        
+
         XCTAssertTrue(try channel.writeOutbound(buf).isFull)
         XCTAssertTrue(try channel.finish().hasLeftOvers)
         XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
     }
-    
+
     func testWriteOutboundByteBufferMultipleTimes() throws {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
-        
+
         XCTAssertTrue(try channel.writeOutbound(buf).isFull)
         XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
-        
+
         var bufB = channel.allocator.buffer(capacity: 1024)
         bufB.writeString("again")
-        
+
         XCTAssertTrue(try channel.writeOutbound(bufB).isFull)
         XCTAssertTrue(try channel.finish().hasLeftOvers)
         XCTAssertNoThrow(XCTAssertEqual(bufB, try channel.readOutbound()))
@@ -59,20 +59,20 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
     }
-    
+
     func testWriteInboundByteBufferMultipleTimes() throws {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
-        
+
         XCTAssertTrue(try channel.writeInbound(buf).isFull)
         XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
-        
+
         var bufB = channel.allocator.buffer(capacity: 1024)
         bufB.writeString("again")
-        
+
         XCTAssertTrue(try channel.writeInbound(bufB).isFull)
         XCTAssertTrue(try channel.finish().hasLeftOvers)
         XCTAssertNoThrow(XCTAssertEqual(bufB, try channel.readInbound()))
@@ -373,6 +373,23 @@ class EmbeddedChannelTest: XCTestCase {
         channel.isWritable = false
         XCTAssertFalse(channel.isWritable)
         XCTAssertFalse(opaqueChannel.isWritable)
+    }
+
+    func testFinishWithRecursivelyScheduledTasks() throws {
+        let channel = EmbeddedChannel()
+        var invocations = 0
+
+        func recursivelyScheduleAndIncrement() {
+            channel.pipeline.eventLoop.scheduleTask(deadline: .distantFuture) {
+                invocations += 1
+                recursivelyScheduleAndIncrement()
+            }
+        }
+
+        recursivelyScheduleAndIncrement()
+
+        try XCTAssertNoThrow(channel.finish())
+        XCTAssertEqual(invocations, 1)
     }
 
 }
