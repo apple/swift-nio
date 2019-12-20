@@ -151,11 +151,6 @@ internal final class SelectableEventLoop: EventLoop {
         _addresses.deallocate()
     }
 
-    /// Provide a valid `ClientBootstrap` to setup this `SelectableEventLoop` with a `SocketChannel`.
-    internal func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
-        return ClientBootstrap(group: self)
-    }
-
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
     internal var isOpen: Bool {
         self.assertInEventLoop()

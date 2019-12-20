@@ -338,40 +338,6 @@ private extension Channel {
     }
 }
 
-/// `NIOTCPClientBootstrap` is implemented by various underlying transport mechanisms. Typically,
-/// this will be the BSD Sockets API implemented by `ClientBootstrap`.
-internal protocol NIOTCPClientBootstrap {
-    /// Initialize the connected `Channel` with `initializer`. The most common task in initializer is to add
-    /// `ChannelHandler`s to the `ChannelPipeline`.
-    ///
-    /// - parameters:
-    ///     - handler: A closure that initializes the provided `Channel`.
-    func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self
-
-    /// Specifies a `ChannelOption` to be applied to the `Channel`.
-    ///
-    /// - parameters:
-    ///     - option: The option to be applied.
-    ///     - value: The value for the option.
-    @inlinable
-    func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
-
-    /// Specifies a timeout to apply to a connection attempt.
-    //
-    /// - parameters:
-    ///     - timeout: The timeout that will apply to the connection attempt.
-    func connectTimeout(_ timeout: TimeAmount) -> Self
-
-    /// Specify the `host` and `port` to connect to for the `Channel` that will be established.
-    ///
-    /// - parameters:
-    ///     - host: The host to connect to.
-    ///     - port: The port to connect to.
-    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
-    func connect(host: String, port: Int) -> EventLoopFuture<Channel>
-}
-
-
 /// A `ClientBootstrap` is an easy way to bootstrap a `SocketChannel` when creating network clients.
 ///
 /// Usually you re-use a `ClientBootstrap` once you set it up and called `connect` multiple times on it.
@@ -398,10 +364,21 @@ internal protocol NIOTCPClientBootstrap {
 /// ```
 ///
 /// The connected `SocketChannel` will operate on `ByteBuffer` as inbound and on `IOData` as outbound messages.
-public final class ClientBootstrap: NIOTCPClientBootstrap {
-
+public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     private let group: EventLoopGroup
-    private var channelInitializer: Optional<ChannelInitializerCallback>
+    private var protocolHandlers: Optional<() -> [ChannelHandler]>
+    private var _channelInitializer: ChannelInitializerCallback
+    private var channelInitializer: ChannelInitializerCallback {
+        if let protocolHandlers = self.protocolHandlers {
+            return { channel in
+                self._channelInitializer(channel).flatMap {
+                    channel.pipeline.addHandlers(protocolHandlers(), position: .first)
+                }
+            }
+        } else {
+            return self._channelInitializer
+        }
+    }
     @usableFromInline
     internal var _channelOptions: ChannelOptions.Storage
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
@@ -415,7 +392,8 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
         self.group = group
         self._channelOptions = ChannelOptions.Storage()
         self._channelOptions.append(key: ChannelOptions.socket(SocketOptionLevel(Posix.IPPROTO_TCP), TCP_NODELAY), value: 1)
-        self.channelInitializer = nil
+        self._channelInitializer = { channel in channel.eventLoop.makeSucceededFuture(()) }
+        self.protocolHandlers = nil
         self.resolver = nil
     }
 
@@ -437,7 +415,19 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
     public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
-        self.channelInitializer = handler
+        self._channelInitializer = handler
+        return self
+    }
+
+    /// Sets the protocol handlers that will be added to the front of the `ChannelPipeline` right after the
+    /// `channelInitializer` has been called.
+    ///
+    /// Per bootstrap, you can only set the `protocolHandlers` once. Typically, `protocolHandlers` are used for the TLS
+    /// implementation. Most notably, `NIOClientTCPBootstrap`, NIO's "universal bootstrap" abstraction, uses
+    /// `protocolHandlers` to add the required `ChannelHandler`s for many TLS implementations.
+    public func protocolHandlers(_ handlers: @escaping () -> [ChannelHandler]) -> Self {
+        precondition(self.protocolHandlers == nil, "protocol handlers can only be set once")
+        self.protocolHandlers = handlers
         return self
     }
 
@@ -530,7 +520,7 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
     /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
     public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
         let eventLoop = group.next()
-        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+        let channelInitializer = self.channelInitializer
         let channel: SocketChannel
         do {
             channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, descriptor: descriptor)
@@ -565,7 +555,7 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
     private func execute(eventLoop: EventLoop,
                          protocolFamily: Int32,
                          _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
-        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+        let channelInitializer = self.channelInitializer
         let channelOptions = self._channelOptions
 
         let channel: SocketChannel
