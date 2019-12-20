@@ -44,9 +44,13 @@ class ChannelOptionStorageTest: XCTestCase {
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
         XCTAssertEqual(options.map { $0.0 },
-                       (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.0 })
+                       optionsCollector.allOptions.map { option in
+                           return option.0 as! ChannelOptions.Types.SocketOption
+                       })
         XCTAssertEqual(options.map { $0.1 },
-                       (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.1 })
+                       optionsCollector.allOptions.map { option in
+                           return option.1 as! SocketOptionValue
+                       })
     }
 
     func testSetOneOptionTwice() throws {
@@ -57,9 +61,13 @@ class ChannelOptionStorageTest: XCTestCase {
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(1, optionsCollector.allOptions.count)
         XCTAssertEqual([ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR)],
-                       (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.0 })
+                       optionsCollector.allOptions.map { option in
+                           return option.0 as! ChannelOptions.Types.SocketOption
+                       })
         XCTAssertEqual([SocketOptionValue(2)],
-                       (optionsCollector.allOptions as! [(ChannelOptions.Types.SocketOption, SocketOptionValue)]).map { $0.1 })
+                       optionsCollector.allOptions.map { option in
+                           return option.1 as! SocketOptionValue
+                       })
     }
 }
 
