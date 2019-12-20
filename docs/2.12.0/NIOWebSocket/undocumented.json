@@ -1,0 +1,103 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOWebSocket/NIOWebSocketClientUpgrader.swift",
+      "line": 35,
+      "symbol": "NIOWebClientSocketUpgrader.init(requestKey:maxFrameSize:automaticErrorHandling:upgradePipelineHandler:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/NIOWebSocketServerUpgrader.swift",
+      "line": 22,
+      "symbol": "WebSocketUpgrader",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketFrame.swift",
+      "line": 40,
+      "symbol": "WebSocketMaskingKey.init(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketFrame.swift",
+      "line": 107,
+      "symbol": "WebSocketMaskingKey.withContiguousStorageIfAvailable(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketFrameDecoder.swift",
+      "line": 224,
+      "symbol": "WebSocketFrameDecoder.InboundIn",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketFrameDecoder.swift",
+      "line": 226,
+      "symbol": "WebSocketFrameDecoder.OutboundOut",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketFrameEncoder.swift",
+      "line": 51,
+      "symbol": "WebSocketFrameEncoder.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketOpcode.swift",
+      "line": 19,
+      "symbol": "WebSocketOpcode.continuation",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketOpcode.swift",
+      "line": 20,
+      "symbol": "WebSocketOpcode.text",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketOpcode.swift",
+      "line": 21,
+      "symbol": "WebSocketOpcode.binary",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketOpcode.swift",
+      "line": 22,
+      "symbol": "WebSocketOpcode.connectionClose",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketOpcode.swift",
+      "line": 23,
+      "symbol": "WebSocketOpcode.ping",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketOpcode.swift",
+      "line": 24,
+      "symbol": "WebSocketOpcode.pong",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOWebSocket/WebSocketProtocolErrorHandler.swift",
+      "line": 26,
+      "symbol": "WebSocketProtocolErrorHandler.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}
