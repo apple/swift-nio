@@ -77,3 +77,12 @@ This product contains "ifaddrs-android.c" and "ifaddrs-android.h" from dxr.mozil
     * https://webrtc.googlesource.com/src/+/master/LICENSE
   * HOMEPAGE:
     * https://webrtc.googlesource.com/
+
+---
+
+This product contains a derivation of Fabian Fett's 'Base64.swift'.
+
+  * LICENSE (Apache License 2.0):
+    * https://github.com/fabianfett/swift-base64-kit/blob/master/LICENSE
+  * HOMEPAGE:
+    * https://github.com/fabianfett/swift-base64-kit
