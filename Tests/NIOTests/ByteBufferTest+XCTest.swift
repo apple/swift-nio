@@ -29,6 +29,7 @@ extension ByteBufferTest {
       return [
                 ("testAllocateAndCount", testAllocateAndCount),
                 ("testEqualsComparesReadBuffersOnly", testEqualsComparesReadBuffersOnly),
+                ("testHasherUsesReadBuffersOnly", testHasherUsesReadBuffersOnly),
                 ("testSimpleReadTest", testSimpleReadTest),
                 ("testSimpleWrites", testSimpleWrites),
                 ("testMakeSureUniquelyOwnedSliceDoesNotGetReallocatedOnWrite", testMakeSureUniquelyOwnedSliceDoesNotGetReallocatedOnWrite),
