@@ -890,6 +890,15 @@ extension ByteBuffer: Equatable {
     }
 }
 
+extension ByteBuffer: Hashable {
+    /// The hash value for the readable bytes.
+    public func hash(into hasher: inout Hasher) {
+        self.withUnsafeReadableBytes { ptr in
+            hasher.combine(bytes: ptr)
+        }
+    }
+}
+
 extension ByteBuffer {
     /// Modify this `ByteBuffer` if this `ByteBuffer` is known to uniquely own its storage.
     ///
