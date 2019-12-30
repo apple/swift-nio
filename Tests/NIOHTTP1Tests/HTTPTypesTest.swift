@@ -92,5 +92,16 @@ final class HTTPTypesTest: XCTestCase {
         XCTAssertEqual(HTTPMethod(rawValue: "SOURCE"), .SOURCE)
         XCTAssertEqual(HTTPMethod(rawValue: "SOMETHINGELSE"), HTTPMethod.RAW(value: "SOMETHINGELSE"))
     }
+  
+    func testConvertFromStringToExplicitValue() {
+        switch HTTPMethod(rawValue: "GET") {
+        case .RAW(value: "GET"):
+            XCTFail("Expected \"GET\" to map to explicit .GET value and not .RAW(value: \"GET\")")
+        case .GET:
+            break // everything is awesome
+        default:
+            XCTFail("Unexpected case")
+        }
+    }
 }
 
