@@ -1416,6 +1416,5 @@ extension HTTPMethod: RawRepresentable {
             default:
                 self = .RAW(value: rawValue)
         }
-        self = .RAW(value: rawValue)
     }
 }
