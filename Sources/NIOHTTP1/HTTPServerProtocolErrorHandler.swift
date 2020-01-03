@@ -59,8 +59,8 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
         let res = self.unwrapOutboundIn(data)
         switch res {
         case .head(let head):
-            if head.status != .`continue` || self.hasUnterminatedResponse {
-                precondition(!self.hasUnterminatedResponse)
+            precondition(!self.hasUnterminatedResponse)
+            if head.status != .`continue` {
                 self.hasUnterminatedResponse = true
             }
         case .body:
