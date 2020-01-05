@@ -509,6 +509,35 @@ extension EventLoopFuture {
             }
         }
     }
+    
+    /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
+    /// performs a synchronous computation and returns a new value of type `EventLoopFuture<NewValue>`. 
+    /// The provided callback may optionally `throw`.
+    ///
+    /// Operations performed in `flatMapThrowing` should not block, or they will block the entire
+    /// event loop. `flatMapThrowing` is intended for use when you have a data-driven function that
+    /// performs a simple data transformation that can potentially error.
+    ///
+    /// If your callback function throws, the returned `EventLoopFuture` will error.
+    ///
+    /// - parameters:
+    ///     - callback: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new value lifted into a new `EventLoopFuture`.
+    /// - returns: A future that will receive the eventual value.
+    @inlinable
+    public func flatMapFutureThrowing<NewValue>(file: StaticString = #file,
+                                line: UInt = #line,
+                                _ callback: @escaping (Value) throws -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
+        return self.flatMap(file: file, line: line) { (value: Value) -> EventLoopFuture<NewValue> in
+            let promise = self.eventLoop.makePromise(of: NewValue.self)
+            do {
+                promise.completeWith(try callback(value))
+            } catch {
+                promise.fail(error)
+            }
+            return promise.futureResult
+        }
+    }
 
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// may recover from the error and returns a new value of type `Value`. The provided callback may optionally `throw`,
