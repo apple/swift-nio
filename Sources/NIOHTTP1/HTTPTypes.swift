@@ -407,7 +407,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// returns them in their original representation: that means that a comma-separated
     /// header field list may contain more than one entry, some of which contain commas
     /// and some do not. If you want a representation of the header fields suitable for
-    /// performing computation on, consider `getCanonicalForm`.
+    /// performing computation on, consider `subscript(canonicalForm:)`.
     ///
     /// - Parameter name: The header field name whose values are to be retrieved.
     /// - Returns: A list of the values for that header field name.
@@ -427,7 +427,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// but instead returns the first value from the original representation: that means
     /// that a comma-separated header field list may contain more than one entry, some of
     /// which contain commas and some do not. If you want a representation of the header fields
-    /// suitable for performing computation on, consider `getCanonicalForm`.
+    /// suitable for performing computation on, consider `subscript(canonicalForm:)`.
     ///
     /// - Parameter name: The header field name whose first value should be retrieved.
     /// - Returns: The first value for the header field name.
