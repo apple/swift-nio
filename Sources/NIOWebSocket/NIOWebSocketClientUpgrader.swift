@@ -20,7 +20,7 @@ import NIOHTTP1
 /// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request. 
 /// This upgrader also assumes that the `HTTPClientUpgradeHandler` will appropriately mutate the
 /// pipeline to remove the HTTP `ChannelHandler`s.
-public final class NIOWebClientSocketUpgrader: NIOHTTPClientProtocolUpgrader {
+public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"

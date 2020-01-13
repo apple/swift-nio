@@ -531,3 +531,6 @@ extension WebSocketFrameDecoder {
         self.init(maxFrameSize: maxFrameSize)
     }
 }
+
+@available(*, deprecated, renamed: "NIOWebSocketClientUpgrader")
+typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader
