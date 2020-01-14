@@ -47,8 +47,8 @@ public enum ByteToMessageDecoderVerifier {
     ///     exampleInput1.writeString("example-in1")
     ///     var exampleInput2 = channel.allocator.buffer(capacity: 16)
     ///     exampleInput2.writeString("example-in2")
-    ///     let expectedInOuts = [(exampleInput1, ExampleDecoderOutput("1")),
-    ///                           (exampleInput2, ExampleDecoderOutput("2"))
+    ///     let expectedInOuts = [(exampleInput1, [ExampleDecoderOutput("1")]),
+    ///                           (exampleInput2, [ExampleDecoderOutput("2")])
     ///                          ]
     ///     XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: expectedInOuts,
     ///                                                                     decoderFactory: { ExampleDecoder() }))
