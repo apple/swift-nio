@@ -16,7 +16,7 @@ import NIO
 import NIOHTTP1
 
 @available(*, deprecated, renamed: "NIOWebSocketClientUpgrader")
-typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader
+public  typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader
 
 /// A `HTTPClientProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
