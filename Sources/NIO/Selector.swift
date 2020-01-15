@@ -547,9 +547,9 @@ final class Selector<R: Registration> {
                 _ = try EventFd.eventfd_read(fd: self.eventFD, value: &val)
             case self.timerFD:
                 // Consume event
-                var val: UInt = 0
+                var val: UInt64 = 0
                 // We are not interested in the result
-                _ = Glibc.read(self.timerFD, &val, MemoryLayout<UInt>.size)
+                _ = Glibc.read(self.timerFD, &val, MemoryLayout.size(ofValue: val))
 
                 // Processed the earliest set timer so reset it.
                 self.earliestTimer = .distantFuture
