@@ -427,7 +427,7 @@ public typealias HTTPResponseDecoder = HTTPDecoder<HTTPClientResponsePart, HTTPC
 /// that reason, applications should try to ensure that the `HTTPRequestDecoder` *later* in the
 /// `ChannelPipeline` than the `HTTPResponseEncoder`.
 ///
-/// Rather than set this up manually, consider using `ChannelPipeline.addHTTPServerHandlers`.
+/// Rather than set this up manually, consider using `ChannelPipeline.configureHTTPServerPipeline`.
 public typealias HTTPRequestDecoder = HTTPDecoder<HTTPServerRequestPart, HTTPServerResponsePart>
 
 public enum HTTPDecoderKind {
