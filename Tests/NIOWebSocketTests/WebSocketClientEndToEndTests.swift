@@ -168,7 +168,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
         let requestKey = "OfS0wDaT5NoxF2gqm7Zj2YtetzM="
         let responseKey = "yKEqitDFPE81FyIhKTm+ojBqigk="
 
-        let basicUpgrader = NIOWebClientSocketUpgrader(requestKey: requestKey,
+        let basicUpgrader = NIOWebSocketClientUpgrader(requestKey: requestKey,
                                                        upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
                 channel.pipeline.addHandler(WebSocketRecorderHandler())
         })
@@ -221,7 +221,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
         
         let requestKey = "OfS0wDaT5NoxF2gqm7Zj2YtetzM="
         
-        let basicUpgrader = NIOWebClientSocketUpgrader(requestKey: requestKey,
+        let basicUpgrader = NIOWebSocketClientUpgrader(requestKey: requestKey,
                                                        upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
                                                         channel.pipeline.addHandler(WebSocketRecorderHandler())
         })
@@ -252,7 +252,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
         let requestKey = "OfS0wDaT5NoxF2gqm7Zj2YtetzM="
         let responseKey = "notACorrectKeyL1am=F1y=nn="
         
-        let basicUpgrader = NIOWebClientSocketUpgrader(requestKey: requestKey,
+        let basicUpgrader = NIOWebSocketClientUpgrader(requestKey: requestKey,
                                                        upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
                                                         channel.pipeline.addHandler(WebSocketRecorderHandler())
         })
@@ -283,7 +283,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
         let requestKey = "OfS0wDaT5NoxF2gqm7Zj2YtetzM="
         let responseKey = "yKEqitDFPE81FyIhKTm+ojBqigk="
         
-        let basicUpgrader = NIOWebClientSocketUpgrader(requestKey: requestKey,
+        let basicUpgrader = NIOWebSocketClientUpgrader(requestKey: requestKey,
                                                        upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
                                                         channel.pipeline.addHandler(WebSocketRecorderHandler())
         })
@@ -313,7 +313,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
         
         let handler = WebSocketRecorderHandler()
         
-        let basicUpgrader = NIOWebClientSocketUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
+        let basicUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
                                                        upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
                                                         channel.pipeline.addHandler(handler)
         })
