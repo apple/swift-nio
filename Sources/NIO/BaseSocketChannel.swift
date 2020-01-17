@@ -480,19 +480,34 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return .unregister
         }
 
-        defer {
-            inFlushNow = false
-        }
-        inFlushNow = true
-
         do {
-            assert(self.lifecycleManager.isActive)
-            switch try self.writeToSocket() {
-            case .couldNotWriteEverything:
-                return .register
-            case .writtenCompletely:
-                return .unregister
+            var writeResult: OverallWriteResult? = nil
+
+            defer {
+                if writeResult?.writabilityChange == .some(true) {
+                    // We went from not writable to writable.
+                    self.pipeline.fireChannelWritabilityChanged0()
+                }
             }
+
+            do {
+                assert(!self.inFlushNow)
+                self.inFlushNow = true
+                defer {
+                    self.inFlushNow = false
+                }
+
+                assert(self.lifecycleManager.isActive)
+                writeResult = try self.writeToSocket()
+                switch writeResult!.writeResult {
+                case .couldNotWriteEverything:
+                    return .register
+                case .writtenCompletely:
+                    return .unregister
+                }
+            }
+
+
         } catch let err {
             // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
             // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.

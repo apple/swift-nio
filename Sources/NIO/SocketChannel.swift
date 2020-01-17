@@ -590,12 +590,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }, vectorWriteOperation: { msgs in
             try self.socket.sendmmsg(msgs: msgs)
         })
-        if result.writable {
-            // writable again
-            assert(self.isActive)
-            self.pipeline.fireChannelWritabilityChanged0()
-        }
-        return result.writeResult
+        return result
     }
 
     // MARK: Datagram Channel overrides not required by BaseSocketChannel

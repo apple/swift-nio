@@ -14,6 +14,7 @@
 
 import XCTest
 @testable import NIO
+import NIOTestUtils
 import NIOConcurrencyHelpers
 
 class StreamChannelTest: XCTestCase {
@@ -326,6 +327,142 @@ class StreamChannelTest: XCTestCase {
             XCTAssertTrue(areReadsOkayNow.compareAndExchange(expected: false, desired: true))
         }
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(forceSeparateEventLoops: true, runTest))
+    }
+
+    func testFlushInWritePromise() {
+        class WaitForTwoReadsHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            private let allDonePromise: EventLoopPromise<Void>
+            private var numberOfReads = 0
+
+            init(allDonePromise: EventLoopPromise<Void>) {
+                self.allDonePromise = allDonePromise
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                // The two writes could be coalesced, so we add up the bytes and not always the number of read calls.
+                self.numberOfReads += self.unwrapInboundIn(data).readableBytes
+                if self.numberOfReads == 2 {
+                    self.allDonePromise.succeed(())
+                }
+            }
+        }
+
+        func runTest(receiver: Channel, sender: Channel) throws {
+            let allDonePromise = receiver.eventLoop.makePromise(of: Void.self)
+            XCTAssertNoThrow(try sender.setOption(ChannelOptions.writeSpin, value: 0).wait())
+            XCTAssertNoThrow(try receiver.pipeline.addHandler(WaitForTwoReadsHandler(allDonePromise: allDonePromise)).wait())
+            var buffer = sender.allocator.buffer(capacity: 1)
+            buffer.writeString("X")
+            XCTAssertNoThrow(try sender.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
+                let writePromise = sender.eventLoop.makePromise(of: Void.self)
+                let bothWritesResult = writePromise.futureResult.flatMap {
+                    sender.writeAndFlush(buffer)
+                }
+                sender.writeAndFlush(buffer, promise: writePromise)
+                return bothWritesResult
+            }.wait())
+            XCTAssertNoThrow(try allDonePromise.futureResult.wait())
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
+    }
+
+    func testWriteAndFlushInChannelWritabilityChangedToTrue() {
+        // regression test for rdar://58571521
+        final class WriteWhenWritabilityGoesToTrue: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            private var numberOfCalls = 0
+
+            func channelWritabilityChanged(context: ChannelHandlerContext) {
+                self.numberOfCalls += 1
+
+                switch self.numberOfCalls {
+                case 1:
+                    // This is us exceeding the high water mark
+                    XCTAssertFalse(context.channel.isWritable)
+                case 2:
+                    // This is after the two bytes have been written.
+                    XCTAssertTrue(context.channel.isWritable)
+
+                    // Now, let's trigger another write which should cause flushNow to be re-entered. But first, let's
+                    // raise the high water mark so we don't get another call straight away.
+                    var buffer = context.channel.allocator.buffer(capacity: 5)
+                    buffer.writeString("hello")
+                    context.channel.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1024, high: 1024)).flatMap {
+                        context.writeAndFlush(self.wrapOutboundOut(buffer))
+                    }.whenFailure { error in
+                        XCTFail("unexpected error: \(error)")
+                    }
+                default:
+                    XCTFail("call \(self.numberOfCalls) to \(#function) unexpected")
+                }
+            }
+        }
+
+        final class WaitForNumberOfBytes: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            private let allDonePromise: EventLoopPromise<Void>
+            private var numberOfReads = 0
+            private let expectedNumberOfBytes: Int
+
+            init(numberOfBytes: Int, allDonePromise: EventLoopPromise<Void>) {
+                self.expectedNumberOfBytes = numberOfBytes
+                self.allDonePromise = allDonePromise
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                // The two writes could be coalesced, so we add up the bytes and not always the number of read calls.
+                self.numberOfReads += self.unwrapInboundIn(data).readableBytes
+                if self.numberOfReads >= self.expectedNumberOfBytes {
+                    self.allDonePromise.succeed(())
+                }
+            }
+
+            func handlerRemoved(context: ChannelHandlerContext) {
+                self.allDonePromise.fail(ChannelError.ioOnClosedChannel)
+            }
+        }
+
+        func runTest(receiver: Channel, sender: Channel) throws {
+            // Write spin might just disturb this test so let's switch it off
+            XCTAssertNoThrow(try sender.setOption(ChannelOptions.writeSpin, value: 0).wait())
+            // Writing more than the high water mark will cause the channel to become unwritable very easily
+            XCTAssertNoThrow(try sender.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1, high: 1)).wait())
+
+            let sevenBytesReceived = receiver.eventLoop.makePromise(of: Void.self)
+            XCTAssertNoThrow(try receiver.pipeline.addHandler(WaitForNumberOfBytes(numberOfBytes: 7,
+                                                                                   allDonePromise: sevenBytesReceived)).wait())
+
+            let eventCounterHandler = EventCounterHandler()
+            XCTAssertNoThrow(try sender.pipeline.addHandler(EventCounterHandler()).wait())
+            XCTAssertNoThrow(try sender.pipeline.addHandler(WriteWhenWritabilityGoesToTrue()).wait())
+
+            var buffer = sender.allocator.buffer(capacity: 5)
+            buffer.writeString("XX") // 2 bytes, exceeds the high water mark
+
+            XCTAssertTrue(sender.isWritable)
+            XCTAssertEqual(0, eventCounterHandler.channelWritabilityChangedCalls)
+            XCTAssertNoThrow(try sender.writeAndFlush(buffer).wait())
+            XCTAssertNoThrow(try sevenBytesReceived.futureResult.wait())
+        }
+
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
+    }
+
+    func testWritabilityChangedDoesNotGetCalledOnSimpleWrite() {
+        func runTest(receiver: Channel, sender: Channel) throws {
+            let eventCounter = EventCounterHandler()
+            XCTAssertNoThrow(try sender.pipeline.addHandler(eventCounter).wait())
+            var buffer = sender.allocator.buffer(capacity: 1)
+            buffer.writeString("X")
+            XCTAssertNoThrow(try sender.writeAndFlush(buffer).wait())
+            XCTAssertEqual(0, eventCounter.channelWritabilityChangedCalls)
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
     }
 }
 
