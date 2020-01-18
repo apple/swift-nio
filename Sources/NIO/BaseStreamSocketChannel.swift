@@ -150,11 +150,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }, scalarFileWriteOperation: { descriptor, index, endIndex in
             try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
         })
-        if result.writable {
-            // writable again
-            self.pipeline.fireChannelWritabilityChanged0()
-        }
-        return result.writeResult
+        return result
     }
 
     final override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {

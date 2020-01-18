@@ -36,6 +36,9 @@ extension StreamChannelTest {
                 ("testWriteFailsAfterOutputClosed", testWriteFailsAfterOutputClosed),
                 ("testVectorWrites", testVectorWrites),
                 ("testLotsOfWritesWhilstOtherSideNotReading", testLotsOfWritesWhilstOtherSideNotReading),
+                ("testFlushInWritePromise", testFlushInWritePromise),
+                ("testWriteAndFlushInChannelWritabilityChangedToTrue", testWriteAndFlushInChannelWritabilityChangedToTrue),
+                ("testWritabilityChangedDoesNotGetCalledOnSimpleWrite", testWritabilityChangedDoesNotGetCalledOnSimpleWrite),
            ]
    }
 }
