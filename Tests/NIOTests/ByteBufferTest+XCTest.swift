@@ -37,6 +37,8 @@ extension ByteBufferTest {
                 ("testReadWrite", testReadWrite),
                 ("testStaticStringReadTests", testStaticStringReadTests),
                 ("testString", testString),
+                ("testWriteSubstring", testWriteSubstring),
+                ("testSetSubstring", testSetSubstring),
                 ("testSliceEasy", testSliceEasy),
                 ("testWriteStringMovesWriterIndex", testWriteStringMovesWriterIndex),
                 ("testSetExpandsBufferOnUpperBoundsCheckFailure", testSetExpandsBufferOnUpperBoundsCheckFailure),
