@@ -330,11 +330,11 @@ class StreamChannelTest: XCTestCase {
     }
 
     func testFlushInWritePromise() {
-        class WaitForTwoReadsHandler: ChannelInboundHandler {
+        class WaitForTwoBytesHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
             private let allDonePromise: EventLoopPromise<Void>
-            private var numberOfReads = 0
+            private var numberOfBytes = 0
 
             init(allDonePromise: EventLoopPromise<Void>) {
                 self.allDonePromise = allDonePromise
@@ -342,8 +342,8 @@ class StreamChannelTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 // The two writes could be coalesced, so we add up the bytes and not always the number of read calls.
-                self.numberOfReads += self.unwrapInboundIn(data).readableBytes
-                if self.numberOfReads == 2 {
+                self.numberOfBytes += self.unwrapInboundIn(data).readableBytes
+                if self.numberOfBytes == 2 {
                     self.allDonePromise.succeed(())
                 }
             }
@@ -352,7 +352,7 @@ class StreamChannelTest: XCTestCase {
         func runTest(receiver: Channel, sender: Channel) throws {
             let allDonePromise = receiver.eventLoop.makePromise(of: Void.self)
             XCTAssertNoThrow(try sender.setOption(ChannelOptions.writeSpin, value: 0).wait())
-            XCTAssertNoThrow(try receiver.pipeline.addHandler(WaitForTwoReadsHandler(allDonePromise: allDonePromise)).wait())
+            XCTAssertNoThrow(try receiver.pipeline.addHandler(WaitForTwoBytesHandler(allDonePromise: allDonePromise)).wait())
             var buffer = sender.allocator.buffer(capacity: 1)
             buffer.writeString("X")
             XCTAssertNoThrow(try sender.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in

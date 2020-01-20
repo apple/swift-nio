@@ -484,6 +484,16 @@ extension PendingWritesManager {
             } while oneResult == .writtenCompletely
         }
 
+        // Please note that the re-entrancy protection in `flushNow` expects this code to try to write _all_ the data
+        // that is flushed. If we receive a `flush` whilst processing a previous `flush`, we won't do anything because
+        // we expect this loop to attempt to attempt all writes, even ones that arrive after this method begins to run.
+        //
+        // In other words, don't return `.writtenCompletely` unless you've written everything the PendingWritesManager
+        // knows to be flushed.
+        //
+        // Also, it is very important to not do any outcalls to user code outside of the loop until the `flushNow`
+        // re-entrancy protection is off again.
+
         if !wasWritable {
             // Was not writable before so signal back to the caller the possible state change
             result.writabilityChange = self.isWritable
