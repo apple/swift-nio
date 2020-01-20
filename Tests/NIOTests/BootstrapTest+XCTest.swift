@@ -33,6 +33,7 @@ extension BootstrapTest {
                 ("testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
                 ("testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
                 ("testTCPClientBootstrapAllowsConformanceCorrectly", testTCPClientBootstrapAllowsConformanceCorrectly),
+                ("testServerBootstrapBindTimeout", testServerBootstrapBindTimeout),
            ]
    }
 }

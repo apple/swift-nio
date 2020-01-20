@@ -145,6 +145,14 @@ public final class ServerBootstrap {
         return self
     }
 
+    /// Specifies a timeout to apply to a bind attempt. Currently unsupported.
+    ///
+    /// - parameters:
+    ///     - timeout: The timeout that will apply to the bind attempt.
+    public func bindTimeout(_ timeout: TimeAmount) -> Self {
+        return self
+    }
+
     /// Bind the `ServerSocketChannel` to `host` and `port`.
     ///
     /// - parameters:
