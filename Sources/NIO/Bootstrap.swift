@@ -202,7 +202,7 @@ public final class ServerBootstrap {
                                            protocolFamily: address.protocolFamily)
         }
 
-        return bind0(makeServerChannel: makeChannel) { (eventGroup, serverChannel) in
+        return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
             serverChannel.registerAndDoSynchronously { serverChannel in
                 serverChannel.bind(to: address)
             }
