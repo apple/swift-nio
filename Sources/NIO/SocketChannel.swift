@@ -291,6 +291,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
     }
 
+    override func hasFlushedPendingWrites() -> Bool {
+        return false
+    }
+
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.operationUnsupported)
     }
@@ -561,6 +565,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             assert(self.isActive)
             pipeline.fireChannelWritabilityChanged0()
         }
+    }
+
+    override final func hasFlushedPendingWrites() -> Bool {
+        return self.pendingWrites.isFlushPending
     }
 
     /// Mark a flush point. This is called when flush is received, and instructs
