@@ -21,7 +21,7 @@
     <header class="header">
       <p class="header-col header-col--primary">
         <a class="header-link" href="../index.html">
-          NIO 2.12.0 Docs
+          NIO 2.13.0 Docs
         </a>
          (90% documented)
       </p>
@@ -40,7 +40,7 @@
         </p>
     
         <p class="header-col header-col--secondary">
-          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E12%2E0%2FNIO%2Fdocsets%2FNIO%2Exml">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple%2Egithub%2Eio%2Fswift%2Dnio%2Fdocs%2F2%2E13%2E0%2FNIO%2Fdocsets%2FNIO%2Exml">
             <img class="header-icon" src="../img/dash.png"/>
             Install in Dash
           </a>
@@ -507,7 +507,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L32">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L32">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -537,7 +537,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L35">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L35">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -568,7 +568,7 @@ of blocking.</p>
                         </div>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L38-L43">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L38-L43">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -617,7 +617,7 @@ of blocking.</p>
                         </table>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L51-L53">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L51-L53">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -644,6 +644,9 @@ times, delivering <code>chunkSize</code> bytes each time. If less than <code>fil
 <code>chunkHandler</code> will be called less often with the last invocation possibly being of less than <code>chunkSize</code> bytes.</p>
 
 <p>The allocation and reading of a subsequent chunk will only be attempted when <code>chunkHandler</code> succeeds.</p>
+
+<p>This method will not use the file descriptor&rsquo;s seek pointer which means there is no danger of reading from the
+same <code><a href="../Structs/FileRegion.html">FileRegion</a></code> in multiple threads.</p>
 
                       </div>
                       <div class="declaration">
@@ -730,7 +733,7 @@ times, delivering <code>chunkSize</code> bytes each time. If less than <code>fil
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which is the result of the overall operation. If either the reading of <code>fileHandle</code> or <code>chunkHandler</code> fails, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will fail too. If the reading of <code>fileHandle</code> as well as <code>chunkHandler</code> always succeeded, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will succeed too.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L72-L91">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L75-L88">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -759,7 +762,11 @@ times, delivering <code>chunkSize</code> bytes each time. If less than <code>byt
 <p>The allocation and reading of a subsequent chunk will only be attempted when <code>chunkHandler</code> succeeds.</p>
 <div class="aside aside-note">
     <p class="aside-title">Note</p>
-    <p><code><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV11readChunked10fileRegion9chunkSize9allocator9eventLoop0J7HandlerAA05EventN6FutureCyytGAA0dI0V_SiAA19ByteBufferAllocatorVAA0pN0_pAlA0rS0VctF">readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)</a></code> should be preferred as it uses <code><a href="../Structs/FileRegion.html">FileRegion</a></code> object instead of raw <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code>s.</p>
+    <p><code><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV11readChunked10fileRegion9chunkSize9allocator9eventLoop0J7HandlerAA05EventN6FutureCyytGAA0dI0V_SiAA19ByteBufferAllocatorVAA0pN0_pAlA0rS0VctF">readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)</a></code> should be preferred as it uses
+    <code><a href="../Structs/FileRegion.html">FileRegion</a></code> object instead of raw <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code>s. In case you do want to use raw <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code>s,
+    please consider using <code>readChunked(fileHandle:fromOffset:chunkSize:allocator:eventLoop:chunkHandler:)</code>
+    because it doesn&rsquo;t use the file descriptor&rsquo;s seek pointer (which may be shared with other file
+    descriptors and even across processes.)</p>
 
 </div>
 
@@ -860,7 +867,143 @@ times, delivering <code>chunkSize</code> bytes each time. If less than <code>byt
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which is the result of the overall operation. If either the reading of <code>fileHandle</code> or <code>chunkHandler</code> fails, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will fail too. If the reading of <code>fileHandle</code> as well as <code>chunkHandler</code> always succeeded, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will succeed too.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L113-L138">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L114-L126">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOV11readChunked10fileHandle10fromOffset9byteCount9chunkSize9allocator9eventLoop0N7HandlerAA05EventR6FutureCyytGAA07NIOFileI0C_s5Int64VS2iAA19ByteBufferAllocatorVAA0tR0_pAnA0xY0VctF"></a>
+                    <a name="//apple_ref/swift/Method/readChunked(fileHandle:fromOffset:byteCount:chunkSize:allocator:eventLoop:chunkHandler:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOV11readChunked10fileHandle10fromOffset9byteCount9chunkSize9allocator9eventLoop0N7HandlerAA05EventR6FutureCyytGAA07NIOFileI0C_s5Int64VS2iAA19ByteBufferAllocatorVAA0tR0_pAnA0xY0VctF">readChunked(fileHandle:fromOffset:byteCount:chunkSize:allocator:eventLoop:chunkHandler:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read <code>byteCount</code> bytes from offset <code>fileOffset</code> in chunks of <code>chunkSize</code> bytes from <code>fileHandle</code> in <code>NonBlockingFileIO</code>&lsquo;s private thread
+pool which is separate from any <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> thread.</p>
+
+<p><code>chunkHandler</code> will be called on <code>eventLoop</code> for every chunk that was read. Assuming <code>byteCount</code> is greater than
+zero and there are enough bytes available <code>chunkHandler</code> will be called <code>1 + |_ byteCount / chunkSize _|</code>
+times, delivering <code>chunkSize</code> bytes each time. If less than <code>byteCount</code> bytes can be read from <code>descriptor</code>,
+<code>chunkHandler</code> will be called less often with the last invocation possibly being of less than <code>chunkSize</code> bytes.</p>
+
+<p>The allocation and reading of a subsequent chunk will only be attempted when <code>chunkHandler</code> succeeds.</p>
+
+<p>This method will not use the file descriptor&rsquo;s seek pointer which means there is no danger of reading from the
+same <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code> in multiple threads.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p><code><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV11readChunked10fileRegion9chunkSize9allocator9eventLoop0J7HandlerAA05EventN6FutureCyytGAA0dI0V_SiAA19ByteBufferAllocatorVAA0pN0_pAlA0rS0VctF">readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)</a></code> should be preferred as it uses
+    <code><a href="../Structs/FileRegion.html">FileRegion</a></code> object instead of raw <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code>s.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">readChunked</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></span><span class="p">,</span>
+                        <span class="n">fromOffset</span> <span class="nv">fileOffset</span><span class="p">:</span> <span class="kt">Int64</span><span class="p">,</span>
+                        <span class="nv">byteCount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span>
+                        <span class="nv">chunkSize</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="kt">NonBlockingFileIO</span><span class="o">.</span><span class="n"><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV16defaultChunkSizeSivpZ">defaultChunkSize</a></span><span class="p">,</span>
+                        <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span>
+                        <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">,</span>
+                        <span class="nv">chunkHandler</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>fileHandle</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code> to read from.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>byteCount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes to read from <code>fileHandle</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>chunkSize</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The size of the individual chunks to deliver.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>allocator</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A <code><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></code> used to allocate space for the chunks.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>eventLoop</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> to call <code>chunkHandler</code> on.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>chunkHandler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Called for every chunk read. The next chunk will be read upon successful completion of the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>. If the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> fails, the overall operation is aborted.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which is the result of the overall operation. If either the reading of <code>fileHandle</code> or <code>chunkHandler</code> fails, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will fail too. If the reading of <code>fileHandle</code> as well as <code>chunkHandler</code> always succeeded, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will succeed too.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L152-L166">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -882,6 +1025,9 @@ times, delivering <code>chunkSize</code> bytes each time. If less than <code>byt
 
 <p>The returned <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will not have less than <code>fileRegion.readableBytes</code> unless we hit end-of-file in which
 case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will contain the bytes available to read.</p>
+
+<p>This method will not use the file descriptor&rsquo;s seek pointer which means there is no danger of reading from the
+same <code><a href="../Structs/FileRegion.html">FileRegion</a></code> in multiple threads.</p>
 <div class="aside aside-note">
     <p class="aside-title">Note</p>
     Only use this function for small enough <code><a href="../Structs/FileRegion.html">FileRegion</a></code>s as it will need to allocate enough memory to hold <code>fileRegion.readableBytes</code> bytes.
@@ -950,7 +1096,7 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which delivers a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> if the read was successful or a failure on error.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L153-L166">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L222-L229">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -979,7 +1125,11 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
 </div>
 <div class="aside aside-note">
     <p class="aside-title">Note</p>
-    <p><code><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV4read10fileRegion9allocator9eventLoopAA05EventK6FutureCyAA10ByteBufferVGAA0dH0V_AA0nO9AllocatorVAA0lK0_ptF">read(fileRegion:allocator:eventLoop:)</a></code> should be preferred as it uses <code><a href="../Structs/FileRegion.html">FileRegion</a></code> object instead of raw <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code>s.</p>
+    <p><code><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV4read10fileRegion9allocator9eventLoopAA05EventK6FutureCyAA10ByteBufferVGAA0dH0V_AA0nO9AllocatorVAA0lK0_ptF">read(fileRegion:allocator:eventLoop:)</a></code> should be preferred as it uses <code><a href="../Structs/FileRegion.html">FileRegion</a></code> object instead of
+    raw <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code>s. In case you do want to use raw <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code>s,
+    please consider using <code><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV4read10fileHandle10fromOffset9byteCount9allocator9eventLoopAA05EventO6FutureCyAA10ByteBufferVGAA07NIOFileH0C_s5Int64VSiAA0rS9AllocatorVAA0pO0_ptF">read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)</a></code>
+    because it doesn&rsquo;t use the file descriptor&rsquo;s seek pointer (which may be shared with other file
+    descriptors and even across processes.)</p>
 
 </div>
 
@@ -988,7 +1138,10 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">read</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></span><span class="p">,</span> <span class="nv">byteCount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">read</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></span><span class="p">,</span>
+                 <span class="nv">byteCount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span>
+                 <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span>
+                 <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -1052,7 +1205,129 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which delivers a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> if the read was successful or a failure on error.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L182-L214">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L249-L258">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOV4read10fileHandle10fromOffset9byteCount9allocator9eventLoopAA05EventO6FutureCyAA10ByteBufferVGAA07NIOFileH0C_s5Int64VSiAA0rS9AllocatorVAA0pO0_ptF"></a>
+                    <a name="//apple_ref/swift/Method/read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOV4read10fileHandle10fromOffset9byteCount9allocator9eventLoopAA05EventO6FutureCyAA10ByteBufferVGAA07NIOFileH0C_s5Int64VSiAA0rS9AllocatorVAA0pO0_ptF">read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read <code>byteCount</code> bytes starting at <code>fileOffset</code> from <code>fileHandle</code> in <code>NonBlockingFileIO</code>&lsquo;s private thread pool
+which is separate from any <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> thread.</p>
+
+<p>The returned <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will not have less than <code>byteCount</code> bytes unless we hit end-of-file in which
+case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will contain the bytes available to read.</p>
+
+<p>This method will not use the file descriptor&rsquo;s seek pointer which means there is no danger of reading from the
+same <code>fileHandle</code> in multiple threads.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    Only use this function for small enough <code>byteCount</code>s as it will need to allocate enough memory to hold <code>byteCount</code> bytes.
+
+</div>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p><code><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV4read10fileRegion9allocator9eventLoopAA05EventK6FutureCyAA10ByteBufferVGAA0dH0V_AA0nO9AllocatorVAA0lK0_ptF">read(fileRegion:allocator:eventLoop:)</a></code> should be preferred as it uses <code><a href="../Structs/FileRegion.html">FileRegion</a></code> object instead of raw <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code>s.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">read</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></span><span class="p">,</span>
+                 <span class="n">fromOffset</span> <span class="nv">fileOffset</span><span class="p">:</span> <span class="kt">Int64</span><span class="p">,</span>
+                 <span class="nv">byteCount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span>
+                 <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span>
+                 <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>fileHandle</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code> to read.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>fileOffset</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The offset to read from.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>byteCount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes to read from <code>fileHandle</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>allocator</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A <code><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></code> used to allocate space for the returned <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>eventLoop</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> to create the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> from.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which delivers a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> if the read was successful or a failure on error.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L279-L289">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1131,7 +1406,7 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which is fulfilled if the write was successful or fails on error.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L223-L254">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L343-L374">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1204,7 +1479,7 @@ comprising of the whole file. The caller must close the returned <code><a href="
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> containing the <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code> and the <code><a href="../Structs/FileRegion.html">FileRegion</a></code> comprising the whole file.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L267-L278">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L387-L398">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1296,7 +1571,7 @@ The caller must close the returned <code><a href="../Classes/NIOFileHandle.html"
                         <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> containing the <code><a href="../Classes/NIOFileHandle.html">NIOFileHandle</a></code> and the <code><a href="../Structs/FileRegion.html">FileRegion</a></code> comprising the whole file.</p>
                       </div>
                       <div class="slightly-smaller">
-                        <a href="https://github.com/apple/swift-nio/tree/2.12.0/Sources/NIO/NonBlockingFileIO.swift#L291-L295">Show on GitHub</a>
+                        <a href="https://github.com/apple/swift-nio/tree/2.13.0/Sources/NIO/NonBlockingFileIO.swift#L411-L415">Show on GitHub</a>
                       </div>
                     </section>
                   </div>
@@ -1309,7 +1584,7 @@ The caller must close the returned <code><a href="../Classes/NIOFileHandle.html"
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-12-20)</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2020-01-22)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
