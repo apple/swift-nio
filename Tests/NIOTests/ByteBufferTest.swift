@@ -201,6 +201,35 @@ class ByteBufferTest: XCTestCase {
         let string = buf.getString(at: 0, length: written)
         XCTAssertEqual("Hello", string)
     }
+    
+    func testWriteSubstring() {
+        var text = "Hello"
+        let written = buf.writeSubstring(text[...])
+        var string = buf.getString(at: 0, length: written)
+        XCTAssertEqual(text, string)
+        
+        text = ""
+        buf.writeSubstring(text[...])
+        string = buf.getString(at: 0, length: written)
+        XCTAssertEqual("Hello", string)
+    }
+    
+    func testSetSubstring() {
+        let text = "Hello"
+        buf.writeSubstring(text[...])
+        
+        var written = buf.setSubstring(text[...], at: 0)
+        var string = buf.getString(at: 0, length: written)
+        XCTAssertEqual(text, string)
+        
+        written = buf.setSubstring(text[text.index(after: text.startIndex)...], at: 1)
+        string = buf.getString(at: 0, length: written + 1)
+        XCTAssertEqual(text, string)
+        
+        written = buf.setSubstring(text[text.index(after: text.startIndex)...], at: 0)
+        string = buf.getString(at: 0, length: written)
+        XCTAssertEqual("ello", string)
+    }
 
     func testSliceEasy() {
         buf.writeString("0123456789abcdefg")
