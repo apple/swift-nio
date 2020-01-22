@@ -246,4 +246,20 @@ class BootstrapTest: XCTestCase {
             XCTFail("Did not generate a valid Bootstrap")
         }
     }
+    
+    func testServerBootstrapBindTimeout() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        // Set a bindTimeout and call bind. Setting a bind timeout is currently unsupported
+        // by ServerBootstrap. We therefore expect the bind timeout to be ignored and bind to
+        // succeed, even with a minimal bind timeout.
+        let bootstrap = ServerBootstrap(group: group)
+            .bindTimeout(.nanoseconds(0))
+
+        let channel = try assertNoThrowWithValue(bootstrap.bind(host: "127.0.0.1", port: 0).wait())
+        XCTAssertNoThrow(try channel.close().wait())
+    }
 }
