@@ -174,33 +174,42 @@ public struct NonBlockingFileIO {
         precondition(chunkSize > 0, "chunkSize must be > 0 (is \(chunkSize))")
         let remainingReads = 1 + (byteCount / chunkSize)
         let lastReadSize = byteCount % chunkSize
+      
+        let promise = eventLoop.makePromise(of: Void.self)
 
-        func _read(remainingReads: Int, bytesReadSoFar: Int64) -> EventLoopFuture<Void> {
+        func _read(remainingReads: Int, bytesReadSoFar: Int64) {
             if remainingReads > 1 || (remainingReads == 1 && lastReadSize > 0) {
                 let readSize = remainingReads > 1 ? chunkSize : lastReadSize
                 assert(readSize > 0)
-                return self.read0(fileHandle: fileHandle,
-                                  fromOffset: fromOffset.map { $0 + bytesReadSoFar },
-                                  byteCount: readSize,
-                                  allocator: allocator,
-                                  eventLoop: eventLoop).flatMap { buffer in
+                let readFuture = self.read0(fileHandle: fileHandle,
+                                            fromOffset: fromOffset.map { $0 + bytesReadSoFar },
+                                            byteCount: readSize,
+                                            allocator: allocator,
+                                            eventLoop: eventLoop)
+                readFuture.whenSuccess { (buffer: ByteBuffer) in
                     guard buffer.readableBytes > 0 else {
                         // EOF, call `chunkHandler` one more time.
-                        return chunkHandler(buffer)
+                        let handlerFuture = chunkHandler(buffer)
+                        handlerFuture.cascade(to: promise)
+                        return
                     }
                     let bytesRead = Int64(buffer.readableBytes)
-                    return chunkHandler(buffer).flatMap { () -> EventLoopFuture<Void> in
+                    let handlerFuture = chunkHandler(buffer)
+                    handlerFuture.whenSuccess {
                         eventLoop.assertInEventLoop()
-                        return _read(remainingReads: remainingReads - 1,
-                                     bytesReadSoFar: bytesReadSoFar + bytesRead)
+                        _read(remainingReads: remainingReads - 1,
+                              bytesReadSoFar: bytesReadSoFar + bytesRead)
                     }
+                    handlerFuture.whenFailure { promise.fail($0) }
                 }
+                readFuture.whenFailure { promise.fail($0) }
             } else {
-                return eventLoop.makeSucceededFuture(())
+                promise.succeed(())
             }
         }
+        _read(remainingReads: remainingReads, bytesReadSoFar: 0)
 
-        return _read(remainingReads: remainingReads, bytesReadSoFar: 0)
+        return promise.futureResult
     }
 
     /// Read a `FileRegion` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
