@@ -112,6 +112,9 @@ extension ByteBuffer {
     @discardableResult
     @inlinable
     public mutating func setString(_ string: String, at index: Int) -> Int {
+        // Do not implement setString via setSubstring. As of Swift version 5.1.3,
+        // Substring.UTF8View does not implement withContiguousStorageIfAvailable
+        // and therefore has no fast access to the backing storage.
         if let written = string.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
             self.setBytes(utf8Bytes, at: index)
         }) {
@@ -152,6 +155,35 @@ extension ByteBuffer {
         }
     }
 
+    // MARK: Substring APIs
+    /// Write `substring` into this `ByteBuffer` using UTF-8 encoding, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - substring: The substring to write.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    public mutating func writeSubstring(_ substring: Substring) -> Int {
+        let written = self.setSubstring(substring, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
+    }
+    
+    /// Write `substring` into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
+    ///
+    /// - parameters:
+    ///     - substring: The substring to write.
+    ///     - index: The index for the first serilized byte.
+    /// - returns: The number of bytes written
+    @discardableResult
+    @inlinable
+    public mutating func setSubstring(_ substring: Substring, at index: Int) -> Int {
+        // As of Swift 5.1.3, Substring.UTF8View does not implement
+        // withContiguousStorageIfAvailable and therefore has no fast access
+        // to the backing storage. For now, convert to a String and call
+        // setString instead.
+        return self.setString(String(substring), at: index)
+    }
+    
     // MARK: DispatchData APIs
     /// Write `dispatchData` into this `ByteBuffer`, moving the writer index forward appropriately.
     ///
