@@ -58,6 +58,8 @@ protocol SocketProtocol: BaseSocketProtocol {
     func sendmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>
 
     func shutdown(how: Shutdown) throws
+
+    func ignoreSIGPIPE() throws
 }
 
 #if os(Linux)
@@ -71,7 +73,7 @@ private let globallyIgnoredSIGPIPE: Bool = {
 
 extension BaseSocketProtocol {
     // used by `BaseSocket` and `PipePair`.
-    internal func ignoreSIGPIPE(descriptor fd: CInt) throws {
+    internal static func ignoreSIGPIPE(descriptor fd: CInt) throws {
         #if os(Linux)
         let haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt = globallyIgnoredSIGPIPE
         guard haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt else {

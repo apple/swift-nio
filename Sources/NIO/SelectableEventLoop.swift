@@ -104,8 +104,8 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    internal init(thread: NIOThread) throws {
-        self._selector = try NIO.Selector()
+    internal init(thread: NIOThread, selector: NIO.Selector<NIORegistration>) {
+        self._selector = selector
         self.thread = thread
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)

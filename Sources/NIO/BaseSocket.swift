@@ -225,7 +225,7 @@ class BaseSocket: Selectable, BaseSocketProtocol {
     ///
     /// - returns: The local bound address.
     /// - throws: An `IOError` if the retrieval of the address failed.
-    final func localAddress() throws -> SocketAddress {
+    func localAddress() throws -> SocketAddress {
         return try get_addr { try Posix.getsockname(socket: $0, address: $1, addressLength: $2) }
     }
 
@@ -233,7 +233,7 @@ class BaseSocket: Selectable, BaseSocketProtocol {
     ///
     /// - returns: The connected address.
     /// - throws: An `IOError` if the retrieval of the address failed.
-    final func remoteAddress() throws -> SocketAddress {
+    func remoteAddress() throws -> SocketAddress {
         return try get_addr { try Posix.getpeername(socket: $0, address: $1, addressLength: $2) }
     }
 
@@ -308,11 +308,15 @@ class BaseSocket: Selectable, BaseSocketProtocol {
     init(descriptor: CInt) throws {
         precondition(descriptor >= 0, "invalid file descriptor")
         self.descriptor = descriptor
-        try self.ignoreSIGPIPE(descriptor: descriptor)
+        try self.ignoreSIGPIPE()
     }
 
     deinit {
         assert(!self.isOpen, "leak of open BaseSocket")
+    }
+
+    func ignoreSIGPIPE() throws {
+        try Self.ignoreSIGPIPE(descriptor: self.descriptor)
     }
 
     /// Set the socket as non-blocking.

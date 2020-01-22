@@ -55,6 +55,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(ChannelOptionStorageTest.allTests),
              testCase(ChannelPipelineTest.allTests),
              testCase(ChannelTests.allTests),
+             testCase(ChannelWithHookedSelectorTest.allTests),
              testCase(CircularBufferTests.allTests),
              testCase(CodableByteBufferTest.allTests),
              testCase(CustomChannelTests.allTests),
