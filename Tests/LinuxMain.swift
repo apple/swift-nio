@@ -97,6 +97,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(PendingDatagramWritesManagerTests.allTests),
              testCase(PipeChannelTest.allTests),
              testCase(PriorityQueueTest.allTests),
+             testCase(SALChannelTest.allTests),
              testCase(SNIHandlerTest.allTests),
              testCase(SelectorTest.allTests),
              testCase(SocketAddressTest.allTests),
