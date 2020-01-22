@@ -2790,7 +2790,33 @@ public final class ChannelTests: XCTestCase {
         XCTAssertEqual(1, b1.capacity)
         XCTAssertEqual(1, b2.capacity)
         XCTAssertEqual(1, allocator.capacity)
+    }
 
+    func testCloseInConnectPromise() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        var maybeServer: Channel? = nil
+        XCTAssertNoThrow(maybeServer = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+        guard let server = maybeServer else {
+            XCTFail("couldn't bootstrap server")
+            return
+        }
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+
+        for _ in 0..<10 {
+            // 10 times so we get a good chance of an asynchronous connect.
+            XCTAssertNoThrow(try ClientBootstrap(group: group).connect(to: server.localAddress!).flatMap { channel in
+                channel.close()
+            }.wait())
+        }
     }
 }
 
