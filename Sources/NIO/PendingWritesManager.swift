@@ -501,3 +501,10 @@ extension PendingWritesManager {
         return result
     }
 }
+
+extension PendingStreamWritesManager: CustomStringConvertible {
+    var description: String {
+        return "PendingStreamWritesManager { isFlushPending: \(self.isFlushPending), " +
+        /*  */ "writabilityFlag: \(self.channelWritabilityFlag.load())), state: \(self.state) }"
+    }
+}

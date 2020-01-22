@@ -200,6 +200,10 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }
     }
 
+    final override func hasFlushedPendingWrites() -> Bool {
+        return self.pendingWrites.isFlushPending
+    }
+
     final override func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
