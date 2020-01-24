@@ -25,6 +25,7 @@ needs to be listed here.
 - Ben Cohen <ben_cohen@apple.com>
 - Bouke Haarsma <bouke@haarsma.eu>
 - Chris Eidhof <chris@eidhof.nl>
+- Christian Priebe <cpriebe@apple.com>
 - Christian Weinberger <christian.weinberger@me.com>
 - Cory Benfield <cbenfield@apple.com>
 - Cotton Hou <himcotton@gmail.com>
@@ -37,6 +38,7 @@ needs to be listed here.
 - Emil Marashliev <marashliev@gmail.com>
 - Esteban Torres <me@estebantorr.es>
 - Eugen <eugenf78@gmail.com>
+- Fabian Fett <fabianfett@mac.com>
 - Frank Kair <frankkair@gmail.com>
 - Franz Busch <privat@franz-busch.de>
 - George Barnett <gbarnett@apple.com>
@@ -109,6 +111,7 @@ needs to be listed here.
 - Tomer Doron <tomerd@apple.com>
 - Trevör <adtrevor@users.noreply.github.com>
 - Trevör Anne Denise <adtrevor@users.noreply.github.com>
+- Volodymyr Sapsai <vsapsai@users.noreply.github.com>
 - Will Lisac <will@lisac.org>
 - Wilson Ding <hello@wilsonding.com>
 - fadi-botros <botros_fadi@yahoo.com>
