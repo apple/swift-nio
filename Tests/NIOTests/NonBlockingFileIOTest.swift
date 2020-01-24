@@ -14,6 +14,7 @@
 
 import XCTest
 @testable import NIO
+import NIOConcurrencyHelpers
 
 class NonBlockingFileIOTest: XCTestCase {
     private var group: EventLoopGroup!
@@ -828,4 +829,23 @@ class NonBlockingFileIOTest: XCTestCase {
         })
     }
 
+    func testReadManyChunks() {
+        let numberOfChunks = 2_000
+        XCTAssertNoThrow(try withTemporaryFile(content: String(repeating: "X",
+                                                               count: numberOfChunks)) { (fileHandle, path) in
+            let numberOfCalls = NIOAtomic<Int>.makeAtomic(value: 0)
+            XCTAssertNoThrow(try self.fileIO.readChunked(fileHandle: fileHandle,
+                                                         fromOffset: 0,
+                                                         byteCount: numberOfChunks,
+                                                         chunkSize: 1,
+                                                         allocator: self.allocator,
+                                                         eventLoop: self.eventLoop) { buffer in
+                _ = numberOfCalls.add(1)
+                XCTAssertEqual(1, buffer.readableBytes)
+                XCTAssertEqual(UInt8(ascii: "X"), buffer.readableBytesView.first)
+                return self.eventLoop.makeSucceededFuture(())
+            }.wait())
+            XCTAssertEqual(numberOfChunks, numberOfCalls.load())
+        })
+    }
 }
