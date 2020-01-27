@@ -65,6 +65,7 @@ extension NonBlockingFileIOTest {
                 ("testReadFromOffsetAfterEOFDeliversExactlyOneChunk", testReadFromOffsetAfterEOFDeliversExactlyOneChunk),
                 ("testReadFromEOFDeliversExactlyOneChunk", testReadFromEOFDeliversExactlyOneChunk),
                 ("testReadChunkedFromOffsetFileRegion", testReadChunkedFromOffsetFileRegion),
+                ("testReadManyChunks", testReadManyChunks),
            ]
    }
 }
