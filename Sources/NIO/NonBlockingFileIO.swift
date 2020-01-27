@@ -186,23 +186,30 @@ public struct NonBlockingFileIO {
                                             byteCount: readSize,
                                             allocator: allocator,
                                             eventLoop: eventLoop)
-                readFuture.whenSuccess { (buffer: ByteBuffer) in
-                    guard buffer.readableBytes > 0 else {
-                        // EOF, call `chunkHandler` one more time.
-                        let handlerFuture = chunkHandler(buffer)
-                        handlerFuture.cascade(to: promise)
-                        return
-                    }
-                    let bytesRead = Int64(buffer.readableBytes)
-                    let handlerFuture = chunkHandler(buffer)
-                    handlerFuture.whenSuccess {
-                        eventLoop.assertInEventLoop()
-                        _read(remainingReads: remainingReads - 1,
-                              bytesReadSoFar: bytesReadSoFar + bytesRead)
-                    }
-                    handlerFuture.whenFailure { promise.fail($0) }
-                }
-                readFuture.whenFailure { promise.fail($0) }
+                readFuture.whenComplete { (result) in
+                    switch result {
+                    case .success(let buffer):
+                        guard buffer.readableBytes > 0 else {
+                            // EOF, call `chunkHandler` one more time.
+                            let handlerFuture = chunkHandler(buffer)
+                            handlerFuture.cascade(to: promise)
+                            return
+                        }
+                        let bytesRead = Int64(buffer.readableBytes)
+                        chunkHandler(buffer).whenComplete { result in
+                            switch result {
+                            case .success(_):
+                                eventLoop.assertInEventLoop()
+                                _read(remainingReads: remainingReads - 1,
+                                      bytesReadSoFar: bytesReadSoFar + bytesRead)
+                            case .failure(let error):
+                                promise.fail(error)
+                            }
+                        }
+                  case .failure(let error):
+                      promise.fail(error)
+                  }
+              }
             } else {
                 promise.succeed(())
             }

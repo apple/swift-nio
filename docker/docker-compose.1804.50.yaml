@@ -33,7 +33,7 @@ services:
       - MAX_ALLOCS_ALLOWED_decode_1000_ws_frames=1000
       - MAX_ALLOCS_ALLOWED_modifying_byte_buffer_view=6010
       - MAX_ALLOCS_ALLOWED_schedule_10000_tasks=90050
-      - MAX_ALLOCS_ALLOWED_read_10000_chunks_from_file=270050
+      - MAX_ALLOCS_ALLOWED_read_10000_chunks_from_file=230050
 
   performance-test:
     image: swift-nio:18.04-5.0
