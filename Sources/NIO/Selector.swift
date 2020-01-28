@@ -254,7 +254,7 @@ extension SelectorEventSet {
 ///
 /// This implementation offers an consistent API over epoll (for linux) and kqueue (for Darwin, BSD).
 /* this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly */
-final class Selector<R: Registration> {
+internal class Selector<R: Registration> {
     private var lifecycleState: SelectorLifecycleState
 
     #if os(Linux)

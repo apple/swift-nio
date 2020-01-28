@@ -766,7 +766,9 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private let shutdownLock: Lock = Lock()
     private var runState: RunState = .running
 
-    private static func setupThreadAndEventLoop(name: String, initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
+    private static func setupThreadAndEventLoop(name: String,
+                                                selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration>,
+                                                initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
         let lock = Lock()
         /* the `loopUpAndRunningGroup` is done by the calling thread when the EventLoop has been created and was written to `_loop` */
         let loopUpAndRunningGroup = DispatchGroup()
@@ -780,7 +782,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
             do {
                 /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
-                let l = try! SelectableEventLoop(thread: t)
+                let l = SelectableEventLoop(thread: t, selector: try! selectorFactory())
                 threadSpecificEventLoop.currentValue = l
                 defer {
                     threadSpecificEventLoop.currentValue = nil
@@ -808,22 +810,29 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - arguments:
     ///     - numberOfThreads: The number of `Threads` to use.
     public convenience init(numberOfThreads: Int) {
+        self.init(numberOfThreads: numberOfThreads, selectorFactory: NIO.Selector<NIORegistration>.init)
+    }
+
+    internal convenience init(numberOfThreads: Int,
+                              selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration>) {
         precondition(numberOfThreads > 0, "numberOfThreads must be positive")
         let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
-        self.init(threadInitializers: initializers)
+        self.init(threadInitializers: initializers, selectorFactory: selectorFactory)
     }
     
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `NIOThread` per `ThreadInitializer` is created and used.
     ///
     /// - arguments:
     ///     - threadInitializers: The `ThreadInitializer`s to use.
-    internal init(threadInitializers: [ThreadInitializer]) {
+    internal init(threadInitializers: [ThreadInitializer],
+                  selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration> = { try .init() }) {
         let myGroupID = nextEventLoopGroupID.add(1)
         self.myGroupID = myGroupID
         var idx = 0
         self.eventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
             let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-\(myGroupID)-#\(idx)",
+                                                                         selectorFactory: selectorFactory,
                                                                          initializer: initializer)
             idx += 1
             return ev

@@ -24,10 +24,18 @@ final class PipePair: SocketProtocol {
     init(inputFD: NIOFileHandle, outputFD: NIOFileHandle) throws {
         self.inputFD = inputFD
         self.outputFD = outputFD
+        try self.ignoreSIGPIPE()
         for fileHandle in [inputFD, outputFD] {
             try fileHandle.withUnsafeFileDescriptor {
                 try NIOFileHandle.setNonBlocking(fileDescriptor: $0)
-                try ignoreSIGPIPE(descriptor: $0)
+            }
+        }
+    }
+
+    func ignoreSIGPIPE() throws {
+        for fileHandle in [self.inputFD, self.outputFD] {
+            try fileHandle.withUnsafeFileDescriptor {
+                try PipePair.ignoreSIGPIPE(descriptor: $0)
             }
         }
     }
