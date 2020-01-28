@@ -33,7 +33,8 @@ services:
 
   test:
     <<: *common
-    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && ./scripts/integration_tests.sh"
+    privileged: true
+    command: /bin/bash -xcl "clang -version; swift -version; dpkg -l | grep libc; uname -a; ulimit -a && swift build --build-tests -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && lldb --batch -o run -k 'image list' -k 'register read' -k 'bt all' -k 'exit 134' .build/debug/swift-nioPackageTests.xctest && ./scripts/integration_tests.sh"
 
   performance-test:
     <<: *common
