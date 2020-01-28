@@ -407,7 +407,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// returns them in their original representation: that means that a comma-separated
     /// header field list may contain more than one entry, some of which contain commas
     /// and some do not. If you want a representation of the header fields suitable for
-    /// performing computation on, consider `getCanonicalForm`.
+    /// performing computation on, consider `subscript(canonicalForm:)`.
     ///
     /// - Parameter name: The header field name whose values are to be retrieved.
     /// - Returns: A list of the values for that header field name.
@@ -427,7 +427,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// but instead returns the first value from the original representation: that means
     /// that a comma-separated header field list may contain more than one entry, some of
     /// which contain commas and some do not. If you want a representation of the header fields
-    /// suitable for performing computation on, consider `getCanonicalForm`.
+    /// suitable for performing computation on, consider `subscript(canonicalForm:)`.
     ///
     /// - Parameter name: The header field name whose first value should be retrieved.
     /// - Returns: The first value for the header field name.
@@ -616,11 +616,11 @@ public enum HTTPMethod: Equatable {
     /// Whether requests with this verb may have a request body.
     internal var hasRequestBody: HasBody {
         switch self {
-        case .HEAD, .DELETE, .TRACE:
+        case .TRACE:
             return .no
         case .POST, .PUT, .PATCH:
             return .yes
-        case .GET, .CONNECT, .OPTIONS:
+        case .GET, .CONNECT, .OPTIONS, .HEAD, .DELETE:
             fallthrough
         default:
             return .unlikely
@@ -1416,6 +1416,5 @@ extension HTTPMethod: RawRepresentable {
             default:
                 self = .RAW(value: rawValue)
         }
-        self = .RAW(value: rawValue)
     }
 }

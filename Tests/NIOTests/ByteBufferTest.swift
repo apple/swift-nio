@@ -71,6 +71,31 @@ class ByteBufferTest: XCTestCase {
         otherBuffer.writeString("oh hi")
         XCTAssertEqual(otherBuffer, buf)
     }
+    
+    func testHasherUsesReadBuffersOnly() {
+        // Only cares about the read buffer
+        self.buf.clear()
+        self.buf.writeString("oh hi")
+
+        var hasher = Hasher()
+        // We need to force unwrap the implicitly unwrapped optional here in order to
+        // mark it as unwrapped for the compiler *before* the function call. Otherwise
+        // the implementation of the optional's conditional conformance is triggered,
+        // that will change the hash. For more information please see:
+        // https://github.com/apple/swift-nio/pull/1326
+        // https://bugs.swift.org/browse/SR-11975
+        hasher.combine(self.buf!)
+        let hash = hasher.finalize()
+        
+        var otherBuffer = allocator.buffer(capacity: 6)
+        otherBuffer.writeString("oh hi")
+
+        var otherHasher = Hasher()
+        otherHasher.combine(otherBuffer)
+        let otherHash = otherHasher.finalize()
+        
+        XCTAssertEqual(hash, otherHash)
+    }
 
     func testSimpleReadTest() throws {
         buf.withUnsafeReadableBytes { ptr in
@@ -175,6 +200,35 @@ class ByteBufferTest: XCTestCase {
         let written = buf.writeString("Hello")
         let string = buf.getString(at: 0, length: written)
         XCTAssertEqual("Hello", string)
+    }
+    
+    func testWriteSubstring() {
+        var text = "Hello"
+        let written = buf.writeSubstring(text[...])
+        var string = buf.getString(at: 0, length: written)
+        XCTAssertEqual(text, string)
+        
+        text = ""
+        buf.writeSubstring(text[...])
+        string = buf.getString(at: 0, length: written)
+        XCTAssertEqual("Hello", string)
+    }
+    
+    func testSetSubstring() {
+        let text = "Hello"
+        buf.writeSubstring(text[...])
+        
+        var written = buf.setSubstring(text[...], at: 0)
+        var string = buf.getString(at: 0, length: written)
+        XCTAssertEqual(text, string)
+        
+        written = buf.setSubstring(text[text.index(after: text.startIndex)...], at: 1)
+        string = buf.getString(at: 0, length: written + 1)
+        XCTAssertEqual(text, string)
+        
+        written = buf.setSubstring(text[text.index(after: text.startIndex)...], at: 0)
+        string = buf.getString(at: 0, length: written)
+        XCTAssertEqual("ello", string)
     }
 
     func testSliceEasy() {
@@ -1358,18 +1412,12 @@ class ByteBufferTest: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buf = alloc.buffer(capacity: 16)
 
-        var bufPtrValPre: UInt = 1
-        var bufPtrValPost: UInt = 2
-
         XCTAssertLessThan(buf.capacity, 32)
         let preCapacity = buf.capacity
 
-        bufPtrValPre = buf.storagePointerIntegerValue()
         buf.clear(minimumCapacity: 32)
-        bufPtrValPost = buf.storagePointerIntegerValue()
         let postCapacity = buf.capacity
 
-        XCTAssertNotEqual(bufPtrValPre, bufPtrValPost)
         XCTAssertGreaterThanOrEqual(buf.capacity, 32)
         XCTAssertNotEqual(preCapacity, postCapacity)
     }

@@ -53,6 +53,12 @@ extension NIOConcurrencyHelpersTests {
                 ("testAtomicBoxCompareAndExchangeWorksIfNotEqual", testAtomicBoxCompareAndExchangeWorksIfNotEqual),
                 ("testAtomicBoxStoreWorks", testAtomicBoxStoreWorks),
                 ("testAtomicBoxCompareAndExchangeOntoItselfWorks", testAtomicBoxCompareAndExchangeOntoItselfWorks),
+                ("testAtomicLoadMassLoadAndStore", testAtomicLoadMassLoadAndStore),
+                ("testAtomicBoxCompareAndExchangeOntoItself", testAtomicBoxCompareAndExchangeOntoItself),
+                ("testLoadAndExchangeHammering", testLoadAndExchangeHammering),
+                ("testLoadAndStoreHammering", testLoadAndStoreHammering),
+                ("testLoadAndCASHammering", testLoadAndCASHammering),
+                ("testMultipleLoadsRacingWhilstStoresAreGoingOn", testMultipleLoadsRacingWhilstStoresAreGoingOn),
            ]
    }
 }

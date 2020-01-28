@@ -85,12 +85,17 @@ internal enum OneWriteOperationResult {
 
 /// The result of trying to write all the outstanding flushed data. That naturally includes all `ByteBuffer`s and
 /// `FileRegions` and the individual writes have potentially been retried (see `WriteSpinOption`).
-internal enum OverallWriteResult {
-    /// Wrote all the data that was flushed. When receiving this result, we can unsubscribe from 'writable' notification.
-    case writtenCompletely
+internal struct OverallWriteResult {
+    enum WriteOutcome {
+        /// Wrote all the data that was flushed. When receiving this result, we can unsubscribe from 'writable' notification.
+        case writtenCompletely
 
-    /// Could not write everything. Before attempting further writes the eventing system should send a 'writable' notification.
-    case couldNotWriteEverything
+        /// Could not write everything. Before attempting further writes the eventing system should send a 'writable' notification.
+        case couldNotWriteEverything
+    }
+
+    internal var writeResult: WriteOutcome
+    internal var writabilityChange: Bool
 }
 
 /// This holds the states of the currently pending stream writes. The core is a `MarkedCircularBuffer` which holds all the
@@ -330,7 +335,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - returns: The `OneWriteOperationResult` and whether the `Channel` is now writable.
     func triggerAppropriateWriteOperations(scalarBufferWriteOperation: (UnsafeRawBufferPointer) throws -> IOResult<Int>,
                                            vectorBufferWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
-                                           scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> (writeResult: OverallWriteResult, writable: Bool) {
+                                           scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> OverallWriteResult {
         return try self.triggerWriteOperations { writeMechanism in
             switch writeMechanism {
             case .scalarBufferWrite:
@@ -460,15 +465,15 @@ extension PendingWritesManager {
         return self.channelWritabilityFlag.load()
     }
 
-    internal func triggerWriteOperations(triggerOneWriteOperation: (WriteMechanism) throws -> OneWriteOperationResult) throws -> (OverallWriteResult, Bool) {
+    internal func triggerWriteOperations(triggerOneWriteOperation: (WriteMechanism) throws -> OneWriteOperationResult) throws -> OverallWriteResult {
         let wasWritable = self.isWritable
-        var result: OverallWriteResult = .couldNotWriteEverything
+        var result = OverallWriteResult(writeResult: .couldNotWriteEverything, writabilityChange: false)
 
         writeSpinLoop: for _ in 0...self.writeSpinCount {
             var oneResult: OneWriteOperationResult
             repeat {
                 guard self.isOpen && self.isFlushPending else {
-                    result = .writtenCompletely
+                    result.writeResult = .writtenCompletely
                     break writeSpinLoop
                 }
 
@@ -479,10 +484,27 @@ extension PendingWritesManager {
             } while oneResult == .writtenCompletely
         }
 
+        // Please note that the re-entrancy protection in `flushNow` expects this code to try to write _all_ the data
+        // that is flushed. If we receive a `flush` whilst processing a previous `flush`, we won't do anything because
+        // we expect this loop to attempt to attempt all writes, even ones that arrive after this method begins to run.
+        //
+        // In other words, don't return `.writtenCompletely` unless you've written everything the PendingWritesManager
+        // knows to be flushed.
+        //
+        // Also, it is very important to not do any outcalls to user code outside of the loop until the `flushNow`
+        // re-entrancy protection is off again.
+
         if !wasWritable {
             // Was not writable before so signal back to the caller the possible state change
-            return (result, self.isWritable)
+            result.writabilityChange = self.isWritable
         }
-        return (result, false)
+        return result
+    }
+}
+
+extension PendingStreamWritesManager: CustomStringConvertible {
+    var description: String {
+        return "PendingStreamWritesManager { isFlushPending: \(self.isFlushPending), " +
+        /*  */ "writabilityFlag: \(self.channelWritabilityFlag.load())), state: \(self.state) }"
     }
 }

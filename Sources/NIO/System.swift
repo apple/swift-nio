@@ -57,8 +57,9 @@ private let sysAccept: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, Un
 private let sysConnect: @convention(c) (CInt, UnsafePointer<sockaddr>?, socklen_t) -> CInt = connect
 private let sysOpen: @convention(c) (UnsafePointer<CChar>, CInt) -> CInt = open
 private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
-private let sysWrite: @convention(c) (CInt, UnsafeRawPointer?, CLong) -> CLong = write
-private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong) -> CLong = read
+private let sysWrite: @convention(c) (CInt, UnsafeRawPointer?, size_t) -> ssize_t = write
+private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t) -> ssize_t = read
+private let sysPread: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t, off_t) -> ssize_t = pread
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
 private let sysPoll: @convention(c) (UnsafeMutablePointer<pollfd>?, nfds_t, Int32) -> CInt = poll
 #if os(Android)
@@ -297,7 +298,9 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func accept(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>) throws -> CInt? {
+    public static func accept(descriptor: CInt,
+                              addr: UnsafeMutablePointer<sockaddr>?,
+                              len: UnsafeMutablePointer<socklen_t>?) throws -> CInt? {
         let result: IOResult<CInt> = try wrapSyscallMayBlock {
             let fd = sysAccept(descriptor, addr, len)
 
@@ -373,9 +376,16 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> IOResult<Int> {
+    public static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> IOResult<ssize_t> {
         return try wrapSyscallMayBlock {
             sysRead(descriptor, pointer, size)
+        }
+    }
+
+    @inline(never)
+    public static func pread(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t, offset: off_t) throws -> IOResult<ssize_t> {
+        return try wrapSyscallMayBlock {
+            sysPread(descriptor, pointer, size, offset)
         }
     }
 

@@ -415,6 +415,11 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         fatalError("this must be overridden by sub class")
     }
 
+    /// Returns if there are any flushed, pending writes to be sent over the network.
+    func hasFlushedPendingWrites() -> Bool {
+        fatalError("this must be overridden by sub class")
+    }
+
     /// Buffer a write in preparation for a flush.
     func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         fatalError("this must be overridden by sub class")
@@ -471,27 +476,43 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     /// Flush data to the underlying socket and return if this socket needs to be registered for write notifications.
     ///
-    /// - returns: If this socket should be registered for write notifications. Ie. `IONotificationState.register` if _not_ all data could be written, so notifications are necessary; and `IONotificationState.unregister` if everything was written and we don't need to be notified about writability at the moment.
+    /// This method can be called re-entrantly but it will return immediately because the first call is responsible
+    /// for sending all flushed writes, even the ones that are accumulated whilst `flushNow()` is running.
+    ///
+    /// - returns: If this socket should be registered for write notifications. Ie. `IONotificationState.register` if
+    ///            _not_ all data could be written, so notifications are necessary; and `IONotificationState.unregister`
+    ///             if everything was written and we don't need to be notified about writability at the moment.
     func flushNow() -> IONotificationState {
         self.eventLoop.assertInEventLoop()
+
         // Guard against re-entry as data that will be put into `pendingWrites` will just be picked up by
         // `writeToSocket`.
-        guard !self.inFlushNow && self.isOpen else {
+        guard !self.inFlushNow else {
             return .unregister
         }
 
+        assert(!self.inFlushNow)
+        self.inFlushNow = true
         defer {
-            inFlushNow = false
+            self.inFlushNow = false
         }
-        inFlushNow = true
 
+        var newWriteRegistrationState: IONotificationState = .unregister
         do {
-            assert(self.lifecycleManager.isActive)
-            switch try self.writeToSocket() {
-            case .couldNotWriteEverything:
-                return .register
-            case .writtenCompletely:
-                return .unregister
+            while newWriteRegistrationState == .unregister && self.hasFlushedPendingWrites() && self.isOpen {
+                assert(self.lifecycleManager.isActive)
+                let writeResult = try self.writeToSocket()
+                switch writeResult.writeResult {
+                case .couldNotWriteEverything:
+                    newWriteRegistrationState = .register
+                case .writtenCompletely:
+                    newWriteRegistrationState = .unregister
+                }
+
+                if writeResult.writabilityChange {
+                    // We went from not writable to writable.
+                    self.pipeline.fireChannelWritabilityChanged0()
+                }
             }
         } catch let err {
             // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
@@ -514,8 +535,12 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             // we handled all writes
             return .unregister
         }
-    }
 
+        assert((newWriteRegistrationState == .register && self.hasFlushedPendingWrites()) ||
+               (newWriteRegistrationState == .unregister && !self.hasFlushedPendingWrites()),
+               "illegal flushNow decision: \(newWriteRegistrationState) and \(self.hasFlushedPendingWrites())")
+        return newWriteRegistrationState
+    }
 
     public final func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
@@ -890,9 +915,14 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         assert(self.isOpen)
 
         self.finishConnect()  // If we were connecting, that has finished.
-        if self.flushNow() == .unregister {
-            // Everything was written or connect was complete
+
+        switch self.flushNow() {
+        case .unregister:
+            // Everything was written or connect was complete, let's unregister from writable.
             self.finishWritable()
+        case .register:
+            assert(!self.isOpen || self.interestedEvent.contains(.write))
+            () // nothing to do because given that we just received `writable`, we're still registered for writable.
         }
     }
 
@@ -926,6 +956,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
         if self.isOpen {
             assert(self.lifecycleManager.isPreRegistered)
+            assert(!self.hasFlushedPendingWrites())
             self.unregisterForWritable()
         }
     }

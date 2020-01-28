@@ -145,6 +145,14 @@ public final class ServerBootstrap {
         return self
     }
 
+    /// Specifies a timeout to apply to a bind attempt. Currently unsupported.
+    ///
+    /// - parameters:
+    ///     - timeout: The timeout that will apply to the bind attempt.
+    public func bindTimeout(_ timeout: TimeAmount) -> Self {
+        return self
+    }
+
     /// Bind the `ServerSocketChannel` to `host` and `port`.
     ///
     /// - parameters:
@@ -202,7 +210,7 @@ public final class ServerBootstrap {
                                            protocolFamily: address.protocolFamily)
         }
 
-        return bind0(makeServerChannel: makeChannel) { (eventGroup, serverChannel) in
+        return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
             serverChannel.registerAndDoSynchronously { serverChannel in
                 serverChannel.bind(to: address)
             }
@@ -330,6 +338,40 @@ private extension Channel {
     }
 }
 
+/// `NIOTCPClientBootstrap` is implemented by various underlying transport mechanisms. Typically,
+/// this will be the BSD Sockets API implemented by `ClientBootstrap`.
+internal protocol NIOTCPClientBootstrap {
+    /// Initialize the connected `Channel` with `initializer`. The most common task in initializer is to add
+    /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - handler: A closure that initializes the provided `Channel`.
+    func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self
+
+    /// Specifies a `ChannelOption` to be applied to the `Channel`.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
+    @inlinable
+    func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
+
+    /// Specifies a timeout to apply to a connection attempt.
+    //
+    /// - parameters:
+    ///     - timeout: The timeout that will apply to the connection attempt.
+    func connectTimeout(_ timeout: TimeAmount) -> Self
+
+    /// Specify the `host` and `port` to connect to for the `Channel` that will be established.
+    ///
+    /// - parameters:
+    ///     - host: The host to connect to.
+    ///     - port: The port to connect to.
+    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
+    func connect(host: String, port: Int) -> EventLoopFuture<Channel>
+}
+
+
 /// A `ClientBootstrap` is an easy way to bootstrap a `SocketChannel` when creating network clients.
 ///
 /// Usually you re-use a `ClientBootstrap` once you set it up and called `connect` multiple times on it.
@@ -356,7 +398,7 @@ private extension Channel {
 /// ```
 ///
 /// The connected `SocketChannel` will operate on `ByteBuffer` as inbound and on `IOData` as outbound messages.
-public final class ClientBootstrap {
+public final class ClientBootstrap: NIOTCPClientBootstrap {
 
     private let group: EventLoopGroup
     private var channelInitializer: Optional<ChannelInitializerCallback>

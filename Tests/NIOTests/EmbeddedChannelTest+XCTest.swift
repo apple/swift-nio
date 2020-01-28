@@ -47,6 +47,7 @@ extension EmbeddedChannelTest {
                 ("testSetRemoteAddressAfterSuccessfulConnect", testSetRemoteAddressAfterSuccessfulConnect),
                 ("testUnprocessedOutboundUserEventFailsOnEmbeddedChannel", testUnprocessedOutboundUserEventFailsOnEmbeddedChannel),
                 ("testEmbeddedChannelWritabilityIsWritable", testEmbeddedChannelWritabilityIsWritable),
+                ("testFinishWithRecursivelyScheduledTasks", testFinishWithRecursivelyScheduledTasks),
            ]
    }
 }

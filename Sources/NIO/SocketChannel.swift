@@ -291,6 +291,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
     }
 
+    override func hasFlushedPendingWrites() -> Bool {
+        return false
+    }
+
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.operationUnsupported)
     }
@@ -563,6 +567,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
     }
 
+    override final func hasFlushedPendingWrites() -> Bool {
+        return self.pendingWrites.isFlushPending
+    }
+
     /// Mark a flush point. This is called when flush is received, and instructs
     /// the implementation to record the flush.
     override func markFlushPoint() {
@@ -590,12 +598,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }, vectorWriteOperation: { msgs in
             try self.socket.sendmmsg(msgs: msgs)
         })
-        if result.writable {
-            // writable again
-            assert(self.isActive)
-            self.pipeline.fireChannelWritabilityChanged0()
-        }
-        return result.writeResult
+        return result
     }
 
     // MARK: Datagram Channel overrides not required by BaseSocketChannel

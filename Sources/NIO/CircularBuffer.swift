@@ -112,6 +112,8 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
 
 // MARK: Collection/MutableCollection implementation
 extension CircularBuffer: Collection, MutableCollection {
+    public typealias Element = Element
+    public typealias Indices = DefaultIndices<CircularBuffer<Element>>
     public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
     public typealias SubSequence = CircularBuffer<Element>
 

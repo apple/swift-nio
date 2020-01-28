@@ -66,24 +66,17 @@
     /// - throws: An `IOError` if the operation failed.
     func accept(setNonBlocking: Bool = false) throws -> Socket? {
         return try withUnsafeFileDescriptor { fd in
-            var acceptAddr = sockaddr_in()
-            var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
-
-            let result = try withUnsafeMutablePointer(to: &acceptAddr) { (ptr) throws -> CInt? in
-                try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                    #if os(Linux)
-                    let flags: Int32
-                    if setNonBlocking {
-                        flags = Linux.SOCK_NONBLOCK
-                    } else {
-                        flags = 0
-                    }
-                    return try Linux.accept4(descriptor: fd, addr: ptr, len: &addrSize, flags: flags)
-                    #else
-                    return try Posix.accept(descriptor: fd, addr: ptr, len: &addrSize)
-                    #endif
-                }
+            #if os(Linux)
+            let flags: Int32
+            if setNonBlocking {
+                flags = Linux.SOCK_NONBLOCK
+            } else {
+                flags = 0
             }
+            let result = try Linux.accept4(descriptor: fd, addr: nil, len: nil, flags: flags)
+            #else
+            let result = try Posix.accept(descriptor: fd, addr: nil, len: nil)
+            #endif
 
             guard let fd = result else {
                 return nil

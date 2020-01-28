@@ -18,6 +18,7 @@ import Glibc
 #endif
 import Dispatch
 import XCTest
+import NIO
 @testable import NIOConcurrencyHelpers
 
 class NIOConcurrencyHelpersTests: XCTestCase {
@@ -606,6 +607,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         }
     }
 
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxDoesNotTriviallyLeak() throws {
         class SomeClass {}
         weak var weakSomeInstance1: SomeClass? = nil
@@ -624,6 +626,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertNil(weakSomeInstance2)
     }
 
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxCompareAndExchangeWorksIfEqual() throws {
         class SomeClass {}
         weak var weakSomeInstance1: SomeClass? = nil
@@ -656,6 +659,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertNil(weakSomeInstance3)
     }
 
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxCompareAndExchangeWorksIfNotEqual() throws {
         class SomeClass {}
         weak var weakSomeInstance1: SomeClass? = nil
@@ -689,6 +693,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertNil(weakSomeInstance3)
     }
 
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxStoreWorks() throws {
         class SomeClass {}
         weak var weakSomeInstance1: SomeClass? = nil
@@ -720,6 +725,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertNil(weakSomeInstance3)
     }
 
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxCompareAndExchangeOntoItselfWorks() {
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
@@ -749,5 +755,274 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             XCTAssert(v === instance)
         })()
         XCTAssertNil(weakInstance)
+    }
+
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
+    func testAtomicLoadMassLoadAndStore() {
+        let writer = DispatchQueue(label: "\(#file):writer")
+        let reader = DispatchQueue(label: "\(#file):reader")
+        let g = DispatchGroup()
+        let writerArrived = DispatchSemaphore(value: 0)
+        let readerArrived = DispatchSemaphore(value: 0)
+        let go = DispatchSemaphore(value: 0)
+        let iterations = 100_000
+
+        class Foo {
+            var x: Int
+
+            init(_ x: Int) {
+                self.x = x
+            }
+
+            deinit {
+                self.x = -1
+            }
+        }
+
+        let box: AtomicBox<Foo> = .init(value: Foo(iterations))
+
+        writer.async(group: g) {
+            writerArrived.signal()
+            go.wait()
+
+            for i in 0..<iterations {
+                box.store(Foo(i))
+            }
+        }
+
+        reader.async(group: g) {
+            readerArrived.signal()
+            go.wait()
+
+            for _ in 0..<iterations {
+                if box.load().x < 0 {
+                    XCTFail("bad")
+                }
+            }
+        }
+
+        writerArrived.wait()
+        readerArrived.wait()
+        go.signal()
+        go.signal()
+
+        g.wait()
+    }
+
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
+    func testAtomicBoxCompareAndExchangeOntoItself() {
+        class Foo {}
+        weak var weakF: Foo? = nil
+        weak var weakG: Foo? = nil
+
+        @inline(never)
+        func doIt() {
+            let f = Foo()
+            let g = Foo()
+            weakF = f
+            weakG = g
+            let box = AtomicBox<Foo>(value: f)
+            XCTAssertFalse(box.compareAndExchange(expected: g, desired: g))
+            XCTAssertTrue(box.compareAndExchange(expected: f, desired: f))
+            XCTAssertFalse(box.compareAndExchange(expected: g, desired: g))
+            XCTAssertTrue(box.compareAndExchange(expected: f, desired: g))
+        }
+        doIt()
+        assert(weakF == nil, within: .seconds(1))
+        assert(weakF == nil, within: .seconds(1))
+    }
+
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
+    func testLoadAndExchangeHammering() {
+        let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
+        let iterations = 100_000
+
+        @inline(never)
+        func doIt() {
+            let box = AtomicBox(value: IntHolderWithDeallocationTracking(0, allDeallocations: allDeallocations))
+
+            spawnAndJoinRacingThreads(count: 6) { i in
+                switch i {
+                case 0: // writer
+                    for i in 1 ... iterations {
+                        let nextObject = box.exchange(with: .init(i, allDeallocations: allDeallocations))
+                        XCTAssertEqual(nextObject.value, i - 1)
+                    }
+                default: // readers
+                    while true {
+                        if box.load().value < 0 || box.load().value > iterations {
+                            XCTFail("bad")
+                        }
+                        if box.load().value == iterations {
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
+        doIt()
+        assert(allDeallocations.load() == iterations + 1, within: .seconds(1))
+    }
+
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
+    func testLoadAndStoreHammering() {
+        let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
+        let iterations = 100_000
+
+        @inline(never)
+        func doIt() {
+            let box = AtomicBox(value: IntHolderWithDeallocationTracking(0, allDeallocations: allDeallocations))
+
+            spawnAndJoinRacingThreads(count: 6) { i in
+                switch i {
+                case 0: // writer
+                    for i in 1 ... iterations {
+                        box.store(IntHolderWithDeallocationTracking(i, allDeallocations: allDeallocations))
+                    }
+                default: // readers
+                    while true {
+                        if box.load().value < 0 || box.load().value > iterations {
+                            XCTFail("loaded the wrong value")
+                        }
+                        if box.load().value == iterations {
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
+        doIt()
+        assert(allDeallocations.load() == iterations + 1, within: .seconds(1))
+    }
+
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
+    func testLoadAndCASHammering() {
+        let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
+        let iterations = 100_000
+
+        @inline(never)
+        func doIt() {
+            let box = AtomicBox(value: IntHolderWithDeallocationTracking(0, allDeallocations: allDeallocations))
+
+            spawnAndJoinRacingThreads(count: 6) { i in
+                switch i {
+                case 0: // writer
+                    for i in 1 ... iterations {
+                        let old = box.load()
+                        XCTAssertEqual(i - 1, old.value)
+                        if !box.compareAndExchange(expected: old,
+                                                   desired: .init(i, allDeallocations: allDeallocations)) {
+                            XCTFail("compare and exchange didn't work but it should have")
+                        }
+                    }
+                default: // readers
+                    while true {
+                        if box.load().value < 0 || box.load().value > iterations {
+                            XCTFail("loaded wrong value")
+                        }
+                        if box.load().value == iterations {
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
+        doIt()
+        assert(allDeallocations.load() == iterations + 1, within: .seconds(1))
+    }
+
+    @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
+    func testMultipleLoadsRacingWhilstStoresAreGoingOn() {
+        // regression test for https://github.com/apple/swift-nio/pull/1287#discussion_r353932225
+        let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
+        let iterations = 100_000
+
+        @inline(never)
+        func doIt() {
+            let box = AtomicBox(value: IntHolderWithDeallocationTracking(0, allDeallocations: allDeallocations))
+            spawnAndJoinRacingThreads(count: 3) { i in
+                switch i {
+                case 0:
+                    var last = Int.min
+                    while last < iterations {
+                        let loaded = box.load()
+                        XCTAssertGreaterThanOrEqual(loaded.value, last)
+                        last = loaded.value
+                    }
+                case 1:
+                    for n in 1...iterations {
+                        _ = box.store(.init(n, allDeallocations: allDeallocations))
+                    }
+                case 2:
+                    var last = Int.min
+                    while last < iterations {
+                        let loaded = box.load()
+                        XCTAssertGreaterThanOrEqual(loaded.value, last)
+                        last = loaded.value
+                    }
+                default:
+                    preconditionFailure("thread \(i)?!")
+                }
+            }
+        }
+
+        doIt()
+        XCTAssertEqual(iterations + 1, allDeallocations.load())
+    }
+}
+
+func spawnAndJoinRacingThreads(count: Int, _ body: @escaping (Int) -> Void) {
+    let go = DispatchSemaphore(value: 0) // will be incremented when the threads are supposed to run (and race).
+    let arrived = Array(repeating: DispatchSemaphore(value: 0), count: count) // waiting for all threads to arrive
+
+    let group = DispatchGroup()
+    for i in 0..<count {
+        DispatchQueue(label: "\(#file):\(#line):\(i)").async(group: group) {
+            arrived[i].signal()
+            go.wait()
+            body(i)
+        }
+    }
+
+    for sem in arrived {
+        sem.wait()
+    }
+    // all the threads are ready to go
+    for _ in 0..<count {
+        go.signal()
+    }
+
+    group.wait()
+}
+
+func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
+    let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
+    let endTime = NIODeadline.now() + time
+
+    repeat {
+        if condition() { return }
+        usleep(UInt32(testInterval.nanoseconds / 1000))
+    } while (NIODeadline.now() < endTime)
+
+    if !condition() {
+        XCTFail(message, file: file, line: line)
+    }
+}
+
+fileprivate class IntHolderWithDeallocationTracking {
+    private(set) var value: Int
+    let allDeallocations: NIOAtomic<Int>
+
+    init(_ x: Int, allDeallocations: NIOAtomic<Int>) {
+        self.value = x
+        self.allDeallocations = allDeallocations
+    }
+
+    deinit {
+        self.value = -1
+        _ = self.allDeallocations.add(1)
     }
 }

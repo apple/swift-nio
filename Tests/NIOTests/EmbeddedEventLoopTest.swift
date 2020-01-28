@@ -337,4 +337,39 @@ public final class EmbeddedEventLoopTest: XCTestCase {
             XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
         }
     }
+
+    func testDrainScheduledTasks() {
+        let eventLoop = EmbeddedEventLoop()
+        let timeAtStart = eventLoop._now
+        var tasksRun = 0
+
+        eventLoop.scheduleTask(in: .nanoseconds(3141592)) {
+            XCTAssertEqual(eventLoop._now, timeAtStart + .nanoseconds(3141592))
+            tasksRun += 1
+        }
+
+        eventLoop.scheduleTask(in: .seconds(3141592)) {
+            XCTAssertEqual(eventLoop._now, timeAtStart + .seconds(3141592))
+            tasksRun += 1
+        }
+
+        eventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
+        XCTAssertEqual(tasksRun, 2)
+    }
+
+    func testDrainScheduledTasksDoesNotRunNewlyScheduledTasks() {
+        let eventLoop = EmbeddedEventLoop()
+        var tasksRun = 0
+
+        func scheduleNowAndIncrement() {
+            eventLoop.scheduleTask(in: .nanoseconds(0)) {
+                tasksRun += 1
+                scheduleNowAndIncrement()
+            }
+        }
+
+        scheduleNowAndIncrement()
+        eventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
+        XCTAssertEqual(tasksRun, 1)
+    }
 }

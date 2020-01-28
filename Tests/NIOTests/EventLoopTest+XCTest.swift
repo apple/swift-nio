@@ -51,8 +51,6 @@ extension EventLoopTest {
                 ("testRepeatedTaskThatIsImmediatelyCancelledNotifies", testRepeatedTaskThatIsImmediatelyCancelledNotifies),
                 ("testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies", testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies),
                 ("testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished", testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished),
-                ("testAndAllCompleteWithZeroFutures", testAndAllCompleteWithZeroFutures),
-                ("testAndAllSucceedWithZeroFutures", testAndAllSucceedWithZeroFutures),
                 ("testCancelledScheduledTasksDoNotHoldOnToRunClosure", testCancelledScheduledTasksDoNotHoldOnToRunClosure),
                 ("testIllegalCloseOfEventLoopFails", testIllegalCloseOfEventLoopFails),
                 ("testSubtractingDeadlineFromPastAndFuturesDeadlinesWorks", testSubtractingDeadlineFromPastAndFuturesDeadlinesWorks),
@@ -63,6 +61,12 @@ extension EventLoopTest {
                 ("testEdgeCasesNIODeadlineMinusTimeAmount", testEdgeCasesNIODeadlineMinusTimeAmount),
                 ("testSuccessfulFlatSubmit", testSuccessfulFlatSubmit),
                 ("testFailingFlatSubmit", testFailingFlatSubmit),
+                ("testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyTask", testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyTask),
+                ("testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyIOOperation", testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyIOOperation),
+                ("testCancellingTheLastOutstandingTask", testCancellingTheLastOutstandingTask),
+                ("testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask", testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask),
+                ("testSelectableEventLoopDescription", testSelectableEventLoopDescription),
+                ("testMultiThreadedEventLoopGroupDescription", testMultiThreadedEventLoopGroupDescription),
            ]
    }
 }

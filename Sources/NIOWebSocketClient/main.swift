@@ -166,7 +166,7 @@ let bootstrap = ClientBootstrap(group: group)
         
         let httpHandler = HTTPInitialRequestHandler()
         
-        let websocketUpgrader = NIOWebClientSocketUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
+        let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
                                                            upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
             channel.pipeline.addHandler(WebSocketPingPongHandler())
         })

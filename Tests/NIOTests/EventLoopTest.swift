@@ -738,32 +738,6 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 0.5), .completed)
     }
 
-    func testAndAllCompleteWithZeroFutures() {
-        let eventLoop = EmbeddedEventLoop()
-        let done = DispatchWorkItem {}
-        EventLoopFuture<Void>.andAllComplete([], on: eventLoop).whenComplete { (result: Result<Void, Error>) in
-            _ = result.mapError { error -> Error in
-                XCTFail("unexpected error \(error)")
-                return error
-            }
-            done.perform()
-        }
-        done.wait()
-    }
-
-    func testAndAllSucceedWithZeroFutures() {
-        let eventLoop = EmbeddedEventLoop()
-        let done = DispatchWorkItem {}
-        EventLoopFuture<Void>.andAllSucceed([], on: eventLoop).whenComplete { result in
-            _ = result.mapError { error -> Error in
-                XCTFail("unexpected error \(error)")
-                return error
-            }
-            done.perform()
-        }
-        done.wait()
-    }
-
     func testCancelledScheduledTasksDoNotHoldOnToRunClosure() {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -962,5 +936,144 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertThrowsError(try future.wait()) { error in
             XCTAssertEqual(.failed, error as? TestError)
         }
+    }
+
+    func testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyTask() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+
+        let el = elg.next()
+        let g = DispatchGroup()
+        g.enter()
+        el.execute {
+            // We're the last and only task running, scheduling another task here makes sure that despite not waking
+            // up the selector, we will still run this task.
+            el.execute {
+                g.leave()
+            }
+        }
+        g.wait()
+    }
+
+    func testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyIOOperation() {
+        final class ExecuteSomethingOnEventLoop: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            static let numberOfInstances = NIOAtomic<Int>.makeAtomic(value: 0)
+            let groupToNotify: DispatchGroup
+
+            init(groupToNotify: DispatchGroup) {
+                XCTAssertEqual(0, ExecuteSomethingOnEventLoop.numberOfInstances.add(1))
+                self.groupToNotify = groupToNotify
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                context.eventLoop.execute {
+                    self.groupToNotify.leave()
+                }
+            }
+        }
+
+        let elg1 = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let elg2 = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg1.syncShutdownGracefully())
+            XCTAssertNoThrow(try elg2.syncShutdownGracefully())
+        }
+
+        let g = DispatchGroup()
+        g.enter()
+        var maybeServer: Channel?
+        XCTAssertNoThrow(maybeServer = try ServerBootstrap(group: elg2)
+            .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
+            .serverChannelOption(ChannelOptions.autoRead, value: false)
+            .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+            .childChannelInitializer { channel in
+                channel.pipeline.addHandler(ExecuteSomethingOnEventLoop(groupToNotify: g))
+            }
+            .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
+            .wait())
+        maybeServer?.read() // this should accept one client
+
+        var maybeClient: Channel?
+        XCTAssertNoThrow(maybeClient = try ClientBootstrap(group: elg1)
+            .connect(to: maybeServer?.localAddress ?? SocketAddress(unixDomainSocketPath: "/dev/null/does/not/exist"))
+            .wait())
+
+        guard let client = maybeClient else {
+            XCTFail("couldn't connect")
+            return
+        }
+
+        var buffer = client.allocator.buffer(capacity: 1)
+        buffer.writeString("X")
+
+        // Now let's trigger a channelRead in the accepted channel which should schedule running an EventLoop task
+        // with no outstanding operations on the EventLoop (no IO, nor tasks left to do).
+        XCTAssertNoThrow(try client.writeAndFlush(buffer).wait())
+
+        // The executed task should've notified this DispatchGroup
+        g.wait()
+    }
+
+    func testCancellingTheLastOutstandingTask() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+
+        let el = elg.next()
+        let task = el.scheduleTask(in: .milliseconds(10)) {}
+        task.cancel()
+        // sleep for 10ms which should have the above scheduled (and cancelled) task have caused an unnecessary wakeup.
+        Thread.sleep(forTimeInterval: 0.015 /* 15 ms */)
+    }
+
+    func testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+
+        let el = elg.next()
+        let g = DispatchGroup()
+        g.enter()
+        el.scheduleTask(in: .nanoseconds(10) /* something non-0 */) {
+            el.execute {
+                g.leave()
+            }
+        }
+        g.wait()
+    }
+
+    func testSelectableEventLoopDescription() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+
+        let el: EventLoop = elg.next()
+        let expectedPrefix = "SelectableEventLoop { selector = Selector { descriptor ="
+        let expectedContains = "thread = NIOThread(name = NIO-ELT-"
+        let expectedSuffix = " }"
+        let desc = el.description
+        XCTAssert(el.description.starts(with: expectedPrefix), desc)
+        XCTAssert(el.description.reversed().starts(with: expectedSuffix.reversed()), desc)
+        // let's check if any substring contains the `expectedContains`
+        XCTAssert(desc.indices.contains { startIndex in
+            desc[startIndex...].starts(with: expectedContains)
+        }, desc)
+    }
+
+    func testMultiThreadedEventLoopGroupDescription() {
+        let elg: EventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+
+        XCTAssert(elg.description.starts(with: "MultiThreadedEventLoopGroup { threadPattern = NIO-ELT-"),
+                  elg.description)
     }
 }
