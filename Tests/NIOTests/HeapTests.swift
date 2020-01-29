@@ -83,7 +83,7 @@ class HeapTests: XCTestCase {
         var maxHeapLast = UInt8.max
         var minHeapLast = UInt8.min
 
-        let N = 100
+        let N = 10
 
         for n in getRandomNumbers(count: N) {
             maxHeap.append(n)
