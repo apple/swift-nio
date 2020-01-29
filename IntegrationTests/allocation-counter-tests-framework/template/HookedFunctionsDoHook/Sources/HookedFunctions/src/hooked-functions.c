@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #define _GNU_SOURCE
+#define __USE_GNU
 #include <atomic-counter.h>
 #include <dlfcn.h>
 #include <fcntl.h>

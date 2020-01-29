@@ -508,7 +508,10 @@ extension SALTest {
             XCTAssertNil(error, "unexpected error: \(error!)")
             group.leave()
         })
-        XCTAssertNoThrow(try self.assertWakeup())
+        // We're in a slightly tricky situation here. We don't know if the EventLoop thread enters `whenReady` again
+        // or not. If it has, we have to wake it up, so let's just put a return value in the 'kernel to user' box, just
+        // in case :)
+        XCTAssertNoThrow(try self.kernelToUserBox.waitForEmptyAndSet(.returnSelectorEvent(nil)))
         group.wait()
 
         self.group = nil
