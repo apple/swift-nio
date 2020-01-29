@@ -28,18 +28,28 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
     @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testLargeContendedAtomicSum() {
-        let noAsyncs: UInt64 = 64
-        let noCounts: UInt64 = 200_000
+        let noAsyncs: UInt64 = 50
+        let noCounts: UInt64 = 2_000
 
         let q = DispatchQueue(label: "q", attributes: .concurrent)
         let g = DispatchGroup()
         let ai = NIOConcurrencyHelpers.Atomic<UInt64>(value: 0)
+        let everybodyHere = DispatchSemaphore(value: 0)
+        let go = DispatchSemaphore(value: 0)
         for thread in 1...noAsyncs {
             q.async(group: g) {
+                everybodyHere.signal()
+                go.wait()
                 for _ in 0..<noCounts {
                     _ = ai.add(thread)
                 }
             }
+        }
+        for _ in 0..<noAsyncs {
+            everybodyHere.wait()
+        }
+        for _ in 0..<noAsyncs {
+            go.signal()
         }
         g.wait()
         XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
@@ -230,18 +240,28 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     }
 
     func testLargeContendedNIOAtomicSum() {
-        let noAsyncs: UInt64 = 64
-        let noCounts: UInt64 = 200_000
+        let noAsyncs: UInt64 = 50
+        let noCounts: UInt64 = 2_000
 
         let q = DispatchQueue(label: "q", attributes: .concurrent)
         let g = DispatchGroup()
         let ai = NIOConcurrencyHelpers.NIOAtomic<UInt64>.makeAtomic(value: 0)
+        let everybodyHere = DispatchSemaphore(value: 0)
+        let go = DispatchSemaphore(value: 0)
         for thread in 1...noAsyncs {
             q.async(group: g) {
+                everybodyHere.signal()
+                go.wait()
                 for _ in 0..<noCounts {
                     _ = ai.add(thread)
                 }
             }
+        }
+        for _ in 0..<noAsyncs {
+            everybodyHere.wait()
+        }
+        for _ in 0..<noAsyncs {
+            go.signal()
         }
         g.wait()
         XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
@@ -835,7 +855,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testLoadAndExchangeHammering() {
         let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
-        let iterations = 100_000
+        let iterations = 10_000
 
         @inline(never)
         func doIt() {
@@ -868,7 +888,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testLoadAndStoreHammering() {
         let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
-        let iterations = 100_000
+        let iterations = 10_000
 
         @inline(never)
         func doIt() {
@@ -938,7 +958,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testMultipleLoadsRacingWhilstStoresAreGoingOn() {
         // regression test for https://github.com/apple/swift-nio/pull/1287#discussion_r353932225
         let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
-        let iterations = 100_000
+        let iterations = 10_000
 
         @inline(never)
         func doIt() {

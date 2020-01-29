@@ -42,14 +42,14 @@ class CircularBufferTests: XCTestCase {
         XCTAssertTrue(ring.isEmpty)
         XCTAssertEqual(0, ring.count)
 
-        for f in 1..<1000 {
+        for f in 1..<100 {
             ring.append(f)
             XCTAssertEqual(f, ring.count)
             XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
-        for f in 1..<1000 {
+        for f in 1..<100 {
             XCTAssertEqual(f, ring.removeFirst())
-            XCTAssertEqual(999 - f, ring.count)
+            XCTAssertEqual(99 - f, ring.count)
             XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
         XCTAssertTrue(ring.isEmpty)
