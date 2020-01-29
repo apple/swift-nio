@@ -16,16 +16,9 @@ import XCTest
 @testable import NIO
 
 public func getRandomNumbers(count: Int) -> [UInt8] {
-    var values: [UInt8] = .init(repeating: 0, count: count)
-    let fd = open("/dev/urandom", O_RDONLY)
-    precondition(fd >= 0)
-    defer {
-        close(fd)
+    return (0..<count).map { _ in
+        UInt8.random(in: .min ... .max)
     }
-    _ = values.withUnsafeMutableBytes { ptr in
-        read(fd, ptr.baseAddress!, ptr.count)
-    }
-    return values
 }
 
 class HeapTests: XCTestCase {

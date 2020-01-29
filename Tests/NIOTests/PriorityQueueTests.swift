@@ -78,7 +78,7 @@ class PriorityQueueTest: XCTestCase {
 
     func testBuildAndRemoveFromRandomPriorityQueues() {
         for ascending in [true, false] {
-            for size in 0...50 {
+            for size in 0...33 {
                 var pq = PriorityQueue<UInt8>(ascending: ascending)
                 let randoms = getRandomNumbers(count: size)
                 randoms.forEach { pq.push($0) }
