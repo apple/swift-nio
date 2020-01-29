@@ -182,7 +182,7 @@ class HTTPTest: XCTestCase {
         req2.headers.add(name: "C", value: "D")
 
         try checkHTTPRequests([req1, req2])
-        try checkHTTPRequests(Array(repeating: req1, count: 1000))
+        try checkHTTPRequests(Array(repeating: req1, count: 10))
     }
 
     func testHTTPBody() throws {
@@ -196,7 +196,9 @@ class HTTPTest: XCTestCase {
     }
 
     func testHTTPPipeliningWithBody() throws {
-        try checkHTTPRequests(Array(repeating: HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/"), count: 1000),
+        try checkHTTPRequests(Array(repeating: HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
+                                                               method: .GET, uri: "/"),
+                                    count: 20),
                              body: "1")
     }
 

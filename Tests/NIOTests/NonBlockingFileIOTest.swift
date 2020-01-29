@@ -227,19 +227,19 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testChunkReadingWorksForIncrediblyLongChain() throws {
-        let content = String(repeatElement("X", count: 20*1024))
+        let content = String(repeating: "X", count: 20*1024)
         var numCalls = 0
         let expectedByte = content.utf8.first!
         try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
-            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: content.utf8.count)
-            try self.fileIO.readChunked(fileRegion: fr,
+            try self.fileIO.readChunked(fileHandle: fileHandle,
+                                        fromOffset: 0,
+                                        byteCount: content.utf8.count,
                                         chunkSize: 1,
                                         allocator: self.allocator,
                                         eventLoop: self.eventLoop) { buf in
-                                            var buf = buf
                                             XCTAssertTrue(self.eventLoop.inEventLoop)
                                             XCTAssertEqual(1, buf.readableBytes)
-                                            XCTAssertEqual(expectedByte, buf.readBytes(length: 1)!.first!)
+                                            XCTAssertEqual(expectedByte, buf.readableBytesView.first)
                                             numCalls += 1
                                             return self.eventLoop.makeSucceededFuture(())
                 }.wait()

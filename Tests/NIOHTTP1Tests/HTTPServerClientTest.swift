@@ -62,14 +62,9 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
 
 class HTTPServerClientTest : XCTestCase {
     /* needs to be something reasonably large and odd so it has good odds producing incomplete writes even on the loopback interface */
-    private static let massiveResponseLength = 5 * 1024 * 1024 + 7
+    private static let massiveResponseLength = 1 * 1024 * 1024 + 7
     private static let massiveResponseBytes: [UInt8] = {
-        var bytes: [UInt8] = []
-        bytes.reserveCapacity(HTTPServerClientTest.massiveResponseLength)
-        for f in 0..<HTTPServerClientTest.massiveResponseLength {
-            bytes.append(UInt8(f % 255))
-        }
-        return bytes
+        return Array(repeating: 0xff, count: HTTPServerClientTest.massiveResponseLength)
     }()
 
     enum SendMode {
@@ -191,13 +186,7 @@ class HTTPServerClientTest : XCTestCase {
 
                 case "/massive-response":
                     var buf = context.channel.allocator.buffer(capacity: HTTPServerClientTest.massiveResponseLength)
-                    buf.writeWithUnsafeMutableBytes(minimumWritableBytes: HTTPServerClientTest.massiveResponseLength) { targetPtr in
-                        return HTTPServerClientTest.massiveResponseBytes.withUnsafeBytes { srcPtr in
-                            precondition(targetPtr.count >= srcPtr.count)
-                            targetPtr.copyMemory(from: srcPtr)
-                            return srcPtr.count
-                        }
-                    }
+                    buf.reserveCapacity(HTTPServerClientTest.massiveResponseLength)
                     buf.writeBytes(HTTPServerClientTest.massiveResponseBytes)
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
