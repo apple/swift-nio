@@ -1637,7 +1637,7 @@ class ByteBufferTest: XCTestCase {
 
     func testLargeSliceBegin16MBIsOkayAndDoesNotCopy() throws {
         var fourMBBuf = self.allocator.buffer(capacity: 4 * 1024 * 1024)
-        fourMBBuf.writeBytes(repeatElement(0xff, count: fourMBBuf.capacity))
+        fourMBBuf.writeBytes(Array<UInt8>(repeating: 0xff, count: fourMBBuf.capacity))
         let totalBufferSize = 5 * fourMBBuf.readableBytes
         XCTAssertEqual(4 * 1024 * 1024, fourMBBuf.readableBytes)
         var buf = self.allocator.buffer(capacity: totalBufferSize)
@@ -1674,7 +1674,7 @@ class ByteBufferTest: XCTestCase {
 
     func testLargeSliceBeginMoreThan16MBIsOkay() throws {
         var fourMBBuf = self.allocator.buffer(capacity: 4 * 1024 * 1024)
-        fourMBBuf.writeBytes(repeatElement(0xff, count: fourMBBuf.capacity))
+        fourMBBuf.writeBytes(Array<UInt8>(repeating: 0xff, count: fourMBBuf.capacity))
         let totalBufferSize = 5 * fourMBBuf.readableBytes + 1
         XCTAssertEqual(4 * 1024 * 1024, fourMBBuf.readableBytes)
         var buf = self.allocator.buffer(capacity: totalBufferSize)
