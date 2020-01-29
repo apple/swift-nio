@@ -29,11 +29,11 @@ services:
 
   integration-tests:
     <<: *common
-    command: /bin/bash -xcl "./scripts/integration_tests.sh"
+    command: /bin/bash -xcl "./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-}"
 
   test:
     <<: *common
-    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && ./scripts/integration_tests.sh"
+    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && ./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-}"
 
   performance-test:
     <<: *common

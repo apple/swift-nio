@@ -13,5 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+set +ex
+
 mkdir -p .build # for the junit.xml file
-./IntegrationTests/run-tests.sh --junit-xml .build/junit-sh-tests.xml -i
+./IntegrationTests/run-tests.sh --junit-xml .build/junit-sh-tests.xml -i $@
