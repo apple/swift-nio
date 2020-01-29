@@ -13,11 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #define _GNU_SOURCE
-#define __USE_GNU
-#include <atomic-counter.h>
 #include <dlfcn.h>
 #include <fcntl.h>
-#include <hooked-functions.h>
 #include <inttypes.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -27,6 +24,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <atomic-counter.h>
+#include <hooked-functions.h>
 
 /* a big block of memory that we'll use for recursive mallocs */
 static char g_recursive_malloc_mem[10 * 1024 * 1024] = {0};
