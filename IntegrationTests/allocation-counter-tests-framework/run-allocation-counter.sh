@@ -103,7 +103,7 @@ function dir_basename() {
 
 function fake_package_swift() {
     cat > Package.swift <<EOF
-// swift-tools-version:4.0
+// swift-tools-version:5.0
 import PackageDescription
 
 let package = Package(name: "$1")
