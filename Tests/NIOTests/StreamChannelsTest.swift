@@ -624,7 +624,7 @@ class StreamChannelTest: XCTestCase {
                 case .waitingForWritableAgain:
                     XCTAssert(context.channel.isWritable)
                     self.state = .done
-                    var buffer = context.channel.allocator.buffer(capacity: 100 * 1024 * 1024)
+                    var buffer = context.channel.allocator.buffer(capacity: 10 * 1024 * 1024)
                     buffer.writeBytes(Array(repeating: UInt8(ascii: "X"), count: buffer.capacity - 1))
                     context.writeAndFlush(self.wrapOutboundOut(buffer), promise: self.finishedBigWritePromise)
                     self.beganBigWritePromise.succeed(())

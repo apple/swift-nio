@@ -1851,7 +1851,7 @@ public final class ChannelTests: XCTestCase {
             }
         }
 
-        for _ in 0..<1000 {
+        for _ in 0..<20 {
             XCTAssertNoThrow(try runTest())
         }
     }

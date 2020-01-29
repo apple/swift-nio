@@ -920,7 +920,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testLoadAndCASHammering() {
         let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
-        let iterations = 100_000
+        let iterations = 1_000
 
         @inline(never)
         func doIt() {
