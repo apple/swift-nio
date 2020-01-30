@@ -17,10 +17,13 @@ import NIOConcurrencyHelpers
 import XCTest
 
 class BootstrapTest: XCTestCase {
+    var group: MultiThreadedEventLoopGroup!
     var groupBag: [MultiThreadedEventLoopGroup]? = nil // protected by `self.lock`
     let lock = Lock()
 
     override func setUp() {
+        XCTAssertNil(self.group)
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.lock.withLock {
             XCTAssertNil(self.groupBag)
             self.groupBag = []
@@ -37,7 +40,10 @@ class BootstrapTest: XCTestCase {
                 XCTAssertNoThrow(try $0.syncShutdownGracefully())
             })
             self.groupBag = nil
+            XCTAssertNotNil(self.group)
         })
+        XCTAssertNoThrow(try self.group?.syncShutdownGracefully())
+        self.group = nil
     }
 
     func freshEventLoop() -> EventLoop {
@@ -261,5 +267,138 @@ class BootstrapTest: XCTestCase {
 
         let channel = try assertNoThrowWithValue(bootstrap.bind(host: "127.0.0.1", port: 0).wait())
         XCTAssertNoThrow(try channel.close().wait())
+    }
+
+    func testServerBootstrapSetsChannelOptionsBeforeChannelInitializer() {
+        var channel: Channel? = nil
+        XCTAssertNoThrow(channel = try ServerBootstrap(group: self.group)
+            .serverChannelOption(ChannelOptions.autoRead, value: false)
+            .serverChannelInitializer { channel in
+                channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                    func workaround() {
+                        XCTAssertNoThrow(XCTAssertFalse(try result.get()))
+                    }
+                    workaround()
+                }
+                return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
+        }
+        .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
+        .wait())
+        XCTAssertNotNil(channel)
+        XCTAssertNoThrow(try channel?.close().wait())
+    }
+
+    func testClientBootstrapSetsChannelOptionsBeforeChannelInitializer() {
+        XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
+            var channel: Channel? = nil
+            XCTAssertNoThrow(channel = try ClientBootstrap(group: self.group)
+                .channelOption(ChannelOptions.autoRead, value: false)
+                .channelInitializer { channel in
+                    channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                        func workaround() {
+                            XCTAssertNoThrow(XCTAssertFalse(try result.get()))
+                        }
+                        workaround()
+                    }
+                    return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
+            }
+            .connect(to: server.localAddress!)
+            .wait())
+            XCTAssertNotNil(channel)
+            XCTAssertNoThrow(try channel?.close().wait())
+        })
+    }
+
+    func testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer() {
+        XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
+            var maybeSocket: Socket? = nil
+            XCTAssertNoThrow(maybeSocket = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM))
+            XCTAssertNoThrow(XCTAssertEqual(true, try maybeSocket?.connect(to: server.localAddress!)))
+            var maybeFD: CInt? = nil
+            XCTAssertNoThrow(maybeFD = try maybeSocket?.takeDescriptorOwnership())
+            guard let fd = maybeFD else {
+                XCTFail("could not get a socket fd")
+                return
+            }
+
+            var channel: Channel? = nil
+            XCTAssertNoThrow(channel = try ClientBootstrap(group: self.group)
+                .channelOption(ChannelOptions.autoRead, value: false)
+                .channelInitializer { channel in
+                    channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                        func workaround() {
+                            XCTAssertNoThrow(XCTAssertFalse(try result.get()))
+                        }
+                        workaround()
+                    }
+                    return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
+            }
+            .withConnectedSocket(descriptor: fd)
+            .wait())
+            XCTAssertNotNil(channel)
+            XCTAssertNoThrow(try channel?.close().wait())
+        })
+    }
+
+    func testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer() {
+        var channel: Channel? = nil
+        XCTAssertNoThrow(channel = try DatagramBootstrap(group: self.group)
+            .channelOption(ChannelOptions.autoRead, value: false)
+            .channelInitializer { channel in
+                channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                    func workaround() {
+                        XCTAssertNoThrow(XCTAssertFalse(try result.get()))
+                    }
+                    workaround()
+                }
+                return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
+        }
+        .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
+        .wait())
+        XCTAssertNotNil(channel)
+        XCTAssertNoThrow(try channel?.close().wait())
+    }
+
+    func testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer() {
+        XCTAssertNoThrow(try withPipe { inPipe, outPipe in
+            var maybeInFD: CInt? = nil
+            var maybeOutFD: CInt? = nil
+            XCTAssertNoThrow(maybeInFD = try inPipe.takeDescriptorOwnership())
+            XCTAssertNoThrow(maybeOutFD = try outPipe.takeDescriptorOwnership())
+            guard let inFD = maybeInFD, let outFD = maybeOutFD else {
+                XCTFail("couldn't get pipe fds")
+                return [inPipe, outPipe]
+            }
+            var channel: Channel? = nil
+            XCTAssertNoThrow(channel = try NIOPipeBootstrap(group: self.group)
+                .channelOption(ChannelOptions.autoRead, value: false)
+                .channelInitializer { channel in
+                    channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                        func workaround() {
+                            XCTAssertNoThrow(XCTAssertFalse(try result.get()))
+                        }
+                        workaround()
+                    }
+                    return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
+            }
+            .withPipes(inputDescriptor: inFD, outputDescriptor: outFD)
+            .wait())
+            XCTAssertNotNil(channel)
+            XCTAssertNoThrow(try channel?.close().wait())
+            return []
+        })
+    }
+}
+
+private final class MakeSureAutoReadIsOffInChannelInitializer:  ChannelInboundHandler {
+    typealias InboundIn = Channel
+
+    func channelActive(context: ChannelHandlerContext) {
+        context.channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+            func workaround() {
+                XCTAssertNoThrow(XCTAssertFalse(try result.get()))
+            }
+            workaround()
+        }
     }
 }

@@ -518,6 +518,25 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
     }
 }
 
+func withTCPServerChannel<R>(bindTarget: SocketAddress? = nil,
+                             group: EventLoopGroup,
+                             file: StaticString = #file,
+                             line: UInt = #line,
+                             _ body: (Channel) throws -> R) throws -> R {
+    let server = try ServerBootstrap(group: group)
+        .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
+        .bind(to: bindTarget ?? .init(ipAddress: "127.0.0.1", port: 0))
+        .wait()
+    do {
+        let result = try body(server)
+        try server.close().wait()
+        return result
+    } catch {
+        try? server.close().wait()
+        throw error
+    }
+}
+
 func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
                                            forceSeparateEventLoops: Bool = false,
                                            file: StaticString = #file,
