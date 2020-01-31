@@ -185,13 +185,13 @@ public enum SocketAddress: CustomStringConvertible {
         switch self {
         case .v4(let addr):
             var address = addr.address
-            return try address.withSockAddr(body)
+            return try address.withSockAddr({ try body($0, $1) })
         case .v6(let addr):
             var address = addr.address
-            return try address.withSockAddr(body)
+            return try address.withSockAddr({ try body($0, $1) })
         case .unixDomainSocket(let addr):
             var address = addr.address
-            return try address.withSockAddr(body)
+            return try address.withSockAddr({ try body($0, $1) })
         }
     }
 
