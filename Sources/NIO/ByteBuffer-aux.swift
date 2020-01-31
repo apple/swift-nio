@@ -258,7 +258,7 @@ extension ByteBuffer {
     @discardableResult
     @inlinable
     public mutating func readWithUnsafeReadableBytes(_ body: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
-        let bytesRead = try self.withUnsafeReadableBytes(body)
+        let bytesRead = try self.withUnsafeReadableBytes({ try body($0) })
         self._moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
@@ -273,7 +273,7 @@ extension ByteBuffer {
     /// - returns: The value `body` returned in the second tuple component.
     @inlinable
     public mutating func readWithUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
-        let (bytesRead, ret) = try self.withUnsafeReadableBytes(body)
+        let (bytesRead, ret) = try self.withUnsafeReadableBytes({ try body($0) })
         self._moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
@@ -289,7 +289,7 @@ extension ByteBuffer {
     @discardableResult
     @inlinable
     public mutating func readWithUnsafeMutableReadableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
-        let bytesRead = try self.withUnsafeMutableReadableBytes(body)
+        let bytesRead = try self.withUnsafeMutableReadableBytes({ try body($0) })
         self._moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
@@ -304,7 +304,7 @@ extension ByteBuffer {
     /// - returns: The value `body` returned in the second tuple component.
     @inlinable
     public mutating func readWithUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
-        let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(body)
+        let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes({ try body($0) })
         self._moveReaderIndex(forwardBy: bytesRead)
         return ret
     }

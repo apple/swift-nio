@@ -398,13 +398,13 @@ class BaseSocket: Selectable, BaseSocketProtocol {
             switch address {
             case .v4(let address):
                 var addr = address.address
-                try addr.withSockAddr(doBind)
+                try addr.withSockAddr({ try doBind(ptr: $0, bytes: $1) })
             case .v6(let address):
                 var addr = address.address
-                try addr.withSockAddr(doBind)
+                try addr.withSockAddr({ try doBind(ptr: $0, bytes: $1) })
             case .unixDomainSocket(let address):
                 var addr = address.address
-                try addr.withSockAddr(doBind)
+                try addr.withSockAddr({ try doBind(ptr: $0, bytes: $1) })
             }
         }
     }
