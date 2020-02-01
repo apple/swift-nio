@@ -217,7 +217,7 @@ final class NonAcceptingServerSocket: ServerSocket {
     override func accept(setNonBlocking: Bool) throws -> Socket? {
         if let err = self.errors.last {
             _ = self.errors.removeLast()
-            throw IOError(errnoCode: err, function: "accept")
+            throw IOError(errnoCode: err, reason: "accept")
         }
         return nil
     }

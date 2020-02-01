@@ -108,14 +108,14 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
     }
 }
 
-private func preconditionIsNotBlacklistedErrno(err: CInt, where function: StaticString) -> Void {
+private func preconditionIsNotBlacklistedErrno(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     precondition(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
 }
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticString = #function, _ body: () throws -> T) throws -> IOResult<T> {
+internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: String = #function, _ body: () throws -> T) throws -> IOResult<T> {
     while true {
         let res = try body()
         if res == -1 {
@@ -127,7 +127,7 @@ internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticSt
                 return .wouldBlock(0)
             default:
                 preconditionIsNotBlacklistedErrno(err: err, where: function)
-                throw IOError(errnoCode: err, function: function)
+                throw IOError(errnoCode: err, reason: function)
             }
 
         }
@@ -138,7 +138,7 @@ internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticSt
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
 @discardableResult
-internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #function, _ body: () throws -> T) throws -> T {
+internal func wrapSyscall<T: FixedWidthInteger>(where function: String = #function, _ body: () throws -> T) throws -> T {
     while true {
         let res = try body()
         if res == -1 {
@@ -147,7 +147,7 @@ internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #
                 continue
             }
             preconditionIsNotBlacklistedErrno(err: err, where: function)
-            throw IOError(errnoCode: err, function: function)
+            throw IOError(errnoCode: err, reason: function)
         }
         return res
     }
@@ -155,7 +155,7 @@ internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-internal func wrapErrorIsNullReturnCall<T>(where function: StaticString = #function, _ body: () throws -> T?) throws -> T {
+internal func wrapErrorIsNullReturnCall<T>(where function: String = #function, _ body: () throws -> T?) throws -> T {
     while true {
         guard let res = try body() else {
             let err = errno
@@ -163,7 +163,7 @@ internal func wrapErrorIsNullReturnCall<T>(where function: StaticString = #funct
                 continue
             }
             preconditionIsNotBlacklistedErrno(err: err, where: function)
-            throw IOError(errnoCode: err, function: function)
+            throw IOError(errnoCode: err, reason: function)
         }
         return res
     }
@@ -246,7 +246,7 @@ internal enum Posix {
             //     - https://lwn.net/Articles/576478/
             if err != EINTR {
                 preconditionIsNotBlacklistedErrno(err: err, where: #function)
-                throw IOError(errnoCode: err, function: "close")
+                throw IOError(errnoCode: err, reason: "close")
             }
         }
     }

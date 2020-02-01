@@ -14,38 +14,42 @@
 
 /// An `Error` for an IO operation.
 public struct IOError: Swift.Error {
+    @available(*, deprecated, message: "NIO no longer uses FailureDescription.")
     public enum FailureDescription {
         case function(StaticString)
         case reason(String)
     }
-    /// The `errno` that was set for the operation.
-    public let errnoCode: Int32
 
     /// The actual reason (in an human-readable form) for this `IOError`.
-    public let reason: FailureDescription
+    private var failureDescription: String
+
+    @available(*, deprecated, message: "NIO no longer uses FailureDescription, use IOError.description for a human-readable error description")
+    public var reason: FailureDescription {
+        return .reason(self.failureDescription)
+    }
+
+    /// The `errno` that was set for the operation.
+    public let errnoCode: CInt
 
     /// Creates a new `IOError``
-    ///
-    /// - note: At the moment, this constructor is more expensive than `IOError(errnoCode:function:)` as the `String` will incur reference counting
     ///
     /// - parameters:
     ///     - errorCode: the `errno` that was set for the operation.
     ///     - reason: the actual reason (in an human-readable form).
-    public init(errnoCode: Int32, reason: String) {
+    public init(errnoCode: CInt, reason: String) {
         self.errnoCode = errnoCode
-        self.reason = .reason(reason)
+        self.failureDescription = reason
     }
 
     /// Creates a new `IOError``
     ///
-    /// - note: This constructor is the cheapest way to create an `IOError`.
-    ///
     /// - parameters:
     ///     - errorCode: the `errno` that was set for the operation.
     ///     - function: The function the error happened in, the human readable description will be generated automatically when needed.
-    public init(errnoCode: Int32, function: StaticString) {
+    @available(*, deprecated, renamed: "init(errnoCode:reason:)")
+    public init(errnoCode: CInt, function: StaticString) {
         self.errnoCode = errnoCode
-        self.reason = .function(function)
+        self.failureDescription = "\(function)"
     }
 }
 
@@ -55,7 +59,7 @@ public struct IOError: Swift.Error {
 ///     - errorCode: the `errno` that was set for the operation.
 ///     - reason: what failed
 /// - returns: the constructed reason.
-private func reasonForError(errnoCode: Int32, reason: String) -> String {
+private func reasonForError(errnoCode: CInt, reason: String) -> String {
     if let errorDescC = strerror(errnoCode) {
         return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"
     } else {
@@ -69,12 +73,7 @@ extension IOError: CustomStringConvertible {
     }
 
     public var localizedDescription: String {
-        switch self.reason {
-        case .reason(let reason):
-            return reasonForError(errnoCode: self.errnoCode, reason: reason)
-        case .function(let function):
-            return reasonForError(errnoCode: self.errnoCode, reason: "\(function) failed")
-        }
+        return reasonForError(errnoCode: self.errnoCode, reason: self.failureDescription)
     }
 }
 
