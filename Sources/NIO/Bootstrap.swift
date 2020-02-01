@@ -233,12 +233,11 @@ public final class ServerBootstrap {
         }
 
         return eventLoop.submit {
-            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
-            return serverChannelInit(serverChannel).hop(to: eventLoop).flatMap {
+            serverChannelOptions.applyAllChannelOptions(to: serverChannel).flatMap {
                 serverChannel.pipeline.addHandler(AcceptHandler(childChannelInitializer: childChannelInit,
                                                                 childChannelOptions: childChannelOptions))
             }.flatMap {
-                serverChannelOptions.applyAllChannelOptions(to: serverChannel)
+                serverChannelInit(serverChannel)
             }.flatMap {
                 register(eventLoop, serverChannel)
             }.map {
@@ -540,10 +539,10 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
 
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
-            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
-            return channelInitializer(channel).hop(to: eventLoop).flatMap {
-                self._channelOptions.applyAllChannelOptions(to: channel)
+            return self._channelOptions.applyAllChannelOptions(to: channel).flatMap {
+                channelInitializer(channel)
             }.flatMap {
+                eventLoop.assertInEventLoop()
                 let promise = eventLoop.makePromise(of: Void.self)
                 channel.registerAlreadyConfigured0(promise: promise)
                 return promise.futureResult
@@ -578,11 +577,11 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
-            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
-            return channelInitializer(channel).hop(to: eventLoop).flatMap {
-                channelOptions.applyAllChannelOptions(to: channel)
+            return channelOptions.applyAllChannelOptions(to: channel).flatMap {
+                channelInitializer(channel)
             }.flatMap {
-                channel.registerAndDoSynchronously(body)
+                eventLoop.assertInEventLoop()
+                return channel.registerAndDoSynchronously(body)
             }.map {
                 channel
             }.flatMapError { error in
@@ -736,12 +735,11 @@ public final class DatagramBootstrap {
 
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
-            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
-            return channelInitializer(channel).hop(to: eventLoop).flatMap {
-                eventLoop.assertInEventLoop()
-                return channelOptions.applyAllChannelOptions(to: channel)
+            return channelOptions.applyAllChannelOptions(to: channel).flatMap {
+                channelInitializer(channel)
             }.flatMap {
-                registerAndBind(eventLoop, channel)
+                eventLoop.assertInEventLoop()
+                return registerAndBind(eventLoop, channel)
             }.map {
                 channel
             }.flatMapError { error in
@@ -851,10 +849,10 @@ public final class NIOPipeBootstrap {
 
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
-            // We need to hop to `eventLoop` as the user might have returned a future from a different `EventLoop`.
-            return channelInitializer(channel).hop(to: eventLoop).flatMap {
-                self._channelOptions.applyAllChannelOptions(to: channel)
+            return self._channelOptions.applyAllChannelOptions(to: channel).flatMap {
+                channelInitializer(channel)
             }.flatMap {
+                eventLoop.assertInEventLoop()
                 let promise = eventLoop.makePromise(of: Void.self)
                 channel.registerAlreadyConfigured0(promise: promise)
                 return promise.futureResult
