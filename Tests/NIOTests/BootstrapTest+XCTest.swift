@@ -34,6 +34,11 @@ extension BootstrapTest {
                 ("testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
                 ("testTCPClientBootstrapAllowsConformanceCorrectly", testTCPClientBootstrapAllowsConformanceCorrectly),
                 ("testServerBootstrapBindTimeout", testServerBootstrapBindTimeout),
+                ("testServerBootstrapSetsChannelOptionsBeforeChannelInitializer", testServerBootstrapSetsChannelOptionsBeforeChannelInitializer),
+                ("testClientBootstrapSetsChannelOptionsBeforeChannelInitializer", testClientBootstrapSetsChannelOptionsBeforeChannelInitializer),
+                ("testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer", testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer),
+                ("testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer", testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer),
+                ("testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer", testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer),
            ]
    }
 }
