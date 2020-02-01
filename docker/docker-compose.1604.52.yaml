@@ -13,8 +13,6 @@ services:
 
   integration-tests:
     image: swift-nio:16.04-5.2
-    environment:
-      - INTEGRATION_TESTS_ARG=-f tests_0[013-9]
 
   test:
     image: swift-nio:16.04-5.2
