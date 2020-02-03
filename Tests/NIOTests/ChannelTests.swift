@@ -2046,7 +2046,7 @@ public final class ChannelTests: XCTestCase {
                 XCTAssertGreaterThan(pointer.count, 0)
                 if self.firstReadHappened {
                     // this is a copy of the exact error that'd come out of the real Socket.read
-                    throw IOError.init(errnoCode: ECONNRESET, function: "read(descriptor:pointer:size:)")
+                    throw IOError.init(errnoCode: ECONNRESET, reason: "read(descriptor:pointer:size:)")
                 } else {
                     pointer[0] = 0xff
                     return .processed(1)
@@ -2481,11 +2481,11 @@ public final class ChannelTests: XCTestCase {
             }
 
             override func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
-                throw IOError(errnoCode: ETXTBSY, function: "WriteAlwaysFailingSocket.write fake error")
+                throw IOError(errnoCode: ETXTBSY, reason: "WriteAlwaysFailingSocket.write fake error")
             }
 
             override func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
-                throw IOError(errnoCode: ETXTBSY, function: "WriteAlwaysFailingSocket.writev fake error")
+                throw IOError(errnoCode: ETXTBSY, reason: "WriteAlwaysFailingSocket.writev fake error")
             }
         }
 
