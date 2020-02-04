@@ -526,7 +526,7 @@ public struct ByteBuffer {
         if minimumWritableBytes > 0 {
             self.reserveCapacity(minimumWritableBytes: minimumWritableBytes)
         }
-        let bytesWritten = try self.withUnsafeMutableWritableBytes(body)
+        let bytesWritten = try self.withUnsafeMutableWritableBytes({ try body($0) })
         self._moveWriterIndex(to: self._writerIndex + _toIndex(bytesWritten))
         return bytesWritten
     }
@@ -535,7 +535,7 @@ public struct ByteBuffer {
     @discardableResult
     @inlinable
     public mutating func writeWithUnsafeMutableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
-        return try self.writeWithUnsafeMutableBytes(minimumWritableBytes: 0, body)
+        return try self.writeWithUnsafeMutableBytes(minimumWritableBytes: 0, { try body($0) })
     }
 
     /// This vends a pointer to the storage of the `ByteBuffer`. It's marked as _very unsafe_ because it might contain

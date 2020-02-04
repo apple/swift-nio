@@ -433,10 +433,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         return try self.triggerWriteOperations { writeMechanism in
             switch writeMechanism {
             case .scalarBufferWrite:
-                return try triggerScalarBufferWrite(scalarWriteOperation: scalarWriteOperation)
+                return try triggerScalarBufferWrite(scalarWriteOperation: { try scalarWriteOperation($0, $1, $2) })
             case .vectorBufferWrite:
                 do {
-                    return try triggerVectorBufferWrite(vectorWriteOperation: vectorWriteOperation)
+                    return try triggerVectorBufferWrite(vectorWriteOperation: { try vectorWriteOperation($0) })
                 } catch {
                     // If the error we just hit is recoverable, we fall back to single write mode to
                     // isolate exactly which write triggered the problem.
@@ -444,7 +444,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                         throw error
                     }
 
-                    return try triggerScalarBufferWrite(scalarWriteOperation: scalarWriteOperation)
+                    return try triggerScalarBufferWrite(scalarWriteOperation: { try scalarWriteOperation($0, $1, $2) })
                 }
             case .scalarFileWrite:
                 preconditionFailure("PendingDatagramWritesManager was handed a file write")
@@ -524,7 +524,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                                                                        msgs: self.msgs,
                                                                        addresses: self.addresses,
                                                                        storageRefs: self.storageRefs,
-                                                                       vectorWriteOperation),
+                                                                       { try vectorWriteOperation($0) }),
                              messages: self.msgs)
     }
 

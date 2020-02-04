@@ -82,6 +82,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(HTTPTypesTest.allTests),
              testCase(HappyEyeballsTest.allTests),
              testCase(HeapTests.allTests),
+             testCase(IOErrorTest.allTests),
              testCase(IdleStateHandlerTest.allTests),
              testCase(IntegerTypesTest.allTests),
              testCase(MarkedCircularBufferTests.allTests),

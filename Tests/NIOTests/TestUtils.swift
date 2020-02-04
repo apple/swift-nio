@@ -217,7 +217,7 @@ final class NonAcceptingServerSocket: ServerSocket {
     override func accept(setNonBlocking: Bool) throws -> Socket? {
         if let err = self.errors.last {
             _ = self.errors.removeLast()
-            throw IOError(errnoCode: err, function: "accept")
+            throw IOError(errnoCode: err, reason: "accept")
         }
         return nil
     }
@@ -515,6 +515,25 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
     return try lock.withLock {
         ret.append(try body(udpChannel.wait()))
         return ret
+    }
+}
+
+func withTCPServerChannel<R>(bindTarget: SocketAddress? = nil,
+                             group: EventLoopGroup,
+                             file: StaticString = #file,
+                             line: UInt = #line,
+                             _ body: (Channel) throws -> R) throws -> R {
+    let server = try ServerBootstrap(group: group)
+        .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
+        .bind(to: bindTarget ?? .init(ipAddress: "127.0.0.1", port: 0))
+        .wait()
+    do {
+        let result = try body(server)
+        try server.close().wait()
+        return result
+    } catch {
+        try? server.close().wait()
+        throw error
     }
 }
 

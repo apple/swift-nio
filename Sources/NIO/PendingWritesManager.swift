@@ -339,11 +339,11 @@ final class PendingStreamWritesManager: PendingWritesManager {
         return try self.triggerWriteOperations { writeMechanism in
             switch writeMechanism {
             case .scalarBufferWrite:
-                return try triggerScalarBufferWrite(scalarBufferWriteOperation)
+                return try triggerScalarBufferWrite({ try scalarBufferWriteOperation($0) })
             case .vectorBufferWrite:
-                return try triggerVectorBufferWrite(vectorBufferWriteOperation)
+                return try triggerVectorBufferWrite({ try vectorBufferWriteOperation($0) })
             case .scalarFileWrite:
-                return try triggerScalarFileWrite(scalarFileWriteOperation)
+                return try triggerScalarFileWrite({ try scalarFileWriteOperation($0, $1, $2) })
             case .nothingToBeWritten:
                 assertionFailure("called \(#function) with nothing available to be written")
                 return .writtenCompletely
@@ -378,7 +378,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
         switch self.state[0].data {
         case .byteBuffer(let buffer):
-            return self.didWrite(itemCount: 1, result: try buffer.withUnsafeReadableBytes(operation))
+            return self.didWrite(itemCount: 1, result: try buffer.withUnsafeReadableBytes({ try operation($0) }))
         case .fileRegion:
             preconditionFailure("called \(#function) but first item to write was a FileRegion")
         }
@@ -414,7 +414,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         let result = try doPendingWriteVectorOperation(pending: self.state,
                                                        iovecs: self.iovecs,
                                                        storageRefs: self.storageRefs,
-                                                       operation)
+                                                       { try operation($0) })
         return self.didWrite(itemCount: result.itemCount, result: result.writeResult)
     }
 
