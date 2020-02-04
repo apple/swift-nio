@@ -2043,6 +2043,59 @@ class ByteBufferTest: XCTestCase {
         }
     }
 
+    func testReserveCapacityWithMinimumWritableBytesWhenNotEnoughWritableBytes() {
+        // Ensure we have a non-empty buffer since the writer index is involved here.
+        self.buf.writeBytes((UInt8.min...UInt8.max))
+
+        let writableBytes = self.buf.writableBytes
+        self.buf.reserveCapacity(minimumWritableBytes: writableBytes + 1)
+        XCTAssertGreaterThanOrEqual(self.buf.writableBytes, writableBytes + 1)
+    }
+
+    func testReserveCapacityWithMinimumWritableBytesWhenEnoughWritableBytes() {
+        // Ensure we have a non-empty buffer since the writer index is involved here.
+        self.buf.writeBytes((UInt8.min...UInt8.max))
+
+        // Ensure we have some space.
+        self.buf.reserveCapacity(minimumWritableBytes: 5)
+
+        let oldPtrVal = self.buf.withVeryUnsafeBytes {
+            UInt(bitPattern: $0.baseAddress!)
+        }
+
+        let writableBytes = self.buf.writableBytes
+        self.buf.reserveCapacity(minimumWritableBytes: writableBytes - 1)
+
+        let newPtrVal = self.buf.withVeryUnsafeBytes {
+            UInt(bitPattern: $0.baseAddress!)
+        }
+
+        XCTAssertEqual(self.buf.writableBytes, writableBytes)
+        XCTAssertEqual(oldPtrVal, newPtrVal)
+    }
+
+    func testReserveCapacityWithMinimumWritableBytesWhenSameWritableBytes() {
+        // Ensure we have a non-empty buffer since the writer index is involved here.
+        self.buf.writeBytes((UInt8.min...UInt8.max))
+
+        // Ensure we have some space.
+        self.buf.reserveCapacity(minimumWritableBytes: 5)
+
+        let oldPtrVal = self.buf.withVeryUnsafeBytes {
+            UInt(bitPattern: $0.baseAddress!)
+        }
+
+        let writableBytes = self.buf.writableBytes
+        self.buf.reserveCapacity(minimumWritableBytes: writableBytes)
+
+        let newPtrVal = self.buf.withVeryUnsafeBytes {
+            UInt(bitPattern: $0.baseAddress!)
+        }
+
+        XCTAssertEqual(self.buf.writableBytes, writableBytes)
+        XCTAssertEqual(oldPtrVal, newPtrVal)
+    }
+
     func testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable() {
         var buf = self.buf!
         buf.writeString("ABCD")
