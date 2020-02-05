@@ -1260,9 +1260,9 @@ reexecute:
 
           switch (parser->header_state) {
             case h_general: {
-              size_t limit = data + len - p;
-              limit = MIN(limit, max_header_size);
-              while (p+1 < data + limit && TOKEN(p[1])) {
+              size_t left = data + len - p;
+              const char* pe = p + MIN(left, max_header_size);
+              while (p+1 < pe && TOKEN(p[1])) {
                 p++;
               }
               break;
@@ -1499,28 +1499,25 @@ reexecute:
 
           switch (h_state) {
             case h_general:
-            {
-              const char* p_cr;
-              const char* p_lf;
-              size_t limit = data + len - p;
+              {
+                size_t left = data + len - p;
+                const char* pe = p + MIN(left, max_header_size);
 
-              limit = MIN(limit, max_header_size);
-
-              p_cr = (const char*) memchr(p, CR, limit);
-              p_lf = (const char*) memchr(p, LF, limit);
-              if (p_cr != NULL) {
-                if (p_lf != NULL && p_cr >= p_lf)
-                  p = p_lf;
-                else
-                  p = p_cr;
-              } else if (UNLIKELY(p_lf != NULL)) {
-                p = p_lf;
-              } else {
-                p = data + len;
+                for (; p != pe; p++) {
+                  ch = *p;
+                  if (ch == CR || ch == LF) {
+                    --p;
+                    break;
+                  }
+                  if (!lenient && !IS_HEADER_CHAR(ch)) {
+                    SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
+                    goto error;
+                  }
+                }
+                if (p == data + len)
+                  --p;
+                break;
               }
-              --p;
-              break;
-            }
 
             case h_connection:
             case h_transfer_encoding:
