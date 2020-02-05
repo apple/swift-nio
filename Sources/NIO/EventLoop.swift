@@ -1027,3 +1027,18 @@ public enum EventLoopError: Error {
     /// Shutting down the `EventLoop` failed.
     case shutdownFailed
 }
+
+extension EventLoopError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .unsupportedOperation:
+            return "EventLoopError: the executed operation is not supported by the event loop"
+        case .cancelled:
+            return "EventLoopError: the scheduled task was cancelled"
+        case .shutdown:
+            return "EventLoopError: the event loop is shutdown"
+        case .shutdownFailed:
+            return "EventLoopError: failed to shutdown the event loop"
+        }
+    }
+}
