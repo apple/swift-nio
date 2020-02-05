@@ -46,11 +46,11 @@ def extract_useful_keys(d):
 
 def usage():
     print("Usage: stackdiff-dtrace.py OLD-STACKS NEW-STACKS")
-    print()
+    print("")
     print("stackdiff-dtrace can diff aggregated stack traces as produced")
     print("by a `agg[ustack()] = count();` and printed with `printa(agg)`;")
     print("by a dtrace program.")
-    print()
+    print("")
     print("Full example leveraging the malloc aggregation:")
     print("  # get old stack traces")
     print("  sudo malloc-aggregation.d -c ./old-binary > /tmp/old")
@@ -66,8 +66,8 @@ if len(sys.argv) != 3:
 before_file = sys.argv[1]
 after_file = sys.argv[2]
 
-after_dict = put_in_dict(before_file)
-before_dict = put_in_dict(after_file)
+after_dict = put_in_dict(after_file)
+before_dict = put_in_dict(before_file)
 
 useful_after_keys = extract_useful_keys(after_dict)
 useful_before_keys = extract_useful_keys(before_dict)

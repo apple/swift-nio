@@ -179,3 +179,64 @@ The output will look something like
 ```
 
 repeated many times. Each block means that the specific stack trace is responsible for some number of allocations: in the example above, `30000` allocations. Remember that the allocation counter tests run each test 10 times, so this means that in each test run, the above stack trace allocated 3000 times. Also remember that we usually run the workload we want to test 1000 times. That means that in the real world, the above stack trace accounts for 3 out of the 75 total allocations (30000 allocations / 10 runs / 1000 executions per run = 3).
+
+The output from `malloc-aggreation.d` can also be diffed using the `stackdiff-dtrace.py` script. This can be helpful to track down where additional allocations were made. The `stdout` from `malloc-aggregation.d` for the two runs to compare should be written to files, and then passsed to `stackdiff-dtrace.py`:
+
+```bash
+~/path/to/swift-nio/dev/stackdiff-dtrace.py stack_aggregation.old stack_aggregation.new
+```
+
+Where `stack_aggregation.old` and `stack_aggregation.new` are the two outputs from `malloc-aggregation.d` to compare. The script will output the aggregated stacks which appear: 
+
+- only in `stack_aggregation.old`,
+- only in `stack_aggregation.new`, and
+- any differences in numbers for stacks that appear in both.
+
+Let's look at some output.
+
+```
+### only in AFTER
+22022
+libsystem_malloc.dylib`malloc
+libswiftCore.dylib`swift_slowAlloc+0x19
+libswiftCore.dylib`swift_allocObject+0x27
+test_1000_reqs_1_conn`AdaptiveRecvByteBufferAllocator.buffer(allocator:)+0x5f
+test_1000_reqs_1_conn`protocol witness for RecvByteBufferAllocator.buffer(allocator:) in conformance AdaptiveRecvByteBufferAllocator+0x52
+test_1000_reqs_1_conn`BaseStreamSocketChannel.readFromSocket()+0xa2
+test_1000_reqs_1_conn`specialized BaseSocketChannel.readable0()+0x21
+test_1000_reqs_1_conn`specialized SelectableEventLoop.handleEvent<A>(_:channel:)+0x175
+[...]
+
+### only in BEFORE
+22022
+libsystem_malloc.dylib`malloc
+libswiftCore.dylib`swift_slowAlloc+0x19
+libswiftCore.dylib`swift_allocObject+0x27
+test_1000_reqs_1_conn`AdaptiveRecvByteBufferAllocator.buffer(allocator:)+0x5f
+test_1000_reqs_1_conn`protocol witness for RecvByteBufferAllocator.buffer(allocator:) in conformance AdaptiveRecvByteBufferAllocator+0x52
+test_1000_reqs_1_conn`specialized BaseStreamSocketChannel.readFromSocket()+0x88
+test_1000_reqs_1_conn`specialized SelectableEventLoop.handleEvent<A>(_:channel:)+0xcc
+[...]
+```
+
+These stacks are only *slighly* different; the new ("AFTER") stacktrace has an extra line ("``test_1000_reqs_1_conn`BaseStreamSocketChannel.readFromSocket()+0xa2``"). They're otherwise the same so we can ignore them and look at more output.
+
+```
+### only in AFTER
+[... (previously dismissed stacktrace)]
+
+22022
+libsystem_malloc.dylib`malloc
+libswiftCore.dylib`swift_slowAlloc+0x19
+libswiftCore.dylib`swift_allocObject+0x27
+test_1000_reqs_1_conn`curry thunk of SocketProtocol.read(pointer:)+0x84
+test_1000_reqs_1_conn`BaseStreamSocketChannel.readFromSocket()+0x2d7
+test_1000_reqs_1_conn`specialized BaseSocketChannel.readable0()+0x21
+test_1000_reqs_1_conn`specialized SelectableEventLoop.handleEvent<A>(_:channel:)+0x175
+[...]
+
+### only in BEFORE
+[... (previously dismissed stacktrace)]
+```
+
+Now we see there's another stacktrace in the `AFTER` section which has no corresponding stacktrace in `BEFORE`. From the stack we can see it's originating from a curry thunk of  `SocketProtocol.read(pointer:)`. In this instance we were comparing the benchmark across two different versions of the Swift compiler. As the same version of NIO was used it must be down to a change in the compiler.
