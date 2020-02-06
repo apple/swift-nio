@@ -59,7 +59,7 @@ The latest released SwiftNIO 1 version supports Swift 4.0, 4.1, 4.2, and 5.0.
 
 #### SwiftNIO 2
 
-The latest released SwiftNIO 2 version supports only Swift 5.0 & 5.1. If you have a SwiftNIO 1 application or library that you would like to migrate to SwiftNIO 2, please check out the [migration guide](docs/migration-guide-NIO1-to-NIO2.md) we prepared for you.
+The latest released SwiftNIO 2 version supports only Swift 5.0, 5.1, and 5.2. If you have a SwiftNIO 1 application or library that you would like to migrate to SwiftNIO 2, please check out the [migration guide](docs/migration-guide-NIO1-to-NIO2.md) we prepared for you.
 
 ### Compatibility
 
@@ -218,6 +218,20 @@ dependencies: [
 ```
 
 and then adding the appropriate SwiftNIO module(s) to your target dependencies.
+The syntax for adding target dependencies differs slightly between Swift
+versions. For example, if you want to depend on the `NIO` and `NIOHTTP1`
+modules, specify the following dependencies:
+
+#### Swift 5.0 and 5.1 (`swift-tools-version:5.[01]`)
+
+    dependencies: ["NIO", "NIOHTTP1"]
+
+#### Swift 5.2 (`swift-tools-version:5.2`)
+
+    dependencies: [.product(name: "NIO", package: "swift-nio"),
+                   .product(name: "NIOHTTP1", package: "swift-nio")]
+
+### Using Xcode Package support
 
 If your project is set up as an Xcode project and you're using Xcode 11+, you can add SwiftNIO as a dependency to your
 Xcode project by clicking File -> Swift Packages -> Add Package Dependency. In the upcoming dialog, please enter
@@ -290,7 +304,7 @@ have a few prerequisites installed on your system.
 
 ### Linux
 
-- Swift 5.0 or 5.1 (recommended) from [swift.org/download](https://swift.org/download/#releases).
+- Swift 5.0, 5.1, or 5.2 from [swift.org/download](https://swift.org/download/#releases). We always recommend to use the latest released version.
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
