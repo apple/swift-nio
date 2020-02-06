@@ -15,7 +15,7 @@
 import Foundation
 import NIO
 
-final class ByteBufferBenchmark: Benchmark {
+final class CircularBufferIntoByteBufferBenchmark: Benchmark {
     private let iterations: Int
     private let bufferSize: Int
     private var circularBuffer: CircularBuffer<UInt8>
