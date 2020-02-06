@@ -51,6 +51,14 @@ extension ByteBuffer {
         guard let range = self.rangeWithinReadableBytes(index: index, length: MemoryLayout<T>.size) else {
             return nil
         }
+
+        if T.self == UInt8.self {
+            assert(range.count == 1)
+            return self.withUnsafeReadableBytes { ptr in
+                ptr[range.startIndex] as! T
+            }
+        }
+
         return self.withUnsafeReadableBytes { ptr in
             var value: T = 0
             withUnsafeMutableBytes(of: &value) { valuePtr in
