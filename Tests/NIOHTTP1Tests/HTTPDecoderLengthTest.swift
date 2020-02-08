@@ -292,14 +292,26 @@ class HTTPDecoderLengthTest: XCTestCase {
         try assertIgnoresLengthFields(requestMethod: .GET, responseStatus: .notModified, responseFramingField: .neither)
     }
 
-    private func assertRequestTransferEncodingHasNoBody(transferEncodingHeader: String) throws {
+    private func assertRequestTransferEncodingInError(transferEncodingHeader: String) throws {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         let handler = MessageEndHandler<HTTPRequestHead, ByteBuffer>()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Send a GET with the appropriate Transfer Encoding header.
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n")))
+        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n"))) { error in
+            XCTAssertEqual(error as? HTTPParserError, .unknown)
+        }
+    }
+
+    func testMultipleTEWithChunkedLastWorksFine() throws {
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+
+        let handler = MessageEndHandler<HTTPRequestHead, ByteBuffer>()
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+
+        // Send a GET with the appropriate Transfer Encoding header.
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\n")))
 
         // We should have a request, no body, and immediately see end of request.
         XCTAssert(handler.seenHead)
@@ -309,22 +321,12 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertTrue(try channel.finish().isClean)
     }
 
-    func testMultipleTEWithChunkedLastHasNoBodyOnRequest() throws {
-        // This is not quite right: RFC 7230 should allow this as chunked. However, http_parser
-        // does not, so we don't either.
-        try assertRequestTransferEncodingHasNoBody(transferEncodingHeader: "gzip, chunked")
-    }
-
     func testMultipleTEWithChunkedFirstHasNoBodyOnRequest() throws {
-        // Here http_parser is again wrong: strictly this should 400. Again, though,
-        // if http_parser doesn't support this neither do we.
-        try assertRequestTransferEncodingHasNoBody(transferEncodingHeader: "chunked, gzip")
+        try assertRequestTransferEncodingInError(transferEncodingHeader: "chunked, gzip")
     }
 
     func testMultipleTEWithChunkedInTheMiddleHasNoBodyOnRequest() throws {
-        // Here http_parser is again wrong: strictly this should 400. Again, though,
-        // if http_parser doesn't support this neither do we.
-        try assertRequestTransferEncodingHasNoBody(transferEncodingHeader: "gzip, chunked, deflate")
+        try assertRequestTransferEncodingInError(transferEncodingHeader: "gzip, chunked, deflate")
     }
 
     private func assertResponseTransferEncodingHasBodyTerminatedByEOF(transferEncodingHeader: String, eofMechanism: EOFMechanism) throws {
@@ -366,10 +368,51 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertTrue(try channel.finish().isClean)
     }
 
+    private func assertResponseTransferEncodingHasBodyTerminatedByEndOfChunk(transferEncodingHeader: String, eofMechanism: EOFMechanism) throws {
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
+
+        let handler = MessageEndHandler<HTTPResponseHead, ByteBuffer>()
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+
+        // Prime the decoder with a request and consume it.
+        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
+                                                                                           method: .GET,
+                                                                                           uri: "/"))).isFull)
+        XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
+
+        // Send a 200 with the appropriate Transfer Encoding header. We should see the request.
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n")))
+        XCTAssert(handler.seenHead)
+        XCTAssertFalse(handler.seenBody)
+        XCTAssertFalse(handler.seenEnd)
+
+        // Now send body. Note that this *is* chunk encoded. We should also see a body.
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "9\r\ncaribbean\r\n")))
+        XCTAssert(handler.seenHead)
+        XCTAssert(handler.seenBody)
+        XCTAssertFalse(handler.seenEnd)
+
+        // Now send EOF. This should error, as we're expecting the end chunk.
+        if case .halfClosure = eofMechanism {
+            channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+        } else {
+            channel.pipeline.fireChannelInactive()
+        }
+
+        XCTAssert(handler.seenHead)
+        XCTAssert(handler.seenBody)
+        XCTAssertFalse(handler.seenEnd)
+
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            XCTAssertEqual(error as? HTTPParserError, .invalidEOFState)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
     func testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithChannelInactive() throws {
-        // This is not right: RFC 7230 should allow this as chunked, but http_parser instead parses it as
-        // EOF-terminated. We can't easily override that, so we don't.
-        try assertResponseTransferEncodingHasBodyTerminatedByEOF(transferEncodingHeader: "gzip, chunked", eofMechanism: .channelInactive)
+        try assertResponseTransferEncodingHasBodyTerminatedByEndOfChunk(transferEncodingHeader: "gzip, chunked", eofMechanism: .channelInactive)
     }
 
     func testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithChannelInactive() throws {
@@ -383,9 +426,7 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     func testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithHalfClosure() throws {
-        // This is not right: RFC 7230 should allow this as chunked, but http_parser instead parses it as
-        // EOF-terminated. We can't easily override that, so we don't.
-        try assertResponseTransferEncodingHasBodyTerminatedByEOF(transferEncodingHeader: "gzip, chunked", eofMechanism: .halfClosure)
+        try assertResponseTransferEncodingHasBodyTerminatedByEndOfChunk(transferEncodingHeader: "gzip, chunked", eofMechanism: .halfClosure)
     }
 
     func testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithHalfClosure() throws {
