@@ -45,7 +45,7 @@ extension HTTPDecoderLengthTest {
                 ("testIgnoresTransferEncodingFieldOn304Responses", testIgnoresTransferEncodingFieldOn304Responses),
                 ("testIgnoresContentLengthFieldOn304Responses", testIgnoresContentLengthFieldOn304Responses),
                 ("testEarlyFinishWithoutLengthAtAllOn304Responses", testEarlyFinishWithoutLengthAtAllOn304Responses),
-                ("testMultipleTEWithChunkedLastHasNoBodyOnRequest", testMultipleTEWithChunkedLastHasNoBodyOnRequest),
+                ("testMultipleTEWithChunkedLastWorksFine", testMultipleTEWithChunkedLastWorksFine),
                 ("testMultipleTEWithChunkedFirstHasNoBodyOnRequest", testMultipleTEWithChunkedFirstHasNoBodyOnRequest),
                 ("testMultipleTEWithChunkedInTheMiddleHasNoBodyOnRequest", testMultipleTEWithChunkedInTheMiddleHasNoBodyOnRequest),
                 ("testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithChannelInactive", testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithChannelInactive),
