@@ -758,6 +758,9 @@ extension HTTPParserError {
             return .paused
         case HPE_UNKNOWN:
             return .unknown
+        case HPE_INVALID_TRANSFER_ENCODING:
+            // The downside of enums here, we don't have a case for this. Map it to .unknown for now.
+            return .unknown
         default:
             return nil
         }

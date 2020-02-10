@@ -458,4 +458,46 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.finish())
     }
 
+    func testRefusesRequestSmugglingAttempt() throws {
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+
+        // This is a request smuggling attempt caused by duplicating the Transfer-Encoding and Content-Length headers.
+        var buffer = channel.allocator.buffer(capacity: 256)
+        buffer.write(string: "POST /foo HTTP/1.1\r\n" +
+                             "Host: localhost\r\n" +
+                             "Content-length: 1\r\n" +
+                             "Transfer-Encoding: gzip, chunked\r\n\r\n" +
+                             "3\r\na=1\r\n0\r\n\r\n")
+
+        do {
+            try channel.writeInbound(buffer)
+            XCTFail("Did not error")
+        } catch HTTPParserError.unexpectedContentLength {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        loop.run()
+    }
+
+    func testTrimsTrailingOWS() throws {
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(string: "GET / HTTP/1.1\r\nHost: localhost\r\nFoo: bar \r\nBaz: Boz\r\n\r\n")
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        let request: HTTPServerRequestPart? = try assertNoThrowWithValue(channel.readInbound())
+        guard case .some(.head(let head)) = request else {
+            XCTFail("Unexpected first message: \(String(describing: request))")
+            return
+        }
+        XCTAssertEqual(head.headers[canonicalForm: "Foo"], ["bar"])
+        let next: HTTPServerRequestPart? = try assertNoThrowWithValue(channel.readInbound())
+        guard case .some(.end) = next else {
+            XCTFail("Unexpected last message")
+            return
+        }
+    }
 }

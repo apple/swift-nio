@@ -41,6 +41,8 @@ extension HTTPDecoderTest {
                 ("testExtraCRLF", testExtraCRLF),
                 ("testSOURCEDoesntExplodeUs", testSOURCEDoesntExplodeUs),
                 ("testExtraCarriageReturnBetweenSubsequentRequests", testExtraCarriageReturnBetweenSubsequentRequests),
+                ("testRefusesRequestSmugglingAttempt", testRefusesRequestSmugglingAttempt),
+                ("testTrimsTrailingOWS", testTrimsTrailingOWS),
            ]
    }
 }

@@ -28,6 +28,8 @@
 #include <string.h>
 #include <limits.h>
 
+static uint32_t max_header_size = HTTP_MAX_HEADER_SIZE;
+
 #ifndef ULLONG_MAX
 # define ULLONG_MAX ((uint64_t) -1) /* 2^64-1 */
 #endif
@@ -142,20 +144,20 @@ do {                                                                 \
 } while (0)
 
 /* Don't allow the total size of the HTTP headers (including the status
- * line) to exceed HTTP_MAX_HEADER_SIZE.  This check is here to protect
+ * line) to exceed max_header_size.  This check is here to protect
  * embedders against denial-of-service attacks where the attacker feeds
  * us a never-ending header that the embedder keeps buffering.
  *
  * This check is arguably the responsibility of embedders but we're doing
  * it on the embedder's behalf because most won't bother and this way we
- * make the web a little safer.  HTTP_MAX_HEADER_SIZE is still far bigger
+ * make the web a little safer.  max_header_size is still far bigger
  * than any reasonable request or response so this should never affect
  * day-to-day operation.
  */
 #define COUNT_HEADER_SIZE(V)                                         \
 do {                                                                 \
-  nread += (V);                                                      \
-  if (UNLIKELY(nread > (HTTP_MAX_HEADER_SIZE))) {                    \
+  nread += (uint32_t)(V);                                            \
+  if (UNLIKELY(nread > max_header_size)) {                           \
     SET_ERRNO(HPE_HEADER_OVERFLOW);                                  \
     goto error;                                                      \
   }                                                                  \
@@ -317,6 +319,8 @@ enum state
   , s_req_http_HT
   , s_req_http_HTT
   , s_req_http_HTTP
+  , s_req_http_I
+  , s_req_http_IC
   , s_req_http_major
   , s_req_http_dot
   , s_req_http_minor
@@ -380,7 +384,10 @@ enum header_states
   , h_transfer_encoding
   , h_upgrade
 
+  , h_matching_transfer_encoding_token_start
   , h_matching_transfer_encoding_chunked
+  , h_matching_transfer_encoding_token
+
   , h_matching_connection_token_start
   , h_matching_connection_keep_alive
   , h_matching_connection_close
@@ -1087,11 +1094,17 @@ reexecute:
 
       case s_req_http_start:
         switch (ch) {
+          case ' ':
+            break;
           case 'H':
             UPDATE_STATE(s_req_http_H);
             break;
-          case ' ':
-            break;
+          case 'I':
+            if (parser->method == HTTP_SOURCE) {
+              UPDATE_STATE(s_req_http_I);
+              break;
+            }
+            /* fall through */
           default:
             SET_ERRNO(HPE_INVALID_CONSTANT);
             goto error;
@@ -1111,6 +1124,16 @@ reexecute:
       case s_req_http_HTT:
         STRICT_CHECK(ch != 'P');
         UPDATE_STATE(s_req_http_HTTP);
+        break;
+
+      case s_req_http_I:
+        STRICT_CHECK(ch != 'C');
+        UPDATE_STATE(s_req_http_IC);
+        break;
+
+      case s_req_http_IC:
+        STRICT_CHECK(ch != 'E');
+        UPDATE_STATE(s_req_http_HTTP);  /* Treat "ICE" as "HTTP". */
         break;
 
       case s_req_http_HTTP:
@@ -1240,9 +1263,9 @@ reexecute:
 
           switch (parser->header_state) {
             case h_general: {
-              size_t limit = data + len - p;
-              limit = MIN(limit, HTTP_MAX_HEADER_SIZE);
-              while (p+1 < data + limit && TOKEN(p[1])) {
+              size_t left = data + len - p;
+              const char* pe = p + MIN(left, max_header_size);
+              while (p+1 < pe && TOKEN(p[1])) {
                 p++;
               }
               break;
@@ -1318,6 +1341,7 @@ reexecute:
                 parser->header_state = h_general;
               } else if (parser->index == sizeof(TRANSFER_ENCODING)-2) {
                 parser->header_state = h_transfer_encoding;
+                parser->flags |= F_TRANSFER_ENCODING;
               }
               break;
 
@@ -1399,8 +1423,12 @@ reexecute:
             if ('c' == c) {
               parser->header_state = h_matching_transfer_encoding_chunked;
             } else {
-              parser->header_state = h_general;
+              parser->header_state = h_matching_transfer_encoding_token;
             }
+            break;
+
+          /* Multi-value `Transfer-Encoding` header */
+          case h_matching_transfer_encoding_token_start:
             break;
 
           case h_content_length:
@@ -1417,6 +1445,11 @@ reexecute:
             parser->flags |= F_CONTENTLENGTH;
             parser->content_length = ch - '0';
             parser->header_state = h_content_length_num;
+            break;
+
+          /* when obsolete line folding is encountered for content length
+           * continue to the s_header_value state */
+          case h_content_length_ws:
             break;
 
           case h_connection:
@@ -1474,28 +1507,25 @@ reexecute:
 
           switch (h_state) {
             case h_general:
-            {
-              const char* p_cr;
-              const char* p_lf;
-              size_t limit = data + len - p;
+              {
+                size_t left = data + len - p;
+                const char* pe = p + MIN(left, max_header_size);
 
-              limit = MIN(limit, HTTP_MAX_HEADER_SIZE);
-
-              p_cr = (const char*) memchr(p, CR, limit);
-              p_lf = (const char*) memchr(p, LF, limit);
-              if (p_cr != NULL) {
-                if (p_lf != NULL && p_cr >= p_lf)
-                  p = p_lf;
-                else
-                  p = p_cr;
-              } else if (UNLIKELY(p_lf != NULL)) {
-                p = p_lf;
-              } else {
-                p = data + len;
+                for (; p != pe; p++) {
+                  ch = *p;
+                  if (ch == CR || ch == LF) {
+                    --p;
+                    break;
+                  }
+                  if (!lenient && !IS_HEADER_CHAR(ch)) {
+                    SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
+                    goto error;
+                  }
+                }
+                if (p == data + len)
+                  --p;
+                break;
               }
-              --p;
-              break;
-            }
 
             case h_connection:
             case h_transfer_encoding:
@@ -1544,13 +1574,38 @@ reexecute:
               goto error;
 
             /* Transfer-Encoding: chunked */
+            case h_matching_transfer_encoding_token_start:
+              /* looking for 'Transfer-Encoding: chunked' */
+              if ('c' == c) {
+                h_state = h_matching_transfer_encoding_chunked;
+              } else if (STRICT_TOKEN(c)) {
+                /* TODO(indutny): similar code below does this, but why?
+                 * At the very least it seems to be inconsistent given that
+                 * h_matching_transfer_encoding_token does not check for
+                 * `STRICT_TOKEN`
+                 */
+                h_state = h_matching_transfer_encoding_token;
+              } else if (c == ' ' || c == '\t') {
+                /* Skip lws */
+              } else {
+                h_state = h_general;
+              }
+              break;
+
             case h_matching_transfer_encoding_chunked:
               parser->index++;
               if (parser->index > sizeof(CHUNKED)-1
                   || c != CHUNKED[parser->index]) {
-                h_state = h_general;
+                h_state = h_matching_transfer_encoding_token;
               } else if (parser->index == sizeof(CHUNKED)-2) {
                 h_state = h_transfer_encoding_chunked;
+              }
+              break;
+
+            case h_matching_transfer_encoding_token:
+              if (ch == ',') {
+                h_state = h_matching_transfer_encoding_token_start;
+                parser->index = 0;
               }
               break;
 
@@ -1612,7 +1667,7 @@ reexecute:
               break;
 
             case h_transfer_encoding_chunked:
-              if (ch != ' ') h_state = h_general;
+              if (ch != ' ') h_state = h_matching_transfer_encoding_token;
               break;
 
             case h_connection_keep_alive:
@@ -1662,6 +1717,10 @@ reexecute:
       case s_header_value_lws:
       {
         if (ch == ' ' || ch == '\t') {
+          if (parser->header_state == h_content_length_num) {
+              /* treat obsolete line folding as space */
+              parser->header_state = h_content_length_ws;
+          }
           UPDATE_STATE(s_header_value_start);
           REEXECUTE();
         }
@@ -1714,6 +1773,11 @@ reexecute:
             case h_transfer_encoding_chunked:
               parser->flags |= F_CHUNKED;
               break;
+            case h_content_length:
+              /* do not allow empty content length */
+              SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
+              goto error;
+              break;
             default:
               break;
           }
@@ -1737,12 +1801,17 @@ reexecute:
           REEXECUTE();
         }
 
-        /* Cannot use chunked encoding and a content-length header together
-           per the HTTP specification. */
-        if ((parser->flags & F_CHUNKED) &&
+        /* Cannot us transfer-encoding and a content-length header together
+           per the HTTP specification. (RFC 7230 Section 3.3.3) */
+        if ((parser->flags & F_TRANSFER_ENCODING) &&
             (parser->flags & F_CONTENTLENGTH)) {
-          SET_ERRNO(HPE_UNEXPECTED_CONTENT_LENGTH);
-          goto error;
+          /* Allow it for lenient parsing as long as `Transfer-Encoding` is
+           * not `chunked`
+           */
+          if (!lenient || (parser->flags & F_CHUNKED)) {
+            SET_ERRNO(HPE_UNEXPECTED_CONTENT_LENGTH);
+            goto error;
+          }
         }
 
         UPDATE_STATE(s_headers_done);
@@ -1817,8 +1886,31 @@ reexecute:
           UPDATE_STATE(NEW_MESSAGE());
           CALLBACK_NOTIFY(message_complete);
         } else if (parser->flags & F_CHUNKED) {
-          /* chunked encoding - ignore Content-Length header */
+          /* chunked encoding - ignore Content-Length header,
+           * prepare for a chunk */
           UPDATE_STATE(s_chunk_size_start);
+        } else if (parser->flags & F_TRANSFER_ENCODING) {
+          if (parser->type == HTTP_REQUEST && !lenient) {
+            /* RFC 7230 3.3.3 */
+
+            /* If a Transfer-Encoding header field
+             * is present in a request and the chunked transfer coding is not
+             * the final encoding, the message body length cannot be determined
+             * reliably; the server MUST respond with the 400 (Bad Request)
+             * status code and then close the connection.
+             */
+            SET_ERRNO(HPE_INVALID_TRANSFER_ENCODING);
+            RETURN(p - data); /* Error */
+          } else {
+            /* RFC 7230 3.3.3 */
+
+            /* If a Transfer-Encoding header field is present in a response and
+             * the chunked transfer coding is not the final encoding, the
+             * message body length is determined by reading the connection until
+             * it is closed by the server.
+             */
+            UPDATE_STATE(s_body_identity_eof);
+          }
         } else {
           if (parser->content_length == 0) {
             /* Content-Length header given but zero: Content-Length: 0\r\n */
@@ -2072,6 +2164,12 @@ c_nio_http_message_needs_eof (const http_parser *parser)
     return 0;
   }
 
+  /* RFC 7230 3.3.3, see `s_headers_almost_done` */
+  if ((parser->flags & F_TRANSFER_ENCODING) &&
+      (parser->flags & F_CHUNKED) == 0) {
+    return 1;
+  }
+
   if ((parser->flags & F_CHUNKED) || parser->content_length != ULLONG_MAX) {
     return 0;
   }
@@ -2250,14 +2348,14 @@ http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
     switch(new_s) {
       case s_http_host:
         if (s != s_http_host) {
-          u->field_data[UF_HOST].off = p - buf;
+          u->field_data[UF_HOST].off = (uint16_t)(p - buf);
         }
         u->field_data[UF_HOST].len++;
         break;
 
       case s_http_host_v6:
         if (s != s_http_host_v6) {
-          u->field_data[UF_HOST].off = p - buf;
+          u->field_data[UF_HOST].off = (uint16_t)(p - buf);
         }
         u->field_data[UF_HOST].len++;
         break;
@@ -2269,7 +2367,7 @@ http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
 
       case s_http_host_port:
         if (s != s_http_host_port) {
-          u->field_data[UF_PORT].off = p - buf;
+          u->field_data[UF_PORT].off = (uint16_t)(p - buf);
           u->field_data[UF_PORT].len = 0;
           u->field_set |= (1 << UF_PORT);
         }
@@ -2278,7 +2376,7 @@ http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
 
       case s_http_userinfo:
         if (s != s_http_userinfo) {
-          u->field_data[UF_USERINFO].off = p - buf ;
+          u->field_data[UF_USERINFO].off = (uint16_t)(p - buf);
           u->field_data[UF_USERINFO].len = 0;
           u->field_set |= (1 << UF_USERINFO);
         }
@@ -2382,7 +2480,7 @@ c_nio_http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
       continue;
     }
 
-    u->field_data[uf].off = p - buf;
+    u->field_data[uf].off = (uint16_t)(p - buf);
     u->field_data[uf].len = 1;
 
     u->field_set |= (1 << uf);
@@ -2462,4 +2560,9 @@ c_nio_http_parser_version(void) {
   return HTTP_PARSER_VERSION_MAJOR * 0x10000 |
          HTTP_PARSER_VERSION_MINOR * 0x00100 |
          HTTP_PARSER_VERSION_PATCH * 0x00001;
+}
+
+void
+c_nio_http_parser_set_max_header_size(uint32_t size) {
+  max_header_size = size;
 }
