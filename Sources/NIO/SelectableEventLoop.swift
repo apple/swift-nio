@@ -56,7 +56,7 @@ internal final class SelectableEventLoop: EventLoop {
     /* private but tests */ internal let _selector: NIO.Selector<NIORegistration>
     private let thread: NIOThread
     @usableFromInline
-    internal var _scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
+    internal var _scheduledTasks: PriorityQueue<ScheduledTask>? = PriorityQueue<ScheduledTask>(ascending: true)
     private var tasksCopy = ContiguousArray<() -> Void>()
 
     @usableFromInline
@@ -102,6 +102,13 @@ internal final class SelectableEventLoop: EventLoop {
         return self.promiseCreationStoreLock.withLock {
             self._promiseCreationStore.removeValue(forKey: ObjectIdentifier(future))!
         }
+    }
+
+    /// Call this before force unwrapping self._scheduledTasks to handle the nil case with a better error message.
+    @usableFromInline
+    internal func _preconditionScheduledTasksNotNil() {
+        precondition(self._scheduledTasks != nil,
+            "cannot execute tasks on this EventLoop; either setup has not completed or it is closed")
     }
 
     internal init(thread: NIOThread, selector: NIO.Selector<NIORegistration>) {
@@ -200,7 +207,8 @@ internal final class SelectableEventLoop: EventLoop {
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
             self._tasksLock.withLockVoid {
-                self._scheduledTasks.remove(task)
+                self._preconditionScheduledTasksNotNil()
+                self._scheduledTasks!.remove(task)
             }
             // We don't need to wake up the selector here, the scheduled task will never be picked up. Waking up the
             // selector would mean that we may be able to recalculate the shutdown to a later date. The cost of not
@@ -228,7 +236,7 @@ internal final class SelectableEventLoop: EventLoop {
     @inlinable
     internal func execute(_ task: @escaping () -> Void) {
         // nothing we can do if we fail enqueuing here.
-       try? self._schedule0(ScheduledTask(task, { error in
+        try? self._schedule0(ScheduledTask(task, { error in
             // do nothing
         }, .now()))
     }
@@ -237,7 +245,8 @@ internal final class SelectableEventLoop: EventLoop {
     @usableFromInline
     internal func _schedule0(_ task: ScheduledTask) throws {
         self._tasksLock.withLockVoid {
-            self._scheduledTasks.push(task)
+            self._preconditionScheduledTasksNotNil()
+            self._scheduledTasks!.push(task)
         }
 
         // We only need to wake up the selector if we're not in the EventLoop. If we're in the EventLoop already, we're
@@ -308,12 +317,16 @@ internal final class SelectableEventLoop: EventLoop {
         defer {
             var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
             _tasksLock.withLockVoid {
+                self._preconditionScheduledTasksNotNil()
                 // reserve the correct capacity so we don't need to realloc later on.
-                scheduledTasksCopy.reserveCapacity(_scheduledTasks.count)
-                while let sched = _scheduledTasks.pop() {
+                scheduledTasksCopy.reserveCapacity(_scheduledTasks!.count)
+                while let sched = _scheduledTasks!.pop() {
                     scheduledTasksCopy.append(sched)
                 }
             }
+
+            // Cross out the queue so that any attempt to enqueue a task fails from here on out.
+            self._scheduledTasks = nil
 
             // Fail all the scheduled tasks.
             for task in scheduledTasksCopy {
@@ -350,14 +363,15 @@ internal final class SelectableEventLoop: EventLoop {
             while true {
                 // TODO: Better locking
                 _tasksLock.withLockVoid {
-                    if !_scheduledTasks.isEmpty {
+                    self._preconditionScheduledTasksNotNil()
+                    if !_scheduledTasks!.isEmpty {
                         // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
                         let now: NIODeadline = .now()
 
                         // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                        while tasksCopy.count < tasksCopy.capacity, let task = _scheduledTasks.peek() {
+                        while tasksCopy.count < tasksCopy.capacity, let task = _scheduledTasks!.peek() {
                             if task.readyIn(now) <= .nanoseconds(0) {
-                                _scheduledTasks.pop()
+                                _scheduledTasks!.pop()
                                 tasksCopy.append(task.task)
                             } else {
                                 nextReadyTask = task
@@ -483,7 +497,13 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
     @usableFromInline
     var debugDescription: String {
         return self._tasksLock.withLock {
-            return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
+            let scheduledTasksDescription: String
+            if let scheduledTasks = self._scheduledTasks {
+                scheduledTasksDescription = scheduledTasks.description
+            } else {
+                scheduledTasksDescription = "nil"
+            }
+            return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(scheduledTasksDescription) }"
         }
     }
 }

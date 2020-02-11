@@ -1076,4 +1076,20 @@ public final class EventLoopTest : XCTestCase {
         XCTAssert(elg.description.starts(with: "MultiThreadedEventLoopGroup { threadPattern = NIO-ELT-"),
                   elg.description)
     }
+
+    func testSafeToExecuteTrue() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+        let loop = elg.next() as! SelectableEventLoop
+        XCTAssert(loop._scheduledTasks != nil)
+    }
+
+    func testSafeToExecuteFalse() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let loop = elg.next() as! SelectableEventLoop
+        try? elg.syncShutdownGracefully()
+        XCTAssert(loop._scheduledTasks == nil)
+    }
 }
