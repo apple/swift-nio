@@ -388,6 +388,43 @@ class BootstrapTest: XCTestCase {
             return []
         })
     }
+
+    func testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser() {
+        // It's unclear if this is the right solution, see https://github.com/apple/swift-nio/issues/1392
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        struct FoundHandlerThatWasNotSupposedToBeThereError: Error {}
+
+        var maybeServer: Channel? = nil
+        XCTAssertNoThrow(maybeServer = try ServerBootstrap(group: group)
+            .serverChannelInitializer { channel in
+                // Here, we test that we can't find the AcceptHandler
+                return channel.pipeline.context(name: "AcceptHandler").flatMap { context -> EventLoopFuture<Void> in
+                    XCTFail("unexpectedly found \(context)")
+                    return channel.eventLoop.makeFailedFuture(FoundHandlerThatWasNotSupposedToBeThereError())
+                }.flatMapError { error -> EventLoopFuture<Void> in
+                    XCTAssertEqual(.notFound, error as? ChannelPipelineError)
+                    if case .some(.notFound) = error as? ChannelPipelineError {
+                        return channel.eventLoop.makeSucceededFuture(())
+                    }
+                    return channel.eventLoop.makeFailedFuture(error)
+                }
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+
+        guard let server = maybeServer else {
+            XCTFail("couldn't bootstrap server")
+            return
+        }
+
+        // But now, it should be there.
+        XCTAssertNoThrow(_ = try server.pipeline.context(name: "AcceptHandler").wait())
+        XCTAssertNoThrow(try server.close().wait())
+    }
 }
 
 private final class MakeSureAutoReadIsOffInChannelInitializer:  ChannelInboundHandler {
