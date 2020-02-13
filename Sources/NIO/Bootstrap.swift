@@ -234,10 +234,11 @@ public final class ServerBootstrap {
 
         return eventLoop.submit {
             serverChannelOptions.applyAllChannelOptions(to: serverChannel).flatMap {
-                serverChannel.pipeline.addHandler(AcceptHandler(childChannelInitializer: childChannelInit,
-                                                                childChannelOptions: childChannelOptions))
-            }.flatMap {
                 serverChannelInit(serverChannel)
+            }.flatMap {
+                serverChannel.pipeline.addHandler(AcceptHandler(childChannelInitializer: childChannelInit,
+                                                                childChannelOptions: childChannelOptions),
+                                                  name: "AcceptHandler")
             }.flatMap {
                 register(eventLoop, serverChannel)
             }.map {
