@@ -86,23 +86,15 @@ public struct ByteBufferView: RandomAccessCollection {
     }
 
     public func _customIndexOfEquatableElement(_ element : Element) -> Index?? {
-        let indexInRange = self.withUnsafeBytes { (ptr) -> Index? in
-            return ptr.firstIndex(of: element)
-        }
-        if let indexFoundInRange = indexInRange {
-            return Optional(Optional(indexFoundInRange + self._range.lowerBound))
-        }
-        return Optional(Optional(nil))
+        return .some(self.withUnsafeBytes { ptr -> Index? in
+            return ptr.firstIndex(of: element).map { $0 + self._range.lowerBound }
+        })
     }
 
     public func _customLastIndexOfEquatableElement(_ element: Element) -> Index?? {
-        let indexInRange = self.withUnsafeBytes { (ptr) -> Index? in
-            return ptr.lastIndex(of: element)
-        }
-        if let indexFoundInRange = indexInRange {
-            return Optional(Optional(indexFoundInRange + self._range.lowerBound))
-        }
-        return Optional(Optional(nil))
+        return .some(self.withUnsafeBytes { ptr -> Index? in
+            return ptr.lastIndex(of: element).map { $0 + self._range.lowerBound }
+        })
     }
 }
 
