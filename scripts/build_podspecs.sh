@@ -20,14 +20,20 @@ function usage() {
   echo
   echo "OPTIONS:"
   echo "  -u: Additionally, upload the podspecs as they are generated"
+  echo "  -f: Skip over all targets before the specified target"
 }
 
 OPTIND=1
 upload=false
-while getopts ":u" opt; do
+skip_until=""
+
+while getopts ":uf:" opt; do
   case $opt in
     u)
       upload=true
+      ;;
+    f)
+      skip_until="$OPTARG"
       ;;
     \?)
       usage
@@ -59,6 +65,14 @@ for target in "${targets[@]}"; do
   if [[ "$target" == "_NIO1APIShims" ]]; then
     continue
   fi
+
+  if [[ -n "$skip_until" && "$target" != "$skip_until" ]]; then
+    echo "Skipping $target"
+    continue
+  elif [[ "$skip_until" == "$target" ]]; then
+    skip_until=""
+  fi
+
   echo "Building podspec for $target"
 
   dependencies=()
@@ -97,6 +111,7 @@ Pod::Spec.new do |s|
 end
 EOF
 
+  pod repo update # last chance of getting the latest versions of previous pushed pods
   if $upload; then
     echo "Uploading ${tmpfile}/${target}.podspec"
     pod trunk push "${tmpfile}/${target}.podspec"
