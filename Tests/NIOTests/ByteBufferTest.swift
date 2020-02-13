@@ -1939,6 +1939,34 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual([], self.buf.readBytes(length: self.buf.readableBytes))
     }
 
+    func testBufferViewFirstIndex() {
+          self.buf.clear();
+          self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
+          self.buf.setBytes([UInt8(0x59)], at: 1000)
+          self.buf.setBytes([UInt8(0x59)], at: 1001)
+          self.buf.setBytes([UInt8(0x59)], at: 1022)
+          self.buf.setBytes([UInt8(0x59)], at: 3)
+          self.buf.setBytes([UInt8(0x3F)], at: 1023)
+          self.buf.setBytes([UInt8(0x3F)], at: 2)
+          let view = self.buf.viewBytes(at: 5, length: 1010)
+          XCTAssertEqual(1000, view?.firstIndex(of: UInt8(0x59)));
+          XCTAssertNil(view?.firstIndex(of: UInt8(0x3F)));
+      }
+
+      func testBufferViewLastIndex() {
+          self.buf.clear();
+          self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
+          self.buf.setBytes([UInt8(0x59)], at: 1000)
+          self.buf.setBytes([UInt8(0x59)], at: 1001)
+          self.buf.setBytes([UInt8(0x59)], at: 1022)
+          self.buf.setBytes([UInt8(0x59)], at: 3)
+          self.buf.setBytes([UInt8(0x3F)], at: 1023)
+          self.buf.setBytes([UInt8(0x3F)], at: 2)
+          let view = self.buf.viewBytes(at: 5, length: 1010)
+          XCTAssertEqual(1001, view?.lastIndex(of: UInt8(0x59)));
+          XCTAssertNil(view?.lastIndex(of: UInt8(0x3F)));
+      }
+
     func testByteBuffersCanBeInitializedFromByteBufferViews() throws {
         self.buf.writeString("hello")
 
