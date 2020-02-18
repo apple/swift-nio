@@ -874,4 +874,33 @@ class HTTPDecoderTest: XCTestCase {
             return
         }
     }
+
+    func testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable() {
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+
+        var buffer = self.channel.allocator.buffer(capacity: 64)
+        buffer.writeString("POST / HTTP/1.1\r\nHost: localhost\r\ntransfer-encoding: chunked\r\n\r\n" +
+                           "FFFFFFFFFFFFF\r\nfoo")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+
+        var maybeHead: HTTPServerRequestPart?
+        var maybeBodyChunk: HTTPServerRequestPart?
+
+        XCTAssertNoThrow(maybeHead = try self.channel.readInbound())
+        XCTAssertNoThrow(maybeBodyChunk = try self.channel.readInbound())
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+
+        guard case .some(.head(let head)) = maybeHead, case .some(.body(let body)) = maybeBodyChunk else {
+            XCTFail("didn't receive head & body")
+            return
+        }
+
+        XCTAssertEqual(.POST, head.method)
+        XCTAssertEqual("foo", String(decoding: body.readableBytesView, as: Unicode.UTF8.self))
+
+        XCTAssertThrowsError(try self.channel.finish()) { error in
+            XCTAssertEqual(.invalidEOFState, error as? HTTPParserError)
+        }
+    }
 }
