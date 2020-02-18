@@ -29,10 +29,8 @@ esac
 for f in sha1.c sha1.h; do
     ( echo "/* Additional changes for SwiftNIO:"
       echo "    - prefixed all symbols by 'c_nio_'"
-      echo "    - replaced the sys/systm.h include by strings.h"
       echo "    - removed the _KERNEL include guards"
       echo "    - defined the __min_size macro inline"
-      echo "    - included sys/types.h in c_nio_sha1.h"
       echo "    - included sys/endian.h on Android"
       echo "*/"
       curl -Ls "https://raw.githubusercontent.com/freebsd/freebsd/master/sys/crypto/$f"
@@ -41,17 +39,21 @@ for f in sha1.c sha1.h; do
     for func in sha1_init sha1_pad sha1_loop sha1_result; do
         "$sed" -i \
             -e "s/$func/c_nio_$func/g" \
-            -e 's#<sys/systm.h>#<strings.h>#g' \
-            -e 's#<crypto/sha1.h>#"include/CNIOSHA1.h"#g' \
-            -e 's%#ifdef _KERNEL%#define __min_size(x)	static (x)%g' \
-            -e 's%#endif /\* _KERNEL \*/%%g' \
-            -e 's%__FBSDID("$FreeBSD$");%%g' \
             "$here/c_nio_$f"
     done
 done
 
-gsed -i $'/#define _CRYPTO_SHA1_H_/a #ifdef __ANDROID__\\\n#include <sys/endian.h>\\\n#endif' "$here/c_nio_sha1.h"
-gsed -i '/#define _CRYPTO_SHA1_H_/a #include <sys/types.h>' "$here/c_nio_sha1.h"
+gsed -e $'/#define _CRYPTO_SHA1_H_/a #include <stdint.h>\\\n#include <stddef.h>' \
+     -e 's/u_int\([0-9]\+\)_t/uint\1_t/g'                                        \
+     -e 's%#ifdef _KERNEL%#define __min_size(x)	static (x)%g'                    \
+     -e 's%#endif /\* _KERNEL \*/%%g'                                            \
+     -i "$here/c_nio_sha1.h"
+
+gsed -e 's/u_int\([0-9]\+\)_t/uint\1_t/g'                                        \
+     -e '/^#include/d'                                                           \
+     -e $'/__FBSDID/c #include "include/CNIOSHA1.h"\\n#include <string.h>\\n#if !defined(bzero)\\n#define bzero(b,l) memset((b), \'\\\\0\', (l))\\n#endif\\n#if !defined(bcopy)\\n#define bcopy(s,d,l) memmove((d), (s), (l))\\n#endif\\n#ifdef __ANDROID__\\n#include <sys/endian.h>\\n#elif __linux__\\n#include <sys/types.h>\\n#endif' \
+     -i "$here/c_nio_sha1.c"
+
 mv "$here/c_nio_sha1.h" "$here/include/CNIOSHA1.h"
 
 tmp=$(mktemp -d /tmp/.test_compile_XXXXXX)
