@@ -87,20 +87,20 @@ internal final class SelectableEventLoop: EventLoop {
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
 
     private let promiseCreationStoreLock = Lock()
-    private var _promiseCreationStore: [ObjectIdentifier: (file: StaticString, line: UInt)] = [:]
+    private var _promiseCreationStore: [UInt: (file: StaticString, line: UInt)] = [:]
 
     @usableFromInline
     internal func promiseCreationStoreAdd<T>(future: EventLoopFuture<T>, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore[ObjectIdentifier(future)] = (file: file, line: line)
+            self._promiseCreationStore[UInt(bitPattern: ObjectIdentifier(future))] = (file: file, line: line)
         }
     }
 
     internal func promiseCreationStoreRemove<T>(future: EventLoopFuture<T>) -> (file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         return self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore.removeValue(forKey: ObjectIdentifier(future))!
+            self._promiseCreationStore.removeValue(forKey: UInt(bitPattern: ObjectIdentifier(future)))!
         }
     }
 
