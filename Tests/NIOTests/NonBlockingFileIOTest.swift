@@ -470,7 +470,7 @@ class NonBlockingFileIOTest: XCTestCase {
             var buf = try self.fileIO.read(fileRegion: fileRegion,
                                            allocator: allocator,
                                            eventLoop: eventLoop).wait()
-            XCTAssertEqual("0", buf.readString(length: buf.readableBytes) ?? "bad")
+            XCTAssertEqual("0", buf.readString(length: buf.readableBytes))
         }
     }
     

@@ -360,14 +360,8 @@ public struct NonBlockingFileIO {
                                size: Int64,
                                eventLoop: EventLoop) -> EventLoopFuture<()> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            let result = try fileHandle.withUnsafeFileDescriptor { descriptor in
-                return try Posix.ftruncate(descriptor: descriptor, size: off_t(size))
-            }
-            switch result {
-            case .processed:
-                return
-            case .wouldBlock:
-                throw Error.descriptorSetToNonBlocking
+            try fileHandle.withUnsafeFileDescriptor { descriptor -> Void in
+                try Posix.ftruncate(descriptor: descriptor, size: off_t(size))
             }
         }
     }
@@ -400,7 +394,7 @@ public struct NonBlockingFileIO {
     public func write(fileHandle: NIOFileHandle,
                       buffer: ByteBuffer,
                       eventLoop: EventLoop) -> EventLoopFuture<()> {
-        write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer, eventLoop: eventLoop)
+        return self.write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer, eventLoop: eventLoop)
     }
 
     /// Write `buffer` starting from `toOffset` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
@@ -416,7 +410,7 @@ public struct NonBlockingFileIO {
                       toOffset: Int64,
                       buffer: ByteBuffer,
                       eventLoop: EventLoop) -> EventLoopFuture<()> {
-        write0(fileHandle: fileHandle, toOffset: toOffset, buffer: buffer, eventLoop: eventLoop)
+        return self.write0(fileHandle: fileHandle, toOffset: toOffset, buffer: buffer, eventLoop: eventLoop)
     }
 
     private func write0(fileHandle: NIOFileHandle,

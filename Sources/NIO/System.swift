@@ -356,9 +356,10 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func ftruncate(descriptor: CInt, size: off_t) throws -> IOResult<CInt> {
-        return try wrapSyscallMayBlock {
-            return sysFtruncate(descriptor, size)
+    @discardableResult
+    public static func ftruncate(descriptor: CInt, size: off_t) throws -> CInt {
+        return try wrapSyscall {
+            sysFtruncate(descriptor, size)
         }
     }
     
