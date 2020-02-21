@@ -414,9 +414,9 @@ public struct NonBlockingFileIO {
     }
 
     private func write0(fileHandle: NIOFileHandle,
-                      toOffset: Int64?,
-                      buffer: ByteBuffer,
-                      eventLoop: EventLoop) -> EventLoopFuture<()> {
+                        toOffset: Int64?,
+                        buffer: ByteBuffer,
+                        eventLoop: EventLoop) -> EventLoopFuture<()> {
         var byteCount = buffer.readableBytes
 
         guard byteCount > 0 else {
