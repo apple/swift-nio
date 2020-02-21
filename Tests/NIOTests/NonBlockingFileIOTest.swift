@@ -452,6 +452,45 @@ class NonBlockingFileIOTest: XCTestCase {
         }
         XCTAssertEqual(2, numCalls)
     }
+    
+    func testReadingFileSize() throws {
+        try withTemporaryFile(content: "0123456789") { (fileHandle, _) -> Void in
+            let size = try self.fileIO.readFileSize(fileHandle: fileHandle,
+                                                    eventLoop: eventLoop).wait()
+            XCTAssertEqual(size, 10)
+        }
+    }
+    
+    func testChangeFileSizeShrink() throws {
+        try withTemporaryFile(content: "0123456789") { (fileHandle, _) -> Void in
+            try self.fileIO.changeFileSize(fileHandle: fileHandle,
+                                           size: 1,
+                                           eventLoop: eventLoop).wait()
+            let fileRegion = try FileRegion(fileHandle: fileHandle)
+            var buf = try self.fileIO.read(fileRegion: fileRegion,
+                                           allocator: allocator,
+                                           eventLoop: eventLoop).wait()
+            XCTAssertEqual("0", buf.readString(length: buf.readableBytes) ?? "bad")
+        }
+    }
+    
+    func testChangeFileSizeGrow() throws {
+        try withTemporaryFile(content: "0123456789") { (fileHandle, _) -> Void in
+            try self.fileIO.changeFileSize(fileHandle: fileHandle,
+                                           size: 100,
+                                           eventLoop: eventLoop).wait()
+            let fileRegion = try FileRegion(fileHandle: fileHandle)
+            var buf = try self.fileIO.read(fileRegion: fileRegion,
+                                           allocator: allocator,
+                                           eventLoop: eventLoop).wait()
+            let zeros = (1...90).map { _ in UInt8(0) }
+            guard let bytes = buf.readBytes(length: buf.readableBytes)?.suffix(from: 10) else {
+                XCTFail("readBytes(length:) should not be nil")
+                return
+            }
+            XCTAssertEqual(zeros, Array(bytes))
+        }
+    }
 
     func testWriting() throws {
         var buffer = allocator.buffer(capacity: 3)
@@ -496,6 +535,53 @@ class NonBlockingFileIOTest: XCTestCase {
                                                   allocator: self.allocator,
                                                   eventLoop: self.eventLoop).wait()
             XCTAssertEqual(expectedOutput, String(decoding: readBuffer.readableBytesView, as: Unicode.UTF8.self))
+        }
+    }
+    
+    func testWritingWithOffset() throws {
+        var buffer = allocator.buffer(capacity: 3)
+        buffer.writeStaticString("123")
+
+        try withTemporaryFile(content: "hello") { (fileHandle, _) -> Void in
+            try self.fileIO.write(fileHandle: fileHandle,
+                                  toOffset: 1,
+                                  buffer: buffer,
+                                  eventLoop: eventLoop).wait()
+            let offset = try fileHandle.withUnsafeFileDescriptor {
+                try Posix.lseek(descriptor: $0, offset: 0, whence: SEEK_SET)
+            }
+            XCTAssertEqual(offset, 0)
+
+            var readBuffer = try self.fileIO.read(fileHandle: fileHandle,
+                                                  byteCount: 5,
+                                                  allocator: self.allocator,
+                                                  eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(5, readBuffer.readableBytes)
+            XCTAssertEqual("h123o", readBuffer.readString(length: readBuffer.readableBytes))
+        }
+    }
+    
+    // This is undefined behavior and may cause different
+    // results on other platforms. Please add #if:s according
+    // to platform requirements.
+    func testWritingBeyondEOF() throws {
+        var buffer = allocator.buffer(capacity: 3)
+        buffer.writeStaticString("123")
+        
+        try withTemporaryFile(content: "hello") { (fileHandle, _) -> Void in
+            try self.fileIO.write(fileHandle: fileHandle,
+                                  toOffset: 6,
+                                  buffer: buffer,
+                                  eventLoop: eventLoop).wait()
+            
+            let fileRegion = try FileRegion(fileHandle: fileHandle)
+            var buf = try self.fileIO.read(fileRegion: fileRegion,
+                                           allocator: self.allocator,
+                                           eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(9, buf.readableBytes)
+            XCTAssertEqual("hello", buf.readString(length: 5))
+            XCTAssertEqual([ UInt8(0) ], buf.readBytes(length: 1))
+            XCTAssertEqual("123", buf.readString(length: buf.readableBytes))
         }
     }
 

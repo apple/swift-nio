@@ -57,7 +57,9 @@ private let sysAccept: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, Un
 private let sysConnect: @convention(c) (CInt, UnsafePointer<sockaddr>?, socklen_t) -> CInt = connect
 private let sysOpen: @convention(c) (UnsafePointer<CChar>, CInt) -> CInt = open
 private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
+private let sysFtruncate: @convention(c) (CInt, off_t) -> CInt = ftruncate
 private let sysWrite: @convention(c) (CInt, UnsafeRawPointer?, size_t) -> ssize_t = write
+private let sysPwrite: @convention(c) (CInt, UnsafeRawPointer?, size_t, off_t) -> ssize_t = pwrite
 private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t) -> ssize_t = read
 private let sysPread: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t, off_t) -> ssize_t = pread
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
@@ -354,9 +356,23 @@ internal enum Posix {
     }
 
     @inline(never)
+    public static func ftruncate(descriptor: CInt, size: off_t) throws -> IOResult<CInt> {
+        return try wrapSyscallMayBlock {
+            return sysFtruncate(descriptor, size)
+        }
+    }
+    
+    @inline(never)
     public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysWrite(descriptor, pointer, size)
+        }
+    }
+
+    @inline(never)
+    public static func pwrite(descriptor: CInt, pointer: UnsafeRawPointer, size: Int, offset: off_t) throws -> IOResult<Int> {
+        return try wrapSyscallMayBlock {
+            sysPwrite(descriptor, pointer, size, offset)
         }
     }
 
