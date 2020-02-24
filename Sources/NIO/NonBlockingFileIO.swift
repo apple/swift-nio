@@ -431,7 +431,7 @@ public struct NonBlockingFileIO {
             var offsetAccumulator: Int = 0
             repeat {
                 let n = try buf.readWithUnsafeReadableBytes { ptr in
-                    precondition(ptr.count == byteCount)
+                    precondition(ptr.count == byteCount - offsetAccumulator)
                     let res: IOResult<ssize_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
                         if let toOffset = toOffset {
                             return try Posix.pwrite(descriptor: descriptor,
