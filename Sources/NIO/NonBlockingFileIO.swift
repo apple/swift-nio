@@ -349,7 +349,10 @@ public struct NonBlockingFileIO {
         }
     }
     
-    /// Writes new file size to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
+    /// Changes the file size of `fileHandle` to `size`.
+    ///
+    /// If `size` is smaller than the current file size, the remaining bytes will be truncated and are lost. If `size`
+    /// is larger than the current file size, the gap will be filled with zero bytes.
     ///
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to write to.
