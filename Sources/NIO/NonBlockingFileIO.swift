@@ -401,7 +401,6 @@ public struct NonBlockingFileIO {
     }
 
     /// Write `buffer` starting from `toOffset` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
-    /// P
     ///
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to write to.
@@ -420,7 +419,7 @@ public struct NonBlockingFileIO {
                         toOffset: Int64?,
                         buffer: ByteBuffer,
                         eventLoop: EventLoop) -> EventLoopFuture<()> {
-        var byteCount = buffer.readableBytes
+        let byteCount = buffer.readableBytes
 
         guard byteCount > 0 else {
             return eventLoop.makeSucceededFuture(())
@@ -429,19 +428,20 @@ public struct NonBlockingFileIO {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
             var buf = buffer
             
-            while byteCount > 0 {
+            var offsetAccumulator: Int = 0
+            repeat {
                 let n = try buf.readWithUnsafeReadableBytes { ptr in
                     precondition(ptr.count == byteCount)
                     let res: IOResult<ssize_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
                         if let toOffset = toOffset {
                             return try Posix.pwrite(descriptor: descriptor,
                                                     pointer: ptr.baseAddress!,
-                                                    size: byteCount,
-                                                    offset: off_t(toOffset))
+                                                    size: byteCount - offsetAccumulator,
+                                                    offset: off_t(toOffset + Int64(offsetAccumulator)))
                         } else {
                             return try Posix.write(descriptor: descriptor,
                                                    pointer: ptr.baseAddress!,
-                                                   size: byteCount)
+                                                   size: byteCount - offsetAccumulator)
                         }
                     }
                     switch res {
@@ -452,9 +452,8 @@ public struct NonBlockingFileIO {
                         throw Error.descriptorSetToNonBlocking
                     }
                 }
-
-                byteCount -= n
-            }
+                offsetAccumulator += n
+            } while byteCount > offsetAccumulator
         }
     }
 
