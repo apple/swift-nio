@@ -56,6 +56,7 @@ extension HTTPDecoderTest {
                 ("testOneRequestTwoResponses", testOneRequestTwoResponses),
                 ("testRefusesRequestSmugglingAttempt", testRefusesRequestSmugglingAttempt),
                 ("testTrimsTrailingOWS", testTrimsTrailingOWS),
+                ("testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable", testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable),
            ]
    }
 }

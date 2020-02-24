@@ -20,8 +20,10 @@ public enum SocketAddressError: Error {
     case unknown(host: String, port: Int)
     /// The requested `SocketAddress` is not supported.
     case unsupported
+#if !os(Windows)
     /// The requested UDS path is too long.
     case unixDomainSocketPathTooLong
+#endif
     /// Unable to parse a given IP string
     case failedToParseIPString(String)
 }
@@ -59,6 +61,7 @@ public enum SocketAddress: CustomStringConvertible {
         }
     }
 
+#if !os(Windows)
     /// A single Unix socket address for `SocketAddress`.
     public struct UnixSocketAddress {
         private let _storage: Box<sockaddr_un>
@@ -70,6 +73,7 @@ public enum SocketAddress: CustomStringConvertible {
             self._storage = Box(address)
         }
     }
+#endif
 
     /// An IPv4 `SocketAddress`.
     case v4(IPv4Address)
@@ -77,8 +81,10 @@ public enum SocketAddress: CustomStringConvertible {
     /// An IPv6 `SocketAddress`.
     case v6(IPv6Address)
 
+#if !os(Windows)
     /// An UNIX Domain `SocketAddress`.
     case unixDomainSocket(UnixSocketAddress)
+#endif
 
     /// A human-readable description of this `SocketAddress`. Mostly useful for logging.
     public var description: String {
@@ -213,6 +219,7 @@ public enum SocketAddress: CustomStringConvertible {
         self = .v6(.init(address: addr, host: host))
     }
 
+#if !os(Windows)
     /// Creates a new Unix Domain Socket `SocketAddress`.
     ///
     /// - parameters:
@@ -250,6 +257,7 @@ public enum SocketAddress: CustomStringConvertible {
 
         self = .unixDomainSocket(.init(address: addr))
     }
+#endif
 
     /// Create a new `SocketAddress` for an IP address in string form.
     ///
