@@ -93,14 +93,14 @@ internal final class SelectableEventLoop: EventLoop {
     internal func promiseCreationStoreAdd<T>(future: EventLoopFuture<T>, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore[UInt(bitPattern: ObjectIdentifier(future))] = (file: file, line: line)
+            self._promiseCreationStore[self.obfuscatePointerValue(future)] = (file: file, line: line)
         }
     }
 
     internal func promiseCreationStoreRemove<T>(future: EventLoopFuture<T>) -> (file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         return self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore.removeValue(forKey: UInt(bitPattern: ObjectIdentifier(future)))!
+            self._promiseCreationStore.removeValue(forKey: self.obfuscatePointerValue(future))!
         }
     }
 
@@ -300,6 +300,14 @@ internal final class SelectableEventLoop: EventLoop {
         } else {
             return .blockUntilTimeout(nextReady)
         }
+    }
+    
+    private func obfuscatePointerValue<T>(_ future: EventLoopFuture<T>) -> UInt {
+        // Note:
+        // 1. 0xbf15ca5d is randomly picked such that it fits into both 32 and 64 bit address spaces
+        // 2. XOR with 0xbf15ca5d so that Memory Graph Debugger and other memory debugging tools
+        // won't see it as a reference.
+        return UInt(bitPattern: ObjectIdentifier(future)) ^ 0xbf15ca5d
     }
 
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
