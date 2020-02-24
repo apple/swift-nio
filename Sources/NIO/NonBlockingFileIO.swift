@@ -369,7 +369,7 @@ public struct NonBlockingFileIO {
         }
     }
 
-    /// Reads the file size from `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
+    /// Returns the length of the file associated with `fileHandle`.
     ///
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to read from.
