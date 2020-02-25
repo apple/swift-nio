@@ -348,7 +348,7 @@ public struct NonBlockingFileIO {
             return buf
         }
     }
-    
+
     /// Changes the file size of `fileHandle` to `size`.
     ///
     /// If `size` is smaller than the current file size, the remaining bytes will be truncated and are lost. If `size`
@@ -427,7 +427,7 @@ public struct NonBlockingFileIO {
 
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
             var buf = buffer
-            
+
             var offsetAccumulator: Int = 0
             repeat {
                 let n = try buf.readWithUnsafeReadableBytes { ptr in

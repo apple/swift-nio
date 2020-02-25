@@ -452,7 +452,7 @@ class NonBlockingFileIOTest: XCTestCase {
         }
         XCTAssertEqual(2, numCalls)
     }
-    
+
     func testReadingFileSize() throws {
         try withTemporaryFile(content: "0123456789") { (fileHandle, _) -> Void in
             let size = try self.fileIO.readFileSize(fileHandle: fileHandle,
@@ -460,7 +460,7 @@ class NonBlockingFileIOTest: XCTestCase {
             XCTAssertEqual(size, 10)
         }
     }
-    
+
     func testChangeFileSizeShrink() throws {
         try withTemporaryFile(content: "0123456789") { (fileHandle, _) -> Void in
             try self.fileIO.changeFileSize(fileHandle: fileHandle,
@@ -473,7 +473,7 @@ class NonBlockingFileIOTest: XCTestCase {
             XCTAssertEqual("0", buf.readString(length: buf.readableBytes))
         }
     }
-    
+
     func testChangeFileSizeGrow() throws {
         try withTemporaryFile(content: "0123456789") { (fileHandle, _) -> Void in
             try self.fileIO.changeFileSize(fileHandle: fileHandle,
@@ -537,7 +537,7 @@ class NonBlockingFileIOTest: XCTestCase {
             XCTAssertEqual(expectedOutput, String(decoding: readBuffer.readableBytesView, as: Unicode.UTF8.self))
         }
     }
-    
+
     func testWritingWithOffset() throws {
         var buffer = allocator.buffer(capacity: 3)
         buffer.writeStaticString("123")
@@ -560,20 +560,20 @@ class NonBlockingFileIOTest: XCTestCase {
             XCTAssertEqual("h123o", readBuffer.readString(length: readBuffer.readableBytes))
         }
     }
-    
+
     // This is undefined behavior and may cause different
     // results on other platforms. Please add #if:s according
     // to platform requirements.
     func testWritingBeyondEOF() throws {
         var buffer = allocator.buffer(capacity: 3)
         buffer.writeStaticString("123")
-        
+
         try withTemporaryFile(content: "hello") { (fileHandle, _) -> Void in
             try self.fileIO.write(fileHandle: fileHandle,
                                   toOffset: 6,
                                   buffer: buffer,
                                   eventLoop: eventLoop).wait()
-            
+
             let fileRegion = try FileRegion(fileHandle: fileHandle)
             var buf = try self.fileIO.read(fileRegion: fileRegion,
                                            allocator: self.allocator,
