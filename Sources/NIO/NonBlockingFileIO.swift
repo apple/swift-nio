@@ -453,7 +453,7 @@ public struct NonBlockingFileIO {
                     }
                 }
                 offsetAccumulator += n
-            } while byteCount > offsetAccumulator
+            } while offsetAccumulator < byteCount
         }
     }
 
