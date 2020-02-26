@@ -223,7 +223,6 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     /// - Returns: `True` if the exchange occurred, or `False` if `expected` did not
     ///     match the current value and so no exchange occurred.
     @inlinable
-    @discardableResult
     public func compareAndExchange(expected: T, desired: T) -> Bool {
         return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
             return T.nio_atomic_compare_and_exchange($0, expected, desired)
@@ -271,7 +270,6 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     /// - Parameter value: The new value to set this object to.
     /// - Returns: The value previously held by this object.
     @inlinable
-    @discardableResult
     public func exchange(with value: T) -> T {
         return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
             return T.nio_atomic_exchange($0, value)
