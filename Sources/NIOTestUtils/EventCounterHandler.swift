@@ -264,103 +264,103 @@ extension EventCounterHandler: ChannelDuplexHandler {
 
     /// @see: `_ChannelInboundHandler.channelRegistered`
     public func channelRegistered(context: ChannelHandlerContext) {
-        _ = self._channelRegisteredCalls.add(1)
+        self._channelRegisteredCalls.add(1)
         context.fireChannelRegistered()
     }
 
     /// @see: `_ChannelInboundHandler.channelUnregistered`
     public func channelUnregistered(context: ChannelHandlerContext) {
-        _ = self._channelUnregisteredCalls.add(1)
+        self._channelUnregisteredCalls.add(1)
         context.fireChannelUnregistered()
     }
 
     /// @see: `_ChannelInboundHandler.channelActive`
     public func channelActive(context: ChannelHandlerContext) {
-        _ = self._channelActiveCalls.add(1)
+        self._channelActiveCalls.add(1)
         context.fireChannelActive()
     }
 
     /// @see: `_ChannelInboundHandler.channelInactive`
     public func channelInactive(context: ChannelHandlerContext) {
-        _ = self._channelInactiveCalls.add(1)
+        self._channelInactiveCalls.add(1)
         context.fireChannelInactive()
     }
 
     /// @see: `_ChannelInboundHandler.channelRead`
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        _ = self._channelReadCalls.add(1)
+        self._channelReadCalls.add(1)
         context.fireChannelRead(data)
     }
     
     /// @see: `_ChannelInboundHandler.channelReadComplete`
     public func channelReadComplete(context: ChannelHandlerContext) {
-        _ = self._channelReadCompleteCalls.add(1)
+        self._channelReadCompleteCalls.add(1)
         context.fireChannelReadComplete()
     }
 
     /// @see: `_ChannelInboundHandler.channelWritabilityChanged`
     public func channelWritabilityChanged(context: ChannelHandlerContext) {
-        _ = self._channelWritabilityChangedCalls.add(1)
+        self._channelWritabilityChangedCalls.add(1)
         context.fireChannelWritabilityChanged()
     }
 
     /// @see: `_ChannelInboundHandler.userInboundEventTriggered`
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
-        _ = self._userInboundEventTriggeredCalls.add(1)
+        self._userInboundEventTriggeredCalls.add(1)
         context.fireUserInboundEventTriggered(event)
     }
     
     /// @see: `_ChannelInboundHandler.errorCaught`
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        _ = self._errorCaughtCalls.add(1)
+        self._errorCaughtCalls.add(1)
         context.fireErrorCaught(error)
     }
 
     /// @see: `_ChannelOutboundHandler.register`
     public func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        _ = self._registerCalls.add(1)
+        self._registerCalls.add(1)
         context.register(promise: promise)
     }
 
     /// @see: `_ChannelOutboundHandler.bind`
     public func bind(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        _ = self._bindCalls.add(1)
+        self._bindCalls.add(1)
         context.bind(to: to, promise: promise)
     }
 
     /// @see: `_ChannelOutboundHandler.connect`
     public func connect(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        _ = self._connectCalls.add(1)
+        self._connectCalls.add(1)
         context.connect(to: to, promise: promise)
     }
 
     /// @see: `_ChannelOutboundHandler.write`
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        _ = self._writeCalls.add(1)
+        self._writeCalls.add(1)
         context.write(data, promise: promise)
     }
 
     /// @see: `_ChannelOutboundHandler.flush`
     public func flush(context: ChannelHandlerContext) {
-        _ = self._flushCalls.add(1)
+        self._flushCalls.add(1)
         context.flush()
     }
 
     /// @see: `_ChannelOutboundHandler.read`
     public func read(context: ChannelHandlerContext) {
-        _ = self._readCalls.add(1)
+        self._readCalls.add(1)
         context.read()
     }
 
     /// @see: `_ChannelOutboundHandler.close`
     public func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        _ = self._closeCalls.add(1)
+        self._closeCalls.add(1)
         context.close(mode: mode, promise: promise)
     }
 
     /// @see: `_ChannelOutboundHandler.triggerUserOutboundEvent`
     public func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
-        _ = self._triggerUserOutboundEventCalls.add(1)
+        self._triggerUserOutboundEventCalls.add(1)
         context.triggerUserOutboundEvent(event, promise: promise)
     }
 }
