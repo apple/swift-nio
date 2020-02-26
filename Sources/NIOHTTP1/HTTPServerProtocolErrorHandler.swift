@@ -60,7 +60,7 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
         switch res {
         case .head(let head):
             precondition(!self.hasUnterminatedResponse)
-            if head.status != .`continue` {
+            if !head.status.isInformational || head.status == .switchingProtocols {
                 self.hasUnterminatedResponse = true
             }
         case .body:

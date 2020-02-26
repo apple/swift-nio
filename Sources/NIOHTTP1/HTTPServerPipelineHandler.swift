@@ -301,7 +301,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             switch res {
             case .head(let head):
                 assert(self.nextExpectedOutboundMessage == .head)
-                if head.status != .`continue` {
+                if !head.status.isInformational || head.status == .switchingProtocols {
                     self.nextExpectedOutboundMessage = .bodyOrEnd
                 }
             case .body:
