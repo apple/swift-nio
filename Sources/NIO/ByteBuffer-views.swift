@@ -56,24 +56,22 @@ public struct ByteBufferView: RandomAccessCollection {
 
     public subscript(position: Index) -> UInt8 {
         get {
-            guard position >= self._range.lowerBound && position < self._range.upperBound else {
-                preconditionFailure("index \(position) out of range")
-            }
+            _failEarlyRangeCheck(position, bounds: self._range)
             return self._buffer.getInteger(at: position)! // range check above
         }
         set {
-            guard position >= self._range.lowerBound && position < self._range.upperBound else {
-                preconditionFailure("index \(position) out of range")
-            }
+            _failEarlyRangeCheck(position, bounds: self._range)
             self._buffer.setInteger(newValue, at: position)
         }
     }
 
     public subscript(range: Range<Index>) -> ByteBufferView {
         get {
+            _failEarlyRangeCheck(range, bounds: self._range)
             return ByteBufferView(buffer: self._buffer, range: range)
         }
         set {
+            _failEarlyRangeCheck(range, bounds: self._range)
             self.replaceSubrange(range, with: newValue)
         }
     }
@@ -96,6 +94,52 @@ public struct ByteBufferView: RandomAccessCollection {
             return ptr.lastIndex(of: element).map { $0 + self._range.lowerBound }
         })
     }
+
+    public func _customContainsEquatableElement(_ element: Element) -> Bool? {
+        return .some(self.withUnsafeBytes { bytes -> Bool in
+            return bytes.contains(element)
+        })
+    }
+
+    public func _copyToContiguousArray() -> ContiguousArray<Element> {
+        return self.withUnsafeBytes { bytes in
+            return bytes._copyToContiguousArray()
+        }
+    }
+
+    public func _copyContents(initializing buffer: UnsafeMutableBufferPointer<UInt8>) -> (Iterator, UnsafeMutableBufferPointer<Element>.Index) {
+        return self.withUnsafeBytes { bytes in
+            let (_, idx) = bytes._copyContents(initializing: buffer)
+            return (IndexingIterator(_elements: self, _position: idx), idx)
+        }
+    }
+
+    public func _failEarlyRangeCheck(_ index: Index, bounds: Range<Index>) {
+        precondition(
+            self.startIndex <= bounds.lowerBound && bounds.upperBound <= self.endIndex,
+            "Bounds out of buffer's range")
+        precondition(
+            bounds.lowerBound <= index && index < bounds.upperBound,
+            "Index \(index) out of bounds")
+    }
+
+    public func _failEarlyRangeCheck(_ index: Index, bounds: ClosedRange<Index>) {
+        precondition(
+            self.startIndex <= bounds.lowerBound && bounds.upperBound <= self.endIndex,
+            "Bounds out of buffer's range")
+        precondition(
+            bounds.lowerBound <= index && index <= bounds.upperBound,
+            "Index \(index) out of bounds")
+    }
+
+    public func _failEarlyRangeCheck(_ range: Range<Index>, bounds: Range<Index>) {
+        precondition(
+            self.startIndex <= bounds.lowerBound && bounds.upperBound <= self.endIndex,
+            "Bounds out of buffer's range")
+        precondition(
+            bounds.lowerBound <= range.lowerBound && range.upperBound <= bounds.upperBound,
+            "Range out of bounds")
+    }
 }
 
 extension ByteBufferView: MutableCollection {}
@@ -108,8 +152,7 @@ extension ByteBufferView: RangeReplaceableCollection {
 
     @inlinable
     public mutating func replaceSubrange<C: Collection>(_ subrange: Range<Index>, with newElements: C) where ByteBufferView.Element == C.Element {
-        precondition(subrange.startIndex >= self.startIndex && subrange.endIndex <= self.endIndex,
-                     "subrange out of bounds")
+        _failEarlyRangeCheck(subrange, bounds: self._range);
 
         if newElements.count == subrange.count {
             self._buffer.setBytes(newElements, at: subrange.startIndex)

@@ -1967,6 +1967,20 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(view?.lastIndex(of: UInt8(0x3F)))
     }
 
+    func testBufferViewContains() {
+        self.buf.clear()
+
+        let view = ByteBufferView(self.buf)
+        XCTAssertFalse(view.contains(0x0))
+
+        self.buf.writeBytes([0x0, 0x1, 0x2])
+        let anotherView = ByteBufferView(self.buf)
+        XCTAssertTrue(anotherView.contains(0x0))
+        XCTAssertTrue(anotherView.contains(0x1))
+        XCTAssertTrue(anotherView.contains(0x2))
+        XCTAssertFalse(anotherView.contains(0x3))
+    }
+
     func testByteBuffersCanBeInitializedFromByteBufferViews() throws {
         self.buf.writeString("hello")
 
