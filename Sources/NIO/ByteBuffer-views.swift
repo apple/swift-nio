@@ -56,22 +56,22 @@ public struct ByteBufferView: RandomAccessCollection {
 
     public subscript(position: Index) -> UInt8 {
         get {
-            _failEarlyRangeCheck(position, bounds: self._range)
+            self._failEarlyRangeCheck(position, bounds: self._range)
             return self._buffer.getInteger(at: position)! // range check above
         }
         set {
-            _failEarlyRangeCheck(position, bounds: self._range)
+            self._failEarlyRangeCheck(position, bounds: self._range)
             self._buffer.setInteger(newValue, at: position)
         }
     }
 
     public subscript(range: Range<Index>) -> ByteBufferView {
         get {
-            _failEarlyRangeCheck(range, bounds: self._range)
+            self._failEarlyRangeCheck(range, bounds: self._range)
             return ByteBufferView(buffer: self._buffer, range: range)
         }
         set {
-            _failEarlyRangeCheck(range, bounds: self._range)
+            self._failEarlyRangeCheck(range, bounds: self._range)
             self.replaceSubrange(range, with: newValue)
         }
     }
@@ -152,7 +152,7 @@ extension ByteBufferView: RangeReplaceableCollection {
 
     @inlinable
     public mutating func replaceSubrange<C: Collection>(_ subrange: Range<Index>, with newElements: C) where ByteBufferView.Element == C.Element {
-        _failEarlyRangeCheck(subrange, bounds: self._range);
+        self._failEarlyRangeCheck(subrange, bounds: self._range);
 
         if newElements.count == subrange.count {
             self._buffer.setBytes(newElements, at: subrange.startIndex)
