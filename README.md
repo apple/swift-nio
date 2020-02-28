@@ -1,3 +1,5 @@
+[![sswg:graduated|104x20](https://img.shields.io/badge/sswg-graduated-green.svg)](https://github.com/swift-server/sswg/blob/master/process/incubation.md#graduated-level)
+
 # SwiftNIO
 
 SwiftNIO is a cross-platform asynchronous event-driven network application framework
@@ -39,7 +41,7 @@ High-level implementations are usually libraries that come with an API that does
 Protocol | Client | Server | Repository | Module | Comment
 --- |  --- | --- | --- | --- | ---
 HTTP | ✅| ❌ | [swift-server/async-http-client](https://github.com/swift-server/async-http-client) | `AsyncHTTPClient` | SSWG community project
-gRPC | ✅| ✅ | [grpc/grpc-swift](https://github.com/grpc/grpc-swift) | `GRPC` | also offers a low-level API; community project
+gRPC | ✅| ✅ | [grpc/grpc-swift](https://github.com/grpc/grpc-swift) | `GRPC` | also offers a low-level API; SSWG community project
 APNS | ✅ | ❌ | [kylebrowning/APNSwift](https://github.com/kylebrowning/APNSwift) | `APNSwift` | SSWG community project
 PostgreSQL | ✅ | ❌ | [vapor/postgres-nio](https://github.com/vapor/postgres-nio) | `PostgresNIO` | SSWG community project
 Redis | ✅ | ❌ | [mordil/swift-redi-stack](https://gitlab.com/Mordil/swift-redi-stack) | `RediStack` | SSWG community project
