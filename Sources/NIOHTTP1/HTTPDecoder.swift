@@ -289,16 +289,20 @@ private class BetterHTTPParser {
             // does not meet the requirement of RFC 7230. This is an outstanding http_parser issue:
             // https://github.com/nodejs/http-parser/issues/251. As a result, we check for these status
             // codes and override http_parser's handling as well.
-            guard let method = self.requestHeads.popFirst()?.method else {
-                self.richerError = NIOHTTPDecoderError.unsolicitedResponse
-                return .error(HPE_UNKNOWN)
-            }
-
-            if method == .HEAD || method == .CONNECT {
+            
+            if statusCode / 100 == 1 && statusCode != 101 {
                 skipBody = true
-            } else if statusCode / 100 == 1 ||  // 1XX codes
-                statusCode == 204 || statusCode == 304 {
-                skipBody = true
+            } else {
+                guard let method = self.requestHeads.popFirst()?.method else {
+                    self.richerError = NIOHTTPDecoderError.unsolicitedResponse
+                    return .error(HPE_UNKNOWN)
+                }
+                
+                if method == .HEAD || method == .CONNECT {
+                    skipBody = true
+                } else if statusCode == 204 || statusCode == 304 {
+                    skipBody = true
+                }
             }
         }
 

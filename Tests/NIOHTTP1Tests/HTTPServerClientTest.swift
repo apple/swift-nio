@@ -659,9 +659,14 @@ class HTTPServerClientTest : XCTestCase {
         }
 
         let expectedHeaders = HTTPHeaders()
+        let expectedSecondHeaders = { () -> HTTPHeaders in
+            var headers = HTTPHeaders()
+            headers.add(name: "transfer-encoding", value: "chunked")
+            return headers
+        }()
 
         let accumulation = ArrayAccumulationHandler<HTTPClientResponsePart> { (parts) in
-            guard parts.count == 3 else {
+            guard parts.count == 4 else {
                 XCTFail("wrong number of parts: \(parts.count)")
                 return
             }
@@ -674,15 +679,21 @@ class HTTPServerClientTest : XCTestCase {
                 XCTFail("unexpected type on index 0 \(parts[0])")
             }
             
-            if case .head(let h) = parts[1] {
+            if case .end(let tratilers) = parts[1] {
+                XCTAssertNil(tratilers)
+            } else {
+                XCTFail("unexpected type on index 1 \(parts[1])")
+            }
+            
+            if case .head(let h) = parts[2] {
                 XCTAssertEqual(HTTPVersion(major: 1, minor: 1), h.version)
                 XCTAssertEqual(HTTPResponseStatus.ok, h.status)
-                XCTAssertEqual(expectedHeaders, h.headers)
+                XCTAssertEqual(expectedSecondHeaders, h.headers)
             } else {
                 XCTFail("unexpected type on index 0 \(parts[0])")
             }
             
-            if case .end(let trailers) = parts[2] {
+            if case .end(let trailers) = parts[3] {
                 XCTAssertEqual(nil, trailers)
             } else {
                 XCTFail("unexpected type on index \(parts.count - 1) \(parts[parts.count - 1])")
