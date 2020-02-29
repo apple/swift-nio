@@ -379,6 +379,29 @@ extension UInt64: AtomicPrimitive {
     public static let atomic_store                = catmc_atomic_unsigned_long_long_store
 }
 
+#if os(Windows)
+extension Int: AtomicPrimitive {
+    public static let atomic_create               = catmc_atomic_intptr_t_create
+    public static let atomic_destroy              = catmc_atomic_intptr_t_destroy
+    public static let atomic_compare_and_exchange = catmc_atomic_intptr_t_compare_and_exchange
+    public static let atomic_add                  = catmc_atomic_intptr_t_add
+    public static let atomic_sub                  = catmc_atomic_intptr_t_sub
+    public static let atomic_exchange             = catmc_atomic_intptr_t_exchange
+    public static let atomic_load                 = catmc_atomic_intptr_t_load
+    public static let atomic_store                = catmc_atomic_intptr_t_store
+}
+
+extension UInt: AtomicPrimitive {
+    public static let atomic_create               = catmc_atomic_uintptr_t_create
+    public static let atomic_destroy              = catmc_atomic_uintptr_t_destroy
+    public static let atomic_compare_and_exchange = catmc_atomic_uintptr_t_compare_and_exchange
+    public static let atomic_add                  = catmc_atomic_uintptr_t_add
+    public static let atomic_sub                  = catmc_atomic_uintptr_t_sub
+    public static let atomic_exchange             = catmc_atomic_uintptr_t_exchange
+    public static let atomic_load                 = catmc_atomic_uintptr_t_load
+    public static let atomic_store                = catmc_atomic_uintptr_t_store
+}
+#else
 extension Int: AtomicPrimitive {
     public static let atomic_create               = catmc_atomic_long_create
     public static let atomic_destroy              = catmc_atomic_long_destroy
@@ -400,6 +423,7 @@ extension UInt: AtomicPrimitive {
     public static let atomic_load                 = catmc_atomic_unsigned_long_load
     public static let atomic_store                = catmc_atomic_unsigned_long_store
 }
+#endif
 
 /// `AtomicBox` is a heap-allocated box which allows lock-free access to an instance of a Swift class.
 ///
