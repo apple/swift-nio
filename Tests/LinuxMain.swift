@@ -90,6 +90,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(MessageToByteHandlerTest.allTests),
              testCase(MulticastTest.allTests),
              testCase(NIOAnyDebugTest.allTests),
+             testCase(NIOAnyUnwrapTests.allTests),
              testCase(NIOCloseOnErrorHandlerTest.allTests),
              testCase(NIOConcurrencyHelpersTests.allTests),
              testCase(NIOHTTP1TestServerTest.allTests),
