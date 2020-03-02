@@ -80,13 +80,16 @@ public final class ServerBootstrap {
     ///     - group: The `EventLoopGroup` to use for the `bind` of the `ServerSocketChannel` and to accept new `SocketChannel`s with.
     ///     - childGroup: The `EventLoopGroup` to run the accepted `SocketChannel`s on.
     public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
+#if false
         self.group = group
         self.childGroup = childGroup
         self._serverChannelOptions = ChannelOptions.Storage()
         self._childChannelOptions = ChannelOptions.Storage()
         self.serverChannelInit = nil
         self.childChannelInit = nil
-        self._serverChannelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+        self._serverChannelOptions.append(key: ChannelOptions.socket(Posix.IPPROTO_TCP, TCP_NODELAY), value: 1)
+#endif
+      fatalError()
     }
 
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
@@ -414,11 +417,14 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
+#if false
         self.group = group
         self._channelOptions = ChannelOptions.Storage()
-        self._channelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+        self._channelOptions.append(key: ChannelOptions.socket(Posix.IPPROTO_TCP, TCP_NODELAY), value: 1)
         self.channelInitializer = nil
         self.resolver = nil
+#endif
+      fatalError()
     }
 
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
@@ -816,6 +822,7 @@ public final class NIOPipeBootstrap {
     }
 
     private func validateFileDescriptorIsNotAFile(_ descriptor: CInt) throws {
+#if false
         precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil,
                      "limitation in SwiftNIO: cannot bootstrap PipeChannel on EventLoop")
         var s: stat = .init()
@@ -825,6 +832,8 @@ public final class NIOPipeBootstrap {
         if (s.st_mode & S_IFREG) != 0 || (s.st_mode & S_IFDIR) != 0 {
             throw ChannelError.operationUnsupported
         }
+#endif
+      fatalError()
     }
 
     /// Create the `PipeChannel` with the provided input and output file descriptors.

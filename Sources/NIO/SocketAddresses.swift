@@ -36,7 +36,9 @@ public enum SocketAddress: CustomStringConvertible {
         private let _storage: Box<(address: sockaddr_in, host: String)>
 
         /// The libc socket address for an IPv4 address.
+#if false
         public var address: sockaddr_in { return _storage.value.address }
+#endif
 
         /// The host this address is for, if known.
         public var host: String { return _storage.value.host }
@@ -51,7 +53,9 @@ public enum SocketAddress: CustomStringConvertible {
         private let _storage: Box<(address: sockaddr_in6, host: String)>
 
         /// The libc socket address for an IPv6 address.
+#if false
         public var address: sockaddr_in6 { return _storage.value.address }
+#endif
 
         /// The host this address is for, if known.
         public var host: String { return _storage.value.host }
@@ -88,6 +92,7 @@ public enum SocketAddress: CustomStringConvertible {
 
     /// A human-readable description of this `SocketAddress`. Mostly useful for logging.
     public var description: String {
+#if false
         let addressString: String
         let port: String
         let host: String?
@@ -98,7 +103,7 @@ public enum SocketAddress: CustomStringConvertible {
             type = "IPv4"
             var mutAddr = addr.address.sin_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            addressString = try! descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+            addressString = try! descriptionForAddress(family: Posix.AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
 
             port = "\(self.port!)"
         case .v6(let addr):
@@ -106,7 +111,7 @@ public enum SocketAddress: CustomStringConvertible {
             type = "IPv6"
             var mutAddr = addr.address.sin6_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            addressString = try! descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+            addressString = try! descriptionForAddress(family: Posix.AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
     
             port = "\(self.port!)"
         case .unixDomainSocket(let addr):
@@ -122,10 +127,13 @@ public enum SocketAddress: CustomStringConvertible {
         }
         
         return "[\(type)]\(host.map { "\($0)/\(addressString):" } ?? "\(addressString):")\(port)"
+#endif
+      fatalError()
     }
 
     /// Returns the protocol family as defined in `man 2 socket` of this `SocketAddress`.
     public var protocolFamily: Int32 {
+#if false
         switch self {
         case .v4:
             return PF_INET
@@ -134,22 +142,27 @@ public enum SocketAddress: CustomStringConvertible {
         case .unixDomainSocket:
             return PF_UNIX
         }
+#endif
+      fatalError()
     }
 	
     /// Get the IP address as a string
     public var ipAddress: String? {
+#if false
         switch self {
         case .v4(let addr):
             var mutAddr = addr.address.sin_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            return try! descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+            return try! descriptionForAddress(family: Posix.AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
         case .v6(let addr):
             var mutAddr = addr.address.sin6_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            return try! descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+            return try! descriptionForAddress(family: Posix.AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
         case .unixDomainSocket(_):
             return nil
         }
+#endif
+      fatalError()
     }
 
     /// Get and set the port associated with the address, if defined.
@@ -157,6 +170,7 @@ public enum SocketAddress: CustomStringConvertible {
     /// be interpreted as "no preference".
     /// Setting a non-nil value for a unix domain socket is invalid and will result in a fatal error.
     public var port: Int? {
+#if false
         get {
             switch self {
             case .v4(let addr):
@@ -183,10 +197,13 @@ public enum SocketAddress: CustomStringConvertible {
                 precondition(newValue == nil, "attempting to set a non-nil value to a unix socket is not valid")
             }
         }
+#endif
+      fatalError()
     }
 
     /// Calls the given function with a pointer to a `sockaddr` structure and the associated size
     /// of that structure.
+#if false
     public func withSockAddr<T>(_ body: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
         switch self {
         case .v4(let addr):
@@ -200,24 +217,29 @@ public enum SocketAddress: CustomStringConvertible {
             return try address.withSockAddr({ try body($0, $1) })
         }
     }
+#endif
 
     /// Creates a new IPv4 `SocketAddress`.
     ///
     /// - parameters:
     ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
     ///     - host: the hostname that resolved to the ipaddress.
+#if false
     public init(_ addr: sockaddr_in, host: String) {
         self = .v4(.init(address: addr, host: host))
     }
+#endif
 
     /// Creates a new IPv6 `SocketAddress`.
     ///
     /// - parameters:
     ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
     ///     - host: the hostname that resolved to the ipaddress.
+#if false
     public init(_ addr: sockaddr_in6, host: String) {
         self = .v6(.init(address: addr, host: host))
     }
+#endif
 
 #if !os(Windows)
     /// Creates a new Unix Domain Socket `SocketAddress`.
@@ -267,19 +289,20 @@ public enum SocketAddress: CustomStringConvertible {
     /// - returns: the `SocketAddress` corresponding to this string and port combination.
     /// - throws: may throw `SocketAddressError.failedToParseIPString` if the IP address cannot be parsed.
     public init(ipAddress: String, port: Int) throws {
+#if false
         var ipv4Addr = in_addr()
         var ipv6Addr = in6_addr()
 
         self = try ipAddress.withCString {
-            if inet_pton(AF_INET, $0, &ipv4Addr) == 1 {
+            if inet_pton(Posix.AF_INET, $0, &ipv4Addr) == 1 {
                 var addr = sockaddr_in()
-                addr.sin_family = sa_family_t(AF_INET)
+                addr.sin_family = sa_family_t(Posix.AF_INET)
                 addr.sin_port = in_port_t(port).bigEndian
                 addr.sin_addr = ipv4Addr
                 return .v4(.init(address: addr, host: ""))
-            } else if inet_pton(AF_INET6, $0, &ipv6Addr) == 1 {
+            } else if inet_pton(Posix.AF_INET6, $0, &ipv6Addr) == 1 {
                 var addr = sockaddr_in6()
-                addr.sin6_family = sa_family_t(AF_INET6)
+                addr.sin6_family = sa_family_t(Posix.AF_INET6)
                 addr.sin6_port = in_port_t(port).bigEndian
                 addr.sin6_flowinfo = 0
                 addr.sin6_addr = ipv6Addr
@@ -289,6 +312,8 @@ public enum SocketAddress: CustomStringConvertible {
                 throw SocketAddressError.failedToParseIPString(ipAddress)
             }
         }
+#endif
+      fatalError()
     }
 
     /// Creates a new `SocketAddress` for the given host (which will be resolved) and port.
@@ -299,6 +324,7 @@ public enum SocketAddress: CustomStringConvertible {
     /// - returns: the `SocketAddress` for the host / port pair.
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
+#if false
         var info: UnsafeMutablePointer<addrinfo>?
 
         /* FIXME: this is blocking! */
@@ -329,6 +355,8 @@ public enum SocketAddress: CustomStringConvertible {
             /* this is odd, getaddrinfo returned NULL */
             throw SocketAddressError.unsupported
         }
+#endif
+      fatalError()
     }
 }
 
@@ -336,6 +364,7 @@ public enum SocketAddress: CustomStringConvertible {
 /// only the elements defined on the structure in their man pages (excluding lengths).
 extension SocketAddress: Equatable {
     public static func ==(lhs: SocketAddress, rhs: SocketAddress) -> Bool {
+#if false
         switch (lhs, rhs) {
         case (.v4(let addr1), .v4(let addr2)):
             return addr1.address.sin_family == addr2.address.sin_family &&
@@ -363,6 +392,8 @@ extension SocketAddress: Equatable {
         case (.v4, _), (.v6, _), (.unixDomainSocket, _):
             return false
         }
+#endif
+      fatalError()
     }
 }
 
@@ -370,10 +401,13 @@ extension SocketAddress: Equatable {
 extension SocketAddress {
     /// Whether this `SocketAddress` corresponds to a multicast address.
     public var isMulticast: Bool {
+#if false
         switch self {
+#if !os(Windows)
         case .unixDomainSocket:
             // No multicast on unix sockets.
             return false
+#endif
         case .v4(let v4Addr):
             // For IPv4 a multicast address is in the range 224.0.0.0/4.
             // The easy way to check if this is the case is to just mask off
@@ -389,6 +423,8 @@ extension SocketAddress {
             var v6WireAddress = v6Addr.address.sin6_addr
             return withUnsafeBytes(of: &v6WireAddress) { $0[0] == 0xff }
         }
+#endif
+      fatalError()
     }
 }
 

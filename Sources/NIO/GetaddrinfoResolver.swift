@@ -85,6 +85,7 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - host: The hostname to do the DNS queries on.
     ///     - port: The port we'll be connecting to.
     private func resolve(host: String, port: Int) {
+#if false
         var info: UnsafeMutablePointer<addrinfo>?
 
         var hint = addrinfo()
@@ -102,6 +103,8 @@ internal class GetaddrinfoResolver: Resolver {
             /* this is odd, getaddrinfo returned NULL */
             self.fail(SocketAddressError.unsupported)
         }
+#endif
+      fatalError()
     }
 
     /// Parses the DNS results from the `addrinfo` linked list.
@@ -109,6 +112,7 @@ internal class GetaddrinfoResolver: Resolver {
     /// - parameters:
     ///     - info: The pointer to the first of the `addrinfo` structures in the list.
     ///     - host: The hostname we resolved.
+#if false
     private func parseResults(_ info: UnsafeMutablePointer<addrinfo>, host: String) {
         var info = info
         var v4Results = [SocketAddress]()
@@ -139,6 +143,7 @@ internal class GetaddrinfoResolver: Resolver {
         v6Future.succeed(v6Results)
         v4Future.succeed(v4Results)
     }
+#endif
 
     /// Record an error and fail the lookup process.
     ///

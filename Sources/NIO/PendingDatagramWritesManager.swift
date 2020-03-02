@@ -26,6 +26,7 @@ private struct PendingDatagramWrite {
     /// we are using a box to store the underlying sockaddr, if libc ever did mess with that data
     /// it will screw any other values pointing to that box. That would be a pretty bad scene. And
     /// in most cases we're not copying large values here: only for UDS does this become a problem.
+#if false
     func copySocketAddress(_ target: UnsafeMutablePointer<sockaddr_storage>) -> socklen_t {
         switch address {
         case .v4(let innerAddress):
@@ -42,6 +43,7 @@ private struct PendingDatagramWrite {
             fatalError("UDS with datagrams is currently not supported")
         }
     }
+#endif
 }
 
 fileprivate extension Error {
@@ -60,6 +62,7 @@ fileprivate extension Error {
 }
 
 /// Does the setup required to trigger a `sendmmsg`.
+#if false
 private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWritesState,
                                                    iovecs: UnsafeMutableBufferPointer<IOVector>,
                                                    msgs: UnsafeMutableBufferPointer<MMsgHdr>,
@@ -117,6 +120,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
     }
     return try body(UnsafeMutableBufferPointer(start: msgs.baseAddress!, count: c))
 }
+#endif
 
 /// This holds the states of the currently pending datagram writes. The core is a `MarkedCircularBuffer` which holds all the
 /// writes and a mark up until the point the data is flushed. This struct has several behavioural differences from the
@@ -340,6 +344,7 @@ extension PendingDatagramWritesState {
 /// This class manages the writing of pending writes to datagram sockets. The state is held in a `PendingWritesState`
 /// value. The most important purpose of this object is to call `sendto` or `sendmmsg` depending on the writes held and
 /// the availability of the functions.
+#if false
 final class PendingDatagramWritesManager: PendingWritesManager {
     /// Storage for mmsghdr structures. Only present on Linux because Darwin does not support
     /// gathering datagram writes.
@@ -351,7 +356,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     /// Storage for iovec structures. Only present on Linux because this is only needed when we call
     /// sendmmsg: sendto doesn't require any iovecs.
+#if false
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
+#endif
 
     /// Storage for sockaddr structures. Only present on Linux because Darwin does not support gathering
     /// writes.
@@ -374,6 +381,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - iovecs: A pre-allocated array of `IOVector` elements
     ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
     ///     - storageRefs: A pre-allocated array of storage management tokens used to keep storage elements alive during a vector write operation
+#if false
     init(msgs: UnsafeMutableBufferPointer<MMsgHdr>,
          iovecs: UnsafeMutableBufferPointer<IOVector>,
          addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
@@ -383,6 +391,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         self.addresses = addresses
         self.storageRefs = storageRefs
     }
+#endif
 
     /// Mark the flush checkpoint.
     func markFlushCheckpoint() {
@@ -428,6 +437,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
     ///     - vectorWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `sendmmsg`).
     /// - returns: The `WriteResult` and whether the `Channel` is now writable.
+#if false
     func triggerAppropriateWriteOperations(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>, socklen_t) throws -> IOResult<Int>,
                                            vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> OverallWriteResult {
         return try self.triggerWriteOperations { writeMechanism in
@@ -454,6 +464,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
             }
         }
     }
+#endif
 
     /// To be called after a write operation (usually selected and run by `triggerAppropriateWriteOperation`) has
     /// completed.
@@ -498,6 +509,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///
     /// - parameters:
     ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
+#if false
     private func triggerScalarBufferWrite(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>, socklen_t) throws -> IOResult<Int>) rethrows -> OneWriteOperationResult {
         assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
                "illegal state for scalar datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
@@ -511,12 +523,14 @@ final class PendingDatagramWritesManager: PendingWritesManager {
             return try self.handleError(error)
         }
     }
+#endif
 
     /// Trigger a vector write operation. In other words: Write multiple contiguous arrays of bytes.
     ///
     /// - parameters:
     ///     - vectorWriteOperation: The vector write operation to use. Usually `sendmmsg`.
     private func triggerVectorBufferWrite(vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
+#if false
         assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
                "illegal state for vector datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
         return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
@@ -526,6 +540,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                                                                        storageRefs: self.storageRefs,
                                                                        { try vectorWriteOperation($0) }),
                              messages: self.msgs)
+#endif
+      fatalError()
     }
 
     private func fulfillPromise(_ promise: PendingDatagramWritesState.DatagramWritePromiseFiller?) {
@@ -548,3 +564,4 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         assert(self.state.isEmpty)
     }
 }
+#endif

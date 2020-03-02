@@ -1012,6 +1012,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     // other words: Failing to unregister the whole selector will cause NIO to spin at 100% CPU constantly delivering
     // the `reset` event.
     final func reset() {
+#if false
         self.readEOF0()
 
         if self.socket.isOpen {
@@ -1040,6 +1041,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             }
         }
         assert(!self.lifecycleManager.isPreRegistered)
+#endif
+      fatalError()
     }
 
     public final func readable() {

@@ -26,6 +26,7 @@ private struct PendingStreamWrite {
 ///    - storageRefs: Pre-allocated storage references (per `EventLoop`) to manage the lifetime of the buffers to be passed to `writev`.
 ///    - body: The function that actually does the vector write (usually `writev`).
 /// - returns: A tuple of the number of items attempted to write and the result of the write operation.
+#if false
 private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
                                            iovecs: UnsafeMutableBufferPointer<IOVector>,
                                            storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
@@ -70,6 +71,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
     /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
     return (numberOfUsedStorageSlots, result)
 }
+#endif
 
 /// The result of a single write operation, usually `write`, `sendfile` or `writev`.
 internal enum OneWriteOperationResult {
@@ -276,9 +278,12 @@ private struct PendingStreamWritesState {
 /// This class manages the writing of pending writes to stream sockets. The state is held in a `PendingWritesState`
 /// value. The most important purpose of this object is to call `write`, `writev` or `sendfile` depending on the
 /// currently pending writes.
+#if false
 final class PendingStreamWritesManager: PendingWritesManager {
     private var state = PendingStreamWritesState()
+#if false
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
+#endif
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
@@ -333,6 +338,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     ///     - vectorBufferWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `writev`).
     ///     - scalarFileWriteOperation: An operation that writes a region of a file descriptor (usually `sendfile`).
     /// - returns: The `OneWriteOperationResult` and whether the `Channel` is now writable.
+#if false
     func triggerAppropriateWriteOperations(scalarBufferWriteOperation: (UnsafeRawBufferPointer) throws -> IOResult<Int>,
                                            vectorBufferWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
                                            scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> OverallWriteResult {
@@ -350,6 +356,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
             }
         }
     }
+#endif
 
     /// To be called after a write operation (usually selected and run by `triggerAppropriateWriteOperation`) has
     /// completed.
@@ -443,6 +450,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         self.storageRefs = storageRefs
     }
 }
+#endif
 
 internal enum WriteMechanism {
     case scalarBufferWrite
@@ -502,9 +510,11 @@ extension PendingWritesManager {
     }
 }
 
+#if false
 extension PendingStreamWritesManager: CustomStringConvertible {
     var description: String {
         return "PendingStreamWritesManager { isFlushPending: \(self.isFlushPending), " +
         /*  */ "writabilityFlag: \(self.channelWritabilityFlag.load())), state: \(self.state) }"
     }
 }
+#endif

@@ -53,9 +53,11 @@
     ///     - backlog: The backlog to use.
     /// - throws: An `IOError` if creation of the socket failed.
     func listen(backlog: Int32 = 128) throws {
+#if false
         try withUnsafeFileDescriptor { fd in
             _ = try Posix.listen(descriptor: fd, backlog: backlog)
         }
+#endif
     }
 
     /// Accept a new connection
@@ -65,6 +67,7 @@
     /// - returns: A `Socket` once a new connection was established or `nil` if this `ServerSocket` is in non-blocking mode and there is no new connection that can be accepted when this method is called.
     /// - throws: An `IOError` if the operation failed.
     func accept(setNonBlocking: Bool = false) throws -> Socket? {
+#if false
         return try withUnsafeFileDescriptor { fd in
             #if os(Linux)
             let flags: Int32
@@ -95,5 +98,7 @@
             #endif
             return sock
         }
+#endif
+      fatalError()
     }
 }

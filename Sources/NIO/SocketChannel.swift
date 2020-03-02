@@ -84,6 +84,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
+#if false
         if try self.socket.connect(to: address) {
             return true
         }
@@ -97,6 +98,8 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         }
 
         return false
+#endif
+      fatalError()
     }
 
     override func finishConnectSocket() throws {
@@ -327,20 +330,28 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 final class DatagramChannel: BaseSocketChannel<Socket> {
 
     // Guard against re-entrance of flushNow() method.
+#if false
     private let pendingWrites: PendingDatagramWritesManager
+#endif
 
     /// Support for vector reads, if enabled.
     private var vectorReadManager: Optional<DatagramVectorReadManager>
 
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
+#if false
         return pendingWrites.isWritable
+#endif
+      fatalError()
     }
 
     override var isOpen: Bool {
+#if false
         self.eventLoop.assertInEventLoop()
         assert(super.isOpen == self.pendingWrites.isOpen)
         return super.isOpen
+#endif
+      fatalError()
     }
 
     convenience init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
@@ -361,6 +372,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
+#if false
         self.vectorReadManager = nil
         let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_DGRAM)
         do {
@@ -379,9 +391,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                        parent: nil,
                        eventLoop: eventLoop,
                        recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
+#endif
+      fatalError()
     }
 
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
+#if false
         self.vectorReadManager = nil
         try socket.setNonBlocking()
         self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
@@ -389,11 +404,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           addresses: eventLoop.addresses,
                                                           storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
+#endif
+      fatalError()
     }
 
     // MARK: Datagram Channel overrides required by BaseSocketChannel
 
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
+#if false
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
@@ -415,9 +433,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         default:
             try super.setOption0(option, value: value)
         }
+#endif
     }
 
     override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
+#if false
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
@@ -434,6 +454,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         default:
             return try super.getOption0(option)
         }
+#endif
+      fatalError()
     }
 
     func registrationFor(interested: SelectorEventSet) -> NIORegistration {
@@ -459,6 +481,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     private func singleReadFromSocket() throws -> ReadResult {
+#if false
         var rawAddress = sockaddr_storage()
         var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
         var buffer = self.recvAllocator.buffer(allocator: self.allocator)
@@ -493,6 +516,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             }
         }
         return readResult
+#endif
+      fatalError()
     }
 
     private func vectorReadFromSocket() throws -> ReadResult {
@@ -559,33 +584,46 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
     /// Buffer a write in preparation for a flush.
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+#if false
         let data = data.forceAsByteEnvelope()
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {
             assert(self.isActive)
             pipeline.fireChannelWritabilityChanged0()
         }
+#endif
+      fatalError()
     }
 
     override final func hasFlushedPendingWrites() -> Bool {
+#if false
         return self.pendingWrites.isFlushPending
+#endif
+      fatalError()
     }
 
     /// Mark a flush point. This is called when flush is received, and instructs
     /// the implementation to record the flush.
     override func markFlushPoint() {
+#if false
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
         self.pendingWrites.markFlushCheckpoint()
+#endif
+      fatalError()
     }
 
     /// Called when closing, to instruct the specific implementation to discard all pending
     /// writes.
     override func cancelWritesOnClose(error: Error) {
+#if false
         self.pendingWrites.failAll(error: error, close: true)
+#endif
+      fatalError()
     }
 
     override func writeToSocket() throws -> OverallWriteResult {
+#if false
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarWriteOperation: { (ptr, destinationPtr, destinationSize) in
             guard ptr.count > 0 else {
                 // No need to call write if the buffer is empty.
@@ -599,6 +637,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             try self.socket.sendmmsg(msgs: msgs)
         })
         return result
+#endif
+      fatalError()
     }
 
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
@@ -669,6 +709,7 @@ extension DatagramChannel: MulticastChannel {
         ///         `IPPROTO_IPV6`. Will trap if an invalid value is provided.
         /// - returns: The socket option name to use for this group operation.
         func optionName(level: CInt) -> CInt {
+#if false
             switch (self, level) {
             case (.join, CInt(IPPROTO_IP)):
                 return CInt(IP_ADD_MEMBERSHIP)
@@ -681,6 +722,8 @@ extension DatagramChannel: MulticastChannel {
             default:
                 preconditionFailure("Unexpected socket option level: \(level)")
             }
+#endif
+          fatalError()
         }
     }
 
@@ -711,6 +754,7 @@ extension DatagramChannel: MulticastChannel {
                                         interface: NIONetworkInterface?,
                                         promise: EventLoopPromise<Void>?,
                                         operation: GroupOperation) {
+#if false
         self.eventLoop.assertInEventLoop()
 
         guard self.isActive else {
@@ -752,22 +796,24 @@ extension DatagramChannel: MulticastChannel {
             case (.v4(let groupAddress), .some(.v4(let interfaceAddress))):
                 // IPv4Binding with specific target interface.
                 let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: interfaceAddress.address.sin_addr)
-                try self.socket.setOption(level: CInt(IPPROTO_IP), name: operation.optionName(level: CInt(IPPROTO_IP)), value: multicastRequest)
+                try self.socket.setOption(level: CInt(Posix.IPPROTO_IP), name: operation.optionName(level: CInt(Posix.IPPROTO_IP)), value: multicastRequest)
             case (.v4(let groupAddress), .none):
                 // IPv4 binding without target interface.
                 let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: in_addr(s_addr: INADDR_ANY))
-                try self.socket.setOption(level: CInt(IPPROTO_IP), name: operation.optionName(level: CInt(IPPROTO_IP)), value: multicastRequest)
+                try self.socket.setOption(level: CInt(Posix.IPPROTO_IP), name: operation.optionName(level: CInt(Posix.IPPROTO_IP)), value: multicastRequest)
             case (.v6(let groupAddress), .some(.v6)):
                 // IPv6 binding with specific target interface.
                 let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: UInt32(interface!.interfaceIndex))
-                try self.socket.setOption(level: CInt(IPPROTO_IPV6), name: operation.optionName(level: CInt(IPPROTO_IPV6)), value: multicastRequest)
+                try self.socket.setOption(level: CInt(Posix.IPPROTO_IPV6), name: operation.optionName(level: CInt(Posix.IPPROTO_IPV6)), value: multicastRequest)
             case (.v6(let groupAddress), .none):
                 // IPv6 binding with no specific interface requested.
                 let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: 0)
-                try self.socket.setOption(level: CInt(IPPROTO_IPV6), name: operation.optionName(level: CInt(IPPROTO_IPV6)), value: multicastRequest)
+                try self.socket.setOption(level: CInt(Posix.IPPROTO_IPV6), name: operation.optionName(level: CInt(Posix.IPPROTO_IPV6)), value: multicastRequest)
+#if !os(Windows)
             case (.v4, .some(.v6)), (.v6, .some(.v4)), (.v4, .some(.unixDomainSocket)), (.v6, .some(.unixDomainSocket)):
                 // Mismatched group and interface address: this is an error.
                 throw ChannelError.badInterfaceAddressFamily
+#endif
             }
 
             promise?.succeed(())
@@ -775,5 +821,6 @@ extension DatagramChannel: MulticastChannel {
             promise?.fail(error)
             return
         }
+#endif
     }
 }

@@ -17,24 +17,32 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     private var allowRemoteHalfClosure: Bool = false
     private var inputShutdown: Bool = false
     private var outputShutdown: Bool = false
+#if false
     private let pendingWrites: PendingStreamWritesManager
+#endif
 
     override init(socket: Socket,
                   parent: Channel?,
                   eventLoop: SelectableEventLoop,
                   recvAllocator: RecvByteBufferAllocator) throws {
+#if false
         self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         self.connectTimeoutScheduled = nil
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: recvAllocator)
+#endif
+      fatalError()
     }
 
     deinit {
         // We should never have any pending writes left as otherwise we may leak callbacks
+#if false
         assert(self.pendingWrites.isEmpty)
+#endif
     }
 
     // MARK: BaseSocketChannel's must override API that might be further refined by subclasses
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
+#if false
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
@@ -51,9 +59,11 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         default:
             try super.setOption0(option, value: value)
         }
+#endif
     }
 
     override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
+#if false
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
@@ -70,18 +80,26 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         default:
             return try super.getOption0(option)
         }
+#endif
+      fatalError()
     }
 
     // MARK: BaseSocketChannel's must override API that cannot be further refined by subclasses
     // This is `Channel` API so must be thread-safe.
     final override public var isWritable: Bool {
+#if false
         return self.pendingWrites.isWritable
+#endif
+      fatalError()
     }
 
     final override var isOpen: Bool {
+#if false
         self.eventLoop.assertInEventLoop()
         assert(super.isOpen == self.pendingWrites.isOpen)
         return super.isOpen
+#endif
+      fatalError()
     }
 
     final override func readFromSocket() throws -> ReadResult {
@@ -137,6 +155,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func writeToSocket() throws -> OverallWriteResult {
+#if false
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
             guard ptr.count > 0 else {
                 // No need to call write if the buffer is empty.
@@ -151,9 +170,12 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
             try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
         })
         return result
+#endif
+      fatalError()
     }
 
     final override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+#if false
         do {
             switch mode {
             case .output:
@@ -198,20 +220,30 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         } catch let err {
             promise?.fail(err)
         }
+#endif
     }
 
     final override func hasFlushedPendingWrites() -> Bool {
+#if false
         return self.pendingWrites.isFlushPending
+#endif
+      fatalError()
     }
 
     final override func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
+#if false
         self.pendingWrites.markFlushCheckpoint()
+#endif
+      fatalError()
     }
 
     final override func cancelWritesOnClose(error: Error) {
+#if false
         self.pendingWrites.failAll(error: error, close: true)
+#endif
+      fatalError()
     }
 
     @discardableResult
@@ -230,6 +262,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+#if false
         if self.outputShutdown {
             promise?.fail(ChannelError.outputClosed)
             return
@@ -240,5 +273,6 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         if !self.pendingWrites.add(data: data, promise: promise) {
             self.pipeline.fireChannelWritabilityChanged0()
         }
+#endif
     }
 }

@@ -309,6 +309,7 @@ public struct NonBlockingFileIO {
                        byteCount: Int,
                        allocator: ByteBufferAllocator,
                        eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
+#if false
         guard byteCount > 0 else {
             return eventLoop.makeSucceededFuture(allocator.buffer(capacity: 0))
         }
@@ -347,6 +348,8 @@ public struct NonBlockingFileIO {
             }
             return buf
         }
+#endif
+      fatalError()
     }
 
     /// Write `buffer` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
@@ -359,6 +362,7 @@ public struct NonBlockingFileIO {
     public func write(fileHandle: NIOFileHandle,
                       buffer: ByteBuffer,
                       eventLoop: EventLoop) -> EventLoopFuture<()> {
+#if false
         var byteCount = buffer.readableBytes
 
         guard byteCount > 0 else {
@@ -387,6 +391,8 @@ public struct NonBlockingFileIO {
                 byteCount -= n
             }
         }
+#endif
+      fatalError()
     }
 
     /// Open the file at `path` for reading on a private thread pool which is separate from any `EventLoop` thread.
@@ -424,10 +430,12 @@ public struct NonBlockingFileIO {
     ///     - flags: Additional POSIX flags.
     ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
+#if false
     public func openFile(path: String, mode: NIOFileHandle.Mode, flags: NIOFileHandle.Flags = .default, eventLoop: EventLoop) -> EventLoopFuture<NIOFileHandle> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
             return try NIOFileHandle(path: path, mode: mode, flags: flags)
         }
     }
+#endif
 
 }

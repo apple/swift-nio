@@ -20,6 +20,7 @@
 
 import CNIOLinux
 
+#if false
 private extension ifaddrs {
     var dstaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux)
@@ -37,6 +38,7 @@ private extension ifaddrs {
         #endif
     }
 }
+#endif
 
 /// A representation of a single network interface on a system.
 public final class NIONetworkInterface {
@@ -73,6 +75,7 @@ public final class NIONetworkInterface {
     /// This constructor will fail if NIO does not understand the format of the underlying
     /// socket address family. This is quite common: for example, Linux will return AF_PACKET
     /// addressed interfaces on most platforms, which NIO does not currently understand.
+#if false
     internal init?(_ caddr: ifaddrs) {
         self.name = String(cString: caddr.ifa_name)
         guard let address = caddr.ifa_addr!.convert() else {
@@ -108,6 +111,11 @@ public final class NIONetworkInterface {
         } catch {
             return nil
         }
+    }
+#endif
+
+    internal init?(_: AnyObject) {
+      fatalError()
     }
 }
 

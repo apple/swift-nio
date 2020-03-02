@@ -41,7 +41,10 @@ public enum System {
     ///
     /// - returns: The logical core count on the system.
     public static var coreCount: Int {
+#if false
         return sysconf(CInt(_SC_NPROCESSORS_ONLN))
+#endif
+      fatalError()
     }
 
     /// A utility function that enumerates the available network interfaces on this machine.
@@ -53,6 +56,7 @@ public enum System {
     /// - returns: An array of network interfaces available on this machine.
     /// - throws: If an error is encountered while enumerating interfaces.
     public static func enumerateInterfaces() throws -> [NIONetworkInterface] {
+#if false
         var interface: UnsafeMutablePointer<ifaddrs>? = nil
         try Posix.getifaddrs(&interface)
         let originalInterface = interface
@@ -70,5 +74,7 @@ public enum System {
         }
 
         return results
+#endif
+      fatalError()
     }
 }

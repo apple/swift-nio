@@ -53,30 +53,42 @@ final class PipePair: SocketProtocol {
     }
 
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
+#if false
         return try self.outputFD.withUnsafeFileDescriptor { fd in
             try Posix.write(descriptor: fd, pointer: pointer.baseAddress!, size: pointer.count)
         }
+#endif
+      fatalError()
     }
 
+#if false
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         return try self.outputFD.withUnsafeFileDescriptor { fd in
             try Posix.writev(descriptor: fd, iovecs: iovecs)
         }
     }
+#endif
 
+#if false
     func sendto(pointer: UnsafeRawBufferPointer, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
     }
+#endif
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
+#if false
         return try self.inputFD.withUnsafeFileDescriptor { fd in
             try Posix.read(descriptor: fd, pointer: pointer.baseAddress!, size: pointer.count)
         }
+#endif
+      fatalError()
     }
 
+#if false
     func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
     }
+#endif
 
     func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported

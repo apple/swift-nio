@@ -18,12 +18,12 @@ import NIOConcurrencyHelpers
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
-    #if os(Linux)
-    return try execute()
-    #else
+    #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
     return try autoreleasepool {
         try execute()
     }
+    #else
+    return try execute()
     #endif
 }
 
@@ -72,10 +72,14 @@ internal final class SelectableEventLoop: EventLoop {
     private var internalState: InternalState = .runningAndAcceptingNewRegistrations // protected by the EventLoop thread
     private var externalState: ExternalState = .open // protected by externalStateLock
 
+#if false
     private let _iovecs: UnsafeMutablePointer<IOVector>
+#endif
     private let _storageRefs: UnsafeMutablePointer<Unmanaged<AnyObject>>
 
+#if false
     let iovecs: UnsafeMutableBufferPointer<IOVector>
+#endif
     let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
     // Used for gathering UDP writes.
@@ -105,6 +109,7 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     internal init(thread: NIOThread, selector: NIO.Selector<NIORegistration>) {
+#if false
         self._selector = selector
         self.thread = thread
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
@@ -117,9 +122,12 @@ internal final class SelectableEventLoop: EventLoop {
         self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
+#endif
+      fatalError()
     }
 
     deinit {
+#if false
         assert(self.internalState == .noLongerRunning,
                "illegal internal state on deinit: \(self.internalState)")
         assert(self.externalState == .resourcesReclaimed,
@@ -128,6 +136,7 @@ internal final class SelectableEventLoop: EventLoop {
         _storageRefs.deallocate()
         _msgs.deallocate()
         _addresses.deallocate()
+#endif
     }
 
     /// Provide a valid `ClientBootstrap` to setup this `SelectableEventLoop` with a `SocketChannel`.

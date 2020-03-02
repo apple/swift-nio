@@ -31,6 +31,7 @@ struct DatagramVectorReadManager {
             return self.messageVector.count
         }
         set {
+#if false
             precondition(newValue >= 0)
             self.messageVector.deinitializeAndDeallocate()
             self.ioVector.deinitializeAndDeallocate()
@@ -39,6 +40,8 @@ struct DatagramVectorReadManager {
             self.messageVector = .allocateAndInitialize(repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0), count: newValue)
             self.ioVector = .allocateAndInitialize(repeating: IOVector(), count: newValue)
             self.sockaddrVector = .allocateAndInitialize(repeating: sockaddr_storage(), count: newValue)
+#endif
+          fatalError()
         }
     }
 
@@ -46,7 +49,9 @@ struct DatagramVectorReadManager {
     private var messageVector: UnsafeMutableBufferPointer<MMsgHdr>
 
     /// The vector of iovec structures needed by msghdr structures.
+#if false
     private var ioVector: UnsafeMutableBufferPointer<IOVector>
+#endif
 
     /// The vector of sockaddr structures used for saving addresses.
     private var sockaddrVector: UnsafeMutableBufferPointer<sockaddr_storage>
@@ -54,11 +59,13 @@ struct DatagramVectorReadManager {
     // FIXME(cory): Right now there's no good API for specifying the various parameters of multi-read, especially how
     // it should interact with RecvByteBufferAllocator. For now I'm punting on this to see if I can get it working,
     // but we should design it back.
+#if false
     fileprivate init(messageVector: UnsafeMutableBufferPointer<MMsgHdr>, ioVector: UnsafeMutableBufferPointer<IOVector>, sockaddrVector: UnsafeMutableBufferPointer<sockaddr_storage>) {
         self.messageVector = messageVector
         self.ioVector = ioVector
         self.sockaddrVector = sockaddrVector
     }
+#endif
 
     /// Performs a socket vector read.
     ///
@@ -79,6 +86,7 @@ struct DatagramVectorReadManager {
     ///     - socket: The underlying socket from which to read.
     ///     - buffer: The single large buffer into which reads will be written.
     func readFromSocket(socket: Socket, buffer: inout ByteBuffer) throws -> ReadResult {
+#if false
         assert(buffer.readerIndex == 0, "Buffer was not cleared between calls to readFromSocket!")
 
         let messageSize = buffer.capacity / self.messageCount
@@ -118,16 +126,22 @@ struct DatagramVectorReadManager {
                                       sliceSize: messageSize,
                                       buffer: &buffer)
         }
+#endif
+      fatalError()
     }
 
     /// Destroys this vector read manager, rendering it impossible to re-use. Use of the vector read manager after this is called is not possible.
     mutating func deallocate() {
+#if false
         self.messageVector.deinitializeAndDeallocate()
         self.ioVector.deinitializeAndDeallocate()
         self.sockaddrVector.deinitializeAndDeallocate()
+#endif
+      fatalError()
     }
 
     private func buildMessages(messageCount: Int, sliceSize: Int, buffer: inout ByteBuffer) -> ReadResult {
+#if false
         var sliceOffset = buffer.readerIndex
         var totalReadSize = 0
 
@@ -155,6 +169,8 @@ struct DatagramVectorReadManager {
 
         // Ok, all built. Now we can return these values to the caller.
         return .some(reads: results, totalSize: totalReadSize)
+#endif
+      fatalError()
     }
 }
 
@@ -164,11 +180,14 @@ extension DatagramVectorReadManager {
     /// - parameters:
     ///     - messageCount: The number of vector reads to support initially.
     static func allocate(messageCount: Int) -> DatagramVectorReadManager {
+#if false
         let messageVector = UnsafeMutableBufferPointer.allocateAndInitialize(repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0), count: messageCount)
         let ioVector = UnsafeMutableBufferPointer.allocateAndInitialize(repeating: IOVector(), count: messageCount)
         let sockaddrVector = UnsafeMutableBufferPointer.allocateAndInitialize(repeating: sockaddr_storage(), count: messageCount)
 
         return DatagramVectorReadManager(messageVector: messageVector, ioVector: ioVector, sockaddrVector: sockaddrVector)
+#endif
+      fatalError()
     }
 }
 

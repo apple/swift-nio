@@ -43,13 +43,19 @@ protocol SocketProtocol: BaseSocketProtocol {
 
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int>
 
+#if false
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>
+#endif
 
+#if false
     func sendto(pointer: UnsafeRawBufferPointer, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int>
+#endif
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
 
+#if false
     func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<Int>
+#endif
 
     func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int>
 
@@ -74,6 +80,7 @@ private let globallyIgnoredSIGPIPE: Bool = {
 extension BaseSocketProtocol {
     // used by `BaseSocket` and `PipePair`.
     internal static func ignoreSIGPIPE(descriptor fd: CInt) throws {
+#if false
         #if os(Linux)
         let haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt = globallyIgnoredSIGPIPE
         guard haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt else {
@@ -88,5 +95,7 @@ extension BaseSocketProtocol {
             throw error
         }
         #endif
+#endif
+      fatalError()
     }
 }

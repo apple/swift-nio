@@ -34,6 +34,7 @@ public protocol FileDescriptor {
 
 extension FileDescriptor {
     internal static func setNonBlocking(fileDescriptor: CInt) throws {
+#if false
         let flags = try Posix.fcntl(descriptor: fileDescriptor, command: F_GETFL, value: 0)
         do {
             let ret = try Posix.fcntl(descriptor: fileDescriptor, command: F_SETFL, value: flags | O_NONBLOCK)
@@ -45,5 +46,7 @@ extension FileDescriptor {
             }
             throw error
         }
+#endif
+      fatalError()
     }
 }
