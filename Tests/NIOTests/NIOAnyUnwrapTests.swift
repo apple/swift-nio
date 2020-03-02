@@ -25,7 +25,7 @@ class NIOAnyUnwrapTests: XCTestCase {
     
     func testSafeUnwrap_nil() {
         let data = NIOAny("value")
-        XCTAssertNil(data.unwrap(as: Int.self))
+        XCTAssertNil(data.safeUnwrap(as: Int.self))
     }
     
 }
