@@ -70,4 +70,7 @@ DECLARE_ATOMIC_OPERATIONS(uint_least32_t, uint_least32_t)
 DECLARE_ATOMIC_OPERATIONS(int_least64_t, int_least64_t)
 DECLARE_ATOMIC_OPERATIONS(uint_least64_t, uint_least64_t)
 
+DECLARE_ATOMIC_OPERATIONS(intptr_t, intptr_t)
+DECLARE_ATOMIC_OPERATIONS(uintptr_t, uintptr_t)
+
 #undef DECLARE_ATOMIC_OPERATIONS
