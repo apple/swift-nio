@@ -238,6 +238,7 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     /// - Parameter rhs: The value to add to this object.
     /// - Returns: The previous value of this object, before the addition occurred.
     @inlinable
+    @discardableResult
     public func add(_ rhs: T) -> T {
         return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
             return T.nio_atomic_add($0, rhs)
@@ -253,6 +254,7 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     /// - Parameter rhs: The value to subtract from this object.
     /// - Returns: The previous value of this object, before the subtraction occurred.
     @inlinable
+    @discardableResult
     public func sub(_ rhs: T) -> T {
         return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
             return T.nio_atomic_sub($0, rhs)
