@@ -23,7 +23,7 @@ function usage() {
     echo "OPTIONS:"
     echo "  -l: Only dependencies of library targets"
     echo "  -r: Reverse the output"
-    echo "  -d <PACKAGE>: Prints the dependencies of the given package"
+    echo "  -d <PACKAGE>: Prints the dependencies of the given module"
 }
 
 function tac_compat() {
@@ -34,7 +34,7 @@ tmpfile=$(mktemp /tmp/.list_topsorted_dependencies_XXXXXX)
 
 only_libs=false
 do_reversed=false
-package_dependency=""
+module_dependency=""
 while getopts "lrd:" opt; do
     case $opt in
         l)
@@ -44,7 +44,7 @@ while getopts "lrd:" opt; do
             do_reversed=true
             ;;
         d)
-            package_dependency="$OPTARG"
+            module_dependency="$OPTARG"
             ;;
         \?)
             usage
@@ -58,24 +58,26 @@ if $do_reversed; then
     transform=tac_compat
 fi
 
-if [[ ! -z "$package_dependency" ]]; then
+if [[ ! -z "$module_dependency" ]]; then
   swift package dump-package | jq -r ".targets |
-                                      map(select(.name == \"$package_dependency\" and .type == \"regular\") | .dependencies | map(.byName | first)) | .[] | .[]"
+                                      map(select(.name == \"$module_dependency\" and .type == \"regular\") | .dependencies | map(.byName | first)) | .[] | .[]"
   exit 0
 fi
 
 (
 cd "$here/.."
 if $only_libs; then
+    find Sources -name 'main.swift' | cut -d/ -f2 >> "$tmpfile"
     swift package dump-package | jq '.products |
                                      map(select(.type | has("library") | not)) |
                                      map(.name) | .[]' | tr -d '"' \
                                      >> "$tmpfile"
 fi
 swift package dump-package | jq '.targets |
+                                 map (.name) as $names |
                                  map(.name as $name |
                                  select(.name == $name and .type == "regular") |
-                                 { "\($name)": .dependencies | map(.byName | first) } ) |
+                                 { "\($name)": .dependencies | map(.byName | first) | map(. as $current | $names | map(select($current == .))) | flatten } ) |
                                  map(to_entries[]) |
                                  map("\(.key) \(.value | .[])") |
                                  .[]' | \
