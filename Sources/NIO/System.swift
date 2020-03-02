@@ -57,7 +57,9 @@ private let sysAccept = accept
 private let sysConnect = connect
 private let sysOpen: (UnsafePointer<CChar>, CInt) -> CInt = open
 private let sysOpenWithMode: (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
+private let sysFtruncate = ftruncate
 private let sysWrite = write
+private let sysPwrite = pwrite
 private let sysRead = read
 private let sysPread = pread
 private let sysLseek = lseek
@@ -354,9 +356,24 @@ internal enum Posix {
     }
 
     @inline(never)
+    @discardableResult
+    public static func ftruncate(descriptor: CInt, size: off_t) throws -> CInt {
+        return try wrapSyscall {
+            sysFtruncate(descriptor, size)
+        }
+    }
+    
+    @inline(never)
     public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysWrite(descriptor, pointer, size)
+        }
+    }
+
+    @inline(never)
+    public static func pwrite(descriptor: CInt, pointer: UnsafeRawPointer, size: Int, offset: off_t) throws -> IOResult<Int> {
+        return try wrapSyscallMayBlock {
+            sysPwrite(descriptor, pointer, size, offset)
         }
     }
 
