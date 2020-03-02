@@ -255,6 +255,22 @@ public struct NIOAny {
             return o
         }
     }
+    
+    /// Force-unwraps the wrapped message as a given type `T`
+    ///
+    /// returns: The wrapped `T`, or crashes if the wrapped message is not a `T`
+    @inlinable
+    public func unwrap<T>(as type: T.Type = T.self) -> T {
+        return self.forceAs()
+    }
+    
+    /// Tris to unwrap the wrapped message as a given type `T`
+    ///
+    /// returns: The wrapped `T`, or `nil` if the wrapped message is not a `T`
+    @inlinable
+    public func safeUnwrap<T>(as type: T.Type = T.self) -> T? {
+        return self.tryAs()
+    }
 }
 
 extension NIOAny: CustomStringConvertible {
