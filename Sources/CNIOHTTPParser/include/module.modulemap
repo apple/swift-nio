@@ -1,0 +1,4 @@
+module CNIOHTTPParser {
+  header "CNIOHTTPParser.h"
+  export *
+}
