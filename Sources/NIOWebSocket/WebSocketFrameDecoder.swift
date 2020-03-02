@@ -270,6 +270,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     }
 
     public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+        while try self.decode(context: context, buffer: &buffer) == .continue {}
         // EOF is not semantic in WebSocket, so ignore this.
         return .needMoreData
     }
