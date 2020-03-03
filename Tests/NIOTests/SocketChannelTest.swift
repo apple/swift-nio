@@ -261,11 +261,8 @@ public final class SocketChannelTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .bind(host: "127.0.0.1", port: 0)
             .wait())
-        do {
-            try serverChannel.writeAndFlush("test").wait()
-            XCTFail("did not throw")
-        } catch let err as ChannelError where err == .operationUnsupported {
-            // expected
+        XCTAssertThrowsError(try serverChannel.writeAndFlush("test").wait()) { error in
+            XCTAssertEqual(.operationUnsupported, error as? ChannelError)
         }
         try serverChannel.close().wait()
     }
@@ -278,10 +275,8 @@ public final class SocketChannelTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .bind(host: "127.0.0.1", port: 0)
             .wait())
-        do {
-            try serverChannel.writeAndFlush("test").wait()
-        } catch let err as ChannelError where err == .operationUnsupported {
-            // expected
+        XCTAssertThrowsError(try serverChannel.writeAndFlush("test").wait()) { error in
+            XCTAssertEqual(.operationUnsupported, error as? ChannelError)
         }
         try serverChannel.close().wait()
     }
@@ -294,15 +289,8 @@ public final class SocketChannelTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .bind(host: "127.0.0.1", port: 0)
             .wait())
-        do {
-            try serverChannel.connect(to: serverChannel.localAddress!).wait()
-            XCTFail("Did not throw")
-            XCTAssertNoThrow(try serverChannel.close().wait())
-        } catch let err as ChannelError where err == .operationUnsupported {
-            // expected, no close here as the channel is already closed.
-        } catch {
-            XCTFail("Unexpected error \(error)")
-            XCTAssertNoThrow(try serverChannel.close().wait())
+        XCTAssertThrowsError(try serverChannel.writeAndFlush("test").wait()) { error in
+            XCTAssertEqual(.operationUnsupported, error as? ChannelError)
         }
     }
 
@@ -330,13 +318,8 @@ public final class SocketChannelTest : XCTestCase {
         }
         XCTAssertNoThrow(try clientChannel.close().wait())
 
-        do {
-            try writeFut.wait()
-            XCTFail("Did not throw")
-        } catch ChannelError.alreadyClosed {
-            // ok
-        } catch {
-            XCTFail("Unexpected error \(error)")
+        XCTAssertThrowsError(try writeFut.wait()) { error in
+            XCTAssertEqual(.alreadyClosed, error as? ChannelError)
         }
     }
 
@@ -471,11 +454,8 @@ public final class SocketChannelTest : XCTestCase {
             }
         }.wait() as Void)
 
-        do {
-            try connectPromise.futureResult.wait()
-            XCTFail("Did not throw")
-        } catch let err as ChannelError where err == .ioOnClosedChannel {
-            // expected
+        XCTAssertThrowsError(try connectPromise.futureResult.wait()) { error in
+            XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
         }
         XCTAssertNoThrow(try closePromise.futureResult.wait())
         XCTAssertNoThrow(try channel.closeFuture.wait())

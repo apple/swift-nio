@@ -104,13 +104,8 @@ class EventLoopFutureTest : XCTestCase {
 
         _ = promises.map { $0.succeed(0) }
         XCTAssert(fN.isFulfilled)
-        do {
-            _ = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -143,13 +138,8 @@ class EventLoopFutureTest : XCTestCase {
         }
 
         XCTAssert(fN.isFulfilled)
-        do {
-            _ = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -169,13 +159,8 @@ class EventLoopFutureTest : XCTestCase {
 
         _ = promises.map { $0.succeed(1) }
         XCTAssert(fN.isFulfilled)
-        do {
-            _ = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -194,13 +179,8 @@ class EventLoopFutureTest : XCTestCase {
         }
 
         XCTAssert(fN.isFulfilled)
-        do {
-            _ = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -218,13 +198,8 @@ class EventLoopFutureTest : XCTestCase {
         }
 
         XCTAssert(fN.isFulfilled)
-        do {
-            _ = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -255,13 +230,8 @@ class EventLoopFutureTest : XCTestCase {
 
         let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
         _ = promises.map { $0.fail(E()) }
-        do {
-            () = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -277,13 +247,8 @@ class EventLoopFutureTest : XCTestCase {
         let futures = promises.map { $0.futureResult }
 
         let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
-        do {
-            () = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -325,13 +290,8 @@ class EventLoopFutureTest : XCTestCase {
         let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop, +)
         _ = promises.map { $0.fail(E()) }
         XCTAssert(fN.eventLoop === eventLoop)
-        do {
-            _ = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -348,13 +308,8 @@ class EventLoopFutureTest : XCTestCase {
 
         let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop, +)
         XCTAssert(fN.eventLoop === eventLoop)
-        do {
-            _ = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -373,13 +328,8 @@ class EventLoopFutureTest : XCTestCase {
 
         XCTAssertTrue(fN.isFulfilled)
         XCTAssert(fN.eventLoop === eventLoop)
-        do {
-            _ = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -432,13 +382,8 @@ class EventLoopFutureTest : XCTestCase {
 
         XCTAssert(fN.isFulfilled)
         XCTAssert(fN.eventLoop === eventLoop)
-        do {
-            _ = try fN.wait()
-            XCTFail("should've thrown an error")
-        } catch _ as E {
-            /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        XCTAssertThrowsError(try fN.wait()) { error in
+            XCTAssertNotNil(error as? E)
         }
     }
 
@@ -625,13 +570,8 @@ class EventLoopFutureTest : XCTestCase {
             }
             prev = p.futureResult
         }
-        do {
-            _ = try prev.wait()
-            XCTFail("should have failed")
-        } catch _ as DummyError {
-            // OK
-        } catch {
-            XCTFail("wrong error \(error)")
+        XCTAssertThrowsError(try prev.wait()) { error in
+            XCTAssertNotNil(error as? DummyError)
         }
         XCTAssertNoThrow(try elg.syncShutdownGracefully())
     }
@@ -670,13 +610,8 @@ class EventLoopFutureTest : XCTestCase {
                 }
             }
         }
-        do {
-            try allOfEm.wait()
-            XCTFail("unexpected failure")
-        } catch _ as DummyError {
-            // ok
-        } catch {
-            XCTFail("unexpected error: \(error)")
+        XCTAssertThrowsError(try allOfEm.wait()) { error in
+            XCTAssertNotNil(error as? DummyError)
         }
         XCTAssertNoThrow(try elg.syncShutdownGracefully())
         XCTAssertNoThrow(try fireBackEl.syncShutdownGracefully())

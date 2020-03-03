@@ -34,11 +34,8 @@ extension ChannelPipeline {
     fileprivate func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
                                                                    file: StaticString = #file,
                                                                    line: UInt = #line) throws {
-        do {
-            let context = try self.context(handlerType: handlerType).wait()
-            XCTFail("Found handler: \(context.handler)", file: file, line: line)
-        } catch ChannelPipelineError.notFound {
-            // Nothing to see here
+        XCTAssertThrowsError(try self.context(handlerType: handlerType).wait(), file: file, line: line) { error in
+            XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
     
@@ -234,15 +231,10 @@ class WebSocketClientEndToEndTests: XCTestCase {
         // Push the successful server response but with a missing accept key.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: websocket\r\n\r\n"
         
-        do {
-            try clientChannel.writeInbound(ByteBuffer.forString(response))
-            XCTFail()
-        } catch {
-            if (error as? NIOHTTPClientUpgradeError) != .upgraderDeniedUpgrade {
-                XCTFail()
-            }
+        XCTAssertThrowsError(try clientChannel.writeInbound(ByteBuffer.forString(response))) { error in
+            XCTAssertEqual(.upgraderDeniedUpgrade, error as? NIOHTTPClientUpgradeError)
         }
-        
+
         // Close the pipeline.
         XCTAssertNoThrow(try clientChannel.close().wait())
     }
@@ -265,15 +257,10 @@ class WebSocketClientEndToEndTests: XCTestCase {
         // Push the successful server response but with an incorrect response key.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept:\(responseKey)\r\n\r\n"
 
-        do {
-            try clientChannel.writeInbound(ByteBuffer.forString(response))
-            XCTFail()
-        } catch {
-            if (error as? NIOHTTPClientUpgradeError) != .upgraderDeniedUpgrade {
-                XCTFail()
-            }
+        XCTAssertThrowsError(try clientChannel.writeInbound(ByteBuffer.forString(response))) { error in
+            XCTAssertEqual(.upgraderDeniedUpgrade, error as? NIOHTTPClientUpgradeError)
         }
-        
+
         // Close the pipeline.
         XCTAssertNoThrow(try clientChannel.close().wait())
     }
@@ -296,15 +283,10 @@ class WebSocketClientEndToEndTests: XCTestCase {
         // Push the successful server response with an incorrect protocol.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: myProtocol\r\nSec-WebSocket-Accept:\(responseKey)\r\n\r\n"
         
-        do {
-            try clientChannel.writeInbound(ByteBuffer.forString(response))
-            XCTFail()
-        } catch {
-            if (error as? NIOHTTPClientUpgradeError) != .responseProtocolNotFound {
-                XCTFail()
-            }
+        XCTAssertThrowsError(try clientChannel.writeInbound(ByteBuffer.forString(response))) { error in
+            XCTAssertEqual(.responseProtocolNotFound, error as? NIOHTTPClientUpgradeError)
         }
-        
+
         // Close the pipeline.
         XCTAssertNoThrow(try clientChannel.close().wait())
     }

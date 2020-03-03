@@ -66,13 +66,8 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).wait())
 
         channel.pipeline.fireErrorCaught(DummyError.error)
-        do {
-            try channel.throwIfErrorCaught()
-            XCTFail("No error caught")
-        } catch DummyError.error {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            XCTAssertEqual(DummyError.error, error as? DummyError)
         }
 
         XCTAssertNoThrow(try channel.finish())

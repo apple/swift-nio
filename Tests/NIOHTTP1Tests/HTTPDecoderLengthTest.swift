@@ -443,13 +443,9 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         // Send a GET with the invalid headers.
-        do {
-            try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n"))
-            XCTFail("Did not throw")
-        } catch HTTPParserError.unexpectedContentLength {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        let request = ByteBuffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n")
+        XCTAssertThrowsError(try channel.writeInbound(request)) { error in
+            XCTAssertEqual(HTTPParserError.unexpectedContentLength, error as? HTTPParserError)
         }
 
         // Must spin the loop.
@@ -467,13 +463,9 @@ class HTTPDecoderLengthTest: XCTestCase {
                                                                                            uri: "/"))).isFull)
 
         // Send a 200 OK with the invalid headers.
-        do {
-            try channel.writeInbound(ByteBuffer(string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n"))
-            XCTFail("Did not throw")
-        } catch HTTPParserError.unexpectedContentLength {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        let response = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n"
+        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: response))) { error in
+            XCTAssertEqual(HTTPParserError.unexpectedContentLength, error as? HTTPParserError)
         }
 
         // Must spin the loop.
@@ -485,15 +477,10 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         // Send a GET with the invalid headers.
-        do {
-            try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nContent-Length: \(contentLengthField)\r\n\r\n"))
-            XCTFail("Did not throw")
-        } catch HTTPParserError.invalidContentLength {
-            // ok
-        } catch HTTPParserError.unexpectedContentLength {
-            // also ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        let request = "POST / HTTP/1.1\r\nContent-Length: \(contentLengthField)\r\n\r\n"
+        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: request))) { error in
+            XCTAssert(HTTPParserError.unexpectedContentLength == error as? HTTPParserError ||
+                HTTPParserError.invalidContentLength == error as? HTTPParserError)
         }
 
         // Must spin the loop.
@@ -520,13 +507,9 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Send two POSTs with repeated content length, one with one field and one with two.
         // Both should error.
-        do {
-            try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nContent-Length: 4, 4\r\n\r\n"))
-            XCTFail("Did not throw")
-        } catch HTTPParserError.invalidContentLength {
-            // ok
-        } catch {
-            XCTFail("Unexpected error \(error)")
+        let request = "POST / HTTP/1.1\r\nContent-Length: 4, 4\r\n\r\n"
+        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: request))) { error in
+            XCTAssertEqual(HTTPParserError.invalidContentLength, error as? HTTPParserError)
         }
 
         // Must spin the loop.
@@ -539,13 +522,9 @@ class HTTPDecoderLengthTest: XCTestCase {
         // the spec. Regardless, we match it.
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
-        do {
-            try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nContent-Length: 4\r\nContent-Length: 4\r\n\r\n"))
-            XCTFail("Did not throw")
-        } catch HTTPParserError.unexpectedContentLength {
-            // ok
-        } catch {
-            XCTFail("Unexpected error \(error)")
+        let request = "POST / HTTP/1.1\r\nContent-Length: 4\r\nContent-Length: 4\r\n\r\n"
+        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: request))) { error in
+            XCTAssertEqual(HTTPParserError.unexpectedContentLength, error as? HTTPParserError)
         }
 
         // Must spin the loop.

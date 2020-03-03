@@ -231,14 +231,16 @@ func assertSetGetOptionOnOpenAndClosed<Option: ChannelOption>(channel: Channel, 
 
     do {
         _ = try channel.setOption(option, value: value).wait()
+        // We're okay with no error
     } catch let err as ChannelError where err == .ioOnClosedChannel {
-        // expected
+        // as well as already closed channels.
     }
 
     do {
         _ = try channel.getOption(option).wait()
+        // We're okay with no error
     } catch let err as ChannelError where err == .ioOnClosedChannel {
-        // expected
+        // as well as already closed channels.
     }
 }
 
