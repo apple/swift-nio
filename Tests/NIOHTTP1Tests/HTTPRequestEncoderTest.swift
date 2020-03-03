@@ -141,15 +141,9 @@ class HTTPRequestEncoderTests: XCTestCase {
     }
 
     private func assertOutboundContainsOnly(_ channel: EmbeddedChannel, _ expected: String) {
-        do {
-            if let buffer = try channel.readOutbound(as: ByteBuffer.self) {
-                buffer.assertContainsOnly(expected)
-            } else {
-                fatalError("Could not read ByteBuffer from channel")
-            }
-        } catch {
-            XCTFail("unexpected error: \(error)")
-        }
+        XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self).map { buffer in
+            buffer.assertContainsOnly(expected)
+        }, "couldn't read ByteBuffer"))
     }
 }
 

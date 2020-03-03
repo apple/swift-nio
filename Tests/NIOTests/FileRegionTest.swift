@@ -152,21 +152,16 @@ class FileRegionTest : XCTestCase {
                 XCTAssertNoThrow(try fh2.close())
             }
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
-            do {
-                () = try clientChannel.writeAndFlush(NIOAny(fr1)).flatMap {
-                    let frFuture = clientChannel.write(NIOAny(fr2))
-                    var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-                    buffer.writeBytes(bytes)
-                    let bbFuture = clientChannel.write(NIOAny(buffer))
-                    clientChannel.close(promise: nil)
-                    clientChannel.flush()
-                    return frFuture.flatMap { bbFuture }
-                }.wait()
-                XCTFail("no error happened even though we closed before flush")
-            } catch let e as ChannelError {
-                XCTAssertEqual(ChannelError.ioOnClosedChannel, e)
-            } catch let e {
-                XCTFail("unexpected error \(e)")
+            XCTAssertThrowsError(try clientChannel.writeAndFlush(NIOAny(fr1)).flatMap { () -> EventLoopFuture<Void> in
+                let frFuture = clientChannel.write(NIOAny(fr2))
+                var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
+                buffer.writeBytes(bytes)
+                let bbFuture = clientChannel.write(NIOAny(buffer))
+                clientChannel.close(promise: nil)
+                clientChannel.flush()
+                return frFuture.flatMap { bbFuture }
+            }.wait()) { error in
+                XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
             }
 
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)

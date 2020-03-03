@@ -142,13 +142,9 @@ final class SocketOptionProviderTest: XCTestCase {
         // we just abandon the other tests: this is sufficient to prove that the error path works.
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
-        do {
-            try provider.unsafeSetSocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_RCVTIMEO, value: CInt(1)).wait()
-            XCTFail("Did not throw")
-        } catch let err as IOError where err.errnoCode == EINVAL {
-            // Acceptable error
-        } catch {
-            XCTFail("Invalid error: \(error)")
+        XCTAssertThrowsError(try provider.unsafeSetSocketOption(level: SocketOptionLevel(SOL_SOCKET),
+                                                                name: SO_RCVTIMEO, value: CInt(1)).wait()) { error in
+            XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
         }
     }
 

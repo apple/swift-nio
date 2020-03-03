@@ -1141,11 +1141,8 @@ public final class ChannelTests: XCTestCase {
         try channel.close(mode: .output).wait()
 
         verificationHandler.waitForEvent()
-        do {
-            try channel.writeAndFlush(NIOAny(buffer)).wait()
-            XCTFail()
-        } catch let err as ChannelError {
-            XCTAssertEqual(ChannelError.outputClosed, err)
+        XCTAssertThrowsError(try channel.writeAndFlush(NIOAny(buffer)).wait()) { error in
+            XCTAssertEqual(.outputClosed, error as? ChannelError)
         }
         let written = try buffer.withUnsafeReadableBytes { p in
             try accepted.write(pointer: UnsafeRawBufferPointer(rebasing: p.prefix(4)))
@@ -1386,16 +1383,11 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try serverChannel.closeFuture.wait())
         }()
         let pipeline = try promise.futureResult.wait()
-        do {
-            try pipeline.eventLoop.submit { () -> Channel in
-                XCTAssertTrue(pipeline.channel is DeadChannel)
-                return pipeline.channel
-            }.wait().writeAndFlush(NIOAny(())).wait()
-            XCTFail("shouldn't have been reached")
-        } catch let e as ChannelError where e == .ioOnClosedChannel {
-            // OK
-        } catch {
-            XCTFail("wrong error \(error) received")
+        XCTAssertThrowsError(try pipeline.eventLoop.submit { () -> Channel in
+            XCTAssertTrue(pipeline.channel is DeadChannel)
+            return pipeline.channel
+        }.wait().writeAndFlush(NIOAny(())).wait()) { error in
+            XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
         }
 
         // Annoyingly it's totally possible to get to this stage and have the channels
@@ -1843,8 +1835,9 @@ public final class ChannelTests: XCTestCase {
             closeFutures.forEach {
                 do {
                     try $0.wait()
-                } catch let e as ChannelError where e == .alreadyClosed {
-                    // ok
+                    // No error is okay,
+                } catch ChannelError.alreadyClosed {
+                    // as well as already closed.
                 } catch {
                     XCTFail("unexpected error \(error) received")
                 }
@@ -1967,13 +1960,8 @@ public final class ChannelTests: XCTestCase {
 
     func testAppropriateAndInappropriateOperationsForUnregisteredSockets() throws {
         func checkThatItThrowsInappropriateOperationForState(file: StaticString = #file, line: UInt = #line, _ body: () throws -> Void) {
-            do {
-                try body()
-                XCTFail("didn't throw", file: file, line: line)
-            } catch let error as ChannelError where error == .inappropriateOperationForState {
-                //OK
-            } catch {
-                XCTFail("unexpected error \(error)", file: file, line: line)
+            XCTAssertThrowsError(try body(), file: file, line: line) { error in
+                XCTAssertEqual(.inappropriateOperationForState, error as? ChannelError)
             }
         }
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -2177,13 +2165,8 @@ public final class ChannelTests: XCTestCase {
                 }
             }
         }.wait()
-        do {
-            try cf.wait()
-            XCTFail("should've thrown")
-        } catch DummyError.dummy {
-            // ok
-        } catch {
-            XCTFail("unexpected error \(error)")
+        XCTAssertThrowsError(try cf.wait()) { error in
+            XCTAssertEqual(.dummy, error as? DummyError)
         }
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
@@ -2251,13 +2234,8 @@ public final class ChannelTests: XCTestCase {
         // we're just looping here to get a pretty good chance we're hitting both the synchronous and the asynchronous
         // connect path.
         for _ in 0..<64 {
-            do {
-                _ = try ClientBootstrap(group: group).connect(to: serverSockAddress).wait()
-                XCTFail("just worked")
-            } catch let error as IOError where error.errnoCode == ECONNREFUSED {
-                // OK
-            } catch {
-                XCTFail("unexpected error: \(error)")
+            XCTAssertThrowsError(try ClientBootstrap(group: group).connect(to: serverSockAddress).wait()) { error in
+                XCTAssertEqual(ECONNREFUSED, (error as? IOError).map { $0.errnoCode })
             }
         }
     }
@@ -2294,26 +2272,20 @@ public final class ChannelTests: XCTestCase {
             }
         }.wait() as Void)
 
-        do {
-            try sc.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
-                let p = sc.eventLoop.makePromise(of: Void.self)
-                // this callback must be attached before we call the close
-                let f = p.futureResult.map {
-                    XCTFail("shouldn't be reached")
-                }.flatMapError { err in
-                    XCTAssertNotNil(err as? DummyError)
-                    return sc.close()
-                }
-                sc.close(promise: p)
-                return f
-            }.wait()
-            XCTFail("shouldn't be reached")
-        } catch ChannelError.alreadyClosed {
-            // ok
-        } catch {
-            XCTFail("wrong error: \(error)")
+        XCTAssertThrowsError(try sc.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
+            let p = sc.eventLoop.makePromise(of: Void.self)
+            // this callback must be attached before we call the close
+            let f = p.futureResult.map {
+                XCTFail("shouldn't be reached")
+            }.flatMapError { err in
+                XCTAssertNotNil(err as? DummyError)
+                return sc.close()
+            }
+            sc.close(promise: p)
+            return f
+        }.wait()) { error in
+            XCTAssertEqual(.alreadyClosed, error as? ChannelError)
         }
-
     }
 
     func testLazyRegistrationWorksForServerSockets() throws {
@@ -2371,18 +2343,13 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
-        do {
-            let clientChannel = try ClientBootstrap(group: group)
-                .channelInitializer { channel in
-                    channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
-                }
-                .connect(to: serverChannel.localAddress!)
-                .wait()
-            XCTFail("shouldn't have reached this but got \(clientChannel)")
-        } catch FailRegistrationAndDelayCloseHandler.RegistrationFailedError.error {
-            // ok
-        } catch {
-            XCTFail("unexpected error \(error)")
+        XCTAssertThrowsError(try ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
+            }
+            .connect(to: serverChannel.localAddress!)
+            .wait()) { error in
+            XCTAssertEqual(.error, error as? FailRegistrationAndDelayCloseHandler.RegistrationFailedError)
         }
     }
 
@@ -2410,18 +2377,13 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        do {
-            let serverChannel = try ServerBootstrap(group: group)
+        XCTAssertThrowsError(try ServerBootstrap(group: group)
                 .serverChannelInitializer { channel in
                     channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
                 }
-                .bind(host: "localhost", port: 0).wait()
-            XCTFail("shouldn't be reached")
-            XCTAssertNoThrow(try serverChannel.close().wait())
-        } catch FailRegistrationAndDelayCloseHandler.RegistrationFailedError.error {
-            // ok
-        } catch {
-            XCTFail("unexpected error \(error)")
+                .bind(host: "localhost", port: 0)
+                .wait()) { error in
+                    XCTAssertEqual(.error, error as? FailRegistrationAndDelayCloseHandler.RegistrationFailedError)
         }
     }
 
