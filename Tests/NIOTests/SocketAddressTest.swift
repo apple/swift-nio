@@ -120,7 +120,7 @@ class SocketAddressTest: XCTestCase {
     func testRejectsNonIPStrings() {
         XCTAssertThrowsError(try SocketAddress(ipAddress: "definitelynotanip", port: 800)) { error in
             switch error as? SocketAddressError {
-            case .failedToParseIPString("definitelynotanip"):
+            case .some(.failedToParseIPString("definitelynotanip")):
                 () // ok
             default:
                 XCTFail("unexpected error: \(error)")
