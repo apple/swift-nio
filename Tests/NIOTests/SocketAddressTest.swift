@@ -117,13 +117,14 @@ class SocketAddressTest: XCTestCase {
         }
     }
 
-    func testRejectsNonIPStrings() throws {
-        do {
-            _ = try SocketAddress(ipAddress: "definitelynotanip", port: 800)
-        } catch SocketAddressError.failedToParseIPString(let str) {
-            XCTAssertEqual(str, "definitelynotanip")
-        } catch {
-            XCTFail("Unexpected error \(error)")
+    func testRejectsNonIPStrings() {
+        XCTAssertThrowsError(try SocketAddress(ipAddress: "definitelynotanip", port: 800)) { error in
+            switch error as? SocketAddressError {
+            case .some(.failedToParseIPString("definitelynotanip")):
+                () // ok
+            default:
+                XCTFail("unexpected error: \(error)")
+            }
         }
     }
 
@@ -194,18 +195,18 @@ class SocketAddressTest: XCTestCase {
         var secondCopy = secondIPAddress
         var thirdCopy = thirdIPAddress
 
-        _ = firstIPAddress.withMutableSockAddr { (addr, size) -> Void in
+        firstIPAddress.withMutableSockAddr { (addr, size) -> Void in
             addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
                 $0.pointee.sin_port = 5
             }
         }
-        _ = secondIPAddress.withMutableSockAddr { (addr, size) -> Void in
+        secondIPAddress.withMutableSockAddr { (addr, size) -> Void in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
             addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
                 $0.pointee.sin6_port = in_port_t(5).bigEndian
             }
         }
-        _ = thirdIPAddress.withMutableSockAddr { (addr, size) -> Void in
+        thirdIPAddress.withMutableSockAddr { (addr, size) -> Void in
             XCTAssertEqual(size, MemoryLayout<sockaddr_un>.size)
             addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
                 $0.pointee.sun_path.2 = 50
