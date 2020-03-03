@@ -44,26 +44,20 @@ private final class IndexWritingHandler: ChannelDuplexHandler {
 private extension EmbeddedChannel {
     func assertReadIndexOrder(_ order: [UInt8]) {
         XCTAssertTrue(try self.writeInbound(self.allocator.buffer(capacity: 32)).isFull)
-        do {
-            var outBuffer: ByteBuffer = try self.readInbound()!
-            XCTAssertEqual(outBuffer.readBytes(length: outBuffer.readableBytes)!, order)
-        } catch {
-            XCTFail("unexpected error: \(error)")
-        }
+        XCTAssertNoThrow(XCTAssertEqual(order,
+                                        try self.readInbound(as: ByteBuffer.self).flatMap { buffer in
+                                            var buffer = buffer
+                                            return buffer.readBytes(length: buffer.readableBytes)
+            }))
     }
 
     func assertWriteIndexOrder(_ order: [UInt8]) {
         XCTAssertTrue(try self.writeOutbound(self.allocator.buffer(capacity: 32)).isFull)
-        do {
-            guard var outBuffer2 = try self.readOutbound(as: ByteBuffer.self) else {
-                XCTFail("Could not read byte buffer")
-                return
-            }
-            
-            XCTAssertEqual(outBuffer2.readBytes(length: outBuffer2.readableBytes)!, order)
-        } catch {
-            XCTFail("unexpected error: \(error)")
-        }
+        XCTAssertNoThrow(XCTAssertEqual(order,
+                                        try self.readOutbound(as: ByteBuffer.self).flatMap { buffer in
+                                            var buffer = buffer
+                                            return buffer.readBytes(length: buffer.readableBytes)
+            }))
     }
 }
 
@@ -154,11 +148,8 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertFalse(handler.handlerAddedCalled.load())
             XCTAssertFalse(handler.handlerRemovedCalled.load())
         }
-        do {
-            try channel.pipeline.addHandler(handler).wait()
-            XCTFail()
-        } catch let err as ChannelError {
-            XCTAssertEqual(err, .ioOnClosedChannel)
+        XCTAssertThrowsError(try channel.pipeline.addHandler(handler).wait()) { error in
+            XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
         }
     }
 
@@ -597,13 +588,8 @@ class ChannelPipelineTest: XCTestCase {
     func testAddAfterWhileClosed() {
         let channel = EmbeddedChannel()
         defer {
-            do {
-                _ = try channel.finish()
-                XCTFail("Did not throw")
-            } catch ChannelError.alreadyClosed {
-                // Ok
-            } catch {
-                XCTFail("unexpected error \(error)")
+            XCTAssertThrowsError(try channel.finish()) { error in
+                XCTAssertEqual(.alreadyClosed, error as? ChannelError)
             }
         }
 
@@ -612,13 +598,9 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.close().wait())
         channel.embeddedEventLoop.run()
 
-        do {
-            try channel.pipeline.addHandler(IndexWritingHandler(2), position: .after(handler)).wait()
-            XCTFail("Did not throw")
-        } catch ChannelError.ioOnClosedChannel {
-            // all good
-        } catch {
-            XCTFail("Got incorrect error: \(error)")
+        XCTAssertThrowsError(try channel.pipeline.addHandler(IndexWritingHandler(2),
+                                                             position: .after(handler)).wait()) { error in
+            XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
         }
     }
 
@@ -635,13 +617,9 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.close().wait())
         channel.embeddedEventLoop.run()
 
-        do {
-            try channel.pipeline.addHandler(IndexWritingHandler(2), position: .before(handler)).wait()
-            XCTFail("Did not throw")
-        } catch ChannelError.ioOnClosedChannel {
-            // all good
-        } catch {
-            XCTFail("Got incorrect error: \(error)")
+        XCTAssertThrowsError(try channel.pipeline.addHandler(IndexWritingHandler(2),
+                                                             position: .before(handler)).wait()) { error in
+            XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
         }
     }
 
@@ -674,13 +652,8 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TypeAHandler.self).wait().handler)
         XCTAssertTrue(try h2 === channel.pipeline.context(handlerType: TypeBHandler.self).wait().handler)
 
-        do {
-            _ = try channel.pipeline.context(handlerType: TypeCHandler.self).wait()
-            XCTFail("Did not throw")
-        } catch ChannelPipelineError.notFound {
-            // ok
-        } catch {
-            XCTFail("Unexpected error \(error)")
+        XCTAssertThrowsError(try channel.pipeline.context(handlerType: TypeCHandler.self).wait()) { error in
+            XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
 
@@ -711,32 +684,20 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertTrue(try channel.finish().isClean)
         }
 
-        do {
-            _ = try channel.pipeline.context(name: HeadChannelHandler.name).wait()
-            XCTFail()
-        } catch let err as ChannelPipelineError where err == .notFound {
-            /// expected
+        XCTAssertThrowsError(try channel.pipeline.context(name: HeadChannelHandler.name).wait()) { error in
+            XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
 
-        do {
-            _ = try channel.pipeline.context(handlerType: HeadChannelHandler.self).wait()
-            XCTFail()
-        } catch let err as ChannelPipelineError where err == .notFound {
-            /// expected
+        XCTAssertThrowsError(try channel.pipeline.context(handlerType: HeadChannelHandler.self).wait()) { error in
+            XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
 
-        do {
-            _ = try channel.pipeline.context(name: TailChannelHandler.name).wait()
-            XCTFail()
-        } catch let err as ChannelPipelineError where err == .notFound {
-            /// expected
+        XCTAssertThrowsError(try channel.pipeline.context(name: TailChannelHandler.name).wait()) { error in
+            XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
 
-        do {
-            _ = try channel.pipeline.context(handlerType: TailChannelHandler.self).wait()
-            XCTFail()
-        } catch let err as ChannelPipelineError where err == .notFound {
-            /// expected
+        XCTAssertThrowsError(try channel.pipeline.context(handlerType: TailChannelHandler.self).wait()) { error in
+            XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
 
@@ -747,18 +708,11 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertTrue(try channel.finish().isClean)
         }
 
-        do {
-            _ = try channel.pipeline.removeHandler(name: HeadChannelHandler.name).wait()
-            XCTFail()
-        } catch let err as ChannelPipelineError where err == .notFound {
-            /// expected
+        XCTAssertThrowsError(try channel.pipeline.removeHandler(name: HeadChannelHandler.name).wait()) { error in
+            XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
-
-        do {
-            _ = try channel.pipeline.removeHandler(name: TailChannelHandler.name).wait()
-            XCTFail()
-        } catch let err as ChannelPipelineError where err == .notFound {
-            /// expected
+        XCTAssertThrowsError(try channel.pipeline.removeHandler(name: TailChannelHandler.name).wait()) { error in
+            XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
 
@@ -798,13 +752,8 @@ class ChannelPipelineTest: XCTestCase {
         }
         XCTAssertEqual(receivedBuffer, buffer)
 
-        do {
-            try channel.throwIfErrorCaught()
-            XCTFail("Did not throw")
-        } catch is DummyError {
-            // expected
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            XCTAssertNotNil(error as? DummyError)
         }
     }
 
@@ -870,13 +819,8 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(XCTAssertEqual(try channel.readOutbound(), buffer))
 
-        do {
-            try channel.throwIfErrorCaught()
-            XCTFail("Did not throw")
-        } catch is DummyError {
-            // expected
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            XCTAssertNotNil(error as? DummyError)
         }
     }
 
@@ -941,13 +885,8 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(XCTAssertEqual(try channel.readOutbound(), buffer))
 
-        do {
-            try channel.throwIfErrorCaught()
-            XCTFail("Did not throw")
-        } catch is DummyError {
-            // expected
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            XCTAssertNotNil(error as? DummyError)
         }
     }
 
