@@ -38,11 +38,7 @@ extension ChannelPipeline {
     }
 
     func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
-        do {
-            _ = try self.context(handlerType: handlerType).wait()
-        } catch ChannelPipelineError.notFound {
-            XCTFail("Did not find handler")
-        }
+        XCTAssertNoThrow(try self.context(handlerType: handlerType).wait(), "did not find handler")
     }
 
     fileprivate func removeUpgrader() throws {
@@ -425,11 +421,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
-        do {
-            try channel.writeInbound(data)
-            XCTFail("Writing of bad data did not error")
-        } catch HTTPServerUpgradeErrors.invalidHTTPOrdering {
-            // Nothing to see here.
+        XCTAssertThrowsError(try channel.writeInbound(data)) { error in
+            XCTAssertEqual(.invalidHTTPOrdering, error as? HTTPServerUpgradeErrors)
         }
 
         // The handler removed itself from the pipeline and passed the unexpected
@@ -924,13 +917,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertEqual(upgradingProtocol, "myproto")
         XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
-        do {
-            try channel.throwIfErrorCaught()
-            XCTFail("Did not throw")
-        } catch No.no {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            XCTAssertEqual(.no, error as? No)
         }
 
         // Ok, now we can upgrade. Upgrader should be out of the pipeline, and we should have seen the 101 response.
@@ -985,13 +974,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
 
-        do {
-            try channel.throwIfErrorCaught()
-            XCTFail("Did not throw")
-        } catch No.no {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            XCTAssertEqual(.no, error as? No)
         }
 
         switch try channel.readInbound(as: HTTPServerRequestPart.self) {
@@ -1065,13 +1049,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
 
-        do {
-            try channel.throwIfErrorCaught()
-            XCTFail("Did not throw")
-        } catch No.no {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            XCTAssertEqual(.no, error as? No)
         }
 
         switch try channel.readInbound(as: HTTPServerRequestPart.self) {

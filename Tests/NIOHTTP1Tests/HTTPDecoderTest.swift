@@ -34,23 +34,18 @@ class HTTPDecoderTest: XCTestCase {
 
     func testDoesNotDecodeRealHTTP09Request() throws {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
-
+        
         // This is an invalid HTTP/0.9 simple request (too many CRLFs), but we need to
         // trigger https://github.com/nodejs/http-parser/issues/386 or http_parser won't
         // actually parse this at all.
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("GET /a-file\r\n\r\n")
-
-        do {
-            try channel.writeInbound(buffer)
-            XCTFail("Did not error")
-        } catch HTTPParserError.invalidVersion {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.invalidVersion, error as? HTTPParserError)
         }
-
-       loop.run()
+        
+        self.loop.run()
     }
 
     func testDoesNotDecodeFakeHTTP09Request() throws {
@@ -60,16 +55,11 @@ class HTTPDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("GET / HTTP/0.9\r\nHost: whatever\r\n\r\n")
 
-        do {
-            try channel.writeInbound(buffer)
-            XCTFail("Did not error")
-        } catch HTTPParserError.invalidVersion {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.invalidVersion, error as? HTTPParserError)
         }
 
-        loop.run()
+        self.loop.run()
     }
 
     func testDoesNotDecodeHTTP2XRequest() throws {
@@ -80,16 +70,11 @@ class HTTPDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("GET / HTTP/2.0\r\nHost: whatever\r\n\r\n")
 
-        do {
-            try channel.writeInbound(buffer)
-            XCTFail("Did not error")
-        } catch HTTPParserError.invalidVersion {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.invalidVersion, error as? HTTPParserError)
         }
 
-        loop.run()
+        self.loop.run()
     }
 
     func testToleratesHTTP13Request() throws {
@@ -116,16 +101,11 @@ class HTTPDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("This is file data\n")
 
-        do {
-            try channel.writeInbound(buffer)
-            XCTFail("Did not error")
-        } catch HTTPParserError.invalidConstant {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.invalidConstant, error as? HTTPParserError)
         }
 
-        loop.run()
+        self.loop.run()
     }
 
     func testDoesNotDecodeFakeHTTP09Response() throws {
@@ -139,16 +119,11 @@ class HTTPDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("HTTP/0.9 200 OK\r\nServer: whatever\r\n\r\n")
 
-        do {
-            try channel.writeInbound(buffer)
-            XCTFail("Did not error")
-        } catch HTTPParserError.invalidVersion {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.invalidVersion, error as? HTTPParserError)
         }
 
-        loop.run()
+        self.loop.run()
     }
 
     func testDoesNotDecodeHTTP2XResponse() throws {
@@ -163,16 +138,11 @@ class HTTPDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("HTTP/2.0 200 OK\r\nServer: whatever\r\n\r\n")
 
-        do {
-            try channel.writeInbound(buffer)
-            XCTFail("Did not error")
-        } catch HTTPParserError.invalidVersion {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.invalidVersion, error as? HTTPParserError)
         }
 
-        loop.run()
+        self.loop.run()
     }
 
     func testToleratesHTTP13Response() throws {
@@ -844,16 +814,11 @@ class HTTPDecoderTest: XCTestCase {
                            "Transfer-Encoding: gzip, chunked\r\n\r\n" +
                            "3\r\na=1\r\n0\r\n\r\n")
 
-        do {
-            try channel.writeInbound(buffer)
-            XCTFail("Did not error")
-        } catch HTTPParserError.unexpectedContentLength {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.unexpectedContentLength, error as? HTTPParserError)
         }
 
-        loop.run()
+        self.loop.run()
     }
 
     func testTrimsTrailingOWS() throws {
