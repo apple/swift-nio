@@ -80,28 +80,22 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
     }
 
-    func testWriteInboundByteBufferReThrow() throws {
+    func testWriteInboundByteBufferReThrow() {
         let channel = EmbeddedChannel()
-        _ = try channel.pipeline.addHandler(ExceptionThrowingInboundHandler()).wait()
-        do {
-            try channel.writeInbound("msg")
-            XCTFail()
-        } catch let err {
-            XCTAssertEqual(ChannelError.operationUnsupported, err as! ChannelError)
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ExceptionThrowingInboundHandler()).wait())
+        XCTAssertThrowsError(try channel.writeInbound("msg")) { error in
+            XCTAssertEqual(ChannelError.operationUnsupported, error as? ChannelError)
         }
-        XCTAssertTrue(try channel.finish().isClean)
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
     }
 
-    func testWriteOutboundByteBufferReThrow() throws {
+    func testWriteOutboundByteBufferReThrow() {
         let channel = EmbeddedChannel()
-        _ = try channel.pipeline.addHandler(ExceptionThrowingOutboundHandler()).wait()
-        do {
-            try channel.writeOutbound("msg")
-            XCTFail()
-        } catch let err {
-            XCTAssertEqual(ChannelError.operationUnsupported, err as! ChannelError)
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ExceptionThrowingOutboundHandler()).wait())
+        XCTAssertThrowsError(try channel.writeOutbound("msg")) { error in
+            XCTAssertEqual(ChannelError.operationUnsupported, error as? ChannelError)
         }
-        XCTAssertTrue(try channel.finish().isClean)
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
     }
 
     func testReadOutboundWrongTypeThrows() {
@@ -210,7 +204,7 @@ class EmbeddedChannelTest: XCTestCase {
 
         // Close a second time. This must fail.
         do {
-            try _ = channel.close().wait()
+            try channel.close().wait()
             XCTFail("Second close succeeded")
         } catch ChannelError.alreadyClosed {
             // Nothing to do here.
@@ -220,7 +214,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testCloseOnInactiveIsOk() throws {
         let channel = EmbeddedChannel()
         let inactiveHandler = CloseInChannelInactiveHandler()
-        _ = try channel.pipeline.addHandler(inactiveHandler).wait()
+        XCTAssertNoThrow(try channel.pipeline.addHandler(inactiveHandler).wait())
         XCTAssertTrue(try channel.finish().isClean)
 
         // channelInactive should fire only once.
@@ -236,7 +230,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(handler.currentState, .registered)
         XCTAssertFalse(channel.isActive)
 
-        _ = try channel.connect(to: try SocketAddress(unixDomainSocketPath: "/fake")).wait()
+        XCTAssertNoThrow(try channel.connect(to: try SocketAddress(unixDomainSocketPath: "/fake")).wait())
         XCTAssertEqual(handler.currentState, .active)
         XCTAssertTrue(channel.isActive)
 
@@ -251,7 +245,6 @@ class EmbeddedChannelTest: XCTestCase {
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             context.fireErrorCaught(ChannelError.operationUnsupported)
         }
-
     }
 
     private final class ExceptionThrowingOutboundHandler : ChannelOutboundHandler {
