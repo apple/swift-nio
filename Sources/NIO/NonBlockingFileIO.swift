@@ -349,6 +349,44 @@ public struct NonBlockingFileIO {
         }
     }
 
+    /// Changes the file size of `fileHandle` to `size`.
+    ///
+    /// If `size` is smaller than the current file size, the remaining bytes will be truncated and are lost. If `size`
+    /// is larger than the current file size, the gap will be filled with zero bytes.
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `NIOFileHandle` to write to.
+    ///   - size: The new file size in bytes to write.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
+    /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
+    public func changeFileSize(fileHandle: NIOFileHandle,
+                               size: Int64,
+                               eventLoop: EventLoop) -> EventLoopFuture<()> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            try fileHandle.withUnsafeFileDescriptor { descriptor -> Void in
+                try Posix.ftruncate(descriptor: descriptor, size: off_t(size))
+            }
+        }
+    }
+
+    /// Returns the length of the file associated with `fileHandle`.
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `NIOFileHandle` to read from.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
+    /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
+    public func readFileSize(fileHandle: NIOFileHandle,
+                             eventLoop: EventLoop) -> EventLoopFuture<Int64> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            return try fileHandle.withUnsafeFileDescriptor { descriptor in
+                let curr = try Posix.lseek(descriptor: descriptor, offset: 0, whence: SEEK_CUR)
+                let eof = try Posix.lseek(descriptor: descriptor, offset: 0, whence: SEEK_END)
+                try Posix.lseek(descriptor: descriptor, offset: curr, whence: SEEK_SET)
+                return Int64(eof)
+            }
+        }
+    }
+
     /// Write `buffer` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
@@ -359,7 +397,29 @@ public struct NonBlockingFileIO {
     public func write(fileHandle: NIOFileHandle,
                       buffer: ByteBuffer,
                       eventLoop: EventLoop) -> EventLoopFuture<()> {
-        var byteCount = buffer.readableBytes
+        return self.write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer, eventLoop: eventLoop)
+    }
+
+    /// Write `buffer` starting from `toOffset` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `NIOFileHandle` to write to.
+    ///   - toOffset: The file offset to write to.
+    ///   - buffer: The `ByteBuffer` to write.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
+    /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
+    public func write(fileHandle: NIOFileHandle,
+                      toOffset: Int64,
+                      buffer: ByteBuffer,
+                      eventLoop: EventLoop) -> EventLoopFuture<()> {
+        return self.write0(fileHandle: fileHandle, toOffset: toOffset, buffer: buffer, eventLoop: eventLoop)
+    }
+
+    private func write0(fileHandle: NIOFileHandle,
+                        toOffset: Int64?,
+                        buffer: ByteBuffer,
+                        eventLoop: EventLoop) -> EventLoopFuture<()> {
+        let byteCount = buffer.readableBytes
 
         guard byteCount > 0 else {
             return eventLoop.makeSucceededFuture(())
@@ -367,13 +427,22 @@ public struct NonBlockingFileIO {
 
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
             var buf = buffer
-            while byteCount > 0 {
+
+            var offsetAccumulator: Int = 0
+            repeat {
                 let n = try buf.readWithUnsafeReadableBytes { ptr in
-                    precondition(ptr.count == byteCount)
-                    let res = try fileHandle.withUnsafeFileDescriptor { descriptor in
-                        try Posix.write(descriptor: descriptor,
-                                        pointer: ptr.baseAddress!,
-                                        size: byteCount)
+                    precondition(ptr.count == byteCount - offsetAccumulator)
+                    let res: IOResult<ssize_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
+                        if let toOffset = toOffset {
+                            return try Posix.pwrite(descriptor: descriptor,
+                                                    pointer: ptr.baseAddress!,
+                                                    size: byteCount - offsetAccumulator,
+                                                    offset: off_t(toOffset + Int64(offsetAccumulator)))
+                        } else {
+                            return try Posix.write(descriptor: descriptor,
+                                                   pointer: ptr.baseAddress!,
+                                                   size: byteCount - offsetAccumulator)
+                        }
                     }
                     switch res {
                     case .processed(let n):
@@ -383,9 +452,8 @@ public struct NonBlockingFileIO {
                         throw Error.descriptorSetToNonBlocking
                     }
                 }
-
-                byteCount -= n
-            }
+                offsetAccumulator += n
+            } while offsetAccumulator < byteCount
         }
     }
 
