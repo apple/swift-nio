@@ -129,6 +129,29 @@ extension UInt64: NIOAtomicPrimitive {
     public static let nio_atomic_store                        = catmc_nio_atomic_unsigned_long_long_store
 }
 
+#if os(Windows)
+extension Int: NIOAtomicPrimitive {
+    public typealias AtomicWrapper = catmc_nio_atomic_intptr_t
+    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_intptr_t_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_intptr_t_compare_and_exchange
+    public static let nio_atomic_add                          = catmc_nio_atomic_intptr_t_add
+    public static let nio_atomic_sub                          = catmc_nio_atomic_intptr_t_sub
+    public static let nio_atomic_exchange                     = catmc_nio_atomic_intptr_t_exchange
+    public static let nio_atomic_load                         = catmc_nio_atomic_intptr_t_load
+    public static let nio_atomic_store                        = catmc_nio_atomic_intptr_t_store
+}
+
+extension UInt: NIOAtomicPrimitive {
+    public typealias AtomicWrapper = catmc_nio_atomic_uintptr_t
+    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_uintptr_t_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_uintptr_t_compare_and_exchange
+    public static let nio_atomic_add                          = catmc_nio_atomic_uintptr_t_add
+    public static let nio_atomic_sub                          = catmc_nio_atomic_uintptr_t_sub
+    public static let nio_atomic_exchange                     = catmc_nio_atomic_uintptr_t_exchange
+    public static let nio_atomic_load                         = catmc_nio_atomic_uintptr_t_load
+    public static let nio_atomic_store                        = catmc_nio_atomic_uintptr_t_store
+}
+#else
 extension Int: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_long
     public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_long_create_with_existing_storage
@@ -150,6 +173,7 @@ extension UInt: NIOAtomicPrimitive {
     public static let nio_atomic_load                         = catmc_nio_atomic_unsigned_long_load
     public static let nio_atomic_store                        = catmc_nio_atomic_unsigned_long_store
 }
+#endif
 
 /// An encapsulation of an atomic primitive object.
 ///
@@ -214,6 +238,7 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     /// - Parameter rhs: The value to add to this object.
     /// - Returns: The previous value of this object, before the addition occurred.
     @inlinable
+    @discardableResult
     public func add(_ rhs: T) -> T {
         return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
             return T.nio_atomic_add($0, rhs)
@@ -229,6 +254,7 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     /// - Parameter rhs: The value to subtract from this object.
     /// - Returns: The previous value of this object, before the subtraction occurred.
     @inlinable
+    @discardableResult
     public func sub(_ rhs: T) -> T {
         return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
             return T.nio_atomic_sub($0, rhs)

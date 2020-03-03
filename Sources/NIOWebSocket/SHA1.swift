@@ -46,6 +46,12 @@ internal struct SHA1 {
     ///     - string: The string that will be UTF-8 encoded and fed into the
     ///         hash context.
     mutating func update(string: String) {
+        let isAvailable: ()? = string.utf8.withContiguousStorageIfAvailable {
+            self.update($0)
+        }
+        if isAvailable != nil {
+            return
+        }
         let buffer = Array(string.utf8)
         buffer.withUnsafeBufferPointer {
             self.update($0)

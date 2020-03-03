@@ -10,3 +10,4 @@ Package.resolved
 .podspecs
 DerivedData
 .swiftpm
+.*.sw?

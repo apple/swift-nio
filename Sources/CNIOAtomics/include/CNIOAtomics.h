@@ -15,483 +15,62 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct catmc_atomic__Bool;
-struct catmc_atomic__Bool * _Nonnull catmc_atomic__Bool_create(bool value);
-void catmc_atomic__Bool_destroy(struct catmc_atomic__Bool * _Nonnull atomic);
-bool catmc_atomic__Bool_compare_and_exchange(struct catmc_atomic__Bool * _Nonnull atomic, bool expected, bool desired);
-bool catmc_atomic__Bool_add(struct catmc_atomic__Bool * _Nonnull atomic, bool value);
-bool catmc_atomic__Bool_sub(struct catmc_atomic__Bool * _Nonnull atomic, bool value);
-bool catmc_atomic__Bool_exchange(struct catmc_atomic__Bool * _Nonnull atomic, bool value);
-bool catmc_atomic__Bool_load(struct catmc_atomic__Bool * _Nonnull atomic);
-void catmc_atomic__Bool_store(struct catmc_atomic__Bool * _Nonnull atomic, bool value);
-struct catmc_atomic_char;
-struct catmc_atomic_char * _Nonnull catmc_atomic_char_create(char value);
-void catmc_atomic_char_destroy(struct catmc_atomic_char * _Nonnull atomic);
-bool catmc_atomic_char_compare_and_exchange(struct catmc_atomic_char * _Nonnull atomic, char expected, char desired);
-char catmc_atomic_char_add(struct catmc_atomic_char * _Nonnull atomic, char value);
-char catmc_atomic_char_sub(struct catmc_atomic_char * _Nonnull atomic, char value);
-char catmc_atomic_char_exchange(struct catmc_atomic_char * _Nonnull atomic, char value);
-char catmc_atomic_char_load(struct catmc_atomic_char * _Nonnull atomic);
-void catmc_atomic_char_store(struct catmc_atomic_char * _Nonnull atomic, char value);
-struct catmc_atomic_short;
-struct catmc_atomic_short * _Nonnull catmc_atomic_short_create(short value);
-void catmc_atomic_short_destroy(struct catmc_atomic_short * _Nonnull atomic);
-bool catmc_atomic_short_compare_and_exchange(struct catmc_atomic_short * _Nonnull atomic, short expected, short desired);
-short catmc_atomic_short_add(struct catmc_atomic_short * _Nonnull atomic, short value);
-short catmc_atomic_short_sub(struct catmc_atomic_short * _Nonnull atomic, short value);
-short catmc_atomic_short_exchange(struct catmc_atomic_short * _Nonnull atomic, short value);
-short catmc_atomic_short_load(struct catmc_atomic_short * _Nonnull atomic);
-void catmc_atomic_short_store(struct catmc_atomic_short * _Nonnull atomic, short value);
-struct catmc_atomic_int;
-struct catmc_atomic_int * _Nonnull catmc_atomic_int_create(int value);
-void catmc_atomic_int_destroy(struct catmc_atomic_int * _Nonnull atomic);
-bool catmc_atomic_int_compare_and_exchange(struct catmc_atomic_int * _Nonnull atomic, int expected, int desired);
-int catmc_atomic_int_add(struct catmc_atomic_int * _Nonnull atomic, int value);
-int catmc_atomic_int_sub(struct catmc_atomic_int * _Nonnull atomic, int value);
-int catmc_atomic_int_exchange(struct catmc_atomic_int * _Nonnull atomic, int value);
-int catmc_atomic_int_load(struct catmc_atomic_int * _Nonnull atomic);
-void catmc_atomic_int_store(struct catmc_atomic_int * _Nonnull atomic, int value);
-struct catmc_atomic_long;
-struct catmc_atomic_long * _Nonnull catmc_atomic_long_create(long value);
-void catmc_atomic_long_destroy(struct catmc_atomic_long * _Nonnull atomic);
-bool catmc_atomic_long_compare_and_exchange(struct catmc_atomic_long * _Nonnull atomic, long expected, long desired);
-long catmc_atomic_long_add(struct catmc_atomic_long * _Nonnull atomic, long value);
-long catmc_atomic_long_sub(struct catmc_atomic_long * _Nonnull atomic, long value);
-long catmc_atomic_long_exchange(struct catmc_atomic_long * _Nonnull atomic, long value);
-long catmc_atomic_long_load(struct catmc_atomic_long * _Nonnull atomic);
-void catmc_atomic_long_store(struct catmc_atomic_long * _Nonnull atomic, long value);
-struct catmc_atomic_long_long;
-struct catmc_atomic_long_long * _Nonnull catmc_atomic_long_long_create(long long value);
-void catmc_atomic_long_long_destroy(struct catmc_atomic_long_long * _Nonnull atomic);
-bool catmc_atomic_long_long_compare_and_exchange(struct catmc_atomic_long_long * _Nonnull atomic, long long expected, long long desired);
-long long catmc_atomic_long_long_add(struct catmc_atomic_long_long * _Nonnull atomic, long long value);
-long long catmc_atomic_long_long_sub(struct catmc_atomic_long_long * _Nonnull atomic, long long value);
-long long catmc_atomic_long_long_exchange(struct catmc_atomic_long_long * _Nonnull atomic, long long value);
-long long catmc_atomic_long_long_load(struct catmc_atomic_long_long * _Nonnull atomic);
-void catmc_atomic_long_long_store(struct catmc_atomic_long_long * _Nonnull atomic, long long value);
-struct catmc_atomic_signed_char;
-struct catmc_atomic_signed_char * _Nonnull catmc_atomic_signed_char_create(signed char value);
-void catmc_atomic_signed_char_destroy(struct catmc_atomic_signed_char * _Nonnull atomic);
-bool catmc_atomic_signed_char_compare_and_exchange(struct catmc_atomic_signed_char * _Nonnull atomic, signed char expected, signed char desired);
-signed char catmc_atomic_signed_char_add(struct catmc_atomic_signed_char * _Nonnull atomic, signed char value);
-signed char catmc_atomic_signed_char_sub(struct catmc_atomic_signed_char * _Nonnull atomic, signed char value);
-signed char catmc_atomic_signed_char_exchange(struct catmc_atomic_signed_char * _Nonnull atomic, signed char value);
-signed char catmc_atomic_signed_char_load(struct catmc_atomic_signed_char * _Nonnull atomic);
-void catmc_atomic_signed_char_store(struct catmc_atomic_signed_char * _Nonnull atomic, signed char value);
-struct catmc_atomic_signed_short;
-struct catmc_atomic_signed_short * _Nonnull catmc_atomic_signed_short_create(signed short value);
-void catmc_atomic_signed_short_destroy(struct catmc_atomic_signed_short * _Nonnull atomic);
-bool catmc_atomic_signed_short_compare_and_exchange(struct catmc_atomic_signed_short * _Nonnull atomic, signed short expected, signed short desired);
-signed short catmc_atomic_signed_short_add(struct catmc_atomic_signed_short * _Nonnull atomic, signed short value);
-signed short catmc_atomic_signed_short_sub(struct catmc_atomic_signed_short * _Nonnull atomic, signed short value);
-signed short catmc_atomic_signed_short_exchange(struct catmc_atomic_signed_short * _Nonnull atomic, signed short value);
-signed short catmc_atomic_signed_short_load(struct catmc_atomic_signed_short * _Nonnull atomic);
-void catmc_atomic_signed_short_store(struct catmc_atomic_signed_short * _Nonnull atomic, signed short value);
-struct catmc_atomic_signed_int;
-struct catmc_atomic_signed_int * _Nonnull catmc_atomic_signed_int_create(signed int value);
-void catmc_atomic_signed_int_destroy(struct catmc_atomic_signed_int * _Nonnull atomic);
-bool catmc_atomic_signed_int_compare_and_exchange(struct catmc_atomic_signed_int * _Nonnull atomic, signed int expected, signed int desired);
-signed int catmc_atomic_signed_int_add(struct catmc_atomic_signed_int * _Nonnull atomic, signed int value);
-signed int catmc_atomic_signed_int_sub(struct catmc_atomic_signed_int * _Nonnull atomic, signed int value);
-signed int catmc_atomic_signed_int_exchange(struct catmc_atomic_signed_int * _Nonnull atomic, signed int value);
-signed int catmc_atomic_signed_int_load(struct catmc_atomic_signed_int * _Nonnull atomic);
-void catmc_atomic_signed_int_store(struct catmc_atomic_signed_int * _Nonnull atomic, signed int value);
-struct catmc_atomic_signed_long;
-struct catmc_atomic_signed_long * _Nonnull catmc_atomic_signed_long_create(signed long value);
-void catmc_atomic_signed_long_destroy(struct catmc_atomic_signed_long * _Nonnull atomic);
-bool catmc_atomic_signed_long_compare_and_exchange(struct catmc_atomic_signed_long * _Nonnull atomic, signed long expected, signed long desired);
-signed long catmc_atomic_signed_long_add(struct catmc_atomic_signed_long * _Nonnull atomic, signed long value);
-signed long catmc_atomic_signed_long_sub(struct catmc_atomic_signed_long * _Nonnull atomic, signed long value);
-signed long catmc_atomic_signed_long_exchange(struct catmc_atomic_signed_long * _Nonnull atomic, signed long value);
-signed long catmc_atomic_signed_long_load(struct catmc_atomic_signed_long * _Nonnull atomic);
-void catmc_atomic_signed_long_store(struct catmc_atomic_signed_long * _Nonnull atomic, signed long value);
-struct catmc_atomic_signed_long_long;
-struct catmc_atomic_signed_long_long * _Nonnull catmc_atomic_signed_long_long_create(signed long long value);
-void catmc_atomic_signed_long_long_destroy(struct catmc_atomic_signed_long_long * _Nonnull atomic);
-bool catmc_atomic_signed_long_long_compare_and_exchange(struct catmc_atomic_signed_long_long * _Nonnull atomic, signed long long expected, signed long long desired);
-signed long long catmc_atomic_signed_long_long_add(struct catmc_atomic_signed_long_long * _Nonnull atomic, signed long long value);
-signed long long catmc_atomic_signed_long_long_sub(struct catmc_atomic_signed_long_long * _Nonnull atomic, signed long long value);
-signed long long catmc_atomic_signed_long_long_exchange(struct catmc_atomic_signed_long_long * _Nonnull atomic, signed long long value);
-signed long long catmc_atomic_signed_long_long_load(struct catmc_atomic_signed_long_long * _Nonnull atomic);
-void catmc_atomic_signed_long_long_store(struct catmc_atomic_signed_long_long * _Nonnull atomic, signed long long value);
-struct catmc_atomic_unsigned_char;
-struct catmc_atomic_unsigned_char * _Nonnull catmc_atomic_unsigned_char_create(unsigned char value);
-void catmc_atomic_unsigned_char_destroy(struct catmc_atomic_unsigned_char * _Nonnull atomic);
-bool catmc_atomic_unsigned_char_compare_and_exchange(struct catmc_atomic_unsigned_char * _Nonnull atomic, unsigned char expected, unsigned char desired);
-unsigned char catmc_atomic_unsigned_char_add(struct catmc_atomic_unsigned_char * _Nonnull atomic, unsigned char value);
-unsigned char catmc_atomic_unsigned_char_sub(struct catmc_atomic_unsigned_char * _Nonnull atomic, unsigned char value);
-unsigned char catmc_atomic_unsigned_char_exchange(struct catmc_atomic_unsigned_char * _Nonnull atomic, unsigned char value);
-unsigned char catmc_atomic_unsigned_char_load(struct catmc_atomic_unsigned_char * _Nonnull atomic);
-void catmc_atomic_unsigned_char_store(struct catmc_atomic_unsigned_char * _Nonnull atomic, unsigned char value);
-struct catmc_atomic_unsigned_short;
-struct catmc_atomic_unsigned_short * _Nonnull catmc_atomic_unsigned_short_create(unsigned short value);
-void catmc_atomic_unsigned_short_destroy(struct catmc_atomic_unsigned_short * _Nonnull atomic);
-bool catmc_atomic_unsigned_short_compare_and_exchange(struct catmc_atomic_unsigned_short * _Nonnull atomic, unsigned short expected, unsigned short desired);
-unsigned short catmc_atomic_unsigned_short_add(struct catmc_atomic_unsigned_short * _Nonnull atomic, unsigned short value);
-unsigned short catmc_atomic_unsigned_short_sub(struct catmc_atomic_unsigned_short * _Nonnull atomic, unsigned short value);
-unsigned short catmc_atomic_unsigned_short_exchange(struct catmc_atomic_unsigned_short * _Nonnull atomic, unsigned short value);
-unsigned short catmc_atomic_unsigned_short_load(struct catmc_atomic_unsigned_short * _Nonnull atomic);
-void catmc_atomic_unsigned_short_store(struct catmc_atomic_unsigned_short * _Nonnull atomic, unsigned short value);
-struct catmc_atomic_unsigned_int;
-struct catmc_atomic_unsigned_int * _Nonnull catmc_atomic_unsigned_int_create(unsigned int value);
-void catmc_atomic_unsigned_int_destroy(struct catmc_atomic_unsigned_int * _Nonnull atomic);
-bool catmc_atomic_unsigned_int_compare_and_exchange(struct catmc_atomic_unsigned_int * _Nonnull atomic, unsigned int expected, unsigned int desired);
-unsigned int catmc_atomic_unsigned_int_add(struct catmc_atomic_unsigned_int * _Nonnull atomic, unsigned int value);
-unsigned int catmc_atomic_unsigned_int_sub(struct catmc_atomic_unsigned_int * _Nonnull atomic, unsigned int value);
-unsigned int catmc_atomic_unsigned_int_exchange(struct catmc_atomic_unsigned_int * _Nonnull atomic, unsigned int value);
-unsigned int catmc_atomic_unsigned_int_load(struct catmc_atomic_unsigned_int * _Nonnull atomic);
-void catmc_atomic_unsigned_int_store(struct catmc_atomic_unsigned_int * _Nonnull atomic, unsigned int value);
-struct catmc_atomic_unsigned_long;
-struct catmc_atomic_unsigned_long * _Nonnull catmc_atomic_unsigned_long_create(unsigned long value);
-void catmc_atomic_unsigned_long_destroy(struct catmc_atomic_unsigned_long * _Nonnull atomic);
-bool catmc_atomic_unsigned_long_compare_and_exchange(struct catmc_atomic_unsigned_long * _Nonnull atomic, unsigned long expected, unsigned long desired);
-unsigned long catmc_atomic_unsigned_long_add(struct catmc_atomic_unsigned_long * _Nonnull atomic, unsigned long value);
-unsigned long catmc_atomic_unsigned_long_sub(struct catmc_atomic_unsigned_long * _Nonnull atomic, unsigned long value);
-unsigned long catmc_atomic_unsigned_long_exchange(struct catmc_atomic_unsigned_long * _Nonnull atomic, unsigned long value);
-unsigned long catmc_atomic_unsigned_long_load(struct catmc_atomic_unsigned_long * _Nonnull atomic);
-void catmc_atomic_unsigned_long_store(struct catmc_atomic_unsigned_long * _Nonnull atomic, unsigned long value);
-struct catmc_atomic_unsigned_long_long;
-struct catmc_atomic_unsigned_long_long * _Nonnull catmc_atomic_unsigned_long_long_create(unsigned long long value);
-void catmc_atomic_unsigned_long_long_destroy(struct catmc_atomic_unsigned_long_long * _Nonnull atomic);
-bool catmc_atomic_unsigned_long_long_compare_and_exchange(struct catmc_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long expected, unsigned long long desired);
-unsigned long long catmc_atomic_unsigned_long_long_add(struct catmc_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long value);
-unsigned long long catmc_atomic_unsigned_long_long_sub(struct catmc_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long value);
-unsigned long long catmc_atomic_unsigned_long_long_exchange(struct catmc_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long value);
-unsigned long long catmc_atomic_unsigned_long_long_load(struct catmc_atomic_unsigned_long_long * _Nonnull atomic);
-void catmc_atomic_unsigned_long_long_store(struct catmc_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long value);
-struct catmc_atomic_int_least8_t;
-struct catmc_atomic_int_least8_t * _Nonnull catmc_atomic_int_least8_t_create(int_least8_t value);
-void catmc_atomic_int_least8_t_destroy(struct catmc_atomic_int_least8_t * _Nonnull atomic);
-bool catmc_atomic_int_least8_t_compare_and_exchange(struct catmc_atomic_int_least8_t * _Nonnull atomic, int_least8_t expected, int_least8_t desired);
-int_least8_t catmc_atomic_int_least8_t_add(struct catmc_atomic_int_least8_t * _Nonnull atomic, int_least8_t value);
-int_least8_t catmc_atomic_int_least8_t_sub(struct catmc_atomic_int_least8_t * _Nonnull atomic, int_least8_t value);
-int_least8_t catmc_atomic_int_least8_t_exchange(struct catmc_atomic_int_least8_t * _Nonnull atomic, int_least8_t value);
-int_least8_t catmc_atomic_int_least8_t_load(struct catmc_atomic_int_least8_t * _Nonnull atomic);
-void catmc_atomic_int_least8_t_store(struct catmc_atomic_int_least8_t * _Nonnull atomic, int_least8_t value);
-struct catmc_atomic_uint_least8_t;
-struct catmc_atomic_uint_least8_t * _Nonnull catmc_atomic_uint_least8_t_create(uint_least8_t value);
-void catmc_atomic_uint_least8_t_destroy(struct catmc_atomic_uint_least8_t * _Nonnull atomic);
-bool catmc_atomic_uint_least8_t_compare_and_exchange(struct catmc_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t expected, uint_least8_t desired);
-uint_least8_t catmc_atomic_uint_least8_t_add(struct catmc_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t value);
-uint_least8_t catmc_atomic_uint_least8_t_sub(struct catmc_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t value);
-uint_least8_t catmc_atomic_uint_least8_t_exchange(struct catmc_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t value);
-uint_least8_t catmc_atomic_uint_least8_t_load(struct catmc_atomic_uint_least8_t * _Nonnull atomic);
-void catmc_atomic_uint_least8_t_store(struct catmc_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t value);
-struct catmc_atomic_int_least16_t;
-struct catmc_atomic_int_least16_t * _Nonnull catmc_atomic_int_least16_t_create(int_least16_t value);
-void catmc_atomic_int_least16_t_destroy(struct catmc_atomic_int_least16_t * _Nonnull atomic);
-bool catmc_atomic_int_least16_t_compare_and_exchange(struct catmc_atomic_int_least16_t * _Nonnull atomic, int_least16_t expected, int_least16_t desired);
-int_least16_t catmc_atomic_int_least16_t_add(struct catmc_atomic_int_least16_t * _Nonnull atomic, int_least16_t value);
-int_least16_t catmc_atomic_int_least16_t_sub(struct catmc_atomic_int_least16_t * _Nonnull atomic, int_least16_t value);
-int_least16_t catmc_atomic_int_least16_t_exchange(struct catmc_atomic_int_least16_t * _Nonnull atomic, int_least16_t value);
-int_least16_t catmc_atomic_int_least16_t_load(struct catmc_atomic_int_least16_t * _Nonnull atomic);
-void catmc_atomic_int_least16_t_store(struct catmc_atomic_int_least16_t * _Nonnull atomic, int_least16_t value);
-struct catmc_atomic_uint_least16_t;
-struct catmc_atomic_uint_least16_t * _Nonnull catmc_atomic_uint_least16_t_create(uint_least16_t value);
-void catmc_atomic_uint_least16_t_destroy(struct catmc_atomic_uint_least16_t * _Nonnull atomic);
-bool catmc_atomic_uint_least16_t_compare_and_exchange(struct catmc_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t expected, uint_least16_t desired);
-uint_least16_t catmc_atomic_uint_least16_t_add(struct catmc_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t value);
-uint_least16_t catmc_atomic_uint_least16_t_sub(struct catmc_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t value);
-uint_least16_t catmc_atomic_uint_least16_t_exchange(struct catmc_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t value);
-uint_least16_t catmc_atomic_uint_least16_t_load(struct catmc_atomic_uint_least16_t * _Nonnull atomic);
-void catmc_atomic_uint_least16_t_store(struct catmc_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t value);
-struct catmc_atomic_int_least32_t;
-struct catmc_atomic_int_least32_t * _Nonnull catmc_atomic_int_least32_t_create(int_least32_t value);
-void catmc_atomic_int_least32_t_destroy(struct catmc_atomic_int_least32_t * _Nonnull atomic);
-bool catmc_atomic_int_least32_t_compare_and_exchange(struct catmc_atomic_int_least32_t * _Nonnull atomic, int_least32_t expected, int_least32_t desired);
-int_least32_t catmc_atomic_int_least32_t_add(struct catmc_atomic_int_least32_t * _Nonnull atomic, int_least32_t value);
-int_least32_t catmc_atomic_int_least32_t_sub(struct catmc_atomic_int_least32_t * _Nonnull atomic, int_least32_t value);
-int_least32_t catmc_atomic_int_least32_t_exchange(struct catmc_atomic_int_least32_t * _Nonnull atomic, int_least32_t value);
-int_least32_t catmc_atomic_int_least32_t_load(struct catmc_atomic_int_least32_t * _Nonnull atomic);
-void catmc_atomic_int_least32_t_store(struct catmc_atomic_int_least32_t * _Nonnull atomic, int_least32_t value);
-struct catmc_atomic_uint_least32_t;
-struct catmc_atomic_uint_least32_t * _Nonnull catmc_atomic_uint_least32_t_create(uint_least32_t value);
-void catmc_atomic_uint_least32_t_destroy(struct catmc_atomic_uint_least32_t * _Nonnull atomic);
-bool catmc_atomic_uint_least32_t_compare_and_exchange(struct catmc_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t expected, uint_least32_t desired);
-uint_least32_t catmc_atomic_uint_least32_t_add(struct catmc_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t value);
-uint_least32_t catmc_atomic_uint_least32_t_sub(struct catmc_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t value);
-uint_least32_t catmc_atomic_uint_least32_t_exchange(struct catmc_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t value);
-uint_least32_t catmc_atomic_uint_least32_t_load(struct catmc_atomic_uint_least32_t * _Nonnull atomic);
-void catmc_atomic_uint_least32_t_store(struct catmc_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t value);
-struct catmc_atomic_int_least64_t;
-struct catmc_atomic_int_least64_t * _Nonnull catmc_atomic_int_least64_t_create(int_least64_t value);
-void catmc_atomic_int_least64_t_destroy(struct catmc_atomic_int_least64_t * _Nonnull atomic);
-bool catmc_atomic_int_least64_t_compare_and_exchange(struct catmc_atomic_int_least64_t * _Nonnull atomic, int_least64_t expected, int_least64_t desired);
-int_least64_t catmc_atomic_int_least64_t_add(struct catmc_atomic_int_least64_t * _Nonnull atomic, int_least64_t value);
-int_least64_t catmc_atomic_int_least64_t_sub(struct catmc_atomic_int_least64_t * _Nonnull atomic, int_least64_t value);
-int_least64_t catmc_atomic_int_least64_t_exchange(struct catmc_atomic_int_least64_t * _Nonnull atomic, int_least64_t value);
-int_least64_t catmc_atomic_int_least64_t_load(struct catmc_atomic_int_least64_t * _Nonnull atomic);
-void catmc_atomic_int_least64_t_store(struct catmc_atomic_int_least64_t * _Nonnull atomic, int_least64_t value);
-struct catmc_atomic_uint_least64_t;
-struct catmc_atomic_uint_least64_t * _Nonnull catmc_atomic_uint_least64_t_create(uint_least64_t value);
-void catmc_atomic_uint_least64_t_destroy(struct catmc_atomic_uint_least64_t * _Nonnull atomic);
-bool catmc_atomic_uint_least64_t_compare_and_exchange(struct catmc_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t expected, uint_least64_t desired);
-uint_least64_t catmc_atomic_uint_least64_t_add(struct catmc_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t value);
-uint_least64_t catmc_atomic_uint_least64_t_sub(struct catmc_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t value);
-uint_least64_t catmc_atomic_uint_least64_t_exchange(struct catmc_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t value);
-uint_least64_t catmc_atomic_uint_least64_t_load(struct catmc_atomic_uint_least64_t * _Nonnull atomic);
-void catmc_atomic_uint_least64_t_store(struct catmc_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t value);
+#define DECLARE_ATOMIC_OPERATIONS(type, name)                                                                                         \
+  struct catmc_atomic_ ## name;                                                                                                       \
+                                                                                                                                      \
+  struct catmc_atomic_ ## name * _Nonnull catmc_atomic_ ## name ## _create(type value);                                               \
+  void catmc_atomic_ ## name ## _destroy(struct catmc_atomic_ ## name * _Nonnull);                                                    \
+  bool catmc_atomic_ ## name ## _compare_and_exchange(struct catmc_atomic_ ## name * _Nonnull, type expected, type desired);          \
+  type catmc_atomic_ ## name ## _add(struct catmc_atomic_ ## name * _Nonnull, type value);                                            \
+  type catmc_atomic_ ## name ## _sub(struct catmc_atomic_ ## name * _Nonnull, type value);                                            \
+  type catmc_atomic_ ## name ## _exchange(struct catmc_atomic_ ## name * _Nonnull, type value);                                       \
+  type catmc_atomic_ ## name ## _load(struct catmc_atomic_ ## name * _Nonnull);                                                       \
+  void catmc_atomic_ ## name ## _store(struct catmc_atomic_ ## name * _Nonnull, type value);                                          \
+                                                                                                                                      \
+  struct catmc_nio_atomic_ ## name {                                                                                                  \
+    _Atomic type value;                                                                                                               \
+  };                                                                                                                                  \
+                                                                                                                                      \
+  void catmc_nio_atomic_ ## name ## _create_with_existing_storage(struct catmc_nio_atomic_ ## name * _Nonnull, type value);           \
+  bool catmc_nio_atomic_ ## name ## _compare_and_exchange(struct catmc_nio_atomic_ ## name * _Nonnull, type expected, type desired);  \
+  type catmc_nio_atomic_ ## name ## _add(struct catmc_nio_atomic_ ## name * _Nonnull, type value);                                    \
+  type catmc_nio_atomic_ ## name ## _sub(struct catmc_nio_atomic_ ## name * _Nonnull, type value);                                    \
+  type catmc_nio_atomic_ ## name ## _exchange(struct catmc_nio_atomic_ ## name * _Nonnull, type value);                               \
+  type catmc_nio_atomic_ ## name ## _load(struct catmc_nio_atomic_ ## name * _Nonnull);                                               \
+  void catmc_nio_atomic_ ## name ## _store(struct catmc_nio_atomic_ ## name * _Nonnull, type value);                                  \
 
-struct catmc_nio_atomic__Bool {
-    _Atomic _Bool value;
-};
-void catmc_nio_atomic__Bool_create_with_existing_storage(struct catmc_nio_atomic__Bool * _Nonnull storage, bool value);
-bool catmc_nio_atomic__Bool_compare_and_exchange(struct catmc_nio_atomic__Bool * _Nonnull atomic, bool expected, bool desired);
-bool catmc_nio_atomic__Bool_add(struct catmc_nio_atomic__Bool * _Nonnull atomic, bool value);
-bool catmc_nio_atomic__Bool_sub(struct catmc_nio_atomic__Bool * _Nonnull atomic, bool value);
-bool catmc_nio_atomic__Bool_exchange(struct catmc_nio_atomic__Bool * _Nonnull atomic, bool value);
-bool catmc_nio_atomic__Bool_load(struct catmc_nio_atomic__Bool * _Nonnull atomic);
-void catmc_nio_atomic__Bool_store(struct catmc_nio_atomic__Bool * _Nonnull atomic, bool value);
+DECLARE_ATOMIC_OPERATIONS(_Bool, _Bool)
+DECLARE_ATOMIC_OPERATIONS(char, char)
+DECLARE_ATOMIC_OPERATIONS(short, short)
+DECLARE_ATOMIC_OPERATIONS(int, int)
+DECLARE_ATOMIC_OPERATIONS(long, long)
+DECLARE_ATOMIC_OPERATIONS(long long, long_long)
 
-struct catmc_nio_atomic_char {
-    _Atomic char value;
-};
-void catmc_nio_atomic_char_create_with_existing_storage(struct catmc_nio_atomic_char * _Nonnull storage, char value);
-bool catmc_nio_atomic_char_compare_and_exchange(struct catmc_nio_atomic_char * _Nonnull atomic, char expected, char desired);
-char catmc_nio_atomic_char_add(struct catmc_nio_atomic_char * _Nonnull atomic, char value);
-char catmc_nio_atomic_char_sub(struct catmc_nio_atomic_char * _Nonnull atomic, char value);
-char catmc_nio_atomic_char_exchange(struct catmc_nio_atomic_char * _Nonnull atomic, char value);
-char catmc_nio_atomic_char_load(struct catmc_nio_atomic_char * _Nonnull atomic);
-void catmc_nio_atomic_char_store(struct catmc_nio_atomic_char * _Nonnull atomic, char value);
+DECLARE_ATOMIC_OPERATIONS(signed char, signed_char)
+DECLARE_ATOMIC_OPERATIONS(signed short, signed_short)
+DECLARE_ATOMIC_OPERATIONS(signed int, signed_int)
+DECLARE_ATOMIC_OPERATIONS(signed long, signed_long)
+DECLARE_ATOMIC_OPERATIONS(signed long long, signed_long_long)
 
-struct catmc_nio_atomic_short {
-    _Atomic short value;
-};
-void catmc_nio_atomic_short_create_with_existing_storage(struct catmc_nio_atomic_short * _Nonnull storage, short value);
-bool catmc_nio_atomic_short_compare_and_exchange(struct catmc_nio_atomic_short * _Nonnull atomic, short expected, short desired);
-short catmc_nio_atomic_short_add(struct catmc_nio_atomic_short * _Nonnull atomic, short value);
-short catmc_nio_atomic_short_sub(struct catmc_nio_atomic_short * _Nonnull atomic, short value);
-short catmc_nio_atomic_short_exchange(struct catmc_nio_atomic_short * _Nonnull atomic, short value);
-short catmc_nio_atomic_short_load(struct catmc_nio_atomic_short * _Nonnull atomic);
-void catmc_nio_atomic_short_store(struct catmc_nio_atomic_short * _Nonnull atomic, short value);
+DECLARE_ATOMIC_OPERATIONS(unsigned char, unsigned_char)
+DECLARE_ATOMIC_OPERATIONS(unsigned short, unsigned_short)
+DECLARE_ATOMIC_OPERATIONS(unsigned int, unsigned_int)
+DECLARE_ATOMIC_OPERATIONS(unsigned long, unsigned_long)
+DECLARE_ATOMIC_OPERATIONS(unsigned long long, unsigned_long_long)
 
-struct catmc_nio_atomic_int {
-    _Atomic int value;
-};
-void catmc_nio_atomic_int_create_with_existing_storage(struct catmc_nio_atomic_int * _Nonnull storage, int value);
-bool catmc_nio_atomic_int_compare_and_exchange(struct catmc_nio_atomic_int * _Nonnull atomic, int expected, int desired);
-int catmc_nio_atomic_int_add(struct catmc_nio_atomic_int * _Nonnull atomic, int value);
-int catmc_nio_atomic_int_sub(struct catmc_nio_atomic_int * _Nonnull atomic, int value);
-int catmc_nio_atomic_int_exchange(struct catmc_nio_atomic_int * _Nonnull atomic, int value);
-int catmc_nio_atomic_int_load(struct catmc_nio_atomic_int * _Nonnull atomic);
-void catmc_nio_atomic_int_store(struct catmc_nio_atomic_int * _Nonnull atomic, int value);
+DECLARE_ATOMIC_OPERATIONS(int_least8_t, int_least8_t)
+DECLARE_ATOMIC_OPERATIONS(uint_least8_t, uint_least8_t)
 
-struct catmc_nio_atomic_long {
-    _Atomic long value;
-};
-void catmc_nio_atomic_long_create_with_existing_storage(struct catmc_nio_atomic_long * _Nonnull storage, long value);
-bool catmc_nio_atomic_long_compare_and_exchange(struct catmc_nio_atomic_long * _Nonnull atomic, long expected, long desired);
-long catmc_nio_atomic_long_add(struct catmc_nio_atomic_long * _Nonnull atomic, long value);
-long catmc_nio_atomic_long_sub(struct catmc_nio_atomic_long * _Nonnull atomic, long value);
-long catmc_nio_atomic_long_exchange(struct catmc_nio_atomic_long * _Nonnull atomic, long value);
-long catmc_nio_atomic_long_load(struct catmc_nio_atomic_long * _Nonnull atomic);
-void catmc_nio_atomic_long_store(struct catmc_nio_atomic_long * _Nonnull atomic, long value);
+DECLARE_ATOMIC_OPERATIONS(int_least16_t, int_least16_t)
+DECLARE_ATOMIC_OPERATIONS(uint_least16_t, uint_least16_t)
 
-struct catmc_nio_atomic_long_long {
-    _Atomic long long value;
-};
-void catmc_nio_atomic_long_long_create_with_existing_storage(struct catmc_nio_atomic_long_long * _Nonnull storage, long long value);
-bool catmc_nio_atomic_long_long_compare_and_exchange(struct catmc_nio_atomic_long_long * _Nonnull atomic, long long expected, long long desired);
-long long catmc_nio_atomic_long_long_add(struct catmc_nio_atomic_long_long * _Nonnull atomic, long long value);
-long long catmc_nio_atomic_long_long_sub(struct catmc_nio_atomic_long_long * _Nonnull atomic, long long value);
-long long catmc_nio_atomic_long_long_exchange(struct catmc_nio_atomic_long_long * _Nonnull atomic, long long value);
-long long catmc_nio_atomic_long_long_load(struct catmc_nio_atomic_long_long * _Nonnull atomic);
-void catmc_nio_atomic_long_long_store(struct catmc_nio_atomic_long_long * _Nonnull atomic, long long value);
+DECLARE_ATOMIC_OPERATIONS(int_least32_t, int_least32_t)
+DECLARE_ATOMIC_OPERATIONS(uint_least32_t, uint_least32_t)
 
-struct catmc_nio_atomic_signed_char {
-    _Atomic signed char value;
-};
-void catmc_nio_atomic_signed_char_create_with_existing_storage(struct catmc_nio_atomic_signed_char * _Nonnull storage, signed char value);
-bool catmc_nio_atomic_signed_char_compare_and_exchange(struct catmc_nio_atomic_signed_char * _Nonnull atomic, signed char expected, signed char desired);
-signed char catmc_nio_atomic_signed_char_add(struct catmc_nio_atomic_signed_char * _Nonnull atomic, signed char value);
-signed char catmc_nio_atomic_signed_char_sub(struct catmc_nio_atomic_signed_char * _Nonnull atomic, signed char value);
-signed char catmc_nio_atomic_signed_char_exchange(struct catmc_nio_atomic_signed_char * _Nonnull atomic, signed char value);
-signed char catmc_nio_atomic_signed_char_load(struct catmc_nio_atomic_signed_char * _Nonnull atomic);
-void catmc_nio_atomic_signed_char_store(struct catmc_nio_atomic_signed_char * _Nonnull atomic, signed char value);
+DECLARE_ATOMIC_OPERATIONS(int_least64_t, int_least64_t)
+DECLARE_ATOMIC_OPERATIONS(uint_least64_t, uint_least64_t)
 
-struct catmc_nio_atomic_signed_short {
-    _Atomic signed short value;
-};
-void catmc_nio_atomic_signed_short_create_with_existing_storage(struct catmc_nio_atomic_signed_short * _Nonnull storage, signed short value);
-bool catmc_nio_atomic_signed_short_compare_and_exchange(struct catmc_nio_atomic_signed_short * _Nonnull atomic, signed short expected, signed short desired);
-signed short catmc_nio_atomic_signed_short_add(struct catmc_nio_atomic_signed_short * _Nonnull atomic, signed short value);
-signed short catmc_nio_atomic_signed_short_sub(struct catmc_nio_atomic_signed_short * _Nonnull atomic, signed short value);
-signed short catmc_nio_atomic_signed_short_exchange(struct catmc_nio_atomic_signed_short * _Nonnull atomic, signed short value);
-signed short catmc_nio_atomic_signed_short_load(struct catmc_nio_atomic_signed_short * _Nonnull atomic);
-void catmc_nio_atomic_signed_short_store(struct catmc_nio_atomic_signed_short * _Nonnull atomic, signed short value);
+DECLARE_ATOMIC_OPERATIONS(intptr_t, intptr_t)
+DECLARE_ATOMIC_OPERATIONS(uintptr_t, uintptr_t)
 
-struct catmc_nio_atomic_signed_int {
-    _Atomic signed int value;
-};
-void catmc_nio_atomic_signed_int_create_with_existing_storage(struct catmc_nio_atomic_signed_int * _Nonnull storage, signed int value);
-bool catmc_nio_atomic_signed_int_compare_and_exchange(struct catmc_nio_atomic_signed_int * _Nonnull atomic, signed int expected, signed int desired);
-signed int catmc_nio_atomic_signed_int_add(struct catmc_nio_atomic_signed_int * _Nonnull atomic, signed int value);
-signed int catmc_nio_atomic_signed_int_sub(struct catmc_nio_atomic_signed_int * _Nonnull atomic, signed int value);
-signed int catmc_nio_atomic_signed_int_exchange(struct catmc_nio_atomic_signed_int * _Nonnull atomic, signed int value);
-signed int catmc_nio_atomic_signed_int_load(struct catmc_nio_atomic_signed_int * _Nonnull atomic);
-void catmc_nio_atomic_signed_int_store(struct catmc_nio_atomic_signed_int * _Nonnull atomic, signed int value);
-
-struct catmc_nio_atomic_signed_long {
-    _Atomic signed long value;
-};
-void catmc_nio_atomic_signed_long_create_with_existing_storage(struct catmc_nio_atomic_signed_long * _Nonnull storage, signed long value);
-bool catmc_nio_atomic_signed_long_compare_and_exchange(struct catmc_nio_atomic_signed_long * _Nonnull atomic, signed long expected, signed long desired);
-signed long catmc_nio_atomic_signed_long_add(struct catmc_nio_atomic_signed_long * _Nonnull atomic, signed long value);
-signed long catmc_nio_atomic_signed_long_sub(struct catmc_nio_atomic_signed_long * _Nonnull atomic, signed long value);
-signed long catmc_nio_atomic_signed_long_exchange(struct catmc_nio_atomic_signed_long * _Nonnull atomic, signed long value);
-signed long catmc_nio_atomic_signed_long_load(struct catmc_nio_atomic_signed_long * _Nonnull atomic);
-void catmc_nio_atomic_signed_long_store(struct catmc_nio_atomic_signed_long * _Nonnull atomic, signed long value);
-
-struct catmc_nio_atomic_signed_long_long {
-    _Atomic signed long long value;
-};
-void catmc_nio_atomic_signed_long_long_create_with_existing_storage(struct catmc_nio_atomic_signed_long_long * _Nonnull storage, signed long long value);
-bool catmc_nio_atomic_signed_long_long_compare_and_exchange(struct catmc_nio_atomic_signed_long_long * _Nonnull atomic, signed long long expected, signed long long desired);
-signed long long catmc_nio_atomic_signed_long_long_add(struct catmc_nio_atomic_signed_long_long * _Nonnull atomic, signed long long value);
-signed long long catmc_nio_atomic_signed_long_long_sub(struct catmc_nio_atomic_signed_long_long * _Nonnull atomic, signed long long value);
-signed long long catmc_nio_atomic_signed_long_long_exchange(struct catmc_nio_atomic_signed_long_long * _Nonnull atomic, signed long long value);
-signed long long catmc_nio_atomic_signed_long_long_load(struct catmc_nio_atomic_signed_long_long * _Nonnull atomic);
-void catmc_nio_atomic_signed_long_long_store(struct catmc_nio_atomic_signed_long_long * _Nonnull atomic, signed long long value);
-
-struct catmc_nio_atomic_unsigned_char {
-    _Atomic unsigned char value;
-};
-void catmc_nio_atomic_unsigned_char_create_with_existing_storage(struct catmc_nio_atomic_unsigned_char * _Nonnull storage, unsigned char value);
-bool catmc_nio_atomic_unsigned_char_compare_and_exchange(struct catmc_nio_atomic_unsigned_char * _Nonnull atomic, unsigned char expected, unsigned char desired);
-unsigned char catmc_nio_atomic_unsigned_char_add(struct catmc_nio_atomic_unsigned_char * _Nonnull atomic, unsigned char value);
-unsigned char catmc_nio_atomic_unsigned_char_sub(struct catmc_nio_atomic_unsigned_char * _Nonnull atomic, unsigned char value);
-unsigned char catmc_nio_atomic_unsigned_char_exchange(struct catmc_nio_atomic_unsigned_char * _Nonnull atomic, unsigned char value);
-unsigned char catmc_nio_atomic_unsigned_char_load(struct catmc_nio_atomic_unsigned_char * _Nonnull atomic);
-void catmc_nio_atomic_unsigned_char_store(struct catmc_nio_atomic_unsigned_char * _Nonnull atomic, unsigned char value);
-
-struct catmc_nio_atomic_unsigned_short {
-    _Atomic unsigned short value;
-};
-void catmc_nio_atomic_unsigned_short_create_with_existing_storage(struct catmc_nio_atomic_unsigned_short * _Nonnull storage, unsigned short value);
-bool catmc_nio_atomic_unsigned_short_compare_and_exchange(struct catmc_nio_atomic_unsigned_short * _Nonnull atomic, unsigned short expected, unsigned short desired);
-unsigned short catmc_nio_atomic_unsigned_short_add(struct catmc_nio_atomic_unsigned_short * _Nonnull atomic, unsigned short value);
-unsigned short catmc_nio_atomic_unsigned_short_sub(struct catmc_nio_atomic_unsigned_short * _Nonnull atomic, unsigned short value);
-unsigned short catmc_nio_atomic_unsigned_short_exchange(struct catmc_nio_atomic_unsigned_short * _Nonnull atomic, unsigned short value);
-unsigned short catmc_nio_atomic_unsigned_short_load(struct catmc_nio_atomic_unsigned_short * _Nonnull atomic);
-void catmc_nio_atomic_unsigned_short_store(struct catmc_nio_atomic_unsigned_short * _Nonnull atomic, unsigned short value);
-
-struct catmc_nio_atomic_unsigned_int {
-    _Atomic unsigned int value;
-};
-void catmc_nio_atomic_unsigned_int_create_with_existing_storage(struct catmc_nio_atomic_unsigned_int * _Nonnull storage, unsigned int value);
-bool catmc_nio_atomic_unsigned_int_compare_and_exchange(struct catmc_nio_atomic_unsigned_int * _Nonnull atomic, unsigned int expected, unsigned int desired);
-unsigned int catmc_nio_atomic_unsigned_int_add(struct catmc_nio_atomic_unsigned_int * _Nonnull atomic, unsigned int value);
-unsigned int catmc_nio_atomic_unsigned_int_sub(struct catmc_nio_atomic_unsigned_int * _Nonnull atomic, unsigned int value);
-unsigned int catmc_nio_atomic_unsigned_int_exchange(struct catmc_nio_atomic_unsigned_int * _Nonnull atomic, unsigned int value);
-unsigned int catmc_nio_atomic_unsigned_int_load(struct catmc_nio_atomic_unsigned_int * _Nonnull atomic);
-void catmc_nio_atomic_unsigned_int_store(struct catmc_nio_atomic_unsigned_int * _Nonnull atomic, unsigned int value);
-
-struct catmc_nio_atomic_unsigned_long {
-    _Atomic unsigned long value;
-};
-void catmc_nio_atomic_unsigned_long_create_with_existing_storage(struct catmc_nio_atomic_unsigned_long * _Nonnull storage, unsigned long value);
-bool catmc_nio_atomic_unsigned_long_compare_and_exchange(struct catmc_nio_atomic_unsigned_long * _Nonnull atomic, unsigned long expected, unsigned long desired);
-unsigned long catmc_nio_atomic_unsigned_long_add(struct catmc_nio_atomic_unsigned_long * _Nonnull atomic, unsigned long value);
-unsigned long catmc_nio_atomic_unsigned_long_sub(struct catmc_nio_atomic_unsigned_long * _Nonnull atomic, unsigned long value);
-unsigned long catmc_nio_atomic_unsigned_long_exchange(struct catmc_nio_atomic_unsigned_long * _Nonnull atomic, unsigned long value);
-unsigned long catmc_nio_atomic_unsigned_long_load(struct catmc_nio_atomic_unsigned_long * _Nonnull atomic);
-void catmc_nio_atomic_unsigned_long_store(struct catmc_nio_atomic_unsigned_long * _Nonnull atomic, unsigned long value);
-
-struct catmc_nio_atomic_unsigned_long_long {
-    _Atomic unsigned long long value;
-};
-void catmc_nio_atomic_unsigned_long_long_create_with_existing_storage(struct catmc_nio_atomic_unsigned_long_long * _Nonnull storage, unsigned long long value);
-bool catmc_nio_atomic_unsigned_long_long_compare_and_exchange(struct catmc_nio_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long expected, unsigned long long desired);
-unsigned long long catmc_nio_atomic_unsigned_long_long_add(struct catmc_nio_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long value);
-unsigned long long catmc_nio_atomic_unsigned_long_long_sub(struct catmc_nio_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long value);
-unsigned long long catmc_nio_atomic_unsigned_long_long_exchange(struct catmc_nio_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long value);
-unsigned long long catmc_nio_atomic_unsigned_long_long_load(struct catmc_nio_atomic_unsigned_long_long * _Nonnull atomic);
-void catmc_nio_atomic_unsigned_long_long_store(struct catmc_nio_atomic_unsigned_long_long * _Nonnull atomic, unsigned long long value);
-
-struct catmc_nio_atomic_int_least8_t {
-    _Atomic int_least8_t value;
-};
-void catmc_nio_atomic_int_least8_t_create_with_existing_storage(struct catmc_nio_atomic_int_least8_t * _Nonnull storage, int_least8_t value);
-bool catmc_nio_atomic_int_least8_t_compare_and_exchange(struct catmc_nio_atomic_int_least8_t * _Nonnull atomic, int_least8_t expected, int_least8_t desired);
-int_least8_t catmc_nio_atomic_int_least8_t_add(struct catmc_nio_atomic_int_least8_t * _Nonnull atomic, int_least8_t value);
-int_least8_t catmc_nio_atomic_int_least8_t_sub(struct catmc_nio_atomic_int_least8_t * _Nonnull atomic, int_least8_t value);
-int_least8_t catmc_nio_atomic_int_least8_t_exchange(struct catmc_nio_atomic_int_least8_t * _Nonnull atomic, int_least8_t value);
-int_least8_t catmc_nio_atomic_int_least8_t_load(struct catmc_nio_atomic_int_least8_t * _Nonnull atomic);
-void catmc_nio_atomic_int_least8_t_store(struct catmc_nio_atomic_int_least8_t * _Nonnull atomic, int_least8_t value);
-
-struct catmc_nio_atomic_uint_least8_t {
-    _Atomic uint_least8_t value;
-};
-void catmc_nio_atomic_uint_least8_t_create_with_existing_storage(struct catmc_nio_atomic_uint_least8_t * _Nonnull storage, uint_least8_t value);
-bool catmc_nio_atomic_uint_least8_t_compare_and_exchange(struct catmc_nio_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t expected, uint_least8_t desired);
-uint_least8_t catmc_nio_atomic_uint_least8_t_add(struct catmc_nio_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t value);
-uint_least8_t catmc_nio_atomic_uint_least8_t_sub(struct catmc_nio_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t value);
-uint_least8_t catmc_nio_atomic_uint_least8_t_exchange(struct catmc_nio_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t value);
-uint_least8_t catmc_nio_atomic_uint_least8_t_load(struct catmc_nio_atomic_uint_least8_t * _Nonnull atomic);
-void catmc_nio_atomic_uint_least8_t_store(struct catmc_nio_atomic_uint_least8_t * _Nonnull atomic, uint_least8_t value);
-
-struct catmc_nio_atomic_int_least16_t {
-    _Atomic int_least16_t value;
-};
-void catmc_nio_atomic_int_least16_t_create_with_existing_storage(struct catmc_nio_atomic_int_least16_t * _Nonnull storage, int_least16_t value);
-bool catmc_nio_atomic_int_least16_t_compare_and_exchange(struct catmc_nio_atomic_int_least16_t * _Nonnull atomic, int_least16_t expected, int_least16_t desired);
-int_least16_t catmc_nio_atomic_int_least16_t_add(struct catmc_nio_atomic_int_least16_t * _Nonnull atomic, int_least16_t value);
-int_least16_t catmc_nio_atomic_int_least16_t_sub(struct catmc_nio_atomic_int_least16_t * _Nonnull atomic, int_least16_t value);
-int_least16_t catmc_nio_atomic_int_least16_t_exchange(struct catmc_nio_atomic_int_least16_t * _Nonnull atomic, int_least16_t value);
-int_least16_t catmc_nio_atomic_int_least16_t_load(struct catmc_nio_atomic_int_least16_t * _Nonnull atomic);
-void catmc_nio_atomic_int_least16_t_store(struct catmc_nio_atomic_int_least16_t * _Nonnull atomic, int_least16_t value);
-
-struct catmc_nio_atomic_uint_least16_t {
-    _Atomic uint_least16_t value;
-};
-void catmc_nio_atomic_uint_least16_t_create_with_existing_storage(struct catmc_nio_atomic_uint_least16_t * _Nonnull storage, uint_least16_t value);
-bool catmc_nio_atomic_uint_least16_t_compare_and_exchange(struct catmc_nio_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t expected, uint_least16_t desired);
-uint_least16_t catmc_nio_atomic_uint_least16_t_add(struct catmc_nio_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t value);
-uint_least16_t catmc_nio_atomic_uint_least16_t_sub(struct catmc_nio_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t value);
-uint_least16_t catmc_nio_atomic_uint_least16_t_exchange(struct catmc_nio_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t value);
-uint_least16_t catmc_nio_atomic_uint_least16_t_load(struct catmc_nio_atomic_uint_least16_t * _Nonnull atomic);
-void catmc_nio_atomic_uint_least16_t_store(struct catmc_nio_atomic_uint_least16_t * _Nonnull atomic, uint_least16_t value);
-
-struct catmc_nio_atomic_int_least32_t {
-    _Atomic int_least32_t value;
-};
-void catmc_nio_atomic_int_least32_t_create_with_existing_storage(struct catmc_nio_atomic_int_least32_t * _Nonnull storage, int_least32_t value);
-bool catmc_nio_atomic_int_least32_t_compare_and_exchange(struct catmc_nio_atomic_int_least32_t * _Nonnull atomic, int_least32_t expected, int_least32_t desired);
-int_least32_t catmc_nio_atomic_int_least32_t_add(struct catmc_nio_atomic_int_least32_t * _Nonnull atomic, int_least32_t value);
-int_least32_t catmc_nio_atomic_int_least32_t_sub(struct catmc_nio_atomic_int_least32_t * _Nonnull atomic, int_least32_t value);
-int_least32_t catmc_nio_atomic_int_least32_t_exchange(struct catmc_nio_atomic_int_least32_t * _Nonnull atomic, int_least32_t value);
-int_least32_t catmc_nio_atomic_int_least32_t_load(struct catmc_nio_atomic_int_least32_t * _Nonnull atomic);
-void catmc_nio_atomic_int_least32_t_store(struct catmc_nio_atomic_int_least32_t * _Nonnull atomic, int_least32_t value);
-
-struct catmc_nio_atomic_uint_least32_t {
-    _Atomic uint_least32_t value;
-};
-void catmc_nio_atomic_uint_least32_t_create_with_existing_storage(struct catmc_nio_atomic_uint_least32_t * _Nonnull storage, uint_least32_t value);
-bool catmc_nio_atomic_uint_least32_t_compare_and_exchange(struct catmc_nio_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t expected, uint_least32_t desired);
-uint_least32_t catmc_nio_atomic_uint_least32_t_add(struct catmc_nio_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t value);
-uint_least32_t catmc_nio_atomic_uint_least32_t_sub(struct catmc_nio_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t value);
-uint_least32_t catmc_nio_atomic_uint_least32_t_exchange(struct catmc_nio_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t value);
-uint_least32_t catmc_nio_atomic_uint_least32_t_load(struct catmc_nio_atomic_uint_least32_t * _Nonnull atomic);
-void catmc_nio_atomic_uint_least32_t_store(struct catmc_nio_atomic_uint_least32_t * _Nonnull atomic, uint_least32_t value);
-
-struct catmc_nio_atomic_int_least64_t {
-    _Atomic int_least64_t value;
-};
-void catmc_nio_atomic_int_least64_t_create_with_existing_storage(struct catmc_nio_atomic_int_least64_t * _Nonnull storage, int_least64_t value);
-bool catmc_nio_atomic_int_least64_t_compare_and_exchange(struct catmc_nio_atomic_int_least64_t * _Nonnull atomic, int_least64_t expected, int_least64_t desired);
-int_least64_t catmc_nio_atomic_int_least64_t_add(struct catmc_nio_atomic_int_least64_t * _Nonnull atomic, int_least64_t value);
-int_least64_t catmc_nio_atomic_int_least64_t_sub(struct catmc_nio_atomic_int_least64_t * _Nonnull atomic, int_least64_t value);
-int_least64_t catmc_nio_atomic_int_least64_t_exchange(struct catmc_nio_atomic_int_least64_t * _Nonnull atomic, int_least64_t value);
-int_least64_t catmc_nio_atomic_int_least64_t_load(struct catmc_nio_atomic_int_least64_t * _Nonnull atomic);
-void catmc_nio_atomic_int_least64_t_store(struct catmc_nio_atomic_int_least64_t * _Nonnull atomic, int_least64_t value);
-
-struct catmc_nio_atomic_uint_least64_t {
-    _Atomic uint_least64_t value;
-};
-void catmc_nio_atomic_uint_least64_t_create_with_existing_storage(struct catmc_nio_atomic_uint_least64_t * _Nonnull storage, uint_least64_t value);
-bool catmc_nio_atomic_uint_least64_t_compare_and_exchange(struct catmc_nio_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t expected, uint_least64_t desired);
-uint_least64_t catmc_nio_atomic_uint_least64_t_add(struct catmc_nio_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t value);
-uint_least64_t catmc_nio_atomic_uint_least64_t_sub(struct catmc_nio_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t value);
-uint_least64_t catmc_nio_atomic_uint_least64_t_exchange(struct catmc_nio_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t value);
-uint_least64_t catmc_nio_atomic_uint_least64_t_load(struct catmc_nio_atomic_uint_least64_t * _Nonnull atomic);
-void catmc_nio_atomic_uint_least64_t_store(struct catmc_nio_atomic_uint_least64_t * _Nonnull atomic, uint_least64_t value);
+#undef DECLARE_ATOMIC_OPERATIONS
