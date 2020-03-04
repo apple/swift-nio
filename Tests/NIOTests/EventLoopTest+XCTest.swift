@@ -67,6 +67,8 @@ extension EventLoopTest {
                 ("testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask", testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask),
                 ("testSelectableEventLoopDescription", testSelectableEventLoopDescription),
                 ("testMultiThreadedEventLoopGroupDescription", testMultiThreadedEventLoopGroupDescription),
+                ("testSafeToExecuteTrue", testSafeToExecuteTrue),
+                ("testSafeToExecuteFalse", testSafeToExecuteFalse),
            ]
    }
 }

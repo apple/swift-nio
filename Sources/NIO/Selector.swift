@@ -549,7 +549,7 @@ internal class Selector<R: Registration> {
                 // Consume event
                 var val: UInt64 = 0
                 // We are not interested in the result
-                _ = Glibc.read(self.timerFD, &val, MemoryLayout.size(ofValue: val))
+                _ = try! Posix.read(descriptor: self.timerFD, pointer: &val, size: MemoryLayout.size(ofValue: val))
 
                 // Processed the earliest set timer so reset it.
                 self.earliestTimer = .distantFuture
