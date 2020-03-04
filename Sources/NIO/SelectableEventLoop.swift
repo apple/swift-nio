@@ -110,7 +110,7 @@ internal final class SelectableEventLoop: EventLoop {
         switch self.internalState {
         case .exitingThread:
             return false
-        default:
+        case .runningAndAcceptingNewRegistrations, .runningButNotAcceptingNewRegistrations, .noLongerRunning:
             return true
         }
     }
@@ -120,7 +120,7 @@ internal final class SelectableEventLoop: EventLoop {
         switch self.externalState {
         case .open, .closing:
             return true
-        default:
+        case .closed, .reclaimingResources, .resourcesReclaimed:
             return false
         }
     }
