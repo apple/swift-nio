@@ -31,10 +31,6 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
         }
         return .needMoreData
     }
-
-    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-        return try self.decode(context: context, buffer: &buffer)
-    }
 }
 
 /// This `ChannelInboundHandler` demonstrates a few things:
