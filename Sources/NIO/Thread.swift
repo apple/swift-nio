@@ -82,7 +82,7 @@ final class NIOThread {
     /// - returns: The value returned by `body`.
 #if !os(Windows)
     internal func withUnsafePthread<T>(_ body: (pthread_t) throws -> T) rethrows -> T {
-        return try body(self.handle)
+        return try body((self.handle as pthread_t?)!)
     }
 #endif
 
@@ -101,7 +101,7 @@ final class NIOThread {
         // anyway.
         var chars: [CChar] = Array(repeating: 0, count: 64)
         return chars.withUnsafeMutableBufferPointer { ptr in
-            guard sys_pthread_getname_np(self.handle, ptr.baseAddress!, ptr.count) == 0 else {
+            guard sys_pthread_getname_np((self.handle as pthread_t?)!, ptr.baseAddress!, ptr.count) == 0 else {
                 return nil
             }
 
@@ -117,7 +117,7 @@ final class NIOThread {
         let dwResult: DWORD = WaitForSingleObject(self.handle, INFINITE)
         assert(dwResult == WAIT_OBJECT_0, "WaitForSingleObject: \(GetLastError())")
 #else
-        let err = pthread_join(self.handle, nil)
+        let err = pthread_join((self.handle as pthread_t?)!, nil)
         assert(err == 0, "pthread_join failed with \(err)")
 #endif
     }
@@ -175,7 +175,7 @@ final class NIOThread {
             if let name = name {
                 // this is non-critical so we ignore the result here, we've seen
                 // EPERM in containers.
-                _ = sys_pthread_setname_np(hThread, name)
+                _ = sys_pthread_setname_np((hThread as pthread_t?)!, name)
             }
 
             body(NIOThread(handle: hThread, desiredName: name))
@@ -185,7 +185,7 @@ final class NIOThread {
         precondition(res == 0, "Unable to create thread: \(res)")
 
         if detachThread {
-            let detachError = pthread_detach(handle)
+            let detachError = pthread_detach((handle as pthread_t?)!)
             precondition(detachError == 0, "pthread_detach failed with error \(detachError)")
         }
 #endif
@@ -307,7 +307,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).
     public init() {
         self.key = Key(destructor: {
-          Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
+            Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
         })
     }
 
