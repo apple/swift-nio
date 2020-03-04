@@ -19,6 +19,12 @@ import Darwin
 fileprivate func sys_sched_yield() {
     pthread_yield_np()
 }
+#elseif os(Windows)
+import ucrt
+import WinSDK
+fileprivate func sys_sched_yield() {
+  Sleep(0)
+}
 #else
 import Glibc
 fileprivate func sys_sched_yield() {

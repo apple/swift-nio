@@ -420,12 +420,8 @@ public final class EventLoopTest : XCTestCase {
 
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
-            do {
-                try group.syncShutdownGracefully()
-            } catch EventLoopError.shutdown {
-                // Fine, that's expected if the test completed.
-            } catch {
-                XCTFail("Unexpected error on close: \(error)")
+            XCTAssertThrowsError(try group.syncShutdownGracefully()) { error in
+                XCTAssertEqual(.shutdown, error as? EventLoopError)
             }
         }
         let loop = group.next() as! SelectableEventLoop
@@ -477,13 +473,8 @@ public final class EventLoopTest : XCTestCase {
         // Now we're going to attempt to register a new channel. This should immediately fail.
         let newChannel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
 
-        do {
-            try newChannel.register().wait()
-            XCTFail("Register did not throw")
-        } catch EventLoopError.shutdown {
-            // All good
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try newChannel.register().wait()) { error in
+            XCTAssertEqual(.shutdown, error as? EventLoopError)
         }
 
         // Confirm that the loop still hasn't closed.

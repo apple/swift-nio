@@ -374,6 +374,13 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             XCTAssertEqual(1, ab.sub(1))
 
             XCTAssertEqual(0, ab.load())
+
+            let atomic = NIOAtomic<T>.makeAtomic(value: zero)
+            atomic.store(100)
+            atomic.add(1)
+            XCTAssertEqual(101, atomic.load())
+            atomic.sub(1)
+            XCTAssertEqual(100, atomic.load())
         }
 
         testFor(Int8.self)
@@ -974,7 +981,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
                     }
                 case 1:
                     for n in 1...iterations {
-                        _ = box.store(.init(n, allDeallocations: allDeallocations))
+                        box.store(.init(n, allDeallocations: allDeallocations))
                     }
                 case 2:
                     var last = Int.min

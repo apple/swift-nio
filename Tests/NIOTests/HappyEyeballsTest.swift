@@ -32,8 +32,9 @@ private extension Array where Element == Channel {
         self.forEach {
             do {
                 _ = try($0 as! EmbeddedChannel).finish()
+                // We're happy with no error
             } catch ChannelError.alreadyClosed {
-                return
+                return // as well as already closed.
             } catch {
                 XCTFail("Finishing got error \(error)")
             }
@@ -1168,13 +1169,8 @@ public final class HappyEyeballsTest : XCTestCase {
 
         // At this time the connection attempt should have failed, as the connect timeout
         // fired.
-        do {
-            _ = try channelFuture.wait()
-            XCTFail("connection succeeded")
-        } catch ChannelError.connectTimeout(.milliseconds(250)) {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channelFuture.wait()) { error in
+            XCTAssertEqual(.connectTimeout(.milliseconds(250)), error as? ChannelError)
         }
 
         // There may be one or two channels, depending on ordering, but both
@@ -1217,13 +1213,8 @@ public final class HappyEyeballsTest : XCTestCase {
 
         // At this time the connection attempt should have failed, as the connect timeout
         // fired.
-        do {
-            _ = try channelFuture.wait()
-            XCTFail("connection succeeded")
-        } catch ChannelError.connectTimeout(.milliseconds(50)) {
-            // ok
-        } catch {
-            XCTFail("Unexpected error: \(error)")
+        XCTAssertThrowsError(try channelFuture.wait()) { error in
+            XCTAssertEqual(.connectTimeout(.milliseconds(50)), error as? ChannelError)
         }
 
         // There may be zero or one channels, depending on ordering, but if there is one it

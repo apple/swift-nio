@@ -14,39 +14,45 @@
 
 import CNIOLinux
 
-private typealias ThreadBoxValue = (body: (NIOThread) -> Void, name: String?)
-private typealias ThreadBox = Box<ThreadBoxValue>
-
-
-#if os(Linux)
-private let sys_pthread_getname_np = CNIOLinux_pthread_getname_np
-private let sys_pthread_setname_np = CNIOLinux_pthread_setname_np
-#else
-private let sys_pthread_getname_np = pthread_getname_np
-// Emulate the same method signature as pthread_setname_np on Linux.
-private func sys_pthread_setname_np(_ p: pthread_t, _ pointer: UnsafePointer<Int8>) -> Int32 {
-    assert(pthread_equal(pthread_self(), p) != 0)
-    pthread_setname_np(pointer)
-    // Will never fail on macOS so just return 0 which will be used on linux to signal it not failed.
-    return 0
+enum LowLevelThreadOperations {
+    
 }
-#endif
+
+protocol ThreadOps {
+    associatedtype ThreadHandle
+    associatedtype ThreadSpecificKey
+    associatedtype ThreadSpecificKeyDestructor
+
+    static func threadName(_ thread: ThreadHandle) -> String?
+    static func run(handle: inout ThreadHandle?, args: Box<NIOThread.ThreadBoxValue>, detachThread: Bool)
+    static func isCurrentThread(_ thread: ThreadHandle) -> Bool
+    static func compareThreads(_ lhs: ThreadHandle, _ rhs: ThreadHandle) -> Bool
+    static var currentThread: ThreadHandle { get }
+    static func joinThread(_ thread: ThreadHandle)
+    static func allocateThreadSpecificValue(destructor: ThreadSpecificKeyDestructor) -> ThreadSpecificKey
+    static func deallocateThreadSpecificValue(_ key: ThreadSpecificKey)
+    static func getThreadSpecificValue(_ key: ThreadSpecificKey) -> UnsafeMutableRawPointer?
+    static func setThreadSpecificValue(key: ThreadSpecificKey, value: UnsafeMutableRawPointer?)
+}
 
 /// A Thread that executes some runnable block.
 ///
 /// All methods exposed are thread-safe.
 final class NIOThread {
+    internal typealias ThreadBoxValue = (body: (NIOThread) -> Void, name: String?)
+    internal typealias ThreadBox = Box<ThreadBoxValue>
+
     private let desiredName: String?
 
-    /// The pthread_t used by this instance.
-    private let pthread: pthread_t
+    /// The thread handle used by this instance.
+    private let handle: ThreadOpsSystem.ThreadHandle
 
     /// Create a new instance
     ///
     /// - arguments:
-    ///     - pthread: The `pthread_t` that is wrapped and used by the `NIOThread`.
-    private init(pthread: pthread_t, desiredName: String?) {
-        self.pthread = pthread
+    ///     - handle: The `ThreadOpsSystem.ThreadHandle` that is wrapped and used by the `NIOThread`.
+    internal init(handle: ThreadOpsSystem.ThreadHandle, desiredName: String?) {
+        self.handle = handle
         self.desiredName = desiredName
     }
 
@@ -57,31 +63,17 @@ final class NIOThread {
     /// - parameters:
     ///     - body: The closure that will accept the `pthread_t`.
     /// - returns: The value returned by `body`.
-    func withUnsafePthread<T>(_ body: (pthread_t) throws -> T) rethrows -> T {
-        return try body(self.pthread)
+    internal func withUnsafeThreadHandle<T>(_ body: (ThreadOpsSystem.ThreadHandle) throws -> T) rethrows -> T {
+        return try body(self.handle)
     }
 
     /// Get current name of the `NIOThread` or `nil` if not set.
     var currentName: String? {
-        get {
-            // 64 bytes should be good enough as on Linux the limit is usually 16 and it's very unlikely a user will ever set something longer anyway.
-            var chars: [CChar] = Array(repeating: 0, count: 64)
-            return chars.withUnsafeMutableBufferPointer { ptr in
-                guard sys_pthread_getname_np(self.pthread, ptr.baseAddress!, ptr.count) == 0 else {
-                    return nil
-                }
-
-                return String(decoding: UnsafeRawBufferPointer(UnsafeBufferPointer<CChar>(rebasing: ptr.prefix { char in
-                                  char != 0
-                              })),
-                              as: Unicode.UTF8.self)
-            }
-        }
+        return ThreadOpsSystem.threadName(self.handle)
     }
 
     func join() {
-        let err = pthread_join(self.pthread, nil)
-        assert(err == 0, "pthread_join failed with \(err)")
+        ThreadOpsSystem.joinThread(self.handle)
     }
 
     /// Spawns and runs some task in a `NIOThread`.
@@ -90,51 +82,27 @@ final class NIOThread {
     ///     - name: The name of the `NIOThread` or `nil` if no specific name should be set.
     ///     - body: The function to execute within the spawned `NIOThread`.
     ///     - detach: Whether to detach the thread. If the thread is not detached it must be `join`ed.
-    static func spawnAndRun(name: String? = nil, detachThread: Bool = true, body: @escaping (NIOThread) -> Void) {
-        // Unfortunately the pthread_create method take a different first argument depending on if it's on Linux or macOS, so ensure we use the correct one.
-        #if os(Linux)
-            var pt: pthread_t = pthread_t()
-        #else
-            var pt: pthread_t? = nil
-        #endif
+    static func spawnAndRun(name: String? = nil, detachThread: Bool = true,
+                            body: @escaping (NIOThread) -> Void) {
+        var handle: ThreadOpsSystem.ThreadHandle? = nil
 
-        // Store everything we want to pass into the c function in a Box so we can hand-over the reference.
+        // Store everything we want to pass into the c function in a Box so we
+        // can hand-over the reference.
         let tuple: ThreadBoxValue = (body: body, name: name)
         let box = ThreadBox(tuple)
-        let res = pthread_create(&pt, nil, { p in
-            // Cast to UnsafeMutableRawPointer? and force unwrap to make the same code work on macOS and Linux.
-            let b = Unmanaged<ThreadBox>.fromOpaque((p as UnsafeMutableRawPointer?)!).takeRetainedValue()
 
-            let body = b.value.body
-            let name = b.value.name
-
-            let pt = pthread_self()
-
-            if let threadName = name {
-                _ = sys_pthread_setname_np(pt, threadName)
-                // this is non-critical so we ignore the result here, we've seen EPERM in containers.
-            }
-
-            body(NIOThread(pthread: pt, desiredName: name))
-            return nil
-        }, Unmanaged.passRetained(box).toOpaque())
-
-        precondition(res == 0, "Unable to create thread: \(res)")
-
-        if detachThread {
-            let detachError = pthread_detach((pt as pthread_t?)!)
-            precondition(detachError == 0, "pthread_detach failed with error \(detachError)")
-        }
+        ThreadOpsSystem.run(handle: &handle, args: box, detachThread: detachThread)
     }
 
     /// Returns `true` if the calling thread is the same as this one.
     var isCurrent: Bool {
-        return pthread_equal(pthread, pthread_self()) != 0
+        return ThreadOpsSystem.isCurrentThread(self.handle)
     }
 
     /// Returns the current running `NIOThread`.
     static var current: NIOThread {
-        return NIOThread(pthread: pthread_self(), desiredName: nil)
+        let handle = ThreadOpsSystem.currentThread
+        return NIOThread(handle: handle, desiredName: nil)
     }
 }
 
@@ -176,21 +144,33 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     /* the actual type in there is `Box<(ThreadSpecificVariable<T>, T)>` but we can't use that as C functions can't capture (even types) */
     private typealias BoxedType = Box<(AnyObject, AnyObject)>
 
-    private let key: pthread_key_t
+    internal class Key {
+        private var underlyingKey: ThreadOpsSystem.ThreadSpecificKey
+
+        internal init(destructor: @escaping ThreadOpsSystem.ThreadSpecificKeyDestructor) {
+            self.underlyingKey = ThreadOpsSystem.allocateThreadSpecificValue(destructor: destructor)
+        }
+
+        deinit {
+            ThreadOpsSystem.deallocateThreadSpecificValue(self.underlyingKey)
+        }
+
+        public func get() -> UnsafeMutableRawPointer? {
+            return ThreadOpsSystem.getThreadSpecificValue(self.underlyingKey)
+        }
+
+        public func set(value: UnsafeMutableRawPointer?) {
+            ThreadOpsSystem.setThreadSpecificValue(key: self.underlyingKey, value: value)
+        }
+    }
+
+    private let key: Key
 
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).
     public init() {
-        var key = pthread_key_t()
-        let pthreadErr = pthread_key_create(&key) { ptr in
-            Unmanaged<BoxedType>.fromOpaque((ptr as UnsafeMutableRawPointer?)!).release()
-        }
-        precondition(pthreadErr == 0, "pthread_key_create failed, error \(pthreadErr)")
-        self.key = key
-    }
-
-    deinit {
-        let pthreadErr = pthread_key_delete(self.key)
-        precondition(pthreadErr == 0, "pthread_key_delete failed, error \(pthreadErr)")
+        self.key = Key(destructor: {
+          Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
+        })
     }
 
     /// Initialize a new `ThreadSpecificVariable` with `value` for the calling thread. After calling this, the calling
@@ -207,27 +187,30 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     public var currentValue: Value? {
         /// Get the current value for the calling thread.
         get {
-            guard let raw = pthread_getspecific(self.key) else {
-                return nil
-            }
-            return (Unmanaged<BoxedType>.fromOpaque(raw).takeUnretainedValue().value.1 as! Value)
+            guard let raw = self.key.get() else { return nil }
+          // parenthesize the return value to silence the cast warning
+          return (Unmanaged<BoxedType>
+                   .fromOpaque(raw)
+                   .takeUnretainedValue()
+                   .value.1 as! Value)
         }
 
         /// Set the current value for the calling threads. The `currentValue` for all other threads remains unchanged.
         set {
-            if let raw = pthread_getspecific(self.key) {
+            if let raw = self.key.get() {
                 Unmanaged<BoxedType>.fromOpaque(raw).release()
             }
-            let pthreadErr = pthread_setspecific(self.key, newValue.map { v -> UnsafeMutableRawPointer in
-                return Unmanaged.passRetained(Box((self, v))).toOpaque()
-            })
-            precondition(pthreadErr == 0, "pthread_setspecific failed, error \(pthreadErr)")
+            self.key.set(value: newValue.map { Unmanaged.passRetained(Box((self, $0))).toOpaque() })
         }
     }
 }
 
 extension NIOThread: Equatable {
     static func ==(lhs: NIOThread, rhs: NIOThread) -> Bool {
-        return pthread_equal(lhs.pthread, rhs.pthread) != 0
+        return lhs.withUnsafeThreadHandle { lhs in
+            rhs.withUnsafeThreadHandle { rhs in
+                ThreadOpsSystem.compareThreads(lhs, rhs)
+            }
+        }
     }
 }
