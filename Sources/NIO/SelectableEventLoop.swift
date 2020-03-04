@@ -51,12 +51,13 @@ internal final class SelectableEventLoop: EventLoop {
         case runningAndAcceptingNewRegistrations
         case runningButNotAcceptingNewRegistrations
         case noLongerRunning
+        case exitingThread
     }
 
     /* private but tests */ internal let _selector: NIO.Selector<NIORegistration>
     private let thread: NIOThread
     @usableFromInline
-    internal var _scheduledTasks: PriorityQueue<ScheduledTask>? = PriorityQueue<ScheduledTask>(ascending: true)
+    internal var _scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
     private var tasksCopy = ContiguousArray<() -> Void>()
 
     @usableFromInline
@@ -104,11 +105,24 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    /// Call this before force unwrapping self._scheduledTasks to handle the nil case with a better error message.
     @usableFromInline
-    internal func _preconditionScheduledTasksNotNil() {
-        precondition(self._scheduledTasks != nil,
-            "cannot execute tasks on this EventLoop; either setup has not completed or it is closed")
+    internal var _validInternalStateToScheduleTasks: Bool {
+        switch self.internalState {
+        case .exitingThread:
+            return false
+        default:
+            return true
+        }
+    }
+
+    @usableFromInline
+    internal var _validExternalStateToScheduleTasks: Bool {
+        switch self.externalState {
+        case .open, .closing:
+            return true
+        default:
+            return false
+        }
     }
 
     internal init(thread: NIOThread, selector: NIO.Selector<NIORegistration>) {
@@ -127,7 +141,7 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     deinit {
-        assert(self.internalState == .noLongerRunning,
+        assert(self.internalState == .exitingThread,
                "illegal internal state on deinit: \(self.internalState)")
         assert(self.externalState == .resourcesReclaimed,
                "illegal external state on shutdown: \(self.externalState)")
@@ -146,7 +160,7 @@ internal final class SelectableEventLoop: EventLoop {
     internal var isOpen: Bool {
         self.assertInEventLoop()
         switch self.internalState {
-        case .noLongerRunning, .runningButNotAcceptingNewRegistrations:
+        case .noLongerRunning, .runningButNotAcceptingNewRegistrations, .exitingThread:
             return false
         case .runningAndAcceptingNewRegistrations:
             return true
@@ -207,8 +221,7 @@ internal final class SelectableEventLoop: EventLoop {
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
             self._tasksLock.withLockVoid {
-                self._preconditionScheduledTasksNotNil()
-                self._scheduledTasks!.remove(task)
+                self._scheduledTasks.remove(task)
             }
             // We don't need to wake up the selector here, the scheduled task will never be picked up. Waking up the
             // selector would mean that we may be able to recalculate the shutdown to a later date. The cost of not
@@ -244,15 +257,26 @@ internal final class SelectableEventLoop: EventLoop {
     /// Add the `ScheduledTask` to be executed.
     @usableFromInline
     internal func _schedule0(_ task: ScheduledTask) throws {
-        self._tasksLock.withLockVoid {
-            self._preconditionScheduledTasksNotNil()
-            self._scheduledTasks!.push(task)
-        }
+        if self.inEventLoop {
+            precondition(self._validInternalStateToScheduleTasks,
+                "cannot schedule tasks on an EventLoop that has already shut down")
 
-        // We only need to wake up the selector if we're not in the EventLoop. If we're in the EventLoop already, we're
-        // either doing IO tasks (which happens before checking the scheduled tasks) or we're running a scheduled task
-        // already which means that we'll check at least once more if there are other scheduled tasks runnable.
-        if !self.inEventLoop {
+            self._tasksLock.withLockVoid {
+                self._scheduledTasks.push(task)
+            }
+        } else {
+            self.externalStateLock.withLockVoid {
+                precondition(self._validExternalStateToScheduleTasks,
+                    "cannot schedule tasks on an EventLoop that has already shut down")
+
+                self._tasksLock.withLockVoid {
+                    self._scheduledTasks.push(task)
+                }
+            }
+
+            // We only need to wake up the selector if we're not in the EventLoop. If we're in the EventLoop already, we're
+            // either doing IO tasks (which happens before checking the scheduled tasks) or we're running a scheduled task
+            // already which means that we'll check at least once more if there are other scheduled tasks runnable.
             try self._wakeupSelector()
         }
     }
@@ -317,16 +341,15 @@ internal final class SelectableEventLoop: EventLoop {
         defer {
             var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
             _tasksLock.withLockVoid {
-                self._preconditionScheduledTasksNotNil()
                 // reserve the correct capacity so we don't need to realloc later on.
-                scheduledTasksCopy.reserveCapacity(_scheduledTasks!.count)
-                while let sched = _scheduledTasks!.pop() {
+                scheduledTasksCopy.reserveCapacity(self._scheduledTasks.count)
+                while let sched = self._scheduledTasks.pop() {
                     scheduledTasksCopy.append(sched)
                 }
             }
 
-            // Cross out the queue so that any attempt to enqueue a task fails from here on out.
-            self._scheduledTasks = nil
+            assert(self.internalState == .noLongerRunning, "illegal state: \(self.internalState)")
+            self.internalState = .exitingThread
 
             // Fail all the scheduled tasks.
             for task in scheduledTasksCopy {
@@ -334,7 +357,7 @@ internal final class SelectableEventLoop: EventLoop {
             }
         }
         var nextReadyTask: ScheduledTask? = nil
-        while self.internalState != .noLongerRunning {
+        while self.internalState != .noLongerRunning && self.internalState != .exitingThread {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
@@ -363,15 +386,14 @@ internal final class SelectableEventLoop: EventLoop {
             while true {
                 // TODO: Better locking
                 _tasksLock.withLockVoid {
-                    self._preconditionScheduledTasksNotNil()
-                    if !_scheduledTasks!.isEmpty {
+                    if !self._scheduledTasks.isEmpty {
                         // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
                         let now: NIODeadline = .now()
 
                         // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                        while tasksCopy.count < tasksCopy.capacity, let task = _scheduledTasks!.peek() {
+                        while tasksCopy.count < tasksCopy.capacity, let task = self._scheduledTasks.peek() {
                             if task.readyIn(now) <= .nanoseconds(0) {
-                                _scheduledTasks!.pop()
+                                self._scheduledTasks.pop()
                                 tasksCopy.append(task.task)
                             } else {
                                 nextReadyTask = task
@@ -497,13 +519,7 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
     @usableFromInline
     var debugDescription: String {
         return self._tasksLock.withLock {
-            let scheduledTasksDescription: String
-            if let scheduledTasks = self._scheduledTasks {
-                scheduledTasksDescription = scheduledTasks.description
-            } else {
-                scheduledTasksDescription = "nil"
-            }
-            return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(scheduledTasksDescription) }"
+            return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
         }
     }
 }
