@@ -981,7 +981,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
                     }
                 case 1:
                     for n in 1...iterations {
-                        _ = box.store(.init(n, allDeallocations: allDeallocations))
+                        box.store(.init(n, allDeallocations: allDeallocations))
                     }
                 case 2:
                     var last = Int.min

@@ -164,12 +164,8 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     func testConnectionFails() throws {
-        do {
-            try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait()
-        } catch ChannelError.operationUnsupported {
-            // All is well
-        } catch {
-            XCTFail("Encountered error: \(error)")
+        XCTAssertThrowsError(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait()) { error in
+            XCTAssertEqual(.operationUnsupported, error as? ChannelError)
         }
     }
 
@@ -216,16 +212,11 @@ final class DatagramChannelTests: XCTestCase {
         }.wait()
         XCTAssertTrue(fulfilled)
 
-        promises.forEach {
-            do {
-                try $0.wait()
-                XCTFail("Did not error")
-            } catch ChannelError.ioOnClosedChannel {
-                // All good
-            } catch {
-                XCTFail("Unexpected error: \(error)")
+        XCTAssertNoThrow(try promises.forEach {
+            XCTAssertThrowsError(try $0.wait()) { error in
+                XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
             }
-        }
+        })
     }
 
     func testManyManyDatagramWrites() throws {
@@ -291,13 +282,8 @@ final class DatagramChannelTests: XCTestCase {
         let writeFut = self.firstChannel.write(NIOAny(envelope))
         self.firstChannel.flush()
 
-        do {
-            try writeFut.wait()
-            XCTFail("Did not throw")
-        } catch ChannelError.writeMessageTooLarge {
-            // All good
-        } catch {
-            XCTFail("Got unexpected error \(error)")
+        XCTAssertThrowsError(try writeFut.wait()) { error in
+            XCTAssertEqual(.writeMessageTooLarge, error as? ChannelError)
         }
     }
 
@@ -324,13 +310,8 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(try thirdWrite.wait())
 
         // The second should have failed.
-        do {
-            try secondWrite.wait()
-            XCTFail("Did not throw")
-        } catch ChannelError.writeMessageTooLarge {
-            // All good
-        } catch {
-            XCTFail("Got unexpected error \(error)")
+        XCTAssertThrowsError(try secondWrite.wait()) { error in
+            XCTAssertEqual(.writeMessageTooLarge, error as? ChannelError)
         }
     }
 
@@ -357,13 +338,8 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(try thirdWrite.wait())
 
         // The second should have failed.
-        do {
-            try secondWrite.wait()
-            XCTFail("Did not throw")
-        } catch ChannelError.writeMessageTooLarge {
-            // All good
-        } catch {
-            XCTFail("Got unexpected error \(error)")
+        XCTAssertThrowsError(try secondWrite.wait()) { error in
+            XCTAssertEqual(.writeMessageTooLarge, error as? ChannelError)
         }
     }
 

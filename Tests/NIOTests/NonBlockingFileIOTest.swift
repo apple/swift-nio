@@ -134,16 +134,11 @@ class NonBlockingFileIOTest: XCTestCase {
         }
 
         try withPipe { readFH, writeFH in
-            do {
-                _ = try self.fileIO.read(fileHandle: readFH,
+            XCTAssertThrowsError(try self.fileIO.read(fileHandle: readFH,
                                          byteCount: 1,
                                          allocator: self.allocator,
-                                         eventLoop: self.eventLoop).wait()
-                XCTFail("should've thrown")
-            } catch let e as ChannelError {
-                XCTAssertEqual(ChannelError.ioOnClosedChannel, e)
-            } catch {
-                XCTFail("unexpected error \(error)")
+                                         eventLoop: self.eventLoop).wait()) { error in
+                XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
             }
             return [readFH, writeFH]
         }
@@ -175,25 +170,20 @@ class NonBlockingFileIOTest: XCTestCase {
         let content = "hello"
         let contentBytes = Array(content.utf8)
         var numCalls = 0
-        withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
             let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 5)
-            do {
-                try self.fileIO.readChunked(fileRegion: fr,
-                                            chunkSize: 1,
-                                            allocator: self.allocator,
-                                            eventLoop: self.eventLoop) { buf in
-                                                var buf = buf
-                                        XCTAssertTrue(self.eventLoop.inEventLoop)
-                                        XCTAssertEqual(1, buf.readableBytes)
-                                        XCTAssertEqual(contentBytes[numCalls], buf.readBytes(length: 1)?.first!)
-                                        numCalls += 1
-                                        return self.eventLoop.makeFailedFuture(DummyError.dummy)
-                    }.wait()
-                XCTFail("call successful but should've failed")
-            } catch let e as DummyError where e == .dummy {
-                // ok
-            } catch {
-                XCTFail("wrong error \(error) caught")
+            XCTAssertThrowsError(try self.fileIO.readChunked(fileRegion: fr,
+                                                             chunkSize: 1,
+                                                             allocator: self.allocator,
+                                                             eventLoop: self.eventLoop) { buf in
+                var buf = buf
+                XCTAssertTrue(self.eventLoop.inEventLoop)
+                XCTAssertEqual(1, buf.readableBytes)
+                XCTAssertEqual(contentBytes[numCalls], buf.readBytes(length: 1)?.first!)
+                numCalls += 1
+                return self.eventLoop.makeFailedFuture(DummyError.dummy)
+            }.wait()) { error in
+                XCTAssertEqual(.dummy, error as? DummyError)
             }
         }
         XCTAssertEqual(1, numCalls)
@@ -205,24 +195,19 @@ class NonBlockingFileIOTest: XCTestCase {
         defer {
             XCTAssertNoThrow(try unconnectedSockFH.close())
         }
-        do {
-            try self.fileIO.readChunked(fileHandle: unconnectedSockFH,
+        XCTAssertThrowsError(try self.fileIO.readChunked(fileHandle: unconnectedSockFH,
                                         byteCount: 5,
                                         chunkSize: 1,
                                         allocator: self.allocator,
                                         eventLoop: self.eventLoop) { buf in
                                             XCTFail("shouldn't have been called")
                                             return self.eventLoop.makeSucceededFuture(())
-                }.wait()
-            XCTFail("call successful but should've failed")
-        } catch let e as IOError {
+        }.wait()) { error in
             #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-                XCTAssertEqual(ENOTCONN, e.errnoCode)
+                XCTAssertEqual(ENOTCONN, (error as? IOError)?.errnoCode)
             #else
-                XCTAssertEqual(EINVAL, e.errnoCode)
+                XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
             #endif
-        } catch {
-            XCTFail("wrong error \(error) caught")
         }
     }
 
@@ -384,19 +369,14 @@ class NonBlockingFileIOTest: XCTestCase {
                 _ = try! Posix.write(descriptor: writeFD, pointer: "ABC", size: 3)
             }
             let fr = FileRegion(fileHandle: readFH, readerIndex: 1, endIndex: 2)
-            do {
-                try self.fileIO.readChunked(fileRegion: fr,
+            XCTAssertThrowsError(try self.fileIO.readChunked(fileRegion: fr,
                                             chunkSize: 10,
                                             allocator: self.allocator,
                                             eventLoop: self.eventLoop) { buf in
                                                 XCTFail("this shouldn't have been called")
                                                 return self.eventLoop.makeSucceededFuture(())
-                    }.wait()
-                XCTFail("succeeded and shouldn't have")
-            } catch let e as IOError where e.errnoCode == ESPIPE {
-                // OK
-            } catch {
-                XCTFail("wrong error \(error) caught")
+            }.wait()) { error in
+                XCTAssertEqual(ESPIPE, (error as? IOError)?.errnoCode)
             }
             return [readFH, writeFH]
         }
