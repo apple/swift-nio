@@ -54,7 +54,7 @@ import CNIOLinux
                 // Ensure the cpuset is empty (and so nothing is selected yet).
                 CNIOLinux_CPU_ZERO(&cpuset)
 
-                let res = withUnsafePthread { p in
+                let res = self.withUnsafeThreadHandle { p in
                     CNIOLinux_pthread_getaffinity_np(p, MemoryLayout.size(ofValue: cpuset), &cpuset)
                 }
 
@@ -71,7 +71,7 @@ import CNIOLinux
 
                 // Mark the CPU we want to run on.
                 cpuSet.cpuIds.forEach { CNIOLinux_CPU_SET(CInt($0), &cpuset) }
-                let res = withUnsafePthread { p in
+                let res = self.withUnsafeThreadHandle { p in
                     CNIOLinux_pthread_setaffinity_np(p, MemoryLayout.size(ofValue: cpuset), &cpuset)
                 }
                 precondition(res == 0, "pthread_setaffinity_np failed: \(res)")
