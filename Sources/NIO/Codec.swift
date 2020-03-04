@@ -234,6 +234,11 @@ extension ByteToMessageDecoder {
     public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
         return NIOAny(value)
     }
+    
+    public mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws  -> DecodingState {
+        while try self.decode(context: context, buffer: &buffer) == .continue {}
+        return .needMoreData
+    }
 }
 
 private struct B2MDBuffer {
