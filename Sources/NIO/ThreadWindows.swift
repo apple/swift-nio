@@ -37,7 +37,7 @@ enum ThreadOpsWindows: ThreadOps {
 
         // FIXME(compnerd) this should use the `stdcall` calling convention
         let routine: @convention(c) (UnsafeMutableRawPointer?) -> CUnsignedInt = {
-            let boxed = Unmanaged<ThreadBox>.fromOpaque($0!).takeRetainedValue()
+            let boxed = Unmanaged<NIOThread.ThreadBox>.fromOpaque($0!).takeRetainedValue()
             let (body, name) = (boxed.value.body, boxed.value.name)
             let hThread: ThreadOpsSystem.ThreadHandle = GetCurrentThread()
 
@@ -72,7 +72,7 @@ enum ThreadOpsWindows: ThreadOps {
         assert(dwResult == WAIT_OBJECT_0, "WaitForSingleObject: \(GetLastError())")
     }
 
-    static func allocateThreadSpecificValue(destructor: ThreadSpecificKeyDestructor) -> ThreadSpecificKey {
+    static func allocateThreadSpecificValue(destructor: @escaping ThreadSpecificKeyDestructor) -> ThreadSpecificKey {
         return FlsAlloc(destructor)
     }
 
@@ -81,11 +81,11 @@ enum ThreadOpsWindows: ThreadOps {
         precondition(dwResult, "FlsFree: \(GetLastError())")
     }
 
-    static func getThreadSpecificValue(_ key: pthread_key_t) -> UnsafeMutableRawPointer? {
-        return FlsGetValue(key.value)
+    static func getThreadSpecificValue(_ key: ThreadSpecificKey) -> UnsafeMutableRawPointer? {
+        return FlsGetValue(key)
     }
 
-    static func setThreadSpecificValue(key: pthread_key_t, value: UnsafeMutableRawPointer?) {
+    static func setThreadSpecificValue(key: ThreadSpecificKey, value: UnsafeMutableRawPointer?) {
         FlsSetValue(key, value)
     }
 
