@@ -132,11 +132,11 @@ enum ThreadOpsPosix: ThreadOps {
         precondition(result == 0, "pthread_key_delete failed: \(result)")
     }
 
-    static func getThreadSpecificValue(_ key: pthread_key_t) -> UnsafeMutableRawPointer? {
+    static func getThreadSpecificValue(_ key: ThreadSpecificKey) -> UnsafeMutableRawPointer? {
         return pthread_getspecific(key)
     }
 
-    static func setThreadSpecificValue(key: pthread_key_t, value: UnsafeMutableRawPointer?) {
+    static func setThreadSpecificValue(key: ThreadSpecificKey, value: UnsafeMutableRawPointer?) {
         let result = pthread_setspecific(key, value)
         precondition(result == 0, "pthread_setspecific failed: \(result)")
     }
