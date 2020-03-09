@@ -1,9 +1,7 @@
 /* Additional changes for SwiftNIO:
     - prefixed all symbols by 'c_nio_'
-    - replaced the sys/systm.h include by strings.h
     - removed the _KERNEL include guards
     - defined the __min_size macro inline
-    - included sys/types.h in c_nio_sha1.h
     - included sys/endian.h on Android
 */
 /*	$KAME: sha1.c,v 1.5 2000/11/08 06:13:08 itojun Exp $	*/
@@ -44,15 +42,21 @@
  * implemented by Jun-ichiro itojun Itoh <itojun@itojun.org>
  */
 
-#include <sys/cdefs.h>
-
-
-#include <sys/types.h>
-#include <sys/cdefs.h>
-#include <sys/time.h>
-#include <strings.h>
-
 #include "include/CNIOSHA1.h"
+#include <string.h>
+#if !defined(bzero)
+#define bzero(b,l) memset((b), '\0', (l))
+#endif
+#if !defined(bcopy)
+#define bcopy(s,d,l) memmove((d), (s), (l))
+#endif
+#ifdef __ANDROID__
+#include <sys/endian.h>
+#elif __linux__
+#include <sys/types.h>
+#endif
+
+
 
 /* sanity check */
 #if BYTE_ORDER != BIG_ENDIAN
@@ -64,7 +68,7 @@
 #ifndef unsupported
 
 /* constant table */
-static u_int32_t _K[] = { 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6 };
+static uint32_t _K[] = { 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6 };
 #define	K(t)	_K[(t) / 20]
 
 #define	F0(b, c, d)	(((b) & (c)) | ((~(b)) & (d)))
@@ -102,9 +106,9 @@ static void
 sha1_step(ctxt)
 	struct sha1_ctxt *ctxt;
 {
-	u_int32_t	a, b, c, d, e;
+	uint32_t	a, b, c, d, e;
 	size_t t, s;
-	u_int32_t	tmp;
+	uint32_t	tmp;
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 	struct sha1_ctxt tctxt;
@@ -233,7 +237,7 @@ c_nio_sha1_pad(ctxt)
 void
 c_nio_sha1_loop(ctxt, input, len)
 	struct sha1_ctxt *ctxt;
-	const u_int8_t *input;
+	const uint8_t *input;
 	size_t len;
 {
 	size_t gaplen;
@@ -261,9 +265,9 @@ c_nio_sha1_loop(ctxt, input, len)
 void
 c_nio_sha1_result(struct sha1_ctxt *ctxt, char digest0[static SHA1_RESULTLEN])
 {
-	u_int8_t *digest;
+	uint8_t *digest;
 
-	digest = (u_int8_t *)digest0;
+	digest = (uint8_t *)digest0;
 	c_nio_sha1_pad(ctxt);
 #if BYTE_ORDER == BIG_ENDIAN
 	bcopy(&ctxt->h.b8[0], digest, SHA1_RESULTLEN);
