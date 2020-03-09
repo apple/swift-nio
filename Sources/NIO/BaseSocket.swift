@@ -52,12 +52,10 @@ extension UnsafeMutablePointer where Pointee == sockaddr {
             return self.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
                 SocketAddress($0.pointee, host: $0.pointee.addressDescription())
             }
-#if !os(Windows)
         case Posix.AF_UNIX:
             return self.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
                 SocketAddress($0.pointee)
             }
-#endif
         default:
             return nil
         }
@@ -112,7 +110,6 @@ extension sockaddr_in6: SockAddrProtocol {
     }
 }
 
-#if !os(Windows)
 extension sockaddr_un: SockAddrProtocol {
     mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
@@ -128,7 +125,6 @@ extension sockaddr_un: SockAddrProtocol {
         }
     }
 }
-#endif
 
 extension sockaddr_storage: SockAddrProtocol {
     mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
@@ -178,7 +174,6 @@ extension sockaddr_storage {
         }
     }
 
-#if !os(Windows)
     /// Converts the `socketaddr_storage` to a `sockaddr_un`.
     ///
     /// This will crash if `ss_family` != AF_UNIX!
@@ -190,7 +185,6 @@ extension sockaddr_storage {
             }
         }
     }
-#endif
 
     /// Converts the `socketaddr_storage` to a `SocketAddress`.
     mutating func convert() -> SocketAddress {
@@ -408,11 +402,9 @@ class BaseSocket: Selectable, BaseSocketProtocol {
             case .v6(let address):
                 var addr = address.address
                 try addr.withSockAddr({ try doBind(ptr: $0, bytes: $1) })
-#if !os(Windows)
             case .unixDomainSocket(let address):
                 var addr = address.address
                 try addr.withSockAddr({ try doBind(ptr: $0, bytes: $1) })
-#endif
             }
         }
     }

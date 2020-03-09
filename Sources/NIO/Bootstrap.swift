@@ -172,7 +172,6 @@ public final class ServerBootstrap {
         return bind0 { address }
     }
 
-#if !os(Windows)
     /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
@@ -182,7 +181,6 @@ public final class ServerBootstrap {
             try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
         }
     }
-#endif
 
     /// Use the existing bound socket file descriptor.
     ///
@@ -511,7 +509,6 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
         }
     }
 
-#if !os(Windows)
     /// Specify the `unixDomainSocket` path to connect to for the UDS `Channel` that will be established.
     ///
     /// - parameters:
@@ -525,7 +522,6 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
             return group.next().makeFailedFuture(error)
         }
     }
-#endif
 
     /// Use the existing connected socket file descriptor.
     ///
@@ -698,7 +694,6 @@ public final class DatagramBootstrap {
         return bind0 { address }
     }
 
-#if !os(Windows)
     /// Bind the `DatagramChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
@@ -708,7 +703,6 @@ public final class DatagramBootstrap {
             return try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
         }
     }
-#endif
 
     private func bind0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
         let address: SocketAddress
