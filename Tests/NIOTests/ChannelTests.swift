@@ -1852,7 +1852,7 @@ public final class ChannelTests: XCTestCase {
     func testChannelReadsDoesNotHappenAfterRegistration() throws {
         class SocketThatSucceedsOnSecondConnectForPort123: Socket {
             init(protocolFamily: CInt) throws {
-                try super.init(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+                try super.init(protocolFamily: protocolFamily, type: BSDSocket.SOCK_STREAM, setNonBlocking: true)
             }
             override func connect(to address: SocketAddress) throws -> Bool {
                 if address.port == 123 {
@@ -2025,7 +2025,7 @@ public final class ChannelTests: XCTestCase {
         class SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET: Socket {
             private var firstReadHappened = false
             init(protocolFamily: CInt) throws {
-                try super.init(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+                try super.init(protocolFamily: protocolFamily, type: BSDSocket.SOCK_STREAM, setNonBlocking: true)
             }
             override func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
                 defer {
@@ -2131,7 +2131,7 @@ public final class ChannelTests: XCTestCase {
         enum DummyError: Error { case dummy }
         class SocketFailingAsyncConnect: Socket {
             init() throws {
-                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM, setNonBlocking: true)
+                try super.init(protocolFamily: BSDSocket.PF_INET, type: BSDSocket.SOCK_STREAM, setNonBlocking: true)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -2177,7 +2177,7 @@ public final class ChannelTests: XCTestCase {
         enum DummyError: Error { case dummy }
         class SocketFailingConnect: Socket {
             init() throws {
-                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM, setNonBlocking: true)
+                try super.init(protocolFamily: BSDSocket.PF_INET, type: BSDSocket.SOCK_STREAM, setNonBlocking: true)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -2225,7 +2225,7 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let serverSock = try Socket(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+        let serverSock = try Socket(protocolFamily: BSDSocket.PF_INET, type: BSDSocket.SOCK_STREAM)
         // we deliberately don't set SO_REUSEADDR
         XCTAssertNoThrow(try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)))
         let serverSockAddress = try! serverSock.localAddress()
@@ -2244,7 +2244,7 @@ public final class ChannelTests: XCTestCase {
         enum DummyError: Error { case dummy }
         class SocketFailingClose: Socket {
             init() throws {
-                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM, setNonBlocking: true)
+                try super.init(protocolFamily: BSDSocket.PF_INET, type: BSDSocket.SOCK_STREAM, setNonBlocking: true)
             }
 
             override func close() throws {
@@ -2439,7 +2439,7 @@ public final class ChannelTests: XCTestCase {
 
         final class WriteAlwaysFailingSocket: Socket {
             init() throws {
-                try super.init(protocolFamily: AF_INET, type: Posix.SOCK_STREAM, setNonBlocking: true)
+                try super.init(protocolFamily: CInt(BSDSocket.AF_INET), type: BSDSocket.SOCK_STREAM, setNonBlocking: true)
             }
 
             override func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {

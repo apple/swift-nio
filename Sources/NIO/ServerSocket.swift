@@ -30,18 +30,18 @@
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: Int32, setNonBlocking: Bool = false) throws {
-        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: setNonBlocking)
-        try super.init(descriptor: sock)
+        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: BSDSocket.SOCK_STREAM, setNonBlocking: setNonBlocking)
+        try super.init(socket: sock)
     }
 
     /// Create a new instance.
     ///
     /// - parameters:
-    ///     - descriptor: The _Unix file descriptor_ representing the bound socket.
+    ///     - socket: The _Unix file descriptor_ representing the bound socket.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if socket is invalid.
-    init(descriptor: CInt, setNonBlocking: Bool = false) throws {
-        try super.init(descriptor: descriptor)
+    init(socket: BSDSocket.Handle, setNonBlocking: Bool = false) throws {
+        try super.init(socket: socket)
         if setNonBlocking {
             try self.setNonBlocking()
         }
@@ -54,7 +54,7 @@
     /// - throws: An `IOError` if creation of the socket failed.
     func listen(backlog: Int32 = 128) throws {
         try withUnsafeHandle {
-            _ = try Posix.listen(descriptor: $0, backlog: backlog)
+            _ = try BSDSocket.listen(socket: $0, backlog: backlog)
         }
     }
 
@@ -67,21 +67,15 @@
     func accept(setNonBlocking: Bool = false) throws -> Socket? {
         return try withUnsafeHandle { fd in
             #if os(Linux)
-            let flags: Int32
-            if setNonBlocking {
-                flags = Linux.SOCK_NONBLOCK
-            } else {
-                flags = 0
-            }
-            let result = try Linux.accept4(descriptor: fd, addr: nil, len: nil, flags: flags)
+            let result = try Linux.accept4(descriptor: fd, addr: nil, len: nil, flags: setNonBlocking ? Linux.SOCK_NONBLOCK : 0)
             #else
-            let result = try Posix.accept(descriptor: fd, addr: nil, len: nil)
+            let result = try BSDSocket.accept(socket: fd, address: nil, address_len: nil)
             #endif
 
             guard let fd = result else {
                 return nil
             }
-            let sock = try Socket(descriptor: fd)
+            let sock = try Socket(socket: fd)
             #if !os(Linux)
             if setNonBlocking {
                 do {

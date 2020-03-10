@@ -237,7 +237,7 @@ class HookedSocket: Socket, UserKernelInterface {
     init(userToKernel: LockedBox<UserToKernel>, kernelToUser: LockedBox<KernelToUser>, descriptor: CInt) throws {
         self.userToKernel = userToKernel
         self.kernelToUser = kernelToUser
-        try super.init(descriptor: descriptor)
+        try super.init(socket: descriptor)
     }
 
     override func ignoreSIGPIPE() throws {}

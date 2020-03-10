@@ -150,12 +150,12 @@ class BootstrapTest: XCTestCase {
     func testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
         var socketFDs: [CInt] = [-1, -1]
         XCTAssertNoThrow(try Posix.socketpair(domain: PF_LOCAL,
-                                              type: Posix.SOCK_STREAM,
+                                              type: BSDSocket.SOCK_STREAM,
                                               protocol: 0,
                                               socketVector: &socketFDs))
         defer {
             // 0 is closed together with the Channel below.
-            XCTAssertNoThrow(try Posix.close(descriptor: socketFDs[1]))
+            XCTAssertNoThrow(try BSDSocket.close(socket: socketFDs[1]))
         }
 
         XCTAssertNoThrow(try ClientBootstrap(group: self.freshEventLoop())
@@ -163,19 +163,18 @@ class BootstrapTest: XCTestCase {
                 XCTAssert(channel.eventLoop.inEventLoop)
                 return self.freshEventLoop().makeSucceededFuture(())
             }
-            .withConnectedSocket(descriptor: socketFDs[0])
+            .withConnectedSocket(socket: socketFDs[0])
             .wait()
             .close()
             .wait())
     }
 
     func testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
-        let socket = try Posix.socket(domain: AF_INET, type: Posix.SOCK_STREAM, protocol: 0)
+        let socket = try BSDSocket.socket(domain: CInt(BSDSocket.AF_INET), type: BSDSocket.SOCK_STREAM, protocol: 0)
 
         let serverAddress = try assertNoThrowWithValue(SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0))
         try serverAddress.withSockAddr { serverAddressPtr, size in
-            try Posix.bind(descriptor: socket, ptr: serverAddressPtr,
-                           bytes: size)
+            try BSDSocket.bind(socket: socket, address: serverAddressPtr, address_len: socklen_t(size))
         }
 
         let childChannelDone = self.freshEventLoop().next().makePromise(of: Void.self)
@@ -196,7 +195,7 @@ class BootstrapTest: XCTestCase {
                 }
                 return self.freshEventLoop().makeSucceededFuture(())
             }
-            .withBoundSocket(descriptor: socket)
+            .withBoundSocket(socket: socket)
             .wait())
         let client = try assertNoThrowWithValue(ClientBootstrap(group: self.freshEventLoop())
             .channelInitializer { channel in
@@ -312,7 +311,7 @@ class BootstrapTest: XCTestCase {
     func testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer() {
         XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
             var maybeSocket: Socket? = nil
-            XCTAssertNoThrow(maybeSocket = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM))
+            XCTAssertNoThrow(maybeSocket = try Socket(protocolFamily: CInt(BSDSocket.AF_INET), type: BSDSocket.SOCK_STREAM))
             XCTAssertNoThrow(XCTAssertEqual(true, try maybeSocket?.connect(to: server.localAddress!)))
             var maybeFD: CInt? = nil
             XCTAssertNoThrow(maybeFD = try maybeSocket?.takeDescriptorOwnership())
@@ -333,7 +332,7 @@ class BootstrapTest: XCTestCase {
                     }
                     return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
             }
-            .withConnectedSocket(descriptor: fd)
+            .withConnectedSocket(socket: fd)
             .wait())
             XCTAssertNotNil(channel)
             XCTAssertNoThrow(try channel?.close().wait())

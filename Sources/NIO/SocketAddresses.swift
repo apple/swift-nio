@@ -92,7 +92,7 @@ public enum SocketAddress: CustomStringConvertible {
             type = "IPv4"
             var mutAddr = addr.address.sin_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            addressString = try! descriptionForAddress(family: Posix.AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+            addressString = try! descriptionForAddress(family: BSDSocket.AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
 
             port = "\(self.port!)"
         case .v6(let addr):
@@ -100,7 +100,7 @@ public enum SocketAddress: CustomStringConvertible {
             type = "IPv6"
             var mutAddr = addr.address.sin6_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            addressString = try! descriptionForAddress(family: Posix.AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+            addressString = try! descriptionForAddress(family: BSDSocket.AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
 
             port = "\(self.port!)"
         case .unixDomainSocket(let addr):
@@ -136,11 +136,11 @@ public enum SocketAddress: CustomStringConvertible {
         case .v4(let addr):
             var mutAddr = addr.address.sin_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            return try! descriptionForAddress(family: Posix.AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+            return try! descriptionForAddress(family: BSDSocket.AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
         case .v6(let addr):
             var mutAddr = addr.address.sin6_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            return try! descriptionForAddress(family: Posix.AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+            return try! descriptionForAddress(family: BSDSocket.AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
         case .unixDomainSocket(_):
             return nil
         }

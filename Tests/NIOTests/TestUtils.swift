@@ -54,7 +54,7 @@ func withTemporaryUnixDomainSocketPathName<T>(directory: String = temporaryDirec
                                               _ body: (String) throws -> T) throws -> T {
     // this is racy but we're trying to create the shortest possible path so we can't add a directory...
     let (fd, path) = openTemporaryFile()
-    try! Posix.close(descriptor: fd)
+    try! Posix.close(fd: fd)
     try! FileManager.default.removeItem(atPath: path)
 
     let saveCurrentDirectory = FileManager.default.currentDirectoryPath
@@ -270,7 +270,7 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
             return addr.addressDescription()
         }
     }
-    let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: Posix.SOCK_STREAM, aiProtocol: Posix.IPPROTO_TCP)
+    let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: BSDSocket.SOCK_STREAM, aiProtocol: BSDSocket.IPPROTO_TCP)
     let ipv6Results = try assertNoThrowWithValue(res.initiateAAAAQuery(host: host, port: 0).wait()).map(printSocketAddress)
     let ipv4Results = try assertNoThrowWithValue(res.initiateAQuery(host: host, port: 0).wait()).map(printSocketAddress)
 

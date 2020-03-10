@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import typealias WinSDK.DWORD
+#endif
+
 /// An `Error` for an IO operation.
 public struct IOError: Swift.Error {
     @available(*, deprecated, message: "NIO no longer uses FailureDescription.")
@@ -28,16 +32,47 @@ public struct IOError: Swift.Error {
         return .reason(self.failureDescription)
     }
 
+    private enum Error {
+#if os(Windows)
+    case WindowsError(DWORD)
+    case WinSockError(CInt)
+#endif
+    case errno(CInt)
+    }
+
+    private let error: Error
+
     /// The `errno` that was set for the operation.
-    public let errnoCode: CInt
+    public var errnoCode: CInt {
+      switch self.error {
+      case .errno(let code):
+        return code
+#if os(Windows)
+      default:
+        fatalError("IOError domain is not `errno`")
+#endif
+      }
+    }
+
+#if os(Windows)
+    public init(WindowsError code: DWORD, reason: String) {
+        self.error = .WindowsError(code)
+        self.failureDescription = reason
+    }
+
+    public init(WinSockError code: CInt, reason: String) {
+        self.error = .WinSockError(code)
+        self.failureDescription = reason
+    }
+#endif
 
     /// Creates a new `IOError``
     ///
     /// - parameters:
     ///     - errorCode: the `errno` that was set for the operation.
     ///     - reason: the actual reason (in an human-readable form).
-    public init(errnoCode: CInt, reason: String) {
-        self.errnoCode = errnoCode
+    public init(errnoCode code: CInt, reason: String) {
+        self.error = .errno(code)
         self.failureDescription = reason
     }
 
@@ -47,8 +82,8 @@ public struct IOError: Swift.Error {
     ///     - errorCode: the `errno` that was set for the operation.
     ///     - function: The function the error happened in, the human readable description will be generated automatically when needed.
     @available(*, deprecated, renamed: "init(errnoCode:reason:)")
-    public init(errnoCode: CInt, function: StaticString) {
-        self.errnoCode = errnoCode
+    public init(errnoCode code: CInt, function: StaticString) {
+        self.error = .errno(code)
         self.failureDescription = "\(function)"
     }
 }
@@ -64,6 +99,17 @@ private func reasonForError(errnoCode: CInt, reason: String) -> String {
         return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"
     } else {
         return "\(reason): Broken strerror, unknown error: \(errnoCode)"
+    }
+}
+
+internal extension IOResult where T: FixedWidthInteger {
+    var result: T {
+        switch self {
+        case .processed(let value):
+            return value
+        case .wouldBlock(_):
+            fatalError("cannot unwrap IOResult")
+        }
     }
 }
 

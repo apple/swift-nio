@@ -27,7 +27,7 @@ class SystemTest: XCTestCase {
             do {
                 _ = try withUnsafePointer(to: &randomBytes) { ptr in
                     try readFD.withUnsafeFileDescriptor { readFD in
-                        try Posix.setsockopt(socket: readFD, level: -1, optionName: -1, optionValue: ptr, optionLen: 0)
+                        try BSDSocket.setsockopt(socket: readFD, level: BSDSocket.OptionLevel(rawValue: -1), option_name: BSDSocket.Option(rawValue: -1), option_value: ptr, option_len: 0)
                     }
                 }
                 XCTFail("success even though the call was invalid")

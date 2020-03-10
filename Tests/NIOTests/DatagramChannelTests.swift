@@ -386,7 +386,7 @@ final class DatagramChannelTests: XCTestCase {
 
             init(error: Int32) throws {
                 self.error = error
-                try super.init(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
+                try super.init(protocolFamily: CInt(BSDSocket.AF_INET), type: BSDSocket.SOCK_DGRAM)
             }
 
             override func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
@@ -462,7 +462,7 @@ final class DatagramChannelTests: XCTestCase {
 
             init(error: Int32) throws {
                 self.error = error
-                try super.init(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
+                try super.init(protocolFamily: CInt(BSDSocket.AF_INET), type: BSDSocket.SOCK_DGRAM)
             }
 
             override func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {

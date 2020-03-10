@@ -14,6 +14,10 @@
 
 import NIOConcurrencyHelpers
 
+#if os(Windows)
+import let WinSDK.INVALID_SOCKET
+#endif
+
 /// A Registration on a `Selector`, which is interested in an `SelectorEventSet`.
 protocol Registration {
     /// The `SelectorEventSet` in which the `Registration` is interested.
@@ -29,10 +33,10 @@ protocol SockAddrProtocol {
 internal func descriptionForAddress(family: sa_family_t, bytes: UnsafeRawPointer, length byteCount: Int) throws -> String {
     var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
     return try addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
-        try Posix.inet_ntop(addressFamily: family,
-                            addressBytes: bytes,
-                            addressDescription: addressBytesPtr.baseAddress!,
-                            addressDescriptionLength: socklen_t(byteCount))
+        try BSDSocket.inet_ntop(af: CInt(family),
+                                src: bytes,
+                                dst: addressBytesPtr.baseAddress!,
+                                size: socklen_t(byteCount))
         return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) { addressBytesPtr -> String in
             String(cString: addressBytesPtr)
         }
@@ -44,15 +48,15 @@ extension UnsafeMutablePointer where Pointee == sockaddr {
     /// Converts the `sockaddr` to a `SocketAddress`.
     func convert() -> SocketAddress? {
         switch pointee.sa_family {
-        case Posix.AF_INET:
+        case BSDSocket.AF_INET:
             return self.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
                 SocketAddress($0.pointee, host: $0.pointee.addressDescription())
             }
-        case Posix.AF_INET6:
+        case BSDSocket.AF_INET6:
             return self.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
                 SocketAddress($0.pointee, host: $0.pointee.addressDescription())
             }
-        case Posix.AF_UNIX:
+        case BSDSocket.AF_UNIX:
             return self.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
                 SocketAddress($0.pointee)
             }
@@ -81,7 +85,7 @@ extension sockaddr_in: SockAddrProtocol {
     mutating func addressDescription() -> String {
         return withUnsafePointer(to: &self.sin_addr) { addrPtr in
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            try! descriptionForAddress(family: Posix.AF_INET, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
+            try! descriptionForAddress(family: BSDSocket.AF_INET, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
         }
     }
 }
@@ -105,7 +109,7 @@ extension sockaddr_in6: SockAddrProtocol {
     mutating func addressDescription() -> String {
         return withUnsafePointer(to: &self.sin6_addr) { addrPtr in
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            try! descriptionForAddress(family: Posix.AF_INET6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
+            try! descriptionForAddress(family: BSDSocket.AF_INET6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
         }
     }
 }
@@ -154,7 +158,7 @@ extension sockaddr_storage {
     ///
     /// This will crash if `ss_family` != AF_INET!
     mutating func convert() -> sockaddr_in {
-        precondition(self.ss_family == Posix.AF_INET)
+        precondition(self.ss_family == BSDSocket.AF_INET)
         return withUnsafePointer(to: &self) {
             $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
                 $0.pointee
@@ -166,7 +170,7 @@ extension sockaddr_storage {
     ///
     /// This will crash if `ss_family` != AF_INET6!
     mutating func convert() -> sockaddr_in6 {
-        precondition(self.ss_family == Posix.AF_INET6)
+        precondition(self.ss_family == BSDSocket.AF_INET6)
         return withUnsafePointer(to: &self) {
             $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
                 $0.pointee
@@ -178,7 +182,7 @@ extension sockaddr_storage {
     ///
     /// This will crash if `ss_family` != AF_UNIX!
     mutating func convert() -> sockaddr_un {
-        precondition(self.ss_family == Posix.AF_UNIX)
+        precondition(self.ss_family == BSDSocket.AF_UNIX)
         return withUnsafePointer(to: &self) {
             $0.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
                 $0.pointee
@@ -189,13 +193,13 @@ extension sockaddr_storage {
     /// Converts the `socketaddr_storage` to a `SocketAddress`.
     mutating func convert() -> SocketAddress {
         switch self.ss_family {
-        case Posix.AF_INET:
+        case BSDSocket.AF_INET:
             var sockAddr: sockaddr_in = self.convert()
             return SocketAddress(sockAddr, host: sockAddr.addressDescription())
-        case Posix.AF_INET6:
+        case BSDSocket.AF_INET6:
             var sockAddr: sockaddr_in6 = self.convert()
             return SocketAddress(sockAddr, host: sockAddr.addressDescription())
-        case Posix.AF_UNIX:
+        case BSDSocket.AF_UNIX:
             return SocketAddress(self.convert() as sockaddr_un)
         default:
             fatalError("unknown sockaddr family \(self.ss_family)")
@@ -209,9 +213,13 @@ extension sockaddr_storage {
 class BaseSocket: BaseSocketProtocol {
     typealias SelectableType = BaseSocket
 
-    private var descriptor: CInt
+    private var hSocket: BSDSocket.Handle
     public var isOpen: Bool {
-        return descriptor >= 0
+#if os(Windows)
+        return hSocket != WinSDK.INVALID_SOCKET
+#else
+        return hSocket >= 0
+#endif
     }
 
     /// Returns the local bound `SocketAddress` of the socket.
@@ -219,7 +227,9 @@ class BaseSocket: BaseSocketProtocol {
     /// - returns: The local bound address.
     /// - throws: An `IOError` if the retrieval of the address failed.
     func localAddress() throws -> SocketAddress {
-        return try get_addr { try Posix.getsockname(socket: $0, address: $1, addressLength: $2) }
+        return try get_addr {
+            try BSDSocket.getsockname(socket: $0, address: $1, address_len: $2)
+        }
     }
 
     /// Returns the connected `SocketAddress` of the socket.
@@ -227,11 +237,11 @@ class BaseSocket: BaseSocketProtocol {
     /// - returns: The connected address.
     /// - throws: An `IOError` if the retrieval of the address failed.
     func remoteAddress() throws -> SocketAddress {
-        return try get_addr { try Posix.getpeername(socket: $0, address: $1, addressLength: $2) }
+        return try get_addr { try BSDSocket.getpeername(socket: $0, address: $1, address_len: $2) }
     }
 
     /// Internal helper function for retrieval of a `SocketAddress`.
-    private func get_addr(_ body: (Int32, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) throws -> Void) throws -> SocketAddress {
+    private func get_addr(_ body: (BSDSocket.Handle, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) throws -> Void) throws -> SocketAddress {
         var addr = sockaddr_storage()
 
         try addr.withMutableSockAddr { addressPtr, size in
@@ -252,35 +262,34 @@ class BaseSocket: BaseSocketProtocol {
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - returns: the file descriptor of the socket that was created.
     /// - throws: An `IOError` if creation of the socket failed.
-    static func makeSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> CInt {
+    static func makeSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> BSDSocket.Handle {
         var sockType = type
         #if os(Linux)
         if setNonBlocking {
             sockType = type | Linux.SOCK_NONBLOCK
         }
         #endif
-        let sock = try Posix.socket(domain: protocolFamily,
-                                    type: sockType,
-                                    protocol: 0)
+        let sock = try BSDSocket.socket(domain: protocolFamily, type: sockType,
+                                        protocol: 0)
         #if !os(Linux)
         if setNonBlocking {
             do {
-                try Posix.SetNonBlocking(socket: sock)
+                try BSDSocket.setNonBlocking(socket: sock)
             } catch {
                 // best effort close
-                try? Posix.close(descriptor: sock)
+                try? BSDSocket.close(socket: sock)
                 throw error
             }
         }
         #endif
-        if protocolFamily == Posix.AF_INET6 {
-            var zero: Int32 = 0
+        if protocolFamily == BSDSocket.AF_INET6 {
+            var zero: CChar = 0
             do {
-                try Posix.setsockopt(socket: sock, level: Int32(IPPROTO_IPV6), optionName: IPV6_V6ONLY, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
+                try BSDSocket.setsockopt(socket: sock, level: .IPPROTO_IPV6, option_name: .IPV6_V6ONLY, option_value: &zero, option_len: socklen_t(MemoryLayout.size(ofValue: zero)))
             } catch let e as IOError {
                 if e.errnoCode != EAFNOSUPPORT {
                     // Ignore error that may be thrown by close.
-                    _ = try? Posix.close(descriptor: sock)
+                    _ = try? BSDSocket.close(socket: sock)
                     throw e
                 }
                 /* we couldn't enable dual IP4/6 support, that's okay too. */
@@ -298,19 +307,23 @@ class BaseSocket: BaseSocketProtocol {
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
-    init(descriptor: CInt) throws {
-        precondition(descriptor >= 0, "invalid file descriptor")
-        self.descriptor = descriptor
+    init(socket: BSDSocket.Handle) throws {
+        precondition(socket >= 0, "invalid file descriptor")
+        self.hSocket = socket
+#if !os(Windows)
         try self.ignoreSIGPIPE()
+#endif
     }
 
     deinit {
         assert(!self.isOpen, "leak of open BaseSocket")
     }
 
+#if !os(Windows)
     func ignoreSIGPIPE() throws {
-        try BaseSocket.ignoreSIGPIPE(descriptor: self.descriptor)
+        try BaseSocket.ignoreSIGPIPE(descriptor: self.hSocket)
     }
+#endif
 
     /// Set the socket as non-blocking.
     ///
@@ -319,7 +332,7 @@ class BaseSocket: BaseSocketProtocol {
     /// throws: An `IOError` if the operation failed.
     final func setNonBlocking() throws {
         return try self.withUnsafeHandle {
-            try Posix.SetNonBlocking(socket: $0)
+            try BSDSocket.setNonBlocking(socket: $0)
         }
     }
 
@@ -333,7 +346,7 @@ class BaseSocket: BaseSocketProtocol {
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
     final func setOption<T>(level: Int32, name: Int32, value: T) throws {
-        if level == SocketOptionValue(Posix.IPPROTO_TCP) && name == TCP_NODELAY && (try? self.localAddress().protocolFamily) == Optional<Int32>.some(Int32(Posix.AF_UNIX)) {
+        if level == BSDSocket.OptionLevel.IPPROTO_TCP.rawValue && name == TCP_NODELAY && (try? self.localAddress().protocolFamily) == Optional<Int32>.some(Int32(BSDSocket.AF_UNIX)) {
             // setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
             return
@@ -341,12 +354,12 @@ class BaseSocket: BaseSocketProtocol {
         return try self.withUnsafeHandle {
             var val = value
 
-            try Posix.setsockopt(
+            try BSDSocket.setsockopt(
                 socket: $0,
-                level: level,
-                optionName: name,
-                optionValue: &val,
-                optionLen: socklen_t(MemoryLayout.size(ofValue: val)))
+                level: BSDSocket.OptionLevel(rawValue: level),
+                option_name: BSDSocket.Option(rawValue: name),
+                option_value: &val,
+                option_len: socklen_t(MemoryLayout.size(ofValue: val)))
         }
     }
 
@@ -372,7 +385,7 @@ class BaseSocket: BaseSocketProtocol {
                 storage.deallocate()
             }
 
-            try Posix.getsockopt(socket: fd, level: level, optionName: name, optionValue: val, optionLen: &length)
+            try BSDSocket.getsockopt(socket: fd, level: BSDSocket.OptionLevel(rawValue: level), option_name: BSDSocket.Option(rawValue: name), option_value: val, option_len: &length)
             return val.pointee
         }
     }
@@ -385,7 +398,7 @@ class BaseSocket: BaseSocketProtocol {
     final func bind(to address: SocketAddress) throws {
         try self.withUnsafeHandle { fd in
             func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
-                try Posix.bind(descriptor: fd, ptr: ptr, bytes: bytes)
+                try BSDSocket.bind(socket: fd, address: ptr, address_len: socklen_t(bytes))
             }
 
             switch address {
@@ -408,7 +421,7 @@ class BaseSocket: BaseSocketProtocol {
     ///
     /// - throws: An `IOError` if the operation failed.
     func close() throws {
-        try Posix.close(descriptor: try self.takeDescriptorOwnership())
+        try BSDSocket.close(socket: try self.takeDescriptorOwnership())
     }
 
     /// Takes the file descriptor's ownership.
@@ -417,25 +430,29 @@ class BaseSocket: BaseSocketProtocol {
     /// the underlying file descriptor.
     ///
     /// - throws: An `IOError` if the operation failed.
-    final func takeDescriptorOwnership() throws -> CInt {
+    final func takeDescriptorOwnership() throws -> BSDSocket.Handle {
         return try self.withUnsafeHandle {
-            self.descriptor = -1
+#if os(Windows)
+            self.hSocket = WinSDK.INVALID_SOCKET
+#else
+            self.hSocket = -1
+#endif
             return $0
         }
     }
 }
 
 extension BaseSocket: Selectable {
-    func withUnsafeHandle<T>(_ body: (CInt) throws -> T) throws -> T {
+    func withUnsafeHandle<T>(_ body: (BSDSocket.Handle) throws -> T) throws -> T {
         guard self.isOpen else {
-            throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
+            throw IOError(errnoCode: EBADF, reason: "socket already closed!")
         }
-        return try body(self.descriptor)
+        return try body(self.hSocket)
     }
 }
 
 extension BaseSocket: CustomStringConvertible {
     var description: String {
-        return "BaseSocket { fd=\(self.descriptor) }"
+        return "BaseSocket { socket=\(self.hSocket) }"
     }
 }

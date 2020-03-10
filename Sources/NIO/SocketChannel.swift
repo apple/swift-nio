@@ -36,12 +36,12 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     private var connectTimeout: TimeAmount? = nil
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
-        let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+        let socket = try Socket(protocolFamily: protocolFamily, type: BSDSocket.SOCK_STREAM, setNonBlocking: true)
         try super.init(socket: socket, parent: nil, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
-    init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
-        let socket = try Socket(descriptor: descriptor, setNonBlocking: true)
+    init(eventLoop: SelectableEventLoop, socket: BSDSocket.Handle) throws {
+        let socket = try Socket(socket: socket, setNonBlocking: true)
         try super.init(socket: socket, parent: nil, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
@@ -147,8 +147,8 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
                        recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
-    convenience init(descriptor: CInt, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
-        let socket = try ServerSocket(descriptor: descriptor, setNonBlocking: true)
+    convenience init(socket: BSDSocket.Handle, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
+        let socket = try ServerSocket(socket: socket, setNonBlocking: true)
         try self.init(serverSocket: socket, eventLoop: eventLoop, group: group)
         try self.socket.listen(backlog: backlog)
     }
@@ -343,8 +343,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return super.isOpen
     }
 
-    convenience init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
-        let socket = try Socket(descriptor: descriptor)
+    convenience init(eventLoop: SelectableEventLoop, socket: BSDSocket.Handle) throws {
+        let socket = try Socket(socket: socket)
 
         do {
             try self.init(socket: socket, eventLoop: eventLoop)
@@ -362,7 +362,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
         self.vectorReadManager = nil
-        let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_DGRAM)
+        let socket = try Socket(protocolFamily: protocolFamily, type: BSDSocket.SOCK_DGRAM)
         do {
             try socket.setNonBlocking()
         } catch let err {

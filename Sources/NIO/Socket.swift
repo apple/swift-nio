@@ -34,17 +34,17 @@ typealias IOVector = iovec
     /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: CInt, type: CInt, setNonBlocking: Bool = false) throws {
         let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
-        try super.init(descriptor: sock)
+        try super.init(socket: sock)
     }
 
     /// Create a new instance out of an already established socket.
     ///
     /// - parameters:
-    ///     - descriptor: The existing socket descriptor.
+    ///     - socket: The existing socket descriptor.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if could not change the socket into non-blocking
-    init(descriptor: CInt, setNonBlocking: Bool) throws {
-        try super.init(descriptor: descriptor)
+    init(socket: BSDSocket.Handle, setNonBlocking: Bool) throws {
+        try super.init(socket: socket)
         if setNonBlocking {
             try self.setNonBlocking()
         }
@@ -56,9 +56,9 @@ typealias IOVector = iovec
     /// file descriptor once it's not needed / used anymore.
     ///
     /// - parameters:
-    ///     - descriptor: The file descriptor to wrap.
-    override init(descriptor: CInt) throws {
-        try super.init(descriptor: descriptor)
+    ///     - socket: The file descriptor to wrap.
+    override init(socket: BSDSocket.Handle) throws {
+        try super.init(socket: socket)
     }
 
     /// Connect to the `SocketAddress`.
@@ -84,7 +84,7 @@ typealias IOVector = iovec
             var addr = addr
             return try withUnsafePointer(to: &addr) { ptr in
                 try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                    try Posix.connect(descriptor: fd, addr: ptr, size: socklen_t(MemoryLayout<T>.size))
+                    try BSDSocket.connect(socket: fd, address: ptr, address_len: socklen_t(MemoryLayout<T>.size))
                 }
             }
         }
@@ -133,9 +133,11 @@ typealias IOVector = iovec
     /// - throws: An `IOError` if the operation failed.
     func sendto(pointer: UnsafeRawBufferPointer, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
         return try withUnsafeHandle {
-            try Posix.sendto(descriptor: $0, pointer: UnsafeMutableRawPointer(mutating: pointer.baseAddress!),
-                             size: pointer.count, destinationPtr: destinationPtr,
-                             destinationSize: destinationSize)
+            try BSDSocket.sendto(socket: $0,
+                                 buffer: UnsafeMutableRawPointer(mutating: pointer.baseAddress!),
+                                 length: pointer.count,
+                                 dest_addr: destinationPtr,
+                                 dest_len: destinationSize)
         }
     }
 
@@ -162,10 +164,10 @@ typealias IOVector = iovec
     func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
         return try withUnsafeHandle { fd in
             try storage.withMutableSockAddr { (storagePtr, _) in
-                try Posix.recvfrom(descriptor: fd, pointer: pointer.baseAddress!,
-                                   len: pointer.count,
-                                   addr: storagePtr,
-                                   addrlen: &storageLen)
+                try BSDSocket.recvfrom(socket: fd, buffer: pointer.baseAddress!,
+                                       length: pointer.count,
+                                       address: storagePtr,
+                                       address_len: &storageLen)
             }
         }
     }
@@ -215,7 +217,7 @@ typealias IOVector = iovec
     /// - throws: An `IOError` if the operation failed.
     func shutdown(how: Shutdown) throws {
         return try withUnsafeHandle {
-            try Posix.shutdown(descriptor: $0, how: how)
+            try BSDSocket.shutdown(socket: $0, how: how)
         }
     }
 }

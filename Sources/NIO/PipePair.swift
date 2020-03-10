@@ -15,7 +15,7 @@
 struct SelectableFileHandle {
     var handle: NIOFileHandle
 
-    var isOpen: Bool { handle.isOpen }
+    var isOpen: Bool { return handle.isOpen }
 
     init(_ handle: NIOFileHandle) {
         self.handle = handle
@@ -28,7 +28,7 @@ struct SelectableFileHandle {
 
 extension SelectableFileHandle: Selectable {
     func withUnsafeHandle<T>(_ body: (CInt) throws -> T) throws -> T {
-        try self.handle.withUnsafeFileDescriptor(body)
+        return try self.handle.withUnsafeFileDescriptor(body)
     }
 }
 

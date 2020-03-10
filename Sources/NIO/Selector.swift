@@ -647,13 +647,13 @@ internal class Selector<R: Registration> {
             // about.
 
             #if os(Linux)
-            try! Posix.close(descriptor: self.timerFD)
-            try! Posix.close(descriptor: self.eventFD)
+            try! Posix.close(fd: self.timerFD)
+            try! Posix.close(fd: self.eventFD)
 
             self.eventFD = -1
             self.timerFD = -1
             #endif
-            try! Posix.close(descriptor: self.selectorFD)
+            try! Posix.close(fd: self.selectorFD)
 
             self.selectorFD = -1
         }

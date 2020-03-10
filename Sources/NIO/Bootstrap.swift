@@ -86,7 +86,7 @@ public final class ServerBootstrap {
         self._childChannelOptions = ChannelOptions.Storage()
         self.serverChannelInit = nil
         self.childChannelInit = nil
-        self._serverChannelOptions.append(key: ChannelOptions.socket(SocketOptionLevel(Posix.IPPROTO_TCP), TCP_NODELAY), value: 1)
+        self._serverChannelOptions.append(key: ChannelOptions.socket(SocketOptionLevel(BSDSocket.OptionLevel.IPPROTO_TCP.rawValue), TCP_NODELAY), value: 1)
     }
 
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
@@ -185,10 +185,10 @@ public final class ServerBootstrap {
     /// Use the existing bound socket file descriptor.
     ///
     /// - parameters:
-    ///     - descriptor: The _Unix file descriptor_ representing the bound stream socket.
-    public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+    ///     - socket: The _Unix file descriptor_ representing the bound stream socket.
+    public func withBoundSocket(socket: BSDSocket.Handle) -> EventLoopFuture<Channel> {
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerSocketChannel {
-            return try ServerSocketChannel(descriptor: descriptor, eventLoop: eventLoop, group: childEventLoopGroup)
+            return try ServerSocketChannel(socket: socket, eventLoop: eventLoop, group: childEventLoopGroup)
         }
         return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
             let promise = eventLoop.makePromise(of: Void.self)
@@ -414,7 +414,7 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
     public init(group: EventLoopGroup) {
         self.group = group
         self._channelOptions = ChannelOptions.Storage()
-        self._channelOptions.append(key: ChannelOptions.socket(SocketOptionLevel(Posix.IPPROTO_TCP), TCP_NODELAY), value: 1)
+        self._channelOptions.append(key: ChannelOptions.socket(SocketOptionLevel(BSDSocket.OptionLevel.IPPROTO_TCP.rawValue), TCP_NODELAY), value: 1)
         self.channelInitializer = nil
         self.resolver = nil
     }
@@ -478,7 +478,7 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
         let loop = self.group.next()
-        let connector = HappyEyeballsConnector(resolver: resolver ?? GetaddrinfoResolver(loop: loop, aiSocktype: Posix.SOCK_STREAM, aiProtocol: Posix.IPPROTO_TCP),
+        let connector = HappyEyeballsConnector(resolver: resolver ?? GetaddrinfoResolver(loop: loop, aiSocktype: BSDSocket.SOCK_STREAM, aiProtocol: BSDSocket.IPPROTO_TCP),
                                                loop: loop,
                                                host: host,
                                                port: port,
@@ -526,14 +526,14 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
     /// Use the existing connected socket file descriptor.
     ///
     /// - parameters:
-    ///     - descriptor: The _Unix file descriptor_ representing the connected stream socket.
+    ///     - socket: The _Unix file descriptor_ representing the connected stream socket.
     /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-    public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+    public func withConnectedSocket(socket: BSDSocket.Handle) -> EventLoopFuture<Channel> {
         let eventLoop = group.next()
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
         let channel: SocketChannel
         do {
-            channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, descriptor: descriptor)
+            channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, socket: socket)
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
@@ -663,10 +663,10 @@ public final class DatagramBootstrap {
     /// Use the existing bound socket file descriptor.
     ///
     /// - parameters:
-    ///     - descriptor: The _Unix file descriptor_ representing the bound datagram socket.
-    public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+    ///     - socket: The _Unix file descriptor_ representing the bound datagram socket.
+    public func withBoundSocket(socket: BSDSocket.Handle) -> EventLoopFuture<Channel> {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
-            return try DatagramChannel(eventLoop: eventLoop, descriptor: descriptor)
+            return try DatagramChannel(eventLoop: eventLoop, socket: socket)
         }
         return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
             let promise = eventLoop.makePromise(of: Void.self)

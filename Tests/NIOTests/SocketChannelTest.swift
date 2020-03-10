@@ -220,7 +220,7 @@ public final class SocketChannelTest : XCTestCase {
             private let promise: EventLoopPromise<Void>
             init(promise: EventLoopPromise<Void>) throws {
                 self.promise = promise
-                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+                try super.init(protocolFamily: BSDSocket.PF_INET, type: BSDSocket.SOCK_STREAM)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -327,19 +327,19 @@ public final class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM)
+        let serverSock = try Socket(protocolFamily: CInt(BSDSocket.AF_INET), type: BSDSocket.SOCK_STREAM)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
-            ServerBootstrap(group: group).withBoundSocket(descriptor: dup($0))
+            ServerBootstrap(group: group).withBoundSocket(socket: dup($0))
         }
         try serverSock.close()
         let serverChannel = try serverChannelFuture.wait()
 
-        let clientSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM)
+        let clientSock = try Socket(protocolFamily: CInt(BSDSocket.AF_INET), type: BSDSocket.SOCK_STREAM)
         let connected = try clientSock.connect(to: serverChannel.localAddress!)
         XCTAssertEqual(connected, true)
         let clientChannelFuture = try clientSock.withUnsafeHandle {
-            ClientBootstrap(group: group).withConnectedSocket(descriptor: dup($0))
+            ClientBootstrap(group: group).withConnectedSocket(socket: dup($0))
         }
         try clientSock.close()
         let clientChannel = try clientChannelFuture.wait()
@@ -354,10 +354,10 @@ public final class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
+        let serverSock = try Socket(protocolFamily: CInt(BSDSocket.AF_INET), type: BSDSocket.SOCK_DGRAM)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
-            DatagramBootstrap(group: group).withBoundSocket(descriptor: dup($0))
+            DatagramBootstrap(group: group).withBoundSocket(socket: dup($0))
         }
         try serverSock.close()
         let serverChannel = try serverChannelFuture.wait()
@@ -417,7 +417,7 @@ public final class SocketChannelTest : XCTestCase {
             let promise: EventLoopPromise<Void>
             init(promise: EventLoopPromise<Void>) throws {
                 self.promise = promise
-                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+                try super.init(protocolFamily: BSDSocket.PF_INET, type: BSDSocket.SOCK_STREAM)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -634,8 +634,8 @@ public final class SocketChannelTest : XCTestCase {
     }
 
     func testSetSockOptDoesNotOverrideExistingFlags() throws {
-        let s = try assertNoThrowWithValue(Socket(protocolFamily: PF_INET,
-                                                  type: Posix.SOCK_STREAM,
+        let s = try assertNoThrowWithValue(Socket(protocolFamily: BSDSocket.PF_INET,
+                                                  type: BSDSocket.SOCK_STREAM,
                                                   setNonBlocking: false))
         // check initial flags
         XCTAssertNoThrow(try s.withUnsafeHandle { fd in
@@ -674,8 +674,8 @@ public final class SocketChannelTest : XCTestCase {
                 if self.shouldAcceptsFail.load() {
                     throw NIOFailedToSetSocketNonBlockingError()
                 } else {
-                    return try Socket(protocolFamily: PF_INET,
-                                      type: Posix.SOCK_STREAM,
+                    return try Socket(protocolFamily: BSDSocket.PF_INET,
+                                      type: BSDSocket.SOCK_STREAM,
                                       setNonBlocking: false)
                 }
             }

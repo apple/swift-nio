@@ -19,5 +19,6 @@
 ///     `Selectable`s are not thread-safe, only to be used on the appropriate
 ///     `EventLoop`.
 protocol Selectable {
-    func withUnsafeHandle<T>(_: (CInt) throws -> T) throws -> T
+    // FIXME: this should use an associated type `Selectable.Handle`
+    func withUnsafeHandle<T>(_: (BSDSocket.Handle) throws -> T) throws -> T
 }

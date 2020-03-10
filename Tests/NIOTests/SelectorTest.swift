@@ -37,7 +37,7 @@ class SelectorTest: XCTestCase {
             XCTAssertNoThrow(try selector.close())
         }
 
-        let socket1 = try Socket(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+        let socket1 = try Socket(protocolFamily: BSDSocket.PF_INET, type: BSDSocket.SOCK_STREAM)
         defer {
             if socket1.isOpen {
                 XCTAssertNoThrow(try socket1.close())
@@ -45,7 +45,7 @@ class SelectorTest: XCTestCase {
         }
         try socket1.setNonBlocking()
 
-        let socket2 = try Socket(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+        let socket2 = try Socket(protocolFamily: BSDSocket.PF_INET, type: BSDSocket.SOCK_STREAM)
         defer {
             if socket2.isOpen {
                 XCTAssertNoThrow(try socket2.close())
@@ -378,7 +378,7 @@ class SelectorTest: XCTestCase {
             private let hasBeenClosedPromise: EventLoopPromise<Void>
             init(hasBeenClosedPromise: EventLoopPromise<Void>, descriptor: CInt) throws {
                 self.hasBeenClosedPromise = hasBeenClosedPromise
-                try super.init(descriptor: descriptor)
+                try super.init(socket: descriptor)
             }
             override func close() throws {
                 self.hasBeenClosedPromise.succeed(())
@@ -387,7 +387,7 @@ class SelectorTest: XCTestCase {
         }
         var socketFDs: [CInt] = [-1, -1]
         XCTAssertNoThrow(try Posix.socketpair(domain: PF_LOCAL,
-                                              type: Posix.SOCK_STREAM,
+                                              type: BSDSocket.SOCK_STREAM,
                                               protocol: 0,
                                               socketVector: &socketFDs))
 

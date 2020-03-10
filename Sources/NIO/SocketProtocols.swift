@@ -84,7 +84,7 @@ extension BaseSocketProtocol {
         do {
             try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
         } catch {
-            _ = try? Posix.close(descriptor: fd) // don't care about failure here
+            _ = try? Posix.close(fd: fd) // don't care about failure here
             throw error
         }
         #endif
