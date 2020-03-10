@@ -23,16 +23,16 @@ internal enum TimerFd {
 
     @inline(never)
     public static func timerfd_settime(fd: Int32, flags: Int32, newValue: UnsafePointer<itimerspec>, oldValue: UnsafeMutablePointer<itimerspec>?) throws  {
-        try wrapSyscall {
+        _ = try syscall(blocking: false) {
             CNIOLinux.timerfd_settime(fd, flags, newValue, oldValue)
         }
     }
 
     @inline(never)
     public static func timerfd_create(clockId: Int32, flags: Int32) throws -> Int32 {
-        return try wrapSyscall {
+        return try syscall(blocking: false) {
             CNIOLinux.timerfd_create(clockId, flags)
-        }
+        }.result
     }
 }
 
@@ -43,23 +43,23 @@ internal enum EventFd {
 
     @inline(never)
     public static func eventfd_write(fd: Int32, value: UInt64) throws -> Int32 {
-        return try wrapSyscall {
+        return try syscall(blocking: false) {
             CNIOLinux.eventfd_write(fd, value)
-        }
+        }.result
     }
 
     @inline(never)
     public static func eventfd_read(fd: Int32, value: UnsafeMutablePointer<UInt64>) throws -> Int32 {
-        return try wrapSyscall {
+        return try syscall(blocking: false) {
             CNIOLinux.eventfd_read(fd, value)
-        }
+        }.result
     }
 
     @inline(never)
     public static func eventfd(initval: Int32, flags: Int32) throws -> Int32 {
-        return try wrapSyscall {
+        return try syscall(blocking: false) {
             CNIOLinux.eventfd(0, Int32(EFD_CLOEXEC | EFD_NONBLOCK))
-        }
+        }.result
     }
 }
 
@@ -91,24 +91,24 @@ internal enum Epoll {
 
     @inline(never)
     public static func epoll_create(size: Int32) throws -> Int32 {
-        return try wrapSyscall {
+        return try syscall(blocking: false) {
             CNIOLinux.epoll_create(size)
-        }
+        }.result
     }
 
     @inline(never)
     @discardableResult
     public static func epoll_ctl(epfd: Int32, op: Int32, fd: Int32, event: UnsafeMutablePointer<epoll_event>) throws -> Int32 {
-        return try wrapSyscall {
+        return try syscall(blocking: false) {
             CNIOLinux.epoll_ctl(epfd, op, fd, event)
-        }
+        }.result
     }
 
     @inline(never)
     public static func epoll_wait(epfd: Int32, events: UnsafeMutablePointer<epoll_event>, maxevents: Int32, timeout: Int32) throws -> Int32 {
-        return try wrapSyscall {
+        return try syscall(blocking: false) {
             CNIOLinux.epoll_wait(epfd, events, maxevents, timeout)
-        }
+        }.result
     }
 }
 
@@ -125,15 +125,12 @@ internal enum Linux {
                                addr: UnsafeMutablePointer<sockaddr>?,
                                len: UnsafeMutablePointer<socklen_t>?,
                                flags: CInt) throws -> CInt? {
-        let result: IOResult<CInt> = try wrapSyscallMayBlock {
+        guard case let .processed(fd) = try syscall(blocking: true, {
             CNIOLinux.CNIOLinux_accept4(descriptor, addr, len, flags)
+        }) else {
+          return nil
         }
-        switch result {
-        case .processed(let fd):
-            return fd
-        default:
-            return nil
-        }
+        return fd
     }
 }
 #endif
