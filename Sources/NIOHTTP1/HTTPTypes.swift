@@ -472,7 +472,6 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
             return result.map { $0[...] }
         }
 
-
         var values: [Substring] = []
         for result in result {
             var parser = HTTPHeaderValueParser(result)
