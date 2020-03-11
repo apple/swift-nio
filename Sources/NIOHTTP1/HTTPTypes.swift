@@ -485,7 +485,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
 
 private struct HTTPHeaderValueParser {
     var current: Substring
-    
+
     init(_ string: String) {
         self.current = .init(string)
     }
@@ -527,6 +527,7 @@ private struct HTTPHeaderValueParser {
             return nil
         }
         if self.current[self.current.index(before: nextQuote)] == "\\" {
+            // Skip escaped quotes.
             return self.nextDoubleQuote(from: self.current.index(after: nextQuote))
         }
         return nextQuote
@@ -561,6 +562,7 @@ private struct HTTPHeaderValueParser {
 }
 
 private extension Substring {
+    /// Converts all `\"` to `"`. 
     func unescapingQuotes() -> Substring {
         return self.split(separator: "\\").reduce("") { (result, part) -> SubSequence in
             guard !result.isEmpty else {
