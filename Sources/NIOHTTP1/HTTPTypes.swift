@@ -546,7 +546,7 @@ private struct HTTPHeaderValueParser {
     }
 
     private func nextComma() -> Substring.Index? {
-        self.current.firstIndex(of: ",")
+        return self.current.firstIndex(of: ",")
     }
 
     private mutating func nextWhitespace() -> Substring.Index? {
@@ -562,9 +562,7 @@ private struct HTTPHeaderValueParser {
     }
 
     private mutating func pop() {
-        if self.current.startIndex == self.current.endIndex {
-            return
-        } else {
+        if self.current.startIndex != self.current.endIndex {
             self.current = self.current[self.current.index(after: self.current.startIndex)...]
         }
     }
