@@ -366,6 +366,7 @@ class HTTPHeadersTest : XCTestCase {
             ("qux", #""bar""#),
             ("quuz", #" "bar" "#),
             ("corge", #""bar\"baz""#),
+            ("grault", #""foo\'bar""#)
         ])
         XCTAssertEqual(["bar, baz"], headers[canonicalForm: "foo"])
         XCTAssertEqual(["bar, baz", "qux"], headers[canonicalForm: "bar"])
@@ -373,5 +374,6 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertEqual(["bar"], headers[canonicalForm: "qux"])
         XCTAssertEqual(["bar"], headers[canonicalForm: "quuz"])
         XCTAssertEqual([#"bar"baz"#], headers[canonicalForm: "corge"])
+        XCTAssertEqual([#"foo\'bar"#], headers[canonicalForm: "grault"])
     }
 }

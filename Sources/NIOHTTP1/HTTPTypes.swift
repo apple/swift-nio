@@ -476,7 +476,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
         for result in result {
             var parser = HTTPHeaderValueParser(result)
             while let value = parser.nextValue() {
-                values.append(.init(value))
+                values.append(value)
             }
         }
         return values
@@ -485,64 +485,51 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
 
 private struct HTTPHeaderValueParser {
     var current: Substring
+    
     init(_ string: String) {
         self.current = .init(string)
     }
 
-    mutating func nextValue() -> String? {
+    mutating func nextValue() -> Substring? {
         self.popWhitespace()
         guard !self.current.isEmpty else {
             return nil
         }
         let value: Substring
-        if let comma = self.nextComma() {
-            if let doubleQuote = self.nextDoubleQuote(), doubleQuote < comma {
-                guard let nextDoubleQuote = self.nextDoubleQuote(skip: 1) else {
-                    return nil
-                }
-                self.pop()
-                value = self.pop(to: nextDoubleQuote)
-                self.pop()
-            } else {
-                value = self.pop(to: comma)
+        if self.current.first == "\"" {
+            self.pop()
+            guard let nextDoubleQuote = self.nextDoubleQuote() else {
+                return nil
             }
-            self.popWhitespace()
+            value = self.pop(to: nextDoubleQuote)
+            self.pop()
+            if let comma = self.nextComma() {
+                _ = self.pop(to: comma)
+                self.pop()
+            }
+        } else if let comma = self.nextComma() {
+            value = self.pop(to: comma)
             self.pop()
         } else {
-            if self.current.first == "\"" {
-                guard let nextDoubleQuote = self.nextDoubleQuote(skip: 1) else {
-                    return nil
-                }
-                self.pop()
-                value = self.pop(to: nextDoubleQuote)
-                self.pop()
+            if let whitespace = self.nextWhitespace() {
+                value = self.pop(to: whitespace)
             } else {
-                if let whitespace = self.nextWhitespace() {
-                    value = self.pop(to: whitespace)
-                } else {
-                    value = self.current
-                    self.current = ""
-                }
+                value = self.current
+                self.current = ""
             }
         }
         return value.unescapingQuotes()
     }
 
-    private func nextDoubleQuote(skip: Int = 0) -> Substring.Index? {
-        var startIndex = self.current.startIndex
-        var current: Substring.Index?
-        var skip = skip
-        while skip >= 0 {
-            guard let nextQuote = self.current[startIndex...].firstIndex(of: "\"") else {
-                return nil
-            }
-            current = nextQuote
-            startIndex = self.current.index(after: nextQuote)
-            if nextQuote == self.current.startIndex || self.current[self.current.index(before: nextQuote)] != #"\"# {
-                skip -= 1
-            }
+    private func nextDoubleQuote(from startIndex: Substring.Index? = nil) -> Substring.Index? {
+        let startIndex = startIndex ?? self.current.startIndex
+        guard let nextQuote = self.current[startIndex...].firstIndex(of: "\"") else {
+            return nil
         }
-        return current
+        if self.current[self.current.index(before: nextQuote)] == "\\" {
+            return self.nextDoubleQuote(from: self.current.index(after: nextQuote))
+        }
+        return nextQuote
     }
 
     private func nextComma() -> Substring.Index? {
@@ -573,18 +560,18 @@ private struct HTTPHeaderValueParser {
     }
 }
 
-private extension StringProtocol {
-    func unescapingQuotes() -> String {
-        return self.split(separator: "\\").enumerated().map { (i, string) -> SubSequence in
-            guard i != 0 else {
-                return string
+private extension Substring {
+    func unescapingQuotes() -> Substring {
+        return self.split(separator: "\\").reduce("") { (result, part) -> SubSequence in
+            guard !result.isEmpty else {
+                return part
             }
-            if string.hasPrefix("\"") {
-                return string
+            if part.hasPrefix("\"") {
+                return result + part
             } else {
-                return "\\\(string)"
+                return "\(result)\\\(part)"
             }
-        }.joined(separator: "")
+        }
     }
 }
 
