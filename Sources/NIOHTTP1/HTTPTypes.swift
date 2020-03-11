@@ -501,7 +501,7 @@ private struct HTTPHeaderValueParser {
             guard let nextDoubleQuote = self.nextDoubleQuote() else {
                 return nil
             }
-            value = self.pop(to: nextDoubleQuote)
+            value = self.pop(to: nextDoubleQuote).unescapingQuotes()
             self.pop()
             if let comma = self.nextComma() {
                 _ = self.pop(to: comma)
@@ -510,19 +510,19 @@ private struct HTTPHeaderValueParser {
         } else if let comma = self.nextComma() {
             value = self.pop(to: comma)
             self.pop()
+        } else if let whitespace = self.nextWhitespace() {
+            value = self.pop(to: whitespace)
         } else {
-            if let whitespace = self.nextWhitespace() {
-                value = self.pop(to: whitespace)
-            } else {
-                value = self.current
-                self.current = ""
-            }
+            value = self.pop(to: self.current.endIndex)
         }
-        return value.unescapingQuotes()
+        return value
     }
 
-    private func nextDoubleQuote(from startIndex: Substring.Index? = nil) -> Substring.Index? {
-        let startIndex = startIndex ?? self.current.startIndex
+    private func nextDoubleQuote() -> Substring.Index? {
+        self.nextDoubleQuote(from: self.current.startIndex)
+    }
+
+    private func nextDoubleQuote(from startIndex: Substring.Index) -> Substring.Index? {
         guard let nextQuote = self.current[startIndex...].firstIndex(of: "\"") else {
             return nil
         }
@@ -562,7 +562,7 @@ private struct HTTPHeaderValueParser {
 }
 
 private extension Substring {
-    /// Converts all `\"` to `"`. 
+    /// Converts all `\"` to `"`.
     func unescapingQuotes() -> Substring {
         return self.split(separator: "\\").reduce("") { (result, part) -> SubSequence in
             guard !result.isEmpty else {
