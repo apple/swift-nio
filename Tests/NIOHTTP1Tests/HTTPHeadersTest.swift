@@ -362,10 +362,16 @@ class HTTPHeadersTest : XCTestCase {
         let headers = HTTPHeaders([
             ("foo", #""bar, baz""#),
             ("bar", #""bar, baz", qux"#),
-            ("baz", #""bar, baz", "qux"#),
+            ("baz", #""bar, baz", "qux""#),
+            ("qux", #""bar""#),
+            ("quuz", #" "bar" "#),
+            ("corge", #""bar\"baz""#),
         ])
         XCTAssertEqual(["bar, baz"], headers[canonicalForm: "foo"])
         XCTAssertEqual(["bar, baz", "qux"], headers[canonicalForm: "bar"])
         XCTAssertEqual(["bar, baz", "qux"], headers[canonicalForm: "baz"])
+        XCTAssertEqual(["bar"], headers[canonicalForm: "qux"])
+        XCTAssertEqual(["bar"], headers[canonicalForm: "quuz"])
+        XCTAssertEqual([#"bar"baz"#], headers[canonicalForm: "corge"])
     }
 }

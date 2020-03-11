@@ -472,7 +472,128 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
             return result.map { $0[...] }
         }
 
-        return result.flatMap { $0.split(separator: ",").map { $0.trimWhitespace() } }
+
+        var values: [Substring] = []
+        for result in result {
+            var parser = HTTPHeaderValueParser(result)
+            while let value = parser.nextValue() {
+                values.append(.init(value))
+            }
+        }
+        return values
+    }
+}
+
+private struct HTTPHeaderValueParser {
+    var current: Substring
+    init(_ string: String) {
+        self.current = .init(string)
+    }
+
+    mutating func nextValue() -> String? {
+        self.popWhitespace()
+        guard !self.current.isEmpty else {
+            return nil
+        }
+        let value: Substring
+        if let comma = self.nextComma() {
+            if let doubleQuote = self.nextDoubleQuote(), doubleQuote < comma {
+                guard let nextDoubleQuote = self.nextDoubleQuote(skip: 1) else {
+                    return nil
+                }
+                self.pop()
+                value = self.pop(to: nextDoubleQuote)
+                self.pop()
+            } else {
+                value = self.pop(to: comma)
+            }
+            self.popWhitespace()
+            self.pop()
+        } else {
+            if self.current.first == "\"" {
+                guard let nextDoubleQuote = self.nextDoubleQuote(skip: 1) else {
+                    return nil
+                }
+                self.pop()
+                value = self.pop(to: nextDoubleQuote)
+                self.pop()
+            } else {
+                if let whitespace = self.nextWhitespace() {
+                    value = self.pop(to: whitespace)
+                } else {
+                    value = self.current
+                    self.current = ""
+                }
+            }
+        }
+        return value.unescapingQuotes()
+    }
+
+    private func nextDoubleQuote(skip: Int = 0) -> Substring.Index? {
+        var startIndex = self.current.startIndex
+        var current: Substring.Index?
+        var skip = skip
+        while skip >= 0 {
+            guard let nextQuote = self.current[startIndex...].firstIndex(of: "\"") else {
+                return nil
+            }
+            current = nextQuote
+            startIndex = self.current.index(after: nextQuote)
+            if nextQuote == self.current.startIndex || self.current[self.current.index(before: nextQuote)] != #"\"# {
+                skip -= 1
+            }
+        }
+        return current
+    }
+
+    private func nextComma() -> Substring.Index? {
+        self.current.firstIndex(of: ",")
+    }
+
+    private mutating func nextWhitespace() -> Substring.Index? {
+        return self.current.firstIndex(where: { $0.isLinearWhitespace })
+    }
+
+    private mutating func popWhitespace() {
+        if let nonWhitespace = self.current.firstIndex(where: { !$0.isLinearWhitespace }) {
+            self.current = self.current[nonWhitespace...]
+        } else {
+            self.current = ""
+        }
+    }
+
+    private mutating func pop() {
+        if self.current.startIndex == self.current.endIndex {
+            return
+        } else {
+            self.current = self.current[self.current.index(after: self.current.startIndex)...]
+        }
+    }
+    private mutating func pop(to index: Substring.Index) -> Substring {
+        let value = self.current[..<index]
+        self.current = self.current[index...]
+        return value
+    }
+}
+
+private extension StringProtocol {
+    func unescapingQuotes() -> String {
+        return self.split(separator: "\\").enumerated().map { (i, string) -> SubSequence in
+            guard i != 0 else {
+                return string
+            }
+            if string.hasPrefix("\"") {
+                return string
+            } else {
+                return "\\\(string)"
+            }
+        }.joined(separator: "")
+    }
+}
+
+private extension Character {
+    var isLinearWhitespace: Bool {
+        return self == " " || self == "\t"
     }
 }
 
