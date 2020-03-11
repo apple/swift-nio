@@ -86,7 +86,7 @@ public final class ServerBootstrap {
         self._childChannelOptions = ChannelOptions.Storage()
         self.serverChannelInit = nil
         self.childChannelInit = nil
-        self._serverChannelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+        self._serverChannelOptions.append(key: ChannelOptions.socket(SocketOptionLevel(Posix.IPPROTO_TCP), TCP_NODELAY), value: 1)
     }
 
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
@@ -414,7 +414,7 @@ public final class ClientBootstrap: NIOTCPClientBootstrap {
     public init(group: EventLoopGroup) {
         self.group = group
         self._channelOptions = ChannelOptions.Storage()
-        self._channelOptions.append(key: ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+        self._channelOptions.append(key: ChannelOptions.socket(SocketOptionLevel(Posix.IPPROTO_TCP), TCP_NODELAY), value: 1)
         self.channelInitializer = nil
         self.resolver = nil
     }
