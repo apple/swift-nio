@@ -519,7 +519,7 @@ private struct HTTPHeaderValueParser {
     }
 
     private func nextDoubleQuote() -> Substring.Index? {
-        self.nextDoubleQuote(from: self.current.startIndex)
+        return self.nextDoubleQuote(from: self.current.startIndex)
     }
 
     private func nextDoubleQuote(from startIndex: Substring.Index) -> Substring.Index? {
