@@ -357,4 +357,15 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertEqual(["bazzy"], fooBarHeaders["baz"])
         XCTAssertEqual(.unknown, fooBarHeaders.keepAliveState)
     }
+
+    func testCanonicalFormRespectsQuotedStrings() {
+        let headers = HTTPHeaders([
+            ("foo", #""bar, baz""#),
+            ("bar", #""bar, baz", qux"#),
+            ("baz", #""bar, baz", "qux"#),
+        ])
+        XCTAssertEqual(["bar, baz"], headers[canonicalForm: "foo"])
+        XCTAssertEqual(["bar, baz", "qux"], headers[canonicalForm: "bar"])
+        XCTAssertEqual(["bar, baz", "qux"], headers[canonicalForm: "baz"])
+    }
 }
