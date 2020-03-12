@@ -498,10 +498,10 @@ private struct HTTPHeaderValueParser {
         let value: Substring
         if self.current.first == "\"" {
             self.pop()
-            guard let nextDoubleQuote = self.nextDoubleQuote() else {
+            guard let nextDoubleQuote = self.nextUnescapedDoubleQuote() else {
                 return nil
             }
-            value = self.pop(to: nextDoubleQuote).unescapingQuotes()
+            value = self.pop(to: nextDoubleQuote).unescapingDoubleQuotes()
             self.pop()
             if let comma = self.nextComma() {
                 _ = self.pop(to: comma)
@@ -510,35 +510,33 @@ private struct HTTPHeaderValueParser {
         } else if let comma = self.nextComma() {
             value = self.pop(to: comma)
             self.pop()
-        } else if let whitespace = self.nextWhitespace() {
-            value = self.pop(to: whitespace)
         } else {
-            value = self.pop(to: self.current.endIndex)
+            value = self.pop(to: self.current.endIndex).trimWhitespace()
         }
         return value
     }
 
-    private func nextDoubleQuote() -> Substring.Index? {
-        return self.nextDoubleQuote(from: self.current.startIndex)
-    }
-
-    private func nextDoubleQuote(from startIndex: Substring.Index) -> Substring.Index? {
-        guard let nextQuote = self.current[startIndex...].firstIndex(of: "\"") else {
-            return nil
+    private func nextUnescapedDoubleQuote() -> Substring.Index? {
+        var startIndex = self.current.startIndex
+        var nextDoubleQuote: Substring.Index?
+        while nextDoubleQuote == nil {
+            guard let possibleDoubleQuote = self.current[startIndex...].firstIndex(of: "\"") else {
+                return nil
+            }
+            // Check if quote is escaped.
+            if self.current.startIndex == possibleDoubleQuote || self.current[self.current.index(before: possibleDoubleQuote)] != "\\" {
+                nextDoubleQuote = possibleDoubleQuote
+            } else if possibleDoubleQuote < self.current.endIndex {
+                startIndex = self.current.index(after: possibleDoubleQuote)
+            } else {
+                return nil
+            }
         }
-        if self.current[self.current.index(before: nextQuote)] == "\\" {
-            // Skip escaped quotes.
-            return self.nextDoubleQuote(from: self.current.index(after: nextQuote))
-        }
-        return nextQuote
+        return nextDoubleQuote
     }
 
     private func nextComma() -> Substring.Index? {
         return self.current.firstIndex(of: ",")
-    }
-
-    private mutating func nextWhitespace() -> Substring.Index? {
-        return self.current.firstIndex(where: { $0.isLinearWhitespace })
     }
 
     private mutating func popWhitespace() {
@@ -550,10 +548,9 @@ private struct HTTPHeaderValueParser {
     }
 
     private mutating func pop() {
-        if self.current.startIndex != self.current.endIndex {
-            self.current = self.current[self.current.index(after: self.current.startIndex)...]
-        }
+        self.current = self.current.dropFirst()
     }
+
     private mutating func pop(to index: Substring.Index) -> Substring {
         let value = self.current[..<index]
         self.current = self.current[index...]
@@ -563,15 +560,12 @@ private struct HTTPHeaderValueParser {
 
 private extension Substring {
     /// Converts all `\"` to `"`.
-    func unescapingQuotes() -> Substring {
-        return self.split(separator: "\\").reduce("") { (result, part) -> SubSequence in
-            guard !result.isEmpty else {
-                return part
-            }
-            if part.hasPrefix("\"") {
-                return result + part
+    func unescapingDoubleQuotes() -> Substring {
+        return self.split(separator: "\\").lazy.reduce(into: "") { (result, part) in
+            if result.isEmpty || part.first == "\"" {
+                result += part
             } else {
-                return "\(result)\\\(part)"
+                result += "\\\(part)"
             }
         }
     }
