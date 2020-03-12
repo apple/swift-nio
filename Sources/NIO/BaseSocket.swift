@@ -154,7 +154,7 @@ extension sockaddr_storage {
     ///
     /// This will crash if `ss_family` != AF_INET!
     mutating func convert() -> sockaddr_in {
-        precondition(self.ss_family == AF_INET)
+        precondition(self.ss_family == Posix.AF_INET)
         return withUnsafePointer(to: &self) {
             $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
                 $0.pointee
@@ -166,7 +166,7 @@ extension sockaddr_storage {
     ///
     /// This will crash if `ss_family` != AF_INET6!
     mutating func convert() -> sockaddr_in6 {
-        precondition(self.ss_family == AF_INET6)
+        precondition(self.ss_family == Posix.AF_INET6)
         return withUnsafePointer(to: &self) {
             $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
                 $0.pointee
@@ -178,7 +178,7 @@ extension sockaddr_storage {
     ///
     /// This will crash if `ss_family` != AF_UNIX!
     mutating func convert() -> sockaddr_un {
-        precondition(self.ss_family == AF_UNIX)
+        precondition(self.ss_family == Posix.AF_UNIX)
         return withUnsafePointer(to: &self) {
             $0.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
                 $0.pointee
@@ -280,7 +280,7 @@ class BaseSocket: Selectable, BaseSocketProtocol {
             }
         }
         #endif
-        if protocolFamily == AF_INET6 {
+        if protocolFamily == Posix.AF_INET6 {
             var zero: Int32 = 0
             do {
                 try Posix.setsockopt(socket: sock, level: Int32(IPPROTO_IPV6), optionName: IPV6_V6ONLY, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
@@ -340,7 +340,7 @@ class BaseSocket: Selectable, BaseSocketProtocol {
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
     final func setOption<T>(level: Int32, name: Int32, value: T) throws {
-        if level == SocketOptionValue(IPPROTO_TCP) && name == TCP_NODELAY && (try? self.localAddress().protocolFamily) == Optional<Int32>.some(Int32(Posix.AF_UNIX)) {
+        if level == SocketOptionValue(Posix.IPPROTO_TCP) && name == TCP_NODELAY && (try? self.localAddress().protocolFamily) == Optional<Int32>.some(Int32(Posix.AF_UNIX)) {
             // setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
             return

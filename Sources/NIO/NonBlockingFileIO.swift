@@ -44,10 +44,10 @@ public struct NonBlockingFileIO {
 
     private let threadPool: NIOThreadPool
 
-    /// Initialize a `NonBlockingFileIO` which uses the `BlockingIOThreadPool`.
+    /// Initialize a `NonBlockingFileIO` which uses the `NIOThreadPool`.
     ///
     /// - parameters:
-    ///   - threadPool: The `BlockingIOThreadPool` that will be used for all the IO.
+    ///   - threadPool: The `NIOThreadPool` that will be used for all the IO.
     public init(threadPool: NIOThreadPool) {
         self.threadPool = threadPool
     }
