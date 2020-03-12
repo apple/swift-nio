@@ -257,11 +257,11 @@ extension SelectorEventSet {
 internal class Selector<R: Registration> {
     private var lifecycleState: SelectorLifecycleState
 
-    #if os(Linux)
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    private typealias EventType = kevent
+    #else
     private typealias EventType = Epoll.epoll_event
     private var earliestTimer: NIODeadline = .distantFuture
-    #else
-    private typealias EventType = kevent
     #endif
 
     private var eventsCapacity = 64
@@ -319,7 +319,21 @@ internal class Selector<R: Registration> {
         events = Selector.allocateEventsArray(capacity: eventsCapacity)
         self.lifecycleState = .closed
 
-#if os(Linux)
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        self.selectorFD = try KQueue.kqueue()
+        self.lifecycleState = .open
+
+        var event = kevent()
+        event.ident = 0
+        event.filter = Int16(EVFILT_USER)
+        event.fflags = UInt32(NOTE_FFNOP)
+        event.data = 0
+        event.udata = nil
+        event.flags = UInt16(EV_ADD | EV_ENABLE | EV_CLEAR)
+        try withUnsafeMutablePointer(to: &event) { ptr in
+            try kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
+        }
+#else
         self.selectorFD = try Epoll.epoll_create(size: 128)
         self.eventFD = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
         self.timerFD = try TimerFd.timerfd_create(clockId: CLOCK_MONOTONIC, flags: Int32(TimerFd.TFD_CLOEXEC | TimerFd.TFD_NONBLOCK))
@@ -336,20 +350,6 @@ internal class Selector<R: Registration> {
         timerev.events = Epoll.EPOLLIN | Epoll.EPOLLERR | Epoll.EPOLLRDHUP
         timerev.data.fd = self.timerFD
         try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: self.timerFD, event: &timerev)
-#else
-        self.selectorFD = try KQueue.kqueue()
-        self.lifecycleState = .open
-
-        var event = kevent()
-        event.ident = 0
-        event.filter = Int16(EVFILT_USER)
-        event.fflags = UInt32(NOTE_FFNOP)
-        event.data = 0
-        event.udata = nil
-        event.flags = UInt16(EV_ADD | EV_ENABLE | EV_CLEAR)
-        try withUnsafeMutablePointer(to: &event) { ptr in
-            try kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
-        }
 #endif
     }
 
@@ -512,7 +512,58 @@ internal class Selector<R: Registration> {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
 
-#if os(Linux)
+
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        let timespec = Selector.toKQueueTimeSpec(strategy: strategy)
+        let ready = try timespec.withUnsafeOptionalPointer { ts in
+            Int(try KQueue.kevent(kq: self.selectorFD, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
+        }
+
+        // start with no deregistrations happened
+        self.deregistrationsHappened = false
+        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
+        for i in 0..<ready where !self.deregistrationsHappened {
+            let ev = events[i]
+            let filter = Int32(ev.filter)
+            guard Int32(ev.flags) & EV_ERROR == 0 else {
+                throw IOError(errnoCode: Int32(ev.data), reason: "kevent returned with EV_ERROR set: \(String(describing: ev))")
+            }
+            guard filter != EVFILT_USER, let registration = registrations[Int(ev.ident)] else {
+                continue
+            }
+            var selectorEvent: SelectorEventSet = ._none
+            switch filter {
+            case EVFILT_READ:
+                selectorEvent.formUnion(.read)
+                fallthrough // falling through here as `EVFILT_READ` also delivers `EV_EOF` (meaning `.readEOF`)
+            case EVFILT_EXCEPT:
+                if Int32(ev.flags) & EV_EOF != 0 && registration.interested.contains(.readEOF) {
+                    // we only add `.readEOF` if it happened and the user asked for it
+                    selectorEvent.formUnion(.readEOF)
+                }
+            case EVFILT_WRITE:
+                selectorEvent.formUnion(.write)
+            default:
+                // We only use EVFILT_USER, EVFILT_READ, EVFILT_EXCEPT and EVFILT_WRITE.
+                fatalError("unexpected filter \(ev.filter)")
+            }
+            if ev.fflags != 0 {
+                selectorEvent.formUnion(.reset)
+            }
+            // we can only verify the events for i == 0 as for i > 0 the user might have changed the registrations since then.
+            assert(i != 0 || selectorEvent.isSubset(of: registration.interested), "selectorEvent: \(selectorEvent), registration: \(registration)")
+
+            // in any case we only want what the user is currently registered for & what we got
+            selectorEvent = selectorEvent.intersection(registration.interested)
+
+            guard selectorEvent != ._none else {
+                continue
+            }
+            try body((SelectorEvent(io: selectorEvent, registration: registration)))
+        }
+
+        growEventArrayIfNeeded(ready: ready)
+#else
         let ready: Int
 
         switch strategy {
@@ -571,56 +622,6 @@ internal class Selector<R: Registration> {
                 }
             }
         }
-        growEventArrayIfNeeded(ready: ready)
-#else
-        let timespec = Selector.toKQueueTimeSpec(strategy: strategy)
-        let ready = try timespec.withUnsafeOptionalPointer { ts in
-            Int(try KQueue.kevent(kq: self.selectorFD, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
-        }
-
-        // start with no deregistrations happened
-        self.deregistrationsHappened = false
-        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
-        for i in 0..<ready where !self.deregistrationsHappened {
-            let ev = events[i]
-            let filter = Int32(ev.filter)
-            guard Int32(ev.flags) & EV_ERROR == 0 else {
-                throw IOError(errnoCode: Int32(ev.data), reason: "kevent returned with EV_ERROR set: \(String(describing: ev))")
-            }
-            guard filter != EVFILT_USER, let registration = registrations[Int(ev.ident)] else {
-                continue
-            }
-            var selectorEvent: SelectorEventSet = ._none
-            switch filter {
-            case EVFILT_READ:
-                selectorEvent.formUnion(.read)
-                fallthrough // falling through here as `EVFILT_READ` also delivers `EV_EOF` (meaning `.readEOF`)
-            case EVFILT_EXCEPT:
-                if Int32(ev.flags) & EV_EOF != 0 && registration.interested.contains(.readEOF) {
-                    // we only add `.readEOF` if it happened and the user asked for it
-                    selectorEvent.formUnion(.readEOF)
-                }
-            case EVFILT_WRITE:
-                selectorEvent.formUnion(.write)
-            default:
-                // We only use EVFILT_USER, EVFILT_READ, EVFILT_EXCEPT and EVFILT_WRITE.
-                fatalError("unexpected filter \(ev.filter)")
-            }
-            if ev.fflags != 0 {
-                selectorEvent.formUnion(.reset)
-            }
-            // we can only verify the events for i == 0 as for i > 0 the user might have changed the registrations since then.
-            assert(i != 0 || selectorEvent.isSubset(of: registration.interested), "selectorEvent: \(selectorEvent), registration: \(registration)")
-
-            // in any case we only want what the user is currently registered for & what we got
-            selectorEvent = selectorEvent.intersection(registration.interested)
-
-            guard selectorEvent != ._none else {
-                continue
-            }
-            try body((SelectorEvent(io: selectorEvent, registration: registration)))
-        }
-
         growEventArrayIfNeeded(ready: ready)
 #endif
     }
