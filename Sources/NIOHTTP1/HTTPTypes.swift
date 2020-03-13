@@ -561,11 +561,11 @@ private struct HTTPHeaderValueParser {
 private extension Substring {
     /// Converts all `\"` to `"`.
     func unescapingDoubleQuotes() -> Substring {
-        return self.split(separator: "\\").lazy.reduce(into: "") { (result, part) in
+        return self.lazy.split(separator: "\\").reduce(into: "") { (result, part) in
             if result.isEmpty || part.first == "\"" {
                 result += part
             } else {
-                result += "\\\(part)"
+                result += "\\" + part
             }
         }
     }
