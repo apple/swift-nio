@@ -137,7 +137,7 @@ if [[ $# -lt 2 ]]; then
     exit 1
 fi
 
-destination=$(mktemp -d /tmp/.gen-swift-perf-test_XXXXXX)
+destination=$(mktemp -d /tmp/test_package_XXXXXX)
 file="$1"
 command="$2"
 shift; shift
