@@ -538,6 +538,22 @@ internal enum Posix {
     }
 }
 
+internal extension Posix {
+    static func SetNonBlocking(socket: CInt) throws {
+        let flags = try Posix.fcntl(descriptor: socket, command: F_GETFL, value: 0)
+        do {
+            let ret = try Posix.fcntl(descriptor: socket, command: F_SETFL, value: flags | O_NONBLOCK)
+            assert(ret == 0, "unexpectedly, fcntl(\(socket), F_SETFL, \(flags) | O_NONBLOCK) returned \(ret)")
+        } catch let error as IOError {
+            if error.errnoCode == EINVAL {
+                // Darwin seems to sometimes do this despite the docs claiming it can't happen
+                throw NIOFailedToSetSocketNonBlockingError()
+            }
+            throw error
+        }
+    }
+}
+
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 internal enum KQueue {
 

@@ -12,18 +12,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-extension NIOFileHandle: Selectable {
+struct SelectableFileHandle {
+    var handle: NIOFileHandle
+
+    var isOpen: Bool { handle.isOpen }
+
+    init(_ handle: NIOFileHandle) {
+        self.handle = handle
+    }
+
+    func close() throws {
+        try handle.close()
+    }
+}
+
+extension SelectableFileHandle: Selectable {
+    func withUnsafeHandle<T>(_ body: (CInt) throws -> T) throws -> T {
+        try self.handle.withUnsafeFileDescriptor(body)
+    }
 }
 
 final class PipePair: SocketProtocol {
-    typealias SelectableType = NIOFileHandle
+    typealias SelectableType = SelectableFileHandle
 
-    let inputFD: NIOFileHandle
-    let outputFD: NIOFileHandle
+    let inputFD: SelectableFileHandle
+    let outputFD: SelectableFileHandle
 
     init(inputFD: NIOFileHandle, outputFD: NIOFileHandle) throws {
-        self.inputFD = inputFD
-        self.outputFD = outputFD
+        self.inputFD = SelectableFileHandle(inputFD)
+        self.outputFD = SelectableFileHandle(outputFD)
         try self.ignoreSIGPIPE()
         for fileHandle in [inputFD, outputFD] {
             try fileHandle.withUnsafeFileDescriptor {
@@ -34,7 +51,7 @@ final class PipePair: SocketProtocol {
 
     func ignoreSIGPIPE() throws {
         for fileHandle in [self.inputFD, self.outputFD] {
-            try fileHandle.withUnsafeFileDescriptor {
+            try fileHandle.withUnsafeHandle {
                 try PipePair.ignoreSIGPIPE(descriptor: $0)
             }
         }
@@ -53,14 +70,14 @@ final class PipePair: SocketProtocol {
     }
 
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
-        return try self.outputFD.withUnsafeFileDescriptor { fd in
-            try Posix.write(descriptor: fd, pointer: pointer.baseAddress!, size: pointer.count)
+        return try self.outputFD.withUnsafeHandle {
+            try Posix.write(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
 
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
-        return try self.outputFD.withUnsafeFileDescriptor { fd in
-            try Posix.writev(descriptor: fd, iovecs: iovecs)
+        return try self.outputFD.withUnsafeHandle {
+            try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
     }
 
@@ -69,8 +86,8 @@ final class PipePair: SocketProtocol {
     }
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        return try self.inputFD.withUnsafeFileDescriptor { fd in
-            try Posix.read(descriptor: fd, pointer: pointer.baseAddress!, size: pointer.count)
+        return try self.inputFD.withUnsafeHandle {
+            try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
 
