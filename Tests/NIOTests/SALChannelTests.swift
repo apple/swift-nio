@@ -43,7 +43,7 @@ final class SALChannelTest: XCTestCase, SALTest {
             try self.assertWrite(expectedFD: .max, expectedBytes: buffer, return: .processed(buffer.readableBytes))
             try self.assertWritev(expectedFD: .max, expectedBytes: [buffer, buffer], return: .processed(2 * buffer.readableBytes))
             try self.assertDeregister { selectable in
-                try selectable.withUnsafeFileDescriptor {
+                try selectable.withUnsafeHandle {
                     XCTAssertEqual(.max, $0)
                 }
                 return true
