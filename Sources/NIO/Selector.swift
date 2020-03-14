@@ -208,46 +208,45 @@ extension EpollFilterSet {
     }
 }
 
-extension SelectorEventSet {
-    #if os(Linux)
-    var epollEventSet: UInt32 {
-        assert(self != ._none)
-        // EPOLLERR | EPOLLHUP is always set unconditionally anyway but it's easier to understand if we explicitly ask.
-        var filter: UInt32 = Epoll.EPOLLERR | Epoll.EPOLLHUP
-        let epollFilters = EpollFilterSet(selectorEventSet: self)
-        if epollFilters.contains(.input) {
-            filter |= Epoll.EPOLLIN
+#if os(Linux)
+    extension SelectorEventSet {
+        var epollEventSet: UInt32 {
+            assert(self != ._none)
+            // EPOLLERR | EPOLLHUP is always set unconditionally anyway but it's easier to understand if we explicitly ask.
+            var filter: UInt32 = Epoll.EPOLLERR | Epoll.EPOLLHUP
+            let epollFilters = EpollFilterSet(selectorEventSet: self)
+            if epollFilters.contains(.input) {
+                filter |= Epoll.EPOLLIN
+            }
+            if epollFilters.contains(.output) {
+                filter |= Epoll.EPOLLOUT
+            }
+            if epollFilters.contains(.readHangup) {
+                filter |= Epoll.EPOLLRDHUP
+            }
+            assert(filter & Epoll.EPOLLHUP != 0) // both of these are reported
+            assert(filter & Epoll.EPOLLERR != 0) // always and can't be masked.
+            return filter
         }
-        if epollFilters.contains(.output) {
-            filter |= Epoll.EPOLLOUT
-        }
-        if epollFilters.contains(.readHangup) {
-            filter |= Epoll.EPOLLRDHUP
-        }
-        assert(filter & Epoll.EPOLLHUP != 0) // both of these are reported
-        assert(filter & Epoll.EPOLLERR != 0) // always and can't be masked.
-        return filter
-    }
 
-    fileprivate init(epollEvent: Epoll.epoll_event) {
-        var selectorEventSet: SelectorEventSet = ._none
-        if epollEvent.events & Epoll.EPOLLIN != 0 {
-            selectorEventSet.formUnion(.read)
+        fileprivate init(epollEvent: Epoll.epoll_event) {
+            var selectorEventSet: SelectorEventSet = ._none
+            if epollEvent.events & Epoll.EPOLLIN != 0 {
+                selectorEventSet.formUnion(.read)
+            }
+            if epollEvent.events & Epoll.EPOLLOUT != 0 {
+                selectorEventSet.formUnion(.write)
+            }
+            if epollEvent.events & Epoll.EPOLLRDHUP != 0 {
+                selectorEventSet.formUnion(.readEOF)
+            }
+            if epollEvent.events & Epoll.EPOLLHUP != 0 || epollEvent.events & Epoll.EPOLLERR != 0 {
+                selectorEventSet.formUnion(.reset)
+            }
+            self = selectorEventSet
         }
-        if epollEvent.events & Epoll.EPOLLOUT != 0 {
-            selectorEventSet.formUnion(.write)
-        }
-        if epollEvent.events & Epoll.EPOLLRDHUP != 0 {
-            selectorEventSet.formUnion(.readEOF)
-        }
-        if epollEvent.events & Epoll.EPOLLHUP != 0 || epollEvent.events & Epoll.EPOLLERR != 0 {
-            selectorEventSet.formUnion(.reset)
-        }
-        self = selectorEventSet
     }
-
-    #endif
-}
+#endif
 
 
 ///  A `Selector` allows a user to register different `Selectable` sources to an underlying OS selector, and for that selector to notify them once IO is ready for them to process.
@@ -433,14 +432,14 @@ internal class Selector<R: Registration> {
 
         try selectable.withUnsafeFileDescriptor { fd in
             assert(registrations[Int(fd)] == nil)
-            #if os(Linux)
+            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil)
+            #else
                 var ev = Epoll.epoll_event()
                 ev.events = interested.epollEventSet
                 ev.data.fd = fd
 
                 try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
-            #else
-                try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil)
             #endif
             registrations[Int(fd)] = makeRegistration(interested)
         }
@@ -460,14 +459,14 @@ internal class Selector<R: Registration> {
         try selectable.withUnsafeFileDescriptor { fd in
             var reg = registrations[Int(fd)]!
 
-            #if os(Linux)
+            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: reg.interested)
+            #else
                 var ev = Epoll.epoll_event()
                 ev.events = interested.epollEventSet
                 ev.data.fd = fd
 
                 _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: fd, event: &ev)
-            #else
-                try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: reg.interested)
             #endif
             reg.interested = interested
             registrations[Int(fd)] = reg
@@ -492,11 +491,11 @@ internal class Selector<R: Registration> {
                 return
             }
 
-            #if os(Linux)
+            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                try kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: reg.interested)
+            #else
                 var ev = Epoll.epoll_event()
                 _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_DEL, fd: fd, event: &ev)
-            #else
-                try kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: reg.interested)
             #endif
         }
     }
@@ -663,26 +662,26 @@ internal class Selector<R: Registration> {
     func wakeup() throws {
         assert(NIOThread.current != self.myThread)
         try self.externalSelectorFDLock.withLock {
-        #if os(Linux)
-            guard self.eventFD >= 0 else {
-                throw EventLoopError.shutdown
-            }
-            _ = try EventFd.eventfd_write(fd: self.eventFD, value: 1)
-        #else
-            guard self.selectorFD >= 0 else {
-                throw EventLoopError.shutdown
-            }
-            var event = kevent()
-            event.ident = 0
-            event.filter = Int16(EVFILT_USER)
-            event.fflags = UInt32(NOTE_TRIGGER | NOTE_FFNOP)
-            event.data = 0
-            event.udata = nil
-            event.flags = 0
-            try withUnsafeMutablePointer(to: &event) { ptr in
-                try self.kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
-            }
-        #endif
+            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                guard self.selectorFD >= 0 else {
+                    throw EventLoopError.shutdown
+                }
+                var event = kevent()
+                event.ident = 0
+                event.filter = Int16(EVFILT_USER)
+                event.fflags = UInt32(NOTE_TRIGGER | NOTE_FFNOP)
+                event.data = 0
+                event.udata = nil
+                event.flags = 0
+                try withUnsafeMutablePointer(to: &event) { ptr in
+                    try self.kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
+                }
+            #else
+                guard self.eventFD >= 0 else {
+                    throw EventLoopError.shutdown
+                }
+                _ = try EventFd.eventfd_write(fd: self.eventFD, value: 1)
+            #endif
         }
     }
 }
