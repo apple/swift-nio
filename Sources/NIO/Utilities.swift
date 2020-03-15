@@ -19,6 +19,17 @@
 /// https://forums.swift.org/t/support-debug-only-code/11037 for a discussion.
 import CNIOLinux
 
+#if os(Windows)
+import let WinSDK.RelationProcessorCore
+
+import func WinSDK.GetLastError
+import func WinSDK.GetLogicalProcessorInformation
+
+import struct WinSDK.SYSTEM_LOGICAL_PROCESSOR_INFORMATION
+
+import typealias WinSDK.DWORD
+#endif
+
 @inlinable
 internal func debugOnly(_ body: () -> Void) {
     assert({ body(); return true }())
@@ -41,7 +52,37 @@ public enum System {
     ///
     /// - returns: The logical core count on the system.
     public static var coreCount: Int {
+#if os(Windows)
+        var dwLength: DWORD = 0
+        _ = GetLogicalProcessorInformation(nil, &dwLength)
+
+        let alignment: Int =
+            MemoryLayout<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>.alignment
+        let pBuffer: UnsafeMutableRawPointer =
+            UnsafeMutableRawPointer.allocate(byteCount: Int(dwLength),
+                                             alignment: alignment)
+        defer {
+            pBuffer.deallocate()
+        }
+
+        let dwSLPICount: Int =
+            Int(dwLength) / MemoryLayout<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>.stride
+        let pSLPI: UnsafeMutablePointer<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> =
+            pBuffer.bindMemory(to: SYSTEM_LOGICAL_PROCESSOR_INFORMATION.self,
+                               capacity: dwSLPICount)
+
+        let bResult: Bool = GetLogicalProcessorInformation(pSLPI, &dwLength)
+        assert(bResult, "GetLogicalProcessorInformation: \(GetLastError())")
+
+        return UnsafeBufferPointer<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>(start: pSLPI,
+                                                                         count: dwSLPICount)
+            .filter { $0.Relationship == RelationProcessorCore }
+            .map { $0.ProcessorMask.nonzeroBitCount }
+            .reduce(0, +)
+
+#else
         return sysconf(CInt(_SC_NPROCESSORS_ONLN))
+#endif
     }
 
     /// A utility function that enumerates the available network interfaces on this machine.
