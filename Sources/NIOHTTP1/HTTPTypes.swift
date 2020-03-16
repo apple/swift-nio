@@ -476,6 +476,21 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     }
 }
 
+extension HTTPHeaders {
+
+    /// The total number of headers that can be contained without allocating new storage.
+    public var capacity: Int {
+        return self.headers.capacity
+    }
+
+    /// Reserves enough space to store the specified number of headers.
+    ///
+    /// - Parameter minimumCapacity: The requested number of headers to store.
+    public mutating func reserveCapacity(_ minimumCapacity: Int) {
+        self.headers.reserveCapacity(minimumCapacity)
+    }
+}
+
 extension ByteBuffer {
 
     /// Serializes this HTTP header block to bytes suitable for writing to the wire.

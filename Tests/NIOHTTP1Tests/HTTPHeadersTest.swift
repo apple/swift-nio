@@ -357,4 +357,20 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertEqual(["bazzy"], fooBarHeaders["baz"])
         XCTAssertEqual(.unknown, fooBarHeaders.keepAliveState)
     }
+
+    func testCapacity() {
+        // no headers
+        var headers = HTTPHeaders()
+        XCTAssertEqual(headers.capacity, 0)
+        // reserve capacity
+        headers.reserveCapacity(5)
+        XCTAssertEqual(headers.capacity, 5)
+
+        // initialize with some headers
+        headers = HTTPHeaders([("foo", "bar")])
+        XCTAssertEqual(headers.capacity, 1)
+        // reserve more capacity
+        headers.reserveCapacity(4)
+        XCTAssertEqual(headers.capacity, 4)
+    }
 }
