@@ -72,7 +72,7 @@ public enum System {
                                capacity: dwSLPICount)
 
         let bResult: Bool = GetLogicalProcessorInformation(pSLPI, &dwLength)
-        assert(bResult, "GetLogicalProcessorInformation: \(GetLastError())")
+        precondition(bResult, "GetLogicalProcessorInformation: \(GetLastError())")
 
         return UnsafeBufferPointer<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>(start: pSLPI,
                                                                          count: dwSLPICount)
