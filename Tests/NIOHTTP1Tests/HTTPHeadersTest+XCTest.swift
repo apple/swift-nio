@@ -51,6 +51,7 @@ extension HTTPHeadersTest {
                 ("testWeDefaultToCloseIfDoesNotMakeSense", testWeDefaultToCloseIfDoesNotMakeSense),
                 ("testAddingSequenceOfPairs", testAddingSequenceOfPairs),
                 ("testAddingOtherHTTPHeader", testAddingOtherHTTPHeader),
+                ("testCapacity", testCapacity),
            ]
    }
 }

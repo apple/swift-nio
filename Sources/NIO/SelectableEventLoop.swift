@@ -18,13 +18,13 @@ import NIOConcurrencyHelpers
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
-    #if os(Linux)
-    return try execute()
-    #else
+#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
     return try autoreleasepool {
         try execute()
     }
-    #endif
+#else
+    return try execute()
+#endif
 }
 
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
