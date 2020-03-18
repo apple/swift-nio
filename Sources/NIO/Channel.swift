@@ -350,13 +350,6 @@ public enum ChannelError: Error {
 
 extension ChannelError: Equatable { }
 
-/// `NIOFailedToSetSocketNonBlockingError` indicates that NIO was unable to set a socket to non-blocking mode, either
-/// when connecting a socket as a client or when accepting a socket as a server.
-///
-/// This error should never happen because a socket should always be able to be set to non-blocking mode. Unfortunately,
-/// we have seen this happen on Darwin.
-public struct NIOFailedToSetSocketNonBlockingError: Error {}
-
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
 

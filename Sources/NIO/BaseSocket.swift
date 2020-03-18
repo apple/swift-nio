@@ -206,19 +206,12 @@ extension sockaddr_storage {
 /// Base class for sockets.
 ///
 /// This should not be created directly but one of its sub-classes should be used, like `ServerSocket` or `Socket`.
-class BaseSocket: Selectable, BaseSocketProtocol {
+class BaseSocket: BaseSocketProtocol {
     typealias SelectableType = BaseSocket
 
     private var descriptor: CInt
     public var isOpen: Bool {
         return descriptor >= 0
-    }
-
-    func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
-        guard self.isOpen else {
-            throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
-        }
-        return try body(descriptor)
     }
 
     /// Returns the local bound `SocketAddress` of the socket.
@@ -244,8 +237,8 @@ class BaseSocket: Selectable, BaseSocketProtocol {
         try addr.withMutableSockAddr { addressPtr, size in
             var size = socklen_t(size)
 
-            try withUnsafeFileDescriptor { fd in
-                try body(fd, addressPtr, &size)
+            try self.withUnsafeHandle {
+                try body($0, addressPtr, &size)
             }
         }
         return addr.convert()
@@ -272,7 +265,7 @@ class BaseSocket: Selectable, BaseSocketProtocol {
         #if !os(Linux)
         if setNonBlocking {
             do {
-                try BaseSocket.setNonBlocking(fileDescriptor: sock)
+                try Posix.setNonBlocking(socket: sock)
             } catch {
                 // best effort close
                 try? Posix.close(descriptor: sock)
@@ -325,8 +318,8 @@ class BaseSocket: Selectable, BaseSocketProtocol {
     ///
     /// throws: An `IOError` if the operation failed.
     final func setNonBlocking() throws {
-        return try withUnsafeFileDescriptor { fd in
-            try BaseSocket.setNonBlocking(fileDescriptor: fd)
+        return try self.withUnsafeHandle {
+            try Posix.setNonBlocking(socket: $0)
         }
     }
 
@@ -345,11 +338,11 @@ class BaseSocket: Selectable, BaseSocketProtocol {
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
             return
         }
-        return try withUnsafeFileDescriptor { fd in
+        return try self.withUnsafeHandle {
             var val = value
 
             try Posix.setsockopt(
-                socket: fd,
+                socket: $0,
                 level: level,
                 optionName: name,
                 optionValue: &val,
@@ -366,7 +359,7 @@ class BaseSocket: Selectable, BaseSocketProtocol {
     ///     - name: The name of the option to set.
     /// - throws: An `IOError` if the operation failed.
     final func getOption<T>(level: Int32, name: Int32) throws -> T {
-        return try withUnsafeFileDescriptor { fd in
+        return try self.withUnsafeHandle { fd in
             var length = socklen_t(MemoryLayout<T>.size)
             let storage = UnsafeMutableRawBufferPointer.allocate(byteCount: MemoryLayout<T>.stride,
                                                                  alignment: MemoryLayout<T>.alignment)
@@ -390,7 +383,7 @@ class BaseSocket: Selectable, BaseSocketProtocol {
     ///     - address: The `SocketAddress` to which the socket should be bound.
     /// - throws: An `IOError` if the operation failed.
     final func bind(to address: SocketAddress) throws {
-        try withUnsafeFileDescriptor { fd in
+        try self.withUnsafeHandle { fd in
             func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
                 try Posix.bind(descriptor: fd, ptr: ptr, bytes: bytes)
             }
@@ -425,10 +418,19 @@ class BaseSocket: Selectable, BaseSocketProtocol {
     ///
     /// - throws: An `IOError` if the operation failed.
     final func takeDescriptorOwnership() throws -> CInt {
-        return try withUnsafeFileDescriptor { fd in
+        return try self.withUnsafeHandle {
             self.descriptor = -1
-            return fd
+            return $0
         }
+    }
+}
+
+extension BaseSocket: Selectable {
+    func withUnsafeHandle<T>(_ body: (CInt) throws -> T) throws -> T {
+        guard self.isOpen else {
+            throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
+        }
+        return try body(self.descriptor)
     }
 }
 

@@ -538,6 +538,29 @@ internal enum Posix {
     }
 }
 
+/// `NIOFailedToSetSocketNonBlockingError` indicates that NIO was unable to set a socket to non-blocking mode, either
+/// when connecting a socket as a client or when accepting a socket as a server.
+///
+/// This error should never happen because a socket should always be able to be set to non-blocking mode. Unfortunately,
+/// we have seen this happen on Darwin.
+public struct NIOFailedToSetSocketNonBlockingError: Error {}
+
+internal extension Posix {
+    static func setNonBlocking(socket: CInt) throws {
+        let flags = try Posix.fcntl(descriptor: socket, command: F_GETFL, value: 0)
+        do {
+            let ret = try Posix.fcntl(descriptor: socket, command: F_SETFL, value: flags | O_NONBLOCK)
+            assert(ret == 0, "unexpectedly, fcntl(\(socket), F_SETFL, \(flags) | O_NONBLOCK) returned \(ret)")
+        } catch let error as IOError {
+            if error.errnoCode == EINVAL {
+                // Darwin seems to sometimes do this despite the docs claiming it can't happen
+                throw NIOFailedToSetSocketNonBlockingError()
+            }
+            throw error
+        }
+    }
+}
+
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 internal enum KQueue {
 

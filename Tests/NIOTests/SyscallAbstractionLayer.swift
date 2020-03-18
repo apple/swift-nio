@@ -285,7 +285,7 @@ class HookedSocket: Socket, UserKernelInterface {
     }
 
     override func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
-        return try self.withUnsafeFileDescriptor { fd in
+        return try self.withUnsafeHandle { fd in
             var buffer = ByteBufferAllocator().buffer(capacity: pointer.count)
             buffer.writeBytes(pointer)
             try self.userToKernel.waitForEmptyAndSet(.write(fd, buffer))
@@ -299,7 +299,7 @@ class HookedSocket: Socket, UserKernelInterface {
     }
 
     override func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
-        return try self.withUnsafeFileDescriptor { fd in
+        return try self.withUnsafeHandle { fd in
             let buffers = iovecs.map { iovec -> ByteBuffer in
                 var buffer = ByteBufferAllocator().buffer(capacity: iovec.iov_len)
                 buffer.writeBytes(UnsafeRawBufferPointer(start: iovec.iov_base, count: iovec.iov_len))
