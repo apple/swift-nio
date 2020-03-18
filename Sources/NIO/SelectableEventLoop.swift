@@ -115,13 +115,19 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    @usableFromInline
-    internal var _validExternalStateToScheduleTasks: Bool {
+    // access with `externalStateLock` held
+    private var validExternalStateToScheduleTasks: Bool {
         switch self.externalState {
         case .open, .closing:
             return true
         case .closed, .reclaimingResources, .resourcesReclaimed:
             return false
+        }
+    }
+
+    internal var testsOnly_validExternalStateToScheduleTasks: Bool {
+        return self.externalStateLock.withLock {
+            return self.validExternalStateToScheduleTasks
         }
     }
 
@@ -261,7 +267,7 @@ internal final class SelectableEventLoop: EventLoop {
             }
         } else {
             self.externalStateLock.withLockVoid {
-                guard self._validExternalStateToScheduleTasks else {
+                guard self.validExternalStateToScheduleTasks else {
                     print("ERROR: Cannot schedule tasks on an EventLoop that has already shut down. " +
                           "This will be upgraded to a forced crash in future SwiftNIO versions.")
                     return
