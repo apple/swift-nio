@@ -218,7 +218,7 @@ class BootstrapTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        func restrictBootstrapType(clientBootstrap: NIOTCPClientBootstrap) throws {
+        func restrictBootstrapType(clientBootstrap: NIOClientTCPBootstrap) throws {
             let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -246,11 +246,8 @@ class BootstrapTest: XCTestCase {
                                                                 on: group.next()).wait())
         }
 
-        if let bootstrap = group.makeTCPClientBootstrap() {
-            try restrictBootstrapType(clientBootstrap: bootstrap)
-        } else {
-            XCTFail("Did not generate a valid Bootstrap")
-        }
+        let bootstrap = NIOClientTCPBootstrap(ClientBootstrap(group: group), tls: NIOInsecureNoTLS())
+        try restrictBootstrapType(clientBootstrap: bootstrap)
     }
     
     func testServerBootstrapBindTimeout() throws {
