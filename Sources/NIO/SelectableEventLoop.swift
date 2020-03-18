@@ -254,15 +254,18 @@ internal final class SelectableEventLoop: EventLoop {
     internal func _schedule0(_ task: ScheduledTask) throws {
         if self.inEventLoop {
             precondition(self._validInternalStateToScheduleTasks,
-                "cannot schedule tasks on an EventLoop that has already shut down")
+                         "BUG IN NIO (please report): EventLoop is shutdown, yet we're on the EventLoop.")
 
             self._tasksLock.withLockVoid {
                 self._scheduledTasks.push(task)
             }
         } else {
             self.externalStateLock.withLockVoid {
-                precondition(self._validExternalStateToScheduleTasks,
-                    "cannot schedule tasks on an EventLoop that has already shut down")
+                guard self._validExternalStateToScheduleTasks else {
+                    print("ERROR: Cannot schedule tasks on an EventLoop that has already shut down. " +
+                          "This will be upgraded to a forced crash in future SwiftNIO versions.")
+                    return
+                }
 
                 self._tasksLock.withLockVoid {
                     self._scheduledTasks.push(task)
