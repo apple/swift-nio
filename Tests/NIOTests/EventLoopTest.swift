@@ -1074,15 +1074,15 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try elg.syncShutdownGracefully())
         }
         let loop = elg.next() as! SelectableEventLoop
-        XCTAssertTrue(loop._validInternalStateToScheduleTasks)
-        XCTAssertTrue(loop._validExternalStateToScheduleTasks)
+        XCTAssertTrue(loop.testsOnly_validExternalStateToScheduleTasks)
+        XCTAssertTrue(loop.testsOnly_validExternalStateToScheduleTasks)
     }
 
     func testSafeToExecuteFalse() {
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let loop = elg.next() as! SelectableEventLoop
         try? elg.syncShutdownGracefully()
-        XCTAssertFalse(loop._validInternalStateToScheduleTasks)
-        XCTAssertFalse(loop._validExternalStateToScheduleTasks)
+        XCTAssertFalse(loop.testsOnly_validExternalStateToScheduleTasks)
+        XCTAssertFalse(loop.testsOnly_validExternalStateToScheduleTasks)
     }
 }

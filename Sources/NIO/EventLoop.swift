@@ -691,47 +691,6 @@ extension EventLoopGroup {
     }
 }
 
-/// The default, non-functional implementation used to encourage EventLoopGroup implementations to conform to `NIOTCPClientBootstrap`.
-internal struct CannotBootstrap: NIOTCPClientBootstrap {
-    /// Thrown when an EventLoopGroup has not implemented `NIOTCPClientBootstrap` properly.
-    public struct CannotBootstrapError: Error {
-        let message: String
-
-        public init(_ message: String) {
-            self.message = message
-        }
-    }
-
-    let group: EventLoopGroup
-
-    init(group: EventLoopGroup) {
-        self.group = group
-    }
-
-    func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> CannotBootstrap {
-        return self
-    }
-
-    func channelOption<Option>(_ option: Option, value: Option.Value) -> CannotBootstrap where Option : ChannelOption {
-        return self
-    }
-
-    func connectTimeout(_ timeout: TimeAmount) -> CannotBootstrap {
-        return self
-    }
-
-    func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
-        return self.group.next().makeFailedFuture(CannotBootstrapError(#"Your EventLoopGroup of type \#(type(of: self)) is not compatible with "NIOTCPClientBootstrap", please implement "public func makeTCPClientBootstrap() -> NIOTCPClientBootstrap" "#))
-    }
-}
-
-internal extension EventLoopGroup {
-    /// If implemented, this provides the corresponding `Bootstrap` to create the `Channel` associated with this `EventLoopGroup`
-    func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
-        return CannotBootstrap(group: self)
-    }
-}
-
 private let nextEventLoopGroupID = NIOAtomic.makeAtomic(value: 0)
 
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
@@ -837,11 +796,6 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             idx += 1
             return ev
         }
-    }
-
-    /// Provide a `ClientBootstrap` to setup this `MultiThreadedEventLoopGroup` with a `SocketChannel`.
-    internal func makeTCPClientBootstrap() -> NIOTCPClientBootstrap? {
-        return ClientBootstrap(group: self)
     }
 
     /// Returns the `EventLoop` for the calling thread.
