@@ -59,6 +59,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(CircularBufferTests.allTests),
              testCase(CodableByteBufferTest.allTests),
              testCase(CustomChannelTests.allTests),
+             testCase(Data_ByteBuffer_Tests.allTests),
              testCase(DatagramChannelTests.allTests),
              testCase(EchoServerClientTest.allTests),
              testCase(EmbeddedChannelTest.allTests),
