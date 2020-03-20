@@ -2663,7 +2663,6 @@ extension ByteBufferTest {
         let testString = "some sample data"
         let buffer = ByteBuffer(ByteBufferView(testString.utf8))
         XCTAssertEqual(String(from: buffer), testString)
-        XCTAssertEqual(buffer.readableBytes, 0)
     }
     
 }
