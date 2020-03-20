@@ -43,6 +43,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(AcceptBackoffHandlerTest.allTests),
              testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
              testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
+             testCase(Array_UInt8_ByteBuffer_Tests.allTests),
              testCase(Base64Test.allTests),
              testCase(BaseObjectTest.allTests),
              testCase(BlockingIOThreadPoolTest.allTests),
