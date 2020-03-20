@@ -56,8 +56,8 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
         switch clientResponse {
         case .head(let responseHead):
             print("Received status: \(responseHead.status)")
-        case .body(var byteBuffer):
-            let string = String(from: &byteBuffer)
+        case .body(let byteBuffer):
+            let string = String(from: byteBuffer)
             print("Received: '\(string)' back from the server.")
         case .end:
             print("Closing channel.")

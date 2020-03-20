@@ -2644,3 +2644,26 @@ extension ByteBuffer {
         return pointer
     }
 }
+
+// MARK: - Array init
+extension ByteBufferTest {
+    
+    func testCreateArrayFromBuffer() {
+        let testString = "some sample data"
+        let buffer = ByteBuffer(ByteBufferView(testString.utf8))
+        XCTAssertEqual(Array(from: buffer), Array(testString.utf8))
+    }
+    
+}
+
+// MARK: - String init
+extension ByteBufferTest {
+    
+    func testCreateStringFromBuffer() {
+        let testString = "some sample data"
+        let buffer = ByteBuffer(ByteBufferView(testString.utf8))
+        XCTAssertEqual(String(from: buffer), testString)
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+    
+}

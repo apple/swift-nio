@@ -212,3 +212,14 @@ extension ByteBufferView: DataProtocol {
 }
 
 extension ByteBufferView: MutableDataProtocol {}
+
+// MARK: - Data
+extension Data {
+    
+    /// Creates a `Data` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
+    /// - parameter buffer: The buffer to read.
+    public init(from buffer: inout ByteBuffer) {
+        self = Data(buffer.readBytes(length: buffer.readableBytes)!)
+    }
+    
+}

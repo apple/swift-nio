@@ -265,9 +265,9 @@ private final class TestHTTPHandler: ChannelInboundHandler {
                 self.responsePromise.fail(ResponseError.badStatus)
                 return
             }
-        case .body(var byteBuffer):
+        case .body(let byteBuffer):
             // We're using AggregateBodyHandler so we see all the body content at once
-            let string = String(from: &byteBuffer)
+            let string = String(from: byteBuffer)
             self.responsePromise.succeed(string)
         case .end:
             context.close(promise: nil)

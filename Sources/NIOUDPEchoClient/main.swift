@@ -52,12 +52,12 @@ private final class EchoHandler: ChannelInboundHandler {
     
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let envelope = self.unwrapInboundIn(data)
-        var byteBuffer = envelope.data
+        let byteBuffer = envelope.data
         
         self.numBytes -= byteBuffer.readableBytes
         
         if self.numBytes <= 0 {
-            let string = String(from: &byteBuffer)
+            let string = String(from: byteBuffer)
             print("Received: '\(string)' back from the server, closing channel.")
         }
     }
