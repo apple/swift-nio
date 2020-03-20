@@ -106,6 +106,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(SocketChannelTest.allTests),
              testCase(SocketOptionProviderTest.allTests),
              testCase(StreamChannelTest.allTests),
+             testCase(String_ByteBuffer_Tests.allTests),
              testCase(SystemTest.allTests),
              testCase(ThreadTest.allTests),
              testCase(TypeAssistedChannelHandlerTest.allTests),
