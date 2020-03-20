@@ -57,11 +57,8 @@ private final class HTTPEchoHandler: ChannelInboundHandler {
         case .head(let responseHead):
             print("Received status: \(responseHead.status)")
         case .body(var byteBuffer):
-            if let string = byteBuffer.readString(length: byteBuffer.readableBytes) {
-                print("Received: '\(string)' back from the server.")
-            } else {
-                print("Received the line back from the server.")
-            }
+            let string = String(from: &byteBuffer)
+            print("Received: '\(string)' back from the server.")
         case .end:
             print("Closing channel.")
             context.close(promise: nil)

@@ -267,11 +267,8 @@ private final class TestHTTPHandler: ChannelInboundHandler {
             }
         case .body(var byteBuffer):
             // We're using AggregateBodyHandler so we see all the body content at once
-            if let response = byteBuffer.readString(length: byteBuffer.readableBytes) {
-                self.responsePromise.succeed(response)
-            } else {
-                self.responsePromise.fail(ResponseError.missingResponse)
-            }
+            let string = String(from: &byteBuffer)
+            self.responsePromise.succeed(string)
         case .end:
             context.close(promise: nil)
         }
