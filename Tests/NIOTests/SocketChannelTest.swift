@@ -329,7 +329,7 @@ public final class SocketChannelTest : XCTestCase {
 
         let serverSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
-        let serverChannelFuture = try serverSock.withUnsafeFileDescriptor {
+        let serverChannelFuture = try serverSock.withUnsafeHandle {
             ServerBootstrap(group: group).withBoundSocket(descriptor: dup($0))
         }
         try serverSock.close()
@@ -338,7 +338,7 @@ public final class SocketChannelTest : XCTestCase {
         let clientSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM)
         let connected = try clientSock.connect(to: serverChannel.localAddress!)
         XCTAssertEqual(connected, true)
-        let clientChannelFuture = try clientSock.withUnsafeFileDescriptor {
+        let clientChannelFuture = try clientSock.withUnsafeHandle {
             ClientBootstrap(group: group).withConnectedSocket(descriptor: dup($0))
         }
         try clientSock.close()
@@ -356,7 +356,7 @@ public final class SocketChannelTest : XCTestCase {
 
         let serverSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
-        let serverChannelFuture = try serverSock.withUnsafeFileDescriptor {
+        let serverChannelFuture = try serverSock.withUnsafeHandle {
             DatagramBootstrap(group: group).withBoundSocket(descriptor: dup($0))
         }
         try serverSock.close()
@@ -523,14 +523,14 @@ public final class SocketChannelTest : XCTestCase {
 
     func testSocketFlagNONBLOCKWorks() throws {
         var socket = try assertNoThrowWithValue(try ServerSocket(protocolFamily: PF_INET, setNonBlocking: true))
-        XCTAssertNoThrow(try socket.withUnsafeFileDescriptor { fd in
+        XCTAssertNoThrow(try socket.withUnsafeHandle { fd in
             let flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
             XCTAssertEqual(O_NONBLOCK, flags & O_NONBLOCK)
         })
         XCTAssertNoThrow(try socket.close())
 
         socket = try assertNoThrowWithValue(ServerSocket(protocolFamily: PF_INET, setNonBlocking: false))
-        XCTAssertNoThrow(try socket.withUnsafeFileDescriptor { fd in
+        XCTAssertNoThrow(try socket.withUnsafeHandle { fd in
             var flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
             XCTAssertEqual(0, flags & O_NONBLOCK)
             let ret = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_SETFL, value: flags | O_NONBLOCK))
@@ -638,13 +638,13 @@ public final class SocketChannelTest : XCTestCase {
                                                   type: Posix.SOCK_STREAM,
                                                   setNonBlocking: false))
         // check initial flags
-        XCTAssertNoThrow(try s.withUnsafeFileDescriptor { fd in
+        XCTAssertNoThrow(try s.withUnsafeHandle { fd in
             let flags = try Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0)
             XCTAssertEqual(0, flags & O_NONBLOCK)
         })
 
         // set other random flag
-        XCTAssertNoThrow(try s.withUnsafeFileDescriptor { fd in
+        XCTAssertNoThrow(try s.withUnsafeHandle { fd in
             let oldFlags = try Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0)
             let ret = try Posix.fcntl(descriptor: fd, command: F_SETFL, value: oldFlags | O_ASYNC)
             XCTAssertEqual(0, ret)
@@ -656,7 +656,7 @@ public final class SocketChannelTest : XCTestCase {
         XCTAssertNoThrow(try s.setNonBlocking())
 
         // check both are enabled
-        XCTAssertNoThrow(try s.withUnsafeFileDescriptor { fd in
+        XCTAssertNoThrow(try s.withUnsafeHandle { fd in
             let flags = try Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0)
             XCTAssertEqual(O_ASYNC, flags & O_ASYNC)
             XCTAssertEqual(O_NONBLOCK, flags & O_NONBLOCK)

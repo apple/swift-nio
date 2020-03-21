@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,12 +12,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// Represents a selectable resource which can be registered to a `Selector` to
-/// be notified once there are some events ready for it.
-///
-/// - warning:
-///     `Selectable`s are not thread-safe, only to be used on the appropriate
-///     `EventLoop`.
-protocol Selectable {
-    func withUnsafeHandle<T>(_: (CInt) throws -> T) throws -> T
-}
+#include "CNIOWindows.h"

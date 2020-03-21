@@ -108,6 +108,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(SystemTest.allTests),
              testCase(ThreadTest.allTests),
              testCase(TypeAssistedChannelHandlerTest.allTests),
+             testCase(UniversalBootstrapSupportTest.allTests),
              testCase(UtilitiesTest.allTests),
              testCase(WebSocketClientEndToEndTests.allTests),
              testCase(WebSocketFrameDecoderTest.allTests),

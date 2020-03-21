@@ -115,13 +115,19 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    @usableFromInline
-    internal var _validExternalStateToScheduleTasks: Bool {
+    // access with `externalStateLock` held
+    private var validExternalStateToScheduleTasks: Bool {
         switch self.externalState {
         case .open, .closing:
             return true
         case .closed, .reclaimingResources, .resourcesReclaimed:
             return false
+        }
+    }
+
+    internal var testsOnly_validExternalStateToScheduleTasks: Bool {
+        return self.externalStateLock.withLock {
+            return self.validExternalStateToScheduleTasks
         }
     }
 
@@ -149,11 +155,6 @@ internal final class SelectableEventLoop: EventLoop {
         _storageRefs.deallocate()
         _msgs.deallocate()
         _addresses.deallocate()
-    }
-
-    /// Provide a valid `ClientBootstrap` to setup this `SelectableEventLoop` with a `SocketChannel`.
-    internal func makeTCPClientBootstrap() -> NIOTCPClientBootstrap {
-        return ClientBootstrap(group: self)
     }
 
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
@@ -259,15 +260,18 @@ internal final class SelectableEventLoop: EventLoop {
     internal func _schedule0(_ task: ScheduledTask) throws {
         if self.inEventLoop {
             precondition(self._validInternalStateToScheduleTasks,
-                "cannot schedule tasks on an EventLoop that has already shut down")
+                         "BUG IN NIO (please report): EventLoop is shutdown, yet we're on the EventLoop.")
 
             self._tasksLock.withLockVoid {
                 self._scheduledTasks.push(task)
             }
         } else {
             self.externalStateLock.withLockVoid {
-                precondition(self._validExternalStateToScheduleTasks,
-                    "cannot schedule tasks on an EventLoop that has already shut down")
+                guard self.validExternalStateToScheduleTasks else {
+                    print("ERROR: Cannot schedule tasks on an EventLoop that has already shut down. " +
+                          "This will be upgraded to a forced crash in future SwiftNIO versions.")
+                    return
+                }
 
                 self._tasksLock.withLockVoid {
                     self._scheduledTasks.push(task)

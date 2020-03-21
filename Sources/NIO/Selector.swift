@@ -409,9 +409,9 @@ internal class Selector<R: Registration> {
         assert(interested.contains(.reset))
         assert(oldInterested?.contains(.reset) ?? true)
 
-        try selectable.withUnsafeFileDescriptor { fd in
+        try selectable.withUnsafeHandle {
             try newKQueueFilters.calculateKQueueFilterSetChanges(previousKQueueFilterSet: oldKQueueFilters,
-                                                                 fileDescriptor: fd,
+                                                                 fileDescriptor: $0,
                                                                  kqueueApplyEventChangeSet)
         }
     }
@@ -430,7 +430,7 @@ internal class Selector<R: Registration> {
             throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
         }
 
-        try selectable.withUnsafeFileDescriptor { fd in
+        try selectable.withUnsafeHandle { fd in
             assert(registrations[Int(fd)] == nil)
             #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
                 try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil)
@@ -456,7 +456,7 @@ internal class Selector<R: Registration> {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
         assert(interested.contains(.reset), "must register for at least .reset but tried registering for \(interested)")
-        try selectable.withUnsafeFileDescriptor { fd in
+        try selectable.withUnsafeHandle { fd in
             var reg = registrations[Int(fd)]!
 
             #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
@@ -486,7 +486,7 @@ internal class Selector<R: Registration> {
         }
         // temporary workaround to stop us delivering outdated events
         self.deregistrationsHappened = true
-        try selectable.withUnsafeFileDescriptor { fd in
+        try selectable.withUnsafeHandle { fd in
             guard let reg = registrations.removeValue(forKey: Int(fd)) else {
                 return
             }
