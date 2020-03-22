@@ -39,6 +39,7 @@ let package = Package(
 )
 EOF
     cp "$here/../../Tests/NIOTests/SystemCallWrapperHelpers.swift" \
+        "$here/../../Sources/NIO/BSDSocketAPI.swift" \
         "$here/../../Sources/NIO/System.swift" \
         "$here/../../Sources/NIO/IO.swift" \
         "$tmpdir/syscallwrapper/Sources/syscallwrapper"

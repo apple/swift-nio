@@ -36,7 +36,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     private var connectTimeout: TimeAmount? = nil
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
-        let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+        let socket = try Socket(protocolFamily: protocolFamily, type: .stream, setNonBlocking: true)
         try super.init(socket: socket, parent: nil, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
@@ -362,7 +362,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
         self.vectorReadManager = nil
-        let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_DGRAM)
+        let socket = try Socket(protocolFamily: protocolFamily, type: .dgram)
         do {
             try socket.setNonBlocking()
         } catch let err {

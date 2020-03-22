@@ -40,6 +40,9 @@ import let WinSDK.SO_RCVBUF
 import let WinSDK.SO_RCVTIMEO
 import let WinSDK.SO_REUSEADDR
 import let WinSDK.SO_REUSE_UNICASTPORT
+
+import let WinSDK.SOCK_DGRAM
+import let WinSDK.SOCK_STREAM
 #elseif os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
 import Darwin
 #else
@@ -47,6 +50,23 @@ import Glibc
 #endif
 
 public enum NIOBSDSocket {
+}
+
+extension NIOBSDSocket {
+    /// Specifies the type of socket.
+    internal struct SocketType: RawRepresentable {
+        public typealias RawValue = CInt
+        public var rawValue: RawValue
+        public init(rawValue: RawValue) {
+            self.rawValue = rawValue
+        }
+    }
+}
+
+extension NIOBSDSocket.SocketType: Equatable {
+}
+
+extension NIOBSDSocket.SocketType: Hashable {
 }
 
 extension NIOBSDSocket {
@@ -81,6 +101,29 @@ extension NIOBSDSocket.Option: Equatable {
 }
 
 extension NIOBSDSocket.Option: Hashable {
+}
+
+// Socket Types
+extension NIOBSDSocket.SocketType {
+    /// Supports datagrams, which are connectionless, unreliable messages of a
+    /// fixed (typically small) maximum length.
+    #if os(Linux)
+        internal static let dgram: NIOBSDSocket.SocketType =
+                NIOBSDSocket.SocketType(rawValue: CInt(SOCK_DGRAM.rawValue))
+    #else
+        internal static let dgram: NIOBSDSocket.SocketType =
+                NIOBSDSocket.SocketType(rawValue: SOCK_DGRAM)
+    #endif
+
+    /// Supports reliable, two-way, connection-based byte streams without
+    /// duplication of data and without preservation of boundaries.
+    #if os(Linux)
+        internal static let stream: NIOBSDSocket.SocketType =
+                NIOBSDSocket.SocketType(rawValue: CInt(SOCK_STREAM.rawValue))
+    #else
+        internal static let stream: NIOBSDSocket.SocketType =
+                NIOBSDSocket.SocketType(rawValue: SOCK_STREAM)
+    #endif
 }
 
 // Option Level

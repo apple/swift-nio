@@ -220,7 +220,7 @@ public final class SocketChannelTest : XCTestCase {
             private let promise: EventLoopPromise<Void>
             init(promise: EventLoopPromise<Void>) throws {
                 self.promise = promise
-                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+                try super.init(protocolFamily: PF_INET, type: .stream)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -327,7 +327,7 @@ public final class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM)
+        let serverSock = try Socket(protocolFamily: AF_INET, type: .stream)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
             ServerBootstrap(group: group).withBoundSocket(descriptor: dup($0))
@@ -335,7 +335,7 @@ public final class SocketChannelTest : XCTestCase {
         try serverSock.close()
         let serverChannel = try serverChannelFuture.wait()
 
-        let clientSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM)
+        let clientSock = try Socket(protocolFamily: AF_INET, type: .stream)
         let connected = try clientSock.connect(to: serverChannel.localAddress!)
         XCTAssertEqual(connected, true)
         let clientChannelFuture = try clientSock.withUnsafeHandle {
@@ -354,7 +354,7 @@ public final class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
+        let serverSock = try Socket(protocolFamily: AF_INET, type: .dgram)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
             DatagramBootstrap(group: group).withBoundSocket(descriptor: dup($0))
@@ -417,7 +417,7 @@ public final class SocketChannelTest : XCTestCase {
             let promise: EventLoopPromise<Void>
             init(promise: EventLoopPromise<Void>) throws {
                 self.promise = promise
-                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+                try super.init(protocolFamily: PF_INET, type: .stream)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -585,7 +585,7 @@ public final class SocketChannelTest : XCTestCase {
                 .wait())
 
             // Make a client socket to mess with the server. Setting SO_LINGER forces RST instead of FIN.
-            let clientSocket = try assertNoThrowWithValue(Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM))
+            let clientSocket = try assertNoThrowWithValue(Socket(protocolFamily: AF_INET, type: .stream))
             XCTAssertNoThrow(try clientSocket.setOption(level: .socket, name: .linger, value: linger(l_onoff: 1, l_linger: 0)))
             XCTAssertNoThrow(try clientSocket.connect(to: serverChannel.localAddress!))
             XCTAssertNoThrow(try clientSocket.close())
@@ -635,7 +635,7 @@ public final class SocketChannelTest : XCTestCase {
 
     func testSetSockOptDoesNotOverrideExistingFlags() throws {
         let s = try assertNoThrowWithValue(Socket(protocolFamily: PF_INET,
-                                                  type: Posix.SOCK_STREAM,
+                                                  type: .stream,
                                                   setNonBlocking: false))
         // check initial flags
         XCTAssertNoThrow(try s.withUnsafeHandle { fd in
@@ -675,7 +675,7 @@ public final class SocketChannelTest : XCTestCase {
                     throw NIOFailedToSetSocketNonBlockingError()
                 } else {
                     return try Socket(protocolFamily: PF_INET,
-                                      type: Posix.SOCK_STREAM,
+                                      type: .stream,
                                       setNonBlocking: false)
                 }
             }

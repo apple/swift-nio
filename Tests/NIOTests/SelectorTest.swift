@@ -37,7 +37,7 @@ class SelectorTest: XCTestCase {
             XCTAssertNoThrow(try selector.close())
         }
 
-        let socket1 = try Socket(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+        let socket1 = try Socket(protocolFamily: PF_INET, type: .stream)
         defer {
             if socket1.isOpen {
                 XCTAssertNoThrow(try socket1.close())
@@ -45,7 +45,7 @@ class SelectorTest: XCTestCase {
         }
         try socket1.setNonBlocking()
 
-        let socket2 = try Socket(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+        let socket2 = try Socket(protocolFamily: PF_INET, type: .stream)
         defer {
             if socket2.isOpen {
                 XCTAssertNoThrow(try socket2.close())
@@ -387,7 +387,7 @@ class SelectorTest: XCTestCase {
         }
         var socketFDs: [CInt] = [-1, -1]
         XCTAssertNoThrow(try Posix.socketpair(domain: PF_LOCAL,
-                                              type: Posix.SOCK_STREAM,
+                                              type: .stream,
                                               protocol: 0,
                                               socketVector: &socketFDs))
 

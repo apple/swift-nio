@@ -530,7 +530,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
         let loop = self.group.next()
-        let connector = HappyEyeballsConnector(resolver: resolver ?? GetaddrinfoResolver(loop: loop, aiSocktype: Posix.SOCK_STREAM, aiProtocol: CInt(IPPROTO_TCP)),
+        let connector = HappyEyeballsConnector(resolver: resolver ?? GetaddrinfoResolver(loop: loop, aiSocktype: .stream, aiProtocol: CInt(IPPROTO_TCP)),
                                                loop: loop,
                                                host: host,
                                                port: port,

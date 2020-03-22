@@ -32,7 +32,7 @@ typealias IOVector = iovec
     ///     - type: The type of the socket to create.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: CInt, type: CInt, setNonBlocking: Bool = false) throws {
+    init(protocolFamily: CInt, type: NIOBSDSocket.SocketType, setNonBlocking: Bool = false) throws {
         let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
         try super.init(descriptor: sock)
     }
