@@ -94,7 +94,7 @@ typealias IOVector = iovec
     ///
     /// - throws: An `IOError` if the operation failed.
     func finishConnect() throws {
-        let result: Int32 = try getOption(level: SOL_SOCKET, name: SO_ERROR)
+        let result: Int32 = try getOption(level: .socket, name: .error)
         if result != 0 {
             throw IOError(errnoCode: result, reason: "finishing a non-blocking connect failed")
         }

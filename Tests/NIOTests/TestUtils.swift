@@ -270,7 +270,7 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
             return addr.addressDescription()
         }
     }
-    let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: Posix.SOCK_STREAM, aiProtocol: Posix.IPPROTO_TCP)
+    let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: Posix.SOCK_STREAM, aiProtocol: CInt(IPPROTO_TCP))
     let ipv6Results = try assertNoThrowWithValue(res.initiateAAAAQuery(host: host, port: 0).wait()).map(printSocketAddress)
     let ipv4Results = try assertNoThrowWithValue(res.initiateAQuery(host: host, port: 0).wait()).map(printSocketAddress)
 
@@ -297,12 +297,9 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
     }
 }
 
-func getBoolSocketOption<IntType: SignedInteger>(channel: Channel, level: IntType, name: SocketOptionName,
-                                                 file: StaticString = #file, line: UInt = #line) throws -> Bool {
-    return try assertNoThrowWithValue(channel.getOption(ChannelOptions.socket(SocketOptionLevel(level),
-                                                                                      name)),
-                                      file: file,
-                                      line: line).wait() != 0
+func getBoolSocketOption(channel: Channel, level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option,
+                         file: StaticString = #file, line: UInt = #line) throws -> Bool {
+    return try assertNoThrowWithValue(channel.getOption(ChannelOptions.Types.SocketOption(level: level, name: name)), file: file, line: line).wait() != 0
 }
 
 func assertSuccess<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
@@ -526,7 +523,7 @@ func withTCPServerChannel<R>(bindTarget: SocketAddress? = nil,
                              line: UInt = #line,
                              _ body: (Channel) throws -> R) throws -> R {
     let server = try ServerBootstrap(group: group)
-        .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
+        .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
         .bind(to: bindTarget ?? .init(ipAddress: "127.0.0.1", port: 0))
         .wait()
     do {

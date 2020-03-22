@@ -161,7 +161,7 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
-    .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
     .channelInitializer { channel in
         
         let httpHandler = HTTPInitialRequestHandler()

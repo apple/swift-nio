@@ -108,7 +108,7 @@ final class DatagramChannelTests: XCTestCase {
 
     private func buildChannel(group: EventLoopGroup) throws -> Channel {
         return try DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
@@ -520,16 +520,16 @@ final class DatagramChannelTests: XCTestCase {
 
     func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
         let channel = try assertNoThrowWithValue(DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_TIMESTAMP), value: 1)
+            .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .channelOption(ChannelOptions.socketOption(.timestamp), value: 1)
             .bind(host: "127.0.0.1", port: 0)
             .wait())
         defer {
             XCTAssertNoThrow(try channel.close().wait())
         }
-        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_REUSEADDR))
-        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_TIMESTAMP))
-        XCTAssertFalse(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_KEEPALIVE))
+        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .reuseaddr))
+        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .timestamp))
+        XCTAssertFalse(try getBoolSocketOption(channel: channel, level: .socket, name: .keepalive))
     }
 
     func testUnprocessedOutboundUserEventFailsOnDatagramChannel() throws {

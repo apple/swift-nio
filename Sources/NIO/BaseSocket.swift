@@ -276,7 +276,7 @@ class BaseSocket: BaseSocketProtocol {
         if protocolFamily == Posix.AF_INET6 {
             var zero: Int32 = 0
             do {
-                try Posix.setsockopt(socket: sock, level: Int32(IPPROTO_IPV6), optionName: IPV6_V6ONLY, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
+                try Posix.setsockopt(socket: sock, level: NIOBSDSocket.OptionLevel.ipv6.rawValue, optionName: NIOBSDSocket.Option.ipv6_v6only.rawValue, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
             } catch let e as IOError {
                 if e.errnoCode != EAFNOSUPPORT {
                     // Ignore error that may be thrown by close.
@@ -332,8 +332,8 @@ class BaseSocket: BaseSocketProtocol {
     ///     - name: The name of the option to set.
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
-    final func setOption<T>(level: Int32, name: Int32, value: T) throws {
-        if level == SocketOptionValue(Posix.IPPROTO_TCP) && name == TCP_NODELAY && (try? self.localAddress().protocolFamily) == Optional<Int32>.some(Int32(Posix.AF_UNIX)) {
+    final func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
+        if level == .tcp && name == .nodelay && (try? self.localAddress().protocolFamily) == Optional<Int32>.some(Int32(Posix.AF_UNIX)) {
             // setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
             return
@@ -343,8 +343,8 @@ class BaseSocket: BaseSocketProtocol {
 
             try Posix.setsockopt(
                 socket: $0,
-                level: level,
-                optionName: name,
+                level: level.rawValue,
+                optionName: name.rawValue,
                 optionValue: &val,
                 optionLen: socklen_t(MemoryLayout.size(ofValue: val)))
         }
@@ -358,7 +358,7 @@ class BaseSocket: BaseSocketProtocol {
     ///     - level: The protocol level (see `man getsockopt`).
     ///     - name: The name of the option to set.
     /// - throws: An `IOError` if the operation failed.
-    final func getOption<T>(level: Int32, name: Int32) throws -> T {
+    final func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T {
         return try self.withUnsafeHandle { fd in
             var length = socklen_t(MemoryLayout<T>.size)
             let storage = UnsafeMutableRawBufferPointer.allocate(byteCount: MemoryLayout<T>.stride,
@@ -372,7 +372,7 @@ class BaseSocket: BaseSocketProtocol {
                 storage.deallocate()
             }
 
-            try Posix.getsockopt(socket: fd, level: level, optionName: name, optionValue: val, optionLen: &length)
+            try Posix.getsockopt(socket: fd, level: level.rawValue, optionName: name.rawValue, optionValue: val, optionLen: &length)
             return val.pointee
         }
     }

@@ -72,17 +72,47 @@ extension ChannelOptions {
         public struct SocketOption: ChannelOption, Equatable {
             public typealias Value = (SocketOptionValue)
 
-            public var level: SocketOptionLevel
-            public var name: SocketOptionName
+            public var optionLevel: NIOBSDSocket.OptionLevel
+            public var optionName: NIOBSDSocket.Option
+
+            public var level: SocketOptionLevel {
+                get {
+                    return SocketOptionLevel(optionLevel.rawValue)
+                }
+                set {
+                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(newValue))
+                }
+            }
+            public var name: SocketOptionName {
+                get {
+                    return SocketOptionName(optionName.rawValue)
+                }
+                set {
+                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(newValue))
+                }
+            }
+
+            #if !os(Windows)
+                /// Create a new `SocketOption`.
+                ///
+                /// - parameters:
+                ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+                ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
+                @available(*, deprecated)
+                public init(level: SocketOptionLevel, name: SocketOptionName) {
+                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
+                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
+                }
+            #endif
 
             /// Create a new `SocketOption`.
             ///
             /// - parameters:
             ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
             ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
-            public init(level: SocketOptionLevel, name: SocketOptionName) {
-                self.level = level
-                self.name = name
+            public init(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) {
+                self.optionLevel = level
+                self.optionName = name
             }
         }
 
@@ -225,9 +255,20 @@ extension ChannelOptions {
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions {
+    #if !os(Windows)
+        public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
+            .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
+        }
+    #endif
+
     /// - seealso: `SocketOption`.
-    public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
-        .init(level: level, name: name)
+    public static let socketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+        .init(level: .socket, name: name)
+    }
+
+    /// - seealso: `SocketOption`.
+    public static let tcpOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+        .init(level: .tcp, name: name)
     }
 
     /// - seealso: `AllocatorOption`.
