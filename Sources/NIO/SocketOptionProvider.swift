@@ -109,11 +109,11 @@ public protocol SocketOptionProvider {
 #if !os(Windows)
     extension SocketOptionProvider {
         func unsafeSetSocketOption<Value>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: Value) -> EventLoopFuture<Void> {
-            return unsafeSetSocketOption(level: SocketOptionLevel(level.rawValue), name: SocketOptionName(name.rawValue), value: value)
+            return self.unsafeSetSocketOption(level: SocketOptionLevel(level.rawValue), name: SocketOptionName(name.rawValue), value: value)
         }
 
         func unsafeGetSocketOption<Value>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) -> EventLoopFuture<Value> {
-            return unsafeGetSocketOption(level: SocketOptionLevel(level.rawValue), name: SocketOptionName(name.rawValue))
+            return self.unsafeGetSocketOption(level: SocketOptionLevel(level.rawValue), name: SocketOptionName(name.rawValue))
         }
     }
 #endif

@@ -85,7 +85,7 @@ extension NIOBSDSocket.Option: Hashable {
 
 // Option Level
 extension NIOBSDSocket.OptionLevel {
-    /// Socket options apply only to IP sockets.
+    /// Socket options that apply only to IP sockets.
     #if os(Linux)
         public static let ip: NIOBSDSocket.OptionLevel =
                 NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_IP))
@@ -94,7 +94,7 @@ extension NIOBSDSocket.OptionLevel {
                 NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IP)
     #endif
 
-    /// Socket options apply only to IPv6 sockets.
+    /// Socket options that apply only to IPv6 sockets.
     #if os(Linux)
         public static let ipv6: NIOBSDSocket.OptionLevel =
                 NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_IPV6))
@@ -106,7 +106,7 @@ extension NIOBSDSocket.OptionLevel {
                 NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IPV6)
     #endif
 
-    /// Socket options apply only to TCP sockets.
+    /// Socket options that apply only to TCP sockets.
     #if os(Linux)
         public static let tcp: NIOBSDSocket.OptionLevel =
                 NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_TCP))
@@ -118,18 +118,18 @@ extension NIOBSDSocket.OptionLevel {
                 NIOBSDSocket.OptionLevel(rawValue: IPPROTO_TCP)
     #endif
 
-    /// Socket options apply to all sockets.
+    /// Socket options that apply to all sockets.
     public static let socket: NIOBSDSocket.OptionLevel =
             NIOBSDSocket.OptionLevel(rawValue: SOL_SOCKET)
 }
 
 // IPv4 Options
 extension NIOBSDSocket.Option {
-    /// Add an IP group membership.
+    /// Add a multicast group membership.
     public static let ip_add_membership: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_ADD_MEMBERSHIP)
 
-    /// Drop an IP group membership.
+    /// Drop a multicast group membership.
     public static let ip_drop_membership: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_DROP_MEMBERSHIP)
 
@@ -137,11 +137,11 @@ extension NIOBSDSocket.Option {
     public static let ip_multicast_if: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_MULTICAST_IF)
 
-    /// An IP multicast loopback.
+    /// Control multicast loopback.
     public static let ip_multicast_loop: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_MULTICAST_LOOP)
 
-    /// An IP multicast time-to-live.
+    /// Control multicast time-to-live.
     public static let ip_multicast_ttl: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_MULTICAST_TTL)
 }
@@ -160,14 +160,13 @@ extension NIOBSDSocket.Option {
     public static let ipv6_multicast_hops: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_HOPS)
 
-    /// Set the interface for outgoign multicast packets.
+    /// Set the interface for outgoing multicast packets.
     public static let ipv6_multicast_if: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_IF)
 
-    /// An IP multicast loopback.
+    /// Control multicast loopback.
     public static let ipv6_multicast_loop: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_LOOP)
-
 
     /// Indicates if a socket created for the `AF_INET6` address family is
     /// restricted to IPv6 only.
@@ -216,7 +215,7 @@ extension NIOBSDSocket.Option {
     public static let rcvbuf: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: SO_RCVBUF)
 
-    /// Specifies the recieve timeout.
+    /// Specifies the receive timeout.
     public static let rcvtimeo: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: SO_RCVTIMEO)
 
