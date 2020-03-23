@@ -264,17 +264,26 @@ public enum SocketAddress: CustomStringConvertible {
     /// - returns: the `SocketAddress` corresponding to this string and port combination.
     /// - throws: may throw `SocketAddressError.failedToParseIPString` if the IP address cannot be parsed.
     public init(ipAddress: String, port: Int) throws {
-        var ipv4Addr = in_addr()
-        var ipv6Addr = in6_addr()
-
         self = try ipAddress.withCString {
-            if inet_pton(NIOBSDSocket.AddressFamily.inet.rawValue, $0, &ipv4Addr) == 1 {
+            do {
+                var ipv4Addr = in_addr()
+                try NIOBSDSocket.inet_pton(af: .inet, src: $0, dst: &ipv4Addr)
+
                 var addr = sockaddr_in()
                 addr.sin_family = sa_family_t(NIOBSDSocket.AddressFamily.inet.rawValue)
                 addr.sin_port = in_port_t(port).bigEndian
                 addr.sin_addr = ipv4Addr
+
                 return .v4(.init(address: addr, host: ""))
-            } else if inet_pton(NIOBSDSocket.AddressFamily.inet6.rawValue, $0, &ipv6Addr) == 1 {
+            } catch {
+                // If `inet_pton` fails as an IPv4 address, we will try as an
+                // IPv6 address.
+            }
+
+            do {
+                var ipv6Addr = in6_addr()
+                try NIOBSDSocket.inet_pton(af: .inet6, src: $0, dst: &ipv6Addr)
+
                 var addr = sockaddr_in6()
                 addr.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
                 addr.sin6_port = in_port_t(port).bigEndian
@@ -282,9 +291,12 @@ public enum SocketAddress: CustomStringConvertible {
                 addr.sin6_addr = ipv6Addr
                 addr.sin6_scope_id = 0
                 return .v6(.init(address: addr, host: ""))
-            } else {
-                throw SocketAddressError.failedToParseIPString(ipAddress)
+            } catch {
+              // If `inet_pton` fails as an IPv6 address (and has failed as an
+              // IPv4 address above), we will throw an error below.
             }
+
+            throw SocketAddressError.failedToParseIPString(ipAddress)
         }
     }
 

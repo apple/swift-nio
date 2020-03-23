@@ -2471,7 +2471,8 @@ public final class ChannelTests: XCTestCase {
                 }
                 try channel.socket.withUnsafeHandle { fd in
                     var pollFd: pollfd = .init(fd: fd, events: Int16(POLLIN), revents: 0)
-                    let nfds = try Posix.poll(fds: &pollFd, nfds: 1, timeout: -1)
+                    let nfds =
+                        try NIOBSDSocket.poll(fds: &pollFd, nfds: 1, timeout: -1)
                     XCTAssertEqual(1, nfds)
                 }
             }
