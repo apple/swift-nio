@@ -149,7 +149,7 @@ class BootstrapTest: XCTestCase {
 
     func testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
         var socketFDs: [CInt] = [-1, -1]
-        XCTAssertNoThrow(try Posix.socketpair(domain: PF_LOCAL,
+        XCTAssertNoThrow(try Posix.socketpair(domain: .local,
                                               type: .stream,
                                               protocol: 0,
                                               socketVector: &socketFDs))
@@ -170,7 +170,7 @@ class BootstrapTest: XCTestCase {
     }
 
     func testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
-        let socket = try Posix.socket(domain: AF_INET, type: .stream, protocol: 0)
+        let socket = try Posix.socket(domain: .inet, type: .stream, protocol: 0)
 
         let serverAddress = try assertNoThrowWithValue(SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0))
         try serverAddress.withSockAddr { serverAddressPtr, size in
@@ -309,7 +309,7 @@ class BootstrapTest: XCTestCase {
     func testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer() {
         XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
             var maybeSocket: Socket? = nil
-            XCTAssertNoThrow(maybeSocket = try Socket(protocolFamily: AF_INET, type: .stream))
+            XCTAssertNoThrow(maybeSocket = try Socket(protocolFamily: .inet, type: .stream))
             XCTAssertNoThrow(XCTAssertEqual(true, try maybeSocket?.connect(to: server.localAddress!)))
             var maybeFD: CInt? = nil
             XCTAssertNoThrow(maybeFD = try maybeSocket?.takeDescriptorOwnership())

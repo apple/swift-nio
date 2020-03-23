@@ -252,7 +252,7 @@ class BaseSocket: BaseSocketProtocol {
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - returns: the file descriptor of the socket that was created.
     /// - throws: An `IOError` if creation of the socket failed.
-    static func makeSocket(protocolFamily: Int32, type: NIOBSDSocket.SocketType, setNonBlocking: Bool = false) throws -> CInt {
+    static func makeSocket(protocolFamily: NIOBSDSocket.ProtocolFamily, type: NIOBSDSocket.SocketType, setNonBlocking: Bool = false) throws -> CInt {
         var sockType: CInt = type.rawValue
         #if os(Linux)
         if setNonBlocking {
@@ -273,7 +273,7 @@ class BaseSocket: BaseSocketProtocol {
             }
         }
         #endif
-        if protocolFamily == Posix.AF_INET6 {
+        if protocolFamily == .inet6 {
             var zero: Int32 = 0
             do {
                 try Posix.setsockopt(socket: sock, level: NIOBSDSocket.OptionLevel.ipv6.rawValue, optionName: NIOBSDSocket.Option.ipv6_v6only.rawValue, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
@@ -333,7 +333,7 @@ class BaseSocket: BaseSocketProtocol {
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
     final func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
-        if level == .tcp && name == .nodelay && (try? self.localAddress().protocolFamily) == Optional<Int32>.some(Int32(Posix.AF_UNIX)) {
+        if level == .tcp && name == .nodelay && (try? self.localAddress().protocol) == Optional<NIOBSDSocket.ProtocolFamily>.some(.unix) {
             // setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
             return

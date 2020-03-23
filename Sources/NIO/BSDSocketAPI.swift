@@ -31,6 +31,10 @@ import let WinSDK.IPV6_MULTICAST_IF
 import let WinSDK.IPV6_MULTICAST_LOOP
 import let WinSDK.IPV6_V6ONLY
 
+import let WinSDK.PF_INET
+import let WinSDK.PF_INET6
+import let WinSDK.PF_UNIX
+
 import let WinSDK.TCP_NODELAY
 
 import let WinSDK.SO_ERROR
@@ -70,6 +74,23 @@ extension NIOBSDSocket.SocketType: Hashable {
 }
 
 extension NIOBSDSocket {
+    /// Specifies the type of protocol that the socket can use.
+    public struct ProtocolFamily: RawRepresentable {
+        public typealias RawValue = CInt
+        public var rawValue: RawValue
+        public init(rawValue: RawValue) {
+            self.rawValue = rawValue
+        }
+    }
+}
+
+extension NIOBSDSocket.ProtocolFamily: Equatable {
+}
+
+extension NIOBSDSocket.ProtocolFamily: Hashable {
+}
+
+extension NIOBSDSocket {
     /// Defines socket option levels.
     public struct OptionLevel: RawRepresentable {
         public typealias RawValue = CInt
@@ -102,6 +123,29 @@ extension NIOBSDSocket.Option: Equatable {
 
 extension NIOBSDSocket.Option: Hashable {
 }
+
+// Protocol Family
+extension NIOBSDSocket.ProtocolFamily {
+    /// IP network 4 protocol.
+    public static let inet: NIOBSDSocket.ProtocolFamily =
+            NIOBSDSocket.ProtocolFamily(rawValue: PF_INET)
+
+    /// IP network 6 protocol.
+    public static let inet6: NIOBSDSocket.ProtocolFamily =
+            NIOBSDSocket.ProtocolFamily(rawValue: PF_INET6)
+
+    /// UNIX local to the host.
+    public static let unix: NIOBSDSocket.ProtocolFamily =
+            NIOBSDSocket.ProtocolFamily(rawValue: PF_UNIX)
+}
+
+#if !os(Windows)
+    extension NIOBSDSocket.ProtocolFamily {
+        /// UNIX local to the host, alias for `PF_UNIX` (`.unix`)
+        public static let local: NIOBSDSocket.ProtocolFamily =
+                NIOBSDSocket.ProtocolFamily(rawValue: PF_LOCAL)
+    }
+#endif
 
 // Socket Types
 extension NIOBSDSocket.SocketType {

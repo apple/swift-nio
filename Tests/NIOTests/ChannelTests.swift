@@ -1108,7 +1108,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let server = try assertNoThrowWithValue(ServerSocket(protocolFamily: PF_INET))
+        let server = try assertNoThrowWithValue(ServerSocket(protocolFamily: .inet))
         defer {
             XCTAssertNoThrow(try server.close())
         }
@@ -1161,7 +1161,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let server = try assertNoThrowWithValue(ServerSocket(protocolFamily: PF_INET))
+        let server = try assertNoThrowWithValue(ServerSocket(protocolFamily: .inet))
         defer {
             XCTAssertNoThrow(try server.close())
         }
@@ -1224,7 +1224,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let server = try assertNoThrowWithValue(ServerSocket(protocolFamily: PF_INET))
+        let server = try assertNoThrowWithValue(ServerSocket(protocolFamily: .inet))
         defer {
             XCTAssertNoThrow(try server.close())
         }
@@ -1851,7 +1851,7 @@ public final class ChannelTests: XCTestCase {
 
     func testChannelReadsDoesNotHappenAfterRegistration() throws {
         class SocketThatSucceedsOnSecondConnectForPort123: Socket {
-            init(protocolFamily: CInt) throws {
+            init(protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
                 try super.init(protocolFamily: protocolFamily, type: .stream, setNonBlocking: true)
             }
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -1905,7 +1905,7 @@ public final class ChannelTests: XCTestCase {
         let serverEL = group.next()
         let clientEL = group.next()
         precondition(serverEL !== clientEL)
-        let sc = try SocketChannel(socket: SocketThatSucceedsOnSecondConnectForPort123(protocolFamily: PF_INET), eventLoop: clientEL as! SelectableEventLoop)
+        let sc = try SocketChannel(socket: SocketThatSucceedsOnSecondConnectForPort123(protocolFamily: .inet), eventLoop: clientEL as! SelectableEventLoop)
 
         class WriteImmediatelyHandler: ChannelInboundHandler {
             typealias InboundIn = Any
@@ -1972,9 +1972,9 @@ public final class ChannelTests: XCTestCase {
         func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #file, line: UInt = #line,  _ body: (Channel) throws -> Void) {
             XCTAssertNoThrow(try {
                 let el = elg.next() as! SelectableEventLoop
-                let channels: [Channel] = (skipDatagram ? [] : [try DatagramChannel(eventLoop: el, protocolFamily: PF_INET)]) +
-                    /* Xcode need help */ (skipStream ? []: [try SocketChannel(eventLoop: el, protocolFamily: PF_INET)]) +
-                    /* Xcode need help */ (skipServerSocket ? []: [try ServerSocketChannel(eventLoop: el, group: elg, protocolFamily: PF_INET)])
+                let channels: [Channel] = (skipDatagram ? [] : [try DatagramChannel(eventLoop: el, protocolFamily: .inet)]) +
+                    /* Xcode need help */ (skipStream ? []: [try SocketChannel(eventLoop: el, protocolFamily: .inet)]) +
+                    /* Xcode need help */ (skipServerSocket ? []: [try ServerSocketChannel(eventLoop: el, group: elg, protocolFamily: .inet)])
                 for channel in channels {
                     try body(channel)
                     XCTAssertNoThrow(try channel.close().wait(), file: file, line: line)
@@ -2024,7 +2024,7 @@ public final class ChannelTests: XCTestCase {
     func testCloseSocketWhenReadErrorWasReceivedAndMakeSureNoReadCompleteArrives() throws {
         class SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET: Socket {
             private var firstReadHappened = false
-            init(protocolFamily: CInt) throws {
+            init(protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
                 try super.init(protocolFamily: protocolFamily, type: .stream, setNonBlocking: true)
             }
             override func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
@@ -2094,7 +2094,7 @@ public final class ChannelTests: XCTestCase {
         let serverEL = group.next()
         let clientEL = group.next()
         precondition(serverEL !== clientEL)
-        let sc = try SocketChannel(socket: SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET(protocolFamily: PF_INET), eventLoop: clientEL as! SelectableEventLoop)
+        let sc = try SocketChannel(socket: SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET(protocolFamily: .inet), eventLoop: clientEL as! SelectableEventLoop)
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: serverEL)
             .childChannelInitializer { channel in
@@ -2131,7 +2131,7 @@ public final class ChannelTests: XCTestCase {
         enum DummyError: Error { case dummy }
         class SocketFailingAsyncConnect: Socket {
             init() throws {
-                try super.init(protocolFamily: PF_INET, type: .stream, setNonBlocking: true)
+                try super.init(protocolFamily: .inet, type: .stream, setNonBlocking: true)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -2177,7 +2177,7 @@ public final class ChannelTests: XCTestCase {
         enum DummyError: Error { case dummy }
         class SocketFailingConnect: Socket {
             init() throws {
-                try super.init(protocolFamily: PF_INET, type: .stream, setNonBlocking: true)
+                try super.init(protocolFamily: .inet, type: .stream, setNonBlocking: true)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -2225,7 +2225,7 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let serverSock = try Socket(protocolFamily: PF_INET, type: .stream)
+        let serverSock = try Socket(protocolFamily: .inet, type: .stream)
         // we deliberately don't set SO_REUSEADDR
         XCTAssertNoThrow(try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)))
         let serverSockAddress = try! serverSock.localAddress()
@@ -2244,7 +2244,7 @@ public final class ChannelTests: XCTestCase {
         enum DummyError: Error { case dummy }
         class SocketFailingClose: Socket {
             init() throws {
-                try super.init(protocolFamily: PF_INET, type: .stream, setNonBlocking: true)
+                try super.init(protocolFamily: .inet, type: .stream, setNonBlocking: true)
             }
 
             override func close() throws {
@@ -2295,7 +2295,7 @@ public final class ChannelTests: XCTestCase {
         }
         let server = try assertNoThrowWithValue(ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
                                                                     group: group,
-                                                                    protocolFamily: PF_INET))
+                                                                    protocolFamily: .inet))
         defer {
             XCTAssertNoThrow(try server.close().wait())
         }
@@ -2319,7 +2319,7 @@ public final class ChannelTests: XCTestCase {
             .wait())
 
         let client = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop,
-                                       protocolFamily: serverChannel.localAddress!.protocolFamily)
+                                       protocolFamily: serverChannel.localAddress!.protocol)
         defer {
             XCTAssertNoThrow(try client.close().wait())
         }
@@ -2439,7 +2439,7 @@ public final class ChannelTests: XCTestCase {
 
         final class WriteAlwaysFailingSocket: Socket {
             init() throws {
-                try super.init(protocolFamily: AF_INET, type: .stream, setNonBlocking: true)
+                try super.init(protocolFamily: .inet, type: .stream, setNonBlocking: true)
             }
 
             override func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
@@ -2636,8 +2636,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         let channel = try ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
-                                              group: group,
-                                              protocolFamily: AF_INET)
+                                              group: group, protocolFamily: .inet)
         XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
             if let error = error as? ChannelError {
                 XCTAssertEqual(ChannelError.operationUnsupported, error)

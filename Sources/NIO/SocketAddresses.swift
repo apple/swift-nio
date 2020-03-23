@@ -118,15 +118,20 @@ public enum SocketAddress: CustomStringConvertible {
         return "[\(type)]\(host.map { "\($0)/\(addressString):" } ?? "\(addressString):")\(port)"
     }
 
-    /// Returns the protocol family as defined in `man 2 socket` of this `SocketAddress`.
+    @available(*, deprecated, renamed: "SocketAddress.protocol")
     public var protocolFamily: Int32 {
+      return Int32(self.protocol.rawValue)
+    }
+
+    /// Returns the protocol family as defined in `man 2 socket` of this `SocketAddress`.
+    public var `protocol`: NIOBSDSocket.ProtocolFamily {
         switch self {
         case .v4:
-            return PF_INET
+            return .inet
         case .v6:
-            return PF_INET6
+            return .inet6
         case .unixDomainSocket:
-            return PF_UNIX
+            return .unix
         }
     }
 

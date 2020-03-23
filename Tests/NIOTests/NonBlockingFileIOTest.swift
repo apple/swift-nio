@@ -191,7 +191,7 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testFailedIO() throws {
         enum DummyError: Error { case dummy }
-        let unconnectedSockFH = NIOFileHandle(descriptor: try! Posix.socket(domain: AF_UNIX, type: .stream, protocol: 0))
+        let unconnectedSockFH = NIOFileHandle(descriptor: try! Posix.socket(domain: .unix, type: .stream, protocol: 0))
         defer {
             XCTAssertNoThrow(try unconnectedSockFH.close())
         }
