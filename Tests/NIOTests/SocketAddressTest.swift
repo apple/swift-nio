@@ -20,7 +20,7 @@ class SocketAddressTest: XCTestCase {
     func testDescriptionWorks() throws {
         var ipv4SocketAddress = sockaddr_in()
         let res = "10.0.0.1".withCString { p in
-            inet_pton(AF_INET, p, &ipv4SocketAddress.sin_addr)
+            inet_pton(NIOBSDSocket.AddressFamily.inet.rawValue, p, &ipv4SocketAddress.sin_addr)
         }
         XCTAssertEqual(res, 1)
         ipv4SocketAddress.sin_port = (12345 as in_port_t).bigEndian
@@ -54,7 +54,7 @@ class SocketAddressTest: XCTestCase {
         #else
           address.sin6_len  = UInt8(MemoryLayout<sockaddr_in6>.size)
         #endif
-        address.sin6_family = sa_family_t(AF_INET6)
+        address.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
         address.sin6_addr   = sampleIn6Addr.withUnsafeBytes {
             $0.baseAddress!.bindMemory(to: in6_addr.self, capacity: 1).pointee
         }
@@ -82,7 +82,7 @@ class SocketAddressTest: XCTestCase {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
-            XCTAssertEqual(addr.sin_family, sa_family_t(AF_INET))
+            XCTAssertEqual(addr.sin_family, sa_family_t(NIOBSDSocket.AddressFamily.inet.rawValue))
             XCTAssertEqual(addr.sin_port, in_port_t(80).bigEndian)
             expectedAddress.withUnsafeBytes { expectedPtr in
                 withUnsafeBytes(of: &addr.sin_addr) { actualPtr in
@@ -102,7 +102,7 @@ class SocketAddressTest: XCTestCase {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
-            XCTAssertEqual(addr.sin6_family, sa_family_t(AF_INET6))
+            XCTAssertEqual(addr.sin6_family, sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue))
             XCTAssertEqual(addr.sin6_port, in_port_t(443).bigEndian)
             XCTAssertEqual(addr.sin6_scope_id, 0)
             XCTAssertEqual(addr.sin6_flowinfo, 0)
@@ -367,9 +367,9 @@ class SocketAddressTest: XCTestCase {
         var storage = sockaddr_storage()
         XCTAssertEqual(storage.ss_family, 0)
         storage.withMutableSockAddr { (addr, _) in
-            addr.pointee.sa_family = sa_family_t(AF_UNIX)
+            addr.pointee.sa_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
         }
-        XCTAssertEqual(storage.ss_family, sa_family_t(AF_UNIX))
+        XCTAssertEqual(storage.ss_family, sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue))
     }
 
     func testPortIsMutable() throws {

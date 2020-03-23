@@ -17,18 +17,16 @@ import XCTest
 
 private extension SocketAddress {
     init(_ addr: UnsafePointer<sockaddr>) {
-        let family = addr.pointee.sa_family
-
-        switch family {
-        case sa_family_t(AF_UNIX):
+        switch NIOBSDSocket.AddressFamily(rawValue: CInt(addr.pointee.sa_family)) {
+        case .unix:
             self = addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
                 SocketAddress($0.pointee)
             }
-        case sa_family_t(AF_INET):
+        case .inet:
             self = addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
                 SocketAddress($0.pointee, host: "")
             }
-        case sa_family_t(AF_INET6):
+        case .inet6:
             self = addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
                 SocketAddress($0.pointee, host: "")
             }

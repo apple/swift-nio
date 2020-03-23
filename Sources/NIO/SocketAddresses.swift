@@ -92,7 +92,7 @@ public enum SocketAddress: CustomStringConvertible {
             type = "IPv4"
             var mutAddr = addr.address.sin_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            addressString = try! descriptionForAddress(family: Posix.AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+            addressString = try! descriptionForAddress(family: .inet, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
 
             port = "\(self.port!)"
         case .v6(let addr):
@@ -100,7 +100,7 @@ public enum SocketAddress: CustomStringConvertible {
             type = "IPv6"
             var mutAddr = addr.address.sin6_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            addressString = try! descriptionForAddress(family: Posix.AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+            addressString = try! descriptionForAddress(family: .inet6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
 
             port = "\(self.port!)"
         case .unixDomainSocket(let addr):
@@ -141,11 +141,11 @@ public enum SocketAddress: CustomStringConvertible {
         case .v4(let addr):
             var mutAddr = addr.address.sin_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            return try! descriptionForAddress(family: Posix.AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+            return try! descriptionForAddress(family: .inet, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
         case .v6(let addr):
             var mutAddr = addr.address.sin6_addr
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            return try! descriptionForAddress(family: Posix.AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+            return try! descriptionForAddress(family: .inet6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
         case .unixDomainSocket(_):
             return nil
         }
@@ -244,7 +244,7 @@ public enum SocketAddress: CustomStringConvertible {
 #endif
 
         var addr = sockaddr_un()
-        addr.sun_family = sa_family_t(AF_UNIX)
+        addr.sun_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
         pathBytes.withUnsafeBufferPointer { srcPtr in
             withUnsafeMutablePointer(to: &addr.sun_path) { dstPtr in
                 dstPtr.withMemoryRebound(to: UInt8.self, capacity: pathBytes.count) { dstPtr in
@@ -268,15 +268,15 @@ public enum SocketAddress: CustomStringConvertible {
         var ipv6Addr = in6_addr()
 
         self = try ipAddress.withCString {
-            if inet_pton(AF_INET, $0, &ipv4Addr) == 1 {
+            if inet_pton(NIOBSDSocket.AddressFamily.inet.rawValue, $0, &ipv4Addr) == 1 {
                 var addr = sockaddr_in()
-                addr.sin_family = sa_family_t(AF_INET)
+                addr.sin_family = sa_family_t(NIOBSDSocket.AddressFamily.inet.rawValue)
                 addr.sin_port = in_port_t(port).bigEndian
                 addr.sin_addr = ipv4Addr
                 return .v4(.init(address: addr, host: ""))
-            } else if inet_pton(AF_INET6, $0, &ipv6Addr) == 1 {
+            } else if inet_pton(NIOBSDSocket.AddressFamily.inet6.rawValue, $0, &ipv6Addr) == 1 {
                 var addr = sockaddr_in6()
-                addr.sin6_family = sa_family_t(AF_INET6)
+                addr.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
                 addr.sin6_port = in_port_t(port).bigEndian
                 addr.sin6_flowinfo = 0
                 addr.sin6_addr = ipv6Addr
@@ -310,12 +310,12 @@ public enum SocketAddress: CustomStringConvertible {
         }
 
         if let info = info {
-            switch info.pointee.ai_family {
-            case AF_INET:
+            switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
+            case .inet:
                 return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { ptr in
                     .v4(.init(address: ptr.pointee, host: host))
                 }
-            case AF_INET6:
+            case .inet6:
                 return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { ptr in
                     .v6(.init(address: ptr.pointee, host: host))
                 }
