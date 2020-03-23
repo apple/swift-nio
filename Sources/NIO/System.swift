@@ -18,18 +18,6 @@
 //  Created by Norman Maurer on 11/10/17.
 //
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-@_exported import Darwin.C
-import CNIODarwin
-internal typealias MMsgHdr = CNIODarwin_mmsghdr
-#elseif os(Linux) || os(FreeBSD) || os(Android)
-@_exported import Glibc
-import CNIOLinux
-internal typealias MMsgHdr = CNIOLinux_mmsghdr
-#else
-let badOS = { fatalError("unsupported OS") }()
-#endif
-
 #if os(Android)
 let INADDR_ANY = UInt32(0) // #define INADDR_ANY ((unsigned long int) 0x00000000)
 internal typealias sockaddr_storage = __kernel_sockaddr_storage
@@ -46,15 +34,8 @@ extension ipv6_mreq { // http://lkml.iu.edu/hypermail/linux/kernel/0106.1/0080.h
 
 // Declare aliases to share more code and not need to repeat #if #else blocks
 private let sysClose = close
-private let sysShutdown = shutdown
-private let sysBind = bind
 private let sysFcntl: (CInt, CInt, CInt) -> CInt = fcntl
 private let sysSocket = socket
-private let sysSetsockopt = setsockopt
-private let sysGetsockopt = getsockopt
-private let sysListen = listen
-private let sysAccept = accept
-private let sysConnect = connect
 private let sysOpen: (UnsafePointer<CChar>, CInt) -> CInt = open
 private let sysOpenWithMode: (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
 private let sysFtruncate = ftruncate
@@ -63,39 +44,26 @@ private let sysPwrite = pwrite
 private let sysRead = read
 private let sysPread = pread
 private let sysLseek = lseek
-private let sysPoll = poll
 #if os(Android)
-func sysRecvFrom_wrapper(sockfd: CInt, buf: UnsafeMutableRawPointer, len: CLong, flags: CInt, src_addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) -> CLong {
-    return recvfrom(sockfd, buf, len, flags, src_addr, addrlen) // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
-}
 func sysWritev_wrapper(fd: CInt, iov: UnsafePointer<iovec>?, iovcnt: CInt) -> CLong {
     return CLong(writev(fd, iov, iovcnt)) // cast 'Int32' to 'CLong'
 }
 private let sysRecvFrom = sysRecvFrom_wrapper
 private let sysWritev = sysWritev_wrapper
 #else
-private let sysRecvFrom: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong, CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CLong = recvfrom
 private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
 #endif
-private let sysSendTo: @convention(c) (CInt, UnsafeRawPointer?, CLong, CInt, UnsafePointer<sockaddr>?, socklen_t) -> CLong = sendto
 private let sysDup: @convention(c) (CInt) -> CInt = dup
-private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
-private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockname
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
 private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
-private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 
 #if os(Linux)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
-private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
-private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
 #else
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
 private let sysKevent = kevent
-private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
-private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
 #endif
 
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
@@ -157,47 +125,16 @@ internal func wrapErrorIsNullReturnCall<T>(where function: String = #function, _
     }
 }
 
-enum Shutdown {
-    case RD
-    case WR
-    case RDWR
-
-    fileprivate var cValue: CInt {
-        switch self {
-        case .RD:
-            return CInt(Posix.SHUT_RD)
-        case .WR:
-            return CInt(Posix.SHUT_WR)
-        case .RDWR:
-            return CInt(Posix.SHUT_RDWR)
-        }
-    }
-}
-
 internal enum Posix {
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     static let UIO_MAXIOV: Int = 1024
-    static let SHUT_RD: CInt = CInt(Darwin.SHUT_RD)
-    static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
-    static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
 #elseif os(Linux) || os(FreeBSD) || os(Android)
-
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
-    static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
-    static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
-    static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
 #else
     static var UIO_MAXIOV: Int {
         fatalError("unsupported OS")
     }
 #endif
-
-    @inline(never)
-    public static func shutdown(descriptor: CInt, how: Shutdown) throws {
-        _ = try syscall(blocking: false) {
-            sysShutdown(descriptor, how.cValue)
-        }
-    }
 
     @inline(never)
     public static func close(descriptor: CInt) throws {
@@ -219,92 +156,12 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func bind(descriptor: CInt, ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
-         _ = try syscall(blocking: false) {
-            sysBind(descriptor, ptr, socklen_t(bytes))
-        }
-    }
-
-    @inline(never)
     @discardableResult
     // TODO: Allow varargs
     public static func fcntl(descriptor: CInt, command: CInt, value: CInt) throws -> CInt {
         return try syscall(blocking: false) {
             sysFcntl(descriptor, command, value)
         }.result
-    }
-
-    @inline(never)
-    public static func socket(domain: NIOBSDSocket.ProtocolFamily, type: NIOBSDSocket.SocketType, `protocol`: CInt) throws -> CInt {
-        return try syscall(blocking: false) {
-            return sysSocket(domain.rawValue, type.rawValue, `protocol`)
-        }.result
-    }
-
-    @inline(never)
-    public static func setsockopt(socket: CInt, level: CInt, optionName: CInt,
-                                  optionValue: UnsafeRawPointer, optionLen: socklen_t) throws {
-        _ = try syscall(blocking: false) {
-            sysSetsockopt(socket, level, optionName, optionValue, optionLen)
-        }
-    }
-
-    @inline(never)
-    public static func getsockopt(socket: CInt, level: CInt, optionName: CInt,
-                                  optionValue: UnsafeMutableRawPointer,
-                                  optionLen: UnsafeMutablePointer<socklen_t>) throws {
-        _ = try syscall(blocking: false) {
-            sysGetsockopt(socket, level, optionName, optionValue, optionLen)
-        }.result
-    }
-
-    @inline(never)
-    public static func listen(descriptor: CInt, backlog: CInt) throws {
-        _ = try syscall(blocking: false) {
-            sysListen(descriptor, backlog)
-        }
-    }
-
-    @inline(never)
-    public static func accept(descriptor: CInt,
-                              addr: UnsafeMutablePointer<sockaddr>?,
-                              len: UnsafeMutablePointer<socklen_t>?) throws -> CInt? {
-        let result: IOResult<CInt> = try syscall(blocking: true) {
-            let fd = sysAccept(descriptor, addr, len)
-
-            #if !os(Linux)
-                if fd != -1 {
-                    do {
-                        try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
-                    } catch {
-                        _ = sysClose(fd) // don't care about failure here
-                        throw error
-                    }
-                }
-            #endif
-            return fd
-        }
-
-        if case .processed(let fd) = result {
-            return fd
-        } else {
-            return nil
-        }
-    }
-
-    @inline(never)
-    public static func connect(descriptor: CInt, addr: UnsafePointer<sockaddr>, size: socklen_t) throws -> Bool {
-        do {
-            _ = try syscall(blocking: false) {
-                sysConnect(descriptor, addr, size)
-            }
-            return true
-        } catch let err as IOError {
-            if err.errnoCode == EINPROGRESS {
-                return false
-            }
-            throw err
-        }
     }
 
     @inline(never)
@@ -351,14 +208,6 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func sendto(descriptor: CInt, pointer: UnsafeRawPointer, size: size_t,
-                              destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
-        return try syscall(blocking: true) {
-            sysSendTo(descriptor, pointer, size, 0, destinationPtr, destinationSize)
-        }
-    }
-
-    @inline(never)
     public static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
             sysRead(descriptor, pointer, size)
@@ -369,13 +218,6 @@ internal enum Posix {
     public static func pread(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t, offset: off_t) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
             sysPread(descriptor, pointer, size, offset)
-        }
-    }
-
-    @inline(never)
-    public static func recvfrom(descriptor: CInt, pointer: UnsafeMutableRawPointer, len: size_t, addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<ssize_t> {
-        return try syscall(blocking: true) {
-            sysRecvFrom(descriptor, pointer, len, 0, addr, addrlen)
         }
     }
 
@@ -395,75 +237,6 @@ internal enum Posix {
         }.result
     }
 
-    @discardableResult
-    @inline(never)
-    public static func inet_ntop(addressFamily: sa_family_t, addressBytes: UnsafeRawPointer, addressDescription: UnsafeMutablePointer<CChar>, addressDescriptionLength: socklen_t) throws -> UnsafePointer<CChar> {
-        return try wrapErrorIsNullReturnCall {
-            sysInet_ntop(CInt(addressFamily), addressBytes, addressDescription, addressDescriptionLength)
-        }
-    }
-
-    // It's not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
-    @inline(never)
-    public static func sendfile(descriptor: CInt, fd: CInt, offset: off_t, count: size_t) throws -> IOResult<Int> {
-        var written: off_t = 0
-        do {
-            _ = try syscall(blocking: false) { () -> ssize_t in
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-                    var w: off_t = off_t(count)
-                    let result: CInt = Darwin.sendfile(fd, descriptor, offset, &w, nil, 0)
-                    written = w
-                    return ssize_t(result)
-                #elseif os(Linux) || os(FreeBSD) || os(Android)
-                    var off: off_t = offset
-                    let result: ssize_t = Glibc.sendfile(descriptor, fd, &off, count)
-                    if result >= 0 {
-                        written = result
-                    } else {
-                        written = 0
-                    }
-                    return result
-                #else
-                    fatalError("unsupported OS")
-                #endif
-            }
-            return .processed(Int(written))
-        } catch let err as IOError {
-            if err.errnoCode == EAGAIN {
-                return .wouldBlock(Int(written))
-            }
-            throw err
-        }
-    }
-
-    @inline(never)
-    public static func sendmmsg(sockfd: CInt, msgvec: UnsafeMutablePointer<MMsgHdr>, vlen: CUnsignedInt, flags: CInt) throws -> IOResult<Int> {
-        return try syscall(blocking: true) {
-            Int(sysSendMmsg(sockfd, msgvec, vlen, flags))
-        }
-    }
-
-    @inline(never)
-    public static func recvmmsg(sockfd: CInt, msgvec: UnsafeMutablePointer<MMsgHdr>, vlen: CUnsignedInt, flags: CInt, timeout: UnsafeMutablePointer<timespec>?) throws -> IOResult<Int> {
-        return try syscall(blocking: true) {
-            Int(sysRecvMmsg(sockfd, msgvec, vlen, flags, timeout))
-        }
-    }
-
-    @inline(never)
-    public static func getpeername(socket: CInt, address: UnsafeMutablePointer<sockaddr>, addressLength: UnsafeMutablePointer<socklen_t>) throws {
-        _ = try syscall(blocking: false) {
-            return sysGetpeername(socket, address, addressLength)
-        }
-    }
-
-    @inline(never)
-    public static func getsockname(socket: CInt, address: UnsafeMutablePointer<sockaddr>, addressLength: UnsafeMutablePointer<socklen_t>) throws {
-        _ = try syscall(blocking: false) {
-            return sysGetsockname(socket, address, addressLength)
-        }
-    }
-
     @inline(never)
     public static func getifaddrs(_ addrs: UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) throws {
         _ = try syscall(blocking: false) {
@@ -475,13 +248,6 @@ internal enum Posix {
     public static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
         return try syscall(blocking: false) {
             sysIfNameToIndex(name)
-        }.result
-    }
-
-    @inline(never)
-    public static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t, timeout: CInt) throws -> CInt {
-        return try syscall(blocking: false) {
-            sysPoll(fds, nfds, timeout)
         }.result
     }
 
@@ -499,29 +265,6 @@ internal enum Posix {
                                   socketVector: UnsafeMutablePointer<CInt>?) throws {
         _ = try syscall(blocking: false) {
             sysSocketpair(domain.rawValue, type.rawValue, `protocol`, socketVector)
-        }
-    }
-}
-
-/// `NIOFailedToSetSocketNonBlockingError` indicates that NIO was unable to set a socket to non-blocking mode, either
-/// when connecting a socket as a client or when accepting a socket as a server.
-///
-/// This error should never happen because a socket should always be able to be set to non-blocking mode. Unfortunately,
-/// we have seen this happen on Darwin.
-public struct NIOFailedToSetSocketNonBlockingError: Error {}
-
-internal extension Posix {
-    static func setNonBlocking(socket: CInt) throws {
-        let flags = try Posix.fcntl(descriptor: socket, command: F_GETFL, value: 0)
-        do {
-            let ret = try Posix.fcntl(descriptor: socket, command: F_SETFL, value: flags | O_NONBLOCK)
-            assert(ret == 0, "unexpectedly, fcntl(\(socket), F_SETFL, \(flags) | O_NONBLOCK) returned \(ret)")
-        } catch let error as IOError {
-            if error.errnoCode == EINVAL {
-                // Darwin seems to sometimes do this despite the docs claiming it can't happen
-                throw NIOFailedToSetSocketNonBlockingError()
-            }
-            throw error
         }
     }
 }
