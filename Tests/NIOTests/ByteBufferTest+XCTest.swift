@@ -185,6 +185,7 @@ extension ByteBufferTest {
                 ("testDeprecatedSetBytes", testDeprecatedSetBytes),
                 ("testCreateArrayFromBuffer", testCreateArrayFromBuffer),
                 ("testCreateStringFromBuffer", testCreateStringFromBuffer),
+                ("testCreateDispatchDataFromBuffer", testCreateDispatchDataFromBuffer),
            ]
    }
 }
