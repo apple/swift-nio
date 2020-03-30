@@ -115,17 +115,6 @@ private func preconditionIsNotBlacklistedErrno(err: CInt, where function: String
     precondition(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
 }
 
-internal extension IOResult where T: FixedWidthInteger {
-  var result: T {
-    switch self {
-    case .processed(let value):
-      return value
-    case .wouldBlock(_):
-      fatalError("cannot unwrap IOError")
-    }
-  }
-}
-
 /*
  * Sorry, we really try hard to not use underscored attributes. In this case
  * however we seem to break the inlining threshold which makes a system call
