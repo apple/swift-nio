@@ -2651,7 +2651,7 @@ extension ByteBufferTest {
     func testCreateArrayFromBuffer() {
         let testString = "some sample data"
         let buffer = ByteBuffer(ByteBufferView(testString.utf8))
-        XCTAssertEqual(Array(from: buffer), Array(testString.utf8))
+        XCTAssertEqual(Array(buffer: buffer), Array(testString.utf8))
     }
     
 }
@@ -2662,7 +2662,7 @@ extension ByteBufferTest {
     func testCreateStringFromBuffer() {
         let testString = "some sample data"
         let buffer = ByteBuffer(ByteBufferView(testString.utf8))
-        XCTAssertEqual(String(from: buffer), testString)
+        XCTAssertEqual(String(buffer: buffer), testString)
     }
     
 }

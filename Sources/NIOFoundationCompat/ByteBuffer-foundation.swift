@@ -218,7 +218,7 @@ extension Data {
     
     /// Creates a `Data` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
     /// - parameter buffer: The buffer to read.
-    public init(from buffer: ByteBuffer, byteTransferStrategy: ByteBuffer.ByteTransferStrategy = .automatic) {
+    public init(buffer: ByteBuffer, byteTransferStrategy: ByteBuffer.ByteTransferStrategy = .automatic) {
         var buffer = buffer
         self = buffer.readData(length: buffer.readableBytes, byteTransferStrategy: byteTransferStrategy)!
     }

@@ -16,7 +16,7 @@ extension Array where Element == UInt8 {
     
     /// Creates a `[UInt8]` from the given buffer. The entire readable portion of the buffer will be read.
     /// - parameter buffer: The buffer to read.
-    init(from buffer: ByteBuffer) {
+    init(buffer: ByteBuffer) {
         self = Array(buffer.readableBytesView)
     }
     
@@ -26,8 +26,9 @@ extension String {
     
     /// Creates a `String` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
     /// - parameter buffer: The buffer to read.
-    public init(from buffer: ByteBuffer) {
-        self = String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self)
+    public init(buffer: ByteBuffer) {
+        var buffer = buffer
+        self = buffer.readString(length: buffer.readableBytes)!
     }
     
 }

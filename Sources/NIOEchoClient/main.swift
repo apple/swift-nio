@@ -36,7 +36,7 @@ private final class EchoHandler: ChannelInboundHandler {
         self.numBytes -= byteBuffer.readableBytes
 
         if self.numBytes == 0 {
-            let string = String(from: byteBuffer)
+            let string = String(buffer: byteBuffer)
             print("Received: '\(string)' back from the server, closing channel.")
             context.close(promise: nil)
         }
