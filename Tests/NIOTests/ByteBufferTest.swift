@@ -2666,3 +2666,17 @@ extension ByteBufferTest {
     }
     
 }
+
+// MARK: - DispatchData init
+extension ByteBufferTest {
+    
+    func testCreateDispatchDataFromBuffer() {
+        let testString = "some sample data"
+        let buffer = ByteBuffer(ByteBufferView(testString.utf8))
+        let expectedData = testString.data(using: .utf8)!.withUnsafeBytes { (pointer) in
+            DispatchData(bytes: pointer)
+        }
+        XCTAssertTrue(DispatchData(buffer: buffer).elementsEqual(expectedData))
+    }
+    
+}
