@@ -175,7 +175,8 @@ public final class NIOThreadPool {
 
         for id in 0..<self.numberOfThreads {
             group.enter()
-            NIOThread.spawnAndRun(name: "NIOThreadPool thread #\(id)", detachThread: false) { thread in
+            // We should keep thread names under 16 characters because Linux doesn't allow more.
+            NIOThread.spawnAndRun(name: "TP-#\(id)", detachThread: false) { thread in
                 self.lock.withLock {
                     self.threads!.append(thread)
                 }
