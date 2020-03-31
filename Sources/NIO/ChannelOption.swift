@@ -327,3 +327,23 @@ extension ChannelOptions {
         }
     }
 }
+
+extension ChannelOptions {
+    
+    public enum Socket {
+     
+        /// Allow local address reusue
+        public static let allowLocalAddressReuse = ChannelOptions.Types.SocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_REUSEADDR)
+        
+        /// Permit sending of broadcast messages
+        public static let enableBroadcastMessages = ChannelOptions.Types.SocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_BROADCAST)
+        
+        /// Allow local address *and* port reuse
+        public static let allowLocalPortReuse = ChannelOptions.Types.SocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_REUSEPORT)
+        
+        /// Turn on TCP NODELAY
+        public static let noDelay = ChannelOptions.Types.SocketOption(level: SocketOptionLevel(Posix.IPPROTO_TCP), name: TCP_NODELAY)
+        
+    }
+    
+}
