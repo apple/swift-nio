@@ -40,6 +40,14 @@ extension BootstrapTest {
                 ("testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer", testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer),
                 ("testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer", testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer),
                 ("testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser", testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser),
+                ("testClientBootstrapValidatesWorkingELGsCorrectly", testClientBootstrapValidatesWorkingELGsCorrectly),
+                ("testClientBootstrapRejectsNotWorkingELGsCorrectly", testClientBootstrapRejectsNotWorkingELGsCorrectly),
+                ("testServerBootstrapValidatesWorkingELGsCorrectly", testServerBootstrapValidatesWorkingELGsCorrectly),
+                ("testServerBootstrapRejectsNotWorkingELGsCorrectly", testServerBootstrapRejectsNotWorkingELGsCorrectly),
+                ("testDatagramBootstrapValidatesWorkingELGsCorrectly", testDatagramBootstrapValidatesWorkingELGsCorrectly),
+                ("testDatagramBootstrapRejectsNotWorkingELGsCorrectly", testDatagramBootstrapRejectsNotWorkingELGsCorrectly),
+                ("testNIOPipeBootstrapValidatesWorkingELGsCorrectly", testNIOPipeBootstrapValidatesWorkingELGsCorrectly),
+                ("testNIOPipeBootstrapRejectsNotWorkingELGsCorrectly", testNIOPipeBootstrapRejectsNotWorkingELGsCorrectly),
            ]
    }
 }
