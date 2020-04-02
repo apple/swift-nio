@@ -71,7 +71,7 @@ public final class SocketChannelTest : XCTestCase {
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
             .serverChannelOption(ChannelOptions.backlog, value: 256)
             .bind(host: "127.0.0.1", port: 0).wait())
 
@@ -577,7 +577,7 @@ public final class SocketChannelTest : XCTestCase {
             // Build server channel; after this point the server called listen()
             let serverPromise = group.next().makePromise(of: IOError.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+                .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
                 .serverChannelOption(ChannelOptions.backlog, value: 256)
                 .serverChannelOption(ChannelOptions.autoRead, value: false)
                 .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
@@ -586,7 +586,7 @@ public final class SocketChannelTest : XCTestCase {
 
             // Make a client socket to mess with the server. Setting SO_LINGER forces RST instead of FIN.
             let clientSocket = try assertNoThrowWithValue(Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM))
-            XCTAssertNoThrow(try clientSocket.setOption(level: SOL_SOCKET, name: SO_LINGER, value: linger(l_onoff: 1, l_linger: 0)))
+            XCTAssertNoThrow(try clientSocket.setOption(level: .socket, name: .linger, value: linger(l_onoff: 1, l_linger: 0)))
             XCTAssertNoThrow(try clientSocket.connect(to: serverChannel.localAddress!))
             XCTAssertNoThrow(try clientSocket.close())
         

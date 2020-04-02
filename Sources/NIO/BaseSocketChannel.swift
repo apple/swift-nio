@@ -561,7 +561,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
         switch option {
         case let option as ChannelOptions.Types.SocketOption:
-            try self.setSocketOption0(level: option.level, name: option.name, value: value)
+            try self.setSocketOption0(level: option.optionLevel, name: option.optionName, value: value)
         case _ as ChannelOptions.Types.AllocatorOption:
             bufferAllocator = value as! ByteBufferAllocator
         case _ as ChannelOptions.Types.RecvAllocatorOption:
@@ -608,7 +608,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
         switch option {
         case let option as ChannelOptions.Types.SocketOption:
-            return try self.getSocketOption0(level: option.level, name: option.name)
+            return try self.getSocketOption0(level: option.optionLevel, name: option.optionName)
         case _ as ChannelOptions.Types.AllocatorOption:
             return bufferAllocator as! Option.Value
         case _ as ChannelOptions.Types.RecvAllocatorOption:
@@ -1019,7 +1019,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             let error: IOError
             // if the socket is still registered (and therefore open), let's try to get the actual socket error from the socket
             do {
-                let result: Int32 = try self.socket.getOption(level: SOL_SOCKET, name: SO_ERROR)
+                let result: Int32 = try self.socket.getOption(level: .socket, name: .error)
                 if result != 0 {
                     // we have a socket error, let's forward
                     // this path will be executed on Linux (EPOLLERR) & Darwin (ev.fflags != 0)

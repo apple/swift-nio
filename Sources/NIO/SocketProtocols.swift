@@ -25,9 +25,9 @@ protocol BaseSocketProtocol: CustomStringConvertible {
 
     func remoteAddress() throws -> SocketAddress
 
-    func setOption<T>(level: Int32, name: Int32, value: T) throws
+    func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws
 
-    func getOption<T>(level: Int32, name: Int32) throws -> T
+    func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T
 }
 
 protocol ServerSocketProtocol: BaseSocketProtocol {

@@ -154,11 +154,11 @@ final class PipePair: SocketProtocol {
         throw ChannelError.operationUnsupported
     }
 
-    func setOption<T>(level: Int32, name: Int32, value: T) throws {
+    func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
         throw ChannelError.operationUnsupported
     }
 
-    func getOption<T>(level: Int32, name: Int32) throws -> T {
+    func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T {
         throw ChannelError.operationUnsupported
     }
 }

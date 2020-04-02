@@ -27,15 +27,15 @@ class ChannelOptionStorageTest: XCTestCase {
     func testSetTwoOptionsOfDifferentType() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        cos.append(key: ChannelOptions.socketOption(.reuseaddr), value: 1)
         cos.append(key: ChannelOptions.backlog, value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
     }
 
     func testSetTwoOptionsOfSameType() throws {
-        let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), 1),
-                                                            (ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), 2)]
+        let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [(ChannelOptions.socketOption(.reuseaddr), 1),
+                                                            (ChannelOptions.socketOption(.reuseport), 2)]
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
         for kv in options {
@@ -56,11 +56,11 @@ class ChannelOptionStorageTest: XCTestCase {
     func testSetOneOptionTwice() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-        cos.append(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 2)
+        cos.append(key: ChannelOptions.socketOption(.reuseaddr), value: 1)
+        cos.append(key: ChannelOptions.socketOption(.reuseaddr), value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(1, optionsCollector.allOptions.count)
-        XCTAssertEqual([ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR)],
+        XCTAssertEqual([ChannelOptions.socketOption(.reuseaddr)],
                        optionsCollector.allOptions.map { option in
                            return option.0 as! ChannelOptions.Types.SocketOption
                        })
