@@ -89,9 +89,17 @@ enum ThreadOpsPosix: ThreadOps {
             let hThread: ThreadOpsSystem.ThreadHandle = pthread_self()
 
             if let name = name {
-                // this is non-critical so we ignore the result here, we've seen
-                // EPERM in containers.
-                _ = sys_pthread_setname_np(hThread, name)
+                let maximumThreadNameLength: Int
+                #if os(Linux) || os(Android)
+                maximumThreadNameLength = 15
+                #else
+                maximumThreadNameLength = .max
+                #endif
+                name.prefix(maximumThreadNameLength).withCString { namePtr in
+                    // this is non-critical so we ignore the result here, we've seen
+                    // EPERM in containers.
+                    _ = sys_pthread_setname_np(hThread, namePtr)
+                }
             }
 
             body(NIOThread(handle: hThread, desiredName: name))
