@@ -2644,3 +2644,39 @@ extension ByteBuffer {
         return pointer
     }
 }
+
+// MARK: - Array init
+extension ByteBufferTest {
+    
+    func testCreateArrayFromBuffer() {
+        let testString = "some sample data"
+        let buffer = ByteBuffer(ByteBufferView(testString.utf8))
+        XCTAssertEqual(Array(buffer: buffer), Array(testString.utf8))
+    }
+    
+}
+
+// MARK: - String init
+extension ByteBufferTest {
+    
+    func testCreateStringFromBuffer() {
+        let testString = "some sample data"
+        let buffer = ByteBuffer(ByteBufferView(testString.utf8))
+        XCTAssertEqual(String(buffer: buffer), testString)
+    }
+    
+}
+
+// MARK: - DispatchData init
+extension ByteBufferTest {
+    
+    func testCreateDispatchDataFromBuffer() {
+        let testString = "some sample data"
+        let buffer = ByteBuffer(ByteBufferView(testString.utf8))
+        let expectedData = testString.data(using: .utf8)!.withUnsafeBytes { (pointer) in
+            DispatchData(bytes: pointer)
+        }
+        XCTAssertTrue(DispatchData(buffer: buffer).elementsEqual(expectedData))
+    }
+    
+}

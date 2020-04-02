@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -421,6 +421,113 @@ class BootstrapTest: XCTestCase {
         // But now, it should be there.
         XCTAssertNoThrow(_ = try server.pipeline.context(name: "AcceptHandler").wait())
         XCTAssertNoThrow(try server.close().wait())
+    }
+
+    func testClientBootstrapValidatesWorkingELGsCorrectly() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+        let el = elg.next()
+
+        XCTAssertNotNil(ClientBootstrap(validatingGroup: elg))
+        XCTAssertNotNil(ClientBootstrap(validatingGroup: el))
+    }
+
+    func testClientBootstrapRejectsNotWorkingELGsCorrectly() {
+        let elg = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+        let el = elg.next()
+
+        XCTAssertNil(ClientBootstrap(validatingGroup: elg))
+        XCTAssertNil(ClientBootstrap(validatingGroup: el))
+    }
+
+    func testServerBootstrapValidatesWorkingELGsCorrectly() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+        let el = elg.next()
+
+        XCTAssertNotNil(ServerBootstrap(validatingGroup: elg))
+        XCTAssertNotNil(ServerBootstrap(validatingGroup: el))
+        XCTAssertNotNil(ServerBootstrap(validatingGroup: elg, childGroup: elg))
+        XCTAssertNotNil(ServerBootstrap(validatingGroup: el, childGroup: el))
+    }
+
+    func testServerBootstrapRejectsNotWorkingELGsCorrectly() {
+        let correctELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try correctELG.syncShutdownGracefully())
+        }
+
+        let wrongELG = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try wrongELG.syncShutdownGracefully())
+        }
+        let wrongEL = wrongELG.next()
+        let correctEL = correctELG.next()
+
+        // both wrong
+        XCTAssertNil(ServerBootstrap(validatingGroup: wrongELG))
+        XCTAssertNil(ServerBootstrap(validatingGroup: wrongEL))
+        XCTAssertNil(ServerBootstrap(validatingGroup: wrongELG, childGroup: wrongELG))
+        XCTAssertNil(ServerBootstrap(validatingGroup: wrongEL, childGroup: wrongEL))
+
+        // group correct, child group wrong
+        XCTAssertNil(ServerBootstrap(validatingGroup: correctELG, childGroup: wrongELG))
+        XCTAssertNil(ServerBootstrap(validatingGroup: correctEL, childGroup: wrongEL))
+
+        // group wrong, child group correct
+        XCTAssertNil(ServerBootstrap(validatingGroup: wrongELG, childGroup: correctELG))
+        XCTAssertNil(ServerBootstrap(validatingGroup: wrongEL, childGroup: correctEL))
+    }
+
+    func testDatagramBootstrapValidatesWorkingELGsCorrectly() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+        let el = elg.next()
+
+        XCTAssertNotNil(DatagramBootstrap(validatingGroup: elg))
+        XCTAssertNotNil(DatagramBootstrap(validatingGroup: el))
+    }
+
+    func testDatagramBootstrapRejectsNotWorkingELGsCorrectly() {
+        let elg = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+        let el = elg.next()
+
+        XCTAssertNil(DatagramBootstrap(validatingGroup: elg))
+        XCTAssertNil(DatagramBootstrap(validatingGroup: el))
+    }
+
+    func testNIOPipeBootstrapValidatesWorkingELGsCorrectly() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+        let el = elg.next()
+
+        XCTAssertNotNil(NIOPipeBootstrap(validatingGroup: elg))
+        XCTAssertNotNil(NIOPipeBootstrap(validatingGroup: el))
+    }
+
+    func testNIOPipeBootstrapRejectsNotWorkingELGsCorrectly() {
+        let elg = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+        let el = elg.next()
+
+        XCTAssertNil(NIOPipeBootstrap(validatingGroup: elg))
+        XCTAssertNil(NIOPipeBootstrap(validatingGroup: el))
     }
 }
 

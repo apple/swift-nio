@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -14,6 +14,13 @@
 
 /// The type of all `channelInitializer` callbacks.
 internal typealias ChannelInitializerCallback = (Channel) -> EventLoopFuture<Void>
+
+/// Common functionality for all NIO on sockets bootstraps.
+internal enum NIOOnSocketsBootstraps {
+    internal static func isCompatible(group: EventLoopGroup) -> Bool {
+        return group is SelectableEventLoop || group is MultiThreadedEventLoopGroup
+    }
+}
 
 /// A `ServerBootstrap` is an easy way to bootstrap a `ServerSocketChannel` when creating network servers.
 ///
@@ -66,20 +73,55 @@ public final class ServerBootstrap {
     @usableFromInline
     internal var _childChannelOptions: ChannelOptions.Storage
 
-    /// Create a `ServerBootstrap` for the `EventLoopGroup` `group`.
+    /// Create a `ServerBootstrap` on the `EventLoopGroup` `group`.
+    ///
+    /// The `EventLoopGroup` `group` must be compatible, otherwise the program will crash. `ServerBootstrap` is
+    /// compatible only with `MultiThreadedEventLoopGroup` as well as the `EventLoop`s returned by
+    /// `MultiThreadedEventLoopGroup.next`. See `init(validatingGroup:childGroup:)` for a fallible initializer for
+    /// situations where it's impossible to tell ahead of time if the `EventLoopGroup`s are compatible or not.
     ///
     /// - parameters:
-    ///     - group: The `EventLoopGroup` to use for the `ServerSocketChannel`.
+    ///     - group: The `EventLoopGroup` to use for the `bind` of the `ServerSocketChannel` and to accept new `SocketChannel`s with.
     public convenience init(group: EventLoopGroup) {
-        self.init(group: group, childGroup: group)
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) else {
+            preconditionFailure("ServerBootstrap is only compatible with MultiThreadedEventLoopGroup and " +
+                                "SelectableEventLoop. You tried constructing one with \(group) which is incompatible.")
+        }
+        self.init(validatingGroup: group, childGroup: group)!
     }
 
-    /// Create a `ServerBootstrap`.
+    /// Create a `ServerBootstrap` on the `EventLoopGroup` `group` which accepts `Channel`s on `childGroup`.
+    ///
+    /// The `EventLoopGroup`s `group` and `childGroup` must be compatible, otherwise the program will crash.
+    /// `ServerBootstrap` is compatible only with `MultiThreadedEventLoopGroup` as well as the `EventLoop`s returned by
+    /// `MultiThreadedEventLoopGroup.next`. See `init(validatingGroup:childGroup:)` for a fallible initializer for
+    /// situations where it's impossible to tell ahead of time if the `EventLoopGroup`s are compatible or not.
     ///
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use for the `bind` of the `ServerSocketChannel` and to accept new `SocketChannel`s with.
     ///     - childGroup: The `EventLoopGroup` to run the accepted `SocketChannel`s on.
-    public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
+    public convenience init(group: EventLoopGroup, childGroup: EventLoopGroup) {
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) && NIOOnSocketsBootstraps.isCompatible(group: childGroup) else {
+            preconditionFailure("ServerBootstrap is only compatible with MultiThreadedEventLoopGroup and " +
+                                "SelectableEventLoop. You tried constructing one with group: \(group) and " +
+                                "childGroup: \(childGroup) at least one of which is incompatible.")
+        }
+        self.init(validatingGroup: group, childGroup: childGroup)!
+
+    }
+
+    /// Create a `ServerBootstrap` on the `EventLoopGroup` `group` which accepts `Channel`s on `childGroup`, validating
+    /// that the `EventLoopGroup`s are compatible with `ServerBootstrap`.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use for the `bind` of the `ServerSocketChannel` and to accept new `SocketChannel`s with.
+    ///     - childGroup: The `EventLoopGroup` to run the accepted `SocketChannel`s on. If `nil`, `group` is used.
+    public init?(validatingGroup group: EventLoopGroup, childGroup: EventLoopGroup? = nil) {
+        let childGroup = childGroup ?? group
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) && NIOOnSocketsBootstraps.isCompatible(group: childGroup) else {
+            return nil
+        }
+
         self.group = group
         self.childGroup = childGroup
         self._serverChannelOptions = ChannelOptions.Storage()
@@ -386,9 +428,29 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 
     /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`.
     ///
+    /// The `EventLoopGroup` `group` must be compatible, otherwise the program will crash. `ClientBootstrap` is
+    /// compatible only with `MultiThreadedEventLoopGroup` as well as the `EventLoop`s returned by
+    /// `MultiThreadedEventLoopGroup.next`. See `init(validatingGroup:)` for a fallible initializer for
+    /// situations where it's impossible to tell ahead of time if the `EventLoopGroup` is compatible or not.
+    ///
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use.
-    public init(group: EventLoopGroup) {
+    public convenience init(group: EventLoopGroup) {
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) else {
+            preconditionFailure("ClientBootstrap is only compatible with MultiThreadedEventLoopGroup and " +
+                                "SelectableEventLoop. You tried constructing one with \(group) which is incompatible.")
+        }
+        self.init(validatingGroup: group)!
+    }
+
+    /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`, validating that `group` is compatible.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use.
+    public init?(validatingGroup group: EventLoopGroup) {
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) else {
+            return nil
+        }
         self.group = group
         self._channelOptions = ChannelOptions.Storage()
         self._channelOptions.append(key: ChannelOptions.tcpOption(.nodelay), value: 1)
@@ -621,9 +683,29 @@ public final class DatagramBootstrap {
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
     ///
+    /// The `EventLoopGroup` `group` must be compatible, otherwise the program will crash. `DatagramBootstrap` is
+    /// compatible only with `MultiThreadedEventLoopGroup` as well as the `EventLoop`s returned by
+    /// `MultiThreadedEventLoopGroup.next`. See `init(validatingGroup:)` for a fallible initializer for
+    /// situations where it's impossible to tell ahead of time if the `EventLoopGroup` is compatible or not.
+    ///
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use.
-    public init(group: EventLoopGroup) {
+    public convenience init(group: EventLoopGroup) {
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) else {
+            preconditionFailure("DatagramBootstrap is only compatible with MultiThreadedEventLoopGroup and " +
+                                "SelectableEventLoop. You tried constructing one with \(group) which is incompatible.")
+        }
+        self.init(validatingGroup: group)!
+    }
+
+    /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`, validating that `group` is compatible.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use.
+    public init?(validatingGroup group: EventLoopGroup) {
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) else {
+            return nil
+        }
         self._channelOptions = ChannelOptions.Storage()
         self.group = group
         self.channelInitializer = nil
@@ -767,9 +849,30 @@ public final class NIOPipeBootstrap {
 
     /// Create a `NIOPipeBootstrap` on the `EventLoopGroup` `group`.
     ///
+    /// The `EventLoopGroup` `group` must be compatible, otherwise the program will crash. `NIOPipeBootstrap` is
+    /// compatible only with `MultiThreadedEventLoopGroup` as well as the `EventLoop`s returned by
+    /// `MultiThreadedEventLoopGroup.next`. See `init(validatingGroup:)` for a fallible initializer for
+    /// situations where it's impossible to tell ahead of time if the `EventLoopGroup`s are compatible or not.
+    ///
     /// - parameters:
     ///     - group: The `EventLoopGroup` to use.
-    public init(group: EventLoopGroup) {
+    public convenience init(group: EventLoopGroup) {
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) else {
+            preconditionFailure("NIOPipeBootstrap is only compatible with MultiThreadedEventLoopGroup and " +
+                                "SelectableEventLoop. You tried constructing one with \(group) which is incompatible.")
+        }
+        self.init(validatingGroup: group)!
+    }
+
+    /// Create a `NIOPipeBootstrap` on the `EventLoopGroup` `group`, validating that `group` is compatible.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use.
+    public init?(validatingGroup group: EventLoopGroup) {
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) else {
+            return nil
+        }
+
         self._channelOptions = ChannelOptions.Storage()
         self.group = group
         self.channelInitializer = nil
