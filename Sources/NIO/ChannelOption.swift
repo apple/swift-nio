@@ -98,7 +98,6 @@ extension ChannelOptions {
                 /// - parameters:
                 ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
                 ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
-                @available(*, deprecated)
                 public init(level: SocketOptionLevel, name: SocketOptionName) {
                     self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
                     self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
