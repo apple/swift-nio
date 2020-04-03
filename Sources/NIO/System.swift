@@ -179,32 +179,17 @@ enum Shutdown {
 
 internal enum Posix {
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    static let SOCK_STREAM: CInt = CInt(Darwin.SOCK_STREAM)
-    static let SOCK_DGRAM: CInt = CInt(Darwin.SOCK_DGRAM)
     static let UIO_MAXIOV: Int = 1024
     static let SHUT_RD: CInt = CInt(Darwin.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 
-#if os(Android)
-    static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM)
-    static let SOCK_DGRAM: CInt = CInt(Glibc.SOCK_DGRAM)
-#else
-    static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM.rawValue)
-    static let SOCK_DGRAM: CInt = CInt(Glibc.SOCK_DGRAM.rawValue)
-#endif
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
     static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
 #else
-    static var SOCK_STREAM: CInt {
-        fatalError("unsupported OS")
-    }
-    static var SOCK_DGRAM: CInt {
-        fatalError("unsupported OS")
-    }
     static var UIO_MAXIOV: Int {
         fatalError("unsupported OS")
     }
@@ -257,9 +242,9 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func socket(domain: CInt, type: CInt, `protocol`: CInt) throws -> CInt {
+    public static func socket(domain: CInt, type: NIOBSDSocket.SocketType, `protocol`: CInt) throws -> CInt {
         return try syscall(blocking: false) {
-            return sysSocket(domain, type, `protocol`)
+            return sysSocket(domain, type.rawValue, `protocol`)
         }.result
     }
 
@@ -516,11 +501,11 @@ internal enum Posix {
 
     @inline(never)
     public static func socketpair(domain: CInt,
-                                  type: CInt,
+                                  type: NIOBSDSocket.SocketType,
                                   protocol: CInt,
                                   socketVector: UnsafeMutablePointer<CInt>?) throws {
         _ = try syscall(blocking: false) {
-            sysSocketpair(domain, type, `protocol`, socketVector)
+            sysSocketpair(domain, type.rawValue, `protocol`, socketVector)
         }
     }
 }

@@ -26,7 +26,7 @@ import CNIOLinux
 internal class GetaddrinfoResolver: Resolver {
     private let v4Future: EventLoopPromise<[SocketAddress]>
     private let v6Future: EventLoopPromise<[SocketAddress]>
-    private let aiSocktype: CInt
+    private let aiSocktype: NIOBSDSocket.SocketType
     private let aiProtocol: CInt
 
     /// Create a new resolver.
@@ -35,7 +35,7 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - loop: The `EventLoop` whose thread this resolver will block.
     ///     - aiSocktype: The sock type to use as hint when calling getaddrinfo.
     ///     - aiProtocol: the protocol to use as hint when calling getaddrinfo.
-    init(loop: EventLoop, aiSocktype: CInt, aiProtocol: CInt) {
+    init(loop: EventLoop, aiSocktype: NIOBSDSocket.SocketType, aiProtocol: CInt) {
         self.v4Future = loop.makePromise()
         self.v6Future = loop.makePromise()
         self.aiSocktype = aiSocktype
@@ -88,7 +88,7 @@ internal class GetaddrinfoResolver: Resolver {
         var info: UnsafeMutablePointer<addrinfo>?
 
         var hint = addrinfo()
-        hint.ai_socktype = self.aiSocktype
+        hint.ai_socktype = self.aiSocktype.rawValue
         hint.ai_protocol = self.aiProtocol
         guard getaddrinfo(host, String(port), &hint, &info) == 0 else {
             self.fail(SocketAddressError.unknown(host: host, port: port))

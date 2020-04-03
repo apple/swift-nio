@@ -252,15 +252,15 @@ class BaseSocket: BaseSocketProtocol {
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - returns: the file descriptor of the socket that was created.
     /// - throws: An `IOError` if creation of the socket failed.
-    static func makeSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> CInt {
-        var sockType = type
+    static func makeSocket(protocolFamily: Int32, type: NIOBSDSocket.SocketType, setNonBlocking: Bool = false) throws -> CInt {
+        var sockType: CInt = type.rawValue
         #if os(Linux)
         if setNonBlocking {
-            sockType = type | Linux.SOCK_NONBLOCK
+            sockType = type.rawValue | Linux.SOCK_NONBLOCK
         }
         #endif
         let sock = try Posix.socket(domain: protocolFamily,
-                                    type: sockType,
+                                    type: NIOBSDSocket.SocketType(rawValue: sockType),
                                     protocol: 0)
         #if !os(Linux)
         if setNonBlocking {
