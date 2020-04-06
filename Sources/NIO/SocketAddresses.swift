@@ -15,6 +15,18 @@
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 import CNIOLinux
 
+#if os(Windows)
+import struct WinSDK.SOCKADDR_IN
+import struct WinSDK.SOCKADDR_IN6
+import struct WinSDK.SOCKADDR_UN
+import struct WinSDK.SOCKADDR_STORAGE
+
+internal typealias sockaddr_in = SOCKADDR_IN
+internal typealias sockaddr_in6 = SOCKADDR_IN6
+internal typealias sockaddr_un = SOCKADDR_UN
+internal typealias sockaddr_storage = SOCKADDR_STORAGE
+#endif
+
 public enum SocketAddressError: Error {
     /// The host is unknown (could not be resolved).
     case unknown(host: String, port: Int)
