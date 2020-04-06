@@ -316,21 +316,25 @@ class BaseSocket: BaseSocketProtocol {
             precondition(descriptor >= 0, "invalid socket")
         #endif
         self.descriptor = descriptor
-        do {
-            try self.ignoreSIGPIPE()
-        } catch {
-            self.descriptor = -1 // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
-            throw error
-        }
+        #if !os(Windows)
+            do {
+                try self.ignoreSIGPIPE()
+            } catch {
+                self.descriptor = -1 // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
+                throw error
+            }
+        #endif
     }
 
     deinit {
         assert(!self.isOpen, "leak of open BaseSocket")
     }
 
-    func ignoreSIGPIPE() throws {
-        try BaseSocket.ignoreSIGPIPE(descriptor: self.descriptor)
-    }
+    #if !os(Windows)
+        func ignoreSIGPIPE() throws {
+            try BaseSocket.ignoreSIGPIPE(descriptor: self.descriptor)
+        }
+    #endif
 
     /// Set the socket as non-blocking.
     ///
