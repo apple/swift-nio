@@ -213,7 +213,7 @@ private class DummyResolver: Resolver {
 extension DummyResolver.Event: Equatable {
 }
 
-private func defaultChannelBuilder(loop: EventLoop, family: Int32) -> EventLoopFuture<Channel> {
+private func defaultChannelBuilder(loop: EventLoop, family: NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel> {
     let channel = EmbeddedChannel(loop: loop as! EmbeddedEventLoop)
     XCTAssertNoThrow(try channel.pipeline.addHandler(ConnectRecorder(), name: CONNECT_RECORDER).wait())
     return loop.makeSucceededFuture(channel)
@@ -222,7 +222,7 @@ private func defaultChannelBuilder(loop: EventLoop, family: Int32) -> EventLoopF
 private func buildEyeballer(host: String,
                             port: Int,
                             connectTimeout: TimeAmount = .seconds(10),
-                            channelBuilderCallback: @escaping (EventLoop, Int32) -> EventLoopFuture<Channel> = defaultChannelBuilder) -> (eyeballer: HappyEyeballsConnector, resolver: DummyResolver, loop: EmbeddedEventLoop) {
+                            channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel> = defaultChannelBuilder) -> (eyeballer: HappyEyeballsConnector, resolver: DummyResolver, loop: EmbeddedEventLoop) {
     let loop = EmbeddedEventLoop()
     let resolver = DummyResolver(loop: loop)
     let eyeballer = HappyEyeballsConnector(resolver: resolver,
@@ -1087,14 +1087,14 @@ public final class HappyEyeballsTest : XCTestCase {
 
         // Succeed the first channel future, which will connect because the default
         // channel builder always does.
-        defaultChannelBuilder(loop: loop, family: AF_INET6).whenSuccess {
+        defaultChannelBuilder(loop: loop, family: .inet6).whenSuccess {
             ourChannelFutures.first!.succeed($0)
             XCTAssertEqual($0.state(), .connected)
         }
         XCTAssertTrue(channelFuture.isFulfilled)
 
         // Ok, now succeed the second channel future. This should cause the channel to immediately be closed.
-        defaultChannelBuilder(loop: loop, family: AF_INET6).whenSuccess {
+        defaultChannelBuilder(loop: loop, family: .inet6).whenSuccess {
             ourChannelFutures[1].succeed($0)
             XCTAssertEqual($0.state(), .closed)
         }

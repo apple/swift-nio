@@ -220,7 +220,7 @@ public final class SocketChannelTest : XCTestCase {
             private let promise: EventLoopPromise<Void>
             init(promise: EventLoopPromise<Void>) throws {
                 self.promise = promise
-                try super.init(protocolFamily: PF_INET, type: .stream)
+                try super.init(protocolFamily: .inet, type: .stream)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -327,7 +327,7 @@ public final class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverSock = try Socket(protocolFamily: AF_INET, type: .stream)
+        let serverSock = try Socket(protocolFamily: .inet, type: .stream)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
             ServerBootstrap(group: group).withBoundSocket(descriptor: dup($0))
@@ -335,7 +335,7 @@ public final class SocketChannelTest : XCTestCase {
         try serverSock.close()
         let serverChannel = try serverChannelFuture.wait()
 
-        let clientSock = try Socket(protocolFamily: AF_INET, type: .stream)
+        let clientSock = try Socket(protocolFamily: .inet, type: .stream)
         let connected = try clientSock.connect(to: serverChannel.localAddress!)
         XCTAssertEqual(connected, true)
         let clientChannelFuture = try clientSock.withUnsafeHandle {
@@ -354,7 +354,7 @@ public final class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverSock = try Socket(protocolFamily: AF_INET, type: .dgram)
+        let serverSock = try Socket(protocolFamily: .inet, type: .dgram)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
             DatagramBootstrap(group: group).withBoundSocket(descriptor: dup($0))
@@ -417,7 +417,7 @@ public final class SocketChannelTest : XCTestCase {
             let promise: EventLoopPromise<Void>
             init(promise: EventLoopPromise<Void>) throws {
                 self.promise = promise
-                try super.init(protocolFamily: PF_INET, type: .stream)
+                try super.init(protocolFamily: .inet, type: .stream)
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
@@ -522,14 +522,14 @@ public final class SocketChannelTest : XCTestCase {
     }
 
     func testSocketFlagNONBLOCKWorks() throws {
-        var socket = try assertNoThrowWithValue(try ServerSocket(protocolFamily: PF_INET, setNonBlocking: true))
+        var socket = try assertNoThrowWithValue(try ServerSocket(protocolFamily: .inet, setNonBlocking: true))
         XCTAssertNoThrow(try socket.withUnsafeHandle { fd in
             let flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
             XCTAssertEqual(O_NONBLOCK, flags & O_NONBLOCK)
         })
         XCTAssertNoThrow(try socket.close())
 
-        socket = try assertNoThrowWithValue(ServerSocket(protocolFamily: PF_INET, setNonBlocking: false))
+        socket = try assertNoThrowWithValue(ServerSocket(protocolFamily: .inet, setNonBlocking: false))
         XCTAssertNoThrow(try socket.withUnsafeHandle { fd in
             var flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
             XCTAssertEqual(0, flags & O_NONBLOCK)
@@ -585,7 +585,7 @@ public final class SocketChannelTest : XCTestCase {
                 .wait())
 
             // Make a client socket to mess with the server. Setting SO_LINGER forces RST instead of FIN.
-            let clientSocket = try assertNoThrowWithValue(Socket(protocolFamily: AF_INET, type: .stream))
+            let clientSocket = try assertNoThrowWithValue(Socket(protocolFamily: .inet, type: .stream))
             XCTAssertNoThrow(try clientSocket.setOption(level: .socket, name: .linger, value: linger(l_onoff: 1, l_linger: 0)))
             XCTAssertNoThrow(try clientSocket.connect(to: serverChannel.localAddress!))
             XCTAssertNoThrow(try clientSocket.close())
@@ -606,8 +606,7 @@ public final class SocketChannelTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         let channel = try ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
-                                              group: group,
-                                              protocolFamily: AF_INET)
+                                              group: group, protocolFamily: .inet)
         XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
             if let error = error as? ChannelError {
                 XCTAssertEqual(ChannelError.operationUnsupported, error)
@@ -623,7 +622,7 @@ public final class SocketChannelTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         let channel = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop,
-                                        protocolFamily: AF_INET)
+                                        protocolFamily: .inet)
         XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
             if let error = error as? ChannelError {
                 XCTAssertEqual(ChannelError.operationUnsupported, error)
@@ -634,7 +633,7 @@ public final class SocketChannelTest : XCTestCase {
     }
 
     func testSetSockOptDoesNotOverrideExistingFlags() throws {
-        let s = try assertNoThrowWithValue(Socket(protocolFamily: PF_INET,
+        let s = try assertNoThrowWithValue(Socket(protocolFamily: .inet,
                                                   type: .stream,
                                                   setNonBlocking: false))
         // check initial flags
@@ -674,7 +673,7 @@ public final class SocketChannelTest : XCTestCase {
                 if self.shouldAcceptsFail.load() {
                     throw NIOFailedToSetSocketNonBlockingError()
                 } else {
-                    return try Socket(protocolFamily: PF_INET,
+                    return try Socket(protocolFamily: .inet,
                                       type: .stream,
                                       setNonBlocking: false)
                 }
@@ -697,7 +696,7 @@ public final class SocketChannelTest : XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let serverSock = try assertNoThrowWithValue(HandsOutMoodySocketsServerSocket(protocolFamily: PF_INET,
+        let serverSock = try assertNoThrowWithValue(HandsOutMoodySocketsServerSocket(protocolFamily: .inet,
                                                                                      setNonBlocking: true))
         let serverChan = try assertNoThrowWithValue(ServerSocketChannel(serverSocket: serverSock,
                                                                         eventLoop: group.next() as! SelectableEventLoop,
@@ -878,7 +877,7 @@ public final class SocketChannelTest : XCTestCase {
             }
         }
 
-        let serverSocket = try assertNoThrowWithValue(ServerSocket(protocolFamily: PF_INET))
+        let serverSocket = try assertNoThrowWithValue(ServerSocket(protocolFamily: .inet))
         XCTAssertNoThrow(try serverSocket.bind(to: .init(ipAddress: "127.0.0.1", port: 0)))
         XCTAssertNoThrow(try serverSocket.listen())
         let g = DispatchGroup()

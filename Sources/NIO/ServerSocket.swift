@@ -16,7 +16,7 @@
 /* final but tests */ class ServerSocket: BaseSocket, ServerSocketProtocol {
     typealias SocketType = ServerSocket
 
-    public final class func bootstrap(protocolFamily: Int32, host: String, port: Int) throws -> ServerSocket {
+    public final class func bootstrap(protocolFamily: NIOBSDSocket.ProtocolFamily, host: String, port: Int) throws -> ServerSocket {
         let socket = try ServerSocket(protocolFamily: protocolFamily)
         try socket.bind(to: SocketAddress.makeAddressResolvingHost(host, port: port))
         try socket.listen()
@@ -29,7 +29,7 @@
     ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: Int32, setNonBlocking: Bool = false) throws {
+    init(protocolFamily: NIOBSDSocket.ProtocolFamily, setNonBlocking: Bool = false) throws {
         let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: .stream, setNonBlocking: setNonBlocking)
         try super.init(descriptor: sock)
     }

@@ -249,7 +249,7 @@ public final class ServerBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerSocketChannel {
             return try ServerSocketChannel(eventLoop: eventLoop,
                                            group: childEventLoopGroup,
-                                           protocolFamily: address.protocolFamily)
+                                           protocolFamily: address.protocol)
         }
 
         return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
@@ -546,7 +546,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     ///     - address: The address to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
-        return execute(eventLoop: group.next(), protocolFamily: address.protocolFamily) { channel in
+        return execute(eventLoop: group.next(), protocolFamily: address.protocol) { channel in
             let connectPromise = channel.eventLoop.makePromise(of: Void.self)
             channel.connect(to: address, promise: connectPromise)
             let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
@@ -615,7 +615,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     }
 
     private func execute(eventLoop: EventLoop,
-                         protocolFamily: Int32,
+                         protocolFamily: NIOBSDSocket.ProtocolFamily,
                          _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let channelInitializer = self.channelInitializer
         let channelOptions = self._channelOptions
@@ -785,7 +785,7 @@ public final class DatagramBootstrap {
         }
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop,
-                                       protocolFamily: address.protocolFamily)
+                                       protocolFamily: address.protocol)
         }
         return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
             channel.register().flatMap {

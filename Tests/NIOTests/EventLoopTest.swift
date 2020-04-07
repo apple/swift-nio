@@ -443,7 +443,7 @@ public final class EventLoopTest : XCTestCase {
         let wedgeHandler = WedgeOpenHandler { promise in
             promiseQueue.sync { promises.append(promise) }
         }
-        let channel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
+        let channel = try SocketChannel(eventLoop: loop, protocolFamily: .inet)
         try channel.eventLoop.submit {
             channel.pipeline.addHandler(wedgeHandler).flatMap {
                 channel.register()
@@ -471,7 +471,7 @@ public final class EventLoopTest : XCTestCase {
         }
 
         // Now we're going to attempt to register a new channel. This should immediately fail.
-        let newChannel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
+        let newChannel = try SocketChannel(eventLoop: loop, protocolFamily: .inet)
 
         XCTAssertThrowsError(try newChannel.register().wait()) { error in
             XCTAssertEqual(.shutdown, error as? EventLoopError)
@@ -598,7 +598,7 @@ public final class EventLoopTest : XCTestCase {
         let serverSocket = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .bind(host: "localhost", port: 0).wait())
         let channel = try assertNoThrowWithValue(SocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
-                                                               protocolFamily: serverSocket.localAddress!.protocolFamily))
+                                                               protocolFamily: serverSocket.localAddress!.protocol))
         XCTAssertNoThrow(try channel.pipeline.addHandler(assertHandler).wait() as Void)
         XCTAssertNoThrow(try channel.eventLoop.flatSubmit {
             channel.register().flatMap {

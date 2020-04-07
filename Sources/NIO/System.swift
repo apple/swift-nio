@@ -242,9 +242,9 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func socket(domain: CInt, type: NIOBSDSocket.SocketType, `protocol`: CInt) throws -> CInt {
+    public static func socket(domain: NIOBSDSocket.ProtocolFamily, type: NIOBSDSocket.SocketType, `protocol`: CInt) throws -> CInt {
         return try syscall(blocking: false) {
-            return sysSocket(domain, type.rawValue, `protocol`)
+            return sysSocket(domain.rawValue, type.rawValue, `protocol`)
         }.result
     }
 
@@ -500,12 +500,12 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func socketpair(domain: CInt,
+    public static func socketpair(domain: NIOBSDSocket.ProtocolFamily,
                                   type: NIOBSDSocket.SocketType,
                                   protocol: CInt,
                                   socketVector: UnsafeMutablePointer<CInt>?) throws {
         _ = try syscall(blocking: false) {
-            sysSocketpair(domain, type.rawValue, `protocol`, socketVector)
+            sysSocketpair(domain.rawValue, type.rawValue, `protocol`, socketVector)
         }
     }
 }

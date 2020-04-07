@@ -221,7 +221,7 @@ internal class HappyEyeballsConnector {
     /// than intended.
     ///
     /// The channel builder callback takes an event loop and a protocol family as arguments.
-    private let channelBuilderCallback: (EventLoop, Int32) -> EventLoopFuture<Channel>
+    private let channelBuilderCallback: (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel>
 
     /// The amount of time to wait for an AAAA response to come in after a A response is
     /// received. By default this is 50ms.
@@ -279,7 +279,7 @@ internal class HappyEyeballsConnector {
          connectTimeout: TimeAmount,
          resolutionDelay: TimeAmount = .milliseconds(50),
          connectionDelay: TimeAmount = .milliseconds(250),
-         channelBuilderCallback: @escaping (EventLoop, Int32) -> EventLoopFuture<Channel>) {
+         channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel>) {
         self.resolver = resolver
         self.loop = loop
         self.host = host
@@ -529,7 +529,7 @@ internal class HappyEyeballsConnector {
     /// - parameters:
     ///     - target: The address to connect to.
     private func connectToTarget(_ target: SocketAddress) {
-        let channelFuture = channelBuilderCallback(self.loop, target.protocolFamily)
+        let channelFuture = channelBuilderCallback(self.loop, target.protocol)
         pendingConnections.append(channelFuture)
 
         channelFuture.whenSuccess { channel in

@@ -211,7 +211,7 @@ final class NonAcceptingServerSocket: ServerSocket {
     init(errors: [Int32]) throws {
         // Reverse so it's cheaper to remove errors.
         self.errors = errors.reversed()
-        try super.init(protocolFamily: AF_INET, setNonBlocking: true)
+        try super.init(protocolFamily: .inet, setNonBlocking: true)
     }
 
     override func accept(setNonBlocking: Bool) throws -> Socket? {
