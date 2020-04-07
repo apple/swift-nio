@@ -129,15 +129,15 @@ private extension SocketAddress {
         var v4addr = in_addr()
         var v6addr = in6_addr()
 
-        if inet_pton(AF_INET, ipAddress, &v4addr) == 1 {
+        if inet_pton(NIOBSDSocket.AddressFamily.inet.rawValue, ipAddress, &v4addr) == 1 {
             var sockaddr = sockaddr_in()
-            sockaddr.sin_family = sa_family_t(AF_INET)
+            sockaddr.sin_family = sa_family_t(NIOBSDSocket.AddressFamily.inet.rawValue)
             sockaddr.sin_port = in_port_t(port).bigEndian
             sockaddr.sin_addr = v4addr
             self = .init(sockaddr, host: host)
-        } else if inet_pton(AF_INET6, ipAddress, &v6addr) == 1 {
+        } else if inet_pton(NIOBSDSocket.AddressFamily.inet6.rawValue, ipAddress, &v6addr) == 1 {
             var sockaddr = sockaddr_in6()
-            sockaddr.sin6_family = sa_family_t(AF_INET6)
+            sockaddr.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
             sockaddr.sin6_port = in_port_t(port).bigEndian
             sockaddr.sin6_flowinfo = 0
             sockaddr.sin6_scope_id = 0
@@ -153,10 +153,10 @@ private extension SocketAddress {
         switch self {
         case .v4(let address):
             var baseAddress = address.address
-            precondition(inet_ntop(AF_INET, &baseAddress.sin_addr, ptr, 256) != nil)
+            precondition(inet_ntop(NIOBSDSocket.AddressFamily.inet.rawValue, &baseAddress.sin_addr, ptr, 256) != nil)
         case .v6(let address):
             var baseAddress = address.address
-            precondition(inet_ntop(AF_INET6, &baseAddress.sin6_addr, ptr, 256) != nil)
+            precondition(inet_ntop(NIOBSDSocket.AddressFamily.inet6.rawValue, &baseAddress.sin6_addr, ptr, 256) != nil)
         case .unixDomainSocket:
             fatalError("No UDS support in happy eyeballs.")
         }

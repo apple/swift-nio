@@ -13,10 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
+import let WinSDK.AF_INET
+import let WinSDK.AF_INET6
+import let WinSDK.AF_UNIX
+
 import let WinSDK.IPPROTO_IP
 import let WinSDK.IPPROTO_IPV6
 import let WinSDK.IPPROTO_TCP
-import let WinSDK.SOL_SOCKET
 
 import let WinSDK.IP_ADD_MEMBERSHIP
 import let WinSDK.IP_DROP_MEMBERSHIP
@@ -45,6 +48,8 @@ import let WinSDK.SO_RCVTIMEO
 import let WinSDK.SO_REUSEADDR
 import let WinSDK.SO_REUSE_UNICASTPORT
 
+import let WinSDK.SOL_SOCKET
+
 import let WinSDK.SOCK_DGRAM
 import let WinSDK.SOCK_STREAM
 #elseif os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
@@ -71,6 +76,23 @@ extension NIOBSDSocket.SocketType: Equatable {
 }
 
 extension NIOBSDSocket.SocketType: Hashable {
+}
+
+extension NIOBSDSocket {
+    /// Specifies the addressing scheme that the socket can use.
+    public struct AddressFamily: RawRepresentable {
+        public typealias RawValue = CInt
+        public var rawValue: RawValue
+        public init(rawValue: RawValue) {
+            self.rawValue = rawValue
+        }
+    }
+}
+
+extension NIOBSDSocket.AddressFamily: Equatable {
+}
+
+extension NIOBSDSocket.AddressFamily: Hashable {
 }
 
 extension NIOBSDSocket {
@@ -122,6 +144,21 @@ extension NIOBSDSocket.Option: Equatable {
 }
 
 extension NIOBSDSocket.Option: Hashable {
+}
+
+// Address Family
+extension NIOBSDSocket.AddressFamily {
+    /// Address for IP version 4.
+    public static let inet: NIOBSDSocket.AddressFamily =
+            NIOBSDSocket.AddressFamily(rawValue: AF_INET)
+
+    /// Address for IP version 6.
+    public static let inet6: NIOBSDSocket.AddressFamily =
+            NIOBSDSocket.AddressFamily(rawValue: AF_INET6)
+
+    /// Unix local to host address.
+    public static let unix: NIOBSDSocket.AddressFamily =
+            NIOBSDSocket.AddressFamily(rawValue: AF_UNIX)
 }
 
 // Protocol Family

@@ -115,12 +115,12 @@ internal class GetaddrinfoResolver: Resolver {
         var v6Results = [SocketAddress]()
 
         while true {
-            switch info.pointee.ai_family {
-            case AF_INET:
+            switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
+            case .inet:
                 info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { ptr in
                     v4Results.append(.init(ptr.pointee, host: host))
                 }
-            case AF_INET6:
+            case .inet6:
                 info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { ptr in
                     v6Results.append(.init(ptr.pointee, host: host))
                 }

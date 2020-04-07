@@ -84,9 +84,6 @@ private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
 private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
-private let sysAF_INET = AF_INET
-private let sysAF_INET6 = AF_INET6
-private let sysAF_UNIX = AF_UNIX
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 
@@ -194,10 +191,6 @@ internal enum Posix {
         fatalError("unsupported OS")
     }
 #endif
-
-    static let AF_INET = sa_family_t(sysAF_INET)
-    static let AF_INET6 = sa_family_t(sysAF_INET6)
-    static let AF_UNIX = sa_family_t(sysAF_UNIX)
 
     @inline(never)
     public static func shutdown(descriptor: CInt, how: Shutdown) throws {
