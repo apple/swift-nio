@@ -161,16 +161,8 @@ extension NIOBSDSocket {
     }
 
     @inline(never)
-    static func recvfrom(socket s: NIOBSDSocket.Handle,
-                         buffer buf: UnsafeMutableRawPointer,
-                         length len: size_t,
-                         address from: UnsafeMutablePointer<sockaddr>,
-                         address_len fromlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<size_t> {
-        let iResult: CInt = CNIOWindows_recvfrom(s, buf, CInt(len), 0, from, fromlen)
-        if iResult == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "recvfrom")
-        }
-        return .processed(size_t(iResult))
+    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
+        fatalError("recvmsg not yet implemented on Windows")
     }
 
     @inline(never)

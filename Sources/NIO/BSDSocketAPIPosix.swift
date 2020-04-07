@@ -84,16 +84,8 @@ extension NIOBSDSocket {
         return try Posix.read(descriptor: s, pointer: buf, size: len)
     }
 
-    static func recvfrom(socket s: NIOBSDSocket.Handle,
-                         buffer buf: UnsafeMutableRawPointer,
-                         length len: size_t,
-                         address from: UnsafeMutablePointer<sockaddr>,
-                         address_len fromlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<size_t> {
-        return try Posix.recvfrom(descriptor: s,
-                                  pointer: buf,
-                                  len: len,
-                                  addr: from,
-                                  addrlen: fromlen)
+    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
+        return try Posix.recvmsg(descriptor: descriptor, msgHdr: msgHdr, flags: flags)
     }
 
     static func send(socket s: NIOBSDSocket.Handle,
