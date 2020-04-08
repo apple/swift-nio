@@ -983,15 +983,15 @@ public final class NIOPipeBootstrap {
 /// An channel option which can be applied to bootstrap using shorthand notation.
 /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
 public struct ShorthandBootstrapOption {
-    private let apply : ShorthandApply
+    private let apply: ShorthandApply
     
-    private init(apply : ShorthandApply) {
+    private init(apply: ShorthandApply) {
         self.apply = apply
     }
     
     /// Apply the contained option to the supplied ServerBootstrap
     /// - Parameter serverBootstrap: bootstrap to apply this option to.
-    /// - Returns:the modified bootstrap (currently the same one mutated)
+    /// - Returns: the modified bootstrap (currently the same one mutated)
     func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap : BootstrapT) -> BootstrapT {
         return apply.applyOption(serverBootstrap: serverBootstrap)
     }
@@ -1014,7 +1014,7 @@ private struct ShorthandApplyImpl<Option : ChannelOption> : ShorthandApply {
 extension ShorthandBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr  = ShorthandBootstrapOption(apply: ShorthandApplyImpl(option: ChannelOptions.socketOption(.reuseaddr), value: 1))
+    public static let reuseAddr = ShorthandBootstrapOption(apply: ShorthandApplyImpl(option: ChannelOptions.socketOption(.reuseaddr), value: 1))
     
     /// Option to disble autoRead
     /// - See: ChannelOptions.autoRead
