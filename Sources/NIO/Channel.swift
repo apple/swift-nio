@@ -165,7 +165,7 @@ internal protocol SelectableChannel: Channel {
     /// Called when the read side of the `SelectableChannel` hit EOF.
     func readEOF()
 
-    /// Called when the read side of the `SelectableChannel` hit EOF.
+    /// Called when the write side of the `SelectableChannel` hit EOF.
     func writeEOF()
 
     /// Called when the `SelectableChannel` was reset (ie. is now unusable)
