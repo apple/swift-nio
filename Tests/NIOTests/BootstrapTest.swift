@@ -529,6 +529,23 @@ class BootstrapTest: XCTestCase {
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: elg))
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: el))
     }
+    
+    func testShorthandOptionsAreEquivalent() throws {
+        func bindAndGetReuseAddrOption(applyBootstrapOptions : (ServerBootstrap) -> ServerBootstrap) throws -> ChannelOptions.Types.SocketOption.Value {
+            let bootstrap = applyBootstrapOptions(ServerBootstrap(group: group))
+            let serverChannel = try bootstrap.bind(host: "127.0.0.1", port: 0).wait()
+            let reuseValue = try serverChannel.getOption(ChannelOptions.socketOption(.reuseaddr)).wait()
+            try serverChannel.close().wait()
+            return reuseValue
+        }
+        
+        let sbLongReuseValue = try bindAndGetReuseAddrOption(applyBootstrapOptions: { bs in bs.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1) })
+        let sbShortReuseValue = try bindAndGetReuseAddrOption(applyBootstrapOptions: { bs in bs.serverOptions([.reuseAddr])})
+        let sbNoReuseValue = try bindAndGetReuseAddrOption(applyBootstrapOptions: { bs in bs })
+        
+        XCTAssertEqual(sbLongReuseValue, sbShortReuseValue)
+        XCTAssertNotEqual(sbLongReuseValue, sbNoReuseValue)
+    }
 }
 
 private final class MakeSureAutoReadIsOffInChannelInitializer:  ChannelInboundHandler {
