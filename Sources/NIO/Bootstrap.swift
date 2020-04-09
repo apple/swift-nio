@@ -180,11 +180,10 @@ public final class ServerBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (this mutated)
     public func serverOptions(_ options: [ShorthandBootstrapOption]) -> Self {
-        var toRet = self
         for option in options {
-            toRet = option.applyOption(serverBootstrap: toRet)
+            option.applyOption(to: self)
         }
-        return toRet
+        return self
     }
 
     /// Specifies a `ChannelOption` to be applied to the accepted `SocketChannel`s.
@@ -203,11 +202,10 @@ public final class ServerBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (this mutated)
     public func childChannelOptions(_ options: [ShorthandChildBootstrapOption]) -> Self {
-        var toRet = self
         for option in options {
-            toRet = option.applyOption(serverBootstrap: toRet)
+            option.applyOption(to: self)
         }
-        return toRet
+        return self
     }
 
     /// Specifies a timeout to apply to a bind attempt. Currently unsupported.
@@ -532,11 +530,10 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (this mutated)
     public func channelOptions(_ options: [ShorthandClientBootstrapOption]) -> Self {
-        var toRet = self
         for option in options {
-            toRet = option.applyOption(clientBootstrap: toRet)
+            option.applyOption(to: self)
         }
-        return toRet
+        return self
     }
 
     /// Specifies a timeout to apply to a connection attempt.
@@ -1015,21 +1012,21 @@ public struct ShorthandBootstrapOption {
     /// Apply the contained option to the supplied ServerBootstrap
     /// - Parameter serverBootstrap: bootstrap to apply this option to.
     /// - Returns: the modified bootstrap (currently the same one mutated)
-    func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap : BootstrapT) -> BootstrapT {
-        return apply.applyOption(serverBootstrap: serverBootstrap)
+    func applyOption(to serverBootstrap : ServerBootstrap) {
+        apply.applyOption(to: serverBootstrap)
     }
 }
 
 private protocol ShorthandApply {
-    func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap : BootstrapT) -> BootstrapT
+    func applyOption(to serverBootstrap : ServerBootstrap)
 }
 
 private struct ShorthandApplyImpl<Option : ChannelOption> : ShorthandApply {
     let option : Option
     let value : Option.Value
     
-    func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap: BootstrapT) -> BootstrapT {
-        return serverBootstrap.serverChannelOption(option, value: value)
+    func applyOption(to serverBootstrap: ServerBootstrap) {
+        _ = serverBootstrap.serverChannelOption(option, value: value)
     }
 }
 
@@ -1045,21 +1042,21 @@ public struct ShorthandChildBootstrapOption {
     /// Apply the contained option to the supplied ServerBootstrap
     /// - Parameter serverBootstrap: bootstrap to apply this option to.
     /// - Returns: the modified bootstrap (currently the same one mutated)
-    func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap : BootstrapT) -> BootstrapT {
-        return apply.applyOption(serverBootstrap: serverBootstrap)
+    func applyOption(to serverBootstrap : ServerBootstrap) {
+        apply.applyOption(to: serverBootstrap)
     }
 }
 
 private protocol ShorthandApplyChild {
-    func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap : BootstrapT) -> BootstrapT
+    func applyOption(to serverBootstrap : ServerBootstrap)
 }
 
 private struct ShorthandApplyChildImpl<Option : ChannelOption> : ShorthandApplyChild {
     let option : Option
     let value : Option.Value
     
-    func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap: BootstrapT) -> BootstrapT {
-        return serverBootstrap.childChannelOption(option, value: value)
+    func applyOption(to serverBootstrap: ServerBootstrap) {
+        let _ = serverBootstrap.childChannelOption(option, value: value)
     }
 }
 
@@ -1075,22 +1072,22 @@ public struct ShorthandClientBootstrapOption {
     /// Apply the contained option to the supplied ServerBootstrap
     /// - Parameter serverBootstrap: bootstrap to apply this option to.
     /// - Returns: the modified bootstrap (currently the same one mutated)
-    func applyOption<BootstrapT : ClientBootstrap>(clientBootstrap : BootstrapT) -> BootstrapT {
-        return apply.applyOption(clientBootstrap: clientBootstrap)
+    func applyOption<BootstrapT : ClientBootstrap>(to clientBootstrap : BootstrapT) {
+        apply.applyOption(to: clientBootstrap)
     }
 }
 
 
 private protocol ShorthandApplyClient {
-    func applyOption<BootstrapT : ClientBootstrap>(clientBootstrap : BootstrapT) -> BootstrapT
+    func applyOption(to clientBootstrap : ClientBootstrap)
 }
 
 private struct ShorthandApplyClientImpl<Option : ChannelOption> : ShorthandApplyClient {
     let option : Option
     let value : Option.Value
     
-    func applyOption<BootstrapT : ClientBootstrap>(clientBootstrap: BootstrapT) -> BootstrapT {
-        return clientBootstrap.channelOption(option, value: value)
+    func applyOption(to clientBootstrap: ClientBootstrap) {
+        let _ = clientBootstrap.channelOption(option, value: value)
     }
 }
 
@@ -1148,3 +1145,5 @@ extension ShorthandChildBootstrapOption {
         ShorthandChildBootstrapOption(apply: ShorthandApplyChildImpl(option: ChannelOptions.socketOption(.reuseaddr), value: 1))
     }
 }
+
+
