@@ -197,6 +197,18 @@ public final class ServerBootstrap {
         self._childChannelOptions.append(key: option, value: value)
         return self
     }
+    
+    /// Specifies some `ChannelOption`s to be applied to the  accepted `SocketChannel`s.
+    /// - See: childChannelOption
+    /// - Parameter options: List of shorthand options to apply.
+    /// - Returns: The update server bootstrap (this mutated)
+    public func childChannelOptions(_ options: [ShorthandChildBootstrapOption]) -> Self {
+        var toRet = self
+        for option in options {
+            toRet = option.applyOption(serverBootstrap: toRet)
+        }
+        return toRet
+    }
 
     /// Specifies a timeout to apply to a bind attempt. Currently unsupported.
     ///
@@ -513,6 +525,18 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
         self._channelOptions.append(key: option, value: value)
         return self
+    }
+    
+    /// Specifies some `ChannelOption`s to be applied to the `SocketChannel`.
+    /// - See: channelOption
+    /// - Parameter options: List of shorthand options to apply.
+    /// - Returns: The update server bootstrap (this mutated)
+    public func channelOptions(_ options: [ShorthandClientBootstrapOption]) -> Self {
+        var toRet = self
+        for option in options {
+            toRet = option.applyOption(clientBootstrap: toRet)
+        }
+        return toRet
     }
 
     /// Specifies a timeout to apply to a connection attempt.
@@ -1009,15 +1033,76 @@ private struct ShorthandApplyImpl<Option : ChannelOption> : ShorthandApply {
     }
 }
 
-/// Approved shorthand options.
+/// An channel option which can be applied to bootstrap using shorthand notation.
+/// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
+public struct ShorthandChildBootstrapOption {
+    private let apply: ShorthandApplyChild
+    
+    private init(apply: ShorthandApplyChild) {
+        self.apply = apply
+    }
+    
+    /// Apply the contained option to the supplied ServerBootstrap
+    /// - Parameter serverBootstrap: bootstrap to apply this option to.
+    /// - Returns: the modified bootstrap (currently the same one mutated)
+    func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap : BootstrapT) -> BootstrapT {
+        return apply.applyOption(serverBootstrap: serverBootstrap)
+    }
+}
+
+private protocol ShorthandApplyChild {
+    func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap : BootstrapT) -> BootstrapT
+}
+
+private struct ShorthandApplyChildImpl<Option : ChannelOption> : ShorthandApplyChild {
+    let option : Option
+    let value : Option.Value
+    
+    func applyOption<BootstrapT : ServerBootstrap>(serverBootstrap: BootstrapT) -> BootstrapT {
+        return serverBootstrap.childChannelOption(option, value: value)
+    }
+}
+
+/// An channel option which can be applied to bootstrap using shorthand notation.
+/// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
+public struct ShorthandClientBootstrapOption {
+    private let apply: ShorthandApplyClient
+    
+    private init(apply: ShorthandApplyClient) {
+        self.apply = apply
+    }
+    
+    /// Apply the contained option to the supplied ServerBootstrap
+    /// - Parameter serverBootstrap: bootstrap to apply this option to.
+    /// - Returns: the modified bootstrap (currently the same one mutated)
+    func applyOption<BootstrapT : ClientBootstrap>(clientBootstrap : BootstrapT) -> BootstrapT {
+        return apply.applyOption(clientBootstrap: clientBootstrap)
+    }
+}
+
+
+private protocol ShorthandApplyClient {
+    func applyOption<BootstrapT : ClientBootstrap>(clientBootstrap : BootstrapT) -> BootstrapT
+}
+
+private struct ShorthandApplyClientImpl<Option : ChannelOption> : ShorthandApplyClient {
+    let option : Option
+    let value : Option.Value
+    
+    func applyOption<BootstrapT : ClientBootstrap>(clientBootstrap: BootstrapT) -> BootstrapT {
+        return clientBootstrap.channelOption(option, value: value)
+    }
+}
+
+/// Approved shorthand server options.
 extension ShorthandBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ShorthandBootstrapOption(apply: ShorthandApplyImpl(option: ChannelOptions.socketOption(.reuseaddr), value: 1))
+    public static let reuseAddr = makeSBO(option: ChannelOptions.socketOption(.reuseaddr), value: 1)
     
     /// Option to disble autoRead
     /// - See: ChannelOptions.autoRead
-    public static let disableAutoRead = ShorthandBootstrapOption(apply: ShorthandApplyImpl(option: ChannelOptions.autoRead, value: false))
+    public static let disableAutoRead = makeSBO(option: ChannelOptions.autoRead, value: false)
     
     /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
     /// - See: ChannelOptions.backlog
@@ -1027,5 +1112,39 @@ extension ShorthandBootstrapOption {
     
     private static func makeSBO<Option : ChannelOption>(option: Option, value: Option.Value) -> ShorthandBootstrapOption {
         ShorthandBootstrapOption(apply: ShorthandApplyImpl(option: ChannelOptions.socketOption(.reuseaddr), value: 1))
+    }
+}
+
+/// Approved shorthand client options.
+extension ShorthandClientBootstrapOption {
+    /// Option to reuse address.
+    /// - See:  NIOBSDSocket.Option.reuseaddr
+    public static let reuseAddr = makeCBO(option: ChannelOptions.socketOption(.reuseaddr), value: 1)
+    
+    public static let allowRemoteHalfClosure = makeCBO(option: ChannelOptions.allowRemoteHalfClosure, value: true)
+    
+    public static func allowRemoteHalfClosure(_ value: Bool) -> ShorthandClientBootstrapOption {
+        makeCBO(option: ChannelOptions.allowRemoteHalfClosure, value: value)
+    }
+    
+    private static func makeCBO<Option : ChannelOption>(option: Option, value: Option.Value) -> ShorthandClientBootstrapOption {
+        ShorthandClientBootstrapOption(apply: ShorthandApplyClientImpl(option: ChannelOptions.socketOption(.reuseaddr), value: 1))
+    }
+}
+
+/// Approved shorthand child options.
+extension ShorthandChildBootstrapOption {
+    /// Option to reuse address.
+    /// - See:  NIOBSDSocket.Option.reuseaddr
+    public static let reuseAddr = makeCBO(option: ChannelOptions.socketOption(.reuseaddr), value: 1)
+    
+    public static let allowRemoteHalfClosure = makeCBO(option: ChannelOptions.allowRemoteHalfClosure, value: true)
+    
+    public static func allowRemoteHalfClosure(_ value: Bool) -> ShorthandChildBootstrapOption {
+        makeCBO(option: ChannelOptions.allowRemoteHalfClosure, value: value)
+    }
+    
+    private static func makeCBO<Option : ChannelOption>(option: Option, value: Option.Value) -> ShorthandChildBootstrapOption {
+        ShorthandChildBootstrapOption(apply: ShorthandApplyChildImpl(option: ChannelOptions.socketOption(.reuseaddr), value: 1))
     }
 }

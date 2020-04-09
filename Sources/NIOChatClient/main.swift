@@ -44,7 +44,7 @@ private final class ChatHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
-    .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+    .channelOptions([.reuseaddr])
     .channelInitializer { channel in
         channel.pipeline.addHandler(ChatHandler())
     }

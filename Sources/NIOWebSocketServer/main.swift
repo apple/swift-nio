@@ -226,7 +226,7 @@ let bootstrap = ServerBootstrap(group: group)
     }
 
     // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+    .childChannelOptions([.reuseaddr])
 
 defer {
     try! group.syncShutdownGracefully()

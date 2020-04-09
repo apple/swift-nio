@@ -1183,7 +1183,7 @@ public final class ChannelTests: XCTestCase {
                     channel.pipeline.addHandler(verificationHandler)
                 }
             }
-            .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .channelOptions([.allowRemoteHalfClosure])
             .connect(to: try! server.localAddress())
         let accepted = try server.accept()!
         defer {
@@ -1237,7 +1237,7 @@ public final class ChannelTests: XCTestCase {
             .channelInitializer { channel in
                 channel.pipeline.addHandler(verificationHandler)
             }
-            .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .channelOptions([.allowRemoteHalfClosure])
             .connect(to: try! server.localAddress())
         let accepted = try server.accept()!
         defer {
@@ -1686,7 +1686,7 @@ public final class ChannelTests: XCTestCase {
             }
             // maxMessagesPerRead is large so that we definitely spin and seen the EOF
             .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 10)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .childChannelOptions([.allowRemoteHalfClosure])
             // that fits the message we prepared
             .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
             .bind(host: "127.0.0.1", port: 0).wait())
@@ -2529,7 +2529,7 @@ public final class ChannelTests: XCTestCase {
         let serverChannelAvailablePromise = singleThreadedELG.next().makePromise(of: Channel.self)
         let allDonePromise = singleThreadedELG.next().makePromise(of: Void.self)
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .childChannelOptions([.allowRemoteHalfClosure])
             .childChannelInitializer { channel in
                 channel.pipeline.addHandler(WriteWhenActiveHandler(channelAvailablePromise: serverChannelAvailablePromise))
             }
@@ -2581,7 +2581,7 @@ public final class ChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: server, level: .socket, name: .timestamp))
 
         let client1 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
-            .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .channelOptions([.reuseAddr])
             .channelOption(ChannelOptions.tcpOption(.nodelay), value: 0)
             .connect(to: server.localAddress!)
             .wait())
@@ -2590,7 +2590,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try client1.close().wait())
         }
         let client2 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
-            .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .channelOptions([.reuseAddr])
             .connect(to: server.localAddress!)
             .wait())
         let accepted2 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())

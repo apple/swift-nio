@@ -532,9 +532,8 @@ let socketBootstrap = ServerBootstrap(group: group)
     .childChannelInitializer(childChannelInitializer(channel:))
 
     // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+    .childChannelOptions([.reuseAddr, .allowRemoteHalfClosure(allowHalfClosure)])
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-    .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
 let pipeBootstrap = NIOPipeBootstrap(group: group)
     // Set the handlers that are applied to the accepted Channels
     .channelInitializer(childChannelInitializer(channel:))

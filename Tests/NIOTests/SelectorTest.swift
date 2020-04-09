@@ -348,7 +348,7 @@ class SelectorTest: XCTestCase {
             XCTAssertNoThrow(try el.submit { () -> [EventLoopFuture<Channel>] in
                 (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map { (_: Int) in
                     ClientBootstrap(group: el)
-                        .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+                        .channelOptions([.allowRemoteHalfClosure])
                         .channelInitializer { channel in
                             channel.pipeline.addHandler(CloseEveryOtherAndOpenNewOnesHandler(allChannels: allChannels,
                                                                                              hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
