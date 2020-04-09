@@ -178,7 +178,7 @@ public final class ServerBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the `ServerSocketChannel`.
     /// - See: serverChannelOption
     /// - Parameter options: List of shorthand options to apply.
-    /// - Returns: The update server bootstrap (this mutated)
+    /// - Returns: The updated server bootstrap (`self` being mutated)
     public func serverOptions(_ options: [ShorthandServerBootstrapOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
