@@ -526,8 +526,7 @@ func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
 let fileIO = NonBlockingFileIO(threadPool: threadPool)
 let socketBootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .serverChannelOption(ChannelOptions.backlog, value: 256)
-    .serverOptions([.reuseAddr])
+    .serverOptions([.reuseAddr, .backlog(256)])
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer(childChannelInitializer(channel:))

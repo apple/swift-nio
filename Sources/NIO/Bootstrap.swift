@@ -33,8 +33,7 @@ internal enum NIOOnSocketsBootstraps {
 ///     }
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
-///         .serverChannelOption(ChannelOptions.backlog, value: 256)
-///         .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+///         .serverOptions([.backlog(256), .reuseAddr])
 ///
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
@@ -1019,4 +1018,14 @@ extension ShorthandBootstrapOption {
     /// Option to disble autoRead
     /// - See: ChannelOptions.autoRead
     public static let disableAutoRead = ShorthandBootstrapOption(apply: ShorthandApplyImpl(option: ChannelOptions.autoRead, value: false))
+    
+    /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
+    /// - See: ChannelOptions.backlog
+    public static func backlog(_ value : ChannelOptions.Types.BacklogOption.Value) -> ShorthandBootstrapOption {
+        return makeSBO(option: ChannelOptions.backlog, value: value)
+    }
+    
+    private static func makeSBO<Option : ChannelOption>(option: Option, value: Option.Value) -> ShorthandBootstrapOption {
+        ShorthandBootstrapOption(apply: ShorthandApplyImpl(option: ChannelOptions.socketOption(.reuseaddr), value: 1))
+    }
 }

@@ -71,8 +71,7 @@ public final class SocketChannelTest : XCTestCase {
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-            .serverChannelOption(ChannelOptions.backlog, value: 256)
+            .serverOptions([.reuseAddr, .backlog(256)])
             .bind(host: "127.0.0.1", port: 0).wait())
 
         // The goal of this test is to try to trigger at least one channel to have connection setup that is not
@@ -577,9 +576,7 @@ public final class SocketChannelTest : XCTestCase {
             // Build server channel; after this point the server called listen()
             let serverPromise = group.next().makePromise(of: IOError.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-                .serverChannelOption(ChannelOptions.backlog, value: 256)
-                .serverChannelOption(ChannelOptions.autoRead, value: false)
+                .serverOptions([.reuseAddr, .backlog(256), .disableAutoRead])
                 .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait())
