@@ -42,7 +42,7 @@ private final class EchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 var bootstrap = DatagramBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR
-    .channelOptions([.reuseaddr])
+    .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
 
     // Set the handlers that are applied to the bound channel
     .channelInitializer { channel in
