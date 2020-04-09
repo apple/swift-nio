@@ -1088,8 +1088,10 @@ extension ShorthandChildBootstrapOption {
     /// - See:  NIOBSDSocket.Option.reuseaddr
     public static let reuseAddr = ShorthandChildBootstrapOption(.ReuseAddr(true))
     
+    /// - See: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure = ShorthandChildBootstrapOption(.AllowRemoteHalfClosure(true))
     
+    /// - See: `AllowRemoteHalfClosureOption`.
     public static func allowRemoteHalfClosure(_ value: Bool) -> ShorthandChildBootstrapOption {
         ShorthandChildBootstrapOption(.AllowRemoteHalfClosure(value))
     }
@@ -1132,8 +1134,10 @@ extension ShorthandClientBootstrapOption {
     /// - See:  NIOBSDSocket.Option.reuseaddr
     public static let reuseAddr = ShorthandClientBootstrapOption(.ReuseAddr(true))
     
+    /// - See: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure = ShorthandClientBootstrapOption(.AllowRemoteHalfClosure(true))
     
+    /// - See: `AllowRemoteHalfClosureOption`.
     public static func allowRemoteHalfClosure(_ value: Bool) -> ShorthandClientBootstrapOption {
         ShorthandClientBootstrapOption(.AllowRemoteHalfClosure(value))
     }
