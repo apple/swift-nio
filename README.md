@@ -32,7 +32,7 @@ Protocol | Client | Server | Repository | Module | Comment
 HTTP/1 | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOHTTP1`](https://apple.github.io/swift-nio/docs/current/NIOHTTP1/index.html) | official NIO project
 HTTP/2 | ✅| ✅ | [apple/swift-nio-http2](https://github.com/apple/swift-nio-http2) | [`NIOHTTP2`](https://apple.github.io/swift-nio-http2/docs/current/NIOHTTP2/index.html) | official NIO project
 WebSocket | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOWebSocket`](https://apple.github.io/swift-nio/docs/current/NIOWebSocket/index.html) | official NIO project
-TLS | ✅ | ✅ | [apple/swift-nio-ssl](https://github.com/apple/swift-nio-ssl) | [`NIOSSL`](https://apple.github.io/swift-nio-ssl/docs/current/NIOSSL/index.html) | official NIO project
+TLS | ✅ | ✅ | [apple/swift-nio-ssl](https://github.com/apple/swift-nio-ssl) | [`NIOTLS`](https://apple.github.io/swift-nio-ssl/docs/current/NIOSSL/index.html) | official NIO project
 
 #### High-level implementations
 
