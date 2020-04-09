@@ -179,7 +179,7 @@ public final class ServerBootstrap {
     /// - See: serverChannelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (this mutated)
-    public func serverOptions(_ options: [ShorthandBootstrapOption]) -> Self {
+    public func serverOptions(_ options: [ShorthandServerBootstrapOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
         }
@@ -1002,31 +1002,52 @@ public final class NIOPipeBootstrap {
 
 /// An channel option which can be applied to bootstrap using shorthand notation.
 /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
-public struct ShorthandBootstrapOption {
-    private let apply: ShorthandApply
+public struct ShorthandServerBootstrapOption {
+    private let data: ShorthandServerOption
     
-    private init(apply: ShorthandApply) {
-        self.apply = apply
+    private init(_ data: ShorthandServerOption) {
+        self.data = data
     }
     
     /// Apply the contained option to the supplied ServerBootstrap
     /// - Parameter serverBootstrap: bootstrap to apply this option to.
     /// - Returns: the modified bootstrap (currently the same one mutated)
     func applyOption(to serverBootstrap : ServerBootstrap) {
-        apply.applyOption(to: serverBootstrap)
+        data.applyOption(to: serverBootstrap)
+    }
+    
+    private enum ShorthandServerOption {
+        case ReuseAddr(Bool)
+        case AutoRead(Bool)
+        case Backlog(Int32)
+        
+        func applyOption(to serverBootstrap: ServerBootstrap) {
+            switch self {
+                case .AutoRead(let value):
+                    let _ = serverBootstrap.serverChannelOption(ChannelOptions.autoRead, value: value)
+                case .ReuseAddr(let value):
+                    let _ = serverBootstrap.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+                case .Backlog(let value):
+                    let _ = serverBootstrap.serverChannelOption(ChannelOptions.backlog, value: value)
+            }
+        }
     }
 }
 
-private protocol ShorthandApply {
-    func applyOption(to serverBootstrap : ServerBootstrap)
-}
-
-private struct ShorthandApplyImpl<Option : ChannelOption> : ShorthandApply {
-    let option : Option
-    let value : Option.Value
+/// Approved shorthand server options.
+extension ShorthandServerBootstrapOption {
+    /// Option to reuse address.
+    /// - See:  NIOBSDSocket.Option.reuseaddr
+    public static let reuseAddr = ShorthandServerBootstrapOption(.ReuseAddr(true))
     
-    func applyOption(to serverBootstrap: ServerBootstrap) {
-        _ = serverBootstrap.serverChannelOption(option, value: value)
+    /// Option to disble autoRead
+    /// - See: ChannelOptions.autoRead
+    public static let disableAutoRead = ShorthandServerBootstrapOption(.AutoRead(false))
+    
+    /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
+    /// - See: ChannelOptions.backlog
+    public static func backlog(_ value : ChannelOptions.Types.BacklogOption.Value) -> ShorthandServerBootstrapOption {
+        return ShorthandServerBootstrapOption(.Backlog(value))
     }
 }
 
@@ -1060,6 +1081,8 @@ private struct ShorthandApplyChildImpl<Option : ChannelOption> : ShorthandApplyC
     }
 }
 
+
+
 /// An channel option which can be applied to bootstrap using shorthand notation.
 /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
 public struct ShorthandClientBootstrapOption {
@@ -1091,26 +1114,9 @@ private struct ShorthandApplyClientImpl<Option : ChannelOption> : ShorthandApply
     }
 }
 
-/// Approved shorthand server options.
-extension ShorthandBootstrapOption {
-    /// Option to reuse address.
-    /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = makeSBO(option: ChannelOptions.socketOption(.reuseaddr), value: 1)
-    
-    /// Option to disble autoRead
-    /// - See: ChannelOptions.autoRead
-    public static let disableAutoRead = makeSBO(option: ChannelOptions.autoRead, value: false)
-    
-    /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
-    /// - See: ChannelOptions.backlog
-    public static func backlog(_ value : ChannelOptions.Types.BacklogOption.Value) -> ShorthandBootstrapOption {
-        return makeSBO(option: ChannelOptions.backlog, value: value)
-    }
-    
-    private static func makeSBO<Option : ChannelOption>(option: Option, value: Option.Value) -> ShorthandBootstrapOption {
-        ShorthandBootstrapOption(apply: ShorthandApplyImpl(option: ChannelOptions.socketOption(.reuseaddr), value: 1))
-    }
-}
+
+
+
 
 /// Approved shorthand client options.
 extension ShorthandClientBootstrapOption {
