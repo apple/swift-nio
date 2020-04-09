@@ -77,7 +77,7 @@ private final class HTTPEchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
-    .channelOptions([.reuseaddr])
+    .channelOptions([.reuseAddr])
     .channelInitializer { channel in
         channel.pipeline.addHTTPClientHandlers(position: .first,
                                                leftOverBytesStrategy: .fireError).flatMap {
