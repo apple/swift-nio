@@ -108,6 +108,7 @@ if [[ $PUSH == true ]]; then
   rm -rf "docs/$version"
   rm -rf "docs/current"
   cp -r "$jazzy_dir/docs/$version" docs/
+  cp -r "$jazzy_dir/docset/$version" docset/
   cp -r "docs/$version" docs/current
   git add --all docs
   echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current/NIO/index.html" /></head></html>' > index.html
