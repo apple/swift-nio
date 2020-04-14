@@ -1012,7 +1012,7 @@ public struct ShorthandServerBootstrapOption {
     /// Apply the contained option to the supplied ServerBootstrap
     /// - Parameter serverBootstrap: bootstrap to apply this option to.
     /// - Returns: the modified bootstrap (currently the same one mutated)
-    func applyOption(to serverBootstrap : ServerBootstrap) {
+    func applyOption(to serverBootstrap: ServerBootstrap) {
         data.applyOption(to: serverBootstrap)
     }
     
@@ -1067,7 +1067,7 @@ public struct ShorthandChildBootstrapOption {
     /// Apply the contained option to the supplied ServerBootstrap
     /// - Parameter serverBootstrap: bootstrap to apply this option to.
     /// - Returns: the modified bootstrap (currently the same one mutated)
-    func applyOption(to serverBootstrap : ServerBootstrap) {
+    func applyOption(to serverBootstrap: ServerBootstrap) {
         data.applyOption(to: serverBootstrap)
     }
     
@@ -1117,7 +1117,7 @@ public struct ShorthandClientBootstrapOption {
     /// Apply the contained option to the supplied ServerBootstrap
     /// - Parameter to: bootstrap to apply this option to.
     /// - Returns: the modified bootstrap (currently the same one mutated)
-    func applyOption(to clientBootstrap : ClientBootstrap) {
+    func applyOption(to clientBootstrap: ClientBootstrap) {
         data.applyOption(to: clientBootstrap)
     }
     
