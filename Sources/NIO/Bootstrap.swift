@@ -200,7 +200,7 @@ public final class ServerBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the  accepted `SocketChannel`s.
     /// - See: childChannelOption
     /// - Parameter options: List of shorthand options to apply.
-    /// - Returns: The update server bootstrap (this mutated)
+    /// - Returns: The update server bootstrap (`self` being mutated)
     public func childChannelOptions(_ options: [ShorthandChildBootstrapOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
