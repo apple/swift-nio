@@ -1016,7 +1016,7 @@ public struct ShorthandServerBootstrapOption {
         data.applyOption(to: serverBootstrap)
     }
     
-    private enum ShorthandServerOption {
+    fileprivate enum ShorthandServerOption {
         case reuseAddr(Bool)
         case autoRead(Bool)
         case backlog(Int32)
@@ -1033,6 +1033,10 @@ public struct ShorthandServerBootstrapOption {
         }
     }
 }
+
+// Equatable and Hashable for the convenience of users.
+extension ShorthandServerBootstrapOption : Equatable, Hashable {}
+extension ShorthandServerBootstrapOption.ShorthandServerOption : Equatable, Hashable {}
 
 /// Approved shorthand server options.
 extension ShorthandServerBootstrapOption {
@@ -1067,7 +1071,7 @@ public struct ShorthandChildBootstrapOption {
         data.applyOption(to: serverBootstrap)
     }
     
-    private enum ShorthandChildOption {
+    fileprivate enum ShorthandChildOption {
         case reuseAddr(Bool)
         case allowRemoteHalfClosure(Bool)
         
@@ -1081,6 +1085,10 @@ public struct ShorthandChildBootstrapOption {
         }
     }
 }
+
+// Equatable and Hashable for the convenience of users.
+extension ShorthandChildBootstrapOption : Equatable, Hashable {}
+extension ShorthandChildBootstrapOption.ShorthandChildOption : Equatable, Hashable {}
 
 /// Approved shorthand child options.
 extension ShorthandChildBootstrapOption {
@@ -1113,7 +1121,7 @@ public struct ShorthandClientBootstrapOption {
         data.applyOption(to: clientBootstrap)
     }
     
-    private enum ShorthandClientOption {
+    fileprivate enum ShorthandClientOption {
         case reuseAddr(Bool)
         case allowRemoteHalfClosure(Bool)
         
@@ -1127,6 +1135,10 @@ public struct ShorthandClientBootstrapOption {
         }
     }
 }
+
+// Equatable and Hashable for the convenience of users.
+extension ShorthandClientBootstrapOption : Equatable, Hashable {}
+extension ShorthandClientBootstrapOption.ShorthandClientOption : Equatable, Hashable {}
 
 /// Approved shorthand client options.
 extension ShorthandClientBootstrapOption {
