@@ -385,7 +385,114 @@ public final class ServerBootstrap {
             }
         }
     }
+    
+    /// A channel option which can be applied to bootstrap using shorthand notation.
+    /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
+    public struct ShorthandServerBootstrapOption {
+        private let data: ShorthandServerOption
+        
+        private init(_ data: ShorthandServerOption) {
+            self.data = data
+        }
+        
+        /// Apply the contained option to the supplied ServerBootstrap
+        /// - Parameter serverBootstrap: bootstrap to apply this option to.
+        /// - Returns: the modified bootstrap (currently the same one mutated)
+        func applyOption(to serverBootstrap: ServerBootstrap) {
+            data.applyOption(to: serverBootstrap)
+        }
+        
+        fileprivate enum ShorthandServerOption {
+            case reuseAddr(Bool)
+            case autoRead(Bool)
+            case backlog(Int32)
+            
+            func applyOption(to serverBootstrap: ServerBootstrap) {
+                switch self {
+                case .autoRead(let value):
+                    _ = serverBootstrap.serverChannelOption(ChannelOptions.autoRead, value: value)
+                case .reuseAddr(let value):
+                    _ = serverBootstrap.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+                case .backlog(let value):
+                    _ = serverBootstrap.serverChannelOption(ChannelOptions.backlog, value: value)
+                }
+            }
+        }
+    }
+    
+    /// A channel option which can be applied to bootstrap using shorthand notation.
+    /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
+    public struct ShorthandChildBootstrapOption {
+        private let data: ShorthandChildOption
+        
+        private init(_ data: ShorthandChildOption) {
+            self.data = data
+        }
+        
+        /// Apply the contained option to the supplied ServerBootstrap
+        /// - Parameter serverBootstrap: bootstrap to apply this option to.
+        /// - Returns: the modified bootstrap (currently the same one mutated)
+        func applyOption(to serverBootstrap: ServerBootstrap) {
+            data.applyOption(to: serverBootstrap)
+        }
+        
+        fileprivate enum ShorthandChildOption {
+            case reuseAddr(Bool)
+            case allowRemoteHalfClosure(Bool)
+            
+            func applyOption(to serverBootstrap: ServerBootstrap) {
+                switch self {
+                case .reuseAddr(let value):
+                    _ = serverBootstrap.childChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+                case .allowRemoteHalfClosure(let value):
+                    _ = serverBootstrap.childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+                }
+            }
+        }
+    }
 }
+
+// Hashable for the convenience of users.
+extension ServerBootstrap.ShorthandServerBootstrapOption : Hashable {}
+extension ServerBootstrap.ShorthandServerBootstrapOption.ShorthandServerOption : Hashable {}
+
+/// Approved shorthand server options.
+extension ServerBootstrap.ShorthandServerBootstrapOption {
+    /// Option to reuse address.
+    /// - See:  NIOBSDSocket.Option.reuseaddr
+    public static let reuseAddr = ServerBootstrap.ShorthandServerBootstrapOption(.reuseAddr(true))
+    
+    /// Option to disable autoRead
+    /// - See: ChannelOptions.autoRead
+    public static let disableAutoRead = ServerBootstrap.ShorthandServerBootstrapOption(.autoRead(false))
+    
+    /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
+    /// - See: ChannelOptions.backlog
+    public static func backlog(_ value: ChannelOptions.Types.BacklogOption.Value) -> ServerBootstrap.ShorthandServerBootstrapOption {
+        return ServerBootstrap.ShorthandServerBootstrapOption(.backlog(value))
+    }
+}
+
+// Hashable for the convenience of users.
+extension ServerBootstrap.ShorthandChildBootstrapOption : Hashable {}
+extension ServerBootstrap.ShorthandChildBootstrapOption.ShorthandChildOption : Hashable {}
+
+/// Approved shorthand child options.
+extension ServerBootstrap.ShorthandChildBootstrapOption {
+    /// Option to reuse address.
+    /// - See:  NIOBSDSocket.Option.reuseaddr
+    public static let reuseAddr = ServerBootstrap.ShorthandChildBootstrapOption(.reuseAddr(true))
+    
+    /// - See: `AllowRemoteHalfClosureOption`.
+    public static let allowRemoteHalfClosure = ServerBootstrap.ShorthandChildBootstrapOption(.allowRemoteHalfClosure(true))
+    
+    /// - See: `AllowRemoteHalfClosureOption`.
+    public static func allowRemoteHalfClosure(_ value: Bool) -> ServerBootstrap.ShorthandChildBootstrapOption {
+        ServerBootstrap.ShorthandChildBootstrapOption(.allowRemoteHalfClosure(value))
+    }
+}
+
+
 
 private extension Channel {
     func registerAndDoSynchronously(_ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
@@ -680,6 +787,56 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         } else {
             return eventLoop.submit(setupChannel).flatMap { $0 }
         }
+    }
+    
+    /// A channel option which can be applied to bootstrap using shorthand notation.
+    /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
+    public struct ShorthandClientBootstrapOption {
+        private let data: ShorthandClientOption
+        
+        private init(_ data: ShorthandClientOption) {
+            self.data = data
+        }
+        
+        /// Apply the contained option to the supplied ServerBootstrap
+        /// - Parameter to: bootstrap to apply this option to.
+        /// - Returns: the modified bootstrap (currently the same one mutated)
+        func applyOption(to clientBootstrap: ClientBootstrap) {
+            data.applyOption(to: clientBootstrap)
+        }
+        
+        fileprivate enum ShorthandClientOption {
+            case reuseAddr(Bool)
+            case allowRemoteHalfClosure(Bool)
+            
+            func applyOption(to clientBootstrap: ClientBootstrap) {
+                switch self {
+                case .reuseAddr(let value):
+                    _ = clientBootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+                case .allowRemoteHalfClosure(let value):
+                    _ = clientBootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+                }
+            }
+        }
+    }
+}
+
+// Hashable for the convenience of users.
+extension ClientBootstrap.ShorthandClientBootstrapOption : Hashable {}
+extension ClientBootstrap.ShorthandClientBootstrapOption.ShorthandClientOption : Hashable {}
+
+/// Approved shorthand client options.
+extension ClientBootstrap.ShorthandClientBootstrapOption {
+    /// Option to reuse address.
+    /// - See:  NIOBSDSocket.Option.reuseaddr
+    public static let reuseAddr = ClientBootstrap.ShorthandClientBootstrapOption(.reuseAddr(true))
+    
+    /// - See: `AllowRemoteHalfClosureOption`.
+    public static let allowRemoteHalfClosure = ClientBootstrap.ShorthandClientBootstrapOption(.allowRemoteHalfClosure(true))
+    
+    /// - See: `AllowRemoteHalfClosureOption`.
+    public static func allowRemoteHalfClosure(_ value: Bool) -> ClientBootstrap.ShorthandClientBootstrapOption {
+        ClientBootstrap.ShorthandClientBootstrapOption(.allowRemoteHalfClosure(value))
     }
 }
 
@@ -997,160 +1154,5 @@ public final class NIOPipeBootstrap {
                 setupChannel()
             }
         }
-    }
-}
-
-/// An channel option which can be applied to bootstrap using shorthand notation.
-/// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
-public struct ShorthandServerBootstrapOption {
-    private let data: ShorthandServerOption
-    
-    private init(_ data: ShorthandServerOption) {
-        self.data = data
-    }
-    
-    /// Apply the contained option to the supplied ServerBootstrap
-    /// - Parameter serverBootstrap: bootstrap to apply this option to.
-    /// - Returns: the modified bootstrap (currently the same one mutated)
-    func applyOption(to serverBootstrap: ServerBootstrap) {
-        data.applyOption(to: serverBootstrap)
-    }
-    
-    fileprivate enum ShorthandServerOption {
-        case reuseAddr(Bool)
-        case autoRead(Bool)
-        case backlog(Int32)
-        
-        func applyOption(to serverBootstrap: ServerBootstrap) {
-            switch self {
-            case .autoRead(let value):
-                _ = serverBootstrap.serverChannelOption(ChannelOptions.autoRead, value: value)
-            case .reuseAddr(let value):
-                _ = serverBootstrap.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
-            case .backlog(let value):
-                _ = serverBootstrap.serverChannelOption(ChannelOptions.backlog, value: value)
-            }
-        }
-    }
-}
-
-// Hashable for the convenience of users.
-extension ShorthandServerBootstrapOption : Hashable {}
-extension ShorthandServerBootstrapOption.ShorthandServerOption : Hashable {}
-
-/// Approved shorthand server options.
-extension ShorthandServerBootstrapOption {
-    /// Option to reuse address.
-    /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ShorthandServerBootstrapOption(.reuseAddr(true))
-    
-    /// Option to disable autoRead
-    /// - See: ChannelOptions.autoRead
-    public static let disableAutoRead = ShorthandServerBootstrapOption(.autoRead(false))
-    
-    /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
-    /// - See: ChannelOptions.backlog
-    public static func backlog(_ value: ChannelOptions.Types.BacklogOption.Value) -> ShorthandServerBootstrapOption {
-        return ShorthandServerBootstrapOption(.backlog(value))
-    }
-}
-
-/// An channel option which can be applied to bootstrap using shorthand notation.
-/// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
-public struct ShorthandChildBootstrapOption {
-    private let data: ShorthandChildOption
-    
-    private init(_ data: ShorthandChildOption) {
-        self.data = data
-    }
-    
-    /// Apply the contained option to the supplied ServerBootstrap
-    /// - Parameter serverBootstrap: bootstrap to apply this option to.
-    /// - Returns: the modified bootstrap (currently the same one mutated)
-    func applyOption(to serverBootstrap: ServerBootstrap) {
-        data.applyOption(to: serverBootstrap)
-    }
-    
-    fileprivate enum ShorthandChildOption {
-        case reuseAddr(Bool)
-        case allowRemoteHalfClosure(Bool)
-        
-        func applyOption(to serverBootstrap: ServerBootstrap) {
-            switch self {
-            case .reuseAddr(let value):
-                _ = serverBootstrap.childChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
-            case .allowRemoteHalfClosure(let value):
-                _ = serverBootstrap.childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
-            }
-        }
-    }
-}
-
-// Hashable for the convenience of users.
-extension ShorthandChildBootstrapOption : Hashable {}
-extension ShorthandChildBootstrapOption.ShorthandChildOption : Hashable {}
-
-/// Approved shorthand child options.
-extension ShorthandChildBootstrapOption {
-    /// Option to reuse address.
-    /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ShorthandChildBootstrapOption(.reuseAddr(true))
-    
-    /// - See: `AllowRemoteHalfClosureOption`.
-    public static let allowRemoteHalfClosure = ShorthandChildBootstrapOption(.allowRemoteHalfClosure(true))
-    
-    /// - See: `AllowRemoteHalfClosureOption`.
-    public static func allowRemoteHalfClosure(_ value: Bool) -> ShorthandChildBootstrapOption {
-        ShorthandChildBootstrapOption(.allowRemoteHalfClosure(value))
-    }
-}
-
-/// An channel option which can be applied to bootstrap using shorthand notation.
-/// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
-public struct ShorthandClientBootstrapOption {
-    private let data: ShorthandClientOption
-    
-    private init(_ data: ShorthandClientOption) {
-        self.data = data
-    }
-    
-    /// Apply the contained option to the supplied ServerBootstrap
-    /// - Parameter to: bootstrap to apply this option to.
-    /// - Returns: the modified bootstrap (currently the same one mutated)
-    func applyOption(to clientBootstrap: ClientBootstrap) {
-        data.applyOption(to: clientBootstrap)
-    }
-    
-    fileprivate enum ShorthandClientOption {
-        case reuseAddr(Bool)
-        case allowRemoteHalfClosure(Bool)
-        
-        func applyOption(to clientBootstrap: ClientBootstrap) {
-            switch self {
-            case .reuseAddr(let value):
-                _ = clientBootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
-            case .allowRemoteHalfClosure(let value):
-                _ = clientBootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
-            }
-        }
-    }
-}
-
-// Hashable for the convenience of users.
-extension ShorthandClientBootstrapOption : Hashable {}
-extension ShorthandClientBootstrapOption.ShorthandClientOption : Hashable {}
-
-/// Approved shorthand client options.
-extension ShorthandClientBootstrapOption {
-    /// Option to reuse address.
-    /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ShorthandClientBootstrapOption(.reuseAddr(true))
-    
-    /// - See: `AllowRemoteHalfClosureOption`.
-    public static let allowRemoteHalfClosure = ShorthandClientBootstrapOption(.allowRemoteHalfClosure(true))
-    
-    /// - See: `AllowRemoteHalfClosureOption`.
-    public static func allowRemoteHalfClosure(_ value: Bool) -> ShorthandClientBootstrapOption {
-        ShorthandClientBootstrapOption(.allowRemoteHalfClosure(value))
     }
 }
