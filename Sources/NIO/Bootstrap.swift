@@ -528,7 +528,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     /// Specifies some `ChannelOption`s to be applied to the `SocketChannel`.
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
-    /// - Returns: The update server bootstrap (this mutated)
+    /// - Returns: The update server bootstrap (`self` being mutated)
     public func channelOptions(_ options: [ShorthandClientBootstrapOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
