@@ -1023,12 +1023,12 @@ public struct ShorthandServerBootstrapOption {
         
         func applyOption(to serverBootstrap: ServerBootstrap) {
             switch self {
-                case .autoRead(let value):
-                    let _ = serverBootstrap.serverChannelOption(ChannelOptions.autoRead, value: value)
-                case .reuseAddr(let value):
-                    let _ = serverBootstrap.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
-                case .backlog(let value):
-                    let _ = serverBootstrap.serverChannelOption(ChannelOptions.backlog, value: value)
+            case .autoRead(let value):
+                let _ = serverBootstrap.serverChannelOption(ChannelOptions.autoRead, value: value)
+            case .reuseAddr(let value):
+                let _ = serverBootstrap.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+            case .backlog(let value):
+                let _ = serverBootstrap.serverChannelOption(ChannelOptions.backlog, value: value)
             }
         }
     }
@@ -1073,10 +1073,10 @@ public struct ShorthandChildBootstrapOption {
         
         func applyOption(to serverBootstrap: ServerBootstrap) {
             switch self {
-                case .reuseAddr(let value):
-                    let _ = serverBootstrap.childChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
-                case .allowRemoteHalfClosure(let value):
-                    let _ = serverBootstrap.childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+            case .reuseAddr(let value):
+                let _ = serverBootstrap.childChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+            case .allowRemoteHalfClosure(let value):
+                let _ = serverBootstrap.childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
             }
         }
     }
@@ -1119,10 +1119,10 @@ public struct ShorthandClientBootstrapOption {
         
         func applyOption(to clientBootstrap: ClientBootstrap) {
             switch self {
-                case .reuseAddr(let value):
-                    let _ = clientBootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
-                case .allowRemoteHalfClosure(let value):
-                    let _ = clientBootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+            case .reuseAddr(let value):
+                let _ = clientBootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+            case .allowRemoteHalfClosure(let value):
+                let _ = clientBootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
             }
         }
     }
