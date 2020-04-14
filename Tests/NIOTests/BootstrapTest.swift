@@ -543,7 +543,7 @@ class BootstrapTest: XCTestCase {
         let sbLongReuseValue = try bindAndGetReuseAddrOption { bs in
             bs.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1) }
         let sbShortReuseValue = try bindAndGetReuseAddrOption { bs in bs.serverOptions([.reuseAddr])}
-        let sbNoReuseValue = try bindAndGetReuseAddrOption { bs in bs }
+        let sbNoReuseValue = try bindAndGetReuseAddrOption { $0 }
         
         XCTAssertEqual(sbLongReuseValue, sbShortReuseValue)
         XCTAssertNotEqual(sbLongReuseValue, sbNoReuseValue)
