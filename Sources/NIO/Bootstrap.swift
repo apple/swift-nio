@@ -412,7 +412,8 @@ public final class ServerBootstrap {
                 case .autoRead(let value):
                     _ = serverBootstrap.serverChannelOption(ChannelOptions.autoRead, value: value)
                 case .reuseAddr(let value):
-                    _ = serverBootstrap.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+                    _ = serverBootstrap.serverChannelOption(ChannelOptions.socketOption(.reuseaddr),
+                                                            value: value ? 1 : 0)
                 case .backlog(let value):
                     _ = serverBootstrap.serverChannelOption(ChannelOptions.backlog, value: value)
                 }
@@ -443,7 +444,8 @@ public final class ServerBootstrap {
             func applyOption(to serverBootstrap: ServerBootstrap) {
                 switch self {
                 case .reuseAddr(let value):
-                    _ = serverBootstrap.childChannelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+                    _ = serverBootstrap.childChannelOption(ChannelOptions.socketOption(.reuseaddr),
+                                                           value: value ? 1 : 0)
                 case .allowRemoteHalfClosure(let value):
                     _ = serverBootstrap.childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
                 }
@@ -466,9 +468,11 @@ extension ServerBootstrap.ShorthandServerBootstrapOption {
     /// - See: ChannelOptions.autoRead
     public static let disableAutoRead = ServerBootstrap.ShorthandServerBootstrapOption(.autoRead(false))
     
-    /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
+    /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`.
+    /// This is only useful for `ServerSocketChannel`s.
     /// - See: ChannelOptions.backlog
-    public static func backlog(_ value: ChannelOptions.Types.BacklogOption.Value) -> ServerBootstrap.ShorthandServerBootstrapOption {
+    public static func backlog(_ value: ChannelOptions.Types.BacklogOption.Value) ->
+        ServerBootstrap.ShorthandServerBootstrapOption {
         return ServerBootstrap.ShorthandServerBootstrapOption(.backlog(value))
     }
 }
@@ -484,10 +488,12 @@ extension ServerBootstrap.ShorthandChildBootstrapOption {
     public static let reuseAddr = ServerBootstrap.ShorthandChildBootstrapOption(.reuseAddr(true))
     
     /// - See: `AllowRemoteHalfClosureOption`.
-    public static let allowRemoteHalfClosure = ServerBootstrap.ShorthandChildBootstrapOption(.allowRemoteHalfClosure(true))
+    public static let allowRemoteHalfClosure =
+        ServerBootstrap.ShorthandChildBootstrapOption(.allowRemoteHalfClosure(true))
     
     /// - See: `AllowRemoteHalfClosureOption`.
-    public static func allowRemoteHalfClosure(_ value: Bool) -> ServerBootstrap.ShorthandChildBootstrapOption {
+    public static func allowRemoteHalfClosure(_ value: Bool) ->
+        ServerBootstrap.ShorthandChildBootstrapOption {
         ServerBootstrap.ShorthandChildBootstrapOption(.allowRemoteHalfClosure(value))
     }
 }
@@ -832,7 +838,8 @@ extension ClientBootstrap.ShorthandClientBootstrapOption {
     public static let reuseAddr = ClientBootstrap.ShorthandClientBootstrapOption(.reuseAddr(true))
     
     /// - See: `AllowRemoteHalfClosureOption`.
-    public static let allowRemoteHalfClosure = ClientBootstrap.ShorthandClientBootstrapOption(.allowRemoteHalfClosure(true))
+    public static let allowRemoteHalfClosure =
+        ClientBootstrap.ShorthandClientBootstrapOption(.allowRemoteHalfClosure(true))
     
     /// - See: `AllowRemoteHalfClosureOption`.
     public static func allowRemoteHalfClosure(_ value: Bool) -> ClientBootstrap.ShorthandClientBootstrapOption {
