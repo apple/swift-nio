@@ -403,17 +403,17 @@ public final class ServerBootstrap {
         }
         
         fileprivate enum ShorthandServerOption {
-            case reuseAddr(Bool)
-            case autoRead(Bool)
+            case reuseAddr
+            case disableAutoRead
             case backlog(Int32)
             
             func applyOption(to serverBootstrap: ServerBootstrap) {
                 switch self {
-                case .autoRead(let value):
-                    _ = serverBootstrap.serverChannelOption(ChannelOptions.autoRead, value: value)
-                case .reuseAddr(let value):
+                case .disableAutoRead:
+                    _ = serverBootstrap.serverChannelOption(ChannelOptions.autoRead, value: false)
+                case .reuseAddr:
                     _ = serverBootstrap.serverChannelOption(ChannelOptions.socketOption(.reuseaddr),
-                                                            value: value ? 1 : 0)
+                                                            value: 1)
                 case .backlog(let value):
                     _ = serverBootstrap.serverChannelOption(ChannelOptions.backlog, value: value)
                 }
@@ -438,14 +438,14 @@ public final class ServerBootstrap {
         }
         
         fileprivate enum ShorthandChildOption {
-            case reuseAddr(Bool)
+            case reuseAddr
             case allowRemoteHalfClosure(Bool)
             
             func applyOption(to serverBootstrap: ServerBootstrap) {
                 switch self {
-                case .reuseAddr(let value):
+                case .reuseAddr:
                     _ = serverBootstrap.childChannelOption(ChannelOptions.socketOption(.reuseaddr),
-                                                           value: value ? 1 : 0)
+                                                           value: 1)
                 case .allowRemoteHalfClosure(let value):
                     _ = serverBootstrap.childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
                 }
@@ -462,11 +462,11 @@ extension ServerBootstrap.ShorthandServerBootstrapOption.ShorthandServerOption :
 extension ServerBootstrap.ShorthandServerBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ServerBootstrap.ShorthandServerBootstrapOption(.reuseAddr(true))
+    public static let reuseAddr = ServerBootstrap.ShorthandServerBootstrapOption(.reuseAddr)
     
     /// Option to disable autoRead
     /// - See: ChannelOptions.autoRead
-    public static let disableAutoRead = ServerBootstrap.ShorthandServerBootstrapOption(.autoRead(false))
+    public static let disableAutoRead = ServerBootstrap.ShorthandServerBootstrapOption(.disableAutoRead)
     
     /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`.
     /// This is only useful for `ServerSocketChannel`s.
@@ -485,7 +485,7 @@ extension ServerBootstrap.ShorthandChildBootstrapOption.ShorthandChildOption : H
 extension ServerBootstrap.ShorthandChildBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ServerBootstrap.ShorthandChildBootstrapOption(.reuseAddr(true))
+    public static let reuseAddr = ServerBootstrap.ShorthandChildBootstrapOption(.reuseAddr)
     
     /// - See: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure =
@@ -812,13 +812,13 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         }
         
         fileprivate enum ShorthandClientOption {
-            case reuseAddr(Bool)
+            case reuseAddr
             case allowRemoteHalfClosure(Bool)
             
             func applyOption(to clientBootstrap: ClientBootstrap) {
                 switch self {
-                case .reuseAddr(let value):
-                    _ = clientBootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: value ? 1 : 0)
+                case .reuseAddr:
+                    _ = clientBootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
                 case .allowRemoteHalfClosure(let value):
                     _ = clientBootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
                 }
@@ -835,7 +835,7 @@ extension ClientBootstrap.ShorthandClientBootstrapOption.ShorthandClientOption :
 extension ClientBootstrap.ShorthandClientBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ClientBootstrap.ShorthandClientBootstrapOption(.reuseAddr(true))
+    public static let reuseAddr = ClientBootstrap.ShorthandClientBootstrapOption(.reuseAddr)
     
     /// - See: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure =
