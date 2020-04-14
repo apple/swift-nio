@@ -1044,7 +1044,7 @@ extension ShorthandServerBootstrapOption {
     /// - See:  NIOBSDSocket.Option.reuseaddr
     public static let reuseAddr = ShorthandServerBootstrapOption(.reuseAddr(true))
     
-    /// Option to disble autoRead
+    /// Option to disable autoRead
     /// - See: ChannelOptions.autoRead
     public static let disableAutoRead = ShorthandServerBootstrapOption(.autoRead(false))
     
