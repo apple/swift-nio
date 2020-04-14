@@ -1050,7 +1050,7 @@ extension ShorthandServerBootstrapOption {
     
     /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
     /// - See: ChannelOptions.backlog
-    public static func backlog(_ value : ChannelOptions.Types.BacklogOption.Value) -> ShorthandServerBootstrapOption {
+    public static func backlog(_ value: ChannelOptions.Types.BacklogOption.Value) -> ShorthandServerBootstrapOption {
         return ShorthandServerBootstrapOption(.backlog(value))
     }
 }
