@@ -1034,9 +1034,9 @@ public struct ShorthandServerBootstrapOption {
     }
 }
 
-// Equatable and Hashable for the convenience of users.
-extension ShorthandServerBootstrapOption : Equatable, Hashable {}
-extension ShorthandServerBootstrapOption.ShorthandServerOption : Equatable, Hashable {}
+// Hashable for the convenience of users.
+extension ShorthandServerBootstrapOption : Hashable {}
+extension ShorthandServerBootstrapOption.ShorthandServerOption : Hashable {}
 
 /// Approved shorthand server options.
 extension ShorthandServerBootstrapOption {
@@ -1086,9 +1086,9 @@ public struct ShorthandChildBootstrapOption {
     }
 }
 
-// Equatable and Hashable for the convenience of users.
-extension ShorthandChildBootstrapOption : Equatable, Hashable {}
-extension ShorthandChildBootstrapOption.ShorthandChildOption : Equatable, Hashable {}
+// Hashable for the convenience of users.
+extension ShorthandChildBootstrapOption : Hashable {}
+extension ShorthandChildBootstrapOption.ShorthandChildOption : Hashable {}
 
 /// Approved shorthand child options.
 extension ShorthandChildBootstrapOption {
@@ -1136,9 +1136,9 @@ public struct ShorthandClientBootstrapOption {
     }
 }
 
-// Equatable and Hashable for the convenience of users.
-extension ShorthandClientBootstrapOption : Equatable, Hashable {}
-extension ShorthandClientBootstrapOption.ShorthandClientOption : Equatable, Hashable {}
+// Hashable for the convenience of users.
+extension ShorthandClientBootstrapOption : Hashable {}
+extension ShorthandClientBootstrapOption.ShorthandClientOption : Hashable {}
 
 /// Approved shorthand client options.
 extension ShorthandClientBootstrapOption {
