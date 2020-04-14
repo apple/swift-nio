@@ -531,7 +531,7 @@ class BootstrapTest: XCTestCase {
     }
     
     func testShorthandOptionsAreEquivalent() throws {
-        func bindAndGetReuseAddrOption(applyBootstrapOptions : (ServerBootstrap) -> ServerBootstrap) throws -> ChannelOptions.Types.SocketOption.Value {
+        func bindAndGetReuseAddrOption(_ applyBootstrapOptions : (ServerBootstrap) -> ServerBootstrap) throws -> ChannelOptions.Types.SocketOption.Value {
             let bootstrap = applyBootstrapOptions(ServerBootstrap(group: group))
             let serverChannel = try bootstrap.bind(host: "127.0.0.1", port: 0).wait()
             let reuseValue = try serverChannel.getOption(ChannelOptions.socketOption(.reuseaddr)).wait()
@@ -539,9 +539,9 @@ class BootstrapTest: XCTestCase {
             return reuseValue
         }
         
-        let sbLongReuseValue = try bindAndGetReuseAddrOption(applyBootstrapOptions: { bs in bs.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1) })
-        let sbShortReuseValue = try bindAndGetReuseAddrOption(applyBootstrapOptions: { bs in bs.serverOptions([.reuseAddr])})
-        let sbNoReuseValue = try bindAndGetReuseAddrOption(applyBootstrapOptions: { bs in bs })
+        let sbLongReuseValue = try bindAndGetReuseAddrOption { bs in bs.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1) }
+        let sbShortReuseValue = try bindAndGetReuseAddrOption { bs in bs.serverOptions([.reuseAddr])}
+        let sbNoReuseValue = try bindAndGetReuseAddrOption { bs in bs }
         
         XCTAssertEqual(sbLongReuseValue, sbShortReuseValue)
         XCTAssertNotEqual(sbLongReuseValue, sbNoReuseValue)
