@@ -197,7 +197,7 @@ public final class ServerBootstrap {
         return self
     }
     
-    /// Specifies some `ChannelOption`s to be applied to the  accepted `SocketChannel`s.
+    /// Specifies some `ChannelOption`s to be applied to the accepted `SocketChannel`s.
     /// - See: childChannelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (`self` being mutated)
