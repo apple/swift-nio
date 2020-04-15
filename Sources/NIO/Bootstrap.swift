@@ -455,8 +455,8 @@ public final class ServerBootstrap {
 }
 
 // Hashable for the convenience of users.
-extension ServerBootstrap.ShorthandServerBootstrapOption : Hashable {}
-extension ServerBootstrap.ShorthandServerBootstrapOption.ShorthandServerOption : Hashable {}
+extension ServerBootstrap.ShorthandServerBootstrapOption: Hashable {}
+extension ServerBootstrap.ShorthandServerBootstrapOption.ShorthandServerOption: Hashable {}
 
 /// Approved shorthand server options.
 extension ServerBootstrap.ShorthandServerBootstrapOption {
@@ -478,8 +478,8 @@ extension ServerBootstrap.ShorthandServerBootstrapOption {
 }
 
 // Hashable for the convenience of users.
-extension ServerBootstrap.ShorthandChildBootstrapOption : Hashable {}
-extension ServerBootstrap.ShorthandChildBootstrapOption.ShorthandChildOption : Hashable {}
+extension ServerBootstrap.ShorthandChildBootstrapOption: Hashable {}
+extension ServerBootstrap.ShorthandChildBootstrapOption.ShorthandChildOption: Hashable {}
 
 /// Approved shorthand child options.
 extension ServerBootstrap.ShorthandChildBootstrapOption {
@@ -828,8 +828,8 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 }
 
 // Hashable for the convenience of users.
-extension ClientBootstrap.ShorthandClientBootstrapOption : Hashable {}
-extension ClientBootstrap.ShorthandClientBootstrapOption.ShorthandClientOption : Hashable {}
+extension ClientBootstrap.ShorthandClientBootstrapOption: Hashable {}
+extension ClientBootstrap.ShorthandClientBootstrapOption.ShorthandClientOption: Hashable {}
 
 /// Approved shorthand client options.
 extension ClientBootstrap.ShorthandClientBootstrapOption {
@@ -1045,23 +1045,23 @@ public final class DatagramBootstrap {
             self.data = data
         }
         
-        /// Apply the contained option to the supplied ServerBootstrap
+        /// Apply the contained option to the supplied DatagramBootstrap
         /// - Parameter to: bootstrap to apply this option to.
         /// - Returns: the modified bootstrap (currently the same one mutated)
-        func applyOption(to clientBootstrap: DatagramBootstrap) {
-            data.applyOption(to: clientBootstrap)
+        func applyOption(to bootstrap: DatagramBootstrap) {
+            data.applyOption(to: bootstrap)
         }
         
         fileprivate enum ShorthandChannelOption {
             case reuseAddr
             case disableAutoRead
             
-            func applyOption(to datagramBootstrap: DatagramBootstrap) {
+            func applyOption(to bootstrap: DatagramBootstrap) {
                 switch self {
                 case .reuseAddr:
-                    _ = datagramBootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+                    _ = bootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
                 case .disableAutoRead:
-                    _ = datagramBootstrap.channelOption(ChannelOptions.autoRead, value: false)
+                    _ = bootstrap.channelOption(ChannelOptions.autoRead, value: false)
                 
                 }
             }
@@ -1070,8 +1070,8 @@ public final class DatagramBootstrap {
 }
 
 // Hashable for the convenience of users.
-extension DatagramBootstrap.ShorthandChannelBootstrapOption : Hashable {}
-extension DatagramBootstrap.ShorthandChannelBootstrapOption.ShorthandChannelOption : Hashable {}
+extension DatagramBootstrap.ShorthandChannelBootstrapOption: Hashable {}
+extension DatagramBootstrap.ShorthandChannelBootstrapOption.ShorthandChannelOption: Hashable {}
 
 /// Approved shorthand datagram channel options.
 extension DatagramBootstrap.ShorthandChannelBootstrapOption {
@@ -1265,8 +1265,8 @@ public final class NIOPipeBootstrap {
 }
 
 // Hashable for the convenience of users.
-extension NIOPipeBootstrap.ShorthandChannelBootstrapOption : Hashable {}
-extension NIOPipeBootstrap.ShorthandChannelBootstrapOption.ShorthandChannelOption : Hashable {}
+extension NIOPipeBootstrap.ShorthandChannelBootstrapOption: Hashable {}
+extension NIOPipeBootstrap.ShorthandChannelBootstrapOption.ShorthandChannelOption: Hashable {}
 
 /// Approved shorthand datagram channel options.
 extension NIOPipeBootstrap.ShorthandChannelBootstrapOption {
