@@ -387,7 +387,7 @@ public final class ServerBootstrap {
     }
     
     /// A channel option which can be applied to bootstrap using shorthand notation.
-    /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
+    /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandServerBootstrapOption])
     public struct ShorthandServerBootstrapOption {
         private let data: ShorthandServerOption
         
@@ -422,7 +422,7 @@ public final class ServerBootstrap {
     }
     
     /// A channel option which can be applied to bootstrap using shorthand notation.
-    /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
+    /// - See: ServerBootstrap.childChannelOptions(_ options: [ShorthandChildBootstrapOption])
     public struct ShorthandChildBootstrapOption {
         private let data: ShorthandChildOption
         
@@ -796,7 +796,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     }
     
     /// A channel option which can be applied to bootstrap using shorthand notation.
-    /// - See: ServerBootstrap.clientOptions(_ options: [ShorthandClientBootstrapOption])
+    /// - See: ClientBootstrap.clientOptions(_ options: [ShorthandClientBootstrapOption])
     public struct ShorthandClientBootstrapOption {
         private let data: ShorthandClientOption
         
@@ -804,7 +804,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
             self.data = data
         }
         
-        /// Apply the contained option to the supplied ServerBootstrap
+        /// Apply the contained option to the supplied ClientBootstrap
         /// - Parameter to: bootstrap to apply this option to.
         /// - Returns: the modified bootstrap (currently the same one mutated)
         func applyOption(to clientBootstrap: ClientBootstrap) {
