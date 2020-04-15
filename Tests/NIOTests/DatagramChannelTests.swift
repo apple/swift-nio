@@ -108,7 +108,7 @@ final class DatagramChannelTests: XCTestCase {
 
     private func buildChannel(group: EventLoopGroup) throws -> Channel {
         return try DatagramBootstrap(group: group)
-            .channelOptions([.reuseAddr])
+            .channelOptions([.allowImmediateEndpointAddressReuse])
             .channelInitializer { channel in
                 channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
@@ -520,7 +520,7 @@ final class DatagramChannelTests: XCTestCase {
 
     func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
         let channel = try assertNoThrowWithValue(DatagramBootstrap(group: group)
-            .channelOptions([.reuseAddr])
+            .channelOptions([.allowImmediateEndpointAddressReuse])
             .channelOption(ChannelOptions.socketOption(.timestamp), value: 1)
             .bind(host: "127.0.0.1", port: 0)
             .wait())

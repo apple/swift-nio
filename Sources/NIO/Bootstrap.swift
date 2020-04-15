@@ -462,7 +462,7 @@ extension ServerBootstrap.ShorthandServerBootstrapOption.ShorthandServerOption: 
 extension ServerBootstrap.ShorthandServerBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ServerBootstrap.ShorthandServerBootstrapOption(.reuseAddr)
+    public static let allowImmediateEndpointAddressReuse = ServerBootstrap.ShorthandServerBootstrapOption(.reuseAddr)
     
     /// Option to disable autoRead
     /// - See: ChannelOptions.autoRead
@@ -471,7 +471,7 @@ extension ServerBootstrap.ShorthandServerBootstrapOption {
     /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`.
     /// This is only useful for `ServerSocketChannel`s.
     /// - See: ChannelOptions.backlog
-    public static func backlog(_ value: ChannelOptions.Types.BacklogOption.Value) ->
+    public static func maximumUnacceptedConnectionBacklog(_ value: ChannelOptions.Types.BacklogOption.Value) ->
         ServerBootstrap.ShorthandServerBootstrapOption {
         return ServerBootstrap.ShorthandServerBootstrapOption(.backlog(value))
     }
@@ -485,7 +485,7 @@ extension ServerBootstrap.ShorthandChildBootstrapOption.ShorthandChildOption: Ha
 extension ServerBootstrap.ShorthandChildBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ServerBootstrap.ShorthandChildBootstrapOption(.reuseAddr)
+    public static let allowImmediateEndpointAddressReuse = ServerBootstrap.ShorthandChildBootstrapOption(.reuseAddr)
     
     /// - See: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure =
@@ -835,7 +835,7 @@ extension ClientBootstrap.ShorthandClientBootstrapOption.ShorthandClientOption: 
 extension ClientBootstrap.ShorthandClientBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = ClientBootstrap.ShorthandClientBootstrapOption(.reuseAddr)
+    public static let allowImmediateEndpointAddressReuse = ClientBootstrap.ShorthandClientBootstrapOption(.reuseAddr)
     
     /// - See: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure =
@@ -1077,7 +1077,7 @@ extension DatagramBootstrap.ShorthandChannelBootstrapOption.ShorthandChannelOpti
 extension DatagramBootstrap.ShorthandChannelBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let reuseAddr = DatagramBootstrap.ShorthandChannelBootstrapOption(.reuseAddr)
+    public static let allowImmediateEndpointAddressReuse = DatagramBootstrap.ShorthandChannelBootstrapOption(.reuseAddr)
     
     /// Option to disable autoRead
     /// - See: ChannelOptions.autoRead

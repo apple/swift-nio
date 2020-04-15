@@ -221,7 +221,7 @@ class BootstrapTest: XCTestCase {
         func restrictBootstrapType(clientBootstrap: NIOClientTCPBootstrap) throws {
             let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverOptions([.reuseAddr])
+                .serverOptions([.allowImmediateEndpointAddressReuse])
                 .childChannelInitializer { channel in
                     serverAcceptedChannelPromise.succeed(channel)
                     return channel.eventLoop.makeSucceededFuture(())
@@ -542,7 +542,7 @@ class BootstrapTest: XCTestCase {
         
         let sbLongReuseValue = try bindAndGetReuseAddrOption { bs in
             bs.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1) }
-        let sbShortReuseValue = try bindAndGetReuseAddrOption { bs in bs.serverOptions([.reuseAddr])}
+        let sbShortReuseValue = try bindAndGetReuseAddrOption { bs in bs.serverOptions([.allowImmediateEndpointAddressReuse])}
         let sbNoReuseValue = try bindAndGetReuseAddrOption { $0 }
         
         XCTAssertEqual(sbLongReuseValue, sbShortReuseValue)

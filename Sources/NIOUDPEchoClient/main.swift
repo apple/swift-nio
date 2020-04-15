@@ -117,7 +117,7 @@ let remoteAddress = { () -> SocketAddress in
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = DatagramBootstrap(group: group)
     // Enable SO_REUSEADDR.
-    .channelOptions([.reuseAddr])
+    .channelOptions([.allowImmediateEndpointAddressReuse])
     .channelInitializer { channel in
         channel.pipeline.addHandler(EchoHandler(remoteAddressInitializer: remoteAddress))
 }
