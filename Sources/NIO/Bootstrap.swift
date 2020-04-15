@@ -494,7 +494,7 @@ extension ServerBootstrap.ShorthandChildBootstrapOption {
     /// - See: `AllowRemoteHalfClosureOption`.
     public static func allowRemoteHalfClosure(_ value: Bool) ->
         ServerBootstrap.ShorthandChildBootstrapOption {
-        ServerBootstrap.ShorthandChildBootstrapOption(.allowRemoteHalfClosure(value))
+        return ServerBootstrap.ShorthandChildBootstrapOption(.allowRemoteHalfClosure(value))
     }
 }
 
@@ -843,7 +843,7 @@ extension ClientBootstrap.ShorthandClientBootstrapOption {
     
     /// - See: `AllowRemoteHalfClosureOption`.
     public static func allowRemoteHalfClosure(_ value: Bool) -> ClientBootstrap.ShorthandClientBootstrapOption {
-        ClientBootstrap.ShorthandClientBootstrapOption(.allowRemoteHalfClosure(value))
+        return ClientBootstrap.ShorthandClientBootstrapOption(.allowRemoteHalfClosure(value))
     }
 }
 
@@ -1281,6 +1281,6 @@ extension NIOPipeBootstrap.ShorthandChannelBootstrapOption {
     /// - See: `AllowRemoteHalfClosureOption`.
     public static func allowRemoteHalfClosure(_ value: Bool) ->
         NIOPipeBootstrap.ShorthandChannelBootstrapOption {
-        NIOPipeBootstrap.ShorthandChannelBootstrapOption(.allowRemoteHalfClosure(value))
+        return NIOPipeBootstrap.ShorthandChannelBootstrapOption(.allowRemoteHalfClosure(value))
     }
 }
