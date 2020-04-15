@@ -1077,7 +1077,8 @@ extension DatagramBootstrap.ShorthandChannelBootstrapOption.ShorthandChannelOpti
 extension DatagramBootstrap.ShorthandChannelBootstrapOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let allowImmediateEndpointAddressReuse = DatagramBootstrap.ShorthandChannelBootstrapOption(.reuseAddr)
+    public static let allowImmediateEndpointAddressReuse =
+        	DatagramBootstrap.ShorthandChannelBootstrapOption(.reuseAddr)
     
     /// Option to disable autoRead
     /// - See: ChannelOptions.autoRead
