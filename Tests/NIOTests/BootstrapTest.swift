@@ -340,7 +340,7 @@ class BootstrapTest: XCTestCase {
     func testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer() {
         var channel: Channel? = nil
         XCTAssertNoThrow(channel = try DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.autoRead, value: false)
+            .channelOptions([.disableAutoRead])
             .channelInitializer { channel in
                 channel.getOption(ChannelOptions.autoRead).whenComplete { result in
                     func workaround() {

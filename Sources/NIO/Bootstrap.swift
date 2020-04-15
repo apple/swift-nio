@@ -796,7 +796,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     }
     
     /// A channel option which can be applied to bootstrap using shorthand notation.
-    /// - See: ServerBootstrap.serverOptions(_ options: [ShorthandBootstrapOption])
+    /// - See: ServerBootstrap.clientOptions(_ options: [ShorthandClientBootstrapOption])
     public struct ShorthandClientBootstrapOption {
         private let data: ShorthandClientOption
         
@@ -927,6 +927,17 @@ public final class DatagramBootstrap {
         self._channelOptions.append(key: option, value: value)
         return self
     }
+    
+    /// Specifies some `ChannelOption`s to be applied to the `DatagramChannel`.
+    /// - See: channelOption
+    /// - Parameter options: List of shorthand options to apply.
+    /// - Returns: The updated server bootstrap (`self` being mutated)
+    public func channelOptions(_ options: [ShorthandChannelBootstrapOption]) -> Self {
+        for option in options {
+            option.applyOption(to: self)
+        }
+        return self
+    }
 
     /// Use the existing bound socket file descriptor.
     ///
@@ -1024,6 +1035,53 @@ public final class DatagramBootstrap {
             }
         }
     }
+    
+    /// A channel option which can be applied to datagram bootstrap using shorthand notation.
+    /// - See: DatagramBootstrap.channelOptions(_ options: [ShorthandChannelBootstrapOption])
+    public struct ShorthandChannelBootstrapOption {
+        private let data: ShorthandChannelOption
+        
+        private init(_ data: ShorthandChannelOption) {
+            self.data = data
+        }
+        
+        /// Apply the contained option to the supplied ServerBootstrap
+        /// - Parameter to: bootstrap to apply this option to.
+        /// - Returns: the modified bootstrap (currently the same one mutated)
+        func applyOption(to clientBootstrap: DatagramBootstrap) {
+            data.applyOption(to: clientBootstrap)
+        }
+        
+        fileprivate enum ShorthandChannelOption {
+            case reuseAddr
+            case disableAutoRead
+            
+            func applyOption(to datagramBootstrap: DatagramBootstrap) {
+                switch self {
+                case .reuseAddr:
+                    _ = datagramBootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+                case .disableAutoRead:
+                    _ = datagramBootstrap.channelOption(ChannelOptions.autoRead, value: false)
+                
+                }
+            }
+        }
+    }
+}
+
+// Hashable for the convenience of users.
+extension DatagramBootstrap.ShorthandChannelBootstrapOption : Hashable {}
+extension DatagramBootstrap.ShorthandChannelBootstrapOption.ShorthandChannelOption : Hashable {}
+
+/// Approved shorthand datagram channel options.
+extension DatagramBootstrap.ShorthandChannelBootstrapOption {
+    /// Option to reuse address.
+    /// - See:  NIOBSDSocket.Option.reuseaddr
+    public static let reuseAddr = DatagramBootstrap.ShorthandChannelBootstrapOption(.reuseAddr)
+    
+    /// Option to disable autoRead
+    /// - See: ChannelOptions.autoRead
+    public static let disableAutoRead = DatagramBootstrap.ShorthandChannelBootstrapOption(.disableAutoRead)
 }
 
 /// A `NIOPipeBootstrap` is an easy way to bootstrap a `PipeChannel` which uses two (uni-directional) UNIX pipes
