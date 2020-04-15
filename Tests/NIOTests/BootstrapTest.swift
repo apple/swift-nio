@@ -368,7 +368,7 @@ class BootstrapTest: XCTestCase {
             }
             var channel: Channel? = nil
             XCTAssertNoThrow(channel = try NIOPipeBootstrap(group: self.group)
-                .channelOption(ChannelOptions.autoRead, value: false)
+                .channelOptions([.disableAutoRead])
                 .channelInitializer { channel in
                     channel.getOption(ChannelOptions.autoRead).whenComplete { result in
                         func workaround() {

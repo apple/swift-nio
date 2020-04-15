@@ -539,7 +539,7 @@ let pipeBootstrap = NIOPipeBootstrap(group: group)
     .channelInitializer(childChannelInitializer(channel:))
 
     .channelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-    .channelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
+    .channelOptions([.allowRemoteHalfClosure(allowHalfClosure)])
 
 defer {
     try! group.syncShutdownGracefully()

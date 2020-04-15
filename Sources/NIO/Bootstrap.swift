@@ -1155,6 +1155,17 @@ public final class NIOPipeBootstrap {
         self._channelOptions.append(key: option, value: value)
         return self
     }
+    
+    /// Specifies some `ChannelOption`s to be applied to the `PipeChannel`.
+    /// - See: channelOption
+    /// - Parameter options: List of shorthand options to apply.
+    /// - Returns: The updated server bootstrap (`self` being mutated)
+    public func channelOptions(_ options: [ShorthandChannelBootstrapOption]) -> Self {
+        for option in options {
+            option.applyOption(to: self)
+        }
+        return self
+    }
 
     private func validateFileDescriptorIsNotAFile(_ descriptor: CInt) throws {
         precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil,
@@ -1219,5 +1230,57 @@ public final class NIOPipeBootstrap {
                 setupChannel()
             }
         }
+    }
+    
+    /// A channel option which can be applied to datagram bootstrap using shorthand notation.
+    /// - See: DatagramBootstrap.channelOptions(_ options: [ShorthandChannelBootstrapOption])
+    public struct ShorthandChannelBootstrapOption {
+        private let data: ShorthandChannelOption
+        
+        private init(_ data: ShorthandChannelOption) {
+            self.data = data
+        }
+        
+        /// Apply the contained option to the supplied NIOPipeBootstrap
+        /// - Parameter to: bootstrap to apply this option to.
+        /// - Returns: the modified bootstrap (currently the same one mutated)
+        func applyOption(to bootstrap: NIOPipeBootstrap) {
+            data.applyOption(to: bootstrap)
+        }
+        
+        fileprivate enum ShorthandChannelOption {
+            case disableAutoRead
+            case allowRemoteHalfClosure(Bool)
+            
+            func applyOption(to bootstrap: NIOPipeBootstrap) {
+                switch self {
+                case .disableAutoRead:
+                    _ = bootstrap.channelOption(ChannelOptions.autoRead, value: false)
+                case .allowRemoteHalfClosure(let value):
+                    _ = bootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+                }
+            }
+        }
+    }
+}
+
+// Hashable for the convenience of users.
+extension NIOPipeBootstrap.ShorthandChannelBootstrapOption : Hashable {}
+extension NIOPipeBootstrap.ShorthandChannelBootstrapOption.ShorthandChannelOption : Hashable {}
+
+/// Approved shorthand datagram channel options.
+extension NIOPipeBootstrap.ShorthandChannelBootstrapOption {
+    /// Option to disable autoRead
+    /// - See: ChannelOptions.autoRead
+    public static let disableAutoRead = NIOPipeBootstrap.ShorthandChannelBootstrapOption(.disableAutoRead)
+    
+    /// - See: `AllowRemoteHalfClosureOption`.
+    public static let allowRemoteHalfClosure =
+        NIOPipeBootstrap.ShorthandChannelBootstrapOption(.allowRemoteHalfClosure(true))
+    
+    /// - See: `AllowRemoteHalfClosureOption`.
+    public static func allowRemoteHalfClosure(_ value: Bool) ->
+        NIOPipeBootstrap.ShorthandChannelBootstrapOption {
+        NIOPipeBootstrap.ShorthandChannelBootstrapOption(.allowRemoteHalfClosure(value))
     }
 }
