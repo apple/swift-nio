@@ -90,7 +90,7 @@ For the API documentation of the other repositories in the SwiftNIO family check
 EOF
 
 for module in "${modules[@]}"; do
-  args=("${jazzy_args[@]}" --output "$jazzy_dir/docs/$version/$module" --docset-path "$jazzy_dir/docset/$version/$module"
+  args=("${jazzy_args[@]}" --output "$jazzy_dir/docs/$version/$module"
         --module "$module" --module-version $version
         --root-url "https://apple.github.io/swift-nio/docs/$version/$module/")
   if [[ -f "$root_path/.build/sourcekitten/$module.json" ]]; then
@@ -108,7 +108,6 @@ if [[ $PUSH == true ]]; then
   rm -rf "docs/$version"
   rm -rf "docs/current"
   cp -r "$jazzy_dir/docs/$version" docs/
-  cp -r "$jazzy_dir/docset/$version" docset/
   cp -r "docs/$version" docs/current
   git add --all docs
   echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current/NIO/index.html" /></head></html>' > index.html
