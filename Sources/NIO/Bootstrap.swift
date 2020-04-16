@@ -179,6 +179,7 @@ public final class ServerBootstrap {
     /// - See: serverChannelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated server bootstrap (`self` being mutated)
+    @inlinable
     public func serverOptions(_ options: [ShorthandServerBootstrapOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
@@ -201,6 +202,7 @@ public final class ServerBootstrap {
     /// - See: childChannelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (`self` being mutated)
+    @inlinable
     public func childChannelOptions(_ options: [ShorthandChildBootstrapOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
@@ -398,6 +400,7 @@ public final class ServerBootstrap {
         /// Apply the contained option to the supplied ServerBootstrap
         /// - Parameter serverBootstrap: bootstrap to apply this option to.
         /// - Returns: the modified bootstrap (currently the same one mutated)
+        @usableFromInline
         func applyOption(to serverBootstrap: ServerBootstrap) {
             data.applyOption(to: serverBootstrap)
         }
@@ -433,6 +436,7 @@ public final class ServerBootstrap {
         /// Apply the contained option to the supplied ServerBootstrap
         /// - Parameter serverBootstrap: bootstrap to apply this option to.
         /// - Returns: the modified bootstrap (currently the same one mutated)
+        @usableFromInline
         func applyOption(to serverBootstrap: ServerBootstrap) {
             data.applyOption(to: serverBootstrap)
         }
@@ -642,6 +646,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (`self` being mutated)
+    @inlinable
     public func channelOptions(_ options: [ShorthandClientBootstrapOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
@@ -807,6 +812,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         /// Apply the contained option to the supplied ClientBootstrap
         /// - Parameter to: bootstrap to apply this option to.
         /// - Returns: the modified bootstrap (currently the same one mutated)
+        @usableFromInline
         func applyOption(to clientBootstrap: ClientBootstrap) {
             data.applyOption(to: clientBootstrap)
         }
@@ -932,6 +938,7 @@ public final class DatagramBootstrap {
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated server bootstrap (`self` being mutated)
+    @inlinable
     public func channelOptions(_ options: [ShorthandChannelBootstrapOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
@@ -1048,6 +1055,7 @@ public final class DatagramBootstrap {
         /// Apply the contained option to the supplied DatagramBootstrap
         /// - Parameter to: bootstrap to apply this option to.
         /// - Returns: the modified bootstrap (currently the same one mutated)
+        @usableFromInline
         func applyOption(to bootstrap: DatagramBootstrap) {
             data.applyOption(to: bootstrap)
         }
@@ -1161,6 +1169,7 @@ public final class NIOPipeBootstrap {
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated server bootstrap (`self` being mutated)
+    @inlinable
     public func channelOptions(_ options: [ShorthandChannelBootstrapOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
@@ -1245,6 +1254,7 @@ public final class NIOPipeBootstrap {
         /// Apply the contained option to the supplied NIOPipeBootstrap
         /// - Parameter to: bootstrap to apply this option to.
         /// - Returns: the modified bootstrap (currently the same one mutated)
+        @usableFromInline
         func applyOption(to bootstrap: NIOPipeBootstrap) {
             data.applyOption(to: bootstrap)
         }
