@@ -568,6 +568,59 @@ class BootstrapTest: XCTestCase {
                                    setValue: 4,
                                    shortOption: .maximumUnacceptedConnectionBacklog(4))
     }
+    
+    func testShorthandOptionsAreEquivalentPipe() throws {
+        func setAndGetOption<Option>(option: Option, _ applyOptions : (NIOPipeBootstrap) -> NIOPipeBootstrap) throws -> Option.Value
+            where Option : ChannelOption {
+                var optionRead : EventLoopFuture<Option.Value>?
+                XCTAssertNoThrow(try withPipe { inPipe, outPipe in
+                   var maybeInFD: CInt? = nil
+                   var maybeOutFD: CInt? = nil
+                   XCTAssertNoThrow(maybeInFD = try inPipe.takeDescriptorOwnership())
+                   XCTAssertNoThrow(maybeOutFD = try outPipe.takeDescriptorOwnership())
+                   guard let inFD = maybeInFD, let outFD = maybeOutFD else {
+                       XCTFail("couldn't get pipe fds")
+                       return [inPipe, outPipe]
+                   }
+                   var channel: Channel? = nil
+                   XCTAssertNoThrow(channel = try applyOptions(NIOPipeBootstrap(group: self.group))
+                       .channelInitializer { channel in optionRead = channel.getOption(option)
+                        return channel.eventLoop.makeSucceededFuture(())
+                   }
+                   .withPipes(inputDescriptor: inFD, outputDescriptor: outFD)
+                   .wait())
+                    XCTAssertNotNil(optionRead)
+                    XCTAssertNotNil(channel)
+                    XCTAssertNoThrow(try channel?.close().wait())
+                    return []
+                })
+                return try optionRead!.wait()
+        }
+        
+        func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
+                                            shortOption: NIOPipeBootstrap.Option) throws
+            where Option : ChannelOption, Option.Value : Equatable {
+            let longSetValue = try setAndGetOption(
+                option: longOption, { bs in
+                bs.channelOption(longOption, value: setValue) })
+            let shortSetValue = try setAndGetOption(
+                option: longOption, { bs in
+                    bs.channelOptions([shortOption])})
+            let unsetValue = try setAndGetOption(
+                option: longOption,
+                { $0 })
+            
+            XCTAssertEqual(longSetValue, shortSetValue)
+            XCTAssertNotEqual(longSetValue, unsetValue)
+        }
+        
+        try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
+                                   setValue: true,
+                                   shortOption: .allowRemoteHalfClosure)
+        try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
+                                   setValue: false,
+                                   shortOption: .disableAutoRead)
+    }
 }
 
 private final class MakeSureAutoReadIsOffInChannelInitializer:  ChannelInboundHandler {
