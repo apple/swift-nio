@@ -76,10 +76,75 @@ public protocol NIOClientTCPBootstrapProtocol {
     func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
 }
 
+/// `NIOClientTCPBootstrap` is a bootstrap that allows you to bootstrap client TCP connections using NIO on BSD Sockets,
+/// NIO Transport Services, or other ways.
+///
+/// Usually, to bootstrap a connection with SwiftNIO, you have to match the right `EventLoopGroup`, the right bootstrap,
+/// and the right TLS implementation. Typical choices involve:
+///  - `MultiThreadedEventLoopGroup`, `ClientBootstrap`, and `NIOSSLClientHandler` (from
+///    [`swift-nio-ssl`](https://github.com/apple/swift-nio-ssl)) for NIO on BSD sockets.
+///  - `NIOTSEventLoopGroup`, `NIOTSConnectionBootstrap`, and the Network.framework TLS implementation (all from
+///    [`swift-nio-transport-services`](https://github.com/apple/swift-nio-transport-services).
+///
+/// Bootstrapping connections that way works but is quite tedious for packages that support multiple ways of
+/// bootstrapping. The idea behind `NIOClientTCPBootstrap` is to do all configuration in one place (when you initialize
+/// a `NIOClientTCPBootstrap`) and then have a common API that works for all use-cases.
+///
+/// Example:
+///
+///     // This function combines the right pieces and returns you a "universal client bootstrap"
+///     // (`NIOClientTCPBootstrap`). This allows you to bootstrap connections (with or without TLS) using either the
+///     // NIO on sockets (`NIO`) or NIO on Network.framework (`NIOTransportServices`) stacks.
+///     // The remainder of the code should be platform-independent.
+///     func makeUniversalBootstrap(serverHostname: String) throws -> (NIOClientTCPBootstrap, EventLoopGroup) {
+///         func useNIOOnSockets() throws -> (NIOClientTCPBootstrap, EventLoopGroup) {
+///             let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///             let sslContext = try NIOSSLContext(configuration: TLSConfiguration.forClient())
+///             let bootstrap = try NIOClientTCPBootstrap(ClientBootstrap(group: group),
+///                                                       tls: NIOSSLClientTLSProvider(context: sslContext,
+///                                                                                    serverHostname: serverHostname))
+///             return (bootstrap, group)
+///         }
+///
+///         #if canImport(Network)
+///         if #available(macOS 10.14, iOS 12, tvOS 12, watchOS 3, *) {
+///             // We run on a new-enough Darwin so we can use Network.framework
+///
+///             let group = NIOTSEventLoopGroup()
+///             let bootstrap = NIOClientTCPBootstrap(NIOTSConnectionBootstrap(group: group),
+///                                                   tls: NIOTSClientTLSProvider())
+///             return (bootstrap, group)
+///         } else {
+///             // We're on Darwin but not new enough for Network.framework, so we fall back on NIO on BSD sockets.
+///             return try useNIOOnSockets()
+///         }
+///         #else
+///         // We are on a non-Darwin platform, so we'll use BSD sockets.
+///         return try useNIOOnSockets()
+///         #endif
+///     }
+///
+///     let (bootstrap, group) = try makeUniversalBootstrap(serverHostname: "example.com")
+///     let connection = try bootstrap
+///             .channelInitializer { channel in
+///                 channel.pipeline.addHandler(PrintEverythingHandler { _ in })
+///             }
+///             .enableTLS()
+///             .connect(host: "example.com", port: 443)
+///             .wait()
 public struct NIOClientTCPBootstrap {
     public let underlyingBootstrap: NIOClientTCPBootstrapProtocol
     private let tlsEnablerTypeErased: (NIOClientTCPBootstrapProtocol) -> NIOClientTCPBootstrapProtocol
 
+    /// Initialize a `NIOClientTCPBootstrap` using the underlying `Bootstrap` alongside a compatible `TLS`
+    /// implementation.
+    ///
+    /// - note: If you do not require `TLS`, you can use `NIOInsecureNoTLS` which supports only plain-text
+    ///         connections. We highly recommend to always use TLS.
+    ///
+    /// - parameters:
+    ///     - bootstrap: The underlying bootstrap to use.
+    ///     - tls: The TLS implementation to use, needs to be compatible with `Bootstrap`.
     public init<Bootstrap: NIOClientTCPBootstrapProtocol,
                 TLS: NIOClientTLSProvider>(_ bootstrap: Bootstrap, tls: TLS) where TLS.Bootstrap == Bootstrap {
         self.underlyingBootstrap = bootstrap
