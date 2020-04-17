@@ -561,6 +561,13 @@ class BootstrapTest: XCTestCase {
         try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
                                    setValue: 1,
                                    shortOption: .allowImmediateEndpointAddressReuse)
+        #if !os(Windows)
+            // Check the oldest way of all.
+            // .socket(.init(SOL_SOCKET), .init(SO_REUSEADDR), value: 1)
+            try checkOptionEquivalence(longOption: ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)),
+                                       setValue: 1,
+                                       shortOption: .allowImmediateEndpointAddressReuse)
+        #endif
         try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
                                    setValue: false,
                                    shortOption: .disableAutoRead)
