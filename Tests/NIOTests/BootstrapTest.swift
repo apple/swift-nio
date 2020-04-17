@@ -530,24 +530,43 @@ class BootstrapTest: XCTestCase {
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: el))
     }
     
-    func testShorthandOptionsAreEquivalent() throws {
-        func bindAndGetReuseAddrOption(_ applyBootstrapOptions : (ServerBootstrap) -> ServerBootstrap) throws ->
-                ChannelOptions.Types.SocketOption.Value {
+    func testShorthandServerOptionsAreEquivalent() throws {
+        func bindAndGetOption<Option>(option: Option, _ applyBootstrapOptions: (ServerBootstrap) -> ServerBootstrap) throws ->
+                Option.Value
+                where Option : ChannelOption {
             let bootstrap = applyBootstrapOptions(ServerBootstrap(group: group))
             let serverChannel = try bootstrap.bind(host: "127.0.0.1", port: 0).wait()
-            let reuseValue = try serverChannel.getOption(ChannelOptions.socketOption(.reuseaddr)).wait()
+            let optionValue = try serverChannel.getOption(option).wait()
             try serverChannel.close().wait()
-            return reuseValue
+            return optionValue
         }
         
-        let sbLongReuseValue = try bindAndGetReuseAddrOption { bs in
-            bs.serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1) }
-        let sbShortReuseValue = try bindAndGetReuseAddrOption { bs in
-            	bs.serverOptions([.allowImmediateEndpointAddressReuse])}
-        let sbNoReuseValue = try bindAndGetReuseAddrOption { $0 }
+        func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
+                                            shortOption: ServerBootstrap.ServerOption) throws
+            where Option : ChannelOption, Option.Value : Equatable {
+            let longSetValue = try bindAndGetOption(
+                option: longOption, { bs in
+                bs.serverChannelOption(longOption, value: setValue) })
+            let shortSetValue = try bindAndGetOption(
+                option: longOption, { bs in
+                    bs.serverOptions([shortOption])})
+            let unsetValue = try bindAndGetOption(
+                option: longOption,
+                { $0 })
+            
+            XCTAssertEqual(longSetValue, shortSetValue)
+            XCTAssertNotEqual(longSetValue, unsetValue)
+        }
         
-        XCTAssertEqual(sbLongReuseValue, sbShortReuseValue)
-        XCTAssertNotEqual(sbLongReuseValue, sbNoReuseValue)
+        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
+                                   setValue: 1,
+                                   shortOption: .allowImmediateEndpointAddressReuse)
+        try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
+                                   setValue: false,
+                                   shortOption: .disableAutoRead)
+        try checkOptionEquivalence(longOption: ChannelOptions.backlog,
+                                   setValue: 4,
+                                   shortOption: .maximumUnacceptedConnectionBacklog(4))
     }
 }
 
