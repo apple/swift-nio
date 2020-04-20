@@ -130,11 +130,12 @@ public struct NIOClientTCPBootstrap {
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (`self` being mutated)
-    public func channelOptions(_ options: [Option]) -> Self {
+    public func channelOptions(_ options: [Option]) -> NIOClientTCPBootstrap {
+        var toReturn = self
         for option in options {
-            option.applyOption(to: self)
+            toReturn = option.applyOption(to: toReturn)
         }
-        return self
+        return toReturn
     }
 
     /// - parameters:
@@ -192,20 +193,20 @@ public struct NIOClientTCPBootstrap {
         /// - Parameter to: bootstrap to apply this option to.
         /// - Returns: the modified bootstrap (currently the same one mutated)
         @usableFromInline
-        func applyOption(to clientBootstrap: NIOClientTCPBootstrap) {
-            data.applyOption(to: clientBootstrap)
+        func applyOption(to clientBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
+            return data.applyOption(to: clientBootstrap)
         }
         
         fileprivate enum ShorthandOption {
             case reuseAddr
             case allowRemoteHalfClosure(Bool)
             
-            func applyOption(to bootstrap: NIOClientTCPBootstrap) {
+            func applyOption(to bootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
                 switch self {
                 case .reuseAddr:
-                    _ = bootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+                    return bootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
                 case .allowRemoteHalfClosure(let value):
-                    _ = bootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+                    return bootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
                 }
             }
         }
