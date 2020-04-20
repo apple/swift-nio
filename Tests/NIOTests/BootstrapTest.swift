@@ -576,6 +576,48 @@ class BootstrapTest: XCTestCase {
                                    shortOption: .maximumUnacceptedConnectionBacklog(4))
     }
     
+    func testShorthandOptionsAreEquivalentDatagram() throws {
+        func setAndGetOption<Option>(option: Option, _ applyOptions : (DatagramBootstrap) -> DatagramBootstrap) throws
+            -> Option.Value where Option : ChannelOption {
+            var optionRead : EventLoopFuture<Option.Value>?
+            var channel: Channel? = nil
+            XCTAssertNoThrow(channel = try applyOptions(DatagramBootstrap(group: self.group))
+                .channelInitializer { channel in optionRead = channel.getOption(option)
+                    return channel.eventLoop.makeSucceededFuture(())
+                }
+                .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
+                .wait())
+            XCTAssertNotNil(optionRead)
+            XCTAssertNotNil(channel)
+            XCTAssertNoThrow(try channel?.close().wait())
+            return try optionRead!.wait()
+        }
+        
+        func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
+                                            shortOption: DatagramBootstrap.Option) throws
+            where Option : ChannelOption, Option.Value : Equatable {
+            let longSetValue = try setAndGetOption(
+                option: longOption, { bs in
+                bs.channelOption(longOption, value: setValue) })
+            let shortSetValue = try setAndGetOption(
+                option: longOption, { bs in
+                    bs.channelOptions([shortOption])})
+            let unsetValue = try setAndGetOption(
+                option: longOption,
+                { $0 })
+            
+            XCTAssertEqual(longSetValue, shortSetValue)
+            XCTAssertNotEqual(longSetValue, unsetValue)
+        }
+        
+        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
+                                   setValue: 1,
+                                   shortOption: .allowImmediateEndpointAddressReuse)
+        try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
+                                   setValue: false,
+                                   shortOption: .disableAutoRead)
+    }
+    
     func testShorthandOptionsAreEquivalentPipe() throws {
         func setAndGetOption<Option>(option: Option, _ applyOptions : (NIOPipeBootstrap) -> NIOPipeBootstrap) throws -> Option.Value
             where Option : ChannelOption {
