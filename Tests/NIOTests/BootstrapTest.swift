@@ -576,6 +576,83 @@ class BootstrapTest: XCTestCase {
                                    shortOption: .maximumUnacceptedConnectionBacklog(4))
     }
     
+    private final class CloseHandler: ChannelInboundHandler {
+        typealias InboundIn = NIOAny
+
+        func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+            // Shutdown a half closed channel.
+            if let channelEvent = event as? ChannelEvent {
+                if channelEvent == .inputClosed {
+                    _ = context.channel.close()
+                }
+            }
+        }
+    }
+    
+    func testShorthandOptionsAreEquivalentServerChild() throws {
+        func setAndGetOption<Option>(option: Option, _ applyOptions : (ServerBootstrap) -> ServerBootstrap) throws -> Option.Value where Option : ChannelOption {
+                var optionRead : EventLoopFuture<Option.Value>?
+                let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+                defer {
+                    XCTAssertNoThrow(try group.syncShutdownGracefully())
+                }
+
+                let clientBootstrap = ClientBootstrap(group: group)
+                let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
+                let serverChannel = try assertNoThrowWithValue(applyOptions(ServerBootstrap(group: group))
+                    .serverOptions([.allowImmediateEndpointAddressReuse])
+                    .childChannelInitializer { channel in
+                        optionRead = channel.getOption(option)
+                        serverAcceptedChannelPromise.succeed(channel)
+                        // return channel.eventLoop.makeSucceededFuture(())
+                        return channel.pipeline.addHandler(CloseHandler())
+                    }.bind(host: "127.0.0.1", port: 0).wait())
+
+                let clientChannel = try assertNoThrowWithValue(clientBootstrap
+                    .channelInitializer({ (channel: Channel) in channel.eventLoop.makeSucceededFuture(()) })
+                    .connect(host: "127.0.0.1", port: serverChannel.localAddress!.port!).wait())
+
+                let serverAcceptedChannel = try serverAcceptedChannelPromise.futureResult.wait()
+
+                // Start shutting stuff down.
+                XCTAssertNoThrow(try clientChannel.close().wait())
+
+                // Wait for the close promises. These fire last.
+                XCTAssertNoThrow(try EventLoopFuture.andAllSucceed([clientChannel.closeFuture,
+                                                                    serverAcceptedChannel.closeFuture],
+                                                                    on: group.next()).wait())
+            XCTAssertNotNil(optionRead)
+            return try optionRead!.wait()
+
+        }
+        
+        func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
+                                            shortOption: ServerBootstrap.ChildOption) throws
+            where Option : ChannelOption, Option.Value : Equatable {
+            
+            let longSetValue = try setAndGetOption(
+                option: longOption, { bs in
+                    bs.childChannelOption(longOption, value: setValue) })
+            let shortSetValue = try setAndGetOption(
+                option: longOption, { bs in
+                    bs.childChannelOptions([shortOption])})
+            let unsetValue = try setAndGetOption(
+                option: longOption,
+                { $0 })
+            
+            XCTAssertEqual(longSetValue, shortSetValue)
+            XCTAssertNotEqual(longSetValue, unsetValue)
+        }
+        
+        // At least on Darwin the default for clients is to have allow reuse set.
+        // try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
+        //                           setValue: 1,
+        //                           shortOption: .allowImmediateEndpointAddressReuse)
+        try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
+                                   setValue: true,
+                                   shortOption: .allowRemoteHalfClosure)
+    }
+    
     func testShorthandOptionsAreEquivalentClient() throws {
         func setAndGetOption<Option>(option: Option, _ applyOptions : (ClientBootstrap) -> ClientBootstrap) throws
             -> Option.Value where Option : ChannelOption {
@@ -664,7 +741,7 @@ class BootstrapTest: XCTestCase {
                                    setValue: true,
                                    shortOption: .allowRemoteHalfClosure)
     }
-    
+
     func testShorthandOptionsAreEquivalentDatagram() throws {
         func setAndGetOption<Option>(option: Option, _ applyOptions : (DatagramBootstrap) -> DatagramBootstrap) throws
             -> Option.Value where Option : ChannelOption {
