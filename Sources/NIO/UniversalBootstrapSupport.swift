@@ -48,6 +48,12 @@ public protocol NIOClientTCPBootstrapProtocol {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
+    
+    /// Specifies some `ChannelOption`s to be applied to the `SocketChannel`.
+    /// - See: channelOption
+    /// - Parameter options: List of shorthand options to apply.
+    /// - Returns: The update server bootstrap (`self` being mutated)
+    func channelOptions(_ options: [NIOClientTCPBootstrapProtocol_Option]) -> Self
 
     /// - parameters:
     ///     - timeout: The timeout that will apply to the connection attempt.
@@ -75,6 +81,86 @@ public protocol NIOClientTCPBootstrapProtocol {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
 }
+
+/// A channel option which can be applied to bootstrap using shorthand notation.
+/// - See: NIOClientTCPBootstrapProtocol.clientOptions(_ options: [Option])
+public struct NIOClientTCPBootstrapProtocol_Option {
+    private let data: ShorthandOption
+    
+    private init(_ data: ShorthandOption) {
+        self.data = data
+    }
+    
+    /// Apply the contained option to the supplied ClientBootstrap
+    /// - Parameter to: bootstrap to apply this option to.
+    /// - Returns: the modified bootstrap (currently the same one mutated)
+    @usableFromInline
+    func applyOption(to bootstrap: NIOClientTCPBootstrapProtocol) {
+        data.applyOption(to: bootstrap)
+    }
+    
+    fileprivate enum ShorthandOption {
+        case reuseAddr
+        case allowRemoteHalfClosure(Bool)
+        
+        func applyOption(to bootstrap: NIOClientTCPBootstrapProtocol) {
+            switch self {
+            case .reuseAddr:
+                _ = bootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            case .allowRemoteHalfClosure(let value):
+                _ = bootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+            }
+        }
+    }
+}
+
+// Hashable for the convenience of users.
+extension NIOClientTCPBootstrapProtocol_Option: Hashable {}
+extension NIOClientTCPBootstrapProtocol_Option.ShorthandOption: Hashable {}
+
+/// Approved shorthand client options.
+extension NIOClientTCPBootstrapProtocol_Option {
+    /// Option to reuse address.
+    /// - See:  NIOBSDSocket.Option.reuseaddr
+    public static let allowImmediateEndpointAddressReuse = NIOClientTCPBootstrapProtocol_Option(.reuseAddr)
+    
+    /// - See: `AllowRemoteHalfClosureOption`.
+    public static let allowRemoteHalfClosure =
+        NIOClientTCPBootstrapProtocol_Option(.allowRemoteHalfClosure(true))
+    
+    /// - See: `AllowRemoteHalfClosureOption`.
+    public static func allowRemoteHalfClosure(_ value: Bool) -> NIOClientTCPBootstrapProtocol_Option {
+        return NIOClientTCPBootstrapProtocol_Option(.allowRemoteHalfClosure(value))
+    }
+}
+
+extension NIOClientTCPBootstrapProtocol {
+    /// Specifies some `ChannelOption`s to be applied to the `SocketChannel`.
+    /// - See: channelOption
+    /// - Parameter options: List of shorthand options to apply.
+    /// - Returns: The update server bootstrap (`self` being mutated)
+    public func channelOptions(_ options: [NIOClientTCPBootstrapProtocol_Option]) -> Self {
+        for option in options {
+            option.applyOption(to: self)
+        }
+        return self
+    }
+}
+/*
+ 
+ /// Specifies some `ChannelOption`s to be applied to the `SocketChannel`.
+ /// - See: channelOption
+ /// - Parameter options: List of shorthand options to apply.
+ /// - Returns: The update server bootstrap (`self` being mutated)
+ @inlinable
+ public func channelOptions(_ options: [Option]) -> Self {
+     for option in options {
+         option.applyOption(to: self)
+     }
+     return self
+ }
+ 
+ */
 
 public struct NIOClientTCPBootstrap {
     public let underlyingBootstrap: NIOClientTCPBootstrapProtocol
