@@ -49,6 +49,11 @@ extension BootstrapTest {
                 ("testNIOPipeBootstrapValidatesWorkingELGsCorrectly", testNIOPipeBootstrapValidatesWorkingELGsCorrectly),
                 ("testNIOPipeBootstrapRejectsNotWorkingELGsCorrectly", testNIOPipeBootstrapRejectsNotWorkingELGsCorrectly),
                 ("testShorthandServerOptionsAreEquivalent", testShorthandServerOptionsAreEquivalent),
+                ("testShorthandOptionsAreEquivalentServerChild", testShorthandOptionsAreEquivalentServerChild),
+                ("testShorthandOptionsAreEquivalentClient", testShorthandOptionsAreEquivalentClient),
+                ("testShorthandOptionsAreEquivalentUniversalClient", testShorthandOptionsAreEquivalentUniversalClient),
+                ("testShorthandOptionsAreEquivalentDatagram", testShorthandOptionsAreEquivalentDatagram),
+                ("testShorthandOptionsAreEquivalentPipe", testShorthandOptionsAreEquivalentPipe),
            ]
    }
 }
