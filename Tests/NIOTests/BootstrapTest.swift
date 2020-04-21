@@ -644,13 +644,16 @@ class BootstrapTest: XCTestCase {
             XCTAssertNotEqual(longSetValue, unsetValue)
         }
         
-        // At least on Darwin the default for clients is to have allow reuse set.
+        // At least on Darwin the default for child is to have allow reuse set - probably inherited from listen
         // try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
         //                           setValue: 1,
         //                           shortOption: .allowImmediateEndpointAddressReuse)
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
                                    setValue: true,
                                    shortOption: .allowRemoteHalfClosure)
+        // try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
+           //                        setValue: false,
+             //                      shortOption: .disableAutoRead)
     }
     
     func testShorthandOptionsAreEquivalentClient() throws {
@@ -695,6 +698,9 @@ class BootstrapTest: XCTestCase {
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
                                    setValue: true,
                                    shortOption: .allowRemoteHalfClosure)
+        try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
+                                   setValue: false,
+                                   shortOption: .disableAutoRead)
     }
     
     func testShorthandOptionsAreEquivalentUniversalClient() throws {
@@ -740,6 +746,9 @@ class BootstrapTest: XCTestCase {
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
                                    setValue: true,
                                    shortOption: .allowRemoteHalfClosure)
+        try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
+                                   setValue: false,
+                                   shortOption: .disableAutoRead)
     }
 
     func testShorthandOptionsAreEquivalentDatagram() throws {

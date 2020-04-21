@@ -265,6 +265,7 @@ public struct NIOClientTCPBootstrap {
         fileprivate enum ShorthandOption {
             case reuseAddr
             case allowRemoteHalfClosure(Bool)
+            case disableAutoRead
             
             func applyOption(to bootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
                 switch self {
@@ -272,6 +273,8 @@ public struct NIOClientTCPBootstrap {
                     return bootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
                 case .allowRemoteHalfClosure(let value):
                     return bootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+                case .disableAutoRead:
+                    return bootstrap.channelOption(ChannelOptions.autoRead, value: false)
                 }
             }
         }
@@ -287,6 +290,10 @@ extension NIOClientTCPBootstrap.Option {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
     public static let allowImmediateEndpointAddressReuse = NIOClientTCPBootstrap.Option(.reuseAddr)
+    
+    /// Option to disable autoRead
+    /// - See: ChannelOptions.autoRead
+    public static let disableAutoRead = NIOClientTCPBootstrap.Option(.disableAutoRead)
     
     /// - See: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure =

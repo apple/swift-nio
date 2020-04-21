@@ -443,6 +443,7 @@ public final class ServerBootstrap {
         
         fileprivate enum ShorthandChildOption {
             case reuseAddr
+            case disableAutoRead
             case allowRemoteHalfClosure(Bool)
             
             func applyOption(to serverBootstrap: ServerBootstrap) {
@@ -452,6 +453,8 @@ public final class ServerBootstrap {
                                                            value: 1)
                 case .allowRemoteHalfClosure(let value):
                     _ = serverBootstrap.childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+                case .disableAutoRead:
+                    _ = serverBootstrap.childChannelOption(ChannelOptions.autoRead, value: false)
                 }
             }
         }
@@ -490,6 +493,10 @@ extension ServerBootstrap.ChildOption {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
     public static let allowImmediateEndpointAddressReuse = ServerBootstrap.ChildOption(.reuseAddr)
+    
+    /// Option to disable autoRead
+    /// - See: ChannelOptions.autoRead
+    public static let disableAutoRead = ServerBootstrap.ChildOption(.disableAutoRead)
     
     /// - See: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure =
@@ -819,6 +826,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         
         fileprivate enum ShorthandClientOption {
             case reuseAddr
+            case disableAutoRead
             case allowRemoteHalfClosure(Bool)
             
             func applyOption(to clientBootstrap: ClientBootstrap) {
@@ -827,6 +835,8 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
                     _ = clientBootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
                 case .allowRemoteHalfClosure(let value):
                     _ = clientBootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+                case .disableAutoRead:
+                    _ = clientBootstrap.channelOption(ChannelOptions.autoRead, value: false)
                 }
             }
         }
@@ -842,6 +852,10 @@ extension ClientBootstrap.Option {
     /// Option to reuse address.
     /// - See:  NIOBSDSocket.Option.reuseaddr
     public static let allowImmediateEndpointAddressReuse = ClientBootstrap.Option(.reuseAddr)
+    
+    /// Option to disable autoRead
+    /// - See: ChannelOptions.autoRead
+    public static let disableAutoRead = ClientBootstrap.Option(.disableAutoRead)
     
     /// - See: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure =
