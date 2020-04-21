@@ -195,10 +195,10 @@ public struct NIOClientTCPBootstrap {
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (`self` being mutated)
-    public func channelOptions(_ options: [Option]) -> NIOClientTCPBootstrap {
+    public func channelOptions(_ options: [NIOTCPShorthandOption]) -> NIOClientTCPBootstrap {
         var toReturn = self
         for option in options {
-            toReturn = option.applyOption(to: toReturn)
+            toReturn = option.applyOption(with: toReturn)
         }
         return toReturn
     }
@@ -244,65 +244,6 @@ public struct NIOClientTCPBootstrap {
         return NIOClientTCPBootstrap(self.tlsEnablerTypeErased(self.underlyingBootstrap),
                                      tlsEnabler: self.tlsEnablerTypeErased)
     }
-    
-    /// A channel option which can be applied to bootstrap using shorthand notation.
-    /// - See: NIOClientTCPBootstrap.channelOptions(_ options: [Option])
-    public struct Option {
-        private let data: ShorthandOption
-        
-        private init(_ data: ShorthandOption) {
-            self.data = data
-        }
-        
-        /// Apply the contained option to the supplied NIOClientTCPBootstrap
-        /// - Parameter to: bootstrap to apply this option to.
-        /// - Returns: the modified bootstrap (currently the same one mutated)
-        @usableFromInline
-        func applyOption(to clientBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
-            return data.applyOption(to: clientBootstrap)
-        }
-        
-        fileprivate enum ShorthandOption {
-            case reuseAddr
-            case allowRemoteHalfClosure(Bool)
-            case disableAutoRead
-            
-            func applyOption(to bootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
-                switch self {
-                case .reuseAddr:
-                    return bootstrap.channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-                case .allowRemoteHalfClosure(let value):
-                    return bootstrap.channelOption(ChannelOptions.allowRemoteHalfClosure, value: value)
-                case .disableAutoRead:
-                    return bootstrap.channelOption(ChannelOptions.autoRead, value: false)
-                }
-            }
-        }
-    }
-}
-
-// Hashable for the convenience of users.
-extension NIOClientTCPBootstrap.Option: Hashable {}
-extension NIOClientTCPBootstrap.Option.ShorthandOption: Hashable {}
-
-/// Approved shorthand tcp client options.
-extension NIOClientTCPBootstrap.Option {
-    /// Option to reuse address.
-    /// - See:  NIOBSDSocket.Option.reuseaddr
-    public static let allowImmediateEndpointAddressReuse = NIOClientTCPBootstrap.Option(.reuseAddr)
-    
-    /// Option to disable autoRead
-    /// - See: ChannelOptions.autoRead
-    public static let disableAutoRead = NIOClientTCPBootstrap.Option(.disableAutoRead)
-    
-    /// - See: `AllowRemoteHalfClosureOption`.
-    public static let allowRemoteHalfClosure =
-        NIOClientTCPBootstrap.Option(.allowRemoteHalfClosure(true))
-    
-    /// - See: `AllowRemoteHalfClosureOption`.
-    public static func allowRemoteHalfClosure(_ value: Bool) -> NIOClientTCPBootstrap.Option {
-        return NIOClientTCPBootstrap.Option(.allowRemoteHalfClosure(value))
-    }
 }
 
 public protocol NIOClientTLSProvider {
@@ -319,4 +260,9 @@ public struct NIOInsecureNoTLS<Bootstrap: NIOClientTCPBootstrapProtocol>: NIOCli
     }
 }
 
-
+extension NIOClientTCPBootstrap : TCPOptionAppliable {
+    @usableFromInline
+    func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
+        return self.channelOption(option, value: value)
+    }
+}
