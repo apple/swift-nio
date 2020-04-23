@@ -1192,18 +1192,18 @@ extension NIOPipeBootstrap.Option {
 // ------------------------
 
 @usableFromInline
-internal protocol TCPOptionAppliable {
+internal protocol NIOTCPOptionAppliable {
     func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
 }
 
-extension ServerBootstrap : TCPOptionAppliable {
+extension ServerBootstrap : NIOTCPOptionAppliable {
     @usableFromInline
     func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
         return self.childChannelOption(option, value: value)
     }
 }
 
-extension ClientBootstrap : TCPOptionAppliable {
+extension ClientBootstrap : NIOTCPOptionAppliable {
     @usableFromInline
     func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
         return self.channelOption(option, value: value)
@@ -1223,7 +1223,7 @@ public struct NIOTCPShorthandOption  {
     /// - Parameter to: object to apply this option to.
     /// - Returns: the modified object
     @usableFromInline
-    func applyOption<T : TCPOptionAppliable>(with: T) -> T {
+    func applyOption<T : NIOTCPOptionAppliable>(with: T) -> T {
         return data.applyOption(with: with)
     }
     
@@ -1232,7 +1232,7 @@ public struct NIOTCPShorthandOption  {
         case disableAutoRead
         case allowRemoteHalfClosure(Bool)
         
-        func applyOption<T : TCPOptionAppliable>(with: T) -> T {
+        func applyOption<T : NIOTCPOptionAppliable>(with: T) -> T {
             switch self {
             case .reuseAddr:
                 return with.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)

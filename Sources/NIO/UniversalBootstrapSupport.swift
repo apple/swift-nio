@@ -260,7 +260,7 @@ public struct NIOInsecureNoTLS<Bootstrap: NIOClientTCPBootstrapProtocol>: NIOCli
     }
 }
 
-extension NIOClientTCPBootstrap : TCPOptionAppliable {
+extension NIOClientTCPBootstrap : NIOTCPOptionAppliable {
     @usableFromInline
     func applyOption<Option>(_ option: Option, value: Option.Value) -> NIOClientTCPBootstrap where Option : ChannelOption {
         return self.channelOption(option, value: value)
