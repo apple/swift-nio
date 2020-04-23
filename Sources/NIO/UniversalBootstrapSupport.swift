@@ -48,6 +48,12 @@ public protocol NIOClientTCPBootstrapProtocol {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
+    
+    /// Apply a shorthand option to this bootstrap.
+    /// - parameters:
+    ///     - option:  The option to try applying.
+    /// - returns: The updated bootstrap if option was successfully applied, otherwise nil suggesting the caller try another method.
+    func applyChannelOption(_ option: NIOTCPShorthandOption) -> Self?
 
     /// - parameters:
     ///     - timeout: The timeout that will apply to the connection attempt.
@@ -74,6 +80,16 @@ public protocol NIOClientTCPBootstrapProtocol {
     ///     - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
+}
+
+extension NIOClientTCPBootstrapProtocol {
+    /// Apply a shorthand option to this bootstrap - default implementation which always fails to apply.
+    /// - parameters:
+    ///     - option:  The option to try applying.
+    /// - returns: The updated bootstrap if option was successfully applied, otherwise nil suggesting the caller try another method.
+    public func applyChannelOption(_ option: NIOTCPShorthandOption) -> Self? {
+        return .none
+    }
 }
 
 /// `NIOClientTCPBootstrap` is a bootstrap that allows you to bootstrap client TCP connections using NIO on BSD Sockets,
@@ -198,7 +214,12 @@ public struct NIOClientTCPBootstrap {
     public func channelOptions(_ options: [NIOTCPShorthandOption]) -> NIOClientTCPBootstrap {
         var toReturn = self
         for option in options {
-            toReturn = option.applyOption(with: toReturn)
+            if let updatedUnderlying = toReturn.underlyingBootstrap.applyChannelOption(option) {
+                toReturn = NIOClientTCPBootstrap(updatedUnderlying,
+                                                 tlsEnabler: self.tlsEnablerTypeErased)
+            } else {
+                toReturn = option.applyOption(with: toReturn)
+            }
         }
         return toReturn
     }
