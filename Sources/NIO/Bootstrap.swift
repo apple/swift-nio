@@ -1191,21 +1191,18 @@ extension NIOPipeBootstrap.Option {
 
 // ------------------------
 
-@usableFromInline
-internal protocol NIOTCPOptionAppliable {
+public protocol NIOTCPOptionAppliable {
     func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
 }
 
 extension ServerBootstrap : NIOTCPOptionAppliable {
-    @usableFromInline
-    func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
+    public func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
         return self.childChannelOption(option, value: value)
     }
 }
 
 extension ClientBootstrap : NIOTCPOptionAppliable {
-    @usableFromInline
-    func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
+    public func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
         return self.channelOption(option, value: value)
     }
 }
@@ -1219,11 +1216,10 @@ public struct NIOTCPShorthandOption  {
         self.data = data
     }
     
-    /// Apply the contained option to the supplied object (almost certainly bootstrap).
+    /// Apply the contained option to the supplied object (almost certainly bootstrap) using the default mapping.
     /// - Parameter to: object to apply this option to.
     /// - Returns: the modified object
-    @usableFromInline
-    func applyOption<T : NIOTCPOptionAppliable>(with: T) -> T {
+    public func applyOption<T : NIOTCPOptionAppliable>(with: T) -> T {
         return data.applyOption(with: with)
     }
     
