@@ -31,6 +31,8 @@ extension SALChannelTest {
                 ("testWritesFromWritabilityNotificationsDoNotGetLostIfWePreviouslyWroteEverything", testWritesFromWritabilityNotificationsDoNotGetLostIfWePreviouslyWroteEverything),
                 ("testWeSurviveIfIgnoringSIGPIPEFails", testWeSurviveIfIgnoringSIGPIPEFails),
                 ("testBasicRead", testBasicRead),
+                ("testBasicConnectWithClientBootstrap", testBasicConnectWithClientBootstrap),
+                ("testClientBootstrapBindIsDoneAfterSocketOptions", testClientBootstrapBindIsDoneAfterSocketOptions),
            ]
    }
 }

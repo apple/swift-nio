@@ -2012,7 +2012,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertFalse(channel.isWritable)
         }
 
-        withChannel { channel in
+        withChannel(skipStream: true) { channel in
             checkThatItThrowsInappropriateOperationForState {
                 XCTAssertEqual(0, channel.localAddress?.port ?? 0xffff)
                 XCTAssertNil(channel.remoteAddress)

@@ -49,15 +49,6 @@ final class MulticastTest: XCTestCase {
 
     struct ReceivedDatagramError: Error { }
 
-    private var supportsIPv6: Bool {
-        do {
-            let ipv6Loopback = try SocketAddress(ipAddress: "::1", port: 0)
-            return try System.enumerateInterfaces().contains(where: { $0.address == ipv6Loopback })
-        } catch {
-            return false
-        }
-    }
-
     private func interfaceForAddress(address: String) throws -> NIONetworkInterface {
         let targetAddress = try SocketAddress(ipAddress: address, port: 0)
         guard let interface = try System.enumerateInterfaces().lazy.filter({ $0.address == targetAddress }).first else {
@@ -220,7 +211,7 @@ final class MulticastTest: XCTestCase {
     }
 
     func testCanJoinBasicMulticastGroupIPv6() throws {
-        guard self.supportsIPv6 else {
+        guard System.supportsIPv6 else {
             // Skip on non-IPv6 systems
             return
         }
@@ -317,7 +308,7 @@ final class MulticastTest: XCTestCase {
     }
 
     func testCanLeaveAnIPv6MulticastGroup() throws {
-        guard self.supportsIPv6 else {
+        guard System.supportsIPv6 else {
             // Skip on non-IPv6 systems
             return
         }
