@@ -604,7 +604,6 @@ class BootstrapTest: XCTestCase {
                     .childChannelInitializer { channel in
                         optionRead = channel.getOption(option)
                         serverAcceptedChannelPromise.succeed(channel)
-                        // return channel.eventLoop.makeSucceededFuture(())
                         return channel.pipeline.addHandler(CloseHandler())
                     }.bind(host: "127.0.0.1", port: 0).wait())
 
