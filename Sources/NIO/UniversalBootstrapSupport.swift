@@ -207,10 +207,10 @@ public struct NIOClientTCPBootstrap {
                                      tlsEnabler: self.tlsEnablerTypeErased)
     }
     
-    /// Specifies some `ChannelOption`s to be applied to the `SocketChannel`.
+    /// Specifies some `ChannelOption`s to be applied to the channel.
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
-    /// - Returns: The update server bootstrap (`self` being mutated)
+    /// - Returns: The updated bootstrap (`self` being mutated)
     public func channelOptions(_ options: [NIOTCPShorthandOption]) -> NIOClientTCPBootstrap {
         var toReturn = self
         for option in options {
@@ -281,9 +281,8 @@ public struct NIOInsecureNoTLS<Bootstrap: NIOClientTCPBootstrapProtocol>: NIOCli
     }
 }
 
-extension NIOClientTCPBootstrap : TCPOptionAppliable {
-    @usableFromInline
-    func applyOption<Option>(_ option: Option, value: Option.Value) -> NIOClientTCPBootstrap where Option : ChannelOption {
+extension NIOClientTCPBootstrap : NIOTCPOptionAppliable {
+    public func applyOption<Option>(_ option: Option, value: Option.Value) -> NIOClientTCPBootstrap where Option : ChannelOption {
         return self.channelOption(option, value: value)
     }
 }

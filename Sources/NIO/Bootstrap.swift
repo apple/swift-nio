@@ -33,7 +33,7 @@ internal enum NIOOnSocketsBootstraps {
 ///     }
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
-///         .serverOptions([.backlog(256), .reuseAddr])
+///         .serverOptions([.maximumUnacceptedConnectionBacklog(256), .allowImmediateEndpointAddressReuse])
 ///
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
@@ -400,7 +400,6 @@ public final class ServerBootstrap {
         
         /// Apply the contained option to the supplied ServerBootstrap
         /// - Parameter serverBootstrap: bootstrap to apply this option to.
-        /// - Returns: the modified bootstrap (currently the same one mutated)
         @usableFromInline
         func applyOption(to serverBootstrap: ServerBootstrap) {
             data.applyOption(to: serverBootstrap)
@@ -590,7 +589,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     /// Specifies some `ChannelOption`s to be applied to the `SocketChannel`.
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
-    /// - Returns: The update server bootstrap (`self` being mutated)
+    /// - Returns: The updated client bootstrap (`self` being mutated)
     @inlinable
     public func channelOptions(_ options: [NIOTCPShorthandOption]) -> Self {
         var toReturn = self
@@ -831,7 +830,7 @@ public final class DatagramBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the `DatagramChannel`.
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
-    /// - Returns: The updated server bootstrap (`self` being mutated)
+    /// - Returns: The updated datagram bootstrap (`self` being mutated)
     @inlinable
     public func channelOptions(_ options: [Option]) -> Self {
         for option in options {
@@ -948,7 +947,6 @@ public final class DatagramBootstrap {
         
         /// Apply the contained option to the supplied DatagramBootstrap
         /// - Parameter to: bootstrap to apply this option to.
-        /// - Returns: the modified bootstrap (currently the same one mutated)
         @usableFromInline
         func applyOption(to bootstrap: DatagramBootstrap) {
             data.applyOption(to: bootstrap)
@@ -1062,7 +1060,7 @@ public final class NIOPipeBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the `PipeChannel`.
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
-    /// - Returns: The updated server bootstrap (`self` being mutated)
+    /// - Returns: The updated pipe bootstrap (`self` being mutated)
     @inlinable
     public func channelOptions(_ options: [Option]) -> Self {
         for option in options {
@@ -1136,7 +1134,7 @@ public final class NIOPipeBootstrap {
         }
     }
     
-    /// A channel option which can be applied to datagram bootstrap using shorthand notation.
+    /// A channel option which can be applied to pipe bootstrap using shorthand notation.
     /// - See: NIOPipeBootstrap.channelOptions(_ options: [Option])
     public struct Option {
         private let data: ShorthandChannelOption
@@ -1147,7 +1145,6 @@ public final class NIOPipeBootstrap {
         
         /// Apply the contained option to the supplied NIOPipeBootstrap
         /// - Parameter to: bootstrap to apply this option to.
-        /// - Returns: the modified bootstrap (currently the same one mutated)
         @usableFromInline
         func applyOption(to bootstrap: NIOPipeBootstrap) {
             data.applyOption(to: bootstrap)
@@ -1194,61 +1191,55 @@ extension NIOPipeBootstrap.Option {
 
 // ------------------------
 
-@usableFromInline
-internal protocol TCPOptionAppliable {
+public protocol NIOTCPOptionAppliable {
     func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
 }
 
-extension ServerBootstrap : TCPOptionAppliable {
-    @usableFromInline
-    func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
+extension ServerBootstrap : NIOTCPOptionAppliable {
+    public func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
         return self.childChannelOption(option, value: value)
     }
 }
 
-extension ClientBootstrap : TCPOptionAppliable {
-    @usableFromInline
-    func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
+extension ClientBootstrap : NIOTCPOptionAppliable {
+    public func applyOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
         return self.channelOption(option, value: value)
     }
 }
 
-/// A channel option which can be applied to bootstrap using shorthand notation.
-    /// - See: eg ClientBootstrap.clientOptions(_ options: [Option])
+/// A channel option which can be applied to a bootstrap or similar using shorthand notation.
+/// - See: ClientBootstrap.channelOptions(_ options: [Option])
 public struct NIOTCPShorthandOption  {
-        private let data: ShorthandOption
+    private let data: ShorthandOption
+    
+    private init(_ data: ShorthandOption) {
+        self.data = data
+    }
+    
+    /// Apply the contained option to the supplied object (almost certainly bootstrap) using the default mapping.
+    /// - Parameter to: object to apply this option to.
+    /// - Returns: the modified object
+    public func applyOption<T : NIOTCPOptionAppliable>(with: T) -> T {
+        return data.applyOption(with: with)
+    }
+    
+    fileprivate enum ShorthandOption {
+        case reuseAddr
+        case disableAutoRead
+        case allowRemoteHalfClosure(Bool)
         
-        private init(_ data: ShorthandOption) {
-            self.data = data
-        }
-        
-        /// Apply the contained option to the supplied ClientBootstrap
-        /// - Parameter to: bootstrap to apply this option to.
-        /// - Returns: the modified bootstrap (currently the same one mutated)
-        @usableFromInline
-        func applyOption<T : TCPOptionAppliable>(with: T) -> T {
-            return data.applyOption(with: with)
-        }
-        
-        fileprivate enum ShorthandOption {
-            case reuseAddr
-            case disableAutoRead
-            case allowRemoteHalfClosure(Bool)
-            
-            func applyOption<T : TCPOptionAppliable>(with: T) -> T
-            {
-                switch self {
-                case .reuseAddr:
-                    return with.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-                case .allowRemoteHalfClosure(let value):
-                    return with.applyOption(ChannelOptions.allowRemoteHalfClosure, value: value)
-                case .disableAutoRead:
-                    return with.applyOption(ChannelOptions.autoRead, value: false)
-                }
+        func applyOption<T : NIOTCPOptionAppliable>(with: T) -> T {
+            switch self {
+            case .reuseAddr:
+                return with.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            case .allowRemoteHalfClosure(let value):
+                return with.applyOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+            case .disableAutoRead:
+                return with.applyOption(ChannelOptions.autoRead, value: false)
             }
         }
     }
-
+}
 
 // Hashable for the convenience of users.
 extension NIOTCPShorthandOption: Hashable {}

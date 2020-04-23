@@ -544,15 +544,13 @@ class BootstrapTest: XCTestCase {
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
                                             shortOption: ServerBootstrap.ServerOption) throws
             where Option : ChannelOption, Option.Value : Equatable {
-            let longSetValue = try bindAndGetOption(
-                option: longOption, { bs in
-                bs.serverChannelOption(longOption, value: setValue) })
-            let shortSetValue = try bindAndGetOption(
-                option: longOption, { bs in
-                    bs.serverOptions([shortOption])})
-            let unsetValue = try bindAndGetOption(
-                option: longOption,
-                { $0 })
+            let longSetValue = try bindAndGetOption(option: longOption) { bs in
+                bs.serverChannelOption(longOption, value: setValue)
+            }
+            let shortSetValue = try bindAndGetOption(option: longOption) { bs in
+                bs.serverOptions([shortOption])
+            }
+            let unsetValue = try bindAndGetOption(option: longOption) { $0 }
             
             XCTAssertEqual(longSetValue, shortSetValue)
             XCTAssertNotEqual(longSetValue, unsetValue)
@@ -604,7 +602,6 @@ class BootstrapTest: XCTestCase {
                     .childChannelInitializer { channel in
                         optionRead = channel.getOption(option)
                         serverAcceptedChannelPromise.succeed(channel)
-                        // return channel.eventLoop.makeSucceededFuture(())
                         return channel.pipeline.addHandler(CloseHandler())
                     }.bind(host: "127.0.0.1", port: 0).wait())
 
@@ -630,15 +627,13 @@ class BootstrapTest: XCTestCase {
                                             shortOption: NIOTCPShorthandOption) throws
             where Option : ChannelOption, Option.Value : Equatable {
             
-            let longSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                    bs.childChannelOption(longOption, value: setValue) })
-            let shortSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                    bs.childChannelOptions([shortOption])})
-            let unsetValue = try setAndGetOption(
-                option: longOption,
-                { $0 })
+            let longSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.childChannelOption(longOption, value: setValue)
+            }
+            let shortSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.childChannelOptions([shortOption])
+            }
+            let unsetValue = try setAndGetOption(option: longOption) { $0 }
             
             XCTAssertEqual(longSetValue, shortSetValue)
             XCTAssertNotEqual(longSetValue, unsetValue)
@@ -678,15 +673,13 @@ class BootstrapTest: XCTestCase {
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
                                             shortOption: NIOTCPShorthandOption) throws
             where Option : ChannelOption, Option.Value : Equatable {
-            let longSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                bs.channelOption(longOption, value: setValue) })
-            let shortSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                    bs.channelOptions([shortOption])})
-            let unsetValue = try setAndGetOption(
-                option: longOption,
-                { $0 })
+            let longSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOption(longOption, value: setValue)
+            }
+            let shortSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOptions([shortOption])
+            }
+            let unsetValue = try setAndGetOption(option: longOption) { $0 }
             
             XCTAssertEqual(longSetValue, shortSetValue)
             XCTAssertNotEqual(longSetValue, unsetValue)
@@ -726,15 +719,13 @@ class BootstrapTest: XCTestCase {
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
                                             shortOption: NIOTCPShorthandOption) throws
             where Option : ChannelOption, Option.Value : Equatable {
-            let longSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                bs.channelOption(longOption, value: setValue) })
-            let shortSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                    bs.channelOptions([shortOption])})
-            let unsetValue = try setAndGetOption(
-                option: longOption,
-                { $0 })
+            let longSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOption(longOption, value: setValue)
+            }
+            let shortSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOptions([shortOption])
+            }
+            let unsetValue = try setAndGetOption(option: longOption) { $0 }
             
             XCTAssertEqual(longSetValue, shortSetValue)
             XCTAssertNotEqual(longSetValue, unsetValue)
@@ -771,15 +762,13 @@ class BootstrapTest: XCTestCase {
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
                                             shortOption: DatagramBootstrap.Option) throws
             where Option : ChannelOption, Option.Value : Equatable {
-            let longSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                bs.channelOption(longOption, value: setValue) })
-            let shortSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                    bs.channelOptions([shortOption])})
-            let unsetValue = try setAndGetOption(
-                option: longOption,
-                { $0 })
+            let longSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOption(longOption, value: setValue)
+            }
+            let shortSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOptions([shortOption])
+            }
+            let unsetValue = try setAndGetOption(option: longOption) { $0 }
             
             XCTAssertEqual(longSetValue, shortSetValue)
             XCTAssertNotEqual(longSetValue, unsetValue)
@@ -824,15 +813,13 @@ class BootstrapTest: XCTestCase {
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
                                             shortOption: NIOPipeBootstrap.Option) throws
             where Option : ChannelOption, Option.Value : Equatable {
-            let longSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                bs.channelOption(longOption, value: setValue) })
-            let shortSetValue = try setAndGetOption(
-                option: longOption, { bs in
-                    bs.channelOptions([shortOption])})
-            let unsetValue = try setAndGetOption(
-                option: longOption,
-                { $0 })
+            let longSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOption(longOption, value: setValue)
+            }
+            let shortSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOptions([shortOption])
+            }
+            let unsetValue = try setAndGetOption(option: longOption) { $0 }
             
             XCTAssertEqual(longSetValue, shortSetValue)
             XCTAssertNotEqual(longSetValue, unsetValue)
