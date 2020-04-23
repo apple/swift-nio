@@ -1210,41 +1210,40 @@ extension ClientBootstrap : TCPOptionAppliable {
     }
 }
 
-/// A channel option which can be applied to bootstrap using shorthand notation.
+/// A channel option which can be applied to a bootstrap or similar using shorthand notation.
 /// - See: ClientBootstrap.channelOptions(_ options: [Option])
 public struct NIOTCPShorthandOption  {
-        private let data: ShorthandOption
+    private let data: ShorthandOption
+    
+    private init(_ data: ShorthandOption) {
+        self.data = data
+    }
+    
+    /// Apply the contained option to the supplied object (almost certainly bootstrap).
+    /// - Parameter to: object to apply this option to.
+    /// - Returns: the modified object
+    @usableFromInline
+    func applyOption<T : TCPOptionAppliable>(with: T) -> T {
+        return data.applyOption(with: with)
+    }
+    
+    fileprivate enum ShorthandOption {
+        case reuseAddr
+        case disableAutoRead
+        case allowRemoteHalfClosure(Bool)
         
-        private init(_ data: ShorthandOption) {
-            self.data = data
-        }
-        
-        /// Apply the contained option to the supplied ClientBootstrap
-        /// - Parameter to: bootstrap to apply this option to.
-        /// - Returns: the modified bootstrap (currently the same one mutated)
-        @usableFromInline
         func applyOption<T : TCPOptionAppliable>(with: T) -> T {
-            return data.applyOption(with: with)
-        }
-        
-        fileprivate enum ShorthandOption {
-            case reuseAddr
-            case disableAutoRead
-            case allowRemoteHalfClosure(Bool)
-            
-            func applyOption<T : TCPOptionAppliable>(with: T) -> T {
-                switch self {
-                case .reuseAddr:
-                    return with.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-                case .allowRemoteHalfClosure(let value):
-                    return with.applyOption(ChannelOptions.allowRemoteHalfClosure, value: value)
-                case .disableAutoRead:
-                    return with.applyOption(ChannelOptions.autoRead, value: false)
-                }
+            switch self {
+            case .reuseAddr:
+                return with.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            case .allowRemoteHalfClosure(let value):
+                return with.applyOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+            case .disableAutoRead:
+                return with.applyOption(ChannelOptions.autoRead, value: false)
             }
         }
     }
-
+}
 
 // Hashable for the convenience of users.
 extension NIOTCPShorthandOption: Hashable {}
