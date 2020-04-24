@@ -542,7 +542,7 @@ class BootstrapTest: XCTestCase {
         }
         
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
-                                            shortOption: ServerBootstrap.ServerOption) throws
+                                            shortOption: NIOTCPServerShorthandOption) throws
             where Option : ChannelOption, Option.Value : Equatable {
             let longSetValue = try bindAndGetOption(option: longOption) { bs in
                 bs.serverChannelOption(longOption, value: setValue)
@@ -760,7 +760,7 @@ class BootstrapTest: XCTestCase {
         }
         
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
-                                            shortOption: DatagramBootstrap.Option) throws
+                                            shortOption: NIOUDPShorthandOption) throws
             where Option : ChannelOption, Option.Value : Equatable {
             let longSetValue = try setAndGetOption(option: longOption) { bs in
                 bs.channelOption(longOption, value: setValue)
@@ -811,7 +811,7 @@ class BootstrapTest: XCTestCase {
         }
         
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
-                                            shortOption: NIOPipeBootstrap.Option) throws
+                                            shortOption: NIOPipeShorthandOption) throws
             where Option : ChannelOption, Option.Value : Equatable {
             let longSetValue = try setAndGetOption(option: longOption) { bs in
                 bs.channelOption(longOption, value: setValue)
