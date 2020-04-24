@@ -19,12 +19,12 @@ extension ServerBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated server bootstrap (`self` being mutated)
     @inlinable
-    public func serverChannelOptions(_ options: [NIOTCPServerShorthandOption]) -> Self {
+    public func serverChannelOptions(_ options: [NIOTCPServerShorthandOption]) -> ServerBootstrap {
         var applier = ServerBootstrapServer_Applier(contained: self)
         for option in options {
             applier = option.applyOptionDefaultMapping(with: applier)
         }
-        return applier.contained as! Self
+        return applier.contained
     }
     
     @usableFromInline
@@ -38,8 +38,8 @@ extension ServerBootstrap {
         }
         
         @usableFromInline
-        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-            return Self(contained: contained.serverChannelOption(option, value: value))
+        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> ServerBootstrapServer_Applier {
+            return ServerBootstrapServer_Applier(contained: contained.serverChannelOption(option, value: value))
         }
     }
 }
@@ -51,12 +51,12 @@ extension ServerBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (`self` being mutated)
     @inlinable
-    public func childChannelOptions(_ options: [NIOTCPShorthandOption]) -> Self {
+    public func childChannelOptions(_ options: [NIOTCPShorthandOption]) -> ServerBootstrap {
         var applier = ServerBootstrapChild_Applier(contained: self)
         for option in options {
             applier = option.applyOptionDefaultMapping(with: applier)
         }
-        return applier.contained as! Self
+        return applier.contained
     }
     
     @usableFromInline
@@ -70,8 +70,8 @@ extension ServerBootstrap {
         }
         
         @usableFromInline
-        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-            return Self(contained: contained.childChannelOption(option, value: value))
+        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> ServerBootstrapChild_Applier {
+            return ServerBootstrapChild_Applier(contained: contained.childChannelOption(option, value: value))
         }
     }
 }
@@ -83,12 +83,12 @@ extension ClientBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated client bootstrap (`self` being mutated)
     @inlinable
-    public func channelOptions(_ options: [NIOTCPShorthandOption]) -> Self {
+    public func channelOptions(_ options: [NIOTCPShorthandOption]) -> ClientBootstrap {
         var applier = ClientBootstrap_Applier(contained: self)
         for option in options {
             applier = option.applyOptionDefaultMapping(with: applier)
         }
-        return applier.contained as! Self
+        return applier.contained
     }
     
     @usableFromInline
@@ -102,8 +102,8 @@ extension ClientBootstrap {
         }
         
         @usableFromInline
-        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-            return Self(contained: contained.channelOption(option, value: value))
+        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> ClientBootstrap_Applier {
+            return ClientBootstrap_Applier(contained: contained.channelOption(option, value: value))
         }
     }
 }
@@ -115,12 +115,12 @@ extension DatagramBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated datagram bootstrap (`self` being mutated)
     @inlinable
-    public func channelOptions(_ options: [NIOUDPShorthandOption]) -> Self {
+    public func channelOptions(_ options: [NIOUDPShorthandOption]) -> DatagramBootstrap {
         var applier = DatagramBootstrap_Applier(contained: self)
         for option in options {
             applier = option.applyOptionDefaultMapping(with: applier)
         }
-        return applier.contained as! Self
+        return applier.contained
     }
     
     @usableFromInline
@@ -134,8 +134,8 @@ extension DatagramBootstrap {
         }
         
         @usableFromInline
-        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-            return Self(contained: contained.channelOption(option, value: value))
+        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> DatagramBootstrap_Applier {
+            return DatagramBootstrap_Applier(contained: contained.channelOption(option, value: value))
         }
     }
 }
@@ -147,12 +147,12 @@ extension NIOPipeBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated pipe bootstrap (`self` being mutated)
     @inlinable
-    public func channelOptions(_ options: [NIOPipeShorthandOption]) -> Self {
+    public func channelOptions(_ options: [NIOPipeShorthandOption]) -> NIOPipeBootstrap {
         var applier = NIOPipeBootstrap_Applier(contained: self)
         for option in options {
             applier = option.applyOptionDefaultMapping(with: applier)
         }
-        return applier.contained as! Self
+        return applier.contained
     }
     
     @usableFromInline
@@ -166,8 +166,8 @@ extension NIOPipeBootstrap {
         }
         
         @usableFromInline
-        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-            return Self(contained: contained.channelOption(option, value: value))
+        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> NIOPipeBootstrap_Applier {
+            return NIOPipeBootstrap_Applier(contained: contained.channelOption(option, value: value))
         }
     }
 }
@@ -212,8 +212,8 @@ extension NIOClientTCPBootstrap {
         }
         
         @usableFromInline
-        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-            return Self(contained: contained.channelOption(option, value: value))
+        func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> NIOClientTCPBootstrap_Applier {
+            return NIOClientTCPBootstrap_Applier(contained: contained.channelOption(option, value: value))
         }
     }
 }
