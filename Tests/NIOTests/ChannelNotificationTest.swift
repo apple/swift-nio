@@ -294,7 +294,7 @@ class ChannelNotificationTest: XCTestCase {
         let acceptedChannelPromise = group.next().makePromise(of: Channel.self)
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
             .serverChannelInitializer { channel in
                 channel.pipeline.addHandler(ServerSocketChannelLifecycleVerificationHandler())
             }
@@ -376,7 +376,7 @@ class ChannelNotificationTest: XCTestCase {
 
         let promise = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
             .childChannelOption(ChannelOptions.autoRead, value: true)
             .childChannelInitializer { channel in
                 channel.pipeline.addHandler(OrderVerificationHandler(promise))

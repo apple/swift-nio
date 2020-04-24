@@ -180,7 +180,7 @@ public final class ServerBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated server bootstrap (`self` being mutated)
     @inlinable
-    public func serverOptions(_ options: [ServerOption]) -> Self {
+    public func serverChannelOptions(_ options: [ServerOption]) -> Self {
         for option in options {
             option.applyOption(to: self)
         }
@@ -390,7 +390,7 @@ public final class ServerBootstrap {
     }
     
     /// A channel option which can be applied to bootstrap using shorthand notation.
-    /// - See: ServerBootstrap.serverOptions(_ options: [ServerOption])
+    /// - See: ServerBootstrap.serverChannelOptions(_ options: [ServerOption])
     public struct ServerOption {
         private let data: ShorthandServerOption
         

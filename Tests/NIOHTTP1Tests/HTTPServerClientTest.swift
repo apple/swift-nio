@@ -338,7 +338,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -395,7 +395,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -455,7 +455,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.addHandler(httpHandler)
@@ -511,7 +511,7 @@ class HTTPServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -553,7 +553,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.addHandler(httpHandler)
@@ -597,7 +597,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.addHandler(httpHandler)

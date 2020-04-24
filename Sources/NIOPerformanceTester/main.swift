@@ -122,7 +122,7 @@ defer {
 }
 
 let serverChannel = try ServerBootstrap(group: group)
-    .serverOptions([.allowImmediateEndpointAddressReuse])
+    .serverChannelOptions([.allowImmediateEndpointAddressReuse])
     .childChannelInitializer { channel in
         channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
             channel.pipeline.addHandler(SimpleHTTPServer())
