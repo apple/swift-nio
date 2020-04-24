@@ -111,7 +111,7 @@ private final class PongHandler: ChannelInboundHandler {
 
 func doPingPongRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
     let serverChannel = try ServerBootstrap(group: group)
-        .serverOptions([.allowImmediateEndpointAddressReuse])
+        .serverChannelOptions([.allowImmediateEndpointAddressReuse])
         .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
         .childChannelInitializer { channel in
             channel.pipeline.addHandler(ByteToMessageHandler(PongDecoder())).flatMap {

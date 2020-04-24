@@ -33,7 +33,7 @@ internal enum NIOOnSocketsBootstraps {
 ///     }
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
-///         .serverOptions([.maximumUnacceptedConnectionBacklog(256), .allowImmediateEndpointAddressReuse])
+///         .serverChannelOptions([.maximumUnacceptedConnectionBacklog(256), .allowImmediateEndpointAddressReuse])
 ///
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
