@@ -82,16 +82,6 @@ public protocol NIOClientTCPBootstrapProtocol {
     func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
 }
 
-extension NIOClientTCPBootstrapProtocol {
-    /// Apply a shorthand option to this bootstrap - default implementation which always fails to apply.
-    /// - parameters:
-    ///     - option:  The option to try applying.
-    /// - returns: The updated bootstrap if option was successfully applied, otherwise nil suggesting the caller try another method.
-    public func applyChannelOption(_ option: NIOTCPShorthandOption) -> Self? {
-        return .none
-    }
-}
-
 /// `NIOClientTCPBootstrap` is a bootstrap that allows you to bootstrap client TCP connections using NIO on BSD Sockets,
 /// NIO Transport Services, or other ways.
 ///
@@ -174,6 +164,11 @@ public struct NIOClientTCPBootstrap {
         self.underlyingBootstrap = bootstrap
         self.tlsEnablerTypeErased = tlsEnabler
     }
+    
+    internal init(_ original : NIOClientTCPBootstrap, withUpdated underlying : NIOClientTCPBootstrapProtocol) {
+        self.underlyingBootstrap = underlying
+        self.tlsEnablerTypeErased = original.tlsEnablerTypeErased
+    }
 
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
@@ -205,23 +200,6 @@ public struct NIOClientTCPBootstrap {
     public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> NIOClientTCPBootstrap {
         return NIOClientTCPBootstrap(self.underlyingBootstrap.channelOption(option, value: value),
                                      tlsEnabler: self.tlsEnablerTypeErased)
-    }
-    
-    /// Specifies some `ChannelOption`s to be applied to the channel.
-    /// - See: channelOption
-    /// - Parameter options: List of shorthand options to apply.
-    /// - Returns: The updated bootstrap (`self` being mutated)
-    public func channelOptions(_ options: [NIOTCPShorthandOption]) -> NIOClientTCPBootstrap {
-        var toReturn = self
-        for option in options {
-            if let updatedUnderlying = toReturn.underlyingBootstrap.applyChannelOption(option) {
-                toReturn = NIOClientTCPBootstrap(updatedUnderlying,
-                                                 tlsEnabler: self.tlsEnablerTypeErased)
-            } else {
-                toReturn = option.applyOption(with: toReturn)
-            }
-        }
-        return toReturn
     }
 
     /// - parameters:
@@ -278,11 +256,5 @@ public struct NIOInsecureNoTLS<Bootstrap: NIOClientTCPBootstrapProtocol>: NIOCli
 
     public func enableTLS(_ bootstrap: Bootstrap) -> Bootstrap {
         fatalError("NIOInsecureNoTLS cannot enable TLS.")
-    }
-}
-
-extension NIOClientTCPBootstrap : NIOTCPOptionAppliable {
-    public func applyOption<Option>(_ option: Option, value: Option.Value) -> NIOClientTCPBootstrap where Option : ChannelOption {
-        return self.channelOption(option, value: value)
     }
 }
