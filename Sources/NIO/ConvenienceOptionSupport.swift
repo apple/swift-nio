@@ -181,19 +181,25 @@ extension NIOTCPShorthandOption.ShorthandOption: Hashable {}
 
 /// Approved shorthand client options.
 extension NIOTCPShorthandOption {
-    /// Option to reuse address.
-    /// - See:  NIOBSDSocket.Option.reuseaddr
+    /// Allow immediately reusing a local address.
     public static let allowImmediateEndpointAddressReuse = NIOTCPShorthandOption(.reuseAddr)
     
-    /// Option to disable autoRead
-    /// - See: ChannelOptions.autoRead
+    /// The user will manually call `Channel.read` once all the data is read from the transport.
     public static let disableAutoRead = NIOTCPShorthandOption(.disableAutoRead)
     
-    /// - See: `AllowRemoteHalfClosureOption`.
+    /// Allows users to configure whether the `Channel` will close itself when its remote
+    /// peer shuts down its send stream, or whether it will remain open. If set to `false` (the default), the `Channel`
+    /// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
+    /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
+    /// and no more data will be received.
     public static let allowRemoteHalfClosure =
         NIOTCPShorthandOption(.allowRemoteHalfClosure(true))
     
-    /// - See: `AllowRemoteHalfClosureOption`.
+    /// Allows users to configure whether the `Channel` will close itself when its remote
+    /// peer shuts down its send stream, or whether it will remain open. If set to `false` (the default), the `Channel`
+    /// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
+    /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
+    /// and no more data will be received.
     public static func allowRemoteHalfClosure(_ value: Bool) -> NIOTCPShorthandOption {
         return NIOTCPShorthandOption(.allowRemoteHalfClosure(value))
     }
@@ -241,17 +247,13 @@ extension NIOTCPServerShorthandOption.ShorthandOption: Hashable {}
 
 /// Approved shorthand server options.
 extension NIOTCPServerShorthandOption {
-    /// Option to reuse address.
-    /// - See:  NIOBSDSocket.Option.reuseaddr
+    /// Allow immediately reusing a local address.
     public static let allowImmediateEndpointAddressReuse = NIOTCPServerShorthandOption(.reuseAddr)
     
-    /// Option to disable autoRead
-    /// - See: ChannelOptions.autoRead
+    /// The user will manually call `Channel.read` once all the data is read from the transport.
     public static let disableAutoRead = NIOTCPServerShorthandOption(.disableAutoRead)
     
-    /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`.
-    /// This is only useful for `ServerSocketChannel`s.
-    /// - See: ChannelOptions.backlog
+    /// Allows users to configure the `backlog` value as specified in `man 2 listen` - the maximum number of connections waiting to be accepted.
     public static func maximumUnacceptedConnectionBacklog(_ value: ChannelOptions.Types.BacklogOption.Value) ->
         NIOTCPServerShorthandOption {
         return NIOTCPServerShorthandOption(.backlog(value))
@@ -259,7 +261,7 @@ extension NIOTCPServerShorthandOption {
 }
 
 // MARK: UDP
-/// A channel option which can be applied to datagram bootstrap using shorthand notation.
+/// A channel option which can be applied to a UDP based bootstrap using shorthand notation.
 /// - See: DatagramBootstrap.channelOptions(_ options: [Option])
 public struct NIOUDPShorthandOption {
     private var data: ShorthandOption
@@ -297,13 +299,11 @@ extension NIOUDPShorthandOption.ShorthandOption: Hashable {}
 
 /// Approved shorthand datagram channel options.
 extension NIOUDPShorthandOption {
-    /// Option to reuse address.
-    /// - See:  NIOBSDSocket.Option.reuseaddr
+    /// Allow immediately reusing a local address.
     public static let allowImmediateEndpointAddressReuse =
             NIOUDPShorthandOption(.reuseAddr)
     
-    /// Option to disable autoRead
-    /// - See: ChannelOptions.autoRead
+    /// The user will manually call `Channel.read` once all the data is read from the transport.
     public static let disableAutoRead = NIOUDPShorthandOption(.disableAutoRead)
 }
 
@@ -345,15 +345,22 @@ extension NIOPipeShorthandOption.ShorthandOption: Hashable {}
 
 /// Approved shorthand datagram channel options.
 extension NIOPipeShorthandOption {
-    /// Option to disable autoRead
-    /// - See: ChannelOptions.autoRead
+    /// The user will manually call `Channel.read` once all the data is read from the transport.
     public static let disableAutoRead = NIOPipeShorthandOption(.disableAutoRead)
     
-    /// - See: `AllowRemoteHalfClosureOption`.
+    /// Allows users to configure whether the `Channel` will close itself when its remote
+    /// peer shuts down its send stream, or whether it will remain open. If set to `false` (the default), the `Channel`
+    /// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
+    /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
+    /// and no more data will be received.
     public static let allowRemoteHalfClosure =
         NIOPipeShorthandOption(.allowRemoteHalfClosure(true))
     
-    /// - See: `AllowRemoteHalfClosureOption`.
+    /// Allows users to configure whether the `Channel` will close itself when its remote
+    /// peer shuts down its send stream, or whether it will remain open. If set to `false` (the default), the `Channel`
+    /// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
+    /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
+    /// and no more data will be received.
     public static func allowRemoteHalfClosure(_ value: Bool) ->
         NIOPipeShorthandOption {
         return NIOPipeShorthandOption(.allowRemoteHalfClosure(value))
