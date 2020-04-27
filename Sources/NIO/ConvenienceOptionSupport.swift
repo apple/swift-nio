@@ -178,17 +178,23 @@ extension NIOClientTCPBootstrap {
     /// - See: channelOption
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated bootstrap (`self` being mutated)
+    @inlinable
     public func channelOptions(_ options: [NIOTCPShorthandOption]) -> NIOClientTCPBootstrap {
         var toReturn = self
         for option in options {
-            if let updatedUnderlying = toReturn.underlyingBootstrap.applyChannelOption(option) {
-                toReturn = NIOClientTCPBootstrap(toReturn, withUpdated: updatedUnderlying)
-            } else {
-                let applier = NIOClientTCPBootstrap_Applier(contained: toReturn)
-                toReturn = option.applyOptionDefaultMapping(with: applier).contained
-            }
+            toReturn = toReturn.channelOption(option)
         }
         return toReturn
+    }
+    
+    @usableFromInline
+    func channelOption(_ option: NIOTCPShorthandOption) -> NIOClientTCPBootstrap {
+        if let updatedUnderlying = underlyingBootstrap.applyChannelOption(option) {
+            return NIOClientTCPBootstrap(self, withUpdated: updatedUnderlying)
+        } else {
+            let applier = NIOClientTCPBootstrap_Applier(contained: self)
+            return option.applyOptionDefaultMapping(with: applier).contained
+        }
     }
     
     struct NIOClientTCPBootstrap_Applier : NIOChannelOptionAppliable {
@@ -318,7 +324,7 @@ extension NIOTCPServerShorthandOption {
     /// The user will manually call `Channel.read` once all the data is read from the transport.
     public static let disableAutoRead = NIOTCPServerShorthandOption(.disableAutoRead)
     
-    /// Allows users to configure the `backlog` value as specified in `man 2 listen` - the maximum number of connections waiting to be accepted.
+    /// Allows users to configure the maximum number of connections waiting to be accepted.
     /// This is possibly advisory and exact resuilts will depend on the underlying implementation.
     public static func maximumUnacceptedConnectionBacklog(_ value: ChannelOptions.Types.BacklogOption.Value) ->
         NIOTCPServerShorthandOption {
