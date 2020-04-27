@@ -612,7 +612,7 @@ class BootstrapTest: XCTestCase {
                 let serverAcceptedChannel = try serverAcceptedChannelPromise.futureResult.wait()
 
                 // Start shutting stuff down.
-                XCTAssertNoThrow(try clientChannel.close().wait())
+                XCTAssertNoThrow(try serverAcceptedChannel.close().wait())
 
                 // Wait for the close promises. These fire last.
                 XCTAssertNoThrow(try EventLoopFuture.andAllSucceed([clientChannel.closeFuture,
@@ -644,9 +644,9 @@ class BootstrapTest: XCTestCase {
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
                                    setValue: true,
                                    shortOption: .allowRemoteHalfClosure)
-        // try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
-           //                        setValue: false,
-             //                      shortOption: .disableAutoRead)
+        try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
+                                   setValue: false,
+                                   shortOption: .disableAutoRead)
     }
     
     func testShorthandOptionsAreEquivalentClient() throws {
