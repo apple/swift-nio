@@ -40,7 +40,7 @@ let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOptions([.maximumUnacceptedConnectionBacklog(256),
-                    .allowImmediateEndpointAddressReuse])
+                           .allowImmediateEndpointAddressReuse])
 
     // Set the handlers that are appled to the accepted Channels
     .childChannelInitializer { channel in

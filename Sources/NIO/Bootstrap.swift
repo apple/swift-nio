@@ -502,7 +502,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         self._channelOptions.append(key: option, value: value)
         return self
     }
-    
+
     /// Specifies a timeout to apply to a connection attempt.
     //
     /// - parameters:

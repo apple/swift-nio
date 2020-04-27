@@ -72,7 +72,7 @@ public final class SocketChannelTest : XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOptions([.allowImmediateEndpointAddressReuse,
-                            .maximumUnacceptedConnectionBacklog(256)])
+                                   .maximumUnacceptedConnectionBacklog(256)])
             .bind(host: "127.0.0.1", port: 0).wait())
 
         // The goal of this test is to try to trigger at least one channel to have connection setup that is not
@@ -578,8 +578,8 @@ public final class SocketChannelTest : XCTestCase {
             let serverPromise = group.next().makePromise(of: IOError.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .serverChannelOptions([.allowImmediateEndpointAddressReuse,
-                                .maximumUnacceptedConnectionBacklog(256),
-                                .disableAutoRead])
+                                       .maximumUnacceptedConnectionBacklog(256),
+                                       .disableAutoRead])
                 .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait())
