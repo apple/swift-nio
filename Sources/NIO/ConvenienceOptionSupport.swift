@@ -319,6 +319,7 @@ extension NIOTCPServerShorthandOption {
     public static let disableAutoRead = NIOTCPServerShorthandOption(.disableAutoRead)
     
     /// Allows users to configure the `backlog` value as specified in `man 2 listen` - the maximum number of connections waiting to be accepted.
+    /// This is possibly advisory and exact resuilts will depend on the underlying implementation.
     public static func maximumUnacceptedConnectionBacklog(_ value: ChannelOptions.Types.BacklogOption.Value) ->
         NIOTCPServerShorthandOption {
         return NIOTCPServerShorthandOption(.backlog(value))
