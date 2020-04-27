@@ -76,7 +76,7 @@ The CI will do this for you.  You can use the docker-compose files included if y
 
 ### Make sure your code is performant
 
-SwiftNIO has been created to be high performance.  The integration tests cover some measures of performance including allocations which should be avoided if possible.
+SwiftNIO has been created to be high performance.  The integration tests cover some measures of performance including allocations which should be avoided if possible.  For help with allocation problems refer to the guide to [allocation debugging](./docs/debugging-allocations.md)
 
 ### Formatting
 
@@ -86,9 +86,7 @@ It is intended SwiftNIO will use the swift-format tool in the future to bring co
 
 ### Extensibility
 
-Try to make sure your code is robust to future extensions.  The public interface is very hard to change after release - think very carefully about the design.
-
-Public structures and classes should have names starting with NIO to avoid clashes with consumers.
+Try to make sure your code is robust to future extensions.  The public interface is very hard to change after release - please refer to the [API guidelines](./docs/public-api.md)
 
 ## How to contribute your work
 
