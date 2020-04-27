@@ -63,7 +63,7 @@ We require that your commit messages match our template. The easiest way to do t
 
     git config commit.template dev/git.commit.template
 
-The default policy for taking contributions is “Squash and Merge” - because of this, the commit message format rule above, applies to the PR rather than every commit contained within it. 
+The default policy for taking contributions is “Squash and Merge” - because of this the commit message format rule above applies to the PR rather than every commit contained within it. 
 
 ### Make sure Tests work on Linux
 
