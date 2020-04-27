@@ -639,10 +639,8 @@ class BootstrapTest: XCTestCase {
             XCTAssertNotEqual(longSetValue, unsetValue)
         }
         
+        // allowImmediateEndpointAddressReuse not checked as problematic to test -
         // At least on Darwin the default for child is to have allow reuse set - probably inherited from listen
-        // try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
-        //                           setValue: 1,
-        //                           shortOption: .allowImmediateEndpointAddressReuse)
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
                                    setValue: true,
                                    shortOption: .allowRemoteHalfClosure)
