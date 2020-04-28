@@ -533,14 +533,16 @@ let socketBootstrap = ServerBootstrap(group: group)
     .childChannelInitializer(childChannelInitializer(channel:))
 
     // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOptions([.allowImmediateLocalEndpointAddressReuse, .allowRemoteHalfClosure(allowHalfClosure)])
+    .childChannelOptions(allowHalfClosure ?
+        [.allowImmediateLocalEndpointAddressReuse, .allowRemoteHalfClosure] :
+        [.allowImmediateLocalEndpointAddressReuse])
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
 let pipeBootstrap = NIOPipeBootstrap(group: group)
     // Set the handlers that are applied to the accepted Channels
     .channelInitializer(childChannelInitializer(channel:))
 
     .channelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-    .channelOptions([.allowRemoteHalfClosure(allowHalfClosure)])
+    .channelOptions(allowHalfClosure ? [.allowRemoteHalfClosure] : [])
 
 defer {
     try! group.syncShutdownGracefully()

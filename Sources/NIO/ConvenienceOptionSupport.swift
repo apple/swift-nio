@@ -232,14 +232,14 @@ public struct NIOTCPShorthandOption  {
     fileprivate enum ShorthandOption {
         case reuseAddr
         case disableAutoRead
-        case allowRemoteHalfClosure(Bool)
+        case allowRemoteHalfClosure
         
         func applyOptionDefaultMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
             switch self {
             case .reuseAddr:
                 return optionApplier.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-            case .allowRemoteHalfClosure(let value):
-                return optionApplier.applyOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+            case .allowRemoteHalfClosure:
+                return optionApplier.applyOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             case .disableAutoRead:
                 return optionApplier.applyOption(ChannelOptions.autoRead, value: false)
             }
@@ -265,16 +265,7 @@ extension NIOTCPShorthandOption {
     /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
     /// and no more data will be received.
     public static let allowRemoteHalfClosure =
-        NIOTCPShorthandOption(.allowRemoteHalfClosure(true))
-    
-    /// Allows users to configure whether the `Channel` will close itself when its remote
-    /// peer shuts down its send stream, or whether it will remain open. If set to `false` (the default), the `Channel`
-    /// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
-    /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
-    /// and no more data will be received.
-    public static func allowRemoteHalfClosure(_ value: Bool) -> NIOTCPShorthandOption {
-        return NIOTCPShorthandOption(.allowRemoteHalfClosure(value))
-    }
+        NIOTCPShorthandOption(.allowRemoteHalfClosure)
 }
 
 // MARK: TCP - server
@@ -398,14 +389,14 @@ public struct NIOPipeShorthandOption {
     
     fileprivate enum ShorthandOption {
         case disableAutoRead
-        case allowRemoteHalfClosure(Bool)
+        case allowRemoteHalfClosure
         
         func applyOptionDefaultMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
             switch self {
             case .disableAutoRead:
                 return optionApplier.applyOption(ChannelOptions.autoRead, value: false)
-            case .allowRemoteHalfClosure(let value):
-                return optionApplier.applyOption(ChannelOptions.allowRemoteHalfClosure, value: value)
+            case .allowRemoteHalfClosure:
+                return optionApplier.applyOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             }
         }
     }
@@ -426,15 +417,5 @@ extension NIOPipeShorthandOption {
     /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
     /// and no more data will be received.
     public static let allowRemoteHalfClosure =
-        NIOPipeShorthandOption(.allowRemoteHalfClosure(true))
-    
-    /// Allows users to configure whether the `Channel` will close itself when its remote
-    /// peer shuts down its send stream, or whether it will remain open. If set to `false` (the default), the `Channel`
-    /// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
-    /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
-    /// and no more data will be received.
-    public static func allowRemoteHalfClosure(_ value: Bool) ->
-        NIOPipeShorthandOption {
-        return NIOPipeShorthandOption(.allowRemoteHalfClosure(value))
-    }
+        NIOPipeShorthandOption(.allowRemoteHalfClosure)
 }

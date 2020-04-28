@@ -757,7 +757,7 @@ public final class SocketChannelTest : XCTestCase {
             let eventCounter = EventCounterHandler()
             var numberOfAcceptedChannels = 0
             let server = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .childChannelOptions([.allowRemoteHalfClosure(mode == .halfClosureEnabled)])
+                .childChannelOptions((mode == .halfClosureEnabled) ? [.allowRemoteHalfClosure] : [])
                 .childChannelInitializer { channel in
                     numberOfAcceptedChannels += 1
                     XCTAssertEqual(1, numberOfAcceptedChannels)
@@ -823,7 +823,7 @@ public final class SocketChannelTest : XCTestCase {
                 .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
                 .wait())
             let client = try assertNoThrowWithValue(ClientBootstrap(group: group)
-                .channelOptions([.allowRemoteHalfClosure(mode == .halfClosureEnabled)])
+                .channelOptions((mode == .halfClosureEnabled) ? [.allowRemoteHalfClosure] : [])
                 .channelInitializer { channel in
                     channel.pipeline.addHandlers([eventCounter,
                                                   DropAllReadsOnTheFloorHandler(mode: mode,
