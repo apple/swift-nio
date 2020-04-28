@@ -16,12 +16,8 @@ import NIO
 
 func run(identifier: String) {
     measure(identifier: identifier) {
-        var numberDone = 1
-        for _ in 0..<10 {
-            let newDones = try! UdpShared.doUdpRequests(group: group, number: 1000)
-            precondition(newDones == 1000)
-            numberDone += newDones
-        }
+        let numberDone = try! UdpShared.doUdpRequests(group: group, number: 1000)
+        precondition(numberDone == 1000)
         return numberDone
     }
 }
