@@ -221,7 +221,7 @@ class BootstrapTest: XCTestCase {
         func restrictBootstrapType(clientBootstrap: NIOClientTCPBootstrap) throws {
             let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+                .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
                 .childChannelInitializer { channel in
                     serverAcceptedChannelPromise.succeed(channel)
                     return channel.eventLoop.makeSucceededFuture(())
@@ -558,13 +558,13 @@ class BootstrapTest: XCTestCase {
         
         try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
                                    setValue: 1,
-                                   shortOption: .allowImmediateEndpointAddressReuse)
+                                   shortOption: .allowImmediateLocalEndpointAddressReuse)
         #if !os(Windows)
             // Check the oldest way of all.
             // .socket(.init(SOL_SOCKET), .init(SO_REUSEADDR), value: 1)
             try checkOptionEquivalence(longOption: ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)),
                                        setValue: 1,
-                                       shortOption: .allowImmediateEndpointAddressReuse)
+                                       shortOption: .allowImmediateLocalEndpointAddressReuse)
         #endif
         try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
                                    setValue: false,
@@ -598,7 +598,7 @@ class BootstrapTest: XCTestCase {
                 let clientBootstrap = ClientBootstrap(group: group)
                 let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
                 let serverChannel = try assertNoThrowWithValue(applyOptions(ServerBootstrap(group: group))
-                    .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+                    .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
                     .childChannelInitializer { channel in
                         optionRead = channel.getOption(option)
                         serverAcceptedChannelPromise.succeed(channel)
@@ -639,7 +639,7 @@ class BootstrapTest: XCTestCase {
             XCTAssertNotEqual(longSetValue, unsetValue)
         }
         
-        // allowImmediateEndpointAddressReuse not checked as problematic to test -
+        // allowImmediateLocalEndpointAddressReuse not checked as problematic to test -
         // At least on Darwin the default for child is to have allow reuse set - probably inherited from listen
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
                                    setValue: true,
@@ -685,7 +685,7 @@ class BootstrapTest: XCTestCase {
         
         try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
                                    setValue: 1,
-                                   shortOption: .allowImmediateEndpointAddressReuse)
+                                   shortOption: .allowImmediateLocalEndpointAddressReuse)
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
                                    setValue: true,
                                    shortOption: .allowRemoteHalfClosure)
@@ -731,7 +731,7 @@ class BootstrapTest: XCTestCase {
         
         try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
                                    setValue: 1,
-                                   shortOption: .allowImmediateEndpointAddressReuse)
+                                   shortOption: .allowImmediateLocalEndpointAddressReuse)
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
                                    setValue: true,
                                    shortOption: .allowRemoteHalfClosure)
@@ -774,7 +774,7 @@ class BootstrapTest: XCTestCase {
         
         try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
                                    setValue: 1,
-                                   shortOption: .allowImmediateEndpointAddressReuse)
+                                   shortOption: .allowImmediateLocalEndpointAddressReuse)
         try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
                                    setValue: false,
                                    shortOption: .disableAutoRead)

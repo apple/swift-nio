@@ -68,7 +68,7 @@ final class MulticastTest: XCTestCase {
 
     private func bindMulticastChannel(host: String, port: Int, multicastAddress: String, interface: NIONetworkInterface) -> EventLoopFuture<MulticastChannel> {
         return DatagramBootstrap(group: self.group)
-            .channelOptions([.allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: host, port: port)
             .flatMap { channel in
                 let channel = channel as! MulticastChannel
@@ -207,7 +207,7 @@ final class MulticastTest: XCTestCase {
 
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOptions([.allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "127.0.0.1", port: 0)
             .wait()
         )
@@ -266,7 +266,7 @@ final class MulticastTest: XCTestCase {
 
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOptions([.allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "::1", port: 0)
             .wait()
         )
@@ -300,7 +300,7 @@ final class MulticastTest: XCTestCase {
 
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOptions([.allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "127.0.0.1", port: 0)
             .wait()
         )
@@ -342,7 +342,7 @@ final class MulticastTest: XCTestCase {
 
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOptions([.allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "::1", port: 0)
             .wait()
         )

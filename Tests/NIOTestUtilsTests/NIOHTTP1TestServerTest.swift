@@ -32,7 +32,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
 
     func connect(serverPort: Int, responsePromise: EventLoopPromise<String>) throws -> EventLoopFuture<Channel> {
         let bootstrap = ClientBootstrap(group: self.group)
-            .channelOptions([.allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers(position: .first,
                                                        leftOverBytesStrategy: .fireError).flatMap {

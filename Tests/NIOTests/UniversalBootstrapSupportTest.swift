@@ -154,7 +154,7 @@ class UniversalBootstrapSupportTest: XCTestCase {
             
             var shorthandOptionConsumed = false
             func applyChannelOption(_ option: NIOTCPShorthandOption) -> FakeBootstrap? {
-                if option == .allowImmediateEndpointAddressReuse {
+                if option == .allowImmediateLocalEndpointAddressReuse {
                     shorthandOptionConsumed = true
                     return self
                 }
@@ -181,7 +181,7 @@ class UniversalBootstrapSupportTest: XCTestCase {
         // Check consumption works.
         let consumingFake = FakeBootstrap()
         _ = NIOClientTCPBootstrap(consumingFake, tls: NIOInsecureNoTLS())
-            .channelOptions([.allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
         XCTAssertTrue(consumingFake.shorthandOptionConsumed)
         XCTAssertFalse(consumingFake.regularOptionsSeen)
         
@@ -195,7 +195,7 @@ class UniversalBootstrapSupportTest: XCTestCase {
         // Both at once.
         let bothFake = FakeBootstrap()
         _ = NIOClientTCPBootstrap(bothFake, tls: NIOInsecureNoTLS())
-            .channelOptions([.allowRemoteHalfClosure, .allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowRemoteHalfClosure, .allowImmediateLocalEndpointAddressReuse])
         XCTAssertTrue(bothFake.shorthandOptionConsumed)
         XCTAssertTrue(bothFake.regularOptionsSeen)
     }

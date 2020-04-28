@@ -254,7 +254,7 @@ extension NIOTCPShorthandOption.ShorthandOption: Hashable {}
 /// Approved shorthand options.
 extension NIOTCPShorthandOption {
     /// Allow immediately reusing a local address.
-    public static let allowImmediateEndpointAddressReuse = NIOTCPShorthandOption(.reuseAddr)
+    public static let allowImmediateLocalEndpointAddressReuse = NIOTCPShorthandOption(.reuseAddr)
     
     /// The user will manually call `Channel.read` once all the data is read from the transport.
     public static let disableAutoRead = NIOTCPShorthandOption(.disableAutoRead)
@@ -319,7 +319,7 @@ extension NIOTCPServerShorthandOption.ShorthandOption: Hashable {}
 /// Approved shorthand server options.
 extension NIOTCPServerShorthandOption {
     /// Allow immediately reusing a local address.
-    public static let allowImmediateEndpointAddressReuse = NIOTCPServerShorthandOption(.reuseAddr)
+    public static let allowImmediateLocalEndpointAddressReuse = NIOTCPServerShorthandOption(.reuseAddr)
     
     /// The user will manually call `Channel.read` once all the data is read from the transport.
     public static let disableAutoRead = NIOTCPServerShorthandOption(.disableAutoRead)
@@ -372,7 +372,7 @@ extension NIOUDPShorthandOption.ShorthandOption: Hashable {}
 /// Approved shorthand datagram channel options.
 extension NIOUDPShorthandOption {
     /// Allow immediately reusing a local address.
-    public static let allowImmediateEndpointAddressReuse =
+    public static let allowImmediateLocalEndpointAddressReuse =
             NIOUDPShorthandOption(.reuseAddr)
     
     /// The user will manually call `Channel.read` once all the data is read from the transport.

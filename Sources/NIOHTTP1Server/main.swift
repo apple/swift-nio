@@ -526,14 +526,14 @@ func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
 let fileIO = NonBlockingFileIO(threadPool: threadPool)
 let socketBootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .serverChannelOptions([.allowImmediateEndpointAddressReuse,
+    .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse,
                            .maximumUnacceptedConnectionBacklog(256)])
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer(childChannelInitializer(channel:))
 
     // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOptions([.allowImmediateEndpointAddressReuse, .allowRemoteHalfClosure(allowHalfClosure)])
+    .childChannelOptions([.allowImmediateLocalEndpointAddressReuse, .allowRemoteHalfClosure(allowHalfClosure)])
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
 let pipeBootstrap = NIOPipeBootstrap(group: group)
     // Set the handlers that are applied to the accepted Channels

@@ -80,7 +80,7 @@ public final class ChannelTests: XCTestCase {
         let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
         let serverLifecycleHandler = ChannelLifecycleHandler()
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelInitializer { channel in
                 serverAcceptedChannelPromise.succeed(channel)
                 return channel.pipeline.addHandler(serverLifecycleHandler)
@@ -118,7 +118,7 @@ public final class ChannelTests: XCTestCase {
         }
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "127.0.0.1", port: 0).wait())
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
@@ -147,7 +147,7 @@ public final class ChannelTests: XCTestCase {
         }
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "127.0.0.1", port: 0).wait())
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
@@ -181,7 +181,7 @@ public final class ChannelTests: XCTestCase {
 
         let childChannelPromise = group.next().makePromise(of: Channel.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelInitializer { channel in
                 childChannelPromise.succeed(channel)
                 return channel.eventLoop.makeSucceededFuture(())
@@ -1350,7 +1350,7 @@ public final class ChannelTests: XCTestCase {
         try {
             let serverChildChannelPromise = group.next().makePromise(of: Channel.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+                .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
                 .childChannelInitializer { channel in
                     serverChildChannelPromise.succeed(channel)
                     channel.close(promise: nil)
@@ -1406,7 +1406,7 @@ public final class ChannelTests: XCTestCase {
         }
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "127.0.0.1", port: 0).wait())
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
@@ -1445,7 +1445,7 @@ public final class ChannelTests: XCTestCase {
         }
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelInitializer { ch in
                 ch.pipeline.addHandler(AddressVerificationHandler())
             }
@@ -1509,7 +1509,7 @@ public final class ChannelTests: XCTestCase {
         let readDelayer = ReadDelayer()
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelInitializer {
                 $0.pipeline.addHandler(readDelayer)
             }
@@ -1565,7 +1565,7 @@ public final class ChannelTests: XCTestCase {
 
         let handler = VerifyNoReadBeforeEOFHandler()
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
                 ch.pipeline.addHandler(handler)
@@ -1621,7 +1621,7 @@ public final class ChannelTests: XCTestCase {
         }
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
                 ch.pipeline.addHandler(VerifyEOFReadOrderingAndCloseInChannelReadHandler())
@@ -1679,7 +1679,7 @@ public final class ChannelTests: XCTestCase {
 
         let allDone = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
                 ch.pipeline.addHandler(CloseWhenWeGetEOFHandler(allDone: allDone))
@@ -1737,7 +1737,7 @@ public final class ChannelTests: XCTestCase {
 
         let promise = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
                 ch.pipeline.addHandler(ChannelInactiveVerificationHandler(promise))
@@ -2314,7 +2314,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "localhost", port: 0)
             .wait())
 
@@ -2563,7 +2563,7 @@ public final class ChannelTests: XCTestCase {
                                                              singleThreadedELG.next().makePromise(),
                                                              singleThreadedELG.next().makePromise()]
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .serverChannelOption(ChannelOptions.socketOption(.timestamp), value: 1)
             .childChannelOption(ChannelOptions.socketOption(.keepalive), value: 1)
             .childChannelOption(ChannelOptions.tcpOption(.nodelay), value: 0)
@@ -2581,7 +2581,7 @@ public final class ChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: server, level: .socket, name: .timestamp))
 
         let client1 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
-            .channelOptions([.allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
             .channelOption(ChannelOptions.tcpOption(.nodelay), value: 0)
             .connect(to: server.localAddress!)
             .wait())
@@ -2590,7 +2590,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try client1.close().wait())
         }
         let client2 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
-            .channelOptions([.allowImmediateEndpointAddressReuse])
+            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
             .connect(to: server.localAddress!)
             .wait())
         let accepted2 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())
@@ -2761,7 +2761,7 @@ public final class ChannelTests: XCTestCase {
 
         var maybeServer: Channel? = nil
         XCTAssertNoThrow(maybeServer = try ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateEndpointAddressReuse])
+            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "127.0.0.1", port: 0)
             .wait())
         guard let server = maybeServer else {

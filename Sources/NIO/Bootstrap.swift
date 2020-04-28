@@ -33,7 +33,7 @@ internal enum NIOOnSocketsBootstraps {
 ///     }
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
-///         .serverChannelOptions([.maximumUnacceptedConnectionBacklog(256), .allowImmediateEndpointAddressReuse])
+///         .serverChannelOptions([.maximumUnacceptedConnectionBacklog(256), .allowImmediateLocalEndpointAddressReuse])
 ///
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
@@ -46,7 +46,7 @@ internal enum NIOOnSocketsBootstraps {
 ///         }
 ///
 ///         // Enable SO_REUSEADDR for the accepted Channels
-///         .childChannelOptions([.allowImmediateEndpointAddressReuse])
+///         .childChannelOptions([.allowImmediateLocalEndpointAddressReuse])
 ///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
 ///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
 ///     let channel = try! bootstrap.bind(host: host, port: port).wait()
@@ -393,7 +393,7 @@ private extension Channel {
 ///     }
 ///     let bootstrap = ClientBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
-///         .channelOptions([.allowImmediateEndpointAddressReuse])
+///         .channelOptions([.allowImmediateLocalEndpointAddressReuse])
 ///         .channelInitializer { channel in
 ///             // always instantiate the handler _within_ the closure as
 ///             // it may be called multiple times (for example if the hostname
@@ -662,7 +662,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 ///     }
 ///     let bootstrap = DatagramBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
-///         .channelOption([.allowImmediateEndpointAddressReuse])
+///         .channelOption([.allowImmediateLocalEndpointAddressReuse])
 ///         .channelInitializer { channel in
 ///             channel.pipeline.addHandler(MyChannelHandler())
 ///         }
