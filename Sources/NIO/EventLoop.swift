@@ -236,11 +236,11 @@ public protocol EventLoop: EventLoopGroup {
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 
-    /// Schedule a `task` that is executed by this `SelectableEventLoop` at the given time.
+    /// Schedule a `task` that is executed by this `EventLoop` at the given time.
     @discardableResult
     func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T>
 
-    /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
+    /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
     @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 
@@ -482,7 +482,7 @@ extension EventLoop {
     /// the `EventLoopFuture` returned by `task`.
     ///
     /// - parameters:
-    ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: An `EventLoopFuture` identical to the `EventLooopFuture` returned from `task`.
     @inlinable
     public func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
