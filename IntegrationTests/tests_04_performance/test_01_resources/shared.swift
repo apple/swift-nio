@@ -170,14 +170,13 @@ enum UdpShared {
     private final class EchoHandlerClient: ChannelInboundHandler {
         public typealias InboundIn = AddressedEnvelope<ByteBuffer>
         public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
-        private var numBytesOutstanding = 0
-        private var repetitionsRemaining : Int
+        private var repetitionsRemaining: Int
         
-        private let remoteAddressInitializer: () throws -> SocketAddress
+        private let remoteAddress: SocketAddress
         
-        init(remoteAddressInitializer: @escaping () throws -> SocketAddress,
+        init(remoteAddress: SocketAddress,
              numberOfRepetitions: Int) {
-            self.remoteAddressInitializer = remoteAddressInitializer
+            self.remoteAddress = remoteAddress
             self.repetitionsRemaining = numberOfRepetitions
         }
         
@@ -188,26 +187,17 @@ enum UdpShared {
         
         private func sendSomeDataIfDesiredOrClose(context: ChannelHandlerContext) {
             if (repetitionsRemaining > 0) {
-                do {
-                    repetitionsRemaining -= 1
-                    
-                    // Get the server address.
-                    let remoteAddress = try self.remoteAddressInitializer()
-                    
-                    // Set the transmission data.
-                    let line = "Something to send there and back again."
-                    var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
-                    buffer.writeString(line)
-                    self.numBytesOutstanding += buffer.readableBytes
-                    
-                    // Forward the data.
-                    let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
-                    
-                    context.writeAndFlush(self.wrapOutboundOut(envolope), promise: nil)
-                    
-                } catch {
-                    print("Could not resolve remote address")
-                }
+                repetitionsRemaining -= 1
+                
+                // Set the transmission data.
+                let line = "Something to send there and back again."
+                var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
+                buffer.writeString(line)
+                
+                // Forward the data.
+                let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
+                
+                context.writeAndFlush(self.wrapOutboundOut(envolope), promise: nil)
             }
             else {
                 // We're all done - hurrah!
@@ -217,14 +207,10 @@ enum UdpShared {
         
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             let envelope = self.unwrapInboundIn(data)
-            let byteBuffer = envelope.data
+            _ = envelope.data
             
-            self.numBytesOutstanding -= byteBuffer.readableBytes
-            
-            if self.numBytesOutstanding <= 0 {
-                // Got back everything we sent - maybe send some more.
-                sendSomeDataIfDesiredOrClose(context: context)
-            }
+            // Got back a response - maybe send some more.
+            sendSomeDataIfDesiredOrClose(context: context)
         }
         
         public func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -241,7 +227,6 @@ enum UdpShared {
             .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
             // Set the handlers that are applied to the bound channel
             .channelInitializer { channel in
-                // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.addHandler(EchoHandler())
             }
             .bind(to: localhostPickPort).wait()
@@ -250,13 +235,14 @@ enum UdpShared {
             try! serverChannel.close().wait()
         }
         
-        let remoteAddress = { () -> SocketAddress in serverChannel.localAddress! }
+        let remoteAddress = serverChannel.localAddress!
 
         let clientChannel = try DatagramBootstrap(group: group)
             // Enable SO_REUSEADDR.
             .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
             .channelInitializer { channel in
-                channel.pipeline.addHandler(EchoHandlerClient(remoteAddressInitializer: remoteAddress, numberOfRepetitions: numberOfRequests))
+                channel.pipeline.addHandler(EchoHandlerClient(remoteAddress: remoteAddress,
+                                                              numberOfRepetitions: numberOfRequests))
             }
             .bind(to: localhostPickPort).wait()
 
