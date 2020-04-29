@@ -237,10 +237,24 @@ public protocol EventLoop: EventLoopGroup {
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
+    ///
+    /// - parameters:
+    ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
     @discardableResult
     func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T>
 
     /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
+    ///
+    /// - parameters:
+    ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
     @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 
@@ -495,9 +509,11 @@ extension EventLoop {
     ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the full execution of the task, including its returned `EventLoopFuture`.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
     @discardableResult
-    func flatScheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
+    public func flatScheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = self.makePromise(file: #file, line: #line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
         
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
@@ -510,9 +526,11 @@ extension EventLoop {
     ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the full execution of the task, including its returned `EventLoopFuture`.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
     @discardableResult
-    func flatScheduleTask<T>(in delay: TimeAmount, _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
+    public func flatScheduleTask<T>(in delay: TimeAmount, _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = self.makePromise(file: #file, line: #line)
         let scheduled = self.scheduleTask(in: delay, task)
         
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
