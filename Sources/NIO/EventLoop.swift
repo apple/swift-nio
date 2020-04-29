@@ -489,6 +489,36 @@ extension EventLoop {
         return self.submit(task).flatMap { $0 }
     }
 
+    /// Schedule a `task` that is executed by this `EventLoop` at the given time.
+    ///
+    /// - parameters:
+    ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the full execution of the task, including its returned `EventLoopFuture`.
+    @discardableResult
+    func flatScheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
+        let scheduled = self.scheduleTask(deadline: deadline, task)
+        
+        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        return .init(promise: promise, cancellationTask: { scheduled.cancel() })
+    }
+
+    /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
+    ///
+    /// - parameters:
+    ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the full execution of the task, including its returned `EventLoopFuture`.
+    @discardableResult
+    func flatScheduleTask<T>(in delay: TimeAmount, _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
+        let scheduled = self.scheduleTask(in: delay, task)
+        
+        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        return .init(promise: promise, cancellationTask: { scheduled.cancel() })
+    }
+
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.
     @inlinable
     public func makePromise<T>(of type: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {

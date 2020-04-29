@@ -33,6 +33,21 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertTrue(value)
     }
 
+    public func testFlatSchedule() throws {
+        let nanos: NIODeadline = .now()
+        let amount: TimeAmount = .seconds(1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+        let value = try eventLoopGroup.next().flatScheduleTask(in: amount) {
+            eventLoopGroup.next().makeSucceededFuture(true)
+        }.futureResult.wait()
+
+        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
+        XCTAssertTrue(value)
+    }
+
     public func testScheduleWithDelay() throws {
         let smallAmount: TimeAmount = .milliseconds(100)
         let longAmount: TimeAmount = .seconds(1)
@@ -91,6 +106,31 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertFalse(ran.load())
     }
 
+    public func testFlatScheduleCancelled() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+        let ran = NIOAtomic<Bool>.makeAtomic(value: false)
+        let scheduled = eventLoopGroup.next().flatScheduleTask(in: .seconds(2)) {
+            eventLoopGroup.next().makeSucceededFuture(()).map {
+                ran.store(true)
+            }
+        }
+
+        scheduled.cancel()
+
+        let nanos = NIODeadline.now()
+        let amount: TimeAmount = .seconds(2)
+        let value = try eventLoopGroup.next().scheduleTask(in: amount) {
+            true
+        }.futureResult.wait()
+
+        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
+        XCTAssertTrue(value)
+        XCTAssertFalse(ran.load())
+    }
+
     public func testScheduleRepeatedTask() throws {
         let nanos: NIODeadline = .now()
         let initialDelay: TimeAmount = .milliseconds(5)
@@ -133,6 +173,22 @@ public final class EventLoopTest : XCTestCase {
         loop.execute {
             let task = loop.scheduleTask(in: .milliseconds(0)) {
                 XCTFail()
+            }
+            task.cancel()
+        }
+        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
+    }
+
+    public func testFlatScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let loop = eventLoopGroup.next()
+        loop.execute {
+            let task = loop.flatScheduleTask(in: .milliseconds(0)) {
+                loop.makeSucceededFuture(()).map { XCTFail() }
             }
             task.cancel()
         }
