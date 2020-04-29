@@ -115,7 +115,7 @@ public final class EventLoopTest : XCTestCase {
 
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
-        XCTAssertEqual(try XCTUnwrap(error as? EventLoopError), .cancelled)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
     public func testFlatScheduleCancelled() throws {
@@ -140,7 +140,7 @@ public final class EventLoopTest : XCTestCase {
 
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
-        XCTAssertEqual(try XCTUnwrap(error as? EventLoopError), .cancelled)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
     public func testScheduleRepeatedTask() throws {
@@ -190,7 +190,7 @@ public final class EventLoopTest : XCTestCase {
 
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
-        XCTAssertEqual(try XCTUnwrap(error as? EventLoopError), .cancelled)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
     public func testFlatScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
@@ -210,7 +210,7 @@ public final class EventLoopTest : XCTestCase {
 
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
-        XCTAssertEqual(try XCTUnwrap(error as? EventLoopError), .cancelled)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
     public func testRepeatedTaskThatIsImmediatelyCancelledNeverFires() throws {
