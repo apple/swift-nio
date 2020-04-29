@@ -143,7 +143,7 @@ func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
 /// Based on the UDPEchoClient/Server example.
 enum UDPShared {
     private final class EchoHandler: ChannelInboundHandler {
-        public typealias InboundIn = ByteBuffer
+        public typealias InboundIn = AddressedEnvelope<ByteBuffer>
         public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
 
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
