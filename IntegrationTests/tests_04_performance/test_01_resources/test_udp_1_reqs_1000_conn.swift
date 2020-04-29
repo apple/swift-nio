@@ -18,7 +18,7 @@ func run(identifier: String) {
     measure(identifier: identifier) {
         var numberDone = 1
         for _ in 0..<1000 {
-            let newDones = try! UdpShared.doUdpRequests(group: group, number: 1)
+            let newDones = try! UDPShared.doUDPRequests(group: group, number: 1)
             precondition(newDones == 1)
             numberDone += newDones
         }

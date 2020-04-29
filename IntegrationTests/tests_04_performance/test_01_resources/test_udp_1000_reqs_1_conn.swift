@@ -16,7 +16,7 @@ import NIO
 
 func run(identifier: String) {
     measure(identifier: identifier) {
-        let numberDone = try! UdpShared.doUdpRequests(group: group, number: 1000)
+        let numberDone = try! UDPShared.doUDPRequests(group: group, number: 1000)
         precondition(numberDone == 1000)
         return numberDone
     }

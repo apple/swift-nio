@@ -141,7 +141,7 @@ func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
 
 /// Repeatedly send, echo and receive a number of UDP requests.
 /// Based on the UDPEchoClient/Server example.
-enum UdpShared {
+enum UDPShared {
     private final class EchoHandler: ChannelInboundHandler {
         public typealias InboundIn = ByteBuffer
         public typealias OutboundOut = ByteBuffer
@@ -159,11 +159,8 @@ enum UdpShared {
         }
 
         public func errorCaught(context: ChannelHandlerContext, error: Error) {
-            print("error: ", error)
-
-            // As we are not really interested getting notified on success or failure we just pass nil as promise to
-            // reduce allocations.
-            context.close(promise: nil)
+            // Errors should never happen.
+            fatalError("EchoHandler received errorCaught")
         }
     }
 
@@ -174,19 +171,18 @@ enum UdpShared {
         
         private let remoteAddress: SocketAddress
         
-        init(remoteAddress: SocketAddress,
-             numberOfRepetitions: Int) {
+        init(remoteAddress: SocketAddress, numberOfRepetitions: Int) {
             self.remoteAddress = remoteAddress
             self.repetitionsRemaining = numberOfRepetitions
         }
         
         public func channelActive(context: ChannelHandlerContext) {
             // Channel is available. It's time to send the message to the server to initialize the ping-pong sequence.
-            sendSomeDataIfDesiredOrClose(context: context)
+            self.sendSomeDataIfDesiredOrClose(context: context)
         }
         
         private func sendSomeDataIfDesiredOrClose(context: ChannelHandlerContext) {
-            if (repetitionsRemaining > 0) {
+            if repetitionsRemaining > 0 {
                 repetitionsRemaining -= 1
                 
                 // Set the transmission data.
@@ -198,31 +194,24 @@ enum UdpShared {
                 let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
                 
                 context.writeAndFlush(self.wrapOutboundOut(envolope), promise: nil)
-            }
-            else {
+            } else {
                 // We're all done - hurrah!
                 context.close(promise: nil)
             }
         }
         
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-            let envelope = self.unwrapInboundIn(data)
-            _ = envelope.data
-            
             // Got back a response - maybe send some more.
-            sendSomeDataIfDesiredOrClose(context: context)
+            self.sendSomeDataIfDesiredOrClose(context: context)
         }
         
         public func errorCaught(context: ChannelHandlerContext, error: Error) {
-            print("error: ", error)
-            
-            // As we are not really interested getting notified on success or failure we just pass nil as promise to
-            // reduce allocations.
-            context.close(promise: nil)
+            // Errors should never happen.
+            fatalError("EchoHandlerClient received errorCaught")
         }
     }
 
-    static func doUdpRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
+    static func doUDPRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
         let serverChannel = try DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
             // Set the handlers that are applied to the bound channel
