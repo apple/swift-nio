@@ -239,7 +239,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
     ///
     /// - parameters:
-    ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    ///     - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
     /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the completion of the task.
     ///
@@ -250,7 +250,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
     ///
     /// - parameters:
-    ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    ///     - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
     /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the completion of the task.
     ///
@@ -496,7 +496,7 @@ extension EventLoop {
     /// the `EventLoopFuture` returned by `task`.
     ///
     /// - parameters:
-    ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
     /// - returns: An `EventLoopFuture` identical to the `EventLooopFuture` returned from `task`.
     @inlinable
     public func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
@@ -506,7 +506,7 @@ extension EventLoop {
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
     ///
     /// - parameters:
-    ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
     /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the full execution of the task, including its returned `EventLoopFuture`.
     ///
