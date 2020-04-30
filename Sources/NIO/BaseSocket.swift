@@ -365,7 +365,7 @@ class BaseSocket: BaseSocketProtocol {
                                                                  alignment: MemoryLayout<T>.alignment)
             // write zeroes into the memory as Linux's getsockopt doesn't zero them out
             storage.initializeMemory(as: UInt8.self, repeating: 0)
-            var val = storage.bindMemory(to: T.self).baseAddress!
+            let val = storage.bindMemory(to: T.self).baseAddress!
             // initialisation will be done by getsockopt
             defer {
                 val.deinitialize(count: 1)
