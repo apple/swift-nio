@@ -2270,7 +2270,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testGetDispatchDataReadWrite() {
-        var buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 4, alignment: 0)
+        let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 4, alignment: 0)
         buffer.copyBytes(from: "1234".utf8)
         defer {
             buffer.deallocate()
