@@ -30,8 +30,7 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertFalse(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
         
-        eventLoop.advanceTime(by: .seconds(1))
-        eventLoop.run() // should fire now
+        eventLoop.advanceTime(by: .seconds(1)) // should fire now
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         
         XCTAssertNotNil(result)
@@ -52,8 +51,7 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertFalse(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
         
-        eventLoop.advanceTime(by: .seconds(1))
-        eventLoop.run() // should fire now
+        eventLoop.advanceTime(by: .seconds(1)) // should fire now
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         
         XCTAssertNotNil(result)
@@ -105,13 +103,9 @@ public final class EventLoopTest : XCTestCase {
         scheduled.futureResult.whenSuccess { result = $0 }
         scheduled.futureResult.whenFailure { error = $0 }
         
-        eventLoop.advanceTime(by: .milliseconds(500))
-        eventLoop.run() // advance halfway to firing time
-
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance halfway to firing time
         scheduled.cancel()
-        
-        eventLoop.advanceTime(by: .milliseconds(500))
-        eventLoop.run() // advance the rest of the way
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance the rest of the way
 
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
@@ -130,13 +124,9 @@ public final class EventLoopTest : XCTestCase {
         scheduled.futureResult.whenSuccess { result = $0 }
         scheduled.futureResult.whenFailure { error = $0 }
         
-        eventLoop.advanceTime(by: .milliseconds(500))
-        eventLoop.run() // advance halfway to firing time
-
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance halfway to firing time
         scheduled.cancel()
-        
-        eventLoop.advanceTime(by: .milliseconds(500))
-        eventLoop.run() // advance the rest of the way
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance the rest of the way
 
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
@@ -186,7 +176,6 @@ public final class EventLoopTest : XCTestCase {
         
         scheduled.cancel()
         eventLoop.advanceTime(by: .seconds(1))
-        eventLoop.run()
 
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
@@ -206,7 +195,6 @@ public final class EventLoopTest : XCTestCase {
         
         scheduled.cancel()
         eventLoop.advanceTime(by: .seconds(1))
-        eventLoop.run()
 
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
@@ -321,57 +309,46 @@ public final class EventLoopTest : XCTestCase {
 
         // t == 5: nothing
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(0, counter)
 
         // t == 10: once
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 15: still once
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 20: still once (because the task takes 10ms to execute)
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 25: still once (because the task takes 10ms to execute)
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 30: twice
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(2, counter)
 
         // t == 40: twice
         eventLoop.advanceTime(by: .milliseconds(10))
-        eventLoop.run()
         XCTAssertEqual(2, counter)
 
         // t == 50: three times
         eventLoop.advanceTime(by: .milliseconds(10))
-        eventLoop.run()
         XCTAssertEqual(3, counter)
 
         // t == 60: three times
         eventLoop.advanceTime(by: .milliseconds(10))
-        eventLoop.run()
         XCTAssertEqual(3, counter)
 
         // t == 89: four times
         eventLoop.advanceTime(by: .milliseconds(29))
-        eventLoop.run()
         XCTAssertEqual(4, counter)
 
         // t == 90: five times
         eventLoop.advanceTime(by: .milliseconds(1))
-        eventLoop.run()
         XCTAssertEqual(5, counter)
 
         repeatedTask.cancel()
@@ -380,7 +357,6 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertEqual(5, counter)
 
         eventLoop.advanceTime(by: .hours(10))
-        eventLoop.run()
         XCTAssertEqual(5, counter)
     }
 
