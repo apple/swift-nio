@@ -512,8 +512,11 @@ extension EventLoop {
     ///
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
-    public func flatScheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = self.makePromise(file: #file, line: #line)
+    public func flatScheduleTask<T>(deadline: NIODeadline,
+                                    file: StaticString = #file,
+                                    line: UInt = #line,
+                                    _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = self.makePromise(file:#file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
         
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
@@ -529,8 +532,11 @@ extension EventLoop {
     ///
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
-    public func flatScheduleTask<T>(in delay: TimeAmount, _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = self.makePromise(file: #file, line: #line)
+    public func flatScheduleTask<T>(in delay: TimeAmount,
+                                    file: StaticString = #file,
+                                    line: UInt = #line,
+                                    _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(in: delay, task)
         
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
