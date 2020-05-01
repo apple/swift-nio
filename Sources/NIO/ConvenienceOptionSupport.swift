@@ -218,7 +218,7 @@ struct NIOChannelOptionsStorageApplier: NIOChannelOptionAppliable {
     /// The storage - the contents of this will be updated.
     var channelOptionsStorage: ChannelOptions.Storage
     
-    public func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
+    public func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> NIOChannelOptionsStorageApplier {
         var s = channelOptionsStorage
         s.append(key: option, value: value)
         return NIOChannelOptionsStorageApplier(channelOptionsStorage: s)
