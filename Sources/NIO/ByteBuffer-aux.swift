@@ -373,6 +373,21 @@ extension ByteBuffer {
         self._moveWriterIndex(forwardBy: written)
         return written
     }
+    
+    /// Writes `byte` `repeated` times. Moves the writer index forward by the number of bytes written.
+    ///
+    /// - parameter byte: The `UInt8` byte to repeat.
+    /// - parameter count: How many times to repeat the given `byte`
+    /// - returns: How many bytes were written.
+    @discardableResult
+    @inlinable
+    public mutating func writeRepeatingByte(_ byte: UInt8, count: Int) -> Int {
+        precondition(count >= 0, "Can't write less than 0 bytes")
+        return self.writeWithUnsafeMutableBytes(minimumWritableBytes: count) { (_pointer) -> Int in
+            memset(_pointer.baseAddress!, Int32(byte), count)
+            return count
+        }
+    }
 
     /// Slice the readable bytes off this `ByteBuffer` without modifying the reader index. This method will return a
     /// `ByteBuffer` sharing the underlying storage with the `ByteBuffer` the method was invoked on. The returned

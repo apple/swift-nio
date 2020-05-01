@@ -2579,6 +2579,21 @@ class ByteBufferTest: XCTestCase {
         self.buf.moveWriterIndex(forwardBy: 5)
         XCTAssertEqual("hellohello", self.buf.readString(length: 10))
     }
+    
+    func testRepeatingBytes() {
+        
+        var buffer1 = self.allocator.buffer(capacity: 0)
+        let written = buffer1.writeRepeatingByte(9, count: 1 << 10)
+        XCTAssertEqual(written, 1 << 10)
+        XCTAssertEqual(buffer1.readableBytes, 1 << 10)
+        XCTAssertEqual(buffer1.writerIndex, 1 << 10)
+        XCTAssertEqual(buffer1.readerIndex, 0)
+        
+        while let byte = buffer1.readBytes(length: 1) {
+            XCTAssertEqual(byte.first!, 9)
+        }
+        
+    }
 }
 
 private enum AllocationExpectationState: Int {
