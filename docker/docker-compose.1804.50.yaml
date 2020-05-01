@@ -7,7 +7,7 @@ services:
     build:
       args:
         ubuntu_version: "bionic"
-        swift_version: "5.0"
+        swift_version: "5.0.3"
 
   unit-tests:
     image: swift-nio:18.04-5.0

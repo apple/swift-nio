@@ -6,8 +6,8 @@ services:
     image: swift-nio:18.04-5.1
     build:
       args:
-        ubuntu_version: "xenial"
-        swift_version: "5.1.3"
+        ubuntu_version: "bionic"
+        swift_version: "5.1.5"
 
   unit-tests:
     image: swift-nio:18.04-5.1
