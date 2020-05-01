@@ -33,7 +33,7 @@ services:
       - MAX_ALLOCS_ALLOWED_modifying_byte_buffer_view=2010 
       - MAX_ALLOCS_ALLOWED_schedule_10000_tasks=90050
       - MAX_ALLOCS_ALLOWED_read_10000_chunks_from_file=210050
-      - SANITIZER_ARG=--sanitize=thread
+      # - SANITIZER_ARG=--sanitize=thread (filed a bug with the thread sanitizer)
 
   performance-test:
     image: swift-nio:18.04-5.3
