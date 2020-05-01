@@ -242,9 +242,11 @@ public struct NIOTCPShorthandOption  {
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
-    /// - Parameter to: The storage to append this option to..
-    public func applyOptionDefaultMapping(to storage: ChannelOptions.Storage) {
-        _ = data.applyOptionDefaultMapping(NIOChannelOptionsStorageApplier(channelOptionsStorage: storage))
+    /// - Parameter to: The storage to append this option to.
+    /// - Returns: ChannelOptions.storage with option added.
+    public func applyOptionDefaultMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
+        let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
+        return data.applyOptionDefaultMapping(applier).channelOptionsStorage
     }
     
     fileprivate enum ShorthandOption {
@@ -303,9 +305,11 @@ public struct NIOTCPServerShorthandOption {
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
-    /// - Parameter to: The storage to append this option to..
-    public func applyOptionDefaultMapping(to storage: ChannelOptions.Storage) {
-        _ = data.applyOptionDefaultMapping(NIOChannelOptionsStorageApplier(channelOptionsStorage: storage))
+    /// - Parameter to: The storage to append this option to.
+    /// - Returns: ChannelOptions.storage with option added.
+    public func applyOptionDefaultMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
+        let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
+        return data.applyOptionDefaultMapping(applier).channelOptionsStorage
     }
     
     fileprivate enum ShorthandOption {
@@ -365,9 +369,11 @@ public struct NIOUDPShorthandOption {
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
-    /// - Parameter to: The storage to append this option to..
-    public func applyOptionDefaultMapping(to storage: ChannelOptions.Storage) {
-        _ = data.applyOptionDefaultMapping(NIOChannelOptionsStorageApplier(channelOptionsStorage: storage))
+    /// - Parameter to: The storage to append this option to.
+    /// - Returns: ChannelOptions.storage with option added.
+    public func applyOptionDefaultMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
+        let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
+        return data.applyOptionDefaultMapping(applier).channelOptionsStorage
     }
     
     fileprivate enum ShorthandOption {
@@ -418,9 +424,11 @@ public struct NIOPipeShorthandOption {
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
-    /// - Parameter to: The storage to append this option to..
-    public func applyOptionDefaultMapping(to storage: ChannelOptions.Storage) {
-        _ = data.applyOptionDefaultMapping(NIOChannelOptionsStorageApplier(channelOptionsStorage: storage))
+    /// - Parameter to: The storage to append this option to.
+    /// - Returns: ChannelOptions.storage with option added.
+    public func applyOptionDefaultMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
+        let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
+        return data.applyOptionDefaultMapping(applier).channelOptionsStorage
     }
     
     fileprivate enum ShorthandOption {
