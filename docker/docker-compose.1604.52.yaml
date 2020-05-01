@@ -7,7 +7,7 @@ services:
     build:
       args:
         ubuntu_version: "xenial"
-        swift_version: "5.2.3"
+        swift_version: "5.2"
 
   unit-tests:
     image: swift-nio:16.04-5.2
