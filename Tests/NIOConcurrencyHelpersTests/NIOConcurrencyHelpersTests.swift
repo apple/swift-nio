@@ -856,7 +856,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         }
         doIt()
         assert(weakF == nil, within: .seconds(1))
-        assert(weakF == nil, within: .seconds(1))
+        assert(weakG == nil, within: .seconds(1))
     }
 
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
