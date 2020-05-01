@@ -245,16 +245,11 @@ class HTTPDecoderTest: XCTestCase {
             }
 
             func handlerAdded(context: ChannelHandlerContext) {
-//                var fulfilledImmediately = true
-//                defer {
-//                    fulfilledImmediately = false
-//                }
                 context.pipeline.removeHandler(name: "decoder").whenComplete { result in
                     _ = result.mapError { (error: Error) -> Error in
                         XCTFail("unexpected error \(error)")
                         return error
                     }
-                    //XCTAssertTrue(fulfilledImmediately)
                 }
             }
 
