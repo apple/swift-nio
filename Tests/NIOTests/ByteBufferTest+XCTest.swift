@@ -183,6 +183,7 @@ extension ByteBufferTest {
                 ("testByteBufferModifiedWithoutAllocationLogic", testByteBufferModifiedWithoutAllocationLogic),
                 ("testByteBufferModifyIfUniquelyOwnedMayThrow", testByteBufferModifyIfUniquelyOwnedMayThrow),
                 ("testDeprecatedSetBytes", testDeprecatedSetBytes),
+                ("testRepeatingBytes", testRepeatingBytes),
                 ("testCreateArrayFromBuffer", testCreateArrayFromBuffer),
                 ("testCreateStringFromBuffer", testCreateStringFromBuffer),
                 ("testCreateDispatchDataFromBuffer", testCreateDispatchDataFromBuffer),
