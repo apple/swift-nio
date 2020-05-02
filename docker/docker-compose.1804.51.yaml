@@ -3,20 +3,20 @@ version: "3"
 services:
 
   runtime-setup:
-    image: swift-nio:16.04-5.1
+    image: swift-nio:18.04-5.1
     build:
       args:
-        ubuntu_version: "xenial"
-        swift_version: "5.1.3"
+        ubuntu_version: "bionic"
+        swift_version: "5.1"
 
   unit-tests:
-    image: swift-nio:16.04-5.1
+    image: swift-nio:18.04-5.1
 
   integration-tests:
-    image: swift-nio:16.04-5.1
+    image: swift-nio:18.04-5.1
 
   test:
-    image: swift-nio:16.04-5.1
+    image: swift-nio:18.04-5.1
     environment:
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=30540
       - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=488050
@@ -39,13 +39,13 @@ services:
       - SANITIZER_ARG=--sanitize=thread
 
   performance-test:
-    image: swift-nio:16.04-5.1
+    image: swift-nio:18.04-5.1
 
   shell:
-    image: swift-nio:16.04-5.1
+    image: swift-nio:18.04-5.1
 
   echo:
-    image: swift-nio:16.04-5.1
+    image: swift-nio:18.04-5.1
 
   http:
-    image: swift-nio:16.04-5.1
+    image: swift-nio:18.04-5.1
