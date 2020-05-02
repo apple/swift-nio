@@ -184,6 +184,7 @@ extension ByteBufferTest {
                 ("testByteBufferModifyIfUniquelyOwnedMayThrow", testByteBufferModifyIfUniquelyOwnedMayThrow),
                 ("testDeprecatedSetBytes", testDeprecatedSetBytes),
                 ("testRepeatingBytes", testRepeatingBytes),
+                ("testSetBytes", testSetBytes),
                 ("testCreateArrayFromBuffer", testCreateArrayFromBuffer),
                 ("testCreateStringFromBuffer", testCreateStringFromBuffer),
                 ("testCreateDispatchDataFromBuffer", testCreateDispatchDataFromBuffer),
