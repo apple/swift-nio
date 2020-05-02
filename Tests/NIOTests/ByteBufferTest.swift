@@ -2581,18 +2581,15 @@ class ByteBufferTest: XCTestCase {
     }
     
     func testRepeatingBytes() {
-        
-        var buffer1 = self.allocator.buffer(capacity: 0)
-        let written = buffer1.writeRepeatingByte(9, count: 1 << 10)
-        XCTAssertEqual(written, 1 << 10)
-        XCTAssertEqual(buffer1.readableBytes, 1 << 10)
-        XCTAssertEqual(buffer1.writerIndex, 1 << 10)
-        XCTAssertEqual(buffer1.readerIndex, 0)
-        
-        while let byte = buffer1.readBytes(length: 1) {
-            XCTAssertEqual(byte.first!, 9)
+        func write(count: Int, line: UInt = #line) {
+            self.buf.clear()
+            let written = self.buf.writeRepeatingByte(9, count: count)
+            XCTAssertEqual(count, written)
+            XCTAssertEqual(Array(repeating: UInt8(9), count: count), Array(self.buf.readableBytesView))
         }
         
+        write(count: 1_000_000)
+        write(count: 0)
     }
 }
 
