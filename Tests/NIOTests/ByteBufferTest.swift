@@ -2591,6 +2591,25 @@ class ByteBufferTest: XCTestCase {
         write(count: 1_000_000)
         write(count: 0)
     }
+    
+    func testSetBytes() {
+        func set(count: Int, at: Int, line: UInt = #line) {
+            
+            // first write some bytes
+            self.buf.clear()
+            self.buf.writeRepeatingByte(9, count: count)
+            
+            // now overwrite
+            let previousWriterIndex = self.buf.writerIndex
+            let written = self.buf.setRepeatingByte(8, count: count, at: at)
+            XCTAssertEqual(previousWriterIndex, self.buf.writerIndex) // writer index shouldn't have changed
+            XCTAssertEqual(count, written)
+            XCTAssertEqual(Array(repeating: UInt8(8), count: count), self.buf.getBytes(at: at, length: count)!)
+        }
+        
+        set(count: 1_000_000, at: 0)
+        set(count: 0, at: 0)
+    }
 }
 
 private enum AllocationExpectationState: Int {

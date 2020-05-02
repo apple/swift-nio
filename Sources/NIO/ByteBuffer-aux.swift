@@ -387,6 +387,20 @@ extension ByteBuffer {
             return count
         }
     }
+    
+    /// Sets the given `byte` `repeated` times at the given `index`. Will reserve more memory if necessary. Does not move the writer index.
+    ///
+    /// - parameter byte: The `UInt8` byte to repeat.
+    /// - parameter count: How many times to repeat the given `byte`
+    /// - returns: How many bytes were written.
+    @discardableResult
+    public mutating func setRepeatingByte(_ byte: UInt8, count: Int, at index: Int) -> Int {
+        precondition(count >= 0, "Can't write less than 0 bytes")
+        self._ensureAvailableCapacity(_Capacity(count), at: _Index(index))
+        let target = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer.dropFirst(index))
+        memset(target.baseAddress!, Int32(byte), count)
+        return count
+    }
 
     /// Slice the readable bytes off this `ByteBuffer` without modifying the reader index. This method will return a
     /// `ByteBuffer` sharing the underlying storage with the `ByteBuffer` the method was invoked on. The returned
