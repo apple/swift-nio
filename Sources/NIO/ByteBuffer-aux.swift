@@ -381,7 +381,6 @@ extension ByteBuffer {
     /// - returns: How many bytes were written.
     @discardableResult
     public mutating func writeRepeatingByte(_ byte: UInt8, count: Int) -> Int {
-        precondition(count >= 0, "Can't write fewer than 0 bytes")
         let written = self.setRepeatingByte(byte, count: count, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
@@ -400,7 +399,6 @@ extension ByteBuffer {
             precondition(pointer.count >= count)
             let dest = pointer[index ..< index + count].base
             memset(dest.baseAddress!, Int32(byte), count)
-//            memset(<#T##__b: UnsafeMutableRawPointer!##UnsafeMutableRawPointer!#>, <#T##__c: Int32##Int32#>, <#T##__len: Int##Int#>)
         }
         return count
     }
