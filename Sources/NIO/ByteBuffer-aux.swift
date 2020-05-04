@@ -396,9 +396,9 @@ extension ByteBuffer {
         precondition(count >= 0, "Can't write fewer than 0 bytes")
         self.reserveCapacity(index + count)
         self.withVeryUnsafeMutableBytes { pointer in
-            precondition(pointer.count >= count)
             let dest = pointer[index ..< index + count].base
-            memset(dest.baseAddress!, Int32(byte), count)
+            precondition(pointer.count >= count)
+            memset(dest.baseAddress!, CInt(byte), size_t(count))
         }
         return count
     }
