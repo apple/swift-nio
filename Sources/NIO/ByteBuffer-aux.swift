@@ -397,8 +397,7 @@ extension ByteBuffer {
         self.reserveCapacity(index + count)
         self.withVeryUnsafeMutableBytes { pointer in
             let dest = pointer[index ..< index + count].base
-            precondition(pointer.count >= count)
-            dest.initializeMemory(as: UInt8.self, repeating: byte)
+            _ = dest.initializeMemory(as: UInt8.self, repeating: byte)
         }
         return count
     }
