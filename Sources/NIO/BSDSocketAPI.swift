@@ -268,6 +268,10 @@ extension NIOBSDSocket.Option {
     /// Control multicast time-to-live.
     public static let ip_multicast_ttl: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_MULTICAST_TTL)
+    
+    /// Request that we are passed type of service details when receiving datagrams.
+    static let ip_recv_tos: NIOBSDSocket.Option =
+            NIOBSDSocket.Option(rawValue: IP_RECVTOS)
 }
 
 // IPv6 Options

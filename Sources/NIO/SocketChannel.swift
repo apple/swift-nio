@@ -331,6 +331,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     /// Support for vector reads, if enabled.
     private var vectorReadManager: Optional<DatagramVectorReadManager>
+    
+    /// The protocol family of this channel (if known)
+    private var protocolFamily: NIOBSDSocket.ProtocolFamily? = nil
+    
+    /// Has Explicit Congestion Notification information been requested.
+    private var ecnEnabled = false
 
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
@@ -362,6 +368,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
         self.vectorReadManager = nil
+        self.protocolFamily = protocolFamily
         let socket = try Socket(protocolFamily: protocolFamily, type: .dgram)
         do {
             try socket.setNonBlocking()
@@ -412,6 +419,22 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             #else
             break
             #endif
+        case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
+            let tosValue: Int32 = value as! Bool ? 1 : 0
+            switch protocolFamily {
+            case .some(.inet):
+                try socket.setOption(level: NIOBSDSocket.OptionLevel.ip,
+                                     name: NIOBSDSocket.Option.ip_recv_tos,
+                                     value: tosValue)
+            case .some(.inet6):
+                try socket.setOption(level: NIOBSDSocket.OptionLevel.ipv6,
+                                     name: NIOBSDSocket.Option.ip_recv_tos,
+                                     value: tosValue)
+            case .some(_):
+                fatalError("Explicit congestion notification is only supported for IP")
+            default:
+                fatalError("Explicit congestion notification is not supported when protocol is not known")
+            }
         default:
             try super.setOption0(option, value: value)
         }
