@@ -249,10 +249,7 @@ final class DatagramChannelTests: XCTestCase {
             // will cause EMSGSIZE.
             let bufferSize = 1024 * 5
             var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
-            buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: bufferSize) {
-                _ = memset($0.baseAddress!, 4, $0.count)
-                return $0.count
-            }
+            buffer.writeRepeatingByte(4, count: buffer.capacity)
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
             let lotsOfData = Int(Int32.max)
@@ -273,10 +270,7 @@ final class DatagramChannelTests: XCTestCase {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
         let bufferSize = 1024 * 1024 * 10
         var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
-        buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: bufferSize) {
-            _ = memset($0.baseAddress!, 4, $0.count)
-            return $0.count
-        }
+        buffer.writeRepeatingByte(4, count: buffer.capacity)
         let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
         let writeFut = self.firstChannel.write(NIOAny(envelope))
@@ -291,10 +285,7 @@ final class DatagramChannelTests: XCTestCase {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
         let bufferSize = 1024 * 1024 * 10
         var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
-        buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: bufferSize) {
-            _ = memset($0.baseAddress!, 4, $0.count)
-            return $0.count
-        }
+        buffer.writeRepeatingByte(4, count: buffer.capacity)
 
         // Now we want two envelopes. The first is small, the second is large.
         let firstEnvelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer.getSlice(at: buffer.readerIndex, length: 100)!)
@@ -319,10 +310,7 @@ final class DatagramChannelTests: XCTestCase {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
         let bufferSize = 1024 * 1024 * 10
         var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
-        buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: bufferSize) {
-            _ = memset($0.baseAddress!, 4, $0.count)
-            return $0.count
-        }
+        buffer.writeRepeatingByte(4, count: buffer.capacity)
 
         // Now we want two envelopes. The first is small, the second is large.
         let firstEnvelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer.getSlice(at: buffer.readerIndex, length: 100)!)

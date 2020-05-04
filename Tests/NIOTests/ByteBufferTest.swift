@@ -723,12 +723,8 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(otherBuf, buf)
 
         // Write to both buffers.
-        let firstResult = buf!.withUnsafeMutableWritableBytes { (ptr: UnsafeMutableRawBufferPointer) -> Bool in
-            XCTAssertEqual(cap, ptr.count)
-            memset(ptr.baseAddress!, 0, ptr.count)
-            return false
-        }
-        let secondResult = otherBuf!.withUnsafeMutableWritableBytes { (ptr: UnsafeMutableRawBufferPointer) -> Bool in
+        self.buf.setRepeatingByte(0, count: self.buf.capacity, at: 0)
+        let result = otherBuf!.withUnsafeMutableWritableBytes { (ptr: UnsafeMutableRawBufferPointer) -> Bool in
             XCTAssertEqual(cap, ptr.count)
             let intPtr = ptr.baseAddress!.bindMemory(to: UInt8.self, capacity: ptr.count)
             for i in 0..<ptr.count {
@@ -736,8 +732,7 @@ class ByteBufferTest: XCTestCase {
             }
             return true
         }
-        XCTAssertFalse(firstResult)
-        XCTAssertTrue(secondResult)
+        XCTAssertTrue(result)
         XCTAssertEqual(cap, otherBuf!.capacity)
         XCTAssertEqual(buf!.readableBytes, 0)
         XCTAssertEqual(otherBuf!.readableBytes, 0)
