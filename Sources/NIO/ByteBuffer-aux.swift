@@ -395,15 +395,13 @@ extension ByteBuffer {
     @discardableResult
     public mutating func setRepeatingByte(_ byte: UInt8, count: Int, at index: Int) -> Int {
         precondition(count >= 0, "Can't write fewer than 0 bytes")
-        let bytesCount = count
-        let newEndIndex: _Index = UInt32(index) + _toIndex(bytesCount)
-        if !isKnownUniquelyReferenced(&self._storage) {
-            let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
-            self._copyStorageAndRebase(extraCapacity: extraCapacity)
+        self.reserveCapacity(index + count)
+        self.withVeryUnsafeMutableBytes { pointer in
+            precondition(pointer.count >= count)
+            let dest = pointer[index ..< index + count].base
+            memset(dest.baseAddress!, Int32(byte), count)
+//            memset(<#T##__b: UnsafeMutableRawPointer!##UnsafeMutableRawPointer!#>, <#T##__c: Int32##Int32#>, <#T##__len: Int##Int#>)
         }
-        self._ensureAvailableCapacity(_Capacity(bytesCount), at: UInt32(index))
-        let target = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer.dropFirst(index))
-        memset(target.baseAddress!, Int32(byte), count)
         return count
     }
 

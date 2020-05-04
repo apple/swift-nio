@@ -2610,6 +2610,16 @@ class ByteBufferTest: XCTestCase {
         set(count: 1_000_000, at: 0)
         set(count: 0, at: 0)
     }
+    
+    func testSetRepeatingBytes_unqiueReference() {
+        
+        var buffer = self.buf!
+        let copy = buffer
+        
+        buffer.writeRepeatingByte(2, count: 100)
+        XCTAssertEqual(Array(buffer.readableBytesView), Array(repeating: 2, count: 100))
+        XCTAssertNotEqual(buffer, copy)
+    }
 }
 
 private enum AllocationExpectationState: Int {
