@@ -20,18 +20,18 @@
 public struct AddressedEnvelope<DataType> {
     public var remoteAddress: SocketAddress
     public var data: DataType
-    /// Any MetaData associated with this `AddressedEnvelope`
-    public var metaData : MetaData? = nil
+    /// Any metadata associated with this `AddressedEnvelope`
+    public var metadata : Metadata? = nil
 
     public init(remoteAddress: SocketAddress, data: DataType) {
         self.remoteAddress = remoteAddress
         self.data = data
     }
     
-    /// Any MetaData associated with an AddressedEnvelope
-    public struct MetaData {
+    /// Any metadata associated with an `AddressedEnvelope`
+    public struct Metadata {
         /// Details of any congestion state.
-        public var ecnState : NIOEcnState
+        public var ecnState : NIOECNState
     }
 }
 
@@ -42,7 +42,7 @@ extension AddressedEnvelope: CustomStringConvertible {
 }
 
 /// Possible ECN States
-public enum NIOEcnState {
+public enum NIOECNState: Hashable {
     /// Non-ECN Capable Transport.
     case nonECT
     /// ECN Capable Transport (flag 0).
