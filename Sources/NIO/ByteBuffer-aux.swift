@@ -382,10 +382,9 @@ extension ByteBuffer {
     @discardableResult
     public mutating func writeRepeatingByte(_ byte: UInt8, count: Int) -> Int {
         precondition(count >= 0, "Can't write fewer than 0 bytes")
-        return self.writeWithUnsafeMutableBytes(minimumWritableBytes: count) { (pointer) -> Int in
-            memset(pointer.baseAddress!, Int32(byte), count)
-            return count
-        }
+        let written = self.setRepeatingByte(byte, count: count, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
     }
     
     /// Sets the given `byte` `count` times at the given `index`. Will reserve more memory if necessary. Does not move the writer index.
