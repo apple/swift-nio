@@ -388,7 +388,7 @@ extension ByteBuffer {
         }
     }
     
-    /// Sets the given `byte` `repeated` times at the given `index`. Will reserve more memory if necessary. Does not move the writer index.
+    /// Sets the given `byte` `count` times at the given `index`. Will reserve more memory if necessary. Does not move the writer index.
     ///
     /// - parameter byte: The `UInt8` byte to repeat.
     /// - parameter count: How many times to repeat the given `byte`
