@@ -2580,7 +2580,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("hellohello", self.buf.readString(length: 10))
     }
     
-    func testRepeatingBytes() {
+    func testWriteRepeatingBytes() {
         func write(count: Int, line: UInt = #line) {
             self.buf.clear()
             let written = self.buf.writeRepeatingByte(9, count: count)
@@ -2592,7 +2592,7 @@ class ByteBufferTest: XCTestCase {
         write(count: 0)
     }
     
-    func testSetBytes() {
+    func testSetRepeatingBytes() {
         func set(count: Int, at: Int, line: UInt = #line) {
             
             // first write some bytes
