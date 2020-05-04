@@ -2593,7 +2593,7 @@ class ByteBufferTest: XCTestCase {
     }
     
     func testSetRepeatingBytes() {
-        func set(count: Int, at: Int, padding: [UInt8] = [], line: UInt = #line) {
+        func set(count: Int, at index: Int, padding: [UInt8] = [], line: UInt = #line) {
             
             // first write some bytes
             self.buf.clear()
@@ -2603,10 +2603,14 @@ class ByteBufferTest: XCTestCase {
             
             // now overwrite
             let previousWriterIndex = self.buf.writerIndex
-            let written = self.buf.setRepeatingByte(8, count: count, at: at)
+            let written = self.buf.setRepeatingByte(8, count: count, at: index)
             XCTAssertEqual(previousWriterIndex, self.buf.writerIndex) // writer index shouldn't have changed
             XCTAssertEqual(count, written)
-            XCTAssertEqual(Array(repeating: UInt8(8), count: count), self.buf.getBytes(at: at, length: count)!)
+            XCTAssertEqual(Array(repeating: UInt8(8), count: count), self.buf.getBytes(at: index, length: count)!)
+            
+            // check the padding is still ok
+            XCTAssertEqual(self.buf.getBytes(at: 0, length: padding.count)!, padding)
+            XCTAssertEqual(self.buf.getBytes(at: count + padding.count, length: padding.count)!, padding)
         }
         
         set(count: 1_000_000, at: 0)
