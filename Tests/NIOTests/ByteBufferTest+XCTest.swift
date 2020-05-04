@@ -185,6 +185,7 @@ extension ByteBufferTest {
                 ("testDeprecatedSetBytes", testDeprecatedSetBytes),
                 ("testWriteRepeatingBytes", testWriteRepeatingBytes),
                 ("testSetRepeatingBytes", testSetRepeatingBytes),
+                ("testSetRepeatingBytes_unqiueReference", testSetRepeatingBytes_unqiueReference),
                 ("testCreateArrayFromBuffer", testCreateArrayFromBuffer),
                 ("testCreateStringFromBuffer", testCreateStringFromBuffer),
                 ("testCreateDispatchDataFromBuffer", testCreateDispatchDataFromBuffer),
