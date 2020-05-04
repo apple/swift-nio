@@ -21,7 +21,7 @@ public struct AddressedEnvelope<DataType> {
     public var remoteAddress: SocketAddress
     public var data: DataType
     /// Any metadata associated with this `AddressedEnvelope`
-    public var metadata : Metadata? = nil
+    public var metadata: Metadata? = nil
 
     public init(remoteAddress: SocketAddress, data: DataType) {
         self.remoteAddress = remoteAddress
@@ -31,7 +31,7 @@ public struct AddressedEnvelope<DataType> {
     /// Any metadata associated with an `AddressedEnvelope`
     public struct Metadata {
         /// Details of any congestion state.
-        public var ecnState : NIOECNState
+        public var ecnState: NIOECNState
     }
 }
 
