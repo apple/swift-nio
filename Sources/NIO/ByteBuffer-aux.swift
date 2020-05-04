@@ -374,7 +374,7 @@ extension ByteBuffer {
         return written
     }
     
-    /// Writes `byte` `repeated` times. Moves the writer index forward by the number of bytes written.
+    /// Writes `byte` `count` times. Moves the writer index forward by the number of bytes written.
     ///
     /// - parameter byte: The `UInt8` byte to repeat.
     /// - parameter count: How many times to repeat the given `byte`
