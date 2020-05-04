@@ -381,7 +381,7 @@ extension ByteBuffer {
     /// - returns: How many bytes were written.
     @discardableResult
     public mutating func writeRepeatingByte(_ byte: UInt8, count: Int) -> Int {
-        precondition(count >= 0, "Can't write less than 0 bytes")
+        precondition(count >= 0, "Can't write fewer than 0 bytes")
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: count) { (pointer) -> Int in
             memset(pointer.baseAddress!, Int32(byte), count)
             return count
