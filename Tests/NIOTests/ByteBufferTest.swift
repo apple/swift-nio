@@ -2593,11 +2593,13 @@ class ByteBufferTest: XCTestCase {
     }
     
     func testSetRepeatingBytes() {
-        func set(count: Int, at: Int, line: UInt = #line) {
+        func set(count: Int, at: Int, padding: [UInt8] = [], line: UInt = #line) {
             
             // first write some bytes
             self.buf.clear()
+            self.buf.writeBytes(padding)
             self.buf.writeRepeatingByte(9, count: count)
+            self.buf.writeBytes(padding)
             
             // now overwrite
             let previousWriterIndex = self.buf.writerIndex
@@ -2609,6 +2611,7 @@ class ByteBufferTest: XCTestCase {
         
         set(count: 1_000_000, at: 0)
         set(count: 0, at: 0)
+        set(count: 10, at: 5, padding: [1, 1, 1, 1, 1])
     }
     
     func testSetRepeatingBytes_unqiueReference() {
