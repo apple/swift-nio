@@ -340,7 +340,7 @@ class BootstrapTest: XCTestCase {
     func testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer() {
         var channel: Channel? = nil
         XCTAssertNoThrow(channel = try DatagramBootstrap(group: self.group)
-            .channelOptions([.disableAutoRead])
+            .options([.disableAutoRead])
             .channelInitializer { channel in
                 channel.getOption(ChannelOptions.autoRead).whenComplete { result in
                     func workaround() {
@@ -368,7 +368,7 @@ class BootstrapTest: XCTestCase {
             }
             var channel: Channel? = nil
             XCTAssertNoThrow(channel = try NIOPipeBootstrap(group: self.group)
-                .channelOptions([.disableAutoRead])
+                .options([.disableAutoRead])
                 .channelInitializer { channel in
                     channel.getOption(ChannelOptions.autoRead).whenComplete { result in
                         func workaround() {
@@ -675,7 +675,7 @@ class BootstrapTest: XCTestCase {
                 bs.channelOption(longOption, value: setValue)
             }
             let shortSetValue = try setAndGetOption(option: longOption) { bs in
-                bs.channelOptions([shortOption])
+                bs.options([shortOption])
             }
             let unsetValue = try setAndGetOption(option: longOption) { $0 }
             
@@ -721,7 +721,7 @@ class BootstrapTest: XCTestCase {
                 bs.channelOption(longOption, value: setValue)
             }
             let shortSetValue = try setAndGetOption(option: longOption) { bs in
-                bs.channelOptions([shortOption])
+                bs.options([shortOption])
             }
             let unsetValue = try setAndGetOption(option: longOption) { $0 }
             
@@ -764,7 +764,7 @@ class BootstrapTest: XCTestCase {
                 bs.channelOption(longOption, value: setValue)
             }
             let shortSetValue = try setAndGetOption(option: longOption) { bs in
-                bs.channelOptions([shortOption])
+                bs.options([shortOption])
             }
             let unsetValue = try setAndGetOption(option: longOption) { $0 }
             
@@ -815,7 +815,7 @@ class BootstrapTest: XCTestCase {
                 bs.channelOption(longOption, value: setValue)
             }
             let shortSetValue = try setAndGetOption(option: longOption) { bs in
-                bs.channelOptions([shortOption])
+                bs.options([shortOption])
             }
             let unsetValue = try setAndGetOption(option: longOption) { $0 }
             

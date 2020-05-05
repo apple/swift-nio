@@ -393,7 +393,7 @@ private extension Channel {
 ///     }
 ///     let bootstrap = ClientBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
-///         .channelOptions([.allowImmediateLocalEndpointAddressReuse])
+///         .options([.allowImmediateLocalEndpointAddressReuse])
 ///         .channelInitializer { channel in
 ///             // always instantiate the handler _within_ the closure as
 ///             // it may be called multiple times (for example if the hostname

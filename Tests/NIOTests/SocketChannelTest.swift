@@ -823,7 +823,7 @@ public final class SocketChannelTest : XCTestCase {
                 .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
                 .wait())
             let client = try assertNoThrowWithValue(ClientBootstrap(group: group)
-                .channelOptions((mode == .halfClosureEnabled) ? [.allowRemoteHalfClosure] : [])
+                .options((mode == .halfClosureEnabled) ? [.allowRemoteHalfClosure] : [])
                 .channelInitializer { channel in
                     channel.pipeline.addHandlers([eventCounter,
                                                   DropAllReadsOnTheFloorHandler(mode: mode,

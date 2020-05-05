@@ -1183,7 +1183,7 @@ public final class ChannelTests: XCTestCase {
                     channel.pipeline.addHandler(verificationHandler)
                 }
             }
-            .channelOptions([.allowRemoteHalfClosure])
+            .options([.allowRemoteHalfClosure])
             .connect(to: try! server.localAddress())
         let accepted = try server.accept()!
         defer {
@@ -1237,7 +1237,7 @@ public final class ChannelTests: XCTestCase {
             .channelInitializer { channel in
                 channel.pipeline.addHandler(verificationHandler)
             }
-            .channelOptions([.allowRemoteHalfClosure])
+            .options([.allowRemoteHalfClosure])
             .connect(to: try! server.localAddress())
         let accepted = try server.accept()!
         defer {
@@ -2581,7 +2581,7 @@ public final class ChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: server, level: .socket, name: .timestamp))
 
         let client1 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
-            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
+            .options([.allowImmediateLocalEndpointAddressReuse])
             .channelOption(ChannelOptions.tcpOption(.nodelay), value: 0)
             .connect(to: server.localAddress!)
             .wait())
@@ -2590,7 +2590,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try client1.close().wait())
         }
         let client2 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
-            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
+            .options([.allowImmediateLocalEndpointAddressReuse])
             .connect(to: server.localAddress!)
             .wait())
         let accepted2 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())

@@ -79,16 +79,16 @@ extension ClientBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated client bootstrap (`self` being mutated)
     @inlinable
-    public func channelOptions(_ options: [NIOTCPShorthandOption]) -> ClientBootstrap {
+    public func options(_ options: [NIOTCPShorthandOption]) -> ClientBootstrap {
         var toReturn = self
         for option in options {
-            toReturn = toReturn.channelOption(option)
+            toReturn = toReturn.option(option)
         }
         return toReturn
     }
     
     @usableFromInline
-    func channelOption(_ option: NIOTCPShorthandOption) -> ClientBootstrap {
+    func option(_ option: NIOTCPShorthandOption) -> ClientBootstrap {
         let applier = ClientBootstrap_Applier(contained: self)
         return option.applyFallbackMapping(applier).contained
     }
@@ -109,16 +109,16 @@ extension DatagramBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated datagram bootstrap (`self` being mutated)
     @inlinable
-    public func channelOptions(_ options: [NIOUDPShorthandOption]) -> DatagramBootstrap {
+    public func options(_ options: [NIOUDPShorthandOption]) -> DatagramBootstrap {
         var toReturn = self
         for option in options {
-            toReturn = toReturn.channelOption(option)
+            toReturn = toReturn.option(option)
         }
         return toReturn
     }
     
     @usableFromInline
-    func channelOption(_ option: NIOUDPShorthandOption) -> DatagramBootstrap {
+    func option(_ option: NIOUDPShorthandOption) -> DatagramBootstrap {
         let applier = DatagramBootstrap_Applier(contained: self)
         return option.applyFallbackMapping(applier).contained
     }
@@ -139,16 +139,16 @@ extension NIOPipeBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated pipe bootstrap (`self` being mutated)
     @inlinable
-    public func channelOptions(_ options: [NIOPipeShorthandOption]) -> NIOPipeBootstrap {
+    public func options(_ options: [NIOPipeShorthandOption]) -> NIOPipeBootstrap {
         var toReturn = self
         for option in options {
-            toReturn = toReturn.channelOption(option)
+            toReturn = toReturn.option(option)
         }
         return toReturn
     }
     
     @usableFromInline
-    func channelOption(_ option: NIOPipeShorthandOption) -> NIOPipeBootstrap {
+    func option(_ option: NIOPipeShorthandOption) -> NIOPipeBootstrap {
         let applier = NIOPipeBootstrap_Applier(contained: self)
         return option.applyFallbackMapping(applier).contained
     }
@@ -179,16 +179,16 @@ extension NIOClientTCPBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated bootstrap (`self` being mutated)
     @inlinable
-    public func channelOptions(_ options: [NIOTCPShorthandOption]) -> NIOClientTCPBootstrap {
+    public func options(_ options: [NIOTCPShorthandOption]) -> NIOClientTCPBootstrap {
         var toReturn = self
         for option in options {
-            toReturn = toReturn.channelOption(option)
+            toReturn = toReturn.option(option)
         }
         return toReturn
     }
     
     @usableFromInline
-    func channelOption(_ option: NIOTCPShorthandOption) -> NIOClientTCPBootstrap {
+    func option(_ option: NIOTCPShorthandOption) -> NIOClientTCPBootstrap {
         if let updatedUnderlying = underlyingBootstrap.applyChannelOption(option) {
             return NIOClientTCPBootstrap(self, withUpdated: updatedUnderlying)
         } else {
@@ -353,7 +353,7 @@ extension NIOTCPServerShorthandOption {
 
 // MARK: UDP
 /// A channel option which can be applied to a UDP based bootstrap using shorthand notation.
-/// - See: DatagramBootstrap.channelOptions(_ options: [Option])
+/// - See: DatagramBootstrap.options(_ options: [Option])
 public struct NIOUDPShorthandOption {
     private var data: ShorthandOption
     
@@ -408,7 +408,7 @@ extension NIOUDPShorthandOption {
 
 // MARK: Pipe
 /// A channel option which can be applied to pipe bootstrap using shorthand notation.
-/// - See: NIOPipeBootstrap.channelOptions(_ options: [Option])
+/// - See: NIOPipeBootstrap.options(_ options: [Option])
 public struct NIOPipeShorthandOption {
     private let data: ShorthandOption
     

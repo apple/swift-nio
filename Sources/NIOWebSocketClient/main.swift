@@ -158,7 +158,7 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
-    .channelOptions([.allowImmediateLocalEndpointAddressReuse])
+    .options([.allowImmediateLocalEndpointAddressReuse])
     .channelInitializer { channel in
         
         let httpHandler = HTTPInitialRequestHandler()

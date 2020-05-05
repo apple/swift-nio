@@ -181,21 +181,21 @@ class UniversalBootstrapSupportTest: XCTestCase {
         // Check consumption works.
         let consumingFake = FakeBootstrap()
         _ = NIOClientTCPBootstrap(consumingFake, tls: NIOInsecureNoTLS())
-            .channelOptions([.allowImmediateLocalEndpointAddressReuse])
+            .options([.allowImmediateLocalEndpointAddressReuse])
         XCTAssertTrue(consumingFake.shorthandOptionConsumed)
         XCTAssertFalse(consumingFake.regularOptionsSeen)
         
         // Check default behaviour works.
         let nonConsumingFake = FakeBootstrap()
         _ = NIOClientTCPBootstrap(nonConsumingFake, tls: NIOInsecureNoTLS())
-            .channelOptions([.allowRemoteHalfClosure])
+            .options([.allowRemoteHalfClosure])
         XCTAssertFalse(nonConsumingFake.shorthandOptionConsumed)
         XCTAssertTrue(nonConsumingFake.regularOptionsSeen)
         
         // Both at once.
         let bothFake = FakeBootstrap()
         _ = NIOClientTCPBootstrap(bothFake, tls: NIOInsecureNoTLS())
-            .channelOptions([.allowRemoteHalfClosure, .allowImmediateLocalEndpointAddressReuse])
+            .options([.allowRemoteHalfClosure, .allowImmediateLocalEndpointAddressReuse])
         XCTAssertTrue(bothFake.shorthandOptionConsumed)
         XCTAssertTrue(bothFake.regularOptionsSeen)
     }
