@@ -334,9 +334,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     
     /// The protocol family of this channel (if known)
     private var protocolFamily: NIOBSDSocket.ProtocolFamily? = nil
-    
-    /// Has Explicit Congestion Notification information been requested.
-    private var ecnEnabled = false
 
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
@@ -420,16 +417,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             break
             #endif
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
-            let tosValue: Int32 = value as! Bool ? 1 : 0
+            let valueAsInt: Int32 = value as! Bool ? 1 : 0
             switch protocolFamily {
             case .some(.inet):
                 try socket.setOption(level: NIOBSDSocket.OptionLevel.ip,
                                      name: NIOBSDSocket.Option.ip_recv_tos,
-                                     value: tosValue)
+                                     value: valueAsInt)
             case .some(.inet6):
                 try socket.setOption(level: NIOBSDSocket.OptionLevel.ipv6,
                                      name: NIOBSDSocket.Option.ipv6_recv_tclass,
-                                     value: tosValue)
+                                     value: valueAsInt)
             case .some(_):
                 fatalError("Explicit congestion notification is only supported for IP")
             default:
