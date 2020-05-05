@@ -31,7 +31,7 @@ public struct AddressedEnvelope<DataType> {
     /// Any metadata associated with an `AddressedEnvelope`
     public struct Metadata {
         /// Details of any congestion state.
-        public var ecnState: NIOECNState
+        public var ecnState: NIOExplicitCongestionNotificationState
     }
 }
 
@@ -41,14 +41,14 @@ extension AddressedEnvelope: CustomStringConvertible {
     }
 }
 
-/// Possible ECN States
-public enum NIOECNState: Hashable {
+/// Possible Explicit Congestion Notification States
+public enum NIOExplicitCongestionNotificationState: Hashable {
     /// Non-ECN Capable Transport.
-    case nonECT
+    case transportNotCapable
     /// ECN Capable Transport (flag 0).
-    case ect0
+    case transportCapableFlag0
     /// ECN Capable Transport (flag 1).
-    case ect1
+    case transportCapableFlag1
     /// Congestion Experienced.
-    case ce
+    case congestionExperienced
 }
