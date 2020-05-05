@@ -1686,7 +1686,7 @@ public final class ChannelTests: XCTestCase {
             }
             // maxMessagesPerRead is large so that we definitely spin and seen the EOF
             .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 10)
-            .childChannelOptions([.allowRemoteHalfClosure])
+            .childOptions([.allowRemoteHalfClosure])
             // that fits the message we prepared
             .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
             .bind(host: "127.0.0.1", port: 0).wait())
@@ -2529,7 +2529,7 @@ public final class ChannelTests: XCTestCase {
         let serverChannelAvailablePromise = singleThreadedELG.next().makePromise(of: Channel.self)
         let allDonePromise = singleThreadedELG.next().makePromise(of: Void.self)
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
-            .childChannelOptions([.allowRemoteHalfClosure])
+            .childOptions([.allowRemoteHalfClosure])
             .childChannelInitializer { channel in
                 channel.pipeline.addHandler(WriteWhenActiveHandler(channelAvailablePromise: serverChannelAvailablePromise))
             }

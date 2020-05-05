@@ -631,7 +631,7 @@ class BootstrapTest: XCTestCase {
                 bs.childChannelOption(longOption, value: setValue)
             }
             let shortSetValue = try setAndGetOption(option: longOption) { bs in
-                bs.childChannelOptions([shortOption])
+                bs.childOptions([shortOption])
             }
             let unsetValue = try setAndGetOption(option: longOption) { $0 }
             

@@ -49,16 +49,16 @@ extension ServerBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The update server bootstrap (`self` being mutated)
     @inlinable
-    public func childChannelOptions(_ options: [NIOTCPShorthandOption]) -> ServerBootstrap {
+    public func childOptions(_ options: [NIOTCPShorthandOption]) -> ServerBootstrap {
         var toReturn = self
         for option in options {
-            toReturn = toReturn.childChannelOption(option)
+            toReturn = toReturn.childOption(option)
         }
         return toReturn
     }
     
     @usableFromInline
-    func childChannelOption(_ option: NIOTCPShorthandOption) -> ServerBootstrap {
+    func childOption(_ option: NIOTCPShorthandOption) -> ServerBootstrap {
         let applier = ServerBootstrapChild_Applier(contained: self)
         return option.applyFallbackMapping(applier).contained
     }

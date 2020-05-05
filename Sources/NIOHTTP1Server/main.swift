@@ -533,7 +533,7 @@ let socketBootstrap = ServerBootstrap(group: group)
     .childChannelInitializer(childChannelInitializer(channel:))
 
     // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOptions(allowHalfClosure ?
+    .childOptions(allowHalfClosure ?
         [.allowImmediateLocalEndpointAddressReuse, .allowRemoteHalfClosure] :
         [.allowImmediateLocalEndpointAddressReuse])
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)

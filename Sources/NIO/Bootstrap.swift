@@ -46,7 +46,7 @@ internal enum NIOOnSocketsBootstraps {
 ///         }
 ///
 ///         // Enable SO_REUSEADDR for the accepted Channels
-///         .childChannelOptions([.allowImmediateLocalEndpointAddressReuse])
+///         .childOptions([.allowImmediateLocalEndpointAddressReuse])
 ///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
 ///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
 ///     let channel = try! bootstrap.bind(host: host, port: port).wait()
