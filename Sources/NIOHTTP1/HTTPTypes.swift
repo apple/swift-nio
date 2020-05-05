@@ -65,7 +65,7 @@ public struct HTTPRequestHead: Equatable {
             return self._storage.method
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.method = newValue
         }
     }
@@ -76,7 +76,7 @@ public struct HTTPRequestHead: Equatable {
             return self._storage.uri
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.uri = newValue
         }
     }
@@ -87,7 +87,7 @@ public struct HTTPRequestHead: Equatable {
             return self._storage.version
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.version = newValue
         }
     }
@@ -192,7 +192,7 @@ public struct HTTPResponseHead: Equatable {
             return self._storage.status
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.status = newValue
         }
     }
@@ -203,7 +203,7 @@ public struct HTTPResponseHead: Equatable {
             return self._storage.version
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.version = newValue
         }
     }
