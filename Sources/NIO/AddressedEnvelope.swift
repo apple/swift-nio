@@ -29,7 +29,7 @@ public struct AddressedEnvelope<DataType> {
     }
     
     /// Any metadata associated with an `AddressedEnvelope`
-    public struct Metadata {
+    public struct Metadata: Hashable {
         /// Details of any congestion state.
         public var ecnState: NIOExplicitCongestionNotificationState
     }
