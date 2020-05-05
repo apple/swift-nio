@@ -75,7 +75,7 @@ class IdleStateHandlerTest : XCTestCase {
         }
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
+            .serverOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelInitializer { channel in
                 channel.pipeline.addHandler(handler).flatMap { f in
                     channel.pipeline.addHandler(TestWriteHandler(writeToChannel, assertEventFn))

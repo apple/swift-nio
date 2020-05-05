@@ -221,7 +221,7 @@ class BootstrapTest: XCTestCase {
         func restrictBootstrapType(clientBootstrap: NIOClientTCPBootstrap) throws {
             let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
+                .serverOptions([.allowImmediateLocalEndpointAddressReuse])
                 .childChannelInitializer { channel in
                     serverAcceptedChannelPromise.succeed(channel)
                     return channel.eventLoop.makeSucceededFuture(())
@@ -269,7 +269,7 @@ class BootstrapTest: XCTestCase {
     func testServerBootstrapSetsChannelOptionsBeforeChannelInitializer() {
         var channel: Channel? = nil
         XCTAssertNoThrow(channel = try ServerBootstrap(group: self.group)
-            .serverChannelOptions([.disableAutoRead])
+            .serverOptions([.disableAutoRead])
             .serverChannelInitializer { channel in
                 channel.getOption(ChannelOptions.autoRead).whenComplete { result in
                     func workaround() {
@@ -548,7 +548,7 @@ class BootstrapTest: XCTestCase {
                 bs.serverChannelOption(longOption, value: setValue)
             }
             let shortSetValue = try bindAndGetOption(option: longOption) { bs in
-                bs.serverChannelOptions([shortOption])
+                bs.serverOptions([shortOption])
             }
             let unsetValue = try bindAndGetOption(option: longOption) { $0 }
             
@@ -598,7 +598,7 @@ class BootstrapTest: XCTestCase {
                 let clientBootstrap = ClientBootstrap(group: group)
                 let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
                 let serverChannel = try assertNoThrowWithValue(applyOptions(ServerBootstrap(group: group))
-                    .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
+                    .serverOptions([.allowImmediateLocalEndpointAddressReuse])
                     .childChannelInitializer { channel in
                         optionRead = channel.getOption(option)
                         serverAcceptedChannelPromise.succeed(channel)

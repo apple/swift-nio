@@ -88,7 +88,7 @@ private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
                                               _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (Channel, EventLoopFuture<Channel>) {
     let p = group.next().makePromise(of: Channel.self)
     let c = try ServerBootstrap(group: group)
-        .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
+        .serverOptions([.allowImmediateLocalEndpointAddressReuse])
         .childChannelInitializer { channel in
             p.succeed(channel)
             let upgradeConfig = (upgraders: upgraders, completionHandler: upgradeCompletionHandler)

@@ -523,7 +523,7 @@ func withTCPServerChannel<R>(bindTarget: SocketAddress? = nil,
                              line: UInt = #line,
                              _ body: (Channel) throws -> R) throws -> R {
     let server = try ServerBootstrap(group: group)
-        .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
+        .serverOptions([.allowImmediateLocalEndpointAddressReuse])
         .bind(to: bindTarget ?? .init(ipAddress: "127.0.0.1", port: 0))
         .wait()
     do {

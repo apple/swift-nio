@@ -19,7 +19,7 @@ extension ServerBootstrap {
     /// - Parameter options: List of shorthand options to apply.
     /// - Returns: The updated server bootstrap (`self` being mutated)
     @inlinable
-    public func serverChannelOptions(_ options: [NIOTCPServerShorthandOption]) -> ServerBootstrap {
+    public func serverOptions(_ options: [NIOTCPServerShorthandOption]) -> ServerBootstrap {
         var toReturn = self
         for option in options {
             toReturn = toReturn.serverChannelOption(option)

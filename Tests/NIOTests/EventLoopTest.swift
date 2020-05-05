@@ -43,7 +43,7 @@ public final class EventLoopTest : XCTestCase {
 
         // First, we create a server and client channel, but don't connect them.
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: eventLoopGroup)
-            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
+            .serverOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "127.0.0.1", port: 0).wait())
         let clientBootstrap = ClientBootstrap(group: eventLoopGroup)
 
@@ -354,7 +354,7 @@ public final class EventLoopTest : XCTestCase {
 
         // Create a server channel.
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse])
+            .serverOptions([.allowImmediateLocalEndpointAddressReuse])
             .bind(host: "127.0.0.1", port: 0).wait())
 
         // We now want to connect to it. To try to slow this stuff down, we're going to use a multiple of the number
@@ -978,7 +978,7 @@ public final class EventLoopTest : XCTestCase {
         g.enter()
         var maybeServer: Channel?
         XCTAssertNoThrow(maybeServer = try ServerBootstrap(group: elg2)
-            .serverChannelOptions([.allowImmediateLocalEndpointAddressReuse, .disableAutoRead])
+            .serverOptions([.allowImmediateLocalEndpointAddressReuse, .disableAutoRead])
             .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.addHandler(ExecuteSomethingOnEventLoop(groupToNotify: g))

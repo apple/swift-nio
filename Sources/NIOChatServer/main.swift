@@ -116,7 +116,7 @@ let chatHandler = ChatHandler()
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .serverChannelOptions([.maximumUnacceptedConnectionBacklog(256),
+    .serverOptions([.maximumUnacceptedConnectionBacklog(256),
                            .allowImmediateLocalEndpointAddressReuse])
 
     // Set the handlers that are applied to the accepted Channels
