@@ -1,0 +1,1363 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 23,
+      "symbol": "NIOAtomicPrimitive.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.associatedtype",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 24,
+      "symbol": "NIOAtomicPrimitive.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 25,
+      "symbol": "NIOAtomicPrimitive.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 26,
+      "symbol": "NIOAtomicPrimitive.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 27,
+      "symbol": "NIOAtomicPrimitive.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 28,
+      "symbol": "NIOAtomicPrimitive.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 29,
+      "symbol": "NIOAtomicPrimitive.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 30,
+      "symbol": "NIOAtomicPrimitive.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 34,
+      "symbol": "Bool.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 35,
+      "symbol": "Bool.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 36,
+      "symbol": "Bool.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 37,
+      "symbol": "Bool.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 38,
+      "symbol": "Bool.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 39,
+      "symbol": "Bool.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 40,
+      "symbol": "Bool.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 41,
+      "symbol": "Bool.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 45,
+      "symbol": "Int8.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 46,
+      "symbol": "Int8.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 47,
+      "symbol": "Int8.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 48,
+      "symbol": "Int8.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 49,
+      "symbol": "Int8.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 50,
+      "symbol": "Int8.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 51,
+      "symbol": "Int8.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 52,
+      "symbol": "Int8.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 56,
+      "symbol": "UInt8.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 57,
+      "symbol": "UInt8.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 58,
+      "symbol": "UInt8.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 59,
+      "symbol": "UInt8.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 60,
+      "symbol": "UInt8.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 61,
+      "symbol": "UInt8.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 62,
+      "symbol": "UInt8.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 63,
+      "symbol": "UInt8.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 67,
+      "symbol": "Int16.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 68,
+      "symbol": "Int16.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 69,
+      "symbol": "Int16.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 70,
+      "symbol": "Int16.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 71,
+      "symbol": "Int16.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 72,
+      "symbol": "Int16.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 73,
+      "symbol": "Int16.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 74,
+      "symbol": "Int16.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 78,
+      "symbol": "UInt16.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 79,
+      "symbol": "UInt16.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 80,
+      "symbol": "UInt16.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 81,
+      "symbol": "UInt16.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 82,
+      "symbol": "UInt16.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 83,
+      "symbol": "UInt16.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 84,
+      "symbol": "UInt16.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 85,
+      "symbol": "UInt16.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 89,
+      "symbol": "Int32.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 90,
+      "symbol": "Int32.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 91,
+      "symbol": "Int32.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 92,
+      "symbol": "Int32.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 93,
+      "symbol": "Int32.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 94,
+      "symbol": "Int32.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 95,
+      "symbol": "Int32.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 96,
+      "symbol": "Int32.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 100,
+      "symbol": "UInt32.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 101,
+      "symbol": "UInt32.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 102,
+      "symbol": "UInt32.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 103,
+      "symbol": "UInt32.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 104,
+      "symbol": "UInt32.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 105,
+      "symbol": "UInt32.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 106,
+      "symbol": "UInt32.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 107,
+      "symbol": "UInt32.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 111,
+      "symbol": "Int64.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 112,
+      "symbol": "Int64.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 113,
+      "symbol": "Int64.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 114,
+      "symbol": "Int64.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 115,
+      "symbol": "Int64.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 116,
+      "symbol": "Int64.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 117,
+      "symbol": "Int64.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 118,
+      "symbol": "Int64.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 122,
+      "symbol": "UInt64.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 123,
+      "symbol": "UInt64.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 124,
+      "symbol": "UInt64.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 125,
+      "symbol": "UInt64.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 126,
+      "symbol": "UInt64.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 127,
+      "symbol": "UInt64.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 128,
+      "symbol": "UInt64.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 129,
+      "symbol": "UInt64.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 156,
+      "symbol": "Int.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 157,
+      "symbol": "Int.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 158,
+      "symbol": "Int.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 159,
+      "symbol": "Int.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 160,
+      "symbol": "Int.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 161,
+      "symbol": "Int.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 162,
+      "symbol": "Int.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 163,
+      "symbol": "Int.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 167,
+      "symbol": "UInt.AtomicWrapper",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 168,
+      "symbol": "UInt.nio_atomic_create_with_existing_storage",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 169,
+      "symbol": "UInt.nio_atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 170,
+      "symbol": "UInt.nio_atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 171,
+      "symbol": "UInt.nio_atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 172,
+      "symbol": "UInt.nio_atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 173,
+      "symbol": "UInt.nio_atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/NIOAtomic.swift",
+      "line": 174,
+      "symbol": "UInt.nio_atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 279,
+      "symbol": "AtomicPrimitive.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 280,
+      "symbol": "AtomicPrimitive.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 281,
+      "symbol": "AtomicPrimitive.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 282,
+      "symbol": "AtomicPrimitive.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 283,
+      "symbol": "AtomicPrimitive.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 284,
+      "symbol": "AtomicPrimitive.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 285,
+      "symbol": "AtomicPrimitive.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 286,
+      "symbol": "AtomicPrimitive.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 290,
+      "symbol": "Bool.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 291,
+      "symbol": "Bool.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 292,
+      "symbol": "Bool.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 293,
+      "symbol": "Bool.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 294,
+      "symbol": "Bool.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 295,
+      "symbol": "Bool.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 296,
+      "symbol": "Bool.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 297,
+      "symbol": "Bool.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 301,
+      "symbol": "Int8.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 302,
+      "symbol": "Int8.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 303,
+      "symbol": "Int8.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 304,
+      "symbol": "Int8.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 305,
+      "symbol": "Int8.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 306,
+      "symbol": "Int8.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 307,
+      "symbol": "Int8.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 308,
+      "symbol": "Int8.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 312,
+      "symbol": "UInt8.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 313,
+      "symbol": "UInt8.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 314,
+      "symbol": "UInt8.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 315,
+      "symbol": "UInt8.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 316,
+      "symbol": "UInt8.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 317,
+      "symbol": "UInt8.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 318,
+      "symbol": "UInt8.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 319,
+      "symbol": "UInt8.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 323,
+      "symbol": "Int16.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 324,
+      "symbol": "Int16.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 325,
+      "symbol": "Int16.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 326,
+      "symbol": "Int16.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 327,
+      "symbol": "Int16.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 328,
+      "symbol": "Int16.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 329,
+      "symbol": "Int16.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 330,
+      "symbol": "Int16.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 334,
+      "symbol": "UInt16.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 335,
+      "symbol": "UInt16.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 336,
+      "symbol": "UInt16.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 337,
+      "symbol": "UInt16.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 338,
+      "symbol": "UInt16.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 339,
+      "symbol": "UInt16.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 340,
+      "symbol": "UInt16.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 341,
+      "symbol": "UInt16.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 345,
+      "symbol": "Int32.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 346,
+      "symbol": "Int32.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 347,
+      "symbol": "Int32.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 348,
+      "symbol": "Int32.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 349,
+      "symbol": "Int32.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 350,
+      "symbol": "Int32.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 351,
+      "symbol": "Int32.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 352,
+      "symbol": "Int32.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 356,
+      "symbol": "UInt32.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 357,
+      "symbol": "UInt32.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 358,
+      "symbol": "UInt32.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 359,
+      "symbol": "UInt32.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 360,
+      "symbol": "UInt32.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 361,
+      "symbol": "UInt32.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 362,
+      "symbol": "UInt32.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 363,
+      "symbol": "UInt32.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 367,
+      "symbol": "Int64.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 368,
+      "symbol": "Int64.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 369,
+      "symbol": "Int64.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 370,
+      "symbol": "Int64.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 371,
+      "symbol": "Int64.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 372,
+      "symbol": "Int64.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 373,
+      "symbol": "Int64.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 374,
+      "symbol": "Int64.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 378,
+      "symbol": "UInt64.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 379,
+      "symbol": "UInt64.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 380,
+      "symbol": "UInt64.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 381,
+      "symbol": "UInt64.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 382,
+      "symbol": "UInt64.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 383,
+      "symbol": "UInt64.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 384,
+      "symbol": "UInt64.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 385,
+      "symbol": "UInt64.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 412,
+      "symbol": "Int.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 413,
+      "symbol": "Int.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 414,
+      "symbol": "Int.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 415,
+      "symbol": "Int.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 416,
+      "symbol": "Int.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 417,
+      "symbol": "Int.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 418,
+      "symbol": "Int.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 419,
+      "symbol": "Int.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 423,
+      "symbol": "UInt.atomic_create",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 424,
+      "symbol": "UInt.atomic_destroy",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 425,
+      "symbol": "UInt.atomic_compare_and_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 426,
+      "symbol": "UInt.atomic_add",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 427,
+      "symbol": "UInt.atomic_sub",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 428,
+      "symbol": "UInt.atomic_exchange",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 429,
+      "symbol": "UInt.atomic_load",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 430,
+      "symbol": "UInt.atomic_store",
+      "symbol_kind": "source.lang.swift.decl.var.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/atomics.swift",
+      "line": 442,
+      "symbol": "AtomicBox.init(value:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOConcurrencyHelpers/lock.swift",
+      "line": 109,
+      "symbol": "Lock.withLockVoid(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}
