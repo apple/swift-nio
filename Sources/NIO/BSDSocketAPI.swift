@@ -300,6 +300,10 @@ extension NIOBSDSocket.Option {
     /// restricted to IPv6 only.
     public static let ipv6_v6only: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IPV6_V6ONLY)
+    
+    /// Request that we are passed traffic class details when receiving datagrams.
+    static let ipv6_recv_tclass: NIOBSDSocket.Option =
+            NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
 }
 
 // TCP Options

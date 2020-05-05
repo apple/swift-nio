@@ -428,7 +428,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                      value: tosValue)
             case .some(.inet6):
                 try socket.setOption(level: NIOBSDSocket.OptionLevel.ipv6,
-                                     name: NIOBSDSocket.Option.ip_recv_tos,
+                                     name: NIOBSDSocket.Option.ipv6_recv_tclass,
                                      value: tosValue)
             case .some(_):
                 fatalError("Explicit congestion notification is only supported for IP")
