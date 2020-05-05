@@ -22,13 +22,13 @@ extension ServerBootstrap {
     public func serverOptions(_ options: [NIOTCPServerShorthandOption]) -> ServerBootstrap {
         var toReturn = self
         for option in options {
-            toReturn = toReturn.serverChannelOption(option)
+            toReturn = toReturn.serverOption(option)
         }
         return toReturn
     }
     
     @usableFromInline
-    func serverChannelOption(_ option: NIOTCPServerShorthandOption) -> ServerBootstrap {
+    func serverOption(_ option: NIOTCPServerShorthandOption) -> ServerBootstrap {
         let applier = ServerBootstrapServer_Applier(contained: self)
         return option.applyFallbackMapping(applier).contained
     }
