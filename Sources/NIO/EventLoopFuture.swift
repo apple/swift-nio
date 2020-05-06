@@ -907,7 +907,7 @@ Further information:
 - event loop associated to future: \(self.eventLoop)
 """
             }
-            precondition(!eventLoop.inEventLoop, explainer(), file: file, line: line)
+            eventLoop.preconditionNotInEventLoop(explainer(), file: file, line: line)
             precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil, explainer(), file: file, line: line)
         }
 
