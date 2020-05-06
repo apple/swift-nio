@@ -244,7 +244,7 @@ public protocol EventLoop: EventLoopGroup {
     @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 
-    /// Asserts that the current thread is the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `true`.
+    /// Asserts that the current thread is the one tied to this `EventLoop`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionInEventLoop(file: StaticString, line: UInt)
     
