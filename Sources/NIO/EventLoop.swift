@@ -244,9 +244,12 @@ public protocol EventLoop: EventLoopGroup {
     @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 
-    /// Checks that this call is run from the `EventLoop`. If this is called from within the `EventLoop` this function
-    /// will have no effect, if called from outside the `EventLoop` it will crash the process with a trap.
+    /// Asserts that the current thread is the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `true`.
+    /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionInEventLoop(file: StaticString, line: UInt)
+    
+    /// Asserts that the current thread is the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `true`.
+    /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionInEventLoop(_ message: @autoclosure() -> String, file: StaticString, line: UInt)
 }
 
@@ -581,9 +584,9 @@ extension EventLoop {
         return EventLoopIterator([self])
     }
 
-    /// Checks that this call is run from the EventLoop. If this is called from within the EventLoop this function will
-    /// have no effect, if called from outside the EventLoop it will crash the process with a trap if run in debug mode.
-    /// In release mode this function never has any effect.
+    /// Asserts that the current thread is the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `true`.
+    /// Otherwise, if running in debug mode, the process will be abnormally terminated as per the semantics of
+    /// `preconditionFailure(_:file:line:)`. Never has any effect in release mode.
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
     @inlinable
