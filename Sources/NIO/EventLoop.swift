@@ -247,6 +247,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Checks that this call is run from the `EventLoop`. If this is called from within the `EventLoop` this function
     /// will have no effect, if called from outside the `EventLoop` it will crash the process with a trap.
     func preconditionInEventLoop(file: StaticString, line: UInt)
+    func preconditionInEventLoop(_ message: @autoclosure() -> String, file: StaticString, line: UInt)
 }
 
 extension EventLoopGroup {
@@ -586,15 +587,22 @@ extension EventLoop {
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
     @inlinable
-    public func assertInEventLoop(file: StaticString = #file, line: UInt = #line) {
+    public func assertInEventLoop(_ message: @autoclosure() -> String = "", file: StaticString = #file, line: UInt = #line) {
         debugOnly {
-            self.preconditionInEventLoop(file: file, line: line)
+            self.preconditionInEventLoop(message(), file: file, line: line)
         }
     }
 
     /// Checks the necessary condition of currently running on the called `EventLoop` for making forward progress.
+    /// Forwarder to preserve API while adding message parameter.
+    @inlinable
     public func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
-        precondition(self.inEventLoop, file: file, line: line)
+        preconditionInEventLoop("", file: file, line: line)
+    }
+
+    /// Checks the necessary condition of currently running on the called `EventLoop` for making forward progress.
+    public func preconditionInEventLoop(_ message: @autoclosure() -> String, file: StaticString = #file, line: UInt = #line) {
+        precondition(self.inEventLoop, message(), file: file, line: line)
     }
 }
 
