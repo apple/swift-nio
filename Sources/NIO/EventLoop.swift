@@ -251,6 +251,10 @@ public protocol EventLoop: EventLoopGroup {
     /// Asserts that the current thread is the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `true`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionInEventLoop(_ message: @autoclosure() -> String, file: StaticString, line: UInt)
+    
+    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `false`.
+    /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
+    func preconditionNotInEventLoop(_ message: @autoclosure() -> String, file: StaticString, line: UInt)
 }
 
 extension EventLoopGroup {
@@ -596,6 +600,18 @@ extension EventLoop {
         }
     }
 
+    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `false`.
+    /// Otherwise, if running in debug mode, the process will be abnormally terminated as per the semantics of
+    /// `preconditionFailure(_:file:line:)`. Never has any effect in release mode.
+    ///
+    /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
+    @inlinable
+    public func assertNotInEventLoop(_ message: @autoclosure() -> String = "", file: StaticString = #file, line: UInt = #line) {
+        debugOnly {
+            self.preconditionNotInEventLoop(message(), file: file, line: line)
+        }
+    }
+
     /// Checks the necessary condition of currently running on the called `EventLoop` for making forward progress.
     /// Forwarder to preserve API while adding message parameter.
     @inlinable
@@ -606,6 +622,11 @@ extension EventLoop {
     /// Checks the necessary condition of currently running on the called `EventLoop` for making forward progress.
     public func preconditionInEventLoop(_ message: @autoclosure() -> String, file: StaticString = #file, line: UInt = #line) {
         precondition(self.inEventLoop, message(), file: file, line: line)
+    }
+
+    /// Checks the necessary condition of currently _not_ running on the called `EventLoop` for making forward progress.
+    public func preconditionNotInEventLoop(_ message: @autoclosure() -> String = "", file: StaticString = #file, line: UInt = #line) {
+        precondition(!self.inEventLoop, message(), file: file, line: line)
     }
 }
 
