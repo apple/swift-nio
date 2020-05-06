@@ -248,11 +248,11 @@ public protocol EventLoop: EventLoopGroup {
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionInEventLoop(file: StaticString, line: UInt)
     
-    /// Asserts that the current thread is the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `true`.
+    /// Asserts that the current thread is the one tied to this `EventLoop`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionInEventLoop(_ message: @autoclosure() -> String, file: StaticString, line: UInt)
     
-    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `false`.
+    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionNotInEventLoop(_ message: @autoclosure() -> String, file: StaticString, line: UInt)
 }
@@ -588,7 +588,7 @@ extension EventLoop {
         return EventLoopIterator([self])
     }
 
-    /// Asserts that the current thread is the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `true`.
+    /// Asserts that the current thread is the one tied to this `EventLoop`.
     /// Otherwise, if running in debug mode, the process will be abnormally terminated as per the semantics of
     /// `preconditionFailure(_:file:line:)`. Never has any effect in release mode.
     ///
@@ -600,7 +600,7 @@ extension EventLoop {
         }
     }
 
-    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`. Has no effect if `inEventLoop` is `false`.
+    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`.
     /// Otherwise, if running in debug mode, the process will be abnormally terminated as per the semantics of
     /// `preconditionFailure(_:file:line:)`. Never has any effect in release mode.
     ///
