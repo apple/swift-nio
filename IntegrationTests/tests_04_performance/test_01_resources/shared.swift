@@ -98,7 +98,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
 
 func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
     let serverChannel = try ServerBootstrap(group: group)
-        .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         .childChannelInitializer { channel in
             channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
                                                          withErrorHandling: false).flatMap {
@@ -213,7 +213,7 @@ enum UDPShared {
 
     static func doUDPRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
         let serverChannel = try DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             // Set the handlers that are applied to the bound channel
             .channelInitializer { channel in
                 return channel.pipeline.addHandler(EchoHandler())
@@ -228,7 +228,7 @@ enum UDPShared {
 
         let clientChannel = try DatagramBootstrap(group: group)
             // Enable SO_REUSEADDR.
-            .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(EchoHandlerClient(remoteAddress: remoteAddress,
                                                               numberOfRepetitions: numberOfRequests))
