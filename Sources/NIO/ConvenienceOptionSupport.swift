@@ -212,7 +212,7 @@ extension NIOTCPShorthandOption {
 }
 
 /// A set of `NIOTCPShorthandOption`s
-public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral {
+public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var allowImmediateLocalEndpointAddressReuse = false
     var disableAutoRead = false
     var allowRemoteHalfClosure = false
@@ -316,7 +316,7 @@ extension NIOTCPServerShorthandOption {
 }
 
 /// A set of `NIOTCPServerShorthandOption`s
-public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral {
+public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var allowImmediateLocalEndpointAddressReuse = false
     var disableAutoRead = false
     var maximumUnacceptedConnectionBacklog : Int32? = nil
@@ -412,7 +412,7 @@ extension NIOUDPShorthandOption {
 }
 
 /// A set of `NIOUDPShorthandOption`s
-public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral {
+public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var allowImmediateLocalEndpointAddressReuse = false
     var disableAutoRead = false
     
@@ -523,7 +523,7 @@ extension NIOPipeShorthandOption {
 }
 
 /// A set of `NIOPipeShorthandOption`s
-public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral {
+public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var allowRemoteHalfClosure = false
     var disableAutoRead = false
     
