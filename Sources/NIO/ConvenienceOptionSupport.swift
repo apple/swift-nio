@@ -139,16 +139,6 @@ extension NIOClientTCPBootstrap {
         return optionsRemaining.applyFallbackMapping(applier).contained
     }
     
- /*   @usableFromInline
-    func option(_ option: NIOTCPShorthandOption) -> NIOClientTCPBootstrap {
-        if let updatedUnderlying = underlyingBootstrap.applyChannelOption(option) {
-            return NIOClientTCPBootstrap(self, withUpdated: updatedUnderlying)
-        } else {
-            let applier = NIOClientTCPBootstrap_Applier(contained: self)
-            return option.applyFallbackMapping(applier).contained
-        }
-    } */
-    
     struct NIOClientTCPBootstrap_Applier: NIOChannelOptionAppliable {
         var contained: NIOClientTCPBootstrap
         
