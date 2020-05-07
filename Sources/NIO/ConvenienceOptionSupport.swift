@@ -232,11 +232,30 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral {
         elements.forEach({element in element.addToSet(&self)})
     }
     
-    /// Was the allowImmediateLocalEndpointAddressReuse option set.
-    /// Consume the setting so it will not be set after this call.
+    /// Caller is consuming the knowledge that allowImmediateLocalEndpointAddressReuse was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If allowImmediateLocalEndpointAddressReuse was set.
     public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> Bool {
         let result = self.allowImmediateLocalEndpointAddressReuse
         self.allowImmediateLocalEndpointAddressReuse = false
+        return result
+    }
+    
+    /// Caller is consuming the knowledge that disableAutoRead was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If disableAutoRead was set.
+    public mutating func consumeDisableAutoRead() -> Bool {
+        let result = self.disableAutoRead
+        self.disableAutoRead = false
+        return result
+    }
+    
+    /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If allowRemoteHalfClosure was set.
+    public mutating func consumeAllowRemoteHalfClosure() -> Bool {
+        let result = self.allowRemoteHalfClosure
+        self.allowRemoteHalfClosure = false
         return result
     }
     
@@ -317,6 +336,33 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral {
         elements.forEach({element in element.addToSet(&self)})
     }
     
+    /// Caller is consuming the knowledge that allowImmediateLocalEndpointAddressReuse was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If allowImmediateLocalEndpointAddressReuse was set.
+    public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> Bool {
+        let result = self.allowImmediateLocalEndpointAddressReuse
+        self.allowImmediateLocalEndpointAddressReuse = false
+        return result
+    }
+    
+    /// Caller is consuming the knowledge that disableAutoRead was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If disableAutoRead was set.
+    public mutating func consumeDisableAutoRead() -> Bool {
+        let result = self.disableAutoRead
+        self.disableAutoRead = false
+        return result
+    }
+    
+    /// Caller is consuming the knowledge that maximumUnacceptedConnectionBacklog was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If maximumUnacceptedConnectionBacklog was set.
+    public mutating func consumeMaximumUnacceptedConnectionBacklog() -> Int32? {
+        let result = self.maximumUnacceptedConnectionBacklog
+        self.maximumUnacceptedConnectionBacklog = nil
+        return result
+    }
+    
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
     /// - Parameter to: The storage to append this option to.
     /// - Returns: ChannelOptions.storage with option added.
@@ -383,6 +429,24 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral {
     /// Construct from an array literal.
     public init(arrayLiteral elements: NIOUDPShorthandOption...) {
         elements.forEach({element in element.addToSet(&self)})
+    }
+    
+    /// Caller is consuming the knowledge that allowImmediateLocalEndpointAddressReuse was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If allowImmediateLocalEndpointAddressReuse was set.
+    public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> Bool {
+        let result = self.allowImmediateLocalEndpointAddressReuse
+        self.allowImmediateLocalEndpointAddressReuse = false
+        return result
+    }
+    
+    /// Caller is consuming the knowledge that disableAutoRead was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If disableAutoRead was set.
+    public mutating func consumeDisableAutoRead() -> Bool {
+        let result = self.disableAutoRead
+        self.disableAutoRead = false
+        return result
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -476,6 +540,24 @@ public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral {
     /// Construct from an array literal.
     public init(arrayLiteral elements: NIOPipeShorthandOption...) {
         elements.forEach({element in element.addToSet(&self)})
+    }
+    
+    /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If allowRemoteHalfClosure was set.
+    public mutating func consumeAllowRemoteHalfClosure() -> Bool {
+        let result = self.allowRemoteHalfClosure
+        self.allowRemoteHalfClosure = false
+        return result
+    }
+    
+    /// Caller is consuming the knowledge that disableAutoRead was set or not.
+    /// The setting will nolonger be set after this call.
+    /// - Returns: If disableAutoRead was set.
+    public mutating func consumeDisableAutoRead() -> Bool {
+        let result = self.disableAutoRead
+        self.disableAutoRead = false
+        return result
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
