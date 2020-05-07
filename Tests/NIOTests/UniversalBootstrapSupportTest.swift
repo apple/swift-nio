@@ -154,7 +154,7 @@ class UniversalBootstrapSupportTest: XCTestCase {
             
             var shorthandOptionConsumed = false
             func applyOptions(_ options: inout NIOTCPShorthandOptions) -> FakeBootstrap {
-                if options.consumeAllowImmediateLocalEndpointAddressReuse() {
+                if options.consumeAllowImmediateLocalEndpointAddressReuse().isSet {
                     shorthandOptionConsumed = true
                 }
                 return self
