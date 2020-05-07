@@ -153,12 +153,11 @@ class UniversalBootstrapSupportTest: XCTestCase {
             }
             
             var shorthandOptionConsumed = false
-            func applyChannelOption(_ option: NIOTCPShorthandOption) -> FakeBootstrap? {
-                if option == .allowImmediateLocalEndpointAddressReuse {
+            func applyOptions(_ options: inout NIOTCPShorthandOptions) -> FakeBootstrap {
+                if options.consumeAllowImmediateLocalEndpointAddressReuse() {
                     shorthandOptionConsumed = true
-                    return self
                 }
-                return .none
+                return self
             }
             
             func connectTimeout(_ timeout: TimeAmount) -> Self {

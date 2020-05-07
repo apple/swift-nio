@@ -16,21 +16,11 @@
 extension ServerBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the `ServerSocketChannel`.
     /// - See: serverChannelOption
-    /// - Parameter options: List of shorthand options to apply.
+    /// - Parameter options: Set of shorthand options to apply.
     /// - Returns: The updated server bootstrap (`self` being mutated)
-    @inlinable
-    public func serverOptions(_ options: [NIOTCPServerShorthandOption]) -> ServerBootstrap {
-        var toReturn = self
-        for option in options {
-            toReturn = toReturn.serverOption(option)
-        }
-        return toReturn
-    }
-    
-    @usableFromInline
-    func serverOption(_ option: NIOTCPServerShorthandOption) -> ServerBootstrap {
+    public func serverOptions(_ options: NIOTCPServerShorthandOptions) -> ServerBootstrap {
         let applier = ServerBootstrapServer_Applier(contained: self)
-        return option.applyFallbackMapping(applier).contained
+        return options.applyFallbackMapping(applier).contained
     }
     
     fileprivate struct ServerBootstrapServer_Applier: NIOChannelOptionAppliable {
@@ -46,21 +36,11 @@ extension ServerBootstrap {
 extension ServerBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the accepted `SocketChannel`s.
     /// - See: childChannelOption
-    /// - Parameter options: List of shorthand options to apply.
+    /// - Parameter options: Set of shorthand options to apply.
     /// - Returns: The update server bootstrap (`self` being mutated)
-    @inlinable
-    public func childOptions(_ options: [NIOTCPShorthandOption]) -> ServerBootstrap {
-        var toReturn = self
-        for option in options {
-            toReturn = toReturn.childOption(option)
-        }
-        return toReturn
-    }
-    
-    @usableFromInline
-    func childOption(_ option: NIOTCPShorthandOption) -> ServerBootstrap {
+    public func childOptions(_ options: NIOTCPShorthandOptions) -> ServerBootstrap {
         let applier = ServerBootstrapChild_Applier(contained: self)
-        return option.applyFallbackMapping(applier).contained
+        return options.applyFallbackMapping(applier).contained
     }
     
     fileprivate struct ServerBootstrapChild_Applier: NIOChannelOptionAppliable {
@@ -76,21 +56,11 @@ extension ServerBootstrap {
 extension ClientBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the `SocketChannel`.
     /// - See: channelOption
-    /// - Parameter options: List of shorthand options to apply.
+    /// - Parameter options: Set of shorthand options to apply.
     /// - Returns: The updated client bootstrap (`self` being mutated)
-    @inlinable
-    public func options(_ options: [NIOTCPShorthandOption]) -> ClientBootstrap {
-        var toReturn = self
-        for option in options {
-            toReturn = toReturn.option(option)
-        }
-        return toReturn
-    }
-    
-    @usableFromInline
-    func option(_ option: NIOTCPShorthandOption) -> ClientBootstrap {
+    public func options(_ options: NIOTCPShorthandOptions) -> ClientBootstrap {
         let applier = ClientBootstrap_Applier(contained: self)
-        return option.applyFallbackMapping(applier).contained
+        return options.applyFallbackMapping(applier).contained
     }
     
     fileprivate struct ClientBootstrap_Applier: NIOChannelOptionAppliable {
@@ -106,21 +76,11 @@ extension ClientBootstrap {
 extension DatagramBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the `DatagramChannel`.
     /// - See: channelOption
-    /// - Parameter options: List of shorthand options to apply.
+    /// - Parameter options: Set of shorthand options to apply.
     /// - Returns: The updated datagram bootstrap (`self` being mutated)
-    @inlinable
-    public func options(_ options: [NIOUDPShorthandOption]) -> DatagramBootstrap {
-        var toReturn = self
-        for option in options {
-            toReturn = toReturn.option(option)
-        }
-        return toReturn
-    }
-    
-    @usableFromInline
-    func option(_ option: NIOUDPShorthandOption) -> DatagramBootstrap {
+    public func options(_ options: NIOUDPShorthandOptions) -> DatagramBootstrap {
         let applier = DatagramBootstrap_Applier(contained: self)
-        return option.applyFallbackMapping(applier).contained
+        return options.applyFallbackMapping(applier).contained
     }
     
     fileprivate struct DatagramBootstrap_Applier: NIOChannelOptionAppliable {
@@ -136,21 +96,11 @@ extension DatagramBootstrap {
 extension NIOPipeBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the `PipeChannel`.
     /// - See: channelOption
-    /// - Parameter options: List of shorthand options to apply.
+    /// - Parameter options: Set of shorthand options to apply.
     /// - Returns: The updated pipe bootstrap (`self` being mutated)
-    @inlinable
-    public func options(_ options: [NIOPipeShorthandOption]) -> NIOPipeBootstrap {
-        var toReturn = self
-        for option in options {
-            toReturn = toReturn.option(option)
-        }
-        return toReturn
-    }
-    
-    @usableFromInline
-    func option(_ option: NIOPipeShorthandOption) -> NIOPipeBootstrap {
+    public func options(_ options: NIOPipeShorthandOptions) -> NIOPipeBootstrap {
         let applier = NIOPipeBootstrap_Applier(contained: self)
-        return option.applyFallbackMapping(applier).contained
+        return options.applyFallbackMapping(applier).contained
     }
     
     fileprivate struct NIOPipeBootstrap_Applier: NIOChannelOptionAppliable {
@@ -164,30 +114,32 @@ extension NIOPipeBootstrap {
 
 // MARK:  Universal Client Bootstrap
 extension NIOClientTCPBootstrapProtocol {
-    /// Apply a shorthand option to this bootstrap - default implementation which always fails to apply.
+    /// Apply any understood shorthand options to the bootstrap, removing them from the set of options if they are consumed.
     /// - parameters:
-    ///     - option:  The option to try applying.
-    /// - returns: The updated bootstrap if option was successfully applied, otherwise nil suggesting the caller try another method.
-    public func applyChannelOption(_ option: NIOTCPShorthandOption) -> Self? {
-        return nil
+    ///     - options:  The options to try applying - the options applied should be consumed from here.
+    /// - returns: The updated bootstrap with and options applied.
+    public func applyOptions(_ options: inout NIOTCPShorthandOptions) -> Self {
+        // Default is to consume no options and not update self.
+        return self
     }
 }
 
 extension NIOClientTCPBootstrap {
     /// Specifies some `ChannelOption`s to be applied to the channel.
     /// - See: channelOption
-    /// - Parameter options: List of shorthand options to apply.
+    /// - Parameter options: Set of shorthand options to apply.
     /// - Returns: The updated bootstrap (`self` being mutated)
-    @inlinable
-    public func options(_ options: [NIOTCPShorthandOption]) -> NIOClientTCPBootstrap {
-        var toReturn = self
-        for option in options {
-            toReturn = toReturn.option(option)
-        }
-        return toReturn
+    public func options(_ options: NIOTCPShorthandOptions) -> NIOClientTCPBootstrap {
+        var optionsRemaining = options
+        // First give the underlying a chance to consume options.
+        let withUnderlyingOverrides =
+            NIOClientTCPBootstrap(self, withUpdated: underlyingBootstrap.applyOptions(&optionsRemaining))
+        // Default apply any remaining options.
+        let applier = NIOClientTCPBootstrap_Applier(contained: withUnderlyingOverrides)
+        return optionsRemaining.applyFallbackMapping(applier).contained
     }
     
-    @usableFromInline
+ /*   @usableFromInline
     func option(_ option: NIOTCPShorthandOption) -> NIOClientTCPBootstrap {
         if let updatedUnderlying = underlyingBootstrap.applyChannelOption(option) {
             return NIOClientTCPBootstrap(self, withUpdated: updatedUnderlying)
@@ -195,7 +147,7 @@ extension NIOClientTCPBootstrap {
             let applier = NIOClientTCPBootstrap_Applier(contained: self)
             return option.applyFallbackMapping(applier).contained
         }
-    }
+    } */
     
     struct NIOClientTCPBootstrap_Applier: NIOChannelOptionAppliable {
         var contained: NIOClientTCPBootstrap
@@ -208,13 +160,13 @@ extension NIOClientTCPBootstrap {
 
 // MARK: Utility
 /// An object which can have a 'ChannelOption' applied to it and will return an appropriately updated version of itself.
-fileprivate protocol NIOChannelOptionAppliable {
+protocol NIOChannelOptionAppliable {
     /// Apply a ChannelOption and return an updated version of self.
     func applyOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
 }
 
 /// An updater which works by appending to channelOptionsStorage.
-struct NIOChannelOptionsStorageApplier: NIOChannelOptionAppliable {
+private struct NIOChannelOptionsStorageApplier: NIOChannelOptionAppliable {
     /// The storage - the contents of this will be updated.
     var channelOptionsStorage: ChannelOptions.Storage
     
@@ -227,49 +179,30 @@ struct NIOChannelOptionsStorageApplier: NIOChannelOptionAppliable {
 
 // MARK: TCP - data
 /// A TCP channel option which can be applied to a bootstrap using shorthand notation.
-public struct NIOTCPShorthandOption  {
+public struct NIOTCPShorthandOption: Hashable {
     private var data: ShorthandOption
     
     private init(_ data: ShorthandOption) {
         self.data = data
     }
     
-    /// Apply the contained option to the supplied object (almost certainly bootstrap) using the default mapping.
-    /// - Parameter optionApplier: object to use to apply the option.
-    /// - Returns: the modified object
-    fileprivate func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
-        return data.applyFallbackMapping(optionApplier)
-    }
-    
-    /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
-    /// - Parameter to: The storage to append this option to.
-    /// - Returns: ChannelOptions.storage with option added.
-    public func applyFallbackMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
-        let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
-        return data.applyFallbackMapping(applier).channelOptionsStorage
-    }
-    
-    fileprivate enum ShorthandOption {
+    private enum ShorthandOption: Hashable {
         case reuseAddr
         case disableAutoRead
         case allowRemoteHalfClosure
-        
-        func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
-            switch self {
-            case .reuseAddr:
-                return optionApplier.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-            case .allowRemoteHalfClosure:
-                return optionApplier.applyOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-            case .disableAutoRead:
-                return optionApplier.applyOption(ChannelOptions.autoRead, value: false)
-            }
+    }
+    
+    func addToSet(_ set: inout NIOTCPShorthandOptions) {
+        switch data {
+        case .reuseAddr:
+            set.allowImmediateLocalEndpointAddressReuse = true
+        case .allowRemoteHalfClosure:
+            set.allowRemoteHalfClosure = true
+        case .disableAutoRead:
+            set.disableAutoRead = true
         }
     }
 }
-
-// Hashable for the convenience of users.
-extension NIOTCPShorthandOption: Hashable {}
-extension NIOTCPShorthandOption.ShorthandOption: Hashable {}
 
 /// Approved shorthand options.
 extension NIOTCPShorthandOption {
@@ -288,20 +221,23 @@ extension NIOTCPShorthandOption {
         NIOTCPShorthandOption(.allowRemoteHalfClosure)
 }
 
-// MARK: TCP - server
-/// A channel option which can be applied to bootstrap using shorthand notation.
-public struct NIOTCPServerShorthandOption {
-    private var data: ShorthandOption
+/// A set of `NIOTCPShorthandOption`s
+public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral {
+    var allowImmediateLocalEndpointAddressReuse = false
+    var disableAutoRead = false
+    var allowRemoteHalfClosure = false
     
-    private init(_ data: ShorthandOption) {
-        self.data = data
+    /// Construct from an array literal.
+    public init(arrayLiteral elements: NIOTCPShorthandOption...) {
+        elements.forEach({element in element.addToSet(&self)})
     }
     
-    /// Apply the contained option to the supplied object (almost certainly bootstrap) using the default mapping.
-    /// - Parameter optionApplier: object to use to apply the option.
-    /// - Returns: the modified object
-    fileprivate func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
-        return data.applyFallbackMapping(optionApplier)
+    /// Was the allowImmediateLocalEndpointAddressReuse option set.
+    /// Consume the setting so it will not be set after this call.
+    public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> Bool {
+        let result = self.allowImmediateLocalEndpointAddressReuse
+        self.allowImmediateLocalEndpointAddressReuse = false
+        return result
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -309,31 +245,50 @@ public struct NIOTCPServerShorthandOption {
     /// - Returns: ChannelOptions.storage with option added.
     public func applyFallbackMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
         let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
-        return data.applyFallbackMapping(applier).channelOptionsStorage
+        return self.applyFallbackMapping(applier).channelOptionsStorage
     }
     
-    fileprivate enum ShorthandOption {
-        case reuseAddr
-        case disableAutoRead
-        case backlog(Int32)
-        
-        func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
-            switch self {
-            case .disableAutoRead:
-                return optionApplier.applyOption(ChannelOptions.autoRead, value: false)
-            case .reuseAddr:
-                return optionApplier.applyOption(ChannelOptions.socketOption(.reuseaddr),
-                                                        value: 1)
-            case .backlog(let value):
-                return optionApplier.applyOption(ChannelOptions.backlog, value: value)
-            }
+    func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
+        var result = optionApplier
+        if self.allowImmediateLocalEndpointAddressReuse {
+            result = result.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
         }
+        if self.allowRemoteHalfClosure {
+            result = result.applyOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+        }
+        if self.disableAutoRead {
+            result = result.applyOption(ChannelOptions.autoRead, value: false)
+        }
+        return result
     }
 }
 
-// Hashable for the convenience of users.
-extension NIOTCPServerShorthandOption: Hashable {}
-extension NIOTCPServerShorthandOption.ShorthandOption: Hashable {}
+// MARK: TCP - server
+/// A channel option which can be applied to bootstrap using shorthand notation.
+public struct NIOTCPServerShorthandOption: Hashable{
+    private var data: ShorthandOption
+    
+    private init(_ data: ShorthandOption) {
+        self.data = data
+    }
+    
+    private enum ShorthandOption: Hashable {
+        case reuseAddr
+        case disableAutoRead
+        case backlog(Int32)
+    }
+    
+    func addToSet(_ set: inout NIOTCPServerShorthandOptions) {
+        switch data {
+        case .reuseAddr:
+            set.allowImmediateLocalEndpointAddressReuse = true
+        case .disableAutoRead:
+            set.disableAutoRead = true
+        case .backlog(let value):
+            set.maximumUnacceptedConnectionBacklog = value
+        }
+    }
+}
 
 /// Approved shorthand server options.
 extension NIOTCPServerShorthandOption {
@@ -351,21 +306,15 @@ extension NIOTCPServerShorthandOption {
     }
 }
 
-// MARK: UDP
-/// A channel option which can be applied to a UDP based bootstrap using shorthand notation.
-/// - See: DatagramBootstrap.options(_ options: [Option])
-public struct NIOUDPShorthandOption {
-    private var data: ShorthandOption
+/// A set of `NIOTCPServerShorthandOption`s
+public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral {
+    var allowImmediateLocalEndpointAddressReuse = false
+    var disableAutoRead = false
+    var maximumUnacceptedConnectionBacklog : Int32? = nil
     
-    private init(_ data: ShorthandOption) {
-        self.data = data
-    }
-    
-    /// Apply the contained option to the supplied object (almost certainly bootstrap) using the default mapping.
-    /// - Parameter optionApplier: object to use to apply the option.
-    /// - Returns: the modified object
-    fileprivate func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
-        return data.applyFallbackMapping(optionApplier)
+    /// Construct from an array literal.
+    public init(arrayLiteral elements: NIOTCPServerShorthandOption...) {
+        elements.forEach({element in element.addToSet(&self)})
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -373,28 +322,48 @@ public struct NIOUDPShorthandOption {
     /// - Returns: ChannelOptions.storage with option added.
     public func applyFallbackMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
         let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
-        return data.applyFallbackMapping(applier).channelOptionsStorage
+        return self.applyFallbackMapping(applier).channelOptionsStorage
     }
     
-    fileprivate enum ShorthandOption {
-        case reuseAddr
-        case disableAutoRead
-        
-        func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
-            switch self {
-            case .reuseAddr:
-                return optionApplier.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-            case .disableAutoRead:
-                return optionApplier.applyOption(ChannelOptions.autoRead, value: false)
-            
-            }
+    func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
+        var result = optionApplier
+        if self.allowImmediateLocalEndpointAddressReuse {
+            result = result.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
         }
+        if let value = self.maximumUnacceptedConnectionBacklog {
+            result = result.applyOption(ChannelOptions.backlog, value: value)
+        }
+        if self.disableAutoRead {
+            result = result.applyOption(ChannelOptions.autoRead, value: false)
+        }
+        return result
     }
 }
 
-// Hashable for the convenience of users.
-extension NIOUDPShorthandOption: Hashable {}
-extension NIOUDPShorthandOption.ShorthandOption: Hashable {}
+// MARK: UDP
+/// A channel option which can be applied to a UDP based bootstrap using shorthand notation.
+/// - See: DatagramBootstrap.options(_ options: [Option])
+public struct NIOUDPShorthandOption: Hashable {
+    private var data: ShorthandOption
+    
+    private init(_ data: ShorthandOption) {
+        self.data = data
+    }
+    
+    private enum ShorthandOption: Hashable {
+        case reuseAddr
+        case disableAutoRead
+    }
+    
+    func addToSet(_ set: inout NIOUDPShorthandOptions) {
+        switch data {
+        case .reuseAddr:
+            set.allowImmediateLocalEndpointAddressReuse = true
+        case .disableAutoRead:
+            set.disableAutoRead = true
+        }
+    }
+}
 
 /// Approved shorthand datagram channel options.
 extension NIOUDPShorthandOption {
@@ -406,10 +375,40 @@ extension NIOUDPShorthandOption {
     public static let disableAutoRead = NIOUDPShorthandOption(.disableAutoRead)
 }
 
+/// A set of `NIOUDPShorthandOption`s
+public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral {
+    var allowImmediateLocalEndpointAddressReuse = false
+    var disableAutoRead = false
+    
+    /// Construct from an array literal.
+    public init(arrayLiteral elements: NIOUDPShorthandOption...) {
+        elements.forEach({element in element.addToSet(&self)})
+    }
+    
+    /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
+    /// - Parameter to: The storage to append this option to.
+    /// - Returns: ChannelOptions.storage with option added.
+    public func applyFallbackMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
+        let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
+        return self.applyFallbackMapping(applier).channelOptionsStorage
+    }
+    
+    func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
+        var result = optionApplier
+        if self.allowImmediateLocalEndpointAddressReuse {
+            result = result.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+        }
+        if self.disableAutoRead {
+            result = result.applyOption(ChannelOptions.autoRead, value: false)
+        }
+        return result
+    }
+}
+
 // MARK: Pipe
 /// A channel option which can be applied to pipe bootstrap using shorthand notation.
 /// - See: NIOPipeBootstrap.options(_ options: [Option])
-public struct NIOPipeShorthandOption {
+public struct NIOPipeShorthandOption: Hashable {
     private let data: ShorthandOption
     
     private init(_ data: ShorthandOption) {
@@ -419,7 +418,7 @@ public struct NIOPipeShorthandOption {
     /// Apply the contained option to the supplied object (almost certainly bootstrap) using the default mapping.
     /// - Parameter optionApplier: object to use to apply the option.
     /// - Returns: the modified object
-    fileprivate func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
+    func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
         return data.applyFallbackMapping(optionApplier)
     }
     
@@ -431,7 +430,7 @@ public struct NIOPipeShorthandOption {
         return data.applyFallbackMapping(applier).channelOptionsStorage
     }
     
-    fileprivate enum ShorthandOption {
+    private enum ShorthandOption: Hashable {
         case disableAutoRead
         case allowRemoteHalfClosure
         
@@ -444,11 +443,16 @@ public struct NIOPipeShorthandOption {
             }
         }
     }
+    
+    func addToSet(_ set: inout NIOPipeShorthandOptions) {
+        switch data {
+        case .allowRemoteHalfClosure:
+            set.allowRemoteHalfClosure = true
+        case .disableAutoRead:
+            set.disableAutoRead = true
+        }
+    }
 }
-
-// Hashable for the convenience of users.
-extension NIOPipeShorthandOption: Hashable {}
-extension NIOPipeShorthandOption.ShorthandOption: Hashable {}
 
 /// Approved shorthand datagram channel options.
 extension NIOPipeShorthandOption {
@@ -462,4 +466,34 @@ extension NIOPipeShorthandOption {
     /// and no more data will be received.
     public static let allowRemoteHalfClosure =
         NIOPipeShorthandOption(.allowRemoteHalfClosure)
+}
+
+/// A set of `NIOPipeShorthandOption`s
+public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral {
+    var allowRemoteHalfClosure = false
+    var disableAutoRead = false
+    
+    /// Construct from an array literal.
+    public init(arrayLiteral elements: NIOPipeShorthandOption...) {
+        elements.forEach({element in element.addToSet(&self)})
+    }
+    
+    /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
+    /// - Parameter to: The storage to append this option to.
+    /// - Returns: ChannelOptions.storage with option added.
+    public func applyFallbackMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
+        let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
+        return self.applyFallbackMapping(applier).channelOptionsStorage
+    }
+    
+    func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
+        var result = optionApplier
+        if self.allowRemoteHalfClosure {
+            result = result.applyOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+        }
+        if self.disableAutoRead {
+            result = result.applyOption(ChannelOptions.autoRead, value: false)
+        }
+        return result
+    }
 }
