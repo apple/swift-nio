@@ -211,6 +211,7 @@ public struct NIOTCPShorthandOption: Hashable {
         case allowRemoteHalfClosure
     }
     
+    @usableFromInline
     func addToSet(_ set: inout NIOTCPShorthandOptions) {
         switch data {
         case .reuseAddr:
@@ -247,6 +248,7 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var allowRemoteHalfClosure = false
     
     /// Construct from an array literal.
+    @inlinable
     public init(arrayLiteral elements: NIOTCPShorthandOption...) {
         elements.forEach({element in element.addToSet(&self)})
     }
@@ -316,6 +318,7 @@ public struct NIOTCPServerShorthandOption: Hashable{
         case backlog(Int32)
     }
     
+    @usableFromInline
     func addToSet(_ set: inout NIOTCPServerShorthandOptions) {
         switch data {
         case .reuseAddr:
@@ -351,6 +354,7 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable
     var maximumUnacceptedConnectionBacklog : Int32? = nil
     
     /// Construct from an array literal.
+    @inlinable
     public init(arrayLiteral elements: NIOTCPServerShorthandOption...) {
         elements.forEach({element in element.addToSet(&self)})
     }
@@ -423,6 +427,7 @@ public struct NIOUDPShorthandOption: Hashable {
         case disableAutoRead
     }
     
+    @usableFromInline
     func addToSet(_ set: inout NIOUDPShorthandOptions) {
         switch data {
         case .reuseAddr:
@@ -449,6 +454,7 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var disableAutoRead = false
     
     /// Construct from an array literal.
+    @inlinable
     public init(arrayLiteral elements: NIOUDPShorthandOption...) {
         elements.forEach({element in element.addToSet(&self)})
     }
@@ -530,6 +536,7 @@ public struct NIOPipeShorthandOption: Hashable {
         }
     }
     
+    @usableFromInline
     func addToSet(_ set: inout NIOPipeShorthandOptions) {
         switch data {
         case .allowRemoteHalfClosure:
@@ -560,6 +567,7 @@ public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var disableAutoRead = false
     
     /// Construct from an array literal.
+    @inlinable
     public init(arrayLiteral elements: NIOPipeShorthandOption...) {
         elements.forEach({element in element.addToSet(&self)})
     }
