@@ -52,7 +52,7 @@ def total_for_dictionary(d):
 def extract_useful_keys(d):
     keys = set()
     for k in d.keys():
-        if total_count_for_key(d, k) > 1000:
+        if total_count_for_key(d, k) >= 1000:
             keys.add(k)
     return keys
 
