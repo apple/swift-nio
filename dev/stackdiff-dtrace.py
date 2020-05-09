@@ -43,6 +43,12 @@ def total_count_for_key(d, key):
     value = d[key]
     return sum(map(lambda x : x[0], value))
 
+def total_for_dictionary(d):
+    total = 0
+    for k in d.keys():
+        total += total_count_for_key(d, k)
+    return total
+
 def extract_useful_keys(d):
     keys = set()
     for k in d.keys():
@@ -54,6 +60,7 @@ def print_dictionary_member(d, key):
     value = d[key]
     print(total_count_for_key(d, key))
     print(key)
+    print()
     for (count, stack) in value:
         print("    %d" % count)
         print("        " + stack.replace("\n", "\n        "))
@@ -88,13 +95,19 @@ useful_before_keys = extract_useful_keys(before_dict)
 
 print("")
 print("### only in AFTER")
+only_after_total = 0
 for x in sorted(list(useful_after_keys - useful_before_keys)):
     print_dictionary_member(after_dict, x)
+    only_after_total += total_count_for_key(after_dict, x)
+print("Total for only in AFTER:  %d" % only_after_total)
 
 print("")
 print("### only in BEFORE")
+only_before_total = 0
 for x in sorted(list(useful_before_keys - useful_after_keys)):
     print_dictionary_member(before_dict, x)
+    only_before_total += total_count_for_key(before_dict, x)
+print("Total for only in BEFORE:  %d" % only_before_total)
 
 print("")
 print("### different numbers")
@@ -106,3 +119,6 @@ for x in sorted(list(useful_before_keys & useful_after_keys)):
                                          after_count))
         print(x)
         print()
+
+print("Total of everything BEFORE:  %d" % total_for_dictionary(before_dict))
+print("Total of everything AFTER:  %d" % total_for_dictionary(after_dict))
