@@ -287,34 +287,14 @@ test_1_reqs_1000_conn`thunk for @callee_guaranteed () -> (@error @owned Error)pa
         libswiftCore.dylib`swift_slowAlloc+0x19
         libswiftCore.dylib`swift_allocObject+0x27
         test_1_reqs_1000_conn`doRequests(group:number:)+0x66
-        test_1_reqs_1000_conn`closure #1 in run(identifier:)+0x44
-        test_1_reqs_1000_conn`partial apply for closure #1 in measureOne #1 (throwAway:_:) in measureAll(_:)+0x11
-        test_1_reqs_1000_conn`partial apply for thunk for @callee_guaranteed () -> (@error @owned Error)+0x11
-        test_1_reqs_1000_conn`thunk for @callee_guaranteed () -> (@error @owned Error)partial apply+0x9
-        libswiftObjectiveC.dylib`autoreleasepool<A>(invoking:)+0x2e
-        test_1_reqs_1000_conn`measureOne #1 (throwAway:_:) in measureAll(_:)+0x62
-        test_1_reqs_1000_conn`measureAll(_:)+0x35
-        test_1_reqs_1000_conn`measureAndPrint(desc:fn:)+0x2a
-        test_1_reqs_1000_conn`main+0x9
-        libdyld.dylib`start+0x1
-        test_1_reqs_1000_conn`0x1
+[...]
         
     1000
         libsystem_malloc.dylib`malloc
         libswiftCore.dylib`swift_slowAlloc+0x19
         libswiftCore.dylib`swift_allocObject+0x27
         test_1_reqs_1000_conn`doRequests(group:number:)+0x1c4
-        test_1_reqs_1000_conn`closure #1 in run(identifier:)+0x44
-        test_1_reqs_1000_conn`partial apply for closure #1 in measureOne #1 (throwAway:_:) in measureAll(_:)+0x11
-        test_1_reqs_1000_conn`partial apply for thunk for @callee_guaranteed () -> (@error @owned Error)+0x11
-        test_1_reqs_1000_conn`thunk for @callee_guaranteed () -> (@error @owned Error)partial apply+0x9
-        libswiftObjectiveC.dylib`autoreleasepool<A>(invoking:)+0x2e
-        test_1_reqs_1000_conn`measureOne #1 (throwAway:_:) in measureAll(_:)+0x62
-        test_1_reqs_1000_conn`measureAll(_:)+0x35
-        test_1_reqs_1000_conn`measureAndPrint(desc:fn:)+0x2a
-        test_1_reqs_1000_conn`main+0x9
-        libdyld.dylib`start+0x1
-        test_1_reqs_1000_conn`0x1
+[...]
 
 ### only in BEFORE
 [... (previously dismissed stacktrace)]
@@ -327,6 +307,7 @@ before: 10000, after: 20000
         libswiftCore.dylib`swift_slowAlloc+0x19
         libswiftCore.dylib`swift_allocObject+0x27
         test_1_reqs_1000_conn`doRequests(group:number:)+0x66
+[...]
 ```
 
 Now we see there's another stacktrace in the `AFTER` section which has no corresponding stacktrace in `BEFORE`. From the stack we can see it's originating from `doRequests(group:number:)`. In this instance we were working on options applied in this function so it appears we have added allocations.  We have also increased the number of allocations which are reported in the different numbers section where stack traces have been paired but with different numbers of allocations.
