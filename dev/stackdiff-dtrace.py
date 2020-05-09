@@ -57,13 +57,17 @@ def extract_useful_keys(d):
     return keys
 
 def print_dictionary_member(d, key):
-    value = d[key]
     print(total_count_for_key(d, key))
     print(key)
     print()
+    print_dictionary_member_detail(d, key)
+
+def print_dictionary_member_detail(d, key):
+    value = d[key]
     for (count, stack) in value:
         print("    %d" % count)
         print("        " + stack.replace("\n", "\n        "))
+    
 
 def usage():
     print("Usage: stackdiff-dtrace.py OLD-STACKS NEW-STACKS")
@@ -117,7 +121,10 @@ for x in sorted(list(useful_before_keys & useful_after_keys)):
     if before_count != after_count:
         print("before: %d, after: %d" % (before_count,
                                          after_count))
-        print(x)
+        print("  AFTER")
+        print_dictionary_member_detail(after_dict, x)
+        print("  BEFORE")
+        print_dictionary_member_detail(before_dict, x)
         print()
 
 everything_before = total_for_dictionary(before_dict)
