@@ -120,5 +120,7 @@ for x in sorted(list(useful_before_keys & useful_after_keys)):
         print(x)
         print()
 
-print("Total of everything BEFORE:  %d" % total_for_dictionary(before_dict))
-print("Total of everything AFTER:  %d" % total_for_dictionary(after_dict))
+everything_before = total_for_dictionary(before_dict)
+everything_after = total_for_dictionary(after_dict)
+print("Total of _EVERYTHING_ BEFORE:  %d,  AFTER:  %d,  DIFFERENCE:  %d" % 
+    (everything_before, everything_after, everything_after - everything_before))
