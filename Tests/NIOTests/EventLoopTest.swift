@@ -1085,4 +1085,89 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertFalse(loop.testsOnly_validExternalStateToScheduleTasks)
         XCTAssertFalse(loop.testsOnly_validExternalStateToScheduleTasks)
     }
+
+    func testTakeOverThreadAndAlsoTakeItBack() {
+        let currentNIOThread = NIOThread.current
+        let currentNSThread = Thread.current
+        let lock = Lock()
+        var hasBeenShutdown = false
+        let allDoneGroup = DispatchGroup()
+        allDoneGroup.enter()
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { loop in
+            XCTAssertEqual(currentNIOThread, NIOThread.current)
+            XCTAssertEqual(currentNSThread, Thread.current)
+            XCTAssert(loop === MultiThreadedEventLoopGroup.currentEventLoop)
+            loop.shutdownGracefully(queue: DispatchQueue.global()) { error in
+                XCTAssertNil(error)
+                lock.withLock {
+                    hasBeenShutdown = error == nil
+                }
+                allDoneGroup.leave()
+            }
+        }
+        allDoneGroup.wait()
+        XCTAssertTrue(lock.withLock { hasBeenShutdown })
+    }
+
+    func testWeCanDoTrulySingleThreadedNetworking() {
+        final class SaveReceivedByte: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            // For once, we don't need thread-safety as we're taking the calling thread :)
+            var received: UInt8? = nil
+            var readCalls: Int = 0
+            var allDonePromise: EventLoopPromise<Void>? = nil
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                self.readCalls += 1
+                XCTAssertEqual(1, self.readCalls)
+
+                var data = self.unwrapInboundIn(data)
+                XCTAssertEqual(1, data.readableBytes)
+
+                XCTAssertNil(self.received)
+                self.received = data.readInteger()
+
+                self.allDonePromise?.succeed(())
+
+                context.close(promise: nil)
+            }
+        }
+
+        let receiveHandler = SaveReceivedByte() // There'll be just one connection, we can share.
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { loop in
+            ServerBootstrap(group: loop)
+                .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
+                .childChannelInitializer { accepted in
+                    accepted.pipeline.addHandler(receiveHandler)
+                }
+                .bind(host: "127.0.0.1", port: 0)
+                .flatMap { serverChannel in
+                    ClientBootstrap(group: loop).connect(to: serverChannel.localAddress!).flatMap { clientChannel in
+                        var buffer = clientChannel.allocator.buffer(capacity: 1)
+                        buffer.writeString("J")
+                        return clientChannel.writeAndFlush(buffer)
+                    }.flatMap {
+                        XCTAssertNil(receiveHandler.allDonePromise)
+                        receiveHandler.allDonePromise = loop.makePromise()
+                        return receiveHandler.allDonePromise!.futureResult
+                    }.flatMap {
+                        serverChannel.close()
+                    }
+                }.whenComplete { (result: Result<Void, Error>) -> Void in
+                    func workaroundSR9815withAUselessFunction() {
+                        XCTAssertNoThrow(try result.get())
+                    }
+                    workaroundSR9815withAUselessFunction()
+
+                    // All done, let's return back into the calling thread.
+                    loop.shutdownGracefully { error in
+                        XCTAssertNil(error)
+                    }
+                }
+        }
+
+        // All done, the EventLoop is terminated so we should be able to check the results.
+        XCTAssertEqual(UInt8(ascii: "J"), receiveHandler.received)
+    }
 }
