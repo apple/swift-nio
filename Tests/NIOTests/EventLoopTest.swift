@@ -19,18 +19,43 @@ import NIOConcurrencyHelpers
 public final class EventLoopTest : XCTestCase {
 
     public func testSchedule() throws {
-        let nanos: NIODeadline = .now()
-        let amount: TimeAmount = .seconds(1)
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
-        }
-        let value = try eventLoopGroup.next().scheduleTask(in: amount) {
-            true
-        }.futureResult.wait()
+        let eventLoop = EmbeddedEventLoop()
 
-        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
-        XCTAssertTrue(value)
+        let scheduled = eventLoop.scheduleTask(in: .seconds(1)) { true }
+
+        var result: Bool?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        
+        eventLoop.run() // run without time advancing should do nothing
+        XCTAssertFalse(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        
+        eventLoop.advanceTime(by: .seconds(1)) // should fire now
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        
+        XCTAssertNotNil(result)
+        XCTAssertTrue(result == true)
+    }
+
+    public func testFlatSchedule() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        let scheduled = eventLoop.flatScheduleTask(in: .seconds(1)) {
+            eventLoop.makeSucceededFuture(true)
+        }
+
+        var result: Bool?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        
+        eventLoop.run() // run without time advancing should do nothing
+        XCTAssertFalse(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        
+        eventLoop.advanceTime(by: .seconds(1)) // should fire now
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        
+        XCTAssertNotNil(result)
+        XCTAssertTrue(result == true)
     }
 
     public func testScheduleWithDelay() throws {
@@ -69,26 +94,43 @@ public final class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleCancelled() throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
-        }
-        let ran = NIOAtomic<Bool>.makeAtomic(value: false)
-        let scheduled = eventLoopGroup.next().scheduleTask(in: .seconds(2)) {
-            ran.store(true)
-        }
+        let eventLoop = EmbeddedEventLoop()
 
+        let scheduled = eventLoop.scheduleTask(in: .seconds(1)) { true }
+
+        var result: Bool?
+        var error: Error?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        scheduled.futureResult.whenFailure { error = $0 }
+        
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance halfway to firing time
         scheduled.cancel()
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance the rest of the way
 
-        let nanos = NIODeadline.now()
-        let amount: TimeAmount = .seconds(2)
-        let value = try eventLoopGroup.next().scheduleTask(in: amount) {
-            true
-        }.futureResult.wait()
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
+    }
 
-        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
-        XCTAssertTrue(value)
-        XCTAssertFalse(ran.load())
+    public func testFlatScheduleCancelled() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        let scheduled = eventLoop.flatScheduleTask(in: .seconds(1)) {
+            eventLoop.makeSucceededFuture(true)
+        }
+
+        var result: Bool?
+        var error: Error?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        scheduled.futureResult.whenFailure { error = $0 }
+        
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance halfway to firing time
+        scheduled.cancel()
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance the rest of the way
+
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
     public func testScheduleRepeatedTask() throws {
@@ -124,19 +166,39 @@ public final class EventLoopTest : XCTestCase {
     }
 
     public func testScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        let eventLoop = EmbeddedEventLoop()
+        let scheduled = eventLoop.scheduleTask(in: .seconds(1)) { true }
+
+        var result: Bool?
+        var error: Error?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        scheduled.futureResult.whenFailure { error = $0 }
+        
+        scheduled.cancel()
+        eventLoop.advanceTime(by: .seconds(1))
+
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
+    }
+
+    public func testFlatScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let scheduled = eventLoop.flatScheduleTask(in: .seconds(1)) {
+            eventLoop.makeSucceededFuture(true)
         }
 
-        let loop = eventLoopGroup.next()
-        loop.execute {
-            let task = loop.scheduleTask(in: .milliseconds(0)) {
-                XCTFail()
-            }
-            task.cancel()
-        }
-        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
+        var result: Bool?
+        var error: Error?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        scheduled.futureResult.whenFailure { error = $0 }
+        
+        scheduled.cancel()
+        eventLoop.advanceTime(by: .seconds(1))
+
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
     public func testRepeatedTaskThatIsImmediatelyCancelledNeverFires() throws {
@@ -247,57 +309,46 @@ public final class EventLoopTest : XCTestCase {
 
         // t == 5: nothing
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(0, counter)
 
         // t == 10: once
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 15: still once
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 20: still once (because the task takes 10ms to execute)
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 25: still once (because the task takes 10ms to execute)
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 30: twice
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(2, counter)
 
         // t == 40: twice
         eventLoop.advanceTime(by: .milliseconds(10))
-        eventLoop.run()
         XCTAssertEqual(2, counter)
 
         // t == 50: three times
         eventLoop.advanceTime(by: .milliseconds(10))
-        eventLoop.run()
         XCTAssertEqual(3, counter)
 
         // t == 60: three times
         eventLoop.advanceTime(by: .milliseconds(10))
-        eventLoop.run()
         XCTAssertEqual(3, counter)
 
         // t == 89: four times
         eventLoop.advanceTime(by: .milliseconds(29))
-        eventLoop.run()
         XCTAssertEqual(4, counter)
 
         // t == 90: five times
         eventLoop.advanceTime(by: .milliseconds(1))
-        eventLoop.run()
         XCTAssertEqual(5, counter)
 
         repeatedTask.cancel()
@@ -306,7 +357,6 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertEqual(5, counter)
 
         eventLoop.advanceTime(by: .hours(10))
-        eventLoop.run()
         XCTAssertEqual(5, counter)
     }
 
