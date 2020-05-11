@@ -108,7 +108,7 @@ final class DatagramChannelTests: XCTestCase {
 
     private func buildChannel(group: EventLoopGroup) throws -> Channel {
         return try DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
@@ -374,7 +374,7 @@ final class DatagramChannelTests: XCTestCase {
 
             init(error: Int32) throws {
                 self.error = error
-                try super.init(protocolFamily: .inet, type: .dgram)
+                try super.init(protocolFamily: .inet, type: .datagram)
             }
 
             override func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
@@ -450,7 +450,7 @@ final class DatagramChannelTests: XCTestCase {
 
             init(error: Int32) throws {
                 self.error = error
-                try super.init(protocolFamily: .inet, type: .dgram)
+                try super.init(protocolFamily: .inet, type: .datagram)
             }
 
             override func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
@@ -508,16 +508,16 @@ final class DatagramChannelTests: XCTestCase {
 
     func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
         let channel = try assertNoThrowWithValue(DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-            .channelOption(ChannelOptions.socketOption(.timestamp), value: 1)
+            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .channelOption(ChannelOptions.socketOption(.so_timestamp), value: 1)
             .bind(host: "127.0.0.1", port: 0)
             .wait())
         defer {
             XCTAssertNoThrow(try channel.close().wait())
         }
-        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .reuseaddr))
-        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .timestamp))
-        XCTAssertFalse(try getBoolSocketOption(channel: channel, level: .socket, name: .keepalive))
+        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .so_reuseaddr))
+        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .so_timestamp))
+        XCTAssertFalse(try getBoolSocketOption(channel: channel, level: .socket, name: .so_keepalive))
     }
 
     func testUnprocessedOutboundUserEventFailsOnDatagramChannel() throws {

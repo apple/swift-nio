@@ -189,10 +189,10 @@ extension NIOBSDSocket.SocketType {
     /// Supports datagrams, which are connectionless, unreliable messages of a
     /// fixed (typically small) maximum length.
     #if os(Linux)
-        internal static let dgram: NIOBSDSocket.SocketType =
+        internal static let datagram: NIOBSDSocket.SocketType =
                 NIOBSDSocket.SocketType(rawValue: CInt(SOCK_DGRAM.rawValue))
     #else
-        internal static let dgram: NIOBSDSocket.SocketType =
+        internal static let datagram: NIOBSDSocket.SocketType =
                 NIOBSDSocket.SocketType(rawValue: SOCK_DGRAM)
     #endif
 
@@ -301,14 +301,14 @@ extension NIOBSDSocket.Option {
 // TCP Options
 extension NIOBSDSocket.Option {
     /// Disables the Nagle algorithm for send coalescing.
-    public static let nodelay: NIOBSDSocket.Option =
+    public static let tcp_nodelay: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: TCP_NODELAY)
 }
 
 #if os(Linux) || os(FreeBSD)
 extension NIOBSDSocket.Option {
     /// Get information about the TCP connection.
-    public static let info: NIOBSDSocket.Option =
+    public static let tcp_info: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: TCP_INFO)
 }
 #endif
@@ -316,7 +316,7 @@ extension NIOBSDSocket.Option {
 #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
 extension NIOBSDSocket.Option {
     /// Get information about the TCP connection.
-    public static let connection_info: NIOBSDSocket.Option =
+    public static let tcp_connection_info: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: TCP_CONNECTION_INFO)
 }
 #endif
@@ -324,44 +324,34 @@ extension NIOBSDSocket.Option {
 // Socket Options
 extension NIOBSDSocket.Option {
     /// Get the error status and clear.
-    public static let error: NIOBSDSocket.Option =
+    public static let so_error: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: SO_ERROR)
 
     /// Use keep-alives.
-    public static let keepalive: NIOBSDSocket.Option =
+    public static let so_keepalive: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: SO_KEEPALIVE)
 
     /// Linger on close if unsent data is present.
-    public static let linger: NIOBSDSocket.Option =
+    public static let so_linger: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: SO_LINGER)
 
     /// Specifies the total per-socket buffer space reserved for receives.
-    public static let rcvbuf: NIOBSDSocket.Option =
+    public static let so_rcvbuf: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: SO_RCVBUF)
 
     /// Specifies the receive timeout.
-    public static let rcvtimeo: NIOBSDSocket.Option =
+    public static let so_rcvtimeo: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: SO_RCVTIMEO)
 
-    /// Indicates that the system should defer ephemeral port allocation for
-    /// outbound connections.
-    #if os(Windows)
-        public static let reuseport: NIOBSDSocket.Option =
-                NIOBSDSocket.Option(rawValue: SO_REUSE_UNICASTPORT)
-    #else
-        public static let reuseport: NIOBSDSocket.Option =
-                NIOBSDSocket.Option(rawValue: SO_REUSEPORT)
-    #endif
-
     /// Allows the socket to be bound to an address that is already in use.
-    public static let reuseaddr: NIOBSDSocket.Option =
+    public static let so_reuseaddr: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: SO_REUSEADDR)
 }
 
 #if !os(Windows)
 extension NIOBSDSocket.Option {
     /// Indicate when to generate timestamps.
-    public static let timestamp: NIOBSDSocket.Option =
+    public static let so_timestamp: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: SO_TIMESTAMP)
 }
 #endif
