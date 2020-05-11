@@ -244,9 +244,13 @@ public protocol EventLoop: EventLoopGroup {
     @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 
-    /// Checks that this call is run from the `EventLoop`. If this is called from within the `EventLoop` this function
-    /// will have no effect, if called from outside the `EventLoop` it will crash the process with a trap.
+    /// Asserts that the current thread is the one tied to this `EventLoop`.
+    /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionInEventLoop(file: StaticString, line: UInt)
+    
+    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`.
+    /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
+    func preconditionNotInEventLoop(file: StaticString, line: UInt)
 }
 
 extension EventLoopGroup {
@@ -580,9 +584,9 @@ extension EventLoop {
         return EventLoopIterator([self])
     }
 
-    /// Checks that this call is run from the EventLoop. If this is called from within the EventLoop this function will
-    /// have no effect, if called from outside the EventLoop it will crash the process with a trap if run in debug mode.
-    /// In release mode this function never has any effect.
+    /// Asserts that the current thread is the one tied to this `EventLoop`.
+    /// Otherwise, if running in debug mode, the process will be abnormally terminated as per the semantics of
+    /// `preconditionFailure(_:file:line:)`. Never has any effect in release mode.
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
     @inlinable
@@ -592,9 +596,28 @@ extension EventLoop {
         }
     }
 
+    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`.
+    /// Otherwise, if running in debug mode, the process will be abnormally terminated as per the semantics of
+    /// `preconditionFailure(_:file:line:)`. Never has any effect in release mode.
+    ///
+    /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
+    @inlinable
+    public func assertNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
+        debugOnly {
+            self.preconditionNotInEventLoop(file: file, line: line)
+        }
+    }
+
     /// Checks the necessary condition of currently running on the called `EventLoop` for making forward progress.
+    @inlinable
     public func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
         precondition(self.inEventLoop, file: file, line: line)
+    }
+
+    /// Checks the necessary condition of currently _not_ running on the called `EventLoop` for making forward progress.
+    @inlinable
+    public func preconditionNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
+        precondition(!self.inEventLoop, file: file, line: line)
     }
 }
 

@@ -283,14 +283,14 @@ extension NIOHTTP1TestServer {
     }
 
     public func readInbound(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPServerRequestPart {
-        assert(!self.eventLoop.inEventLoop)
+        self.eventLoop.assertNotInEventLoop()
         return try self.eventLoop.submit { () -> BlockingQueue<HTTPServerRequestPart> in
             self.inboundBuffer
         }.wait().popFirst(deadline: deadline)
     }
 
     public func writeOutbound(_ data: HTTPServerResponsePart) throws {
-        assert(!self.eventLoop.inEventLoop)
+        self.eventLoop.assertNotInEventLoop()
         try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             if let channel = self.currentClientChannel {
                 return channel.writeAndFlush(data)
@@ -301,7 +301,7 @@ extension NIOHTTP1TestServer {
     }
 
     public var serverPort: Int {
-        assert(!self.eventLoop.inEventLoop)
+        self.eventLoop.assertNotInEventLoop()
         return self.serverChannel!.localAddress!.port!
     }
 }
