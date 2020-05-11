@@ -34,7 +34,7 @@ class FileRegionTest : XCTestCase {
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().makePromise())
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
             .bind(host: "127.0.0.1", port: 0)
             .wait())
@@ -74,7 +74,7 @@ class FileRegionTest : XCTestCase {
         let countingHandler = ByteCountingHandler(numBytes: 0, promise: group.next().makePromise())
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
             .bind(host: "127.0.0.1", port: 0)
             .wait())
@@ -125,7 +125,7 @@ class FileRegionTest : XCTestCase {
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().makePromise())
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
             .bind(host: "127.0.0.1", port: 0)
             .wait())

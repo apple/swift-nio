@@ -72,6 +72,8 @@ extension EventLoopTest {
                 ("testMultiThreadedEventLoopGroupDescription", testMultiThreadedEventLoopGroupDescription),
                 ("testSafeToExecuteTrue", testSafeToExecuteTrue),
                 ("testSafeToExecuteFalse", testSafeToExecuteFalse),
+                ("testTakeOverThreadAndAlsoTakeItBack", testTakeOverThreadAndAlsoTakeItBack),
+                ("testWeCanDoTrulySingleThreadedNetworking", testWeCanDoTrulySingleThreadedNetworking),
            ]
    }
 }

@@ -34,7 +34,7 @@ internal enum NIOOnSocketsBootstraps {
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
 ///         .serverChannelOption(ChannelOptions.backlog, value: 256)
-///         .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+///         .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 ///
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
@@ -47,7 +47,7 @@ internal enum NIOOnSocketsBootstraps {
 ///         }
 ///
 ///         // Enable SO_REUSEADDR for the accepted Channels
-///         .childChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+///         .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 ///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
 ///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
 ///     let channel = try! bootstrap.bind(host: host, port: port).wait()
@@ -128,7 +128,7 @@ public final class ServerBootstrap {
         self._childChannelOptions = ChannelOptions.Storage()
         self.serverChannelInit = nil
         self.childChannelInit = nil
-        self._serverChannelOptions.append(key: ChannelOptions.tcpOption(.nodelay), value: 1)
+        self._serverChannelOptions.append(key: ChannelOptions.tcpOption(.tcp_nodelay), value: 1)
     }
 
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
@@ -394,7 +394,7 @@ private extension Channel {
 ///     }
 ///     let bootstrap = ClientBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
-///         .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+///         .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 ///         .channelInitializer { channel in
 ///             // always instantiate the handler _within_ the closure as
 ///             // it may be called multiple times (for example if the hostname
@@ -453,7 +453,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         }
         self.group = group
         self._channelOptions = ChannelOptions.Storage()
-        self._channelOptions.append(key: ChannelOptions.tcpOption(.nodelay), value: 1)
+        self._channelOptions.append(key: ChannelOptions.tcpOption(.tcp_nodelay), value: 1)
         self._channelInitializer = { channel in channel.eventLoop.makeSucceededFuture(()) }
         self.protocolHandlers = nil
         self.resolver = nil
@@ -663,7 +663,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 ///     }
 ///     let bootstrap = DatagramBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
-///         .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+///         .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 ///         .channelInitializer { channel in
 ///             channel.pipeline.addHandler(MyChannelHandler())
 ///         }

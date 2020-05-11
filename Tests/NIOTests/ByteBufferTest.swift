@@ -2579,6 +2579,54 @@ class ByteBufferTest: XCTestCase {
         self.buf.moveWriterIndex(forwardBy: 5)
         XCTAssertEqual("hellohello", self.buf.readString(length: 10))
     }
+    
+    func testWriteRepeatingBytes() {
+        func write(count: Int, line: UInt = #line) {
+            self.buf.clear()
+            let written = self.buf.writeRepeatingByte(9, count: count)
+            XCTAssertEqual(count, written)
+            XCTAssertEqual(Array(repeating: UInt8(9), count: count), Array(self.buf.readableBytesView))
+        }
+        
+        write(count: 1_000_000)
+        write(count: 0)
+    }
+    
+    func testSetRepeatingBytes() {
+        func set(count: Int, at index: Int, padding: [UInt8] = [], line: UInt = #line) {
+            
+            // first write some bytes
+            self.buf.clear()
+            self.buf.writeBytes(padding)
+            self.buf.writeRepeatingByte(9, count: count)
+            self.buf.writeBytes(padding)
+            
+            // now overwrite
+            let previousWriterIndex = self.buf.writerIndex
+            let written = self.buf.setRepeatingByte(8, count: count, at: index)
+            XCTAssertEqual(previousWriterIndex, self.buf.writerIndex) // writer index shouldn't have changed
+            XCTAssertEqual(count, written)
+            XCTAssertEqual(Array(repeating: UInt8(8), count: count), self.buf.getBytes(at: index, length: count)!)
+            
+            // check the padding is still ok
+            XCTAssertEqual(self.buf.getBytes(at: 0, length: padding.count)!, padding)
+            XCTAssertEqual(self.buf.getBytes(at: count + padding.count, length: padding.count)!, padding)
+        }
+        
+        set(count: 1_000_000, at: 0)
+        set(count: 0, at: 0)
+        set(count: 10, at: 5, padding: [1, 1, 1, 1, 1])
+    }
+    
+    func testSetRepeatingBytes_unqiueReference() {
+        
+        var buffer = self.buf!
+        let copy = buffer
+        
+        buffer.writeRepeatingByte(2, count: 100)
+        XCTAssertEqual(Array(buffer.readableBytesView), Array(repeating: 2, count: 100))
+        XCTAssertNotEqual(buffer, copy)
+    }
 }
 
 private enum AllocationExpectationState: Int {
