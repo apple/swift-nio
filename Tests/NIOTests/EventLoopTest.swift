@@ -19,18 +19,43 @@ import NIOConcurrencyHelpers
 public final class EventLoopTest : XCTestCase {
 
     public func testSchedule() throws {
-        let nanos: NIODeadline = .now()
-        let amount: TimeAmount = .seconds(1)
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
-        }
-        let value = try eventLoopGroup.next().scheduleTask(in: amount) {
-            true
-        }.futureResult.wait()
+        let eventLoop = EmbeddedEventLoop()
 
-        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
-        XCTAssertTrue(value)
+        let scheduled = eventLoop.scheduleTask(in: .seconds(1)) { true }
+
+        var result: Bool?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        
+        eventLoop.run() // run without time advancing should do nothing
+        XCTAssertFalse(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        
+        eventLoop.advanceTime(by: .seconds(1)) // should fire now
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        
+        XCTAssertNotNil(result)
+        XCTAssertTrue(result == true)
+    }
+
+    public func testFlatSchedule() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        let scheduled = eventLoop.flatScheduleTask(in: .seconds(1)) {
+            eventLoop.makeSucceededFuture(true)
+        }
+
+        var result: Bool?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        
+        eventLoop.run() // run without time advancing should do nothing
+        XCTAssertFalse(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        
+        eventLoop.advanceTime(by: .seconds(1)) // should fire now
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        
+        XCTAssertNotNil(result)
+        XCTAssertTrue(result == true)
     }
 
     public func testScheduleWithDelay() throws {
@@ -43,7 +68,7 @@ public final class EventLoopTest : XCTestCase {
 
         // First, we create a server and client channel, but don't connect them.
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: eventLoopGroup)
-            .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .bind(host: "127.0.0.1", port: 0).wait())
         let clientBootstrap = ClientBootstrap(group: eventLoopGroup)
 
@@ -69,26 +94,43 @@ public final class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleCancelled() throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
-        }
-        let ran = NIOAtomic<Bool>.makeAtomic(value: false)
-        let scheduled = eventLoopGroup.next().scheduleTask(in: .seconds(2)) {
-            ran.store(true)
-        }
+        let eventLoop = EmbeddedEventLoop()
 
+        let scheduled = eventLoop.scheduleTask(in: .seconds(1)) { true }
+
+        var result: Bool?
+        var error: Error?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        scheduled.futureResult.whenFailure { error = $0 }
+        
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance halfway to firing time
         scheduled.cancel()
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance the rest of the way
 
-        let nanos = NIODeadline.now()
-        let amount: TimeAmount = .seconds(2)
-        let value = try eventLoopGroup.next().scheduleTask(in: amount) {
-            true
-        }.futureResult.wait()
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
+    }
 
-        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
-        XCTAssertTrue(value)
-        XCTAssertFalse(ran.load())
+    public func testFlatScheduleCancelled() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        let scheduled = eventLoop.flatScheduleTask(in: .seconds(1)) {
+            eventLoop.makeSucceededFuture(true)
+        }
+
+        var result: Bool?
+        var error: Error?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        scheduled.futureResult.whenFailure { error = $0 }
+        
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance halfway to firing time
+        scheduled.cancel()
+        eventLoop.advanceTime(by: .milliseconds(500)) // advance the rest of the way
+
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
     public func testScheduleRepeatedTask() throws {
@@ -124,19 +166,39 @@ public final class EventLoopTest : XCTestCase {
     }
 
     public func testScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        let eventLoop = EmbeddedEventLoop()
+        let scheduled = eventLoop.scheduleTask(in: .seconds(1)) { true }
+
+        var result: Bool?
+        var error: Error?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        scheduled.futureResult.whenFailure { error = $0 }
+        
+        scheduled.cancel()
+        eventLoop.advanceTime(by: .seconds(1))
+
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
+    }
+
+    public func testFlatScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let scheduled = eventLoop.flatScheduleTask(in: .seconds(1)) {
+            eventLoop.makeSucceededFuture(true)
         }
 
-        let loop = eventLoopGroup.next()
-        loop.execute {
-            let task = loop.scheduleTask(in: .milliseconds(0)) {
-                XCTFail()
-            }
-            task.cancel()
-        }
-        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
+        var result: Bool?
+        var error: Error?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        scheduled.futureResult.whenFailure { error = $0 }
+        
+        scheduled.cancel()
+        eventLoop.advanceTime(by: .seconds(1))
+
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
     public func testRepeatedTaskThatIsImmediatelyCancelledNeverFires() throws {
@@ -247,57 +309,46 @@ public final class EventLoopTest : XCTestCase {
 
         // t == 5: nothing
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(0, counter)
 
         // t == 10: once
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 15: still once
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 20: still once (because the task takes 10ms to execute)
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 25: still once (because the task takes 10ms to execute)
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(1, counter)
 
         // t == 30: twice
         eventLoop.advanceTime(by: .milliseconds(5))
-        eventLoop.run()
         XCTAssertEqual(2, counter)
 
         // t == 40: twice
         eventLoop.advanceTime(by: .milliseconds(10))
-        eventLoop.run()
         XCTAssertEqual(2, counter)
 
         // t == 50: three times
         eventLoop.advanceTime(by: .milliseconds(10))
-        eventLoop.run()
         XCTAssertEqual(3, counter)
 
         // t == 60: three times
         eventLoop.advanceTime(by: .milliseconds(10))
-        eventLoop.run()
         XCTAssertEqual(3, counter)
 
         // t == 89: four times
         eventLoop.advanceTime(by: .milliseconds(29))
-        eventLoop.run()
         XCTAssertEqual(4, counter)
 
         // t == 90: five times
         eventLoop.advanceTime(by: .milliseconds(1))
-        eventLoop.run()
         XCTAssertEqual(5, counter)
 
         repeatedTask.cancel()
@@ -306,7 +357,6 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertEqual(5, counter)
 
         eventLoop.advanceTime(by: .hours(10))
-        eventLoop.run()
         XCTAssertEqual(5, counter)
     }
 
@@ -354,7 +404,7 @@ public final class EventLoopTest : XCTestCase {
 
         // Create a server channel.
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .bind(host: "127.0.0.1", port: 0).wait())
 
         // We now want to connect to it. To try to slow this stuff down, we're going to use a multiple of the number
@@ -978,7 +1028,7 @@ public final class EventLoopTest : XCTestCase {
         g.enter()
         var maybeServer: Channel?
         XCTAssertNoThrow(maybeServer = try ServerBootstrap(group: elg2)
-            .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .serverChannelOption(ChannelOptions.autoRead, value: false)
             .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
             .childChannelInitializer { channel in
@@ -1084,5 +1134,90 @@ public final class EventLoopTest : XCTestCase {
         try? elg.syncShutdownGracefully()
         XCTAssertFalse(loop.testsOnly_validExternalStateToScheduleTasks)
         XCTAssertFalse(loop.testsOnly_validExternalStateToScheduleTasks)
+    }
+
+    func testTakeOverThreadAndAlsoTakeItBack() {
+        let currentNIOThread = NIOThread.current
+        let currentNSThread = Thread.current
+        let lock = Lock()
+        var hasBeenShutdown = false
+        let allDoneGroup = DispatchGroup()
+        allDoneGroup.enter()
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { loop in
+            XCTAssertEqual(currentNIOThread, NIOThread.current)
+            XCTAssertEqual(currentNSThread, Thread.current)
+            XCTAssert(loop === MultiThreadedEventLoopGroup.currentEventLoop)
+            loop.shutdownGracefully(queue: DispatchQueue.global()) { error in
+                XCTAssertNil(error)
+                lock.withLock {
+                    hasBeenShutdown = error == nil
+                }
+                allDoneGroup.leave()
+            }
+        }
+        allDoneGroup.wait()
+        XCTAssertTrue(lock.withLock { hasBeenShutdown })
+    }
+
+    func testWeCanDoTrulySingleThreadedNetworking() {
+        final class SaveReceivedByte: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            // For once, we don't need thread-safety as we're taking the calling thread :)
+            var received: UInt8? = nil
+            var readCalls: Int = 0
+            var allDonePromise: EventLoopPromise<Void>? = nil
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                self.readCalls += 1
+                XCTAssertEqual(1, self.readCalls)
+
+                var data = self.unwrapInboundIn(data)
+                XCTAssertEqual(1, data.readableBytes)
+
+                XCTAssertNil(self.received)
+                self.received = data.readInteger()
+
+                self.allDonePromise?.succeed(())
+
+                context.close(promise: nil)
+            }
+        }
+
+        let receiveHandler = SaveReceivedByte() // There'll be just one connection, we can share.
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { loop in
+            ServerBootstrap(group: loop)
+                .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
+                .childChannelInitializer { accepted in
+                    accepted.pipeline.addHandler(receiveHandler)
+                }
+                .bind(host: "127.0.0.1", port: 0)
+                .flatMap { serverChannel in
+                    ClientBootstrap(group: loop).connect(to: serverChannel.localAddress!).flatMap { clientChannel in
+                        var buffer = clientChannel.allocator.buffer(capacity: 1)
+                        buffer.writeString("J")
+                        return clientChannel.writeAndFlush(buffer)
+                    }.flatMap {
+                        XCTAssertNil(receiveHandler.allDonePromise)
+                        receiveHandler.allDonePromise = loop.makePromise()
+                        return receiveHandler.allDonePromise!.futureResult
+                    }.flatMap {
+                        serverChannel.close()
+                    }
+                }.whenComplete { (result: Result<Void, Error>) -> Void in
+                    func workaroundSR9815withAUselessFunction() {
+                        XCTAssertNoThrow(try result.get())
+                    }
+                    workaroundSR9815withAUselessFunction()
+
+                    // All done, let's return back into the calling thread.
+                    loop.shutdownGracefully { error in
+                        XCTAssertNil(error)
+                    }
+                }
+        }
+
+        // All done, the EventLoop is terminated so we should be able to check the results.
+        XCTAssertEqual(UInt8(ascii: "J"), receiveHandler.received)
     }
 }

@@ -35,6 +35,7 @@ needs to be listed here.
 - Dario Rexin <drexin@apple.com>
 - David Evans <d.evans@apple.com>
 - David Skrundz <david.skrundz@gmail.com>
+- Doug Friedman <dfriedm3@gmail.com>
 - Emil Marashliev <marashliev@gmail.com>
 - Esteban Torres <me@estebantorr.es>
 - Eugen <eugenf78@gmail.com>
@@ -61,18 +62,19 @@ needs to be listed here.
 - John Lin <johnlinvc@gmail.com>
 - Jovan Milenkovic <jovan.milenkovic@htecgroup.com>
 - Julian Lettner <julian.lettner@apple.com>
+- Kaitlin Mahar <kaitlinmahar@gmail.com>
 - Kamil Borzym <kamil.borzym@gmail.com>
 - Karim ElNaggar <karimfarid.naggar@gmail.com>
 - Kevin Clark <kevin.clark@apple.com>
 - Kevin Sweeney <kevin_sweeney@apple.com>
-- Konrad `ktoso` Malawski <konrad_malawski@apple.com>
 - Konrad `ktoso` Malawski <ktoso@apple.com>
 - Kyle Bashour <kylebshr@me.com>
+- Kyle Browning <kylebrowning@me.com>
 - Kyle Jessup <kyle@perfect.org>
 - Lev Walkin <lwalkin@apple.com>
-- Liam Flynn <l.flynn2@live.co.uk>
 - Liam Flynn <l.flynn@live.co.uk>
 - Ludovic Dewailly <ldewailly@apple.com>
+- Marcus Liotta <marcus@liotta.se>
 - Mario Sangiorgio <msangiorgio@apple.com>
 - Markus Jais <markusjais@googlemail.com>
 - Markus Kieselmann <markus@kieselmann.eu>
@@ -87,6 +89,7 @@ needs to be listed here.
 - Norman Maurer <norman_maurer@apple.com>
 - Ole Begemann <ole@oleb.net>
 - OleG <emptystamp@gmail.com>
+- Peter Adams <pp_adams@apple.com>
 - Petro Rovenskyy <petro.rovenskyy@gmail.com>
 - Portia <portia-s@users.noreply.github.com>
 - Pushkar N Kulkarni <pushkar.nk@in.ibm.com>
@@ -94,11 +97,13 @@ needs to be listed here.
 - Richard Low <ral@apple.com>
 - Romain Pouclet <rpouclet@apple.com>
 - Rukshani Athapathu <arukshani@users.noreply.github.com>
+- Saleem Abdulrasool <compnerd@compnerd.org>
 - Sebastian Thiebaud <770074+SebastianThiebaud@users.noreply.github.com>
 - Semen Zhydenko <simeon.zhidenko@gmail.com>
 - Sergej Jaskiewicz <jaskiewiczs@icloud.com>
 - Sergo Beruashvili <beruashvili@gmail.com>
 - Shaun Hubbard <shaunhubbard2013@icloud.com>
+- Shekhar Rajak <shekhar_rajak@apple.com>
 - Siemen Sikkema <s.h.sikkema@gmail.com>
 - Simon Evans <si@si.org>
 - Stuart Hinson <stuart.hinson@gmail.com>
@@ -116,6 +121,7 @@ needs to be listed here.
 - Wilson Ding <hello@wilsonding.com>
 - fadi-botros <botros_fadi@yahoo.com>
 - sun_ <sunlubo.sun@gmail.com>
+- trungducc <gnurtduc@gmail.com>
 
 **Updating this list**
 

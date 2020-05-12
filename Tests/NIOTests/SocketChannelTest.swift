@@ -71,7 +71,7 @@ public final class SocketChannelTest : XCTestCase {
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .serverChannelOption(ChannelOptions.backlog, value: 256)
             .bind(host: "127.0.0.1", port: 0).wait())
 
@@ -354,7 +354,7 @@ public final class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverSock = try Socket(protocolFamily: .inet, type: .dgram)
+        let serverSock = try Socket(protocolFamily: .inet, type: .datagram)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
             DatagramBootstrap(group: group).withBoundSocket(descriptor: dup($0))
@@ -577,7 +577,7 @@ public final class SocketChannelTest : XCTestCase {
             // Build server channel; after this point the server called listen()
             let serverPromise = group.next().makePromise(of: IOError.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .serverChannelOption(ChannelOptions.backlog, value: 256)
                 .serverChannelOption(ChannelOptions.autoRead, value: false)
                 .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
@@ -586,7 +586,7 @@ public final class SocketChannelTest : XCTestCase {
 
             // Make a client socket to mess with the server. Setting SO_LINGER forces RST instead of FIN.
             let clientSocket = try assertNoThrowWithValue(Socket(protocolFamily: .inet, type: .stream))
-            XCTAssertNoThrow(try clientSocket.setOption(level: .socket, name: .linger, value: linger(l_onoff: 1, l_linger: 0)))
+            XCTAssertNoThrow(try clientSocket.setOption(level: .socket, name: .so_linger, value: linger(l_onoff: 1, l_linger: 0)))
             XCTAssertNoThrow(try clientSocket.connect(to: serverChannel.localAddress!))
             XCTAssertNoThrow(try clientSocket.close())
         

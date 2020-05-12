@@ -333,7 +333,7 @@ class BaseSocket: BaseSocketProtocol {
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
     final func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
-        if level == .tcp && name == .nodelay && (try? self.localAddress().protocol) == Optional<NIOBSDSocket.ProtocolFamily>.some(.unix) {
+        if level == .tcp && name == .tcp_nodelay && (try? self.localAddress().protocol) == Optional<NIOBSDSocket.ProtocolFamily>.some(.unix) {
             // setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
             return
@@ -365,7 +365,7 @@ class BaseSocket: BaseSocketProtocol {
                                                                  alignment: MemoryLayout<T>.alignment)
             // write zeroes into the memory as Linux's getsockopt doesn't zero them out
             storage.initializeMemory(as: UInt8.self, repeating: 0)
-            var val = storage.bindMemory(to: T.self).baseAddress!
+            let val = storage.bindMemory(to: T.self).baseAddress!
             // initialisation will be done by getsockopt
             defer {
                 val.deinitialize(count: 1)

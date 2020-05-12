@@ -285,7 +285,7 @@ class StreamChannelTest: XCTestCase {
             XCTAssertNoThrow(try receiver.pipeline.addHandler(FailOnReadHandler(areReadOkayNow: areReadsOkayNow)).wait())
 
             // We will immediately send exactly the amount of data that fits in the receiver's receive buffer.
-            let receiveBufferSize = Int((try? receiver.getOption(ChannelOptions.socketOption(.rcvbuf)).wait()) ?? 8192)
+            let receiveBufferSize = Int((try? receiver.getOption(ChannelOptions.socketOption(.so_rcvbuf)).wait()) ?? 8192)
             var buffer = sender.allocator.buffer(capacity: receiveBufferSize)
             buffer.writeBytes(Array(repeating: UInt8(ascii: "X"), count: receiveBufferSize))
 

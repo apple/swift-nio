@@ -1019,7 +1019,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             let error: IOError
             // if the socket is still registered (and therefore open), let's try to get the actual socket error from the socket
             do {
-                let result: Int32 = try self.socket.getOption(level: .socket, name: .error)
+                let result: Int32 = try self.socket.getOption(level: .socket, name: .so_error)
                 if result != 0 {
                     // we have a socket error, let's forward
                     // this path will be executed on Linux (EPOLLERR) & Darwin (ev.fflags != 0)

@@ -221,7 +221,7 @@ class BootstrapTest: XCTestCase {
         func restrictBootstrapType(clientBootstrap: NIOClientTCPBootstrap) throws {
             let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
                     serverAcceptedChannelPromise.succeed(channel)
                     return channel.eventLoop.makeSucceededFuture(())

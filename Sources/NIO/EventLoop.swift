@@ -236,17 +236,35 @@ public protocol EventLoop: EventLoopGroup {
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 
-    /// Schedule a `task` that is executed by this `SelectableEventLoop` at the given time.
+    /// Schedule a `task` that is executed by this `EventLoop` at the given time.
+    ///
+    /// - parameters:
+    ///     - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
     @discardableResult
     func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T>
 
-    /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
+    /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
+    ///
+    /// - parameters:
+    ///     - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
     @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 
-    /// Checks that this call is run from the `EventLoop`. If this is called from within the `EventLoop` this function
-    /// will have no effect, if called from outside the `EventLoop` it will crash the process with a trap.
+    /// Asserts that the current thread is the one tied to this `EventLoop`.
+    /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionInEventLoop(file: StaticString, line: UInt)
+    
+    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`.
+    /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
+    func preconditionNotInEventLoop(file: StaticString, line: UInt)
 }
 
 extension EventLoopGroup {
@@ -482,11 +500,51 @@ extension EventLoop {
     /// the `EventLoopFuture` returned by `task`.
     ///
     /// - parameters:
-    ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
     /// - returns: An `EventLoopFuture` identical to the `EventLooopFuture` returned from `task`.
     @inlinable
     public func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
         return self.submit(task).flatMap { $0 }
+    }
+
+    /// Schedule a `task` that is executed by this `EventLoop` at the given time.
+    ///
+    /// - parameters:
+    ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the full execution of the task, including its returned `EventLoopFuture`.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
+    @discardableResult
+    public func flatScheduleTask<T>(deadline: NIODeadline,
+                                    file: StaticString = #file,
+                                    line: UInt = #line,
+                                    _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = self.makePromise(file:#file, line: line)
+        let scheduled = self.scheduleTask(deadline: deadline, task)
+        
+        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        return .init(promise: promise, cancellationTask: { scheduled.cancel() })
+    }
+
+    /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
+    ///
+    /// - parameters:
+    ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the full execution of the task, including its returned `EventLoopFuture`.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
+    @discardableResult
+    public func flatScheduleTask<T>(in delay: TimeAmount,
+                                    file: StaticString = #file,
+                                    line: UInt = #line,
+                                    _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
+        let scheduled = self.scheduleTask(in: delay, task)
+        
+        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.
@@ -580,9 +638,9 @@ extension EventLoop {
         return EventLoopIterator([self])
     }
 
-    /// Checks that this call is run from the EventLoop. If this is called from within the EventLoop this function will
-    /// have no effect, if called from outside the EventLoop it will crash the process with a trap if run in debug mode.
-    /// In release mode this function never has any effect.
+    /// Asserts that the current thread is the one tied to this `EventLoop`.
+    /// Otherwise, if running in debug mode, the process will be abnormally terminated as per the semantics of
+    /// `preconditionFailure(_:file:line:)`. Never has any effect in release mode.
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
     @inlinable
@@ -592,9 +650,28 @@ extension EventLoop {
         }
     }
 
+    /// Asserts that the current thread is _not_ the one tied to this `EventLoop`.
+    /// Otherwise, if running in debug mode, the process will be abnormally terminated as per the semantics of
+    /// `preconditionFailure(_:file:line:)`. Never has any effect in release mode.
+    ///
+    /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
+    @inlinable
+    public func assertNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
+        debugOnly {
+            self.preconditionNotInEventLoop(file: file, line: line)
+        }
+    }
+
     /// Checks the necessary condition of currently running on the called `EventLoop` for making forward progress.
+    @inlinable
     public func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
         precondition(self.inEventLoop, file: file, line: line)
+    }
+
+    /// Checks the necessary condition of currently _not_ running on the called `EventLoop` for making forward progress.
+    @inlinable
+    public func preconditionNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
+        precondition(!self.inEventLoop, file: file, line: line)
     }
 }
 
@@ -725,6 +802,31 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private let shutdownLock: Lock = Lock()
     private var runState: RunState = .running
 
+    private static func runTheLoop(thread: NIOThread,
+                                   canEventLoopBeShutdownIndividually: Bool,
+                                   selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration>,
+                                   initializer: @escaping ThreadInitializer,
+                                   _ callback: @escaping (SelectableEventLoop) -> Void) {
+        assert(NIOThread.current == thread)
+        initializer(thread)
+
+        do {
+            let loop = SelectableEventLoop(thread: thread,
+                                           selector: try selectorFactory(),
+                                           canBeShutdownIndividually: canEventLoopBeShutdownIndividually)
+            threadSpecificEventLoop.currentValue = loop
+            defer {
+                threadSpecificEventLoop.currentValue = nil
+            }
+            callback(loop)
+            try loop.run()
+        } catch {
+            // We fatalError here because the only reasons this can be hit is if the underlying kqueue/epoll give us
+            // errors that we cannot handle which is an unrecoverable error for us.
+            fatalError("Unexpected error while running SelectableEventLoop: \(error).")
+        }
+    }
+
     private static func setupThreadAndEventLoop(name: String,
                                                 selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration>,
                                                 initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
@@ -737,22 +839,14 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
         loopUpAndRunningGroup.enter()
         NIOThread.spawnAndRun(name: name, detachThread: false) { t in
-            initializer(t)
-
-            do {
-                /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
-                let l = SelectableEventLoop(thread: t, selector: try! selectorFactory())
-                threadSpecificEventLoop.currentValue = l
-                defer {
-                    threadSpecificEventLoop.currentValue = nil
-                }
+            MultiThreadedEventLoopGroup.runTheLoop(thread: t,
+                                                   canEventLoopBeShutdownIndividually: false, // part of MTELG
+                                                   selectorFactory: selectorFactory,
+                                                   initializer: initializer) { l in
                 lock.withLock {
                     _loop = l
                 }
                 loopUpAndRunningGroup.leave()
-                try l.run()
-            } catch let err {
-                fatalError("unexpected error while executing EventLoop \(err)")
             }
         }
         loopUpAndRunningGroup.wait()
@@ -884,7 +978,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
         g.notify(queue: q) {
             for loop in self.eventLoops {
-                loop.syncFinaliseClose()
+                loop.syncFinaliseClose(joinThread: true)
             }
             var overallError: Error?
             var queueCallbackPairs: [(DispatchQueue, (Error?) -> Void)]? = nil
@@ -912,6 +1006,25 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                     queueCallbackPair.1(overallError)
                 }
             }
+        }
+    }
+
+    /// Convert the calling thread into an `EventLoop`.
+    ///
+    /// This function will not return until the `EventLoop` has stopped. You can initiate stopping the `EventLoop` by
+    /// calling `eventLoop.shutdownGracefully` which will eventually make this function return.
+    ///
+    /// - parameters:
+    ///     - callback: Called _on_ the `EventLoop` that the calling thread was converted to, providing you the
+    ///                 `EventLoop` reference. Just like usually on the `EventLoop`, do not block in `callback`.
+    public static func withCurrentThreadAsEventLoop(_ callback: @escaping (EventLoop) -> Void) {
+        let callingThread = NIOThread.current
+        MultiThreadedEventLoopGroup.runTheLoop(thread: callingThread,
+                                               canEventLoopBeShutdownIndividually: true,
+                                               selectorFactory: NIO.Selector<NIORegistration>.init,
+                                               initializer: { _ in }) { loop in
+            loop.assertInEventLoop()
+            callback(loop)
         }
     }
 }
