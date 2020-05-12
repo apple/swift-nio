@@ -133,7 +133,7 @@ extension SocketOptionProvider {
     /// - returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     public func setSoLinger(_ value: linger) -> EventLoopFuture<Void> {
-        return self.unsafeSetSocketOption(level: .socket, name: .linger, value: value)
+        return self.unsafeSetSocketOption(level: .socket, name: .so_linger, value: value)
     }
 
     /// Gets the value of the socket option SO_LINGER.
@@ -141,7 +141,7 @@ extension SocketOptionProvider {
     /// - returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getSoLinger() -> EventLoopFuture<linger> {
-        return self.unsafeGetSocketOption(level: .socket, name: .linger)
+        return self.unsafeGetSocketOption(level: .socket, name: .so_linger)
     }
 
     /// Sets the socket option IP_MULTICAST_IF to `value`.
@@ -260,7 +260,7 @@ extension SocketOptionProvider {
         /// - returns: An `EventLoopFuture` containing the value of the socket option, or
         ///     any error that occurred while retrieving the socket option.
         public func getTCPInfo() -> EventLoopFuture<tcp_info> {
-            return self.unsafeGetSocketOption(level: .tcp, name: .info)
+            return self.unsafeGetSocketOption(level: .tcp, name: .tcp_info)
         }
     #endif
 
@@ -272,7 +272,7 @@ extension SocketOptionProvider {
         /// - returns: An `EventLoopFuture` containing the value of the socket option, or
         ///     any error that occurred while retrieving the socket option.
         public func getTCPConnectionInfo() -> EventLoopFuture<tcp_connection_info> {
-            return self.unsafeGetSocketOption(level: .tcp, name: .connection_info)
+            return self.unsafeGetSocketOption(level: .tcp, name: .tcp_connection_info)
         }
     #endif
 }
