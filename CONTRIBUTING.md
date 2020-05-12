@@ -72,7 +72,7 @@ For this reason, whenever you add new tests **you have to run a script** that ge
 
 ### Make sure your patch works for all supported versions of swift
 
-The CI will do this for you.  You can use the docker-compose files included if you wish to check locally.  Currently all versions of swift >= 5.0 are supported.
+The CI will do this for you.  You can use the docker-compose files included if you wish to check locally.  Currently all versions of swift >= 5.0 are supported.  For example usage of docker compose see the main [README](./README.md#an-alternative-using-docker-compose)
 
 ### Make sure your code is performant
 
@@ -82,7 +82,7 @@ SwiftNIO has been created to be high performance.  The integration tests cover s
 
 Try to keep your lines less than 120 characters long so github can correctly display your changes.
 
-It is intended SwiftNIO will use the swift-format tool in the future to bring consistency to code formatting.
+It is intended SwiftNIO will use the swift-format tool in the future to bring consistency to code formatting.  To follow the discussion on this topic see the swift evolution proposal [SE-250](https://github.com/apple/swift-evolution/blob/master/proposals/0250-swift-style-guide-and-formatter.md)
 
 ### Extensibility
 
