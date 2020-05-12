@@ -286,6 +286,10 @@ First make sure you have [Docker](https://www.docker.com/community-edition) inst
   Will create a base image, compile SwiftNIO, and run a sample `NIOHTTP1Server` on
   `localhost:8888`. Test it by `curl http://localhost:8888`
 
+- `docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.1604.53.yaml run test`
+
+  Will create a base image using ubuntu 16.04 and swift 5.3, compile SwiftNIO and run the unit and integration tests.  Files exist for other ubuntu and swift versions in the docker directory.
+
 
 ## Developing SwiftNIO
 
