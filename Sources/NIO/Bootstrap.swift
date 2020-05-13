@@ -146,7 +146,8 @@ public final class ServerBootstrap {
     }
 
     /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
-    /// `ChannelHandler`s to the `ChannelPipeline`.
+    /// `ChannelHandler`s to the `ChannelPipeline`. Note that if the `initializer` fails then the error will be
+    /// fired in the *parent* channel.
     ///
     /// - warning: The `initializer` will be invoked once for every accepted connection. Therefore it's usually the
     ///            right choice to instantiate stateful `ChannelHandler`s within the closure to make sure they are not
