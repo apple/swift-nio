@@ -15,6 +15,7 @@
 // This is a companion to System.swift that provides only Linux specials: either things that exist
 // only on Linux, or things that have Linux-specific extensions.
 import CNIOLinux
+import Foundation
 
 #if os(Linux)
 internal enum TimerFd {
@@ -113,6 +114,10 @@ internal enum Epoll {
 }
 
 internal enum Linux {
+    static let CFS_QUOTA_PATH = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
+    static let CFS_PERIOD_PATH = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
+    static let CPUSET_PATH = "/sys/fs/cgroup/cpuset/cpuset.cpus"
+    struct CpusetError: Error { }
 #if os(Android)
     static let SOCK_CLOEXEC = Glibc.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Glibc.SOCK_NONBLOCK
@@ -131,6 +136,36 @@ internal enum Linux {
           return nil
         }
         return fd
+    }
+
+    private static func countCoreIds(cores: String) throws -> Int {
+        let ids = cores.components(separatedBy: "-")
+        guard
+            let first = ids.first.flatMap(Int.init),
+            let last = ids.last.flatMap(Int.init),
+            last >= first
+        else { throw CpusetError() }
+        return 1 + last - first
+    }
+
+    static func coreCount(cpuset cpusetPath: String) -> Int? {
+        guard
+            let cpuset = try? String(contentsOfFile: cpusetPath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: ","),
+            !cpuset.isEmpty
+        else { return nil }
+        return try? cpuset.map(countCoreIds).reduce(0, +)
+    }
+
+    static func coreCount(quota quotaPath: String,  period periodPath: String) -> Int? {
+        guard
+            let quota = try? Int(String(contentsOfFile: quotaPath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)),
+            quota > 0
+        else { return nil }
+        guard
+            let period = try? Int(String(contentsOfFile: periodPath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)),
+            period > 0
+        else { return nil }
+        return (quota - 1 + period) / period // always round up if fractional CPU quota requested
     }
 }
 #endif

@@ -79,7 +79,14 @@ public enum System {
             .filter { $0.Relationship == RelationProcessorCore }
             .map { $0.ProcessorMask.nonzeroBitCount }
             .reduce(0, +)
-
+#elseif os(Linux)
+        if let quota = Linux.coreCount(quota: Linux.CFS_QUOTA_PATH, period: Linux.CFS_PERIOD_PATH) {
+            return quota
+        } else if let cpusetCount = Linux.coreCount(cpuset: Linux.CPUSET_PATH) {
+            return cpusetCount
+        } else {
+            return sysconf(CInt(_SC_NPROCESSORS_ONLN))
+        }
 #else
         return sysconf(CInt(_SC_NPROCESSORS_ONLN))
 #endif
