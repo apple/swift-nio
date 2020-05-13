@@ -29,6 +29,7 @@ extension SALChannelTest {
       return [
                 ("testBasicConnectedChannel", testBasicConnectedChannel),
                 ("testWritesFromWritabilityNotificationsDoNotGetLostIfWePreviouslyWroteEverything", testWritesFromWritabilityNotificationsDoNotGetLostIfWePreviouslyWroteEverything),
+                ("testWeSurviveIfIgnoringSIGPIPEFails", testWeSurviveIfIgnoringSIGPIPEFails),
                 ("testBasicRead", testBasicRead),
            ]
    }
