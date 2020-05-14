@@ -113,10 +113,9 @@ internal enum Epoll {
 }
 
 internal enum Linux {
-    static let CFS_QUOTA_PATH = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
-    static let CFS_PERIOD_PATH = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
-    static let CPUSET_PATH = "/sys/fs/cgroup/cpuset/cpuset.cpus"
-    struct LinuxError: Error { }
+    static let cfsQuotaPath = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
+    static let cfsPeriodPath = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
+    static let cpuSetPath = "/sys/fs/cgroup/cpuset/cpuset.cpus"
 #if os(Android)
     static let SOCK_CLOEXEC = Glibc.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Glibc.SOCK_NONBLOCK
@@ -139,36 +138,30 @@ internal enum Linux {
 
     private static func contentsOfFile(path: String) throws -> Substring {
         let fh = try NIOFileHandle(path: path)
-        defer { try? fh.close() }
+        defer { try! fh.close() }
         // linux doesn't properly report /sys/fs/cgroup/* files lengths so we use a reasonable limit
-        let buffSize = 1024
-        var buf = ByteBufferAllocator().buffer(capacity: buffSize)
-        try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: buffSize) { ptr in
+        var buf = ByteBufferAllocator().buffer(capacity: 1024)
+        try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: buf.capacity) { ptr in
             let res = try fh.withUnsafeFileDescriptor { fd -> IOResult<ssize_t> in
-                return try Posix.read(descriptor: fd, pointer: ptr.baseAddress!, size: buffSize)
+                return try Posix.read(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
             }
             switch res {
             case .processed(let n):
                 return n
             case .wouldBlock:
-                throw LinuxError()
+                preconditionFailure("read returned EWOULDBLOCK despite a blocking fd")
             }
         }
-        guard let content = buf.readString(length: buf.readableBytes) else { throw LinuxError() }
-        return content.prefix(while: { $0 != "\n" })
+        return String(buffer: buf).prefix(while: { $0 != "\n" })
     }
 
-    private static func toInt<S: StringProtocol>(_ s: S) -> Int? {
-        return Int(s)
-    }
-
-    private static func countCoreIds(cores: Substring) throws -> Int {
+    private static func countCoreIds(cores: Substring) -> Int {
         let ids = cores.split(separator: "-")
         guard
-            let first = ids.first.flatMap(toInt),
-            let last = ids.last.flatMap(toInt),
+            let first = ids.first.map(String.init).flatMap(Int.init),
+            let last = ids.last.map(String.init).flatMap(Int.init),
             last > first || !cores.contains("-")
-        else { throw LinuxError() }
+        else { preconditionFailure("cpuset format is incorrect") }
         return 1 + last - first
     }
 
@@ -177,7 +170,7 @@ internal enum Linux {
             let cpuset = try? contentsOfFile(path: cpusetPath).split(separator: ","),
             !cpuset.isEmpty
         else { return nil }
-        return try? cpuset.map(countCoreIds).reduce(0, +)
+        return cpuset.map(countCoreIds).reduce(0, +)
     }
 
     static func coreCount(quota quotaPath: String,  period periodPath: String) -> Int? {

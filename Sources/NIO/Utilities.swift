@@ -80,9 +80,9 @@ public enum System {
             .map { $0.ProcessorMask.nonzeroBitCount }
             .reduce(0, +)
 #elseif os(Linux)
-        if let quota = Linux.coreCount(quota: Linux.CFS_QUOTA_PATH, period: Linux.CFS_PERIOD_PATH) {
+        if let quota = Linux.coreCount(quota: Linux.cfsQuotaPath, period: Linux.cfsPeriodPath) {
             return quota
-        } else if let cpusetCount = Linux.coreCount(cpuset: Linux.CPUSET_PATH) {
+        } else if let cpusetCount = Linux.coreCount(cpuset: Linux.cpuSetPath) {
             return cpusetCount
         } else {
             return sysconf(CInt(_SC_NPROCESSORS_ONLN))
