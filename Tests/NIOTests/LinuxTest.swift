@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -21,6 +21,8 @@ class LinuxTest: XCTestCase {
         [
             ("50000", "100000", 1),
             ("100000", "100000", 1),
+            ("100000\n", "100000", 1),
+            ("100000", "100000\n", 1),
             ("150000", "100000", 2),
             ("200000", "100000", 2),
             ("-1", "100000", nil),
@@ -47,6 +49,7 @@ class LinuxTest: XCTestCase {
             ("0,3", 2),
             ("0-3", 4),
             ("0-3,7", 5),
+            ("0-3,7\n", 5),
             ("0,2-4,6,7,9-11", 9),
             ("3-0", nil),
             ("", nil),

@@ -15,7 +15,6 @@
 // This is a companion to System.swift that provides only Linux specials: either things that exist
 // only on Linux, or things that have Linux-specific extensions.
 import CNIOLinux
-import Foundation
 
 #if os(Linux)
 internal enum TimerFd {
@@ -117,7 +116,7 @@ internal enum Linux {
     static let CFS_QUOTA_PATH = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
     static let CFS_PERIOD_PATH = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
     static let CPUSET_PATH = "/sys/fs/cgroup/cpuset/cpuset.cpus"
-    struct CpusetError: Error { }
+    struct LinuxError: Error { }
 #if os(Android)
     static let SOCK_CLOEXEC = Glibc.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Glibc.SOCK_NONBLOCK
@@ -138,19 +137,44 @@ internal enum Linux {
         return fd
     }
 
-    private static func countCoreIds(cores: String) throws -> Int {
-        let ids = cores.components(separatedBy: "-")
+    private static func contentsOfFile(path: String) throws -> Substring {
+        let fh = try NIOFileHandle(path: path)
+        defer { try? fh.close() }
+        // linux doesn't properly report /sys/fs/cgroup/* files lengths so we use a reasonable limit
+        let buffSize = 1024
+        var buf = ByteBufferAllocator().buffer(capacity: buffSize)
+        try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: buffSize) { ptr in
+            let res = try fh.withUnsafeFileDescriptor { fd -> IOResult<ssize_t> in
+                return try Posix.read(descriptor: fd, pointer: ptr.baseAddress!, size: buffSize)
+            }
+            switch res {
+            case .processed(let n):
+                return n
+            case .wouldBlock:
+                throw LinuxError()
+            }
+        }
+        guard let content = buf.readString(length: buf.readableBytes) else { throw LinuxError() }
+        return content.prefix(while: { $0 != "\n" })
+    }
+
+    private static func toInt<S: StringProtocol>(_ s: S) -> Int? {
+        return Int(s)
+    }
+
+    private static func countCoreIds(cores: Substring) throws -> Int {
+        let ids = cores.split(separator: "-")
         guard
-            let first = ids.first.flatMap(Int.init),
-            let last = ids.last.flatMap(Int.init),
-            last >= first
-        else { throw CpusetError() }
+            let first = ids.first.flatMap(toInt),
+            let last = ids.last.flatMap(toInt),
+            last > first || !cores.contains("-")
+        else { throw LinuxError() }
         return 1 + last - first
     }
 
     static func coreCount(cpuset cpusetPath: String) -> Int? {
         guard
-            let cpuset = try? String(contentsOfFile: cpusetPath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: ","),
+            let cpuset = try? contentsOfFile(path: cpusetPath).split(separator: ","),
             !cpuset.isEmpty
         else { return nil }
         return try? cpuset.map(countCoreIds).reduce(0, +)
@@ -158,11 +182,11 @@ internal enum Linux {
 
     static func coreCount(quota quotaPath: String,  period periodPath: String) -> Int? {
         guard
-            let quota = try? Int(String(contentsOfFile: quotaPath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)),
+            let quota = try? Int(contentsOfFile(path: quotaPath)),
             quota > 0
         else { return nil }
         guard
-            let period = try? Int(String(contentsOfFile: periodPath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)),
+            let period = try? Int(contentsOfFile(path: periodPath)),
             period > 0
         else { return nil }
         return (quota - 1 + period) / period // always round up if fractional CPU quota requested
