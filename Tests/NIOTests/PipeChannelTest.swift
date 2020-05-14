@@ -134,6 +134,23 @@ final class PipeChannelTest: XCTestCase {
             return [pipeIn, pipeOut]
         }
     }
+
+    func testWeDontExplodeIfWeGetPassedAKqueueOrEpoll() throws {
+        let randoFD: CInt
+        #if canImport(Darwin)
+        randoFD = try! KQueue.kqueue()
+        #else
+        randoFD = try! Epoll.epoll_create(size: 1)
+        #endif
+        defer {
+            try! Posix.close(descriptor: randoFD)
+        }
+        XCTAssertThrowsError(try NIOPipeBootstrap(group: self.group)
+                                .withPipes(inputDescriptor: randoFD,
+                                           outputDescriptor: randoFD).wait()) { error in
+            XCTAssertEqual(ENOTTY, (error as? IOError)?.errnoCode)
+        }
+    }
 }
 
 extension FileHandle {

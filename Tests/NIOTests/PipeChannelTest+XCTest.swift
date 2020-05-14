@@ -30,6 +30,7 @@ extension PipeChannelTest {
                 ("testBasicIO", testBasicIO),
                 ("testWriteErrorsCloseChannel", testWriteErrorsCloseChannel),
                 ("testWeDontAcceptRegularFiles", testWeDontAcceptRegularFiles),
+                ("testWeDontExplodeIfWeGetPassedAKqueueOrEpoll", testWeDontExplodeIfWeGetPassedAKqueueOrEpoll),
            ]
    }
 }

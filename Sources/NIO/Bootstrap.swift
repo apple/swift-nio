@@ -932,13 +932,18 @@ public final class NIOPipeBootstrap {
 
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
         let channel: PipeChannel
+        let inputFH = NIOFileHandle(descriptor: inputDescriptor)
+        let outputFH = NIOFileHandle(descriptor: outputDescriptor)
         do {
-            let inputFH = NIOFileHandle(descriptor: inputDescriptor)
-            let outputFH = NIOFileHandle(descriptor: outputDescriptor)
             channel = try PipeChannel(eventLoop: eventLoop as! SelectableEventLoop,
                                       inputPipe: inputFH,
                                       outputPipe: outputFH)
         } catch {
+            // We're failing, so the user re-owns those files.
+
+            // Both try!s must work because we shouldn't have done anything to those file handles.
+            _ = try! inputFH.takeDescriptorOwnership()
+            _ = try! outputFH.takeDescriptorOwnership()
             return eventLoop.makeFailedFuture(error)
         }
 
