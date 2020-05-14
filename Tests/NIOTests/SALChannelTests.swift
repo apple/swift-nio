@@ -182,6 +182,14 @@ final class SALChannelTest: XCTestCase, SALTest {
         }.salWait())
     }
 
+    func testWeSurviveIfIgnoringSIGPIPEFails() {
+        // We know this sometimes happens on Darwin, so let's test it.
+        let expectedError = IOError(errnoCode: EINVAL, reason: "bad")
+        XCTAssertThrowsError(try self.makeSocketChannelInjectingFailures(disableSIGPIPEFailure: expectedError)) { error in
+            XCTAssertEqual(expectedError.errnoCode, (error as? IOError)?.errnoCode)
+        }
+    }
+
     func testBasicRead() {
         let localAddress = try! SocketAddress(ipAddress: "0.1.2.3", port: 4)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)

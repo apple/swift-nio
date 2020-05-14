@@ -16,22 +16,28 @@
 source defines.sh
 
 function check_does_not_link() {
-    library="$1"
-    binary="$1"
+    local library="$1"
+    local binary="$2"
 
     case "$(uname -s)" in
         Darwin)
-            assert_equal "" "$(otool -L "$binary" | grep "/$library")"
+            otool -L "$binary" > "$tmp/linked_libs"
             ;;
         Linux)
-            assert_equal "" "$($ldd "$binary" | grep "lib$library")"
+            ldd "$binary" > "$tmp/linked_libs"
             ;;
         *)
             fail "unsupported OS $(uname -s)"
             ;;
     esac
+    echo -n > "$tmp/expected"
+    ! grep "$library" "$tmp/linked_libs" > "$tmp/linked_checked_lib"
+
+    assert_equal_files "$tmp/expected" "$tmp/linked_checked_lib"
 }
 
 for binary in NIOEchoServer NIOEchoClient NIOChatServer NIOChatClient NIOHTTP1Server; do
-    check_does_not_link Foundation "$bin_path/$binary"
+    check_does_not_link /Foundation "$bin_path/$binary" # Darwin (old)
+    check_does_not_link libFoundation "$bin_path/$binary" # Linux
+    check_does_not_link swiftFoundation "$bin_path/$binary" # Darwin (new)
 done

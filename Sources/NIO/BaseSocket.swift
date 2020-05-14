@@ -301,7 +301,12 @@ class BaseSocket: BaseSocketProtocol {
     init(descriptor: CInt) throws {
         precondition(descriptor >= 0, "invalid file descriptor")
         self.descriptor = descriptor
-        try self.ignoreSIGPIPE()
+        do {
+            try self.ignoreSIGPIPE()
+        } catch {
+            self.descriptor = -1 // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
+            throw error
+        }
     }
 
     deinit {
