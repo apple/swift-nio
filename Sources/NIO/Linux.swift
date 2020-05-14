@@ -136,7 +136,7 @@ internal enum Linux {
         return fd
     }
 
-    private static func contentsOfFile(path: String) throws -> Substring {
+    private static func firstLineOfFile(path: String) throws -> Substring {
         let fh = try NIOFileHandle(path: path)
         defer { try! fh.close() }
         // linux doesn't properly report /sys/fs/cgroup/* files lengths so we use a reasonable limit
@@ -156,18 +156,18 @@ internal enum Linux {
     }
 
     private static func countCoreIds(cores: Substring) -> Int {
-        let ids = cores.split(separator: "-")
+        let ids = cores.split(separator: "-", maxSplits: 1)
         guard
-            let first = ids.first.map(String.init).flatMap(Int.init),
-            let last = ids.last.map(String.init).flatMap(Int.init),
-            last > first || !cores.contains("-")
+            let first = ids.first.flatMap({ Int($0, radix: 10) }),
+            let last = ids.last.flatMap({ Int($0, radix: 10) }),
+            last >= first
         else { preconditionFailure("cpuset format is incorrect") }
         return 1 + last - first
     }
 
     static func coreCount(cpuset cpusetPath: String) -> Int? {
         guard
-            let cpuset = try? contentsOfFile(path: cpusetPath).split(separator: ","),
+            let cpuset = try? firstLineOfFile(path: cpusetPath).split(separator: ","),
             !cpuset.isEmpty
         else { return nil }
         return cpuset.map(countCoreIds).reduce(0, +)
@@ -175,11 +175,11 @@ internal enum Linux {
 
     static func coreCount(quota quotaPath: String,  period periodPath: String) -> Int? {
         guard
-            let quota = try? Int(contentsOfFile(path: quotaPath)),
+            let quota = try? Int(firstLineOfFile(path: quotaPath)),
             quota > 0
         else { return nil }
         guard
-            let period = try? Int(contentsOfFile(path: periodPath)),
+            let period = try? Int(firstLineOfFile(path: periodPath)),
             period > 0
         else { return nil }
         return (quota - 1 + period) / period // always round up if fractional CPU quota requested
