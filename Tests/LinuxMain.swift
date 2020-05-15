@@ -85,6 +85,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(IOErrorTest.allTests),
              testCase(IdleStateHandlerTest.allTests),
              testCase(IntegerTypesTest.allTests),
+             testCase(LinuxTest.allTests),
              testCase(MarkedCircularBufferTests.allTests),
              testCase(MessageToByteEncoderTest.allTests),
              testCase(MessageToByteHandlerTest.allTests),

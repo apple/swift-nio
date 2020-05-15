@@ -26,9 +26,6 @@ import CNIOLinux
         ///     - cpuIds: The `Set` of CPU ids. It must be non-empty and can not contain invalid ids.
         init(cpuIds: Set<Int>) {
             precondition(!cpuIds.isEmpty)
-            cpuIds.forEach{ v in
-                precondition(v >= 0 && v < System.coreCount)
-            }
             self.cpuIds = cpuIds
         }
 
