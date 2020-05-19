@@ -143,13 +143,18 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.unwrapOutboundIn(data) {
         case .head(var request):
-
             self.isChunked = sanitizeTransportHeaders(hasBody: request.method.hasRequestBody, headers: &request.headers, version: request.version) == .chunked
 
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(request: request)
             }, context: context, headers: request.headers, promise: promise)
         case .body(let bodyPart):
+            guard bodyPart.readableBytes > 0 else {
+                // Empty writes shouldn't send any bytes in chunked or identity encoding.
+                context.write(self.wrapOutboundOut(bodyPart), promise: promise)
+                return
+            }
+
             writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
         case .end(let trailers):
             writeTrailers(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)

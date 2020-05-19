@@ -140,6 +140,130 @@ class HTTPRequestEncoderTests: XCTestCase {
         assertOutboundContainsOnly(channel, "")
     }
 
+    func testChunkedEncodingIsTheDefault() {
+        let channel = EmbeddedChannel(handler: HTTPRequestEncoder())
+        var buffer = channel.allocator.buffer(capacity: 16)
+        var expected = channel.allocator.buffer(capacity: 32)
+
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+                                                                                    method: .POST,
+                                                                                    uri: "/"))))
+        expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        buffer.writeString("foo")
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.body(.byteBuffer(buffer))))
+
+        expected.clear()
+        expected.writeString("3\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+        expected.clear()
+        expected.writeString("foo")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+        expected.clear()
+        expected.writeString("\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        expected.clear()
+        expected.writeString("0\r\n\r\n")
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+
+    func testChunkedEncodingCanBetEnabled() {
+        let channel = EmbeddedChannel(handler: HTTPRequestEncoder())
+        var buffer = channel.allocator.buffer(capacity: 16)
+        var expected = channel.allocator.buffer(capacity: 32)
+
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+                                                                                    method: .POST,
+                                                                                    uri: "/",
+                                                                                    headers: ["TrAnSfEr-encoding": "chuNKED"]))))
+        expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        buffer.writeString("foo")
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.body(.byteBuffer(buffer))))
+
+        expected.clear()
+        expected.writeString("3\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+        expected.clear()
+        expected.writeString("foo")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+        expected.clear()
+        expected.writeString("\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        expected.clear()
+        expected.writeString("0\r\n\r\n")
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+
+    func testChunkedEncodingDealsWithZeroLengthChunks() {
+        let channel = EmbeddedChannel(handler: HTTPRequestEncoder())
+        var buffer = channel.allocator.buffer(capacity: 16)
+        var expected = channel.allocator.buffer(capacity: 32)
+
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+                                                                                    method: .POST,
+                                                                                    uri: "/"))))
+        expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        buffer.clear()
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.body(.byteBuffer(buffer))))
+        XCTAssertNoThrow(XCTAssertEqual(0, try channel.readOutbound(as: ByteBuffer.self)?.readableBytes))
+
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(["foo": "bar"])))
+
+        expected.clear()
+        expected.writeString("0\r\nfoo: bar\r\n\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+
+    func testChunkedEncodingWorksIfNoPromisesAreAttachedToTheWrites() {
+        let channel = EmbeddedChannel(handler: HTTPRequestEncoder())
+        var buffer = channel.allocator.buffer(capacity: 16)
+        var expected = channel.allocator.buffer(capacity: 32)
+
+        channel.write(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+                                                       method: .POST,
+                                                       uri: "/")), promise: nil)
+        channel.flush()
+        expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        buffer.writeString("foo")
+        channel.write(HTTPClientRequestPart.body(.byteBuffer(buffer)), promise: nil)
+        channel.flush()
+
+        expected.clear()
+        expected.writeString("3\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+        expected.clear()
+        expected.writeString("foo")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+        expected.clear()
+        expected.writeString("\r\n")
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        expected.clear()
+        expected.writeString("0\r\n\r\n")
+        channel.write(HTTPClientRequestPart.end(nil), promise: nil)
+        channel.flush()
+        XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
+
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+
     private func assertOutboundContainsOnly(_ channel: EmbeddedChannel, _ expected: String) {
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self).map { buffer in
             buffer.assertContainsOnly(expected)
