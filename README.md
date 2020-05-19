@@ -51,7 +51,7 @@ Redis | ✅ | ❌ | [mordil/swift-redi-stack](https://gitlab.com/Mordil/swift-re
 SwiftNIO aims to support all of the platforms where Swift is supported. Currently, it is developed and tested on macOS and Linux, and is known to support the following operating system versions:
 
 * Ubuntu 14.04+
-* macOS 10.10+; (macOS 10.14+, iOS 12+, or tvOS 12+ with [swift-nio-transport-services][repo-nio-transport-services])
+* macOS 10.9+, iOS 7+; (macOS 10.14+, iOS 12+, or tvOS 12+ with [swift-nio-transport-services][repo-nio-transport-services])
 
 ### Swift versions
 
