@@ -290,7 +290,7 @@ private class BetterHTTPParser {
             // https://github.com/nodejs/http-parser/issues/251. As a result, we check for these status
             // codes and override http_parser's handling as well.
             
-            if statusCode / 100 == 1 && statusCode != 101 {
+            if statusCode / 100 == 1 && statusCode != 101 /* Switching Protocols */ {
                 skipBody = true
             } else {
                 guard let method = self.requestHeads.popFirst()?.method else {
@@ -300,7 +300,7 @@ private class BetterHTTPParser {
                 
                 if method == .HEAD || method == .CONNECT {
                     skipBody = true
-                } else if statusCode == 204 || statusCode == 304 {
+                } else if statusCode == 204 /* No Content */ || statusCode == 304 /* Not Modified */ {
                     skipBody = true
                 }
             }
