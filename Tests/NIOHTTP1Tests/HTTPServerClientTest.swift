@@ -259,14 +259,12 @@ class HTTPServerClientTest : XCTestCase {
                         let head = HTTPResponseHead(version: req.version, status: .ok)
                         let r = HTTPServerResponsePart.head(head)
                         context.writeAndFlush(self.wrapOutboundOut(r), promise: nil)
-                            context.writeAndFlush(self.wrapOutboundOut(.end(nil))).recover { error in
-                                XCTFail("unexpected error \(error)")
-                                }.whenComplete { (_: Result<Void, Error>) -> () in
-                                    self.sentEnd = true
-                                    self.maybeClose(context: context)
-                                }
-                            
-                        
+                        context.writeAndFlush(self.wrapOutboundOut(.end(nil))).recover { error in
+                            XCTFail("unexpected error \(error)")
+                            }.whenComplete { (_: Result<Void, Error>) -> () in
+                                self.sentEnd = true
+                                self.maybeClose(context: context)
+                            }
                     }
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
@@ -679,8 +677,8 @@ class HTTPServerClientTest : XCTestCase {
                 XCTFail("unexpected type on index 0 \(parts[0])")
             }
             
-            if case .end(let tratilers) = parts[1] {
-                XCTAssertNil(tratilers)
+            if case .end(let trailers) = parts[1] {
+                XCTAssertNil(trailers)
             } else {
                 XCTFail("unexpected type on index 1 \(parts[1])")
             }
@@ -704,18 +702,16 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false)
-                    .flatMap {
-                     channel.pipeline.addHandler(httpHandler)
-                    }
-            }.bind(host: "127.0.0.1", port: 0).wait())
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
+                    channel.pipeline.addHandler(httpHandler)
+                }
+        }.bind(host: "127.0.0.1", port: 0).wait())
         defer {
-            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                ///channel.pipeline.addHandler(DebugInboundEventsHandler()).flatMap {
                     channel.pipeline.addHTTPClientHandlers()
                 .flatMap {
                     channel.pipeline.addHandler(accumulation)
