@@ -281,7 +281,7 @@ private final class TestHTTPHandler: ChannelInboundHandler {
 }
 
 extension HTTPServerRequestPart {
-    func assertHead(expectedURI: String, file: StaticString = #file, line: UInt = #line) {
+    func assertHead(expectedURI: String, file: StaticString = fullFilePath(), line: UInt = #line) {
         switch self {
         case .head(let head):
             XCTAssertEqual(.GET, head.method)
@@ -292,7 +292,7 @@ extension HTTPServerRequestPart {
         }
     }
 
-    func assertBody(expectedMessage: String, file: StaticString = #file, line: UInt = #line) {
+    func assertBody(expectedMessage: String, file: StaticString = fullFilePath(), line: UInt = #line) {
         switch self {
         case .body(let buffer):
             // Note that the test server coalesces the body parts for us.
@@ -303,7 +303,7 @@ extension HTTPServerRequestPart {
         }
     }
 
-    func assertEnd(file: StaticString = #file, line: UInt = #line) {
+    func assertEnd(file: StaticString = fullFilePath(), line: UInt = #line) {
         switch self {
         case .end(_):
             ()
@@ -343,7 +343,11 @@ private enum ResponseError: Error {
     case missingResponse
 }
 
-func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
+func assert(_ condition: @autoclosure () -> Bool,
+            within time: TimeAmount,
+            testInterval: TimeAmount? = nil,
+            _ message: String = "condition not satisfied in time",
+            file: StaticString = fullFilePath(), line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
@@ -356,3 +360,13 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
         XCTFail(message, file: file, line: line)
     }
 }
+
+#if compiler(>=5.3)
+internal func fullFilePath(_ filePath: StaticString = #filePath) -> StaticString {
+    return filePath
+}
+#else
+internal func fullFilePath(_ filePath: StaticString = #file) -> StaticString {
+    return filePath
+}
+#endif
