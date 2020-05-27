@@ -61,4 +61,34 @@ struct EventLoopCrashTests {
             el.preconditionNotInEventLoop(file: "DUMMY", line: 42)
         }.wait()
     }
+
+    let testSchedulingEndlesslyInELShutdown = CrashTest(
+        regex: #"^Precondition failed: EventLoop SelectableEventLoop \{ .* \} didn't quiesce after 1000 ticks."#
+    ) {
+        let group = MultiThreadedEventLoopGroup.init(numberOfThreads: 1)
+        defer {
+            try? group.syncShutdownGracefully()
+            exit(4)
+        }
+        let el = group.next()
+        el.scheduleTask(in: .hours(7)) {
+            // Will never happen.
+            exit(1)
+        }.futureResult.whenFailure { error in
+            guard case .some(.shutdown) = error as? EventLoopError else {
+                exit(2)
+            }
+            func f() {
+                el.scheduleTask(in: .nanoseconds(0)) { [f /* to make 5.1 compiler not crash */] in
+                    f()
+                }.futureResult.whenFailure { [f /* to make 5.1 compiler not crash */] error in
+                    guard case .some(.shutdown) = error as? EventLoopError else {
+                        exit(3)
+                    }
+                    f()
+                }
+            }
+            f()
+        }
+    }
 }
