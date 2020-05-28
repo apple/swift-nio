@@ -74,8 +74,8 @@ fileprivate final class ClientHandler: ChannelInboundHandler {
         var buffer = clientChannel.allocator.buffer(capacity: 1)
         buffer.writeInteger(3, as: UInt8.self)
         // Send the data.
-        let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
-        clientChannel.writeAndFlush(self.wrapOutboundOut(envolope), promise: nil)
+        let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
+        clientChannel.writeAndFlush(self.wrapOutboundOut(envelope), promise: nil)
     }
     
     func sendBytesAndWaitForReply(clientChannel: Channel) -> Int {
