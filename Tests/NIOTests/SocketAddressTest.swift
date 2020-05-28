@@ -346,6 +346,42 @@ class SocketAddressTest: XCTestCase {
         XCTAssertNotEqual(fifth, sixth)
     }
 
+    func testHashEqualSocketAddresses() throws {
+        let first = try SocketAddress(ipAddress: "::1", port: 80)
+        let second = try SocketAddress(ipAddress: "00:00::1", port: 80)
+        let third = try SocketAddress(ipAddress: "127.0.0.1", port: 443)
+        let fourth = try SocketAddress(ipAddress: "127.0.0.1", port: 443)
+        let fifth = try SocketAddress(unixDomainSocketPath: "/var/tmp")
+        let sixth = try SocketAddress(unixDomainSocketPath: "/var/tmp")
+
+        let set: Set<SocketAddress> = [first, second, third, fourth, fifth, sixth]
+        XCTAssertEqual(set.count, 3)
+        XCTAssertEqual(set, [first, third, fifth])
+        XCTAssertEqual(set, [second, fourth, sixth])
+    }
+
+    func testHashUnequalAddressesOnPort() throws {
+        let first = try SocketAddress(ipAddress: "::1", port: 80)
+        let second = try SocketAddress(ipAddress: "::1", port: 443)
+        let third = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
+        let fourth = try SocketAddress(ipAddress: "127.0.0.1", port: 443)
+
+        let set: Set<SocketAddress> = [first, second, third, fourth]
+        XCTAssertEqual(set.count, 4)
+    }
+
+    func testHashUnequalOnAddress() throws {
+        let first = try SocketAddress(ipAddress: "::1", port: 80)
+        let second = try SocketAddress(ipAddress: "::2", port: 80)
+        let third = try SocketAddress(ipAddress: "127.0.0.1", port: 443)
+        let fourth = try SocketAddress(ipAddress: "127.0.0.2", port: 443)
+        let fifth = try SocketAddress(unixDomainSocketPath: "/var/tmp")
+        let sixth = try SocketAddress(unixDomainSocketPath: "/var/tmq")
+
+        let set: Set<SocketAddress> = [first, second, third, fourth, fifth, sixth]
+        XCTAssertEqual(set.count, 6)
+    }
+
     func testUnequalAcrossFamilies() throws {
         let first = try SocketAddress(ipAddress: "::1", port: 80)
         let second = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
@@ -355,6 +391,29 @@ class SocketAddressTest: XCTestCase {
         XCTAssertNotEqual(second, third)
         // By the transitive property first != third, but let's protect against me being an idiot
         XCTAssertNotEqual(third, first)
+    }
+
+    func testUnixSocketAddressIgnoresTrailingJunk() throws {
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
+        let pathBytes: [UInt8] = "/var/tmp".utf8 + [0]
+
+        pathBytes.withUnsafeBufferPointer { srcPtr in
+            withUnsafeMutablePointer(to: &addr.sun_path) { dstPtr in
+                dstPtr.withMemoryRebound(to: UInt8.self, capacity: srcPtr.count) { dstPtr in
+                    dstPtr.assign(from: srcPtr.baseAddress!, count: srcPtr.count)
+                }
+            }
+        }
+
+        let first = SocketAddress(addr)
+
+        // Now poke a random byte at the end. This should be ignored, as that's uninitialized memory.
+        addr.sun_path.100 = 60
+        let second = SocketAddress(addr)
+
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(first.hashValue, second.hashValue)
     }
 
     func testPortAccessor() throws {
