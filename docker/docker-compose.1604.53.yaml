@@ -37,7 +37,7 @@ services:
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=226050
       - MAX_ALLOCS_ALLOWED_1000_reqs=6100
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=4100
-      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=208000
+      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=208100
       - SANITIZER_ARG=--sanitize=thread
 
   performance-test:
