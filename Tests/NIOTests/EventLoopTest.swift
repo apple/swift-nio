@@ -1159,6 +1159,19 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertTrue(lock.withLock { hasBeenShutdown })
     }
 
+    func testThreadTakeoverUnsetsCurrentEventLoop() {
+        XCTAssertNil(MultiThreadedEventLoopGroup.currentEventLoop)
+
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { el in
+            XCTAssert(el === MultiThreadedEventLoopGroup.currentEventLoop)
+            el.shutdownGracefully { error in
+                XCTAssertNil(error)
+            }
+        }
+
+        XCTAssertNil(MultiThreadedEventLoopGroup.currentEventLoop)
+    }
+
     func testWeCanDoTrulySingleThreadedNetworking() {
         final class SaveReceivedByte: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer

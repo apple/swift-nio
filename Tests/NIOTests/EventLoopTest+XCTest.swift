@@ -73,6 +73,7 @@ extension EventLoopTest {
                 ("testSafeToExecuteTrue", testSafeToExecuteTrue),
                 ("testSafeToExecuteFalse", testSafeToExecuteFalse),
                 ("testTakeOverThreadAndAlsoTakeItBack", testTakeOverThreadAndAlsoTakeItBack),
+                ("testThreadTakeoverUnsetsCurrentEventLoop", testThreadTakeoverUnsetsCurrentEventLoop),
                 ("testWeCanDoTrulySingleThreadedNetworking", testWeCanDoTrulySingleThreadedNetworking),
            ]
    }
