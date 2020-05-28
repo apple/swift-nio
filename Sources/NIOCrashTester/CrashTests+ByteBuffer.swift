@@ -21,4 +21,10 @@ struct ByteBufferCrashTests {
         var buffer = ByteBufferAllocator().buffer(capacity: 16)
         buffer.moveReaderIndex(forwardBy: 1)
     }
+
+    let testAllocatingNegativeSize = CrashTest(
+        regex: #"^Precondition failed: ByteBuffer capacity must be positive."#
+    ) {
+        _ = ByteBufferAllocator().buffer(capacity: -1)
+    }
 }

@@ -187,8 +187,7 @@ enum UDPShared {
                 
                 // Set the transmission data.
                 let line = "Something to send there and back again."
-                var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
-                buffer.writeString(line)
+                let buffer = context.channel.allocator.buffer(string: line)
                 
                 // Forward the data.
                 let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)

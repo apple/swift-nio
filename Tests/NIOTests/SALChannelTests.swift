@@ -33,8 +33,7 @@ final class SALChannelTest: XCTestCase, SALTest {
     func testBasicConnectedChannel() throws {
         let localAddress = try! SocketAddress(ipAddress: "0.1.2.3", port: 4)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
-        var buffer = ByteBufferAllocator().buffer(capacity: 10)
-        buffer.writeString("xxx")
+        let buffer = ByteBuffer(string: "xxx")
 
         let channel = try self.makeConnectedSocketChannel(localAddress: localAddress,
                                                           remoteAddress: serverAddress)
@@ -66,8 +65,7 @@ final class SALChannelTest: XCTestCase, SALTest {
 
         let localAddress = try! SocketAddress(ipAddress: "0.1.2.3", port: 4)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
-        var buffer = ByteBufferAllocator().buffer(capacity: 10)
-        buffer.writeString("12")
+        var buffer = ByteBuffer(string: "12")
 
         let writableNotificationStepExpectation = NIOAtomic<Int>.makeAtomic(value: 0)
 
@@ -222,8 +220,7 @@ final class SALChannelTest: XCTestCase, SALTest {
             return
         }
 
-        var buffer = ByteBufferAllocator().buffer(capacity: 5)
-        buffer.writeString("hello")
+        let buffer = ByteBuffer(string: "hello")
 
         let g = DispatchGroup()
         g.enter()
