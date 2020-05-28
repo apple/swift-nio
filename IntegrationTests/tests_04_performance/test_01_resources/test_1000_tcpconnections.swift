@@ -42,7 +42,7 @@ func run(identifier: String) {
             }
             // Send a byte to make sure everything is really open.
             var buffer = clientChannel.allocator.buffer(capacity: 1)
-            buffer.writeBytes([1])
+            buffer.writeInteger(1, as: UInt8.self)
             try! clientChannel.writeAndFlush(NIOAny(buffer)).wait()
         }
         return numberOfIterations
