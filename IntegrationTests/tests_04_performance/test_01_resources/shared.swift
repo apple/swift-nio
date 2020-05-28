@@ -25,18 +25,16 @@ final class RepeatedRequests: ChannelInboundHandler {
 
 	private let numberOfRequests: Int
 	private var remainingNumberOfRequests: Int
-	private var isDonePromise: EventLoopPromise<Int>
-    private let closeChannelOnDone: Bool
+	private let isDonePromise: EventLoopPromise<Int>
 	static var requestHead: HTTPRequestHead {
 		var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/allocation-test-1")
 		head.headers.add(name: "Host", value: "foo-\(ObjectIdentifier(self)).com")
 		return head
 	}
 
-    init(numberOfRequests: Int, eventLoop: EventLoop, closeChannelOnDone: Bool = false) {
+	init(numberOfRequests: Int, eventLoop: EventLoop) {
 		self.remainingNumberOfRequests = numberOfRequests
 		self.numberOfRequests = numberOfRequests
-        self.closeChannelOnDone = closeChannelOnDone
 		self.isDonePromise = eventLoop.makePromise()
 	}
 
@@ -55,11 +53,7 @@ final class RepeatedRequests: ChannelInboundHandler {
 		let respPart = self.unwrapInboundIn(data)
 		if case .end(nil) = respPart {
 			if self.remainingNumberOfRequests <= 0 {
-                if closeChannelOnDone {
-                    context.channel.close().map { self.numberOfRequests - self.remainingNumberOfRequests }.cascade(to: self.isDonePromise)
-                } else {
-                    self.isDonePromise.succeed(self.numberOfRequests - self.remainingNumberOfRequests)
-                }
+				context.channel.close().map { self.numberOfRequests - self.remainingNumberOfRequests }.cascade(to: self.isDonePromise)
 			} else {
 				self.remainingNumberOfRequests -= 1
 				context.write(self.wrapOutboundOut(.head(RepeatedRequests.requestHead)), promise: nil)
@@ -67,11 +61,6 @@ final class RepeatedRequests: ChannelInboundHandler {
 			}
 		}
 	}
-    
-    func reset(eventLoop: EventLoop) {
-        self.remainingNumberOfRequests = self.numberOfRequests
-        self.isDonePromise = eventLoop.makePromise() // Better not be waiting on the old when when you call this.
-    }
 }
 
 private final class SimpleHTTPServer: ChannelInboundHandler {
@@ -105,17 +94,6 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
             context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
         }
     }
-}
-
-func makeServerChannel() throws -> Channel {
-    return try ServerBootstrap(group: group)
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        .childChannelInitializer { channel in
-            channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
-                                                         withErrorHandling: false).flatMap {
-                channel.pipeline.addHandler(SimpleHTTPServer())
-            }
-        }.bind(to: localhostPickPort).wait()
 }
 
 func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
