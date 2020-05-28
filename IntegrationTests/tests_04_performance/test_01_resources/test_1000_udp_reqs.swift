@@ -64,21 +64,15 @@ fileprivate final class ClientHandler: ChannelInboundHandler {
     }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        print("error: ", error)
-
-        // As we are not really interested getting notified on success or failure we just pass nil as promise to
-        // reduce allocations.
-        context.close(promise: nil)
+        fatalError()
     }
     
-    let pileOfBytes: [UInt8] = .init(repeating: 5, count: 1000)
-    
     var iterationsOutstanding = 0
-    var whenDone: EventLoopPromise<()>? = nil
+    var whenDone: EventLoopPromise<Void>? = nil
     
     private func sendBytes(clientChannel: Channel) {
-        var buffer = clientChannel.allocator.buffer(capacity: pileOfBytes.count)
-        buffer.writeBytes(pileOfBytes)
+        var buffer = clientChannel.allocator.buffer(capacity: 1)
+        buffer.writeInteger(3, as: UInt8.self)
         // Send the data.
         let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
         clientChannel.writeAndFlush(self.wrapOutboundOut(envolope), promise: nil)
