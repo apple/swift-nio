@@ -225,7 +225,7 @@ public final class NIOHTTP1TestServer {
         self.eventLoop = group.next()
 
         self.serverChannel = try! ServerBootstrap(group: self.eventLoop)
-            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childOptions([.disableAutoRead])
             .childChannelInitializer { channel in
                 switch self.state {
                 case .channelsAvailable(var channels):

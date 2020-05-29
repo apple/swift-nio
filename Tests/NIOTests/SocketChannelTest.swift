@@ -577,6 +577,10 @@ public final class SocketChannelTest : XCTestCase {
             // Build server channel; after this point the server called listen()
             let serverPromise = group.next().makePromise(of: IOError.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+                .serverOptions([.allowImmediateLocalEndpointAddressReuse,
+                                .maximumUnacceptedConnectionBacklog(256),
+                                .disableAutoRead])
+                .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait())
 

@@ -298,7 +298,7 @@ class ChannelNotificationTest: XCTestCase {
             .serverChannelInitializer { channel in
                 channel.pipeline.addHandler(ServerSocketChannelLifecycleVerificationHandler())
             }
-            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childOptions([.disableAutoRead])
             .childChannelInitializer { channel in
                 channel.pipeline.addHandler(AcceptedSocketChannelLifecycleVerificationHandler(acceptedChannelPromise))
             }

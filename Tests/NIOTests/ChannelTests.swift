@@ -1566,7 +1566,7 @@ public final class ChannelTests: XCTestCase {
         let handler = VerifyNoReadBeforeEOFHandler()
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverOptions([.allowImmediateLocalEndpointAddressReuse])
-            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childOptions([.disableAutoRead])
             .childChannelInitializer { ch in
                 ch.pipeline.addHandler(handler)
             }
@@ -1622,7 +1622,7 @@ public final class ChannelTests: XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverOptions([.allowImmediateLocalEndpointAddressReuse])
-            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childOptions([.disableAutoRead])
             .childChannelInitializer { ch in
                 ch.pipeline.addHandler(VerifyEOFReadOrderingAndCloseInChannelReadHandler())
             }
@@ -1680,7 +1680,7 @@ public final class ChannelTests: XCTestCase {
         let allDone = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverOptions([.allowImmediateLocalEndpointAddressReuse])
-            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childOptions([.disableAutoRead])
             .childChannelInitializer { ch in
                 ch.pipeline.addHandler(CloseWhenWeGetEOFHandler(allDone: allDone))
             }
@@ -1738,7 +1738,7 @@ public final class ChannelTests: XCTestCase {
         let promise = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverOptions([.allowImmediateLocalEndpointAddressReuse])
-            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childOptions([.disableAutoRead])
             .childChannelInitializer { ch in
                 ch.pipeline.addHandler(ChannelInactiveVerificationHandler(promise))
             }

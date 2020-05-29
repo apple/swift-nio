@@ -649,7 +649,7 @@ class EchoServerClientTest : XCTestCase {
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             // We will only start reading once we wrote all data on the accepted channel.
-            //.channelOption(ChannelOptions.autoRead, value: false)
+            //.childOptions([.disableAutoRead])
             .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
             .channelInitializer { channel in
                 channel.pipeline.addHandler(WriteHandler()).flatMap {
