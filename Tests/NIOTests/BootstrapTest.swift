@@ -556,7 +556,7 @@ class BootstrapTest: XCTestCase {
             XCTAssertNotEqual(longSetValue, unsetValue)
         }
         
-        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
+        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.so_reuseaddr),
                                    setValue: 1,
                                    shortOption: .allowImmediateLocalEndpointAddressReuse)
         #if !os(Windows)
@@ -683,7 +683,7 @@ class BootstrapTest: XCTestCase {
             XCTAssertNotEqual(longSetValue, unsetValue)
         }
         
-        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
+        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.so_reuseaddr),
                                    setValue: 1,
                                    shortOption: .allowImmediateLocalEndpointAddressReuse)
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
@@ -729,7 +729,7 @@ class BootstrapTest: XCTestCase {
             XCTAssertNotEqual(longSetValue, unsetValue)
         }
         
-        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
+        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.so_reuseaddr),
                                    setValue: 1,
                                    shortOption: .allowImmediateLocalEndpointAddressReuse)
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
@@ -772,7 +772,7 @@ class BootstrapTest: XCTestCase {
             XCTAssertNotEqual(longSetValue, unsetValue)
         }
         
-        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.reuseaddr),
+        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.so_reuseaddr),
                                    setValue: 1,
                                    shortOption: .allowImmediateLocalEndpointAddressReuse)
         try checkOptionEquivalence(longOption: ChannelOptions.autoRead,

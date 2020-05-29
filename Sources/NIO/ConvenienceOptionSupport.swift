@@ -291,7 +291,7 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
         var result = optionApplier
         if self.allowImmediateLocalEndpointAddressReuse {
-            result = result.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            result = result.applyOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         }
         if self.allowRemoteHalfClosure {
             result = result.applyOption(ChannelOptions.allowRemoteHalfClosure, value: true)
@@ -400,7 +400,7 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable
     func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
         var result = optionApplier
         if self.allowImmediateLocalEndpointAddressReuse {
-            result = result.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            result = result.applyOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         }
         if let value = self.maximumUnacceptedConnectionBacklog {
             result = result.applyOption(ChannelOptions.backlog, value: value)
@@ -488,7 +488,7 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
         var result = optionApplier
         if self.allowImmediateLocalEndpointAddressReuse {
-            result = result.applyOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+            result = result.applyOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         }
         if self.disableAutoRead {
             result = result.applyOption(ChannelOptions.autoRead, value: false)
