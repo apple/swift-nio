@@ -30,11 +30,7 @@ fileprivate final class ServerEchoHandler: ChannelInboundHandler {
     }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        print("error: ", error)
-
-        // As we are not really interested getting notified on success or failure we just pass nil as promise to
-        // reduce allocations.
-        context.close(promise: nil)
+        fatalError()
     }
 }
 
