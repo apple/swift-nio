@@ -38,6 +38,8 @@ func run(identifier: String) {
 
     measure(identifier: identifier) {
         let numberOfIterations = 1000
+        var buffer = ByteBufferAllocator().buffer(capacity: 1)
+        buffer.writeInteger(1, as: UInt8.self)
         for _ in 0 ..< numberOfIterations {
             let clientChannel = try! clientBootstrap.bind(to: localhostPickPort).wait()
             defer {
@@ -45,8 +47,6 @@ func run(identifier: String) {
             }
             
             // Send a byte to make sure everything is really open.
-            var buffer = clientChannel.allocator.buffer(capacity: 1)
-            buffer.writeInteger(1, as: UInt8.self)
             let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
             clientChannel.writeAndFlush(envelope, promise: nil)
         }
