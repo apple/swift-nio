@@ -37,6 +37,10 @@ extension HTTPRequestEncoderTests {
                 ("testNoChunkedEncodingForHTTP10", testNoChunkedEncodingForHTTP10),
                 ("testBody", testBody),
                 ("testCONNECT", testCONNECT),
+                ("testChunkedEncodingIsTheDefault", testChunkedEncodingIsTheDefault),
+                ("testChunkedEncodingCanBetEnabled", testChunkedEncodingCanBetEnabled),
+                ("testChunkedEncodingDealsWithZeroLengthChunks", testChunkedEncodingDealsWithZeroLengthChunks),
+                ("testChunkedEncodingWorksIfNoPromisesAreAttachedToTheWrites", testChunkedEncodingWorksIfNoPromisesAreAttachedToTheWrites),
            ]
    }
 }

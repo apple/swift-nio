@@ -120,6 +120,7 @@ enum UserToKernel {
     case reregister(Selectable, SelectorEventSet)
     case deregister(Selectable)
     case whenReady(SelectorStrategy)
+    case disableSIGPIPE(CInt)
     case write(CInt, ByteBuffer)
     case writev(CInt, [ByteBuffer])
 }
@@ -240,7 +241,17 @@ class HookedSocket: Socket, UserKernelInterface {
         try super.init(descriptor: descriptor)
     }
 
-    override func ignoreSIGPIPE() throws {}
+    override func ignoreSIGPIPE() throws {
+        try self.withUnsafeHandle { fd in
+            try self.userToKernel.waitForEmptyAndSet(.disableSIGPIPE(fd))
+            let ret = try self.waitForKernelReturn()
+            if case .returnVoid = ret {
+                return
+            } else {
+                throw UnexpectedKernelReturn(ret)
+            }
+        }
+    }
 
     override func localAddress() throws -> SocketAddress {
         try self.userToKernel.waitForEmptyAndSet(.localAddress)
@@ -445,6 +456,7 @@ extension SALTest {
     private func makeSocketChannel(eventLoop: SelectableEventLoop,
                                    file: StaticString = #file, line: UInt = #line) throws -> SocketChannel {
         let channel = try eventLoop.runSAL(syscallAssertions: {
+            try self.assertdisableSIGPIPE(expectedFD: .max, result: .success(()))
             try self.assertLocalAddress(address: nil)
             try self.assertRemoteAddress(address: nil)
         }) {
@@ -452,6 +464,28 @@ extension SALTest {
                                                    kernelToUser: self.kernelToUserBox,
                                                    descriptor: .max),
                               eventLoop: eventLoop)
+        }
+        try self.assertParkedRightNow()
+        return channel
+    }
+
+    func makeSocketChannelInjectingFailures(disableSIGPIPEFailure: IOError?) throws -> SocketChannel {
+        let channel = try self.loop.runSAL(syscallAssertions: {
+            try self.assertdisableSIGPIPE(expectedFD: .max,
+                                         result: disableSIGPIPEFailure.map {
+                                            Result<Void, IOError>.failure($0)
+                                         } ?? .success(()))
+            guard disableSIGPIPEFailure == nil else {
+                // if F_NOSIGPIPE failed, we shouldn't see other syscalls.
+                return
+            }
+            try self.assertLocalAddress(address: nil)
+            try self.assertRemoteAddress(address: nil)
+        }) {
+            try SocketChannel(socket: HookedSocket(userToKernel: self.userToKernelBox,
+                                                   kernelToUser: self.kernelToUserBox,
+                                                   descriptor: .max),
+                              eventLoop: self.loop)
         }
         try self.assertParkedRightNow()
         return channel
@@ -546,6 +580,27 @@ extension SALTest {
     func assertWakeup(file: StaticString = #file, line: UInt = #line) throws {
         try self.selector.assertWakeup(file: file, line: line)
     }
+
+    func assertdisableSIGPIPE(expectedFD: CInt,
+                             result: Result<Void, IOError>,
+                             file: StaticString = #file, line: UInt = #line) throws {
+        SAL.printIfDebug("\(#function)")
+        let ret: KernelToUser
+        switch result {
+        case .success:
+            ret = .returnVoid
+        case .failure(let error):
+            ret = .error(error)
+        }
+        try self.selector.assertSyscallAndReturn(ret, file: file, line: line) { syscall in
+            if case .disableSIGPIPE(expectedFD) = syscall {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+
 
     func assertLocalAddress(address: SocketAddress?, file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")

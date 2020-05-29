@@ -65,9 +65,7 @@ public struct HTTPRequestHead: Equatable {
             return self._storage.method
         }
         set {
-            if !isKnownUniquelyReferenced(&self._storage) {
-                self._storage = self._storage.copy()
-            }
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.method = newValue
         }
     }
@@ -78,9 +76,7 @@ public struct HTTPRequestHead: Equatable {
             return self._storage.uri
         }
         set {
-            if !isKnownUniquelyReferenced(&self._storage) {
-                self._storage = self._storage.copy()
-            }
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.uri = newValue
         }
     }
@@ -91,9 +87,7 @@ public struct HTTPRequestHead: Equatable {
             return self._storage.version
         }
         set {
-            if !isKnownUniquelyReferenced(&self._storage) {
-                self._storage = self._storage.copy()
-            }
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.version = newValue
         }
     }
@@ -121,6 +115,12 @@ public struct HTTPRequestHead: Equatable {
 
     public static func ==(lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
         return lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version && lhs.headers == rhs.headers
+    }
+    
+    private mutating func copyStorageIfNotUniquelyReferenced () {
+        if !isKnownUniquelyReferenced(&self._storage) {
+            self._storage = self._storage.copy()
+        }
     }
 }
 
@@ -192,9 +192,7 @@ public struct HTTPResponseHead: Equatable {
             return self._storage.status
         }
         set {
-            if !isKnownUniquelyReferenced(&self._storage) {
-                self._storage = self._storage.copy()
-            }
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.status = newValue
         }
     }
@@ -205,9 +203,7 @@ public struct HTTPResponseHead: Equatable {
             return self._storage.version
         }
         set {
-            if !isKnownUniquelyReferenced(&self._storage) {
-                self._storage = self._storage.copy()
-            }
+            self.copyStorageIfNotUniquelyReferenced()
             self._storage.version = newValue
         }
     }
@@ -224,6 +220,12 @@ public struct HTTPResponseHead: Equatable {
 
     public static func ==(lhs: HTTPResponseHead, rhs: HTTPResponseHead) -> Bool {
         return lhs.status == rhs.status && lhs.version == rhs.version && lhs.headers == rhs.headers
+    }
+    
+    private mutating func copyStorageIfNotUniquelyReferenced () {
+        if !isKnownUniquelyReferenced(&self._storage) {
+            self._storage = self._storage.copy()
+        }
     }
 }
 

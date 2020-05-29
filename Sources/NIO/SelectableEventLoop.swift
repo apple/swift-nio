@@ -60,6 +60,7 @@ internal final class SelectableEventLoop: EventLoop {
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
     private var tasksCopy = ContiguousArray<() -> Void>()
 
+    private let canBeShutdownIndividually: Bool
     @usableFromInline
     internal let _tasksLock = Lock()
     private let _externalStateLock = Lock()
@@ -131,7 +132,7 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    internal init(thread: NIOThread, selector: NIO.Selector<NIORegistration>) {
+    internal init(thread: NIOThread, selector: NIO.Selector<NIORegistration>, canBeShutdownIndividually: Bool) {
         self._selector = selector
         self.thread = thread
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
@@ -144,6 +145,7 @@ internal final class SelectableEventLoop: EventLoop {
         self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
+        self.canBeShutdownIndividually = canBeShutdownIndividually
     }
 
     deinit {
@@ -369,11 +371,21 @@ internal final class SelectableEventLoop: EventLoop {
             }
         }
         var nextReadyTask: ScheduledTask? = nil
+        self._tasksLock.withLock {
+            if let firstTask = self._scheduledTasks.peek() {
+                // The reason this is necessary is a very interesting race:
+                // In theory (and with `makeEventLoopFromCallingThread` even in practise), we could publish an
+                // `EventLoop` reference _before_ the EL thread has entered the `run` function.
+                // If that is the case, we need to schedule the first wakeup at the ready time for this task that was
+                // enqueued really early on, so let's do that :).
+                nextReadyTask = firstTask
+            }
+        }
         while self.internalState != .noLongerRunning && self.internalState != .exitingThread {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
-                try _selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
+                try self._selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
                     switch ev.registration {
                     case .serverSocketChannel(let chan, _):
                         self.handleEvent(ev.io, channel: chan)
@@ -397,7 +409,7 @@ internal final class SelectableEventLoop: EventLoop {
             // We need to ensure we process all tasks, even if a task added another task again
             while true {
                 // TODO: Better locking
-                _tasksLock.withLockVoid {
+                self._tasksLock.withLockVoid {
                     if !self._scheduledTasks.isEmpty {
                         // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
                         let now: NIODeadline = .now()
@@ -406,7 +418,7 @@ internal final class SelectableEventLoop: EventLoop {
                         while tasksCopy.count < tasksCopy.capacity, let task = self._scheduledTasks.peek() {
                             if task.readyIn(now) <= .nanoseconds(0) {
                                 self._scheduledTasks.pop()
-                                tasksCopy.append(task.task)
+                                self.tasksCopy.append(task.task)
                             } else {
                                 nextReadyTask = task
                                 break
@@ -419,19 +431,19 @@ internal final class SelectableEventLoop: EventLoop {
                 }
 
                 // all pending tasks are set to occur in the future, so we can stop looping.
-                if tasksCopy.isEmpty {
+                if self.tasksCopy.isEmpty {
                     break
                 }
 
                 // Execute all the tasks that were summited
-                for task in tasksCopy {
+                for task in self.tasksCopy {
                     /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
                     withAutoReleasePool {
                         task()
                     }
                 }
                 // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
-                tasksCopy.removeAll(keepingCapacity: true)
+                self.tasksCopy.removeAll(keepingCapacity: true)
             }
         }
 
@@ -490,7 +502,9 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    internal func syncFinaliseClose() {
+    internal func syncFinaliseClose(joinThread: Bool) {
+        // This may not be true in the future but today we need to join all ELs that can't be shut down individually.
+        assert(joinThread != self.canBeShutdownIndividually)
         let goAhead = self.externalStateLock.withLock { () -> Bool in
             switch self.externalState {
             case .closed:
@@ -505,7 +519,9 @@ internal final class SelectableEventLoop: EventLoop {
         guard goAhead else {
             return
         }
-        self.thread.join()
+        if joinThread {
+            self.thread.join()
+        }
         self.externalStateLock.withLock {
             precondition(self.externalState == .reclaimingResources)
             self.externalState = .resourcesReclaimed
@@ -514,10 +530,22 @@ internal final class SelectableEventLoop: EventLoop {
 
     @usableFromInline
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
-        // This function is never called legally because the only possibly owner of an `SelectableEventLoop` is
-        // `MultiThreadedEventLoopGroup` which calls `closeGently`.
-        queue.async {
-            callback(EventLoopError.unsupportedOperation)
+        if self.canBeShutdownIndividually {
+            self.initiateClose(queue: queue) { result in
+                self.syncFinaliseClose(joinThread: false) // This thread was taken over by somebody else
+                switch result {
+                case .success:
+                    callback(nil)
+                case .failure(let error):
+                    callback(error)
+                }
+            }
+        } else {
+            // This function is never called legally because the only possibly owner of an `SelectableEventLoop` is
+            // `MultiThreadedEventLoopGroup` which calls `initiateClose` followed by `syncFinaliseClose`.
+            queue.async {
+                callback(EventLoopError.unsupportedOperation)
+            }
         }
     }
 }

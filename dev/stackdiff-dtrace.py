@@ -29,7 +29,9 @@ def put_in_dict(path):
             if re.match(num_regex, line):
                 key = "\n".join(map(lambda l: l.strip().split("+")[0],
                                     current_text.split("\n")[0:8]))
-                dictionary[key] = (int(line), current_text)
+                values = dictionary.get(key, [])
+                values.append( (int(line), current_text) )
+                dictionary[key] = values
                 current_text = ""
             elif line.strip() == "":
                 pass
@@ -37,12 +39,35 @@ def put_in_dict(path):
                 current_text = current_text + line.strip() + "\n"
     return dictionary
 
+def total_count_for_key(d, key):
+    value = d[key]
+    return sum(map(lambda x : x[0], value))
+
+def total_for_dictionary(d):
+    total = 0
+    for k in d.keys():
+        total += total_count_for_key(d, k)
+    return total
+
 def extract_useful_keys(d):
     keys = set()
     for k in d.keys():
-        if d[k][0] > 1000:
+        if total_count_for_key(d, k) >= 1000:
             keys.add(k)
     return keys
+
+def print_dictionary_member(d, key):
+    print(total_count_for_key(d, key))
+    print(key)
+    print()
+    print_dictionary_member_detail(d, key)
+
+def print_dictionary_member_detail(d, key):
+    value = d[key]
+    for (count, stack) in value:
+        print("    %d" % count)
+        print("        " + stack.replace("\n", "\n        "))
+    
 
 def usage():
     print("Usage: stackdiff-dtrace.py OLD-STACKS NEW-STACKS")
@@ -74,20 +99,35 @@ useful_before_keys = extract_useful_keys(before_dict)
 
 print("")
 print("### only in AFTER")
+only_after_total = 0
 for x in sorted(list(useful_after_keys - useful_before_keys)):
-    print(after_dict[x][0])
-    print(after_dict[x][1])
+    print_dictionary_member(after_dict, x)
+    only_after_total += total_count_for_key(after_dict, x)
+print("Total for only in AFTER:  %d" % only_after_total)
 
 print("")
 print("### only in BEFORE")
+only_before_total = 0
 for x in sorted(list(useful_before_keys - useful_after_keys)):
-    print(before_dict[x][0])
-    print(before_dict[x][1])
+    print_dictionary_member(before_dict, x)
+    only_before_total += total_count_for_key(before_dict, x)
+print("Total for only in BEFORE:  %d" % only_before_total)
 
 print("")
 print("### different numbers")
 for x in sorted(list(useful_before_keys & useful_after_keys)):
-    if after_dict[x][0] != before_dict[x][0]:
-        print("before: %d, after: %d" % (before_dict[x][0],
-                                         after_dict[x][0]))
-        print(after_dict[x][1])
+    before_count = total_count_for_key(before_dict, x)
+    after_count = total_count_for_key(after_dict, x)
+    if before_count != after_count:
+        print("before: %d, after: %d" % (before_count,
+                                         after_count))
+        print("  AFTER")
+        print_dictionary_member_detail(after_dict, x)
+        print("  BEFORE")
+        print_dictionary_member_detail(before_dict, x)
+        print()
+
+everything_before = total_for_dictionary(before_dict)
+everything_after = total_for_dictionary(after_dict)
+print("Total of _EVERYTHING_ BEFORE:  %d,  AFTER:  %d,  DIFFERENCE:  %d" % 
+    (everything_before, everything_after, everything_after - everything_before))

@@ -2564,9 +2564,9 @@ public final class ChannelTests: XCTestCase {
                                                              singleThreadedELG.next().makePromise()]
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
             .serverOptions([.allowImmediateLocalEndpointAddressReuse])
-            .serverChannelOption(ChannelOptions.socketOption(.timestamp), value: 1)
-            .childChannelOption(ChannelOptions.socketOption(.keepalive), value: 1)
-            .childChannelOption(ChannelOptions.tcpOption(.nodelay), value: 0)
+            .serverChannelOption(ChannelOptions.socketOption(.so_timestamp), value: 1)
+            .childChannelOption(ChannelOptions.socketOption(.so_keepalive), value: 1)
+            .childChannelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: 0)
             .childChannelInitializer { channel in
                 acceptedChannels[numberOfAcceptedChannel].succeed(channel)
                 numberOfAcceptedChannel += 1
@@ -2577,12 +2577,12 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try server.close().wait())
         }
-        XCTAssertTrue(try getBoolSocketOption(channel: server, level: .socket, name: .reuseaddr))
-        XCTAssertTrue(try getBoolSocketOption(channel: server, level: .socket, name: .timestamp))
+        XCTAssertTrue(try getBoolSocketOption(channel: server, level: .socket, name: .so_reuseaddr))
+        XCTAssertTrue(try getBoolSocketOption(channel: server, level: .socket, name: .so_timestamp))
 
         let client1 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
             .options([.allowImmediateLocalEndpointAddressReuse])
-            .channelOption(ChannelOptions.tcpOption(.nodelay), value: 0)
+            .channelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: 0)
             .connect(to: server.localAddress!)
             .wait())
         let accepted1 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())
@@ -2605,29 +2605,29 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try client3.close().wait())
         }
 
-        XCTAssertTrue(try getBoolSocketOption(channel: client1, level: .socket, name: .reuseaddr))
+        XCTAssertTrue(try getBoolSocketOption(channel: client1, level: .socket, name: .so_reuseaddr))
 
-        XCTAssertFalse(try getBoolSocketOption(channel: client1, level: .tcp, name: .nodelay))
+        XCTAssertFalse(try getBoolSocketOption(channel: client1, level: .tcp, name: .tcp_nodelay))
 
-        XCTAssertTrue(try getBoolSocketOption(channel: accepted1, level: .socket, name: .keepalive))
+        XCTAssertTrue(try getBoolSocketOption(channel: accepted1, level: .socket, name: .so_keepalive))
 
-        XCTAssertFalse(try getBoolSocketOption(channel: accepted1, level: .tcp, name: .nodelay))
+        XCTAssertFalse(try getBoolSocketOption(channel: accepted1, level: .tcp, name: .tcp_nodelay))
 
-        XCTAssertTrue(try getBoolSocketOption(channel: client2, level: .socket, name: .reuseaddr))
+        XCTAssertTrue(try getBoolSocketOption(channel: client2, level: .socket, name: .so_reuseaddr))
 
-        XCTAssertTrue(try getBoolSocketOption(channel: client2, level: .tcp, name: .nodelay))
+        XCTAssertTrue(try getBoolSocketOption(channel: client2, level: .tcp, name: .tcp_nodelay))
 
-        XCTAssertTrue(try getBoolSocketOption(channel: accepted2, level: .socket, name: .keepalive))
+        XCTAssertTrue(try getBoolSocketOption(channel: accepted2, level: .socket, name: .so_keepalive))
 
-        XCTAssertFalse(try getBoolSocketOption(channel: accepted2, level: .tcp, name: .nodelay))
+        XCTAssertFalse(try getBoolSocketOption(channel: accepted2, level: .tcp, name: .tcp_nodelay))
 
-        XCTAssertFalse(try getBoolSocketOption(channel: client3, level: .socket, name: .reuseaddr))
+        XCTAssertFalse(try getBoolSocketOption(channel: client3, level: .socket, name: .so_reuseaddr))
 
-        XCTAssertTrue(try getBoolSocketOption(channel: client3, level: .tcp, name: .nodelay))
+        XCTAssertTrue(try getBoolSocketOption(channel: client3, level: .tcp, name: .tcp_nodelay))
 
-        XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: .socket, name: .keepalive))
+        XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: .socket, name: .so_keepalive))
 
-        XCTAssertFalse(try getBoolSocketOption(channel: accepted3, level: .tcp, name: .nodelay))
+        XCTAssertFalse(try getBoolSocketOption(channel: accepted3, level: .tcp, name: .tcp_nodelay))
     }
 
     func testUnprocessedOutboundUserEventFailsOnServerSocketChannel() throws {
@@ -2706,7 +2706,7 @@ public final class ChannelTests: XCTestCase {
         }
         XCTAssertNoThrow(XCTAssertTrue(try getBoolSocketOption(channel: server,
                                                                level: .tcp,
-                                                               name: .nodelay)))
+                                                               name: .tcp_nodelay)))
 
         let client = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
             .connect(to: server.localAddress!)
@@ -2717,10 +2717,10 @@ public final class ChannelTests: XCTestCase {
         }
         XCTAssertNoThrow(XCTAssertTrue(try getBoolSocketOption(channel: accepted,
                                                                level: .tcp,
-                                                               name: .nodelay)))
+                                                               name: .tcp_nodelay)))
         XCTAssertNoThrow(XCTAssertTrue(try getBoolSocketOption(channel: client,
                                                                level: .tcp,
-                                                               name: .nodelay)))
+                                                               name: .tcp_nodelay)))
     }
 
     func testDescriptionCanBeCalledFromNonEventLoopThreads() {

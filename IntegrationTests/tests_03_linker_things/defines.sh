@@ -13,5 +13,8 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+pushd "$here/../.."
 swift build
 bin_path=$(swift build --show-bin-path)
+popd
