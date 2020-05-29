@@ -24,7 +24,7 @@ func run(identifier: String) {
         let numberOfIterations = 1000
         for _ in 0 ..< numberOfIterations {
             _ = DatagramBootstrap(group: group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .options([.allowImmediateLocalEndpointAddressReuse])
                 .channelInitializer { channel in
                     channel.pipeline.addHandler(DoNothingHandler())
                 }

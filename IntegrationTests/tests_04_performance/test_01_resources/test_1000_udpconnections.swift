@@ -21,7 +21,7 @@ fileprivate final class DoNothingHandler: ChannelInboundHandler {
 
 func run(identifier: String) {
     let serverChannel = try! DatagramBootstrap(group: group)
-        .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .options([.allowImmediateLocalEndpointAddressReuse])
         // Set the handlers that are applied to the bound channel
         .channelInitializer { channel in
             return channel.pipeline.addHandler(DoNothingHandler())
@@ -34,7 +34,7 @@ func run(identifier: String) {
     let remoteAddress = serverChannel.localAddress!
     
     let clientBootstrap = DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .options([.allowImmediateLocalEndpointAddressReuse])
 
     measure(identifier: identifier) {
         let numberOfIterations = 1000

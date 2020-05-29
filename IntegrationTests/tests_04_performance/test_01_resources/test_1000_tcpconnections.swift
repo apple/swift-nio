@@ -21,7 +21,7 @@ fileprivate final class DoNothingHandler: ChannelInboundHandler {
 
 func run(identifier: String) {
     let serverChannel = try! ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .serverOptions([.allowImmediateLocalEndpointAddressReuse])
             .childChannelInitializer { channel in
                 channel.pipeline.addHandler(DoNothingHandler())
             }.bind(to: localhostPickPort).wait()
