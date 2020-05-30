@@ -305,7 +305,7 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
 
 // MARK: TCP - server
 /// A channel option which can be applied to bootstrap using shorthand notation.
-public struct NIOTCPServerShorthandOption: Hashable{
+public struct NIOTCPServerShorthandOption: Hashable {
     private var data: ShorthandOption
     
     private init(_ data: ShorthandOption) {
