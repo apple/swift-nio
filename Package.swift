@@ -63,6 +63,8 @@ var targets: [PackageDescription.Target] = [
             dependencies: ["NIO"]),
     .target(name: "NIOTestUtils",
             dependencies: ["NIO", "NIOHTTP1"]),
+    .target(name: "NIOCrashTester",
+            dependencies: ["NIO", "NIOHTTP1", "NIOWebSocket", "NIOFoundationCompat"]),
     .testTarget(name: "NIOTests",
                 dependencies: ["NIO", "NIOFoundationCompat", "NIOTestUtils", "NIOConcurrencyHelpers"]),
     .testTarget(name: "NIOConcurrencyHelpersTests",
