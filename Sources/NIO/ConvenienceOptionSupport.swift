@@ -191,8 +191,12 @@ public extension NIOOptionValue where T == () {
 }
 
 private extension NIOOptionValue where T == () {
-    static func from(_ boolValue : Bool) -> NIOOptionValue<()> {
-        return boolValue ? .set(()) : .notSet
+    init(flag: Bool) {
+        if flag {
+            self = .set(())
+        } else {
+            self = .notSet
+        }
     }
 }
 
@@ -256,7 +260,7 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
         defer {
             self.allowImmediateLocalEndpointAddressReuse = false
         }
-        return NIOOptionValue<()>.from(self.allowImmediateLocalEndpointAddressReuse)
+        return NIOOptionValue<()>(flag: self.allowImmediateLocalEndpointAddressReuse)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
@@ -266,7 +270,7 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
         defer {
             self.disableAutoRead = false
         }
-        return NIOOptionValue<()>.from(self.disableAutoRead)
+        return NIOOptionValue<()>(flag: self.disableAutoRead)
     }
     
     /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
@@ -276,7 +280,7 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
         defer {
             self.allowRemoteHalfClosure = false
         }
-        return NIOOptionValue<()>.from(self.allowRemoteHalfClosure)
+        return NIOOptionValue<()>(flag: self.allowRemoteHalfClosure)
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -361,7 +365,7 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable
         defer {
             self.allowImmediateLocalEndpointAddressReuse = false
         }
-        return NIOOptionValue<()>.from(self.allowImmediateLocalEndpointAddressReuse)
+        return NIOOptionValue<()>(flag: self.allowImmediateLocalEndpointAddressReuse)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
@@ -371,7 +375,7 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable
         defer {
             self.disableAutoRead = false
         }
-        return NIOOptionValue<()>.from(self.disableAutoRead)
+        return NIOOptionValue<()>(flag: self.disableAutoRead)
     }
     
     /// Caller is consuming the knowledge that maximumUnacceptedConnectionBacklog was set or not.
@@ -461,7 +465,7 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
         defer {
             self.allowImmediateLocalEndpointAddressReuse = false
         }
-        return NIOOptionValue<()>.from(self.allowImmediateLocalEndpointAddressReuse)
+        return NIOOptionValue<()>(flag: self.allowImmediateLocalEndpointAddressReuse)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
@@ -471,7 +475,7 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
         defer {
             self.disableAutoRead = false
         }
-        return NIOOptionValue<()>.from(self.disableAutoRead)
+        return NIOOptionValue<()>(flag: self.disableAutoRead)
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -548,7 +552,7 @@ public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral, Hashable {
         defer {
             self.allowRemoteHalfClosure = false
         }
-        return NIOOptionValue<()>.from(self.allowRemoteHalfClosure)
+        return NIOOptionValue<()>(flag: self.allowRemoteHalfClosure)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
@@ -558,7 +562,7 @@ public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral, Hashable {
         defer {
             self.disableAutoRead = false
         }
-        return NIOOptionValue<()>.from(self.disableAutoRead)
+        return NIOOptionValue<()>(flag: self.disableAutoRead)
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
