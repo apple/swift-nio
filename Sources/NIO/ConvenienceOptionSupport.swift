@@ -256,31 +256,31 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     /// Caller is consuming the knowledge that allowImmediateLocalEndpointAddressReuse was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowImmediateLocalEndpointAddressReuse was set.
-    public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> NIOOptionValue<()> {
+    public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> NIOOptionValue<Void> {
         defer {
             self.allowImmediateLocalEndpointAddressReuse = false
         }
-        return NIOOptionValue<()>(flag: self.allowImmediateLocalEndpointAddressReuse)
+        return NIOOptionValue<Void>(flag: self.allowImmediateLocalEndpointAddressReuse)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If disableAutoRead was set.
-    public mutating func consumeDisableAutoRead() -> NIOOptionValue<()> {
+    public mutating func consumeDisableAutoRead() -> NIOOptionValue<Void> {
         defer {
             self.disableAutoRead = false
         }
-        return NIOOptionValue<()>(flag: self.disableAutoRead)
+        return NIOOptionValue<Void>(flag: self.disableAutoRead)
     }
     
     /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowRemoteHalfClosure was set.
-    public mutating func consumeAllowRemoteHalfClosure() -> NIOOptionValue<()> {
+    public mutating func consumeAllowRemoteHalfClosure() -> NIOOptionValue<Void> {
         defer {
             self.allowRemoteHalfClosure = false
         }
-        return NIOOptionValue<()>(flag: self.allowRemoteHalfClosure)
+        return NIOOptionValue<Void>(flag: self.allowRemoteHalfClosure)
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -361,21 +361,21 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable
     /// Caller is consuming the knowledge that allowImmediateLocalEndpointAddressReuse was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowImmediateLocalEndpointAddressReuse was set.
-    public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> NIOOptionValue<()> {
+    public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> NIOOptionValue<Void> {
         defer {
             self.allowImmediateLocalEndpointAddressReuse = false
         }
-        return NIOOptionValue<()>(flag: self.allowImmediateLocalEndpointAddressReuse)
+        return NIOOptionValue<Void>(flag: self.allowImmediateLocalEndpointAddressReuse)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If disableAutoRead was set.
-    public mutating func consumeDisableAutoRead() -> NIOOptionValue<()> {
+    public mutating func consumeDisableAutoRead() -> NIOOptionValue<Void> {
         defer {
             self.disableAutoRead = false
         }
-        return NIOOptionValue<()>(flag: self.disableAutoRead)
+        return NIOOptionValue<Void>(flag: self.disableAutoRead)
     }
     
     /// Caller is consuming the knowledge that maximumUnacceptedConnectionBacklog was set or not.
@@ -461,21 +461,21 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     /// Caller is consuming the knowledge that allowImmediateLocalEndpointAddressReuse was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowImmediateLocalEndpointAddressReuse was set.
-    public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> NIOOptionValue<()> {
+    public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> NIOOptionValue<Void> {
         defer {
             self.allowImmediateLocalEndpointAddressReuse = false
         }
-        return NIOOptionValue<()>(flag: self.allowImmediateLocalEndpointAddressReuse)
+        return NIOOptionValue<Void>(flag: self.allowImmediateLocalEndpointAddressReuse)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If disableAutoRead was set.
-    public mutating func consumeDisableAutoRead() -> NIOOptionValue<()> {
+    public mutating func consumeDisableAutoRead() -> NIOOptionValue<Void> {
         defer {
             self.disableAutoRead = false
         }
-        return NIOOptionValue<()>(flag: self.disableAutoRead)
+        return NIOOptionValue<Void>(flag: self.disableAutoRead)
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -548,21 +548,21 @@ public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowRemoteHalfClosure was set.
-    public mutating func consumeAllowRemoteHalfClosure() -> NIOOptionValue<()> {
+    public mutating func consumeAllowRemoteHalfClosure() -> NIOOptionValue<Void> {
         defer {
             self.allowRemoteHalfClosure = false
         }
-        return NIOOptionValue<()>(flag: self.allowRemoteHalfClosure)
+        return NIOOptionValue<Void>(flag: self.allowRemoteHalfClosure)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If disableAutoRead was set.
-    public mutating func consumeDisableAutoRead() -> NIOOptionValue<()> {
+    public mutating func consumeDisableAutoRead() -> NIOOptionValue<Void> {
         defer {
             self.disableAutoRead = false
         }
-        return NIOOptionValue<()>(flag: self.disableAutoRead)
+        return NIOOptionValue<Void>(flag: self.disableAutoRead)
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
