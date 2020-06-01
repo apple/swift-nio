@@ -192,7 +192,7 @@ extension ChannelOptions {
         }
         
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.MetaData`
-        public struct ExplicitCongestionNotificationsOption : ChannelOption {
+        public struct ExplicitCongestionNotificationsOption: ChannelOption {
             public typealias Value = Bool
             public init() {}
         }
