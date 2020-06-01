@@ -199,28 +199,16 @@ private extension NIOOptionValue where T == () {
 // MARK: TCP - data
 /// A TCP channel option which can be applied to a bootstrap using shorthand notation.
 public struct NIOTCPShorthandOption: Hashable {
-    private var data: ShorthandOption
+    fileprivate var data: ShorthandOption
     
     private init(_ data: ShorthandOption) {
         self.data = data
     }
     
-    private enum ShorthandOption: Hashable {
+    fileprivate enum ShorthandOption: Hashable {
         case reuseAddr
         case disableAutoRead
         case allowRemoteHalfClosure
-    }
-    
-    @usableFromInline
-    func addToSet(_ set: inout NIOTCPShorthandOptions) {
-        switch data {
-        case .reuseAddr:
-            set.allowImmediateLocalEndpointAddressReuse = true
-        case .allowRemoteHalfClosure:
-            set.allowRemoteHalfClosure = true
-        case .disableAutoRead:
-            set.disableAutoRead = true
-        }
     }
 }
 
@@ -248,9 +236,17 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var allowRemoteHalfClosure = false
     
     /// Construct from an array literal.
-    @inlinable
     public init(arrayLiteral elements: NIOTCPShorthandOption...) {
-        elements.forEach({element in element.addToSet(&self)})
+        for element in elements {
+            switch element.data {
+            case .reuseAddr:
+                self.allowImmediateLocalEndpointAddressReuse = true
+            case .allowRemoteHalfClosure:
+                self.allowRemoteHalfClosure = true
+            case .disableAutoRead:
+                self.disableAutoRead = true
+            }
+        }
     }
     
     /// Caller is consuming the knowledge that allowImmediateLocalEndpointAddressReuse was set or not.
@@ -306,28 +302,16 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
 // MARK: TCP - server
 /// A channel option which can be applied to bootstrap using shorthand notation.
 public struct NIOTCPServerShorthandOption: Hashable {
-    private var data: ShorthandOption
+    fileprivate var data: ShorthandOption
     
     private init(_ data: ShorthandOption) {
         self.data = data
     }
     
-    private enum ShorthandOption: Hashable {
+    fileprivate enum ShorthandOption: Hashable {
         case reuseAddr
         case disableAutoRead
         case backlog(Int32)
-    }
-    
-    @usableFromInline
-    func addToSet(_ set: inout NIOTCPServerShorthandOptions) {
-        switch data {
-        case .reuseAddr:
-            set.allowImmediateLocalEndpointAddressReuse = true
-        case .disableAutoRead:
-            set.disableAutoRead = true
-        case .backlog(let value):
-            set.maximumUnacceptedConnectionBacklog = value
-        }
     }
 }
 
@@ -354,9 +338,17 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable
     var maximumUnacceptedConnectionBacklog : Int32? = nil
     
     /// Construct from an array literal.
-    @inlinable
     public init(arrayLiteral elements: NIOTCPServerShorthandOption...) {
-        elements.forEach({element in element.addToSet(&self)})
+        for element in elements {
+            switch element.data {
+            case .reuseAddr:
+                self.allowImmediateLocalEndpointAddressReuse = true
+            case .disableAutoRead:
+                self.disableAutoRead = true
+            case .backlog(let value):
+                self.maximumUnacceptedConnectionBacklog = value
+            }
+        }
     }
     
     /// Caller is consuming the knowledge that allowImmediateLocalEndpointAddressReuse was set or not.
@@ -416,25 +408,15 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable
 /// A channel option which can be applied to a UDP based bootstrap using shorthand notation.
 /// - See: DatagramBootstrap.options(_ options: [Option])
 public struct NIOUDPShorthandOption: Hashable {
-    private var data: ShorthandOption
+    fileprivate var data: ShorthandOption
     
     private init(_ data: ShorthandOption) {
         self.data = data
     }
     
-    private enum ShorthandOption: Hashable {
+    fileprivate enum ShorthandOption: Hashable {
         case reuseAddr
         case disableAutoRead
-    }
-    
-    @usableFromInline
-    func addToSet(_ set: inout NIOUDPShorthandOptions) {
-        switch data {
-        case .reuseAddr:
-            set.allowImmediateLocalEndpointAddressReuse = true
-        case .disableAutoRead:
-            set.disableAutoRead = true
-        }
     }
 }
 
@@ -454,9 +436,15 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var disableAutoRead = false
     
     /// Construct from an array literal.
-    @inlinable
     public init(arrayLiteral elements: NIOUDPShorthandOption...) {
-        elements.forEach({element in element.addToSet(&self)})
+        for element in elements {
+            switch element.data {
+            case .reuseAddr:
+                self.allowImmediateLocalEndpointAddressReuse = true
+            case .disableAutoRead:
+                self.disableAutoRead = true
+            }
+        }
     }
     
     /// Caller is consuming the knowledge that allowImmediateLocalEndpointAddressReuse was set or not.
@@ -501,49 +489,15 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
 /// A channel option which can be applied to pipe bootstrap using shorthand notation.
 /// - See: NIOPipeBootstrap.options(_ options: [Option])
 public struct NIOPipeShorthandOption: Hashable {
-    private let data: ShorthandOption
+    fileprivate let data: ShorthandOption
     
     private init(_ data: ShorthandOption) {
         self.data = data
     }
     
-    /// Apply the contained option to the supplied object (almost certainly bootstrap) using the default mapping.
-    /// - Parameter optionApplier: object to use to apply the option.
-    /// - Returns: the modified object
-    func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
-        return data.applyFallbackMapping(optionApplier)
-    }
-    
-    /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
-    /// - Parameter to: The storage to append this option to.
-    /// - Returns: ChannelOptions.storage with option added.
-    public func applyFallbackMapping(to storage: ChannelOptions.Storage) -> ChannelOptions.Storage {
-        let applier = NIOChannelOptionsStorageApplier(channelOptionsStorage: storage)
-        return data.applyFallbackMapping(applier).channelOptionsStorage
-    }
-    
-    private enum ShorthandOption: Hashable {
+    fileprivate enum ShorthandOption: Hashable {
         case disableAutoRead
         case allowRemoteHalfClosure
-        
-        func applyFallbackMapping<OptionApplier: NIOChannelOptionAppliable>(_ optionApplier: OptionApplier) -> OptionApplier {
-            switch self {
-            case .disableAutoRead:
-                return optionApplier.applyOption(ChannelOptions.autoRead, value: false)
-            case .allowRemoteHalfClosure:
-                return optionApplier.applyOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-            }
-        }
-    }
-    
-    @usableFromInline
-    func addToSet(_ set: inout NIOPipeShorthandOptions) {
-        switch data {
-        case .allowRemoteHalfClosure:
-            set.allowRemoteHalfClosure = true
-        case .disableAutoRead:
-            set.disableAutoRead = true
-        }
     }
 }
 
@@ -567,9 +521,15 @@ public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var disableAutoRead = false
     
     /// Construct from an array literal.
-    @inlinable
     public init(arrayLiteral elements: NIOPipeShorthandOption...) {
-        elements.forEach({element in element.addToSet(&self)})
+        for element in elements {
+            switch element.data {
+            case .allowRemoteHalfClosure:
+                self.allowRemoteHalfClosure = true
+            case .disableAutoRead:
+                self.disableAutoRead = true
+            }
+        }
     }
     
     /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
