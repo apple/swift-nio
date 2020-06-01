@@ -420,11 +420,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let valueAsInt: Int32 = value as! Bool ? 1 : 0
             switch protocolFamily {
             case .some(.inet):
-                try socket.setOption(level: NIOBSDSocket.OptionLevel.ip,
+                try self.socket.setOption(level: NIOBSDSocket.OptionLevel.ip,
                                      name: NIOBSDSocket.Option.ip_recv_tos,
                                      value: valueAsInt)
             case .some(.inet6):
-                try socket.setOption(level: NIOBSDSocket.OptionLevel.ipv6,
+                try self.socket.setOption(level: NIOBSDSocket.OptionLevel.ipv6,
                                      name: NIOBSDSocket.Option.ipv6_recv_tclass,
                                      value: valueAsInt)
             case .some(_):
@@ -451,6 +451,19 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return pendingWrites.waterMark as! Option.Value
         case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
             return (self.vectorReadManager?.messageCount ?? 0) as! Option.Value
+        case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
+            switch protocolFamily {
+            case .some(.inet):
+                return try (self.socket.getOption(level: NIOBSDSocket.OptionLevel.ip,
+                                                 name: NIOBSDSocket.Option.ip_recv_tos) != 0) as! Option.Value
+            case .some(.inet6):
+                return try (self.socket.getOption(level: NIOBSDSocket.OptionLevel.ipv6,
+                                                 name: NIOBSDSocket.Option.ipv6_recv_tclass) != 0) as! Option.Value
+            case .some(_):
+                fatalError("Explicit congestion notification is only supported for IP")
+            default:
+                fatalError("Explicit congestion notification is not supported when protocol is not known")
+            }
         default:
             return try super.getOption0(option)
         }
