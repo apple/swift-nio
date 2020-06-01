@@ -208,7 +208,7 @@ let upgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { (channel: Channel, he
                                  })
 
 let bootstrap = ServerBootstrap(group: group)
-    // Specify backlog and enable SO_REUSEADDR for the server itself
+    // Specify backlog and enable reusing addresses for the server itself
     .serverOptions([.maximumUnacceptedConnectionBacklog(256), .allowImmediateLocalEndpointAddressReuse])
 
     // Set the handlers that are applied to the accepted Channels
@@ -225,7 +225,7 @@ let bootstrap = ServerBootstrap(group: group)
         }
     }
 
-    // Enable SO_REUSEADDR for the accepted Channels
+    // Enable reusing addresses for the accepted Channels
     .childOptions([.allowImmediateLocalEndpointAddressReuse])
 
 defer {

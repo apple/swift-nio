@@ -525,14 +525,14 @@ func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
 
 let fileIO = NonBlockingFileIO(threadPool: threadPool)
 let socketBootstrap = ServerBootstrap(group: group)
-    // Specify backlog and enable SO_REUSEADDR for the server itself
+    // Specify backlog and enable reusing addresses for the server itself
     .serverOptions([.allowImmediateLocalEndpointAddressReuse,
                            .maximumUnacceptedConnectionBacklog(256)])
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer(childChannelInitializer(channel:))
 
-    // Enable SO_REUSEADDR for the accepted Channels
+    // Enable reusing addresses for the accepted Channels
     .childOptions(allowHalfClosure ? 
         [.allowRemoteHalfClosure, .allowImmediateLocalEndpointAddressReuse] : 
         [.allowImmediateLocalEndpointAddressReuse])

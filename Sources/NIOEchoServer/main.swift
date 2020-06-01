@@ -38,7 +38,7 @@ private final class EchoHandler: ChannelInboundHandler {
 }
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let bootstrap = ServerBootstrap(group: group)
-    // Specify backlog and enable SO_REUSEADDR for the server itself
+    // Specify backlog and enable reusing addresses for the server itself
     .serverOptions([.maximumUnacceptedConnectionBacklog(256),
                            .allowImmediateLocalEndpointAddressReuse])
 
@@ -50,7 +50,7 @@ let bootstrap = ServerBootstrap(group: group)
         }
     }
 
-    // Enable SO_REUSEADDR for the accepted Channels
+    // Enable reusing addresses for the accepted Channels
     .childOptions([.allowImmediateLocalEndpointAddressReuse])
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
     .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())

@@ -32,7 +32,7 @@ internal enum NIOOnSocketsBootstraps {
 ///         try! group.syncShutdownGracefully()
 ///     }
 ///     let bootstrap = ServerBootstrap(group: group)
-///         // Specify backlog and enable SO_REUSEADDR for the server itself
+///         // Specify backlog and enable reusing addresses for the server itself
 ///         .serverOptions([.maximumUnacceptedConnectionBacklog(256), .allowImmediateLocalEndpointAddressReuse])
 ///
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
@@ -45,7 +45,7 @@ internal enum NIOOnSocketsBootstraps {
 ///             }
 ///         }
 ///
-///         // Enable SO_REUSEADDR for the accepted Channels
+///         // Enable reusing addresses for the accepted Channels
 ///         .childOptions([.allowImmediateLocalEndpointAddressReuse])
 ///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
 ///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
@@ -393,7 +393,6 @@ private extension Channel {
 ///         try! group.syncShutdownGracefully()
 ///     }
 ///     let bootstrap = ClientBootstrap(group: group)
-///         // Enable SO_REUSEADDR.
 ///         .options([.allowImmediateLocalEndpointAddressReuse])
 ///         .channelInitializer { channel in
 ///             // always instantiate the handler _within_ the closure as
@@ -662,7 +661,6 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 ///         try! group.syncShutdownGracefully()
 ///     }
 ///     let bootstrap = DatagramBootstrap(group: group)
-///         // Enable SO_REUSEADDR.
 ///         .channelOption([.allowImmediateLocalEndpointAddressReuse])
 ///         .channelInitializer { channel in
 ///             channel.pipeline.addHandler(MyChannelHandler())
