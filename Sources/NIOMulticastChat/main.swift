@@ -70,8 +70,7 @@ let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
 // Begin by setting up the basics of the bootstrap.
 var datagramBootstrap = DatagramBootstrap(group: group)
-    .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
-    .channelOption(ChannelOptions.socketOption(.reuseport), value: 1)
+    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
         return channel.pipeline.addHandler(ChatMessageEncoder()).flatMap {
             channel.pipeline.addHandler(ChatMessageDecoder())

@@ -28,10 +28,13 @@ extension EventLoopTest {
    static var allTests : [(String, (EventLoopTest) -> () throws -> Void)] {
       return [
                 ("testSchedule", testSchedule),
+                ("testFlatSchedule", testFlatSchedule),
                 ("testScheduleWithDelay", testScheduleWithDelay),
                 ("testScheduleCancelled", testScheduleCancelled),
+                ("testFlatScheduleCancelled", testFlatScheduleCancelled),
                 ("testScheduleRepeatedTask", testScheduleRepeatedTask),
                 ("testScheduledTaskThatIsImmediatelyCancelledNeverFires", testScheduledTaskThatIsImmediatelyCancelledNeverFires),
+                ("testFlatScheduledTaskThatIsImmediatelyCancelledNeverFires", testFlatScheduledTaskThatIsImmediatelyCancelledNeverFires),
                 ("testRepeatedTaskThatIsImmediatelyCancelledNeverFires", testRepeatedTaskThatIsImmediatelyCancelledNeverFires),
                 ("testScheduleRepeatedTaskCancelFromDifferentThread", testScheduleRepeatedTaskCancelFromDifferentThread),
                 ("testScheduleRepeatedTaskToNotRetainRepeatedTask", testScheduleRepeatedTaskToNotRetainRepeatedTask),
@@ -69,6 +72,9 @@ extension EventLoopTest {
                 ("testMultiThreadedEventLoopGroupDescription", testMultiThreadedEventLoopGroupDescription),
                 ("testSafeToExecuteTrue", testSafeToExecuteTrue),
                 ("testSafeToExecuteFalse", testSafeToExecuteFalse),
+                ("testTakeOverThreadAndAlsoTakeItBack", testTakeOverThreadAndAlsoTakeItBack),
+                ("testThreadTakeoverUnsetsCurrentEventLoop", testThreadTakeoverUnsetsCurrentEventLoop),
+                ("testWeCanDoTrulySingleThreadedNetworking", testWeCanDoTrulySingleThreadedNetworking),
            ]
    }
 }

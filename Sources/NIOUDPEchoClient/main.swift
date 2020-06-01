@@ -59,6 +59,7 @@ private final class EchoHandler: ChannelInboundHandler {
         if self.numBytes <= 0 {
             let string = String(buffer: byteBuffer)
             print("Received: '\(string)' back from the server, closing channel.")
+            context.close(promise: nil)
         }
     }
     
@@ -117,7 +118,7 @@ let remoteAddress = { () -> SocketAddress in
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = DatagramBootstrap(group: group)
     // Enable SO_REUSEADDR.
-    .channelOption(ChannelOptions.socketOption(.reuseaddr), value: 1)
+    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
         channel.pipeline.addHandler(EchoHandler(remoteAddressInitializer: remoteAddress))
 }

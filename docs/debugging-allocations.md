@@ -159,26 +159,24 @@ The output will look something like
 
 ```
 [...]
-
               libsystem_malloc.dylib`malloc
               libswiftCore.dylib`swift_slowAlloc+0x19
-              libswiftCore.dylib`_swift_allocObject_(swift::TargetHeapMetadata<swift::InProcess> const*, unsigned long, unsigned long)+0x14
-              test_future_lots_of_callbacks`specialized closure #1 in EventLoopFuture.flatMap<A>(file:line:_:)+0xc0
-              test_future_lots_of_callbacks`specialized CallbackList._run()+0xd4e
-              test_future_lots_of_callbacks`doThenAndFriends #1 (loop:) in closure #1 in run(identifier:)+0x201
-              test_future_lots_of_callbacks`specialized closure #1 in measure(identifier:_:)+0x53
-              test_future_lots_of_callbacks`partial apply for closure #1 in measureOne #1 (_:) in measureAll(_:)+0x11
-              test_future_lots_of_callbacks`partial apply for thunk for @callee_guaranteed () -> (@error @owned Error)+0x11
-              libswiftObjectiveC.dylib`autoreleasepool<A>(invoking:)+0x2e
-              test_future_lots_of_callbacks`measureAll(_:)+0x159
-              test_future_lots_of_callbacks`measureAndPrint(desc:fn:)+0x2d
-              test_future_lots_of_callbacks`main+0x9
-              libdyld.dylib`start+0x1
-              test_future_lots_of_callbacks`0x1
-            30000
+              libswiftCore.dylib`swift_allocObject+0x27
+              test_1_reqs_1000_conn`SelectableEventLoop.run()+0x231
+              test_1_reqs_1000_conn`closure #1 in static MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name:selectorFactory:initializer:)+0x106
+              test_1_reqs_1000_conn`partial apply for closure #1 in static MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name:selectorFactory:initializer:)+0x2d
+              test_1_reqs_1000_conn`thunk for @escaping @callee_guaranteed (@guaranteed NIOThread) -> ()+0xf
+              test_1_reqs_1000_conn`partial apply for thunk for @escaping @callee_guaranteed (@guaranteed NIOThread) -> ()+0x11
+              test_1_reqs_1000_conn`closure #1 in static ThreadOpsPosix.run(handle:args:detachThread:)+0x1e4
+              libsystem_pthread.dylib`_pthread_start+0x94
+              libsystem_pthread.dylib`thread_start+0xf
+           231000
+
 ```
 
-repeated many times. Each block means that the specific stack trace is responsible for some number of allocations: in the example above, `30000` allocations. Remember that the allocation counter tests run each test 10 times, so this means that in each test run, the above stack trace allocated 3000 times. Also remember that we usually run the workload we want to test 1000 times. That means that in the real world, the above stack trace accounts for 3 out of the 75 total allocations (30000 allocations / 10 runs / 1000 executions per run = 3).
+repeated many times. Each block means that the specific stack trace is responsible for some number of allocations: in the example above, `231000` allocations. Remember that the allocation counter tests run each test 11 times (1 warm up run and 10 measured runs), so this means that in each test run, the above stack trace allocated 21000 times. Also remember that we usually run the workload we want to test 1000 times. That means that in the real world, the above stack trace accounts for 21 out of the total number of allocations (231000 allocations / 11 runs / 1000 executions per run = 21).
+
+When you are looking at allocations in the setup of the test the numbers may be split into one allocation set of 10000 and another of 1000 - for measured code vs warm up run.
 
 The output from `malloc-aggreation.d` can also be diffed using the `stackdiff-dtrace.py` script. This can be helpful to track down where additional allocations were made. The `stdout` from `malloc-aggregation.d` for the two runs to compare should be written to files, and then passsed to `stackdiff-dtrace.py`:
 
@@ -192,51 +190,124 @@ Where `stack_aggregation.old` and `stack_aggregation.new` are the two outputs fr
 - only in `stack_aggregation.new`, and
 - any differences in numbers for stacks that appear in both.
 
+Similar stack traces will be aggregated into a headline number for matching but where different the full stack traces which made up the collection will be printed indented.
+
+Allocations of less than 1000 in number are ignored - as the tests all run multiples of 1000 runs any values below this are almost certainly from setup in libraries we are using rather than as a consequence of our measured run.
+
 Let's look at some output.
 
 ```
 ### only in AFTER
-22022
+11000
 libsystem_malloc.dylib`malloc
-libswiftCore.dylib`swift_slowAlloc+0x19
-libswiftCore.dylib`swift_allocObject+0x27
-test_1000_reqs_1_conn`AdaptiveRecvByteBufferAllocator.buffer(allocator:)+0x5f
-test_1000_reqs_1_conn`protocol witness for RecvByteBufferAllocator.buffer(allocator:) in conformance AdaptiveRecvByteBufferAllocator+0x52
-test_1000_reqs_1_conn`BaseStreamSocketChannel.readFromSocket()+0xa2
-test_1000_reqs_1_conn`specialized BaseSocketChannel.readable0()+0x21
-test_1000_reqs_1_conn`specialized SelectableEventLoop.handleEvent<A>(_:channel:)+0x175
+libswiftCore.dylib`swift_slowAlloc
+libswiftCore.dylib`swift_allocObject
+test_1_reqs_1000_conn`$s3NIO7Channel_pxq_q0_r1_lyypypAA15EventLoopFutureCyytGIsegnnr_Iegnr_AaB_pypypAEIegnno_Ieggo_TR
+test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TR
+test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TRTA
+test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TRTA.18
+test_1_reqs_1000_conn`$s3NIO7Channel_pxq_q0_r1_lyypypAA15EventLoopFutureCyytGIsegnnr_Iegnr_AaB_pypypAEIegnno_Ieggo_TR
+
+    11000
+        libsystem_malloc.dylib`malloc
+        libswiftCore.dylib`swift_slowAlloc+0x19
+        libswiftCore.dylib`swift_allocObject+0x27
+        test_1_reqs_1000_conn`$s3NIO7Channel_pxq_q0_r1_lyypypAA15EventLoopFutureCyytGIsegnnr_Iegnr_AaB_pypypAEIegnno_Ieggo_TR+0x54
+        test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TR+0x20
+        test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TRTA+0x11
+        test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TRTA.18+0x9
+        test_1_reqs_1000_conn`$s3NIO7Channel_pxq_q0_r1_lyypypAA15EventLoopFutureCyytGIsegnnr_Iegnr_AaB_pypypAEIegnno_Ieggo_TR+0x2e
+        test_1_reqs_1000_conn`specialized applyNext #1 () in ChannelOptions.Storage.applyAllChannelOptions(to:)+0x1a9
+        test_1_reqs_1000_conn`closure #2 in ServerBootstrap.bind0(makeServerChannel:_:)+0xf8
+        test_1_reqs_1000_conn`partial apply for closure #2 in ServerBootstrap.bind0(makeServerChannel:_:)+0x39
+        test_1_reqs_1000_conn`partial apply for thunk for @escaping @callee_guaranteed () -> (@owned EventLoopFuture<Channel>, @error @owned Error)+0x14
+        test_1_reqs_1000_conn`thunk for @escaping @callee_guaranteed () -> (@owned EventLoopFuture<Channel>, @error @owned Error)partial apply+0x9
+        test_1_reqs_1000_conn`closure #1 in EventLoop.submit<A>(_:)+0x3c
+        test_1_reqs_1000_conn`partial apply for thunk for @escaping @callee_guaranteed () -> ()+0x11
+        test_1_reqs_1000_conn`partial apply for thunk for @escaping @callee_guaranteed () -> (@out ())+0x11
+        test_1_reqs_1000_conn`partial apply for closure #3 in SelectableEventLoop.run()+0x11
+        test_1_reqs_1000_conn`thunk for @callee_guaranteed () -> (@error @owned Error)+0xc
+        test_1_reqs_1000_conn`partial apply for thunk for @callee_guaranteed () -> (@error @owned Error)+0x11
+        test_1_reqs_1000_conn`thunk for @callee_guaranteed () -> (@error @owned Error)partial apply+0x9
 [...]
 
 ### only in BEFORE
-22022
+11000
 libsystem_malloc.dylib`malloc
-libswiftCore.dylib`swift_slowAlloc+0x19
-libswiftCore.dylib`swift_allocObject+0x27
-test_1000_reqs_1_conn`AdaptiveRecvByteBufferAllocator.buffer(allocator:)+0x5f
-test_1000_reqs_1_conn`protocol witness for RecvByteBufferAllocator.buffer(allocator:) in conformance AdaptiveRecvByteBufferAllocator+0x52
-test_1000_reqs_1_conn`specialized BaseStreamSocketChannel.readFromSocket()+0x88
-test_1000_reqs_1_conn`specialized SelectableEventLoop.handleEvent<A>(_:channel:)+0xcc
+libswiftCore.dylib`swift_slowAlloc
+libswiftCore.dylib`swift_allocObject
+test_1_reqs_1000_conn`$s3NIO7Channel_pxq_q0_r1_lyypypAA15EventLoopFutureCyytGIsegnnr_Iegnr_AaB_pypypAEIegnno_Ieggo_TR
+test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TR
+test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TRTA
+test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TRTA.33
+test_1_reqs_1000_conn`$s3NIO7Channel_pxq_q0_r1_lyypypAA15EventLoopFutureCyytGIsegnnr_Iegnr_AaB_pypypAEIegnno_Ieggo_TR
+
+    11000
+        libsystem_malloc.dylib`malloc
+        libswiftCore.dylib`swift_slowAlloc+0x19
+        libswiftCore.dylib`swift_allocObject+0x27
+        test_1_reqs_1000_conn`$s3NIO7Channel_pxq_q0_r1_lyypypAA15EventLoopFutureCyytGIsegnnr_Iegnr_AaB_pypypAEIegnno_Ieggo_TR+0x54
+        test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TR+0x20
+        test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TRTA+0x11
+        test_1_reqs_1000_conn`$s3NIO7Channel_pypypAA15EventLoopFutureCyytGIegnno_Ieggo_AaB_pxq_q0_r1_lyypypAEIsegnnr_Iegnr_TRTA.33+0x9
+        test_1_reqs_1000_conn`$s3NIO7Channel_pxq_q0_r1_lyypypAA15EventLoopFutureCyytGIsegnnr_Iegnr_AaB_pypypAEIegnno_Ieggo_TR+0x2e
+        test_1_reqs_1000_conn`specialized applyNext #1 () in ChannelOptions.Storage.applyAllChannelOptions(to:)+0x1a9
+        test_1_reqs_1000_conn`closure #2 in ServerBootstrap.bind0(makeServerChannel:_:)+0xf8
+        test_1_reqs_1000_conn`partial apply for closure #2 in ServerBootstrap.bind0(makeServerChannel:_:)+0x39
+        test_1_reqs_1000_conn`partial apply for thunk for @escaping @callee_guaranteed () -> (@owned EventLoopFuture<Channel>, @error @owned Error)+0x14
+        test_1_reqs_1000_conn`thunk for @escaping @callee_guaranteed () -> (@owned EventLoopFuture<Channel>, @error @owned Error)partial apply+0x9
+        test_1_reqs_1000_conn`closure #1 in EventLoop.submit<A>(_:)+0x3c
+        test_1_reqs_1000_conn`partial apply for thunk for @escaping @callee_guaranteed () -> ()+0x11
+        test_1_reqs_1000_conn`partial apply for thunk for @escaping @callee_guaranteed () -> (@out ())+0x11
+        test_1_reqs_1000_conn`partial apply for closure #3 in SelectableEventLoop.run()+0x11
+        test_1_reqs_1000_conn`thunk for @callee_guaranteed () -> (@error @owned Error)+0xc
+        test_1_reqs_1000_conn`partial apply for thunk for @callee_guaranteed () -> (@error @owned Error)+0x11
+        test_1_reqs_1000_conn`thunk for @callee_guaranteed () -> (@error @owned Error)partial apply+0x9
 [...]
 ```
 
-These stacks are only *slighly* different; the new ("AFTER") stacktrace has an extra line ("``test_1000_reqs_1_conn`BaseStreamSocketChannel.readFromSocket()+0xa2``"). They're otherwise the same so we can ignore them and look at more output.
+These stacks are only *slighly* different; differing only in the name similar to `$s3NIO7Channel_pxq_q0_r1_lyypypAA15EventLoopFutureCyytGIsegnnr_Iegnr_AaB_pypypAEIegnno_Ieggo_TR`. They're otherwise the same so we can ignore them and look at more output.
 
 ```
 ### only in AFTER
 [... (previously dismissed stacktrace)]
 
-22022
+2000
 libsystem_malloc.dylib`malloc
-libswiftCore.dylib`swift_slowAlloc+0x19
-libswiftCore.dylib`swift_allocObject+0x27
-test_1000_reqs_1_conn`curry thunk of SocketProtocol.read(pointer:)+0x84
-test_1000_reqs_1_conn`BaseStreamSocketChannel.readFromSocket()+0x2d7
-test_1000_reqs_1_conn`specialized BaseSocketChannel.readable0()+0x21
-test_1000_reqs_1_conn`specialized SelectableEventLoop.handleEvent<A>(_:channel:)+0x175
+libswiftCore.dylib`swift_slowAlloc
+libswiftCore.dylib`swift_allocObject
+test_1_reqs_1000_conn`doRequests(group:number:)
+test_1_reqs_1000_conn`closure #1 in run(identifier:)
+test_1_reqs_1000_conn`partial apply for closure #1 in measureOne #1 (throwAway:_:) in measureAll(_:)
+test_1_reqs_1000_conn`partial apply for thunk for @callee_guaranteed () -> (@error @owned Error)
+test_1_reqs_1000_conn`thunk for @callee_guaranteed () -> (@error @owned Error)partial apply
+
+    1000
+        libsystem_malloc.dylib`malloc
+        libswiftCore.dylib`swift_slowAlloc+0x19
+        libswiftCore.dylib`swift_allocObject+0x27
+        test_1_reqs_1000_conn`doRequests(group:number:)+0x66
+[...]
+        
+    1000
+        libsystem_malloc.dylib`malloc
+        libswiftCore.dylib`swift_slowAlloc+0x19
+        libswiftCore.dylib`swift_allocObject+0x27
+        test_1_reqs_1000_conn`doRequests(group:number:)+0x1c4
 [...]
 
 ### only in BEFORE
 [... (previously dismissed stacktrace)]
+
+### different numbers
+before: 10000, after: 20000
+  AFTER
+    10000
+        libsystem_malloc.dylib`malloc
+        libswiftCore.dylib`swift_slowAlloc+0x19
+        libswiftCore.dylib`swift_allocObject+0x27
+        test_1_reqs_1000_conn`doRequests(group:number:)+0x66
+[...]
 ```
 
-Now we see there's another stacktrace in the `AFTER` section which has no corresponding stacktrace in `BEFORE`. From the stack we can see it's originating from a curry thunk of  `SocketProtocol.read(pointer:)`. In this instance we were comparing the benchmark across two different versions of the Swift compiler. As the same version of NIO was used it must be down to a change in the compiler.
+Now we see there's another stacktrace in the `AFTER` section which has no corresponding stacktrace in `BEFORE`. From the stack we can see it's originating from `doRequests(group:number:)`. In this instance we were working on options applied in this function so it appears we have added allocations.  We have also increased the number of allocations which are reported in the different numbers section where stack traces have been paired but with different numbers of allocations.
