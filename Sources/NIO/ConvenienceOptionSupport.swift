@@ -253,27 +253,30 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowImmediateLocalEndpointAddressReuse was set.
     public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> NIOOptionValue<()> {
-        let result = NIOOptionValue<()>.from(self.allowImmediateLocalEndpointAddressReuse)
-        self.allowImmediateLocalEndpointAddressReuse = false
-        return result
+        defer {
+            self.allowImmediateLocalEndpointAddressReuse = false
+        }
+        return NIOOptionValue<()>.from(self.allowImmediateLocalEndpointAddressReuse)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If disableAutoRead was set.
     public mutating func consumeDisableAutoRead() -> NIOOptionValue<()> {
-        let result = NIOOptionValue<()>.from(self.disableAutoRead)
-        self.disableAutoRead = false
-        return result
+        defer {
+            self.disableAutoRead = false
+        }
+        return NIOOptionValue<()>.from(self.disableAutoRead)
     }
     
     /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowRemoteHalfClosure was set.
     public mutating func consumeAllowRemoteHalfClosure() -> NIOOptionValue<()> {
-        let result = NIOOptionValue<()>.from(self.allowRemoteHalfClosure)
-        self.allowRemoteHalfClosure = false
-        return result
+        defer {
+            self.allowRemoteHalfClosure = false
+        }
+        return NIOOptionValue<()>.from(self.allowRemoteHalfClosure)
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -355,30 +358,34 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowImmediateLocalEndpointAddressReuse was set.
     public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> NIOOptionValue<()> {
-        let result = NIOOptionValue<()>.from(self.allowImmediateLocalEndpointAddressReuse)
-        self.allowImmediateLocalEndpointAddressReuse = false
-        return result
+        defer {
+            self.allowImmediateLocalEndpointAddressReuse = false
+        }
+        return NIOOptionValue<()>.from(self.allowImmediateLocalEndpointAddressReuse)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If disableAutoRead was set.
     public mutating func consumeDisableAutoRead() -> NIOOptionValue<()> {
-        let result = NIOOptionValue<()>.from(self.disableAutoRead)
-        self.disableAutoRead = false
-        return result
+        defer {
+            self.disableAutoRead = false
+        }
+        return NIOOptionValue<()>.from(self.disableAutoRead)
     }
     
     /// Caller is consuming the knowledge that maximumUnacceptedConnectionBacklog was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If maximumUnacceptedConnectionBacklog was set.
     public mutating func consumeMaximumUnacceptedConnectionBacklog() -> NIOOptionValue<Int32> {
-        var result = NIOOptionValue<Int32>.notSet
-        if let value = self.maximumUnacceptedConnectionBacklog {
-            result = .set(value)
+        defer {
+            self.maximumUnacceptedConnectionBacklog = nil
         }
-        self.maximumUnacceptedConnectionBacklog = nil
-        return result
+        if let value = self.maximumUnacceptedConnectionBacklog {
+            return .set(value)
+        } else {
+            return .notSet
+        }
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -451,18 +458,20 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowImmediateLocalEndpointAddressReuse was set.
     public mutating func consumeAllowImmediateLocalEndpointAddressReuse() -> NIOOptionValue<()> {
-        let result = NIOOptionValue<()>.from(self.allowImmediateLocalEndpointAddressReuse)
-        self.allowImmediateLocalEndpointAddressReuse = false
-        return result
+        defer {
+            self.allowImmediateLocalEndpointAddressReuse = false
+        }
+        return NIOOptionValue<()>.from(self.allowImmediateLocalEndpointAddressReuse)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If disableAutoRead was set.
     public mutating func consumeDisableAutoRead() -> NIOOptionValue<()> {
-        let result = NIOOptionValue<()>.from(self.disableAutoRead)
-        self.disableAutoRead = false
-        return result
+        defer {
+            self.disableAutoRead = false
+        }
+        return NIOOptionValue<()>.from(self.disableAutoRead)
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
@@ -536,18 +545,20 @@ public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     /// The setting will nolonger be set after this call.
     /// - Returns: If allowRemoteHalfClosure was set.
     public mutating func consumeAllowRemoteHalfClosure() -> NIOOptionValue<()> {
-        let result = NIOOptionValue<()>.from(self.allowRemoteHalfClosure)
-        self.allowRemoteHalfClosure = false
-        return result
+        defer {
+            self.allowRemoteHalfClosure = false
+        }
+        return NIOOptionValue<()>.from(self.allowRemoteHalfClosure)
     }
     
     /// Caller is consuming the knowledge that disableAutoRead was set or not.
     /// The setting will nolonger be set after this call.
     /// - Returns: If disableAutoRead was set.
     public mutating func consumeDisableAutoRead() -> NIOOptionValue<()> {
-        let result = NIOOptionValue<()>.from(self.disableAutoRead)
-        self.disableAutoRead = false
-        return result
+        defer {
+            self.disableAutoRead = false
+        }
+        return NIOOptionValue<()>.from(self.disableAutoRead)
     }
     
     /// Apply the contained option to the supplied ChannelOptions.Storage using the default mapping.
