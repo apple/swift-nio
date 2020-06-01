@@ -240,16 +240,22 @@ public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var allowRemoteHalfClosure = false
     
     /// Construct from an array literal.
+    @inlinable
     public init(arrayLiteral elements: NIOTCPShorthandOption...) {
         for element in elements {
-            switch element.data {
-            case .reuseAddr:
-                self.allowImmediateLocalEndpointAddressReuse = true
-            case .allowRemoteHalfClosure:
-                self.allowRemoteHalfClosure = true
-            case .disableAutoRead:
-                self.disableAutoRead = true
-            }
+            add(element)
+        }
+    }
+    
+    @usableFromInline
+    mutating func add(_ element: NIOTCPShorthandOption) {
+        switch element.data {
+        case .reuseAddr:
+            self.allowImmediateLocalEndpointAddressReuse = true
+        case .allowRemoteHalfClosure:
+            self.allowRemoteHalfClosure = true
+        case .disableAutoRead:
+            self.disableAutoRead = true
         }
     }
     
@@ -345,16 +351,22 @@ public struct NIOTCPServerShorthandOptions : ExpressibleByArrayLiteral, Hashable
     var maximumUnacceptedConnectionBacklog : Int32? = nil
     
     /// Construct from an array literal.
+    @inlinable
     public init(arrayLiteral elements: NIOTCPServerShorthandOption...) {
         for element in elements {
-            switch element.data {
-            case .reuseAddr:
-                self.allowImmediateLocalEndpointAddressReuse = true
-            case .disableAutoRead:
-                self.disableAutoRead = true
-            case .backlog(let value):
-                self.maximumUnacceptedConnectionBacklog = value
-            }
+            add(element)
+        }
+    }
+    
+    @usableFromInline
+    mutating func add(_ element: NIOTCPServerShorthandOption) {
+        switch element.data {
+        case .reuseAddr:
+            self.allowImmediateLocalEndpointAddressReuse = true
+        case .disableAutoRead:
+            self.disableAutoRead = true
+        case .backlog(let value):
+            self.maximumUnacceptedConnectionBacklog = value
         }
     }
     
@@ -447,14 +459,20 @@ public struct NIOUDPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var disableAutoRead = false
     
     /// Construct from an array literal.
+    @inlinable
     public init(arrayLiteral elements: NIOUDPShorthandOption...) {
         for element in elements {
-            switch element.data {
-            case .reuseAddr:
-                self.allowImmediateLocalEndpointAddressReuse = true
-            case .disableAutoRead:
-                self.disableAutoRead = true
-            }
+            add(element)
+        }
+    }
+    
+    @usableFromInline
+    mutating func add(_ element: NIOUDPShorthandOption) {
+        switch element.data {
+        case .reuseAddr:
+            self.allowImmediateLocalEndpointAddressReuse = true
+        case .disableAutoRead:
+            self.disableAutoRead = true
         }
     }
     
@@ -534,14 +552,20 @@ public struct NIOPipeShorthandOptions : ExpressibleByArrayLiteral, Hashable {
     var disableAutoRead = false
     
     /// Construct from an array literal.
+    @inlinable
     public init(arrayLiteral elements: NIOPipeShorthandOption...) {
         for element in elements {
-            switch element.data {
-            case .allowRemoteHalfClosure:
-                self.allowRemoteHalfClosure = true
-            case .disableAutoRead:
-                self.disableAutoRead = true
-            }
+            add(element)
+        }
+    }
+    
+    @usableFromInline
+    mutating func add(_ element: NIOPipeShorthandOption) {
+        switch element.data {
+        case .allowRemoteHalfClosure:
+            self.allowRemoteHalfClosure = true
+        case .disableAutoRead:
+            self.disableAutoRead = true
         }
     }
     
