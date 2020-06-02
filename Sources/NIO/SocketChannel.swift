@@ -331,7 +331,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     /// Support for vector reads, if enabled.
     private var vectorReadManager: Optional<DatagramVectorReadManager>
-    
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
         return pendingWrites.isWritable
