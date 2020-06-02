@@ -143,9 +143,10 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
 
-        let expect = expectation(description: "Is cancelling RepatedTask")
         let counter = NIOAtomic<Int>.makeAtomic(value: 0)
         let loop = eventLoopGroup.next()
+        let allDone = DispatchGroup()
+        allDone.enter()
         loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
             XCTAssertTrue(loop.inEventLoop)
             let initialValue = counter.load()
@@ -153,16 +154,15 @@ public final class EventLoopTest : XCTestCase {
             if initialValue == 0 {
                 XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
             } else if initialValue == count {
-                expect.fulfill()
                 repeatedTask.cancel()
+                allDone.leave()
             }
         }
 
-        waitForExpectations(timeout: 1) { error in
-            XCTAssertNil(error)
-            XCTAssertEqual(counter.load(), count + 1)
-            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay + Int64(count) * delay)
-        }
+        allDone.wait()
+
+        XCTAssertEqual(counter.load(), count + 1)
+        XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay + Int64(count) * delay)
     }
 
     public func testScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
@@ -226,10 +226,11 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
 
-        let expect = expectation(description: "Is cancelling RepatedTask")
-        let group = DispatchGroup()
+        let hasFiredGroup = DispatchGroup()
+        let isCancelledGroup = DispatchGroup()
         let loop = eventLoopGroup.next()
-        group.enter()
+        hasFiredGroup.enter()
+        isCancelledGroup.enter()
         var isAllowedToFire = true // read/write only on `loop`
         var hasFired = false // read/write only on `loop`
         let repeatedTask = loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in
@@ -238,23 +239,22 @@ public final class EventLoopTest : XCTestCase {
                 // we can only do this once as we can only leave the DispatchGroup once but we might lose a race and
                 // the timer might fire more than once (until `shouldNoLongerFire` becomes true).
                 hasFired = true
-                group.leave()
-                expect.fulfill()
+                hasFiredGroup.leave()
             }
             XCTAssertTrue(isAllowedToFire)
         }
-        group.notify(queue: DispatchQueue.global()) {
+        hasFiredGroup.notify(queue: DispatchQueue.global()) {
             repeatedTask.cancel()
             loop.execute {
                 // only now do we know that the `cancel` must have gone through
                 isAllowedToFire = false
+                isCancelledGroup.leave()
             }
         }
 
-        waitForExpectations(timeout: 1) { error in
-            XCTAssertNil(error)
-            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
-        }
+        hasFiredGroup.wait()
+        XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
+        isCancelledGroup.wait()
     }
 
     public func testScheduleRepeatedTaskToNotRetainRepeatedTask() throws {
