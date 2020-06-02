@@ -332,9 +332,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     /// Support for vector reads, if enabled.
     private var vectorReadManager: Optional<DatagramVectorReadManager>
     
-    /// The protocol family of this channel (if known)
-    private var protocolFamily: NIOBSDSocket.ProtocolFamily? = nil
-
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
         return pendingWrites.isWritable
@@ -365,7 +362,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
         self.vectorReadManager = nil
-        self.protocolFamily = protocolFamily
         let socket = try Socket(protocolFamily: protocolFamily, type: .datagram)
         do {
             try socket.setNonBlocking()
@@ -418,19 +414,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             #endif
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
             let valueAsInt: Int32 = value as! Bool ? 1 : 0
-            switch protocolFamily {
-            case .some(.inet):
+            switch try self.socket.localAddress().protocol {
+            case .inet:
                 try self.socket.setOption(level: NIOBSDSocket.OptionLevel.ip,
                                      name: NIOBSDSocket.Option.ip_recv_tos,
                                      value: valueAsInt)
-            case .some(.inet6):
+            case .inet6:
                 try self.socket.setOption(level: NIOBSDSocket.OptionLevel.ipv6,
                                      name: NIOBSDSocket.Option.ipv6_recv_tclass,
                                      value: valueAsInt)
-            case .some(_):
-                fatalError("Explicit congestion notification is only supported for IP")
             default:
-                fatalError("Explicit congestion notification is not supported when protocol is not known")
+                fatalError("Explicit congestion notification is only supported for IP")
             }
         default:
             try super.setOption0(option, value: value)
@@ -452,17 +446,15 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
             return (self.vectorReadManager?.messageCount ?? 0) as! Option.Value
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
-            switch protocolFamily {
-            case .some(.inet):
+            switch try self.socket.localAddress().protocol {
+            case .inet:
                 return try (self.socket.getOption(level: NIOBSDSocket.OptionLevel.ip,
                                                  name: NIOBSDSocket.Option.ip_recv_tos) != 0) as! Option.Value
-            case .some(.inet6):
+            case .inet6:
                 return try (self.socket.getOption(level: NIOBSDSocket.OptionLevel.ipv6,
                                                  name: NIOBSDSocket.Option.ipv6_recv_tclass) != 0) as! Option.Value
-            case .some(_):
-                fatalError("Explicit congestion notification is only supported for IP")
             default:
-                fatalError("Explicit congestion notification is not supported when protocol is not known")
+                fatalError("Explicit congestion notification is only supported for IP")
             }
         default:
             return try super.getOption0(option)
