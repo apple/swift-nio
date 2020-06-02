@@ -32,7 +32,7 @@ extension EmbeddedChannel {
 extension ChannelPipeline {
     
     fileprivate func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
-                                                                   file: StaticString = #file,
+                                                                   file: StaticString = fullFilePath(),
                                                                    line: UInt = #line) throws {
         XCTAssertThrowsError(try self.context(handlerType: handlerType).wait(), file: file, line: line) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
@@ -411,3 +411,13 @@ class WebSocketClientEndToEndTests: XCTestCase {
         XCTAssertNoThrow(try clientChannel.close().wait())
     }
 }
+
+#if compiler(>=5.3)
+internal func fullFilePath(_ filePath: StaticString = #filePath) -> StaticString {
+    return filePath
+}
+#else
+internal func fullFilePath(_ filePath: StaticString = #file) -> StaticString {
+    return filePath
+}
+#endif

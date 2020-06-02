@@ -1025,7 +1025,7 @@ func spawnAndJoinRacingThreads(count: Int, _ body: @escaping (Int) -> Void) {
     group.wait()
 }
 
-func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
+func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = fullFilePath(), line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
@@ -1053,3 +1053,13 @@ fileprivate class IntHolderWithDeallocationTracking {
         _ = self.allDeallocations.add(1)
     }
 }
+
+#if compiler(>=5.3)
+internal func fullFilePath(_ filePath: StaticString = #filePath) -> StaticString {
+    return filePath
+}
+#else
+internal func fullFilePath(_ filePath: StaticString = #file) -> StaticString {
+    return filePath
+}
+#endif
