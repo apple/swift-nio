@@ -118,7 +118,7 @@ final class DatagramChannelTests: XCTestCase {
     
     private var supportsIPv6: Bool {
         do {
-            let ipv6Loopback = try SocketAddress.makeAddressResolvingHost("::1", port: 0)
+            let ipv6Loopback = try SocketAddress(ipAddress: "::1", port: 0)
             return try System.enumerateInterfaces().contains(where: { $0.address == ipv6Loopback })
         } catch {
             return false

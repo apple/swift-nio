@@ -415,12 +415,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let valueAsInt: Int32 = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
-                try self.socket.setOption(level: NIOBSDSocket.OptionLevel.ip,
-                                          name: NIOBSDSocket.Option.ip_recv_tos,
+                try self.socket.setOption(level: .ip,
+                                          name: .ip_recv_tos,
                                           value: valueAsInt)
             case .some(.inet6):
-                try self.socket.setOption(level: NIOBSDSocket.OptionLevel.ipv6,
-                                          name: NIOBSDSocket.Option.ipv6_recv_tclass,
+                try self.socket.setOption(level: .ipv6,
+                                          name: .ipv6_recv_tclass,
                                           value: valueAsInt)
             default:
                 // Explicit congestion notification is only supported for IP
@@ -448,11 +448,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
             switch self.localAddress?.protocol {
             case .some(.inet):
-                return try (self.socket.getOption(level: NIOBSDSocket.OptionLevel.ip,
-                                                  name: NIOBSDSocket.Option.ip_recv_tos) != 0) as! Option.Value
+                return try (self.socket.getOption(level: .ip,
+                                                  name: .ip_recv_tos) != 0) as! Option.Value
             case .some(.inet6):
-                return try (self.socket.getOption(level: NIOBSDSocket.OptionLevel.ipv6,
-                                                  name: NIOBSDSocket.Option.ipv6_recv_tclass) != 0) as! Option.Value
+                return try (self.socket.getOption(level: .ipv6,
+                                                  name: .ipv6_recv_tclass) != 0) as! Option.Value
             default:
                 // Explicit congestion notification is only supported for IP
                 throw ChannelError.operationUnsupported
