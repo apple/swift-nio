@@ -424,7 +424,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                      name: NIOBSDSocket.Option.ipv6_recv_tclass,
                                      value: valueAsInt)
             default:
-                fatalError("Explicit congestion notification is only supported for IP")
+                // Explicit congestion notification is only supported for IP
+                throw ChannelError.operationUnsupported
             }
         default:
             try super.setOption0(option, value: value)
@@ -454,7 +455,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 return try (self.socket.getOption(level: NIOBSDSocket.OptionLevel.ipv6,
                                                  name: NIOBSDSocket.Option.ipv6_recv_tclass) != 0) as! Option.Value
             default:
-                fatalError("Explicit congestion notification is only supported for IP")
+                // Explicit congestion notification is only supported for IP
+                throw ChannelError.operationUnsupported
             }
         default:
             return try super.getOption0(option)
