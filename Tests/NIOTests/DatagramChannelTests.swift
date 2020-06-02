@@ -115,6 +115,15 @@ final class DatagramChannelTests: XCTestCase {
             .bind(host: host, port: 0)
             .wait()
     }
+    
+    private var supportsIPv6: Bool {
+        do {
+            let ipv6Loopback = try SocketAddress.makeAddressResolvingHost("::1", port: 0)
+            return try System.enumerateInterfaces().filter { $0.address == ipv6Loopback }.first != nil
+        } catch {
+            return false
+        }
+    }
 
     override func setUp() {
         super.setUp()
@@ -639,6 +648,11 @@ final class DatagramChannelTests: XCTestCase {
             XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
             
             // IPv6
+            guard self.supportsIPv6 else {
+                // Skip on non-IPv6 systems
+                return
+            }
+            
             let channel1 = try buildChannel(group: self.group, host: "::1")
             try channel1.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
             XCTAssertTrue(try channel1.getOption(ChannelOptions.explicitCongestionNotification).wait())
