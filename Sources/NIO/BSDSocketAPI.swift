@@ -270,6 +270,8 @@ extension NIOBSDSocket.Option {
             NIOBSDSocket.Option(rawValue: IP_MULTICAST_TTL)
     
     /// Request that we are passed type of service details when receiving datagrams.
+    /// Not public as the way to request this is to use `ChannelOptions.explicitCongestionNotification`
+    /// which works for both IPv4 and IPv6.
     static let ip_recv_tos: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_RECVTOS)
 }
@@ -302,6 +304,8 @@ extension NIOBSDSocket.Option {
             NIOBSDSocket.Option(rawValue: IPV6_V6ONLY)
     
     /// Request that we are passed traffic class details when receiving datagrams.
+    /// Not public as the way to request this is to use `ChannelOptions.explicitCongestionNotification`
+    /// which works for both IPv4 and IPv6.
     static let ipv6_recv_tclass: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
 }
