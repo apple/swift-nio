@@ -910,18 +910,56 @@ public final class NIOPipeBootstrap {
         try withUnsafeMutablePointer(to: &s) { ptr in
             try Posix.fstat(descriptor: descriptor, outStat: ptr)
         }
-        if (s.st_mode & S_IFREG) != 0 || (s.st_mode & S_IFDIR) != 0 {
+        switch s.st_mode & S_IFMT {
+        case S_IFREG, S_IFDIR, S_IFLNK, S_IFBLK:
             throw ChannelError.operationUnsupported
+        default:
+            () // Let's default to ok
+        }
+    }
+
+    /// Create the `PipeChannel` with the provided file descriptor which is used for both input & output.
+    ///
+    /// This method is useful for specialilsed use-cases where you want to use `NIOPipeBootstrap` for say a serial line.
+    ///
+    /// - note: If this method returns a succeeded future, SwiftNIO will close `fileDescriptor` when the `Channel`
+    ///         becomes inactive. You _must not_ do any further operations with `fileDescriptor`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptor and are responsible for
+    ///         closing it.
+    ///
+    /// - parameters:
+    ///     - fileDescriptor: The _Unix file descriptor_ for the input & output.
+    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
+    public func withInputOutputDescriptor(_ fileDescriptor: CInt) -> EventLoopFuture<Channel> {
+        let inputFD = fileDescriptor
+        let outputFD = dup(fileDescriptor)
+
+        return self.withPipes(inputDescriptor: inputFD, outputDescriptor: outputFD).flatMapErrorThrowing { error in
+            try! Posix.close(descriptor: outputFD)
+            throw error
         }
     }
 
     /// Create the `PipeChannel` with the provided input and output file descriptors.
+    ///
+    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
+    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
+    /// `NIOPipeBootstrap.withInputOutputDescriptor` if it is not a socket.
+    ///
+    /// - note: If this method returns a succeeded future, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
+    ///         `outputDescriptor`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptors and are responsible for
+    ///         closing them.
     ///
     /// - parameters:
     ///     - inputDescriptor: The _Unix file descriptor_ for the input (ie. the read side).
     ///     - outputDescriptor: The _Unix file descriptor_ for the output (ie. the write side).
     /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
     public func withPipes(inputDescriptor: CInt, outputDescriptor: CInt) -> EventLoopFuture<Channel> {
+        precondition(inputDescriptor >= 0 && outputDescriptor >= 0 && inputDescriptor != outputDescriptor,
+                     "illegal file descriptor pair. The file descriptors \(inputDescriptor), \(outputDescriptor) " +
+                     "must be distinct and both positive integers.")
         let eventLoop = group.next()
         do {
             try self.validateFileDescriptorIsNotAFile(inputDescriptor)
