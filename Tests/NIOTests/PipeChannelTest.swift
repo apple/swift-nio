@@ -122,17 +122,55 @@ final class PipeChannelTest: XCTestCase {
                                            outputDescriptor: fileFHDescriptor).wait()) { error in
                                     XCTAssertEqual(ChannelError.operationUnsupported, error as? ChannelError)
                             }
-                            XCTAssertThrowsError(try NIOPipeBootstrap(group: self.group)
-                                .withPipes(inputDescriptor: fileFHDescriptor,
-                                           outputDescriptor: fileFHDescriptor).wait()) { error in
-                                    XCTAssertEqual(ChannelError.operationUnsupported, error as? ChannelError)
-                            }
                         }
                     }
                 }
             }
             return [pipeIn, pipeOut]
         }
+    }
+
+    func testWeWorkFineWithASingleFileDescriptor() throws {
+        final class EchoHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                context.writeAndFlush(data).whenFailure { error in
+                    XCTFail("unexpected error: \(error)")
+                }
+            }
+        }
+        // We're using a socketpair here and not say a serial line because it's much harder to get a serial line :).
+        var socketPair: [CInt] = [-1, -1]
+        XCTAssertNoThrow(try socketPair.withUnsafeMutableBufferPointer { socketPairPtr in
+            precondition(socketPairPtr.count == 2)
+            try Posix.socketpair(domain: .local, type: .stream, protocol: 0, socketVector: socketPairPtr.baseAddress)
+        })
+        defer {
+            XCTAssertNoThrow(try socketPair.filter { $0 > 0 }.forEach(Posix.close(descriptor:)))
+        }
+
+        XCTAssertNoThrow(try "X".withCString { xPtr in
+            try Posix.write(descriptor: socketPair[1], pointer: xPtr, size: 1)
+        })
+
+        var maybeChannel: Channel? = nil
+        XCTAssertNoThrow(maybeChannel = try NIOPipeBootstrap(group: self.group)
+            .channelInitializer { channel in
+                channel.pipeline.addHandler(EchoHandler())
+            }
+            .withInputOutputDescriptor(dup(socketPair[0]))
+            .wait())
+        defer {
+            XCTAssertNoThrow(try maybeChannel?.close().wait())
+        }
+
+        var spaceForX: UInt8 = 0
+        XCTAssertNoThrow(try withUnsafeMutableBytes(of: &spaceForX) { xPtr in
+            try Posix.read(descriptor: socketPair[1], pointer: xPtr.baseAddress!, size: xPtr.count)
+        })
+        XCTAssertEqual(UInt8(ascii: "X"), spaceForX)
     }
 }
 
