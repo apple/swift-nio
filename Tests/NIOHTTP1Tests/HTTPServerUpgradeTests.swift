@@ -23,7 +23,7 @@ extension ChannelPipeline {
     }
 
     func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
-                                                       file: StaticString = fullFilePath(),
+                                                       file: StaticString = (#file),
                                                        line: UInt = #line) throws {
         do {
             let context = try self.context(handlerType: handlerType).wait()
