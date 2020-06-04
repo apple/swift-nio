@@ -38,8 +38,7 @@ func run(identifier: String) {
 
     measure(identifier: identifier) {
         let numberOfIterations = 1000
-        var buffer = ByteBufferAllocator().buffer(capacity: 1)
-        buffer.writeInteger(1, as: UInt8.self)
+        let buffer = ByteBuffer(integer: 1, as: UInt8.self)
         for _ in 0 ..< numberOfIterations {
             let clientChannel = try! clientBootstrap.bind(to: localhostPickPort).wait()
             defer {

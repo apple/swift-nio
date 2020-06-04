@@ -40,8 +40,7 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
         
         context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
         
-        let emptyBuffer = context.channel.allocator.buffer(capacity: 0)
-        let body = HTTPClientRequestPart.body(.byteBuffer(emptyBuffer))
+        let body = HTTPClientRequestPart.body(.byteBuffer(ByteBuffer()))
         context.write(self.wrapOutboundOut(body), promise: nil)
         
         context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
@@ -130,8 +129,7 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
     }
     
     private func pingTestFrameData(context: ChannelHandlerContext) {
-        var buffer = context.channel.allocator.buffer(capacity: self.testFrameData.utf8.count)
-        buffer.writeString(self.testFrameData)
+        let buffer = context.channel.allocator.buffer(string: self.testFrameData)
         let frame = WebSocketFrame(fin: true, opcode: .ping, data: buffer)
         context.write(self.wrapOutboundOut(frame), promise: nil)
     }

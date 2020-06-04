@@ -389,8 +389,7 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
                         self.produced += 1
                         // Produce an extra write the first time we are called to test reentrancy
                         if self.produced == 1 {
-                            var buf = ByteBufferAllocator().buffer(capacity: 1)
-                            buf.writeStaticString("X")
+                            let buf = ByteBuffer(string: "X")
                             XCTAssertNoThrow(try (context.channel as! EmbeddedChannel).writeInbound(buf))
                         }
                         context.fireChannelRead(self.wrapInboundOut(message))

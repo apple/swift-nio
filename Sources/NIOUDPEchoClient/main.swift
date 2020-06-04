@@ -36,8 +36,7 @@ private final class EchoHandler: ChannelInboundHandler {
             let remoteAddress = try self.remoteAddressInitializer()
             
             // Set the transmission data.
-            var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
-            buffer.writeString(line)
+            let buffer = context.channel.allocator.buffer(string: line)
             self.numBytes = buffer.readableBytes
             
             // Forward the data.
