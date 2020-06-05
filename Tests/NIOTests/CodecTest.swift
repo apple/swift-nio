@@ -1541,7 +1541,7 @@ public final class MessageToByteEncoderTest: XCTestCase {
         try testEncoder(MessageToByteHandler(Int32ToByteEncoderWithDefaultImpl()))
     }
 
-    private func testEncoder(_ handler: ChannelHandler, file: StaticString = fullFilePath(), line: UInt = #line) throws {
+    private func testEncoder(_ handler: ChannelHandler, file: StaticString = (#file), line: UInt = #line) throws {
         let channel = EmbeddedChannel()
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(MessageToByteHandler(Int32ToByteEncoder())).wait(),
