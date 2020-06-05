@@ -382,8 +382,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         func channelActive(context: ChannelHandlerContext) {
-            var dataToWrite = context.channel.allocator.buffer(capacity: toWrite.utf8.count)
-            dataToWrite.writeString(toWrite)
+            let dataToWrite = context.channel.allocator.buffer(string: toWrite)
             context.writeAndFlush(NIOAny(dataToWrite), promise: nil)
             context.fireChannelActive()
         }
@@ -457,8 +456,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         // First we confirm that the channel really is up by sending in the appropriate number of bytes.
-        var bytesToWrite = clientChannel.allocator.buffer(capacity: writingBytes.utf8.count)
-        bytesToWrite.writeString(writingBytes)
+        let bytesToWrite = clientChannel.allocator.buffer(string: writingBytes)
         let lastWriteFuture = clientChannel.writeAndFlush(NIOAny(bytesToWrite))
 
         // When we've received all the bytes we know the connection is up.
@@ -563,8 +561,7 @@ class EchoServerClientTest : XCTestCase {
             .channelInitializer { $0.pipeline.addHandler(countingHandler) }
             .connect(to: serverChannel.localAddress!).wait())
 
-        var buffer = clientChannel.allocator.buffer(capacity: str.utf8.count)
-        buffer.writeString(str)
+        let buffer = clientChannel.allocator.buffer(string: str)
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
@@ -620,8 +617,7 @@ class EchoServerClientTest : XCTestCase {
 
             func channelActive(context: ChannelHandlerContext) {
                 context.fireChannelActive()
-                var buffer = context.channel.allocator.buffer(capacity: str.utf8.count)
-                buffer.writeString(str)
+                let buffer = context.channel.allocator.buffer(string: str)
 
                 // write it four times and then close the connect.
                 context.writeAndFlush(NIOAny(buffer)).flatMap {

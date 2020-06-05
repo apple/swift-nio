@@ -43,7 +43,7 @@ internal struct OutputGrepper {
         deadPipe.fileHandleForWriting.closeFile()
         channelFuture.cascadeFailure(to: outputPromise)
         return OutputGrepper(result: outputPromise.futureResult,
-                         processOutputPipe: processOutputPipe)
+                             processOutputPipe: processOutputPipe)
     }
 }
 

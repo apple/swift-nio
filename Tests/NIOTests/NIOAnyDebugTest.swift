@@ -21,7 +21,7 @@ class NIOAnyDebugTest: XCTestCase {
         XCTAssertEqual(wrappedInNIOAnyBlock("string"), wrappedInNIOAnyBlock("string"))
         XCTAssertEqual(wrappedInNIOAnyBlock(123), wrappedInNIOAnyBlock("123"))
         
-        let bb = ByteBufferAllocator().byteBuffer(string: "byte buffer string")
+        let bb = ByteBuffer(string: "byte buffer string")
         XCTAssertTrue(wrappedInNIOAnyBlock(bb).contains("NIOAny { ByteBuffer { readerIndex: 0, writerIndex: 18, readableBytes: 18, capacity: 32, slice: _ByteBufferSlice { 0..<32 }, storage: "))
         XCTAssertTrue(wrappedInNIOAnyBlock(bb).hasSuffix(" }"))
         
@@ -41,7 +41,7 @@ class NIOAnyDebugTest: XCTestCase {
         """))
         
         let socketAddress = try SocketAddress(unixDomainSocketPath: "socketAdress")
-        let envelopeByteBuffer = ByteBufferAllocator().byteBuffer(string: "envelope buffer")
+        let envelopeByteBuffer = ByteBuffer(string: "envelope buffer")
         let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: socketAddress, data: envelopeByteBuffer)
         XCTAssertEqual(wrappedInNIOAnyBlock("\(envelope)"), wrappedInNIOAnyBlock("""
         AddressedEnvelope { \
@@ -54,12 +54,4 @@ class NIOAnyDebugTest: XCTestCase {
         return "NIOAny { \(item) }"
     }
     
-}
-
-private extension ByteBufferAllocator {
-    func byteBuffer(string: String) -> ByteBuffer {
-        var buffer = self.buffer(capacity: string.count)
-        buffer.writeString(string)
-        return buffer
-    }
 }

@@ -99,8 +99,7 @@ final class ChatHandler: ChannelInboundHandler {
     }
 
     private func writeToAll(channels: [ObjectIdentifier: Channel], allocator: ByteBufferAllocator, message: String) {
-        var buffer =  allocator.buffer(capacity: message.utf8.count)
-        buffer.writeString(message)
+        let buffer =  allocator.buffer(string: message)
         self.writeToAll(channels: channels, buffer: buffer)
     }
 

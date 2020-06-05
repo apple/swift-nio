@@ -314,8 +314,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testWriteWithoutFlushDoesNotWrite() throws {
         let channel = EmbeddedChannel()
 
-        var buf = ByteBufferAllocator().buffer(capacity: 1)
-        buf.writeBytes([1])
+        let buf = ByteBuffer(bytes: [1])
         let writeFuture = channel.write(buf)
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertFalse(writeFuture.isFulfilled)

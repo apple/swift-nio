@@ -528,11 +528,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testBasicVerifications() {
-        let byteBufferContainingJustAnX: ByteBuffer = {
-            var buffer = ByteBufferAllocator().buffer(capacity: 1)
-            buffer.writeString("X")
-            return buffer
-        }()
+        let byteBufferContainingJustAnX = ByteBuffer(string: "X")
         let expectedInOuts: [(String, [HTTPServerRequestPart])] = [
             ("GET / HTTP/1.1\r\n\r\n",
              [.head(.init(version: .init(major: 1, minor: 1), method: .GET, uri: "/")),
@@ -564,9 +560,7 @@ class HTTPDecoderTest: XCTestCase {
         ]
 
         let expectedInOutsBB: [(ByteBuffer, [HTTPServerRequestPart])] = expectedInOuts.map { io in
-            var buffer = ByteBufferAllocator().buffer(capacity: io.0.utf8.count)
-            buffer.writeString(io.0)
-            return (buffer, io.1)
+            return (ByteBuffer(string: io.0), io.1)
         }
         XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: expectedInOutsBB,
                                                                         decoderFactory: { HTTPRequestDecoder() }))

@@ -141,9 +141,6 @@ func main() throws {
         }
 
         let processOutputPipe = FileHandle(fileDescriptor: try! grepper.processOutputPipe.takeDescriptorOwnership())
-        defer {
-            processOutputPipe.closeFile()
-        }
         let process = Process()
         process.binaryPath = binary
         process.standardInput = devNull
@@ -153,10 +150,11 @@ func main() throws {
         process.arguments = ["_exec", suite, name]
         try process.runProcess()
 
+        process.waitUntilExit()
+        processOutputPipe.closeFile()
         let result: Result<ProgramOutput, Error> = Result {
             try grepper.result.wait()
         }
-        process.waitUntilExit()
         return try interpretOutput(result,
                                    regex: crashTest.crashRegex,
                                    runResult: process.terminationReason == .exit ?

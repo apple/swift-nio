@@ -198,6 +198,22 @@ extension ByteBuffer {
         }
         return self.setBytes(data, at: index)
     }
+
+    public init(data: Data) {
+        self = ByteBufferAllocator().buffer(data: data)
+    }
+}
+
+extension ByteBufferAllocator {
+    /// Create a fresh `ByteBuffer` containing the bytes contained in the given `Data`.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit the bytes of the `Data` and potentially
+    /// some extra space using Swift's default allocator.
+    public func buffer(data: Data) -> ByteBuffer {
+        var buffer = self.buffer(capacity: data.count)
+        buffer.writeBytes(data)
+        return buffer
+    }
 }
 
 // MARK: - Conformances

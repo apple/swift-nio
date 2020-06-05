@@ -25,8 +25,7 @@ private final class EchoHandler: ChannelInboundHandler {
         print("Client connected to \(context.remoteAddress!)")
         
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
-        var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
-        buffer.writeString(line)
+        let buffer = context.channel.allocator.buffer(string: line)
         self.numBytes = buffer.readableBytes
         context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }

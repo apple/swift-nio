@@ -26,9 +26,8 @@ private final class HTTPEchoHandler: ChannelInboundHandler {
         
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
         
-        var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
-        buffer.writeString(line)
-        
+        let buffer = context.channel.allocator.buffer(string: line)
+
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(buffer.readableBytes)")

@@ -431,4 +431,283 @@ extension ByteBuffer {
             return $0
         }
     }
+
+    @discardableResult
+    public mutating func writeImmutableBuffer(_ buffer: ByteBuffer) -> Int {
+        var mutable = buffer
+        return self.writeBuffer(&mutable)
+    }
+}
+
+extension ByteBuffer {
+    /// Return an empty `ByteBuffer` allocated with `ByteBufferAllocator()`.
+    ///
+    /// Calling this constructor will not allocate because it will return a `ByteBuffer` that wraps a shared storage
+    /// object. As soon as you write to the constructed buffer however, you will incur an allocation because a
+    /// copy-on-write will happen.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` it is
+    ///         recommended using `channel.allocator.buffer(capacity: 0)`. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    @inlinable
+    public init() {
+        self = ByteBufferAllocator.zeroCapacityWithDefaultAllocator
+    }
+
+    /// Create a fresh `ByteBuffer` containing the bytes of the `string` encoded as UTF-8.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `string` and potentially some extra space using
+    /// the default allocator.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(string:)`. Or if you want to write multiple items into the
+    ///         buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeString` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    public init(string: String) {
+        self = ByteBufferAllocator().buffer(string: string)
+    }
+
+    /// Create a fresh `ByteBuffer` containing the bytes of the `string` encoded as UTF-8.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `string` and potentially some extra space using
+    /// the default allocator.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(substring:)`. Or if you want to write multiple items into
+    ///         the buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeSubstring` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    public init(substring string: Substring) {
+        self = ByteBufferAllocator().buffer(substring: string)
+    }
+
+    /// Create a fresh `ByteBuffer` containing the bytes of the `string` encoded as UTF-8.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `string` and potentially some extra space using
+    /// the default allocator.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(staticString:)`. Or if you want to write multiple items into
+    ///         the buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeStaticString` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    public init(staticString string: StaticString) {
+        self = ByteBufferAllocator().buffer(staticString: string)
+    }
+
+    /// Create a fresh `ByteBuffer` containing the `bytes`.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `bytes` and potentially some extra space using
+    /// the default allocator.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(bytes:)`. Or if you want to write multiple items into the
+    ///         buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeBytes` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    @inlinable
+    public init<Bytes: Sequence>(bytes: Bytes) where Bytes.Element == UInt8 {
+        self = ByteBufferAllocator().buffer(bytes: bytes)
+    }
+
+    /// Create a fresh `ByteBuffer` containing the bytes of the byte representation in the given `endianness` of
+    /// `integer`.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `integer` and potentially some extra space using
+    /// the default allocator.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(integer:)`. Or if you want to write multiple items into the
+    ///         buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeInteger` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    @inlinable
+    public init<I: FixedWidthInteger>(integer: I, endianness: Endianness = .big, as: I.Type = I.self) {
+        self = ByteBufferAllocator().buffer(integer: integer, endianness: endianness, as: `as`)
+    }
+
+    /// Create a fresh `ByteBuffer` containing `count` repetitions of `byte`.
+    ///
+    /// This will allocate a new `ByteBuffer` with at least `count` bytes.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(repeating:count:)`. Or if you want to write multiple items
+    ///         into the buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeRepeatingByte` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    public init(repeating byte: UInt8, count: Int) {
+        self = ByteBufferAllocator().buffer(repeating: byte, count: count)
+    }
+
+    /// Create a fresh `ByteBuffer` containing the readable bytes of `buffer`.
+    ///
+    /// This may allocate a new `ByteBuffer` with enough space to fit `buffer` and potentially some extra space using
+    /// the default allocator.
+    ///
+    /// - note: Use this method only if you deliberately want to reallocate a potentially smaller `ByteBuffer` than the
+    ///         one you already have. Given that `ByteBuffer` is a value type, defensive copies are not necessary. If
+    ///         you have a `ByteBuffer` but would like the `readerIndex` to start at `0`, consider `readSlice` instead.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(buffer:)`. Or if you want to write multiple items into the
+    ///         buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeImmutableBuffer` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    public init(buffer: ByteBuffer) {
+        self = ByteBufferAllocator().buffer(buffer: buffer)
+    }
+
+    /// Create a fresh `ByteBuffer` containing the bytes contained in the given `DispatchData`.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit the bytes of the `DispatchData` and potentially
+    /// some extra space using the default allocator.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(dispatchData:)`. Or if you want to write multiple items into
+    ///         the buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeDispatchData` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    public init(dispatchData: DispatchData) {
+        self = ByteBufferAllocator().buffer(dispatchData: dispatchData)
+    }
+}
+
+extension ByteBufferAllocator {
+    /// Create a fresh `ByteBuffer` containing the bytes of the `string` encoded as UTF-8.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `string` and potentially some extra space.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    public func buffer(string: String) -> ByteBuffer {
+        var buffer = self.buffer(capacity: string.utf8.count)
+        buffer.writeString(string)
+        return buffer
+    }
+
+    /// Create a fresh `ByteBuffer` containing the bytes of the `string` encoded as UTF-8.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `string` and potentially some extra space.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    public func buffer(substring string: Substring) -> ByteBuffer {
+        var buffer = self.buffer(capacity: string.utf8.count)
+        buffer.writeSubstring(string)
+        return buffer
+    }
+
+    /// Create a fresh `ByteBuffer` containing the bytes of the `string` encoded as UTF-8.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `string` and potentially some extra space.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    public func buffer(staticString string: StaticString) -> ByteBuffer {
+        var buffer = self.buffer(capacity: string.utf8CodeUnitCount)
+        buffer.writeStaticString(string)
+        return buffer
+    }
+
+    /// Create a fresh `ByteBuffer` containing the `bytes`.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `bytes` and potentially some extra space.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    @inlinable
+    public func buffer<Bytes: Sequence>(bytes: Bytes) -> ByteBuffer where Bytes.Element == UInt8 {
+        var buffer = self.buffer(capacity: bytes.underestimatedCount)
+        buffer.writeBytes(bytes)
+        return buffer
+    }
+
+    /// Create a fresh `ByteBuffer` containing the bytes of the byte representation in the given `endianness` of
+    /// `integer`.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `integer` and potentially some extra space.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    @inlinable
+    public func buffer<I: FixedWidthInteger>(integer: I,
+                                             endianness: Endianness = .big,
+                                             as: I.Type = I.self) -> ByteBuffer {
+        var buffer = self.buffer(capacity: MemoryLayout<I>.size)
+        buffer.writeInteger(integer, endianness: endianness, as: `as`)
+        return buffer
+    }
+
+    /// Create a fresh `ByteBuffer` containing `count` repetitions of `byte`.
+    ///
+    /// This will allocate a new `ByteBuffer` with at least `count` bytes.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    public func buffer(repeating byte: UInt8, count: Int) -> ByteBuffer {
+        var buffer = self.buffer(capacity: count)
+        buffer.writeRepeatingByte(byte, count: count)
+        return buffer
+    }
+
+    /// Create a fresh `ByteBuffer` containing the readable bytes of `buffer`.
+    ///
+    /// This may allocate a new `ByteBuffer` with enough space to fit `buffer` and potentially some extra space.
+    ///
+    /// - note: Use this method only if you deliberately want to reallocate a potentially smaller `ByteBuffer` than the
+    ///         one you already have. Given that `ByteBuffer` is a value type, defensive copies are not necessary. If
+    ///         you have a `ByteBuffer` but would like the `readerIndex` to start at `0`, consider `readSlice` instead.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    public func buffer(buffer: ByteBuffer) -> ByteBuffer {
+        var newBuffer = self.buffer(capacity: buffer.readableBytes)
+        newBuffer.writeImmutableBuffer(buffer)
+        return newBuffer
+    }
+
+    /// Create a fresh `ByteBuffer` containing the bytes contained in the given `DispatchData`.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit the bytes of the `DispatchData` and potentially
+    /// some extra space.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    public func buffer(dispatchData: DispatchData) -> ByteBuffer {
+        var buffer = self.buffer(capacity: dispatchData.count)
+        buffer.writeDispatchData(dispatchData)
+        return buffer
+    }
+}
+
+
+extension Optional where Wrapped == ByteBuffer {
+    /// If `nil`, replace `self` with `.some(buffer)`. If non-`nil`, write `buffer`'s readable bytes into the
+    /// `ByteBuffer` starting at `writerIndex`.
+    ///
+    ///  This method will not modify `buffer`, meaning its `readerIndex` and `writerIndex` stays intact.
+    ///
+    /// - parameters:
+    ///     - buffer: The `ByteBuffer` to write.
+    /// - returns: The number of bytes written to this `ByteBuffer` which is equal to the number of `readableBytes` in
+    ///            `buffer`.
+    @discardableResult
+    public mutating func setOrWriteImmutableBuffer(_ buffer: ByteBuffer) -> Int {
+        var mutable = buffer
+        return self.setOrWriteBuffer(&mutable)
+    }
+
+    /// If `nil`, replace `self` with `.some(buffer)`. If non-`nil`, write `buffer`'s readable bytes into the
+    /// `ByteBuffer` starting at `writerIndex`.
+    ///
+    /// This will move both this `ByteBuffer`'s writer index as well as `buffer`'s reader index by the number of bytes
+    /// readable in `buffer`.
+    ///
+    /// - parameters:
+    ///     - buffer: The `ByteBuffer` to write.
+    /// - returns: The number of bytes written to this `ByteBuffer` which is equal to the number of bytes read from `buffer`.
+    @discardableResult
+    public mutating func setOrWriteBuffer(_ buffer: inout ByteBuffer) -> Int {
+        if self == nil {
+            let readableBytes = buffer.readableBytes
+            self = buffer
+            buffer.moveReaderIndex(to: buffer.writerIndex)
+            return readableBytes
+        } else {
+            return self!.writeBuffer(&buffer)
+        }
+    }
 }
