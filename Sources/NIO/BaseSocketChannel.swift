@@ -645,10 +645,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             promise?.fail(ChannelError.ioOnClosedChannel)
             return
         }
-        guard self.lifecycleManager.isPreRegistered else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
-            return
-        }
 
         executeAndComplete(promise) {
             try socket.bind(to: address)

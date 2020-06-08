@@ -127,6 +127,8 @@ enum UserToKernel {
     case disableSIGPIPE(CInt)
     case write(CInt, ByteBuffer)
     case writev(CInt, [ByteBuffer])
+    case bind(SocketAddress)
+    case setOption(NIOBSDSocket.OptionLevel, NIOBSDSocket.Option, Any)
 }
 
 enum KernelToUser {
@@ -342,6 +344,26 @@ class HookedSocket: Socket, UserKernelInterface {
             throw UnexpectedKernelReturn(ret)
         }
     }
+
+    override func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
+        try self.userToKernel.waitForEmptyAndSet(.setOption(level, name, value))
+        let ret = try self.waitForKernelReturn()
+        if case .returnVoid = ret {
+            return
+        } else {
+            throw UnexpectedKernelReturn(ret)
+        }
+    }
+
+    override func bind(to address: SocketAddress) throws {
+        try self.userToKernel.waitForEmptyAndSet(.bind(address))
+        let ret = try self.waitForKernelReturn()
+        if case .returnVoid = ret {
+            return
+        } else {
+            throw UnexpectedKernelReturn(ret)
+        }
+    }
 }
 
 extension HookedSelector {
@@ -495,13 +517,17 @@ extension SALTest {
         return channel
     }
 
+    func makeSocketChannel(file: StaticString = #file, line: UInt = #line) throws -> SocketChannel {
+        return try self.makeSocketChannel(eventLoop: self.loop, file: file, line: line)
+    }
+
     func makeConnectedSocketChannel(localAddress: SocketAddress?,
                                     remoteAddress: SocketAddress,
                                     file: StaticString = (#file),
                                     line: UInt = #line) throws -> SocketChannel {
         let channel = try self.makeSocketChannel(eventLoop: self.loop)
         let connectFuture = try channel.eventLoop.runSAL(syscallAssertions: {
-            try self.assertConnect(result: true, { $0 == remoteAddress })
+            try self.assertConnect(expectedAddress: remoteAddress, result: true)
             try self.assertLocalAddress(address: localAddress)
             try self.assertRemoteAddress(address: remoteAddress)
             try self.assertRegister { selectable, eventSet, registration in
@@ -608,8 +634,9 @@ extension SALTest {
 
     func assertLocalAddress(address: SocketAddress?, file: StaticString = (#file), line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
-        try self.selector.assertSyscallAndReturn(address.map { .returnSocketAddress($0) } ??
-            /*                                */ .error(.init(errnoCode: EOPNOTSUPP, reason: "nil passed")),
+        try self.selector.assertSyscallAndReturn(address.map {
+                                                    .returnSocketAddress($0)
+            /*                                */ } ?? .error(.init(errnoCode: EOPNOTSUPP, reason: "nil passed")),
                                                  file: file, line: line) { syscall in
             if case .localAddress = syscall {
                 return true
@@ -632,11 +659,22 @@ extension SALTest {
         }
     }
 
-    func assertConnect(result: Bool, file: StaticString = (#file), line: UInt = #line, _ matcher: (SocketAddress) -> Bool = { _ in true }) throws {
+    func assertConnect(expectedAddress: SocketAddress, result: Bool, file: StaticString = (#file), line: UInt = #line, _ matcher: (SocketAddress) -> Bool = { _ in true }) throws {
         SAL.printIfDebug("\(#function)")
         try self.selector.assertSyscallAndReturn(.returnBool(result), file: file, line: line) { syscall in
             if case .connect(let address) = syscall {
-                return matcher(address)
+                return address == expectedAddress
+            } else {
+                return false
+            }
+        }
+    }
+
+    func assertBind(expectedAddress: SocketAddress, file: StaticString = #file, line: UInt = #line) throws {
+        SAL.printIfDebug("\(#function)")
+        try self.selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
+            if case .bind(let address) = syscall {
+                return address == expectedAddress
             } else {
                 return false
             }
@@ -655,6 +693,19 @@ extension SALTest {
         }
     }
 
+    func assertSetOption(expectedLevel: NIOBSDSocket.OptionLevel,
+                         expectedOption: NIOBSDSocket.Option,
+                         file: StaticString = #file, line: UInt = #line,
+                         _ valueMatcher: (Any) -> Bool = { _ in true }) throws {
+        SAL.printIfDebug("\(#function)")
+        try self.selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
+            if case .setOption(expectedLevel, expectedOption, let value) = syscall {
+                return valueMatcher(value)
+            } else {
+                return false
+            }
+        }
+    }
 
     func assertRegister(file: StaticString = (#file), line: UInt = #line, _ matcher: (Selectable, SelectorEventSet, NIORegistration) throws -> Bool) throws {
         SAL.printIfDebug("\(#function)")
