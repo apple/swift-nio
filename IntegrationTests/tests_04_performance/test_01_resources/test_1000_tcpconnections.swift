@@ -40,6 +40,8 @@ func run(identifier: String) {
             defer {
                 try! clientChannel.close().wait()
             }
+            // For boring reasons we need to turn off linger.
+            _ = try! (clientChannel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0)).wait()
             // Send a byte to make sure everything is really open.
             var buffer = clientChannel.allocator.buffer(capacity: 1)
             buffer.writeInteger(1, as: UInt8.self)
