@@ -11,6 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+// Xcode's Archive builds with Xcode's Package support struggle with empty .c files
+// (https://bugs.swift.org/browse/SR-12939).
+void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug(void) {}
+
 #ifdef __linux__
 
 #define _GNU_SOURCE
