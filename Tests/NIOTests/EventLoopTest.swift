@@ -1233,4 +1233,50 @@ public final class EventLoopTest : XCTestCase {
         // All done, the EventLoop is terminated so we should be able to check the results.
         XCTAssertEqual(UInt8(ascii: "J"), receiveHandler.received)
     }
+
+    func testWeFailOutstandingScheduledTasksOnELShutdown() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let scheduledTask = group.next().scheduleTask(in: .hours(24)) {
+            XCTFail("We lost the 24 hour race and aren't even in Le Mans.")
+        }
+        let waiter = DispatchGroup()
+        waiter.enter()
+        scheduledTask.futureResult.map {
+            XCTFail("didn't expect success")
+        }.whenFailure { error in
+            XCTAssertEqual(.shutdown, error as? EventLoopError)
+            waiter.leave()
+        }
+
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
+        waiter.wait()
+    }
+
+    func testSchedulingTaskOnFutureFailedByELShutdownDoesNotMakeUsExplode() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let scheduledTask = group.next().scheduleTask(in: .hours(24)) {
+            XCTFail("Task was scheduled in 24 hours, yet it executed.")
+        }
+        let waiter = DispatchGroup()
+        waiter.enter() // first scheduled task
+        waiter.enter() // scheduled task in the first task's whenFailure.
+        scheduledTask.futureResult.map {
+            XCTFail("didn't expect success")
+        }.whenFailure { error in
+            XCTAssertEqual(.shutdown, error as? EventLoopError)
+            group.next().execute {} // This previously blew up
+            group.next().scheduleTask(in: .hours(24)) {
+                XCTFail("Task was scheduled in 24 hours, yet it executed.")
+            }.futureResult.map {
+                XCTFail("didn't expect success")
+            }.whenFailure { error in
+                XCTAssertEqual(.shutdown, error as? EventLoopError)
+                waiter.leave()
+            }
+            waiter.leave()
+        }
+
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
+        waiter.wait()
+    }
 }
