@@ -529,6 +529,53 @@ class BootstrapTest: XCTestCase {
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: elg))
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: el))
     }
+    
+    func testShorthandOptionsAreEquivalentUniversalClient() throws {
+        func setAndGetOption<Option>(option: Option, _ applyOptions : (NIOClientTCPBootstrap) -> NIOClientTCPBootstrap) throws
+            -> Option.Value where Option : ChannelOption {
+            var optionRead : EventLoopFuture<Option.Value>?
+            XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
+                var channel: Channel? = nil
+                XCTAssertNoThrow(channel = try applyOptions(NIOClientTCPBootstrap(
+                    ClientBootstrap(group: self.group), tls: NIOInsecureNoTLS()))
+                    .channelInitializer { channel in optionRead = channel.getOption(option)
+                        return channel.eventLoop.makeSucceededFuture(())
+                    }
+                .connect(to: server.localAddress!)
+                .wait())
+                XCTAssertNotNil(optionRead)
+                XCTAssertNotNil(channel)
+                XCTAssertNoThrow(try channel?.close().wait())
+            })
+            return try optionRead!.wait()
+        }
+        
+        func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
+                                            shortOption: NIOTCPShorthandOption) throws
+            where Option : ChannelOption, Option.Value : Equatable {
+            let longSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOption(longOption, value: setValue)
+            }
+            let shortSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.options([shortOption])
+            }
+            let unsetValue = try setAndGetOption(option: longOption) { $0 }
+            
+            XCTAssertEqual(longSetValue, shortSetValue)
+            XCTAssertNotEqual(longSetValue, unsetValue)
+        }
+        
+        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.so_reuseaddr),
+                                   setValue: 1,
+                                   shortOption: .allowImmediateLocalEndpointAddressReuse)
+        try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
+                                   setValue: true,
+                                   shortOption: .allowRemoteHalfClosure)
+        try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
+                                   setValue: false,
+                                   shortOption: .disableAutoRead)
+    }
+
 }
 
 private final class MakeSureAutoReadIsOffInChannelInitializer:  ChannelInboundHandler {

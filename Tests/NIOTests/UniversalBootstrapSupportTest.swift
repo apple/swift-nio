@@ -135,4 +135,67 @@ class UniversalBootstrapSupportTest: XCTestCase {
             XCTAssertEqual(0, counter2.channelReadCalls)
         })
     }
+    
+    func testBootstrapOverrideOfShortcutOptions() {
+        final class FakeBootstrap : NIOClientTCPBootstrapProtocol {
+            func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
+                fatalError("Not implemented")
+            }
+            
+            func protocolHandlers(_ handlers: @escaping () -> [ChannelHandler]) -> Self {
+                fatalError("Not implemented")
+            }
+            
+            var regularOptionsSeen = false
+            func channelOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
+                regularOptionsSeen = true
+                return self
+            }
+            
+            var shorthandOptionConsumed = false
+            func _applyOptions(_ options: inout NIOTCPShorthandOptions) -> FakeBootstrap {
+                if options.consumeAllowImmediateLocalEndpointAddressReuse().isSet {
+                    shorthandOptionConsumed = true
+                }
+                return self
+            }
+            
+            func connectTimeout(_ timeout: TimeAmount) -> Self {
+                fatalError("Not implemented")
+            }
+            
+            func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
+                fatalError("Not implemented")
+            }
+            
+            func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
+                fatalError("Not implemented")
+            }
+            
+            func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
+                fatalError("Not implemented")
+            }
+        }
+        
+        // Check consumption works.
+        let consumingFake = FakeBootstrap()
+        _ = NIOClientTCPBootstrap(consumingFake, tls: NIOInsecureNoTLS())
+            .options([.allowImmediateLocalEndpointAddressReuse])
+        XCTAssertTrue(consumingFake.shorthandOptionConsumed)
+        XCTAssertFalse(consumingFake.regularOptionsSeen)
+        
+        // Check default behaviour works.
+        let nonConsumingFake = FakeBootstrap()
+        _ = NIOClientTCPBootstrap(nonConsumingFake, tls: NIOInsecureNoTLS())
+            .options([.allowRemoteHalfClosure])
+        XCTAssertFalse(nonConsumingFake.shorthandOptionConsumed)
+        XCTAssertTrue(nonConsumingFake.regularOptionsSeen)
+        
+        // Both at once.
+        let bothFake = FakeBootstrap()
+        _ = NIOClientTCPBootstrap(bothFake, tls: NIOInsecureNoTLS())
+            .options([.allowRemoteHalfClosure, .allowImmediateLocalEndpointAddressReuse])
+        XCTAssertTrue(bothFake.shorthandOptionConsumed)
+        XCTAssertTrue(bothFake.regularOptionsSeen)
+    }
 }
