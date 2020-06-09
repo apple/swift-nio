@@ -78,6 +78,7 @@ private let sysRecvFrom: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong, 
 private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
 #endif
 private let sysSendTo: @convention(c) (CInt, UnsafeRawPointer?, CLong, CInt, UnsafePointer<sockaddr>?, socklen_t) -> CLong = sendto
+private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>?, CInt) -> ssize_t = recvmsg
 private let sysDup: @convention(c) (CInt) -> CInt = dup
 private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
 private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockname
@@ -96,6 +97,25 @@ private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt
 private let sysKevent = kevent
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
+#endif
+
+#if os(Linux)
+private let sysCmsgFirstHdr: @convention(c) (UnsafePointer<msghdr>?) -> UnsafeMutablePointer<cmsghdr>? =
+                CNIOLinux_CMSG_FIRSTHDR
+private let sysCmsgNxtHdr: @convention(c) (UnsafeMutablePointer<msghdr>?, UnsafeMutablePointer<cmsghdr>?) ->
+                UnsafeMutablePointer<cmsghdr>? = CNIOLinux_CMSG_NXTHDR
+private let sysCmsgData: @convention(c) (UnsafePointer<cmsghdr>?) -> UnsafePointer<UInt8>? = CNIOLinux_CMSG_DATA
+private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_SPACE
+private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_LEN
+#else
+private let sysCmsgFirstHdr: @convention(c) (UnsafePointer<msghdr>?) -> UnsafeMutablePointer<cmsghdr>? =
+                CNIODarwin_CMSG_FIRSTHDR
+private let sysCmsgNxtHdr: @convention(c) (UnsafePointer<msghdr>?, UnsafePointer<cmsghdr>?) ->
+                UnsafeMutablePointer<cmsghdr>? = CNIODarwin_CMSG_NXTHDR
+private let sysCmsgData: @convention(c) (UnsafePointer<cmsghdr>?) -> UnsafePointer<UInt8>? =
+                CNIODarwin_CMSG_DATA
+private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_SPACE
+private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_LEN
 #endif
 
 private func isBlacklistedErrno(_ code: Int32) -> Bool {
@@ -379,6 +399,13 @@ internal enum Posix {
         }
     }
 
+    @inline(never)
+    public static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
+        return try syscall(blocking: true) {
+            sysRecvMsg(descriptor, msgHdr, flags)
+        }
+    }
+
     @discardableResult
     @inline(never)
     public static func lseek(descriptor: CInt, offset: off_t, whence: CInt) throws -> off_t {
@@ -524,6 +551,38 @@ internal extension Posix {
             throw error
         }
     }
+}
+
+internal extension Posix {
+    static func cmsgFirstHeader(inside msghdr: UnsafePointer<msghdr>?) -> UnsafeMutablePointer<cmsghdr>? {
+        return sysCmsgFirstHdr(msghdr)
+    }
+    
+    static func cmsgNextHeader(inside msghdr: UnsafeMutablePointer<msghdr>?, from: UnsafeMutablePointer<cmsghdr>?)
+        -> UnsafeMutablePointer<cmsghdr>? {
+        return sysCmsgNxtHdr(msghdr, from)
+    }
+    
+    static func cmsgData(for header: UnsafePointer<cmsghdr>?) -> UnsafeBufferPointer<UInt8>? {
+        let dataPointer = sysCmsgData(header)
+        if let header = header {
+            // Linux and Darwin use different types for cmsg_len.
+            let length = size_t(header.pointee.cmsg_len) - cmsgLen(payloadSize: 0)
+            let buffer = UnsafeBufferPointer(start: dataPointer, count: Int(length))
+            return buffer
+        } else {
+            return nil
+        }
+    }
+    
+    static func cmsgLen(payloadSize: size_t) -> size_t {
+        return sysCmsgLen(payloadSize)
+    }
+    
+    static func cmsgSpace(payloadSize: size_t) -> size_t {
+        return sysCmsgSpace(payloadSize)
+    }
+    
 }
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)

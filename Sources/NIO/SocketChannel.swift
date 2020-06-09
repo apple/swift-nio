@@ -12,6 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+import CNIODarwin
+#elseif os(Linux) || os(FreeBSD) || os(Android)
+import CNIOLinux
+#else
+let badOS = { fatalError("unsupported OS") }()
+#endif
+
 extension ByteBuffer {
     mutating func withMutableWritePointer(body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
         var singleResult: IOResult<Int>!
@@ -325,6 +333,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 ///
 /// Currently, it does not support connected mode which is well worth adding.
 final class DatagramChannel: BaseSocketChannel<Socket> {
+    private var reportExplicitCongestionNotifications = false
 
     // Guard against re-entrance of flushNow() method.
     private let pendingWrites: PendingDatagramWritesManager
@@ -415,10 +424,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let valueAsInt: Int32 = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
+                reportExplicitCongestionNotifications = true
                 try self.socket.setOption(level: .ip,
                                           name: .ip_recv_tos,
                                           value: valueAsInt)
             case .some(.inet6):
+                reportExplicitCongestionNotifications = true
                 try self.socket.setOption(level: .ipv6,
                                           name: .ipv6_recv_tclass,
                                           value: valueAsInt)
@@ -489,6 +500,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
         var buffer = self.recvAllocator.buffer(allocator: self.allocator)
         var readResult = ReadResult.none
+        
+        let controlBytes = self.reportExplicitCongestionNotifications ?
+                // Guess at max 4 int32 payload messages.
+                UnsafeMutableRawBufferPointer.allocate(
+                    byteCount: Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.size) * 4,
+                    alignment: MemoryLayout<Int32>.alignment) :
+                UnsafeMutableRawBufferPointer(start: nil, count: 0)
+        
 
         for i in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
@@ -496,8 +515,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             }
             buffer.clear()
 
+            var controlByteSlice = controlBytes[...]
+            var controlMessageReceiver = ControlMessageReceiver()
+            
             let result = try buffer.withMutableWritePointer {
-                try self.socket.recvfrom(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength)
+                try self.socket.recvmsg(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength,
+                                        controlBytes: &controlByteSlice,
+                                        controlMessageReceiver: { (level, type, data) in controlMessageReceiver.receiveMessage(level: level, type: type, data: data) })
             }
             switch result {
             case .processed(let bytesRead):
@@ -506,7 +530,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
                 readPending = false
 
-                let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(), data: buffer)
+                let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
+                                            data: buffer,
+                                            metadata: self.reportExplicitCongestionNotifications ?
+                                                AddressedEnvelope.Metadata(ecnState: controlMessageReceiver.ecnValue) :
+                                                nil)
                 assert(self.isActive)
                 pipeline.fireChannelRead0(NIOAny(msg))
                 if mayGrow && i < maxMessagesPerRead {
@@ -519,6 +547,47 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             }
         }
         return readResult
+    }
+    
+    private struct ControlMessageReceiver {
+        var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable // Default
+        
+        mutating func receiveMessage(level: Int32, type: Int32, data: UnsafeBufferPointer<UInt8>?) {
+            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+            let ipv4TosType = IP_RECVTOS
+            #else
+            let ipv4TosType = IP_TOS    // Linux
+            #endif
+            if level == IPPROTO_IP && type == ipv4TosType {
+                if let data = data {
+                    assert(data.count == 1)
+                    let readValue: Int32 = .init(data[0])
+                    self.ecnValue = ControlMessageReceiver.parseEcn(receivedValue: readValue)
+                }
+            } else if level == IPPROTO_IPV6 && type == IPV6_TCLASS {
+                if let data = data {
+                    assert(data.count == 4)
+                    var readValue: Int32 = 0
+                    withUnsafeMutableBytes(of: &readValue) { valuePtr in
+                        valuePtr.copyMemory(from: UnsafeRawBufferPointer(data))
+                    }
+                    self.ecnValue = ControlMessageReceiver.parseEcn(receivedValue: readValue)
+                }
+            }
+        }
+    
+        private static func parseEcn(receivedValue: Int32) -> NIOExplicitCongestionNotificationState {
+            switch receivedValue & IPTOS_ECN_MASK {
+            case IPTOS_ECN_ECT1:
+                return .transportCapableFlag1
+            case IPTOS_ECN_ECT0:
+                return .transportCapableFlag0
+            case IPTOS_ECN_CE:
+                return .congestionExperienced
+            default:
+                return .transportNotCapable
+            }
+        }
     }
 
     private func vectorReadFromSocket() throws -> ReadResult {

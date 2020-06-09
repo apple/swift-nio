@@ -112,4 +112,24 @@ int CNIOLinux_CPU_ISSET(int cpu, cpu_set_t *set) {
 int CNIOLinux_CPU_SETSIZE() {
     return CPU_SETSIZE;
 }
+
+struct cmsghdr *CNIOLinux_CMSG_FIRSTHDR(const struct msghdr *mhdr) {
+    return CMSG_FIRSTHDR(mhdr);
+}
+
+struct cmsghdr *CNIOLinux_CMSG_NXTHDR(struct msghdr *mhdr, struct cmsghdr *cmsg) {
+    return CMSG_NXTHDR(mhdr, cmsg);
+}
+
+const unsigned char *CNIOLinux_CMSG_DATA(const struct cmsghdr *cmsg) {
+    return CMSG_DATA(cmsg);
+}
+
+size_t CNIOLinux_CMSG_LEN(size_t payloadSizeBytes) {
+    return CMSG_LEN(payloadSizeBytes);
+}
+
+size_t CNIOLinux_CMSG_SPACE(size_t payloadSizeBytes) {
+    return CMSG_SPACE(payloadSizeBytes);
+}
 #endif

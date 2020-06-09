@@ -170,6 +170,59 @@ typealias IOVector = iovec
         }
     }
 
+    func recvmsg(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t,
+                 controlBytes: inout Slice<UnsafeMutableRawBufferPointer>,
+                 controlMessageReceiver: ((Int32, Int32, UnsafeBufferPointer<UInt8>?) -> ())?) throws -> IOResult<Int> {
+        var vec = iovec(iov_base: pointer.baseAddress, iov_len: pointer.count)
+        let localControlBytePointer = UnsafeMutableRawBufferPointer(rebasing: controlBytes)
+
+        return try withUnsafeMutablePointer(to: &vec) { vecPtr in
+            return try storage.withMutableSockAddr { (sockaddrPtr, _) in
+                var messageHeader = msghdr(msg_name: sockaddrPtr,
+                                           msg_namelen: storageLen,
+                                           msg_iov: vecPtr,
+                                           msg_iovlen: 1,
+                                           msg_control: localControlBytePointer.baseAddress,
+                                           msg_controllen: .init(localControlBytePointer.count),
+                                           msg_flags: 0)
+                defer {
+                    // We need to write back the length of the message and the control bytes.
+                    storageLen = messageHeader.msg_namelen
+                    controlBytes = controlBytes.prefix(.init(messageHeader.msg_controllen))
+                    
+                }
+
+                let result = try withUnsafeMutablePointer(to: &messageHeader) { messageHeader in
+                    return try withUnsafeHandle { fd in
+                        return try Posix.recvmsg(descriptor: fd, msgHdr: messageHeader, flags: 0)
+                    }
+                }
+                
+                // Only look at the control bytes if all is good.
+                if case .processed = result {
+                    controlMessageReceiver.map { foreachControlMessage(in: messageHeader, $0)}
+                }
+                
+                return result
+            }
+        }
+    }
+    
+    private func foreachControlMessage(in messageHeader: msghdr,
+                                       _ callWithMessageData: (Int32, Int32, UnsafeBufferPointer<UInt8>?) -> ()) {
+        var msgHdr = messageHeader // Sadness - lack of const in linux C.
+        withUnsafeMutablePointer(to: &msgHdr) { messageHeaderPtr in
+            var currentCMsg = Posix.cmsgFirstHeader(inside: messageHeaderPtr)
+            while let currentCMsgValue = currentCMsg {
+                let data = Posix.cmsgData(for: currentCMsgValue)
+                let level = currentCMsgValue.pointee.cmsg_level
+                let type = currentCMsgValue.pointee.cmsg_type
+                callWithMessageData(level, type, data)
+                currentCMsg = Posix.cmsgNextHeader(inside: messageHeaderPtr, from: currentCMsgValue)
+            }
+        }
+    }
+
     /// Send the content of a file descriptor to the remote peer (if possible a zero-copy strategy is applied).
     ///
     /// - parameters:
