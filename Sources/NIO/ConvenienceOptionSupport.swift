@@ -49,9 +49,9 @@ public enum NIOOptionValue<T> {
     case set(T)
 }
 
-public extension NIOOptionValue where T == () {
+extension NIOOptionValue where T == () {
     /// Convenience method working with bool options as bool values for set.
-    var isSet: Bool {
+    public var isSet: Bool {
         get {
             switch self {
             case .notSet:
@@ -63,8 +63,8 @@ public extension NIOOptionValue where T == () {
     }
 }
 
-private extension NIOOptionValue where T == () {
-    init(flag: Bool) {
+extension NIOOptionValue where T == () {
+    fileprivate init(flag: Bool) {
         if flag {
             self = .set(())
         } else {
@@ -107,7 +107,7 @@ extension NIOTCPShorthandOption {
 }
 
 /// A set of `NIOTCPShorthandOption`s
-public struct NIOTCPShorthandOptions : ExpressibleByArrayLiteral, Hashable {
+public struct NIOTCPShorthandOptions: ExpressibleByArrayLiteral, Hashable {
     var allowImmediateLocalEndpointAddressReuse = false
     var disableAutoRead = false
     var allowRemoteHalfClosure = false
