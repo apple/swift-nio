@@ -114,7 +114,7 @@ EOF
   pod repo update # last chance of getting the latest versions of previous pushed pods
   if $upload; then
     echo "Uploading ${tmpfile}/${target}.podspec"
-    pod trunk push "${tmpfile}/${target}.podspec"
+    pod trunk push "${tmpfile}/${target}.podspec" --synchronous
   fi
 
 done
