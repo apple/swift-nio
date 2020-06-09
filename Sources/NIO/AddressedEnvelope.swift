@@ -21,9 +21,14 @@ public struct AddressedEnvelope<DataType> {
     public var remoteAddress: SocketAddress
     public var data: DataType
     /// Any metadata associated with this `AddressedEnvelope`
-    public var metadata: Metadata?
+    public var metadata: Metadata? = nil
 
-    public init(remoteAddress: SocketAddress, data: DataType, metadata: Metadata? = nil) {
+    public init(remoteAddress: SocketAddress, data: DataType) {
+        self.remoteAddress = remoteAddress
+        self.data = data
+    }
+    
+    public init(remoteAddress: SocketAddress, data: DataType, metadata: Metadata?) {
         self.remoteAddress = remoteAddress
         self.data = data
         self.metadata = metadata

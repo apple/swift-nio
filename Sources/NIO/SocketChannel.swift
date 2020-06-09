@@ -561,12 +561,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             if level == IPPROTO_IP && type == ipv4TosType {
                 if let data = data {
                     assert(data.count == 1)
+                    precondition(data.count >= 1)
                     let readValue: Int32 = .init(data[0])
                     self.ecnValue = ControlMessageReceiver.parseEcn(receivedValue: readValue)
                 }
             } else if level == IPPROTO_IPV6 && type == IPV6_TCLASS {
                 if let data = data {
                     assert(data.count == 4)
+                    precondition(data.count >= 4)
                     var readValue: Int32 = 0
                     withUnsafeMutableBytes(of: &readValue) { valuePtr in
                         valuePtr.copyMemory(from: UnsafeRawBufferPointer(data))
