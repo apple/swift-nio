@@ -172,7 +172,7 @@ typealias IOVector = iovec
 
     func recvmsg(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t,
                  controlBytes: inout Slice<UnsafeMutableRawBufferPointer>,
-                 controlMessageReceiver: ((Int32, Int32, UnsafeBufferPointer<UInt8>?) -> ())?) throws -> IOResult<Int> {
+                 controlMessageReceiver: ((ControlMessage) -> ())?) throws -> IOResult<Int> {
         var vec = iovec(iov_base: pointer.baseAddress, iov_len: pointer.count)
         let localControlBytePointer = UnsafeMutableRawBufferPointer(rebasing: controlBytes)
 
@@ -200,25 +200,13 @@ typealias IOVector = iovec
                 
                 // Only look at the control bytes if all is good.
                 if case .processed = result {
-                    controlMessageReceiver.map { foreachControlMessage(in: messageHeader, $0)}
+                    if let controlMessageReceiver = controlMessageReceiver {
+                        let controlMessageCollection = ControlMessageCollection(messageHeader: messageHeader)
+                        controlMessageCollection.forEach(controlMessageReceiver)
+                    }
                 }
                 
                 return result
-            }
-        }
-    }
-    
-    private func foreachControlMessage(in messageHeader: msghdr,
-                                       _ callWithMessageData: (Int32, Int32, UnsafeBufferPointer<UInt8>?) -> ()) {
-        var msgHdr = messageHeader // Sadness - lack of const in linux C.
-        withUnsafeMutablePointer(to: &msgHdr) { messageHeaderPtr in
-            var currentCMsg = Posix.cmsgFirstHeader(inside: messageHeaderPtr)
-            while let currentCMsgValue = currentCMsg {
-                let data = Posix.cmsgData(for: currentCMsgValue)
-                let level = currentCMsgValue.pointee.cmsg_level
-                let type = currentCMsgValue.pointee.cmsg_type
-                callWithMessageData(level, type, data)
-                currentCMsg = Posix.cmsgNextHeader(inside: messageHeaderPtr, from: currentCMsgValue)
             }
         }
     }

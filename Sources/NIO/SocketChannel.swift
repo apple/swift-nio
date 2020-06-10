@@ -521,7 +521,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let result = try buffer.withMutableWritePointer {
                 try self.socket.recvmsg(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength,
                                         controlBytes: &controlByteSlice,
-                                        controlMessageReceiver: { (level, type, data) in controlMessageReceiver.receiveMessage(level: level, type: type, data: data) })
+                                        controlMessageReceiver: { (controlMessage) in controlMessageReceiver.receiveMessage(controlMessage) })
             }
             switch result {
             case .processed(let bytesRead):
@@ -552,21 +552,21 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     private struct ControlMessageReceiver {
         var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable // Default
         
-        mutating func receiveMessage(level: Int32, type: Int32, data: UnsafeBufferPointer<UInt8>?) {
+        mutating func receiveMessage(_ controlMessage: Socket.ControlMessage) {
             #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
             let ipv4TosType = IP_RECVTOS
             #else
             let ipv4TosType = IP_TOS    // Linux
             #endif
-            if level == IPPROTO_IP && type == ipv4TosType {
-                if let data = data {
+            if controlMessage.level == IPPROTO_IP && controlMessage.type == ipv4TosType {
+                if let data = controlMessage.data {
                     assert(data.count == 1)
                     precondition(data.count >= 1)
                     let readValue: Int32 = .init(data[0])
                     self.ecnValue = ControlMessageReceiver.parseEcn(receivedValue: readValue)
                 }
-            } else if level == IPPROTO_IPV6 && type == IPV6_TCLASS {
-                if let data = data {
+            } else if controlMessage.level == IPPROTO_IPV6 && controlMessage.type == IPV6_TCLASS {
+                if let data = controlMessage.data {
                     assert(data.count == 4)
                     precondition(data.count >= 4)
                     var readValue: Int32 = 0
