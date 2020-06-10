@@ -102,5 +102,29 @@ class SystemTest: XCTestCase {
             }
         }
     }
+    
+    func testCMsgCollection() {
+        var exampleCmsgHrd = SystemTest.cmsghdrExample
+        exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
+            var msgHdr = msghdr()
+            msgHdr.msg_control = pCmsgHdr.baseAddress
+            msgHdr.msg_controllen = socklen_t(pCmsgHdr.count)
+            let collection = Socket.ControlMessageCollection(messageHeader: msgHdr)
+            var msgNum = 0
+            for cmsg in collection {
+                if msgNum == 0 {
+                    XCTAssertEqual(cmsg.level, IPPROTO_IP)
+                    XCTAssertEqual(cmsg.type, IP_RECVDSTADDR)
+                    XCTAssertEqual(cmsg.data?.count, 4)
+                } else if msgNum == 1 {
+                    XCTAssertEqual(cmsg.level, IPPROTO_IP)
+                    XCTAssertEqual(cmsg.type, IP_RECVTOS)
+                    XCTAssertEqual(cmsg.data?.count, 1)
+                }
+                msgNum += 1
+            }
+            XCTAssertEqual(msgNum, 2)
+        }
+    }
     #endif
 }
