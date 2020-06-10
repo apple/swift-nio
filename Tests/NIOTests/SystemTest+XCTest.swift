@@ -29,6 +29,10 @@ extension SystemTest {
       return [
                 ("testSystemCallWrapperPerformance", testSystemCallWrapperPerformance),
                 ("testErrorsWorkCorrectly", testErrorsWorkCorrectly),
+                ("testCmsgFirstHeader", testCmsgFirstHeader),
+                ("testCMsgNextHeader", testCMsgNextHeader),
+                ("testCMsgData", testCMsgData),
+                ("testCMsgCollection", testCMsgCollection),
            ]
    }
 }
