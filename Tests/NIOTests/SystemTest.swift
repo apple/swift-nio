@@ -43,8 +43,7 @@ class SystemTest: XCTestCase {
         }
     }
     
-    #if os(macOS)
-    // Example twin data options on apple.
+    // Example twin data options on apple - will not work safely on other platforms.
     private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
                                                   0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
                                                   0x07, 0x00, 0x00, 0x00, // IP_RECVDSTADDR???
@@ -59,7 +58,7 @@ class SystemTest: XCTestCase {
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
             msgHdr.msg_control = pCmsgHdr.baseAddress
-            msgHdr.msg_controllen = socklen_t(pCmsgHdr.count)
+            msgHdr.msg_controllen = .init(pCmsgHdr.count)
 
             withUnsafePointer(to: msgHdr) { pMsgHdr in
                 let result = Posix.cmsgFirstHeader(inside: pMsgHdr)
@@ -69,11 +68,12 @@ class SystemTest: XCTestCase {
     }
     
     func testCMsgNextHeader() {
+        #if os(macOS) // Looking at message internals not an apple is not going to work for captured data.
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
             msgHdr.msg_control = pCmsgHdr.baseAddress
-            msgHdr.msg_controllen = socklen_t(pCmsgHdr.count)
+            msgHdr.msg_controllen = .init(pCmsgHdr.count)
 
             withUnsafeMutablePointer(to: &msgHdr) { pMsgHdr in
                 let first = Posix.cmsgFirstHeader(inside: pMsgHdr)
@@ -84,14 +84,16 @@ class SystemTest: XCTestCase {
                 XCTAssertEqual(third, nil)
             }
         }
+        #endif
     }
     
     func testCMsgData() {
+        #if os(macOS) // Looking at message internals not an apple is not going to work for captured data.
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
             msgHdr.msg_control = pCmsgHdr.baseAddress
-            msgHdr.msg_controllen = socklen_t(pCmsgHdr.count)
+            msgHdr.msg_controllen = .init(pCmsgHdr.count)
 
             withUnsafePointer(to: msgHdr) { pMsgHdr in
                 let first = Posix.cmsgFirstHeader(inside: pMsgHdr)
@@ -101,30 +103,32 @@ class SystemTest: XCTestCase {
                 XCTAssertEqual(expecedFirstData.count, firstData?.count)
             }
         }
+        #endif
     }
     
     func testCMsgCollection() {
+        #if os(macOS) // Looking at message internals not an apple is not going to work for captured data.
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
             msgHdr.msg_control = pCmsgHdr.baseAddress
-            msgHdr.msg_controllen = socklen_t(pCmsgHdr.count)
+            msgHdr.msg_controllen = .init(pCmsgHdr.count)
             let collection = Socket.ControlMessageCollection(messageHeader: msgHdr)
             var msgNum = 0
             for cmsg in collection {
                 if msgNum == 0 {
-                    XCTAssertEqual(cmsg.level, IPPROTO_IP)
-                    XCTAssertEqual(cmsg.type, IP_RECVDSTADDR)
+                    XCTAssertEqual(cmsg.level, .init(IPPROTO_IP))
+                    XCTAssertEqual(cmsg.type, .init(IP_RECVDSTADDR))
                     XCTAssertEqual(cmsg.data?.count, 4)
                 } else if msgNum == 1 {
-                    XCTAssertEqual(cmsg.level, IPPROTO_IP)
-                    XCTAssertEqual(cmsg.type, IP_RECVTOS)
+                    XCTAssertEqual(cmsg.level, .init(IPPROTO_IP))
+                    XCTAssertEqual(cmsg.type, .init(IP_RECVTOS))
                     XCTAssertEqual(cmsg.data?.count, 1)
                 }
                 msgNum += 1
             }
             XCTAssertEqual(msgNum, 2)
         }
+        #endif
     }
-    #endif
 }

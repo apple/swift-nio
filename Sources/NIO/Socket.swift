@@ -252,7 +252,7 @@ typealias IOVector = iovec
         
         let endIndex: Index = ControlMessageIndex(cmsgPointer: nil)
         
-        func index(after: Self.Index) -> Self.Index {
+        func index(after: Index) -> Index {
             var msgHdr = messageHeader
             return withUnsafeMutablePointer(to: &msgHdr) { messageHeaderPtr in
                 return ControlMessageIndex(cmsgPointer:
