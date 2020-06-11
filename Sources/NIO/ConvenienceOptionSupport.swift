@@ -168,15 +168,15 @@ extension ChannelOptions {
             return Types.NIOOptionValue<Void>(flag: self.allowRemoteHalfClosure)
         }
         
-        func applyFallbackMapping(_ universalBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
+        mutating func applyFallbackMapping(_ universalBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
             var result = universalBootstrap
-            if self.allowLocalEndpointReuse {
+            if self.consumeAllowLocalEndpointReuse().isSet {
                 result = result.channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             }
-            if self.allowRemoteHalfClosure {
+            if self.consumeAllowRemoteHalfClosure().isSet {
                 result = result.channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             }
-            if self.disableAutoRead {
+            if self.consumeDisableAutoRead().isSet {
                 result = result.channelOption(ChannelOptions.autoRead, value: false)
             }
             return result
