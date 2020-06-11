@@ -172,7 +172,7 @@ typealias IOVector = iovec
 
     func recvmsg(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t,
                  controlBytes: inout Slice<UnsafeMutableRawBufferPointer>,
-                 controlMessageReceiver: ((ControlMessage) -> ())?) throws -> IOResult<Int> {
+                 controlMessageReceiver: (ControlMessage) -> ()) throws -> IOResult<Int> {
         var vec = iovec(iov_base: pointer.baseAddress, iov_len: pointer.count)
         let localControlBytePointer = UnsafeMutableRawBufferPointer(rebasing: controlBytes)
 
@@ -200,10 +200,8 @@ typealias IOVector = iovec
                 
                 // Only look at the control bytes if all is good.
                 if case .processed = result {
-                    if let controlMessageReceiver = controlMessageReceiver {
-                        let controlMessageCollection = ControlMessageCollection(messageHeader: messageHeader)
-                        controlMessageCollection.forEach(controlMessageReceiver)
-                    }
+                    let controlMessageCollection = UnsafeControlMessageCollection(messageHeader: messageHeader)
+                    controlMessageCollection.forEach(controlMessageReceiver)
                 }
                 
                 return result
@@ -217,15 +215,16 @@ typealias IOVector = iovec
         var data: UnsafeBufferPointer<UInt8>?
     }
     
-    struct ControlMessageCollection: Collection {
+    // Unsafe as captures pointers held in msghdr structure which must not escape scope of validity.
+    struct UnsafeControlMessageCollection: Collection {
         typealias Index = ControlMessageIndex
         typealias Element = ControlMessage
         
         struct ControlMessageIndex: Equatable, Comparable {
             fileprivate var cmsgPointer: UnsafeMutablePointer<cmsghdr>?
             
-            static func < (lhs: Socket.ControlMessageCollection.ControlMessageIndex,
-                           rhs: Socket.ControlMessageCollection.ControlMessageIndex) -> Bool {
+            static func < (lhs: Socket.UnsafeControlMessageCollection.ControlMessageIndex,
+                           rhs: Socket.UnsafeControlMessageCollection.ControlMessageIndex) -> Bool {
                 if let lhsPointer = lhs.cmsgPointer {
                     if let rhsPointer = rhs.cmsgPointer {
                         return lhsPointer < rhsPointer
