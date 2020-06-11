@@ -153,7 +153,7 @@ class UniversalBootstrapSupportTest: XCTestCase {
             }
             
             var convenienceOptionConsumed = false
-            func _applyOptions(_ options: inout ChannelOptions.TCPConvenienceOptions) -> FakeBootstrap {
+            func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.TCPConvenienceOptions) -> FakeBootstrap {
                 if options.consumeAllowLocalEndpointReuse().isSet {
                     convenienceOptionConsumed = true
                 }
