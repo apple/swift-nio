@@ -16,6 +16,17 @@ import XCTest
 @testable import NIO
 import NIOConcurrencyHelpers
 
+extension System {
+    static var supportsIPv6: Bool {
+        do {
+            let ipv6Loopback = try SocketAddress.makeAddressResolvingHost("::1", port: 0)
+            return try System.enumerateInterfaces().filter { $0.address == ipv6Loopback }.first != nil
+        } catch {
+            return false
+        }
+    }
+}
+
 func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) throws -> [NIO.NIOFileHandle]) throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
