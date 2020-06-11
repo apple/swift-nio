@@ -199,3 +199,34 @@ class UniversalBootstrapSupportTest: XCTestCase {
         XCTAssertTrue(bothFake.regularOptionsSeen)
     }
 }
+
+// Prove we've not broken implementors of NIOClientTCPBootstrapProtocol by adding a new method.
+private class UniversalWithoutNewMethods : NIOClientTCPBootstrapProtocol {
+    func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
+        return self
+    }
+    
+    func protocolHandlers(_ handlers: @escaping () -> [ChannelHandler]) -> Self {
+        return self
+    }
+    
+    func channelOption<Option>(_ option: Option, value: Option.Value) -> Self where Option : ChannelOption {
+        return self
+    }
+    
+    func connectTimeout(_ timeout: TimeAmount) -> Self {
+        return self
+    }
+    
+    func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
+        return EmbeddedEventLoop().makePromise(of: Channel.self).futureResult
+    }
+    
+    func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
+        return EmbeddedEventLoop().makePromise(of: Channel.self).futureResult
+    }
+    
+    func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
+        return EmbeddedEventLoop().makePromise(of: Channel.self).futureResult
+    }
+}
