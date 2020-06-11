@@ -120,14 +120,14 @@ extension ChannelOptions {
         
         /// Construct from an array literal.
         @inlinable
-        public init(arrayLiteral elements: ChannelOptions.NIOTCPShorthandOption...) {
+        public init(arrayLiteral elements: NIOTCPShorthandOption...) {
             for element in elements {
                 add(element)
             }
         }
         
         @usableFromInline
-        mutating func add(_ element: ChannelOptions.NIOTCPShorthandOption) {
+        mutating func add(_ element: NIOTCPShorthandOption) {
             switch element.data {
             case .reuseAddr:
                 self.allowImmediateLocalAddressReuse = true
@@ -141,32 +141,31 @@ extension ChannelOptions {
         /// Caller is consuming the knowledge that allowImmediateLocalAddressReuse was set or not.
         /// The setting will nolonger be set after this call.
         /// - Returns: If allowImmediateLocalAddressReuse was set.
-        public mutating func consumeAllowImmediateLocalAddressReuse() ->
-                                ChannelOptions.Types.NIOOptionValue<Void> {
+        public mutating func consumeAllowImmediateLocalAddressReuse() -> Types.NIOOptionValue<Void> {
             defer {
                 self.allowImmediateLocalAddressReuse = false
             }
-            return ChannelOptions.Types.NIOOptionValue<Void>(flag: self.allowImmediateLocalAddressReuse)
+            return Types.NIOOptionValue<Void>(flag: self.allowImmediateLocalAddressReuse)
         }
         
         /// Caller is consuming the knowledge that disableAutoRead was set or not.
         /// The setting will nolonger be set after this call.
         /// - Returns: If disableAutoRead was set.
-        public mutating func consumeDisableAutoRead() -> ChannelOptions.Types.NIOOptionValue<Void> {
+        public mutating func consumeDisableAutoRead() -> Types.NIOOptionValue<Void> {
             defer {
                 self.disableAutoRead = false
             }
-            return ChannelOptions.Types.NIOOptionValue<Void>(flag: self.disableAutoRead)
+            return Types.NIOOptionValue<Void>(flag: self.disableAutoRead)
         }
         
         /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
         /// The setting will nolonger be set after this call.
         /// - Returns: If allowRemoteHalfClosure was set.
-        public mutating func consumeAllowRemoteHalfClosure() -> ChannelOptions.Types.NIOOptionValue<Void> {
+        public mutating func consumeAllowRemoteHalfClosure() -> Types.NIOOptionValue<Void> {
             defer {
                 self.allowRemoteHalfClosure = false
             }
-            return ChannelOptions.Types.NIOOptionValue<Void>(flag: self.allowRemoteHalfClosure)
+            return Types.NIOOptionValue<Void>(flag: self.allowRemoteHalfClosure)
         }
         
         func applyFallbackMapping(_ universalBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
