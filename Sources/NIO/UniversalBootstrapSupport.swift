@@ -166,7 +166,7 @@ public struct NIOClientTCPBootstrap {
         self.tlsEnablerTypeErased = tlsEnabler
     }
     
-    internal init(_ original : NIOClientTCPBootstrap, withUpdated underlying : NIOClientTCPBootstrapProtocol) {
+    internal init(_ original : NIOClientTCPBootstrap, updating underlying : NIOClientTCPBootstrapProtocol) {
         self.underlyingBootstrap = underlying
         self.tlsEnablerTypeErased = original.tlsEnablerTypeErased
     }

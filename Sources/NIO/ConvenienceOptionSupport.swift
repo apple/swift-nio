@@ -34,8 +34,8 @@ extension NIOClientTCPBootstrap {
         var optionsRemaining = options
         // First give the underlying a chance to consume options.
         let withUnderlyingOverrides =
-            NIOClientTCPBootstrap(self, withUpdated:
-                                    underlyingBootstrap._applyChannelConvenienceOptions(&optionsRemaining))
+            NIOClientTCPBootstrap(self,
+                                  updating: underlyingBootstrap._applyChannelConvenienceOptions(&optionsRemaining))
         // Default apply any remaining options.
         return optionsRemaining.applyFallbackMapping(withUnderlyingOverrides)
     }
@@ -123,7 +123,7 @@ extension ChannelOptions {
         @inlinable
         public init(arrayLiteral elements: TCPConvenienceOption...) {
             for element in elements {
-                add(element)
+                self.add(element)
             }
         }
         
