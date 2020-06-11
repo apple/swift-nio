@@ -54,7 +54,7 @@ public protocol NIOClientTCPBootstrapProtocol {
     /// - parameters:
     ///     - options:  The options to try applying - the options applied should be consumed from here.
     /// - returns: The updated bootstrap with and options applied.
-    func _applyOptions(_ options: inout NIOTCPShorthandOptions) -> Self
+    func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.NIOTCPShorthandOptions) -> Self
 
     /// - parameters:
     ///     - timeout: The timeout that will apply to the connection attempt.
