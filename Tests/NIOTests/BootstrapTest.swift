@@ -567,7 +567,7 @@ class BootstrapTest: XCTestCase {
         
         try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.so_reuseaddr),
                                    setValue: 1,
-                                   shortOption: .allowImmediateLocalAddressReuse)
+                                   shortOption: .allowLocalEndpointReuse)
         try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
                                    setValue: true,
                                    shortOption: .allowRemoteHalfClosure)

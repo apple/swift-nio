@@ -97,7 +97,7 @@ extension ChannelOptions {
 /// Approved shorthand options.
 extension ChannelOptions.NIOTCPShorthandOption {
     /// Allow immediately reusing a local address.
-    public static let allowImmediateLocalAddressReuse = ChannelOptions.NIOTCPShorthandOption(.reuseAddr)
+    public static let allowLocalEndpointReuse = ChannelOptions.NIOTCPShorthandOption(.reuseAddr)
     
     /// The user will manually call `Channel.read` once all the data is read from the transport.
     public static let disableAutoRead = ChannelOptions.NIOTCPShorthandOption(.disableAutoRead)
@@ -114,7 +114,7 @@ extension ChannelOptions.NIOTCPShorthandOption {
 extension ChannelOptions {
     /// A set of `NIOTCPShorthandOption`s
     public struct NIOTCPShorthandOptions: ExpressibleByArrayLiteral, Hashable {
-        var allowImmediateLocalAddressReuse = false
+        var allowLocalEndpointReuse = false
         var disableAutoRead = false
         var allowRemoteHalfClosure = false
         
@@ -130,7 +130,7 @@ extension ChannelOptions {
         mutating func add(_ element: NIOTCPShorthandOption) {
             switch element.data {
             case .reuseAddr:
-                self.allowImmediateLocalAddressReuse = true
+                self.allowLocalEndpointReuse = true
             case .allowRemoteHalfClosure:
                 self.allowRemoteHalfClosure = true
             case .disableAutoRead:
@@ -138,14 +138,14 @@ extension ChannelOptions {
             }
         }
         
-        /// Caller is consuming the knowledge that allowImmediateLocalAddressReuse was set or not.
+        /// Caller is consuming the knowledge that `allowLocalEndpointReuse` was set or not.
         /// The setting will nolonger be set after this call.
-        /// - Returns: If allowImmediateLocalAddressReuse was set.
-        public mutating func consumeAllowImmediateLocalAddressReuse() -> Types.NIOOptionValue<Void> {
+        /// - Returns: If `allowLocalEndpointReuse` was set.
+        public mutating func consumeAllowLocalEndpointReuse() -> Types.NIOOptionValue<Void> {
             defer {
-                self.allowImmediateLocalAddressReuse = false
+                self.allowLocalEndpointReuse = false
             }
-            return Types.NIOOptionValue<Void>(flag: self.allowImmediateLocalAddressReuse)
+            return Types.NIOOptionValue<Void>(flag: self.allowLocalEndpointReuse)
         }
         
         /// Caller is consuming the knowledge that disableAutoRead was set or not.
@@ -170,7 +170,7 @@ extension ChannelOptions {
         
         func applyFallbackMapping(_ universalBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
             var result = universalBootstrap
-            if self.allowImmediateLocalAddressReuse {
+            if self.allowLocalEndpointReuse {
                 result = result.channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             }
             if self.allowRemoteHalfClosure {
