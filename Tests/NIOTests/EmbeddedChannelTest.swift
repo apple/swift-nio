@@ -165,7 +165,7 @@ class EmbeddedChannelTest: XCTestCase {
 
         func check<Expected, Actual>(expected: Expected.Type,
                                      actual: Actual.Type,
-                                     file: StaticString = #file,
+                                     file: StaticString = (#file),
                                      line: UInt = #line) {
             do {
                 _ = try channel.readOutbound(as: Expected.self)
@@ -314,8 +314,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testWriteWithoutFlushDoesNotWrite() throws {
         let channel = EmbeddedChannel()
 
-        var buf = ByteBufferAllocator().buffer(capacity: 1)
-        buf.writeBytes([1])
+        let buf = ByteBuffer(bytes: [1])
         let writeFuture = channel.write(buf)
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertFalse(writeFuture.isFulfilled)

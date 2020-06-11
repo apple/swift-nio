@@ -22,9 +22,7 @@ public enum ByteToMessageDecoderVerifier {
                                                                     decoderFactory: @escaping () -> Decoder) throws where Decoder.InboundOut: Equatable {
         let alloc = ByteBufferAllocator()
         let ioPairs = stringInputOutputPairs.map { (ioPair: (String, [Decoder.InboundOut])) -> (ByteBuffer, [Decoder.InboundOut]) in
-            var buffer = alloc.buffer(capacity: ioPair.0.utf8.count)
-            buffer.writeString(ioPair.0)
-            return (buffer, ioPair.1)
+            return (alloc.buffer(string: ioPair.0), ioPair.1)
         }
         return try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: ioPairs, decoderFactory: decoderFactory)
     }

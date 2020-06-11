@@ -324,7 +324,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Push the successful server response.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
 
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         clientChannel.embeddedEventLoop.run()
 
@@ -426,7 +426,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Push the successful server response.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
         
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         clientChannel.embeddedEventLoop.run()
         
@@ -500,7 +500,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Push the successful server response.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: myproto\r\n\r\nTest"
                 
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         clientChannel.embeddedEventLoop.run()
                 
@@ -534,7 +534,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         }
         
         let response = "HTTP/1.1 200 OK\r\n\r\n"
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         clientChannel.embeddedEventLoop.run()
         
@@ -574,7 +574,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         }
         
         let response = "HTTP/1.1 404 Not Found\r\n\r\n"
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         clientChannel.embeddedEventLoop.run()
         
@@ -617,7 +617,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         }
         
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\n\r\n"
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         clientChannel.embeddedEventLoop.run()
         
@@ -662,7 +662,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         }
         
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: unknownProtocol\r\n\r\n"
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         clientChannel.embeddedEventLoop.run()
         
@@ -709,7 +709,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         }
         
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
 
         clientChannel.embeddedEventLoop.run()
         
@@ -756,7 +756,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         }
         
         let response = "HTTP/1.1 101 Switching Protocols\r\nCoNnEcTiOn: uPgRaDe\r\nuPgRaDe: \(upgradeProtocol)\r\n\r\n"
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         clientChannel.embeddedEventLoop.run()
         
@@ -801,7 +801,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         // Push the successful server response.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         // Run the processing of the response, but with the upgrade delayed by the client upgrader.
         clientChannel.embeddedEventLoop.run()
@@ -811,7 +811,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         // Add some non-http data.
         let appData = "supersecretawesome data definitely not http\r\nawesome\r\ndata\ryeah"
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(appData)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: appData)))
         
         // Upgrade now.
         clientUpgrader.unblockUpgrade()
@@ -854,7 +854,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         // Push the successful server response.
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
-        XCTAssertNoThrow(try clientChannel.writeInbound(ByteBuffer.forString(response)))
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
         
         let promise = clientChannel.eventLoop.makePromise(of: Void.self)
         

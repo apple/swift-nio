@@ -529,6 +529,88 @@ class BootstrapTest: XCTestCase {
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: elg))
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: el))
     }
+
+    func testClientBindWorksOnSocketsBoundToEitherIPv4OrIPv6Only() {
+        for isIPv4 in [true, false] {
+            guard System.supportsIPv6 || isIPv4 else {
+                continue // need to skip IPv6 tests if we don't support it.
+            }
+            let localIP = isIPv4 ? "127.0.0.1" : "::1"
+            guard let serverLocalAddressChoice = try? SocketAddress(ipAddress: localIP, port: 0),
+                  let clientLocalAddressWholeInterface = try? SocketAddress(ipAddress: localIP, port: 0),
+                  let server1 = (try? ServerBootstrap(group: self.group)
+                                    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                                    .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+                                    .bind(to: serverLocalAddressChoice)
+                                    .wait()),
+                  let server2 = (try? ServerBootstrap(group: self.group)
+                                    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                                    .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+                                    .bind(to: serverLocalAddressChoice)
+                                    .wait()),
+                  let server1LocalAddress = server1.localAddress,
+                  let server2LocalAddress = server2.localAddress else {
+                XCTFail("can't boot servers even")
+                return
+            }
+            defer {
+                XCTAssertNoThrow(try server1.close().wait())
+                XCTAssertNoThrow(try server2.close().wait())
+            }
+
+            // Try 1: Directly connect to 127.0.0.1, this won't do Happy Eyeballs.
+            XCTAssertNoThrow(try ClientBootstrap(group: self.group)
+                                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                                .bind(to: clientLocalAddressWholeInterface)
+                                .connect(to: server1LocalAddress)
+                                .wait()
+                                .close()
+                                .wait())
+
+            var maybeChannel1: Channel? = nil
+            // Try 2: Connect to "localhost", this will do Happy Eyeballs.
+            XCTAssertNoThrow(maybeChannel1 = try ClientBootstrap(group: self.group)
+                                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                                .bind(to: clientLocalAddressWholeInterface)
+                                .connect(host: "localhost", port: server1LocalAddress.port!)
+                                .wait())
+            guard let myChannel1 = maybeChannel1, let myChannel1Address = myChannel1.localAddress else {
+                XCTFail("can't connect channel 1")
+                return
+            }
+            XCTAssertEqual(localIP, maybeChannel1?.localAddress?.ipAddress)
+            // Try 3: Bind the client to the same address/port as in try 2 but to server 2.
+            XCTAssertNoThrow(try ClientBootstrap(group: self.group)
+                                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                                .connectTimeout(.hours(2))
+                                .bind(to: myChannel1Address)
+                                .connect(to: server2LocalAddress)
+                                .map { channel -> Channel in
+                                    XCTAssertEqual(myChannel1Address, channel.localAddress)
+                                    return channel
+                                }
+                                .wait()
+                                .close()
+                                .wait())
+        }
+    }
+}
+
+private final class WriteStringOnChannelActive: ChannelInboundHandler {
+    typealias InboundIn = Never
+    typealias OutboundOut = ByteBuffer
+
+    let string: String
+
+    init(_ string: String) {
+        self.string = string
+    }
+
+    func channelActive(context: ChannelHandlerContext) {
+        var buffer = context.channel.allocator.buffer(capacity: self.string.utf8.count)
+        buffer.writeString(string)
+        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+    }
 }
 
 private final class MakeSureAutoReadIsOffInChannelInitializer:  ChannelInboundHandler {

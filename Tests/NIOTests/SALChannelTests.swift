@@ -33,8 +33,7 @@ final class SALChannelTest: XCTestCase, SALTest {
     func testBasicConnectedChannel() throws {
         let localAddress = try! SocketAddress(ipAddress: "0.1.2.3", port: 4)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
-        var buffer = ByteBufferAllocator().buffer(capacity: 10)
-        buffer.writeString("xxx")
+        let buffer = ByteBuffer(string: "xxx")
 
         let channel = try self.makeConnectedSocketChannel(localAddress: localAddress,
                                                           remoteAddress: serverAddress)
@@ -66,8 +65,7 @@ final class SALChannelTest: XCTestCase, SALTest {
 
         let localAddress = try! SocketAddress(ipAddress: "0.1.2.3", port: 4)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
-        var buffer = ByteBufferAllocator().buffer(capacity: 10)
-        buffer.writeString("12")
+        var buffer = ByteBuffer(string: "12")
 
         let writableNotificationStepExpectation = NIOAtomic<Int>.makeAtomic(value: 0)
 
@@ -222,8 +220,7 @@ final class SALChannelTest: XCTestCase, SALTest {
             return
         }
 
-        var buffer = ByteBufferAllocator().buffer(capacity: 5)
-        buffer.writeString("hello")
+        let buffer = ByteBuffer(string: "hello")
 
         let g = DispatchGroup()
         g.enter()
@@ -238,4 +235,86 @@ final class SALChannelTest: XCTestCase, SALTest {
 
         g.wait()
     }
+
+    func testBasicConnectWithClientBootstrap() {
+        guard let channel = try? self.makeSocketChannel() else {
+            XCTFail("couldn't make a channel")
+            return
+        }
+        let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
+        let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
+        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
+            try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                return (value as? SocketOptionValue) == 1
+            }
+            try self.assertConnect(expectedAddress: serverAddress, result: true)
+            try self.assertLocalAddress(address: localAddress)
+            try self.assertRemoteAddress(address: localAddress)
+            try self.assertRegister { selectable, event, Registration in
+                XCTAssertEqual([.reset], event)
+                return true
+            }
+            try self.assertReregister { selectable, event in
+                XCTAssertEqual([.reset, .readEOF], event)
+                return true
+            }
+            try self.assertDeregister { selectable in
+                return true
+            }
+            try self.assertClose(expectedFD: .max)
+        }) {
+            ClientBootstrap(group: channel.eventLoop)
+                .channelOption(ChannelOptions.autoRead, value: false)
+                .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                .flatMap { channel in
+                    channel.close()
+                }
+        }.salWait())
+    }
+
+    func testClientBootstrapBindIsDoneAfterSocketOptions() {
+        guard let channel = try? self.makeSocketChannel() else {
+            XCTFail("couldn't make a channel")
+            return
+        }
+        let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
+        let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
+        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
+            try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                return (value as? SocketOptionValue) == 1
+            }
+            // This is the important bit: We need to apply the socket options _before_ ...
+            try self.assertSetOption(expectedLevel: .socket, expectedOption: .so_reuseaddr) { value in
+                return (value as? SocketOptionValue) == 1
+            }
+            // ... we call bind.
+            try self.assertBind(expectedAddress: localAddress)
+            try self.assertLocalAddress(address: nil) // this is an inefficiency in `bind0`.
+            try self.assertConnect(expectedAddress: serverAddress, result: true)
+            try self.assertLocalAddress(address: localAddress)
+            try self.assertRemoteAddress(address: localAddress)
+            try self.assertRegister { selectable, event, Registration in
+                XCTAssertEqual([.reset], event)
+                return true
+            }
+            try self.assertReregister { selectable, event in
+                XCTAssertEqual([.reset, .readEOF], event)
+                return true
+            }
+            try self.assertDeregister { selectable in
+                return true
+            }
+            try self.assertClose(expectedFD: .max)
+        }) {
+            ClientBootstrap(group: channel.eventLoop)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(ChannelOptions.autoRead, value: false)
+                .bind(to: localAddress)
+                .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                .flatMap { channel in
+                    channel.close()
+                }
+        }.salWait())
+    }
+
 }

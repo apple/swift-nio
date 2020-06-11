@@ -47,9 +47,7 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
     private var responseBody: ByteBuffer!
 
     func handlerAdded(context: ChannelHandlerContext) {
-        var buffer = context.channel.allocator.buffer(capacity: websocketResponse.utf8.count)
-        buffer.writeString(websocketResponse)
-        self.responseBody = buffer
+        self.responseBody = context.channel.allocator.buffer(string: websocketResponse)
     }
 
     func handlerRemoved(context: ChannelHandlerContext) {
@@ -167,7 +165,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
             // then, when we've sent it, close up shop. We should send back the close code the remote
             // peer sent us, unless they didn't send one at all.
             var data = frame.unmaskedData
-            let closeDataCode = data.readSlice(length: 2) ?? context.channel.allocator.buffer(capacity: 0)
+            let closeDataCode = data.readSlice(length: 2) ?? ByteBuffer()
             let closeFrame = WebSocketFrame(fin: true, opcode: .connectionClose, data: closeDataCode)
             _ = context.write(self.wrapOutboundOut(closeFrame)).map { () in
                 context.close(promise: nil)

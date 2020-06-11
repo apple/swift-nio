@@ -93,11 +93,7 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
         case .head:
             context.fireChannelRead(data)
         case .body(var buffer):
-            if self.receivedSoFar == nil {
-                self.receivedSoFar = buffer
-            } else {
-                self.receivedSoFar?.writeBuffer(&buffer)
-            }
+            self.receivedSoFar.setOrWriteBuffer(&buffer)
         case .end:
             if let receivedSoFar = self.receivedSoFar {
                 context.fireChannelRead(self.wrapInboundOut(.body(receivedSoFar)))

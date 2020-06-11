@@ -92,8 +92,7 @@ let channel = try { () -> Channel in
 print("ChatClient connected to ChatServer: \(channel.remoteAddress!), happy chatting\n. Press ^D to exit.")
 
 while let line = readLine(strippingNewline: false) {
-    var buffer = channel.allocator.buffer(capacity: line.utf8.count)
-    buffer.writeString(line)
+    let buffer = channel.allocator.buffer(string: line)
     try! channel.writeAndFlush(buffer).wait()
 }
 

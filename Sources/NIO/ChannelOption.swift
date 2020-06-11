@@ -190,6 +190,12 @@ extension ChannelOptions {
 
             public init() { }
         }
+        
+        /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
+        public struct ExplicitCongestionNotificationsOption: ChannelOption {
+            public typealias Value = Bool
+            public init() {}
+        }
 
         /// The watermark used to detect when `Channel.isWritable` returns `true` or `false`.
         public struct WriteBufferWaterMark {
@@ -299,6 +305,9 @@ public struct ChannelOptions {
 
     /// - seealso: `DatagramVectorReadMessageCountOption`
     public static let datagramVectorReadMessageCount = Types.DatagramVectorReadMessageCountOption()
+    
+    /// - seealso: `ExplicitCongestionNotificationsOption`
+    public static let explicitCongestionNotification = Types.ExplicitCongestionNotificationsOption()
 }
 
 extension ChannelOptions {

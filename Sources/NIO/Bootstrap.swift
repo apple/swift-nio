@@ -426,6 +426,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     internal var _channelOptions: ChannelOptions.Storage
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Optional<Resolver>
+    private var bindTarget: Optional<SocketAddress>
 
     /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -458,6 +459,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         self._channelInitializer = { channel in channel.eventLoop.makeSucceededFuture(()) }
         self.protocolHandlers = nil
         self.resolver = nil
+        self.bindTarget = nil
     }
 
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
@@ -523,6 +525,24 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         return self
     }
 
+    /// Bind the `SocketChannel` to `address`.
+    ///
+    /// Using `bind` is not necessary unless you need the local address to be bound to a specific address.
+    ///
+    /// - note: Using `bind` will disable Happy Eyeballs on this `Channel`.
+    ///
+    /// - parameters:
+    ///     - address: The `SocketAddress` to bind on.
+    public func bind(to address: SocketAddress) -> ClientBootstrap {
+        self.bindTarget = address
+        return self
+    }
+
+    func makeSocketChannel(eventLoop: EventLoop,
+                           protocolFamily: NIOBSDSocket.ProtocolFamily) throws -> SocketChannel {
+        return try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
+    }
+
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///
     /// - parameters:
@@ -531,14 +551,40 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
         let loop = self.group.next()
-        let connector = HappyEyeballsConnector(resolver: resolver ?? GetaddrinfoResolver(loop: loop, aiSocktype: .stream, aiProtocol: CInt(IPPROTO_TCP)),
+        let resolver = self.resolver ?? GetaddrinfoResolver(loop: loop,
+                                                            aiSocktype: .stream,
+                                                            aiProtocol: CInt(IPPROTO_TCP))
+        let connector = HappyEyeballsConnector(resolver: resolver,
                                                loop: loop,
                                                host: host,
                                                port: port,
                                                connectTimeout: self.connectTimeout) { eventLoop, protocolFamily in
-            return self.execute(eventLoop: eventLoop, protocolFamily: protocolFamily) { $0.eventLoop.makeSucceededFuture(()) }
+            return self.initializeAndRegisterNewChannel(eventLoop: eventLoop, protocolFamily: protocolFamily) {
+                $0.eventLoop.makeSucceededFuture(())
+            }
         }
         return connector.resolveAndConnect()
+    }
+
+    private func connect(freshChannel channel: Channel, address: SocketAddress) -> EventLoopFuture<Void> {
+        let connectPromise = channel.eventLoop.makePromise(of: Void.self)
+        channel.connect(to: address, promise: connectPromise)
+        let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
+            connectPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
+            channel.close(promise: nil)
+        }
+
+        connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
+            cancelTask.cancel()
+        }
+        return connectPromise.futureResult
+    }
+
+    internal func testOnly_connect(injectedChannel: SocketChannel,
+                                   to address: SocketAddress) -> EventLoopFuture<Channel> {
+        return self.initializeAndRegisterChannel(injectedChannel) { channel in
+            return self.connect(freshChannel: channel, address: address)
+        }
     }
 
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
@@ -547,18 +593,9 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     ///     - address: The address to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
-        return execute(eventLoop: group.next(), protocolFamily: address.protocol) { channel in
-            let connectPromise = channel.eventLoop.makePromise(of: Void.self)
-            channel.connect(to: address, promise: connectPromise)
-            let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
-                connectPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
-                channel.close(promise: nil)
-            }
-
-            connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
-                cancelTask.cancel()
-            }
-            return connectPromise.futureResult
+        return self.initializeAndRegisterNewChannel(eventLoop: self.group.next(),
+                                                    protocolFamily: address.protocol) { channel in
+            return self.connect(freshChannel: channel, address: address)
         }
     }
 
@@ -570,9 +607,9 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     public func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
         do {
             let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
-            return connect(to: address)
+            return self.connect(to: address)
         } catch {
-            return group.next().makeFailedFuture(error)
+            return self.group.next().makeFailedFuture(error)
         }
     }
 
@@ -615,24 +652,35 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         }
     }
 
-    private func execute(eventLoop: EventLoop,
-                         protocolFamily: NIOBSDSocket.ProtocolFamily,
-                         _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
-        let channelInitializer = self.channelInitializer
-        let channelOptions = self._channelOptions
-
+    private func initializeAndRegisterNewChannel(eventLoop: EventLoop,
+                                                 protocolFamily: NIOBSDSocket.ProtocolFamily,
+                                                 _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let channel: SocketChannel
         do {
-            channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
+            channel = try self.makeSocketChannel(eventLoop: eventLoop, protocolFamily: protocolFamily)
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
+        return self.initializeAndRegisterChannel(channel, body)
+    }
+
+    private func initializeAndRegisterChannel(_ channel: SocketChannel,
+                                              _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
+        let channelInitializer = self.channelInitializer
+        let channelOptions = self._channelOptions
+        let eventLoop = channel.eventLoop
 
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
             return channelOptions.applyAllChannelOptions(to: channel).flatMap {
-                channelInitializer(channel)
+                if let bindTarget = self.bindTarget {
+                    return channel.bind(to: bindTarget).flatMap {
+                        channelInitializer(channel)
+                    }
+                } else {
+                    return channelInitializer(channel)
+                }
             }.flatMap {
                 eventLoop.assertInEventLoop()
                 return channel.registerAndDoSynchronously(body)
@@ -647,7 +695,9 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit(setupChannel).flatMap { $0 }
+            return eventLoop.flatSubmit {
+                setupChannel()
+            }
         }
     }
 }
@@ -910,18 +960,56 @@ public final class NIOPipeBootstrap {
         try withUnsafeMutablePointer(to: &s) { ptr in
             try Posix.fstat(descriptor: descriptor, outStat: ptr)
         }
-        if (s.st_mode & S_IFREG) != 0 || (s.st_mode & S_IFDIR) != 0 {
+        switch s.st_mode & S_IFMT {
+        case S_IFREG, S_IFDIR, S_IFLNK, S_IFBLK:
             throw ChannelError.operationUnsupported
+        default:
+            () // Let's default to ok
+        }
+    }
+
+    /// Create the `PipeChannel` with the provided file descriptor which is used for both input & output.
+    ///
+    /// This method is useful for specialilsed use-cases where you want to use `NIOPipeBootstrap` for say a serial line.
+    ///
+    /// - note: If this method returns a succeeded future, SwiftNIO will close `fileDescriptor` when the `Channel`
+    ///         becomes inactive. You _must not_ do any further operations with `fileDescriptor`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptor and are responsible for
+    ///         closing it.
+    ///
+    /// - parameters:
+    ///     - fileDescriptor: The _Unix file descriptor_ for the input & output.
+    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
+    public func withInputOutputDescriptor(_ fileDescriptor: CInt) -> EventLoopFuture<Channel> {
+        let inputFD = fileDescriptor
+        let outputFD = dup(fileDescriptor)
+
+        return self.withPipes(inputDescriptor: inputFD, outputDescriptor: outputFD).flatMapErrorThrowing { error in
+            try! Posix.close(descriptor: outputFD)
+            throw error
         }
     }
 
     /// Create the `PipeChannel` with the provided input and output file descriptors.
+    ///
+    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
+    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
+    /// `NIOPipeBootstrap.withInputOutputDescriptor` if it is not a socket.
+    ///
+    /// - note: If this method returns a succeeded future, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
+    ///         `outputDescriptor`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptors and are responsible for
+    ///         closing them.
     ///
     /// - parameters:
     ///     - inputDescriptor: The _Unix file descriptor_ for the input (ie. the read side).
     ///     - outputDescriptor: The _Unix file descriptor_ for the output (ie. the write side).
     /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
     public func withPipes(inputDescriptor: CInt, outputDescriptor: CInt) -> EventLoopFuture<Channel> {
+        precondition(inputDescriptor >= 0 && outputDescriptor >= 0 && inputDescriptor != outputDescriptor,
+                     "illegal file descriptor pair. The file descriptors \(inputDescriptor), \(outputDescriptor) " +
+                     "must be distinct and both positive integers.")
         let eventLoop = group.next()
         do {
             try self.validateFileDescriptorIsNotAFile(inputDescriptor)

@@ -23,7 +23,7 @@ extension ChannelPipeline {
     }
 
     func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
-                                                       file: StaticString = #file,
+                                                       file: StaticString = (#file),
                                                        line: UInt = #line) throws {
         do {
             let context = try self.context(handlerType: handlerType).wait()
@@ -351,20 +351,12 @@ private class ReentrantReadOnChannelReadCompleteHandler: ChannelInboundHandler {
         // Make sure we only do this once.
         if !self.didRead {
             self.didRead = true
-            let data = ByteBuffer.forString("re-entrant read from channelReadComplete!")
+            let data = context.channel.allocator.buffer(string: "re-entrant read from channelReadComplete!")
 
             // Please never do this.
             context.channel.pipeline.fireChannelRead(NIOAny(data))
         }
         context.fireChannelReadComplete()
-    }
-}
-
-extension ByteBuffer {
-    static func forString(_ string: String) -> ByteBuffer {
-        var buf = ByteBufferAllocator().buffer(capacity: string.utf8.count)
-        buf.writeString(string)
-        return buf
     }
 }
 
@@ -381,7 +373,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
 
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
@@ -400,7 +392,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request fires a subsequent upgrade in immediately. It should also be ignored.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\n\r\nOPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
@@ -417,7 +409,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
                                                extraHTTPHandlers: []) { (_: ChannelHandlerContext) in
             XCTFail("upgrade completed")
         }
-        let data = HTTPServerRequestPart.body(ByteBuffer.forString("hello"))
+        let data = HTTPServerRequestPart.body(channel.allocator.buffer(string: "hello"))
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
@@ -468,7 +460,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // Let the machinery do its thing.
         XCTAssertNoThrow(try completePromise.futureResult.wait())
@@ -494,7 +486,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
 
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nUpgrade: myproto\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
@@ -513,7 +505,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request is missing a 'Kafkaesque' connection header.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nUpgrade: myproto\r\nKafkaesque: true\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
@@ -531,7 +523,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
 
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nUpgrade: something-else\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
@@ -574,7 +566,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto, exploder\r\nKafkaesque: yup\r\nConnection: upgrade, kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // Let the machinery do its thing.
         XCTAssertNoThrow(try completePromise.futureResult.wait())
@@ -618,7 +610,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade,kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // Let the machinery do its thing.
         XCTAssertNoThrow(try completePromise.futureResult.wait())
@@ -679,7 +671,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: noproto,myproto\r\nKafkaesque: yup\r\nConnection: upgrade, kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // Let the machinery do its thing.
         XCTAssertNoThrow(try completePromise.futureResult.wait())
@@ -725,7 +717,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nWeirdcase: yup\r\nConnection: upgrade,weirdcase\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(ByteBuffer.forString(request)).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(client.allocator.buffer(string: request)).wait())
 
         // Let the machinery do its thing.
         XCTAssertNoThrow(try completePromise.futureResult.wait())
@@ -759,7 +751,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         g.wait()
 
@@ -804,14 +796,14 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         // This request is safe to upgrade, but is immediately followed by non-HTTP data that will probably
         // blow up the HTTP parser.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // Wait for the upgrade machinery to run.
         g.wait()
 
         // Ok, send the application data in.
         let appData = "supersecretawesome data definitely not http\r\nawesome\r\ndata\ryeah"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(appData))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: appData))).wait())
 
         // Now we need to wait a little bit before we move forward. This needs to give time for the
         // I/O to settle. 100ms should be plenty to handle that I/O.
@@ -849,7 +841,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // Let's send in an upgrade request.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
 
         // Upgrade has been requested but not proceeded.
         XCTAssertTrue(upgradeRequested)
@@ -904,7 +896,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // Let's send in an upgrade request.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: failingProtocol, myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
 
         // Upgrade has been requested but not proceeded for the failing protocol.
         XCTAssertEqual(upgradingProtocol, "failingProtocol")
@@ -961,7 +953,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // Let's send in an upgrade request.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
 
         // Upgrade has been requested but not proceeded.
         XCTAssertTrue(upgradeRequested)
@@ -1029,7 +1021,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // Let's send in an upgrade request.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
 
         // Upgrade has been requested but not proceeded.
         XCTAssertTrue(upgradeRequested)
@@ -1103,7 +1095,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // Let the machinery do its thing.
         XCTAssertNoThrow(try connectedServer.pipeline.waitForUpgraderToBeRemoved())
@@ -1227,11 +1219,11 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         // This request is safe to upgrade.
         var request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
         request += "A"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         XCTAssertNoThrow(try firstByteDonePromise.futureResult.wait() as Void)
 
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString("B"))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: "B"))).wait())
         
         XCTAssertNoThrow(try secondByteDonePromise.futureResult.wait() as Void)
 
@@ -1265,7 +1257,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // Let's send in an upgrade request.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
         channel.embeddedEventLoop.run()
 
         // Upgrade has been requested but not proceeded.
@@ -1283,7 +1275,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
                          expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
 
         // Now send in some more bytes.
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString("B")))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "B")))
         XCTAssertNoThrow(try XCTAssertNil(channel.readInbound(as: ByteBuffer.self)))
 
         // Now we're going to remove the handler.
@@ -1291,7 +1283,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This should have delivered the pending bytes and the buffered request, and in all ways have behaved
         // as though upgrade simply failed.
-        XCTAssertEqual(try assertNoThrowWithValue(channel.readInbound(as: ByteBuffer.self)), ByteBuffer.forString("B"))
+        XCTAssertEqual(try assertNoThrowWithValue(channel.readInbound(as: ByteBuffer.self)),
+                       channel.allocator.buffer(string: "B"))
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
         XCTAssertNoThrow(try XCTAssertNil(channel.readOutbound(as: ByteBuffer.self)))
     }
@@ -1313,7 +1306,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // Let's send in an upgrade request.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
         channel.embeddedEventLoop.run()
 
         // Upgrade has been requested but not proceeded.
@@ -1331,7 +1324,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
                          expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
 
         // Now send in some more bytes.
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString("B")))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "B")))
         XCTAssertNoThrow(try XCTAssertNil(channel.readInbound(as: ByteBuffer.self)))
 
         // Ok, now we put in a special handler that does a weird readComplete hook thing.
@@ -1341,8 +1334,10 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.removeUpgrader())
 
         // We should have received B and then the re-entrant read in that order.
-        XCTAssertEqual(try assertNoThrowWithValue(channel.readInbound(as: ByteBuffer.self)), ByteBuffer.forString("B"))
-        XCTAssertEqual(try assertNoThrowWithValue(channel.readInbound(as: ByteBuffer.self)), ByteBuffer.forString("re-entrant read from channelReadComplete!"))
+        XCTAssertEqual(try assertNoThrowWithValue(channel.readInbound(as: ByteBuffer.self)),
+                       channel.allocator.buffer(string: "B"))
+        XCTAssertEqual(try assertNoThrowWithValue(channel.readInbound(as: ByteBuffer.self)),
+                       channel.allocator.buffer(string: "re-entrant read from channelReadComplete!"))
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
         XCTAssertNoThrow(try XCTAssertNil(channel.readOutbound(as: ByteBuffer.self)))
     }
@@ -1392,7 +1387,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
 
         // Let the machinery do its thing.
         XCTAssertNoThrow(try completePromise.futureResult.wait())

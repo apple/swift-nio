@@ -45,9 +45,7 @@ extension ByteBuffer {
 
 extension EmbeddedChannel {
     func writeString(_ string: String) -> EventLoopFuture<Void> {
-        var buffer = self.allocator.buffer(capacity: string.utf8.count)
-        buffer.writeString(string)
-        return self.writeAndFlush(buffer)
+        return self.writeAndFlush(self.allocator.buffer(string: string))
     }
 }
 
@@ -184,8 +182,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
         }
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
-        var buffer = server.allocator.buffer(capacity: upgradeRequest.utf8.count)
-        buffer.writeString(upgradeRequest)
+        let buffer = server.allocator.buffer(string: upgradeRequest)
 
         // Write this directly to the server.
         XCTAssertThrowsError(try server.writeInbound(buffer)) { error in
@@ -251,8 +248,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
         }
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "12", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
-        var buffer = server.allocator.buffer(capacity: upgradeRequest.utf8.count)
-        buffer.writeString(upgradeRequest)
+        let buffer = server.allocator.buffer(string: upgradeRequest)
 
         // Write this directly to the server.
         XCTAssertThrowsError(try server.writeInbound(buffer)) { error in
@@ -274,8 +270,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
         }
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
-        var buffer = server.allocator.buffer(capacity: upgradeRequest.utf8.count)
-        buffer.writeString(upgradeRequest)
+        let buffer = server.allocator.buffer(string: upgradeRequest)
 
         // Write this directly to the server.
         XCTAssertThrowsError(try server.writeInbound(buffer)) { error in
@@ -297,8 +292,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
         }
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13"])
-        var buffer = server.allocator.buffer(capacity: upgradeRequest.utf8.count)
-        buffer.writeString(upgradeRequest)
+        let buffer = server.allocator.buffer(string: upgradeRequest)
 
         // Write this directly to the server.
         XCTAssertThrowsError(try server.writeInbound(buffer)) { error in

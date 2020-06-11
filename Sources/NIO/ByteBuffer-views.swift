@@ -103,7 +103,7 @@ extension ByteBufferView: MutableCollection {}
 extension ByteBufferView: RangeReplaceableCollection {
     // required by `RangeReplaceableCollection`
     public init() {
-        self = ByteBufferView(ByteBufferAllocator().buffer(capacity: 0))
+        self = ByteBufferView(ByteBuffer())
     }
 
     @inlinable
