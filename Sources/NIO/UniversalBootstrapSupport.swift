@@ -49,12 +49,12 @@ public protocol NIOClientTCPBootstrapProtocol {
     ///     - value: The value for the option.
     func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
     
-    /// Apply any understood shorthand options to the bootstrap, removing them from the set of options if they are consumed.
+    /// Apply any understood convenience options to the bootstrap, removing them from the set of options if they are consumed.
     /// Method is optional to implement and should never be directly called by users.
     /// - parameters:
     ///     - options:  The options to try applying - the options applied should be consumed from here.
     /// - returns: The updated bootstrap with and options applied.
-    func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.NIOTCPShorthandOptions) -> Self
+    func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.TCPConvenienceOptions) -> Self
 
     /// - parameters:
     ///     - timeout: The timeout that will apply to the connection attempt.

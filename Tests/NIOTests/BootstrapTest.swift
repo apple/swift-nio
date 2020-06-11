@@ -530,7 +530,7 @@ class BootstrapTest: XCTestCase {
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: el))
     }
     
-    func testShorthandOptionsAreEquivalentUniversalClient() throws {
+    func testConvenienceOptionsAreEquivalentUniversalClient() throws {
         func setAndGetOption<Option>(option: Option, _ applyOptions : (NIOClientTCPBootstrap) -> NIOClientTCPBootstrap) throws
             -> Option.Value where Option : ChannelOption {
             var optionRead : EventLoopFuture<Option.Value>?
@@ -551,7 +551,7 @@ class BootstrapTest: XCTestCase {
         }
         
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
-                                            shortOption: ChannelOptions.NIOTCPShorthandOption) throws
+                                            shortOption: ChannelOptions.TCPConvenienceOption) throws
             where Option : ChannelOption, Option.Value : Equatable {
             let longSetValue = try setAndGetOption(option: longOption) { bs in
                 bs.channelOption(longOption, value: setValue)

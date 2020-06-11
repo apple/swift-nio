@@ -152,10 +152,10 @@ class UniversalBootstrapSupportTest: XCTestCase {
                 return self
             }
             
-            var shorthandOptionConsumed = false
-            func _applyOptions(_ options: inout ChannelOptions.NIOTCPShorthandOptions) -> FakeBootstrap {
+            var convenienceOptionConsumed = false
+            func _applyOptions(_ options: inout ChannelOptions.TCPConvenienceOptions) -> FakeBootstrap {
                 if options.consumeAllowLocalEndpointReuse().isSet {
-                    shorthandOptionConsumed = true
+                    convenienceOptionConsumed = true
                 }
                 return self
             }
@@ -181,21 +181,21 @@ class UniversalBootstrapSupportTest: XCTestCase {
         let consumingFake = FakeBootstrap()
         _ = NIOClientTCPBootstrap(consumingFake, tls: NIOInsecureNoTLS())
             .channelConvenienceOptions([.allowLocalEndpointReuse])
-        XCTAssertTrue(consumingFake.shorthandOptionConsumed)
+        XCTAssertTrue(consumingFake.convenienceOptionConsumed)
         XCTAssertFalse(consumingFake.regularOptionsSeen)
         
         // Check default behaviour works.
         let nonConsumingFake = FakeBootstrap()
         _ = NIOClientTCPBootstrap(nonConsumingFake, tls: NIOInsecureNoTLS())
             .channelConvenienceOptions([.allowRemoteHalfClosure])
-        XCTAssertFalse(nonConsumingFake.shorthandOptionConsumed)
+        XCTAssertFalse(nonConsumingFake.convenienceOptionConsumed)
         XCTAssertTrue(nonConsumingFake.regularOptionsSeen)
         
         // Both at once.
         let bothFake = FakeBootstrap()
         _ = NIOClientTCPBootstrap(bothFake, tls: NIOInsecureNoTLS())
             .channelConvenienceOptions([.allowRemoteHalfClosure, .allowLocalEndpointReuse])
-        XCTAssertTrue(bothFake.shorthandOptionConsumed)
+        XCTAssertTrue(bothFake.convenienceOptionConsumed)
         XCTAssertTrue(bothFake.regularOptionsSeen)
     }
 }

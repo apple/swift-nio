@@ -14,22 +14,23 @@
 
 // MARK:  Universal Client Bootstrap
 extension NIOClientTCPBootstrapProtocol {
-    /// Apply any understood shorthand options to the bootstrap, removing them from the set of options if they are consumed.
+    /// Apply any understood convenience options to the bootstrap, removing them from the set of options if they are consumed.
     /// - parameters:
     ///     - options:  The options to try applying - the options applied should be consumed from here.
     /// - returns: The updated bootstrap with and options applied.
-    public func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.NIOTCPShorthandOptions) -> Self {
+    public func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.TCPConvenienceOptions) -> Self {
         // Default is to consume no options and not update self.
         return self
     }
 }
 
 extension NIOClientTCPBootstrap {
-    /// Specifies some `ChannelOption`s to be applied to the channel.
-    /// - See: channelOption
-    /// - Parameter options: Set of shorthand options to apply.
+    /// Specifies some `TCPConvenienceOption`s to be applied to the channel.
+    /// These are preferred over regular channel options as they are easier to use and restrict
+    /// options to those with a normal user would consider.
+    /// - Parameter options: Set of convenience options to apply.
     /// - Returns: The updated bootstrap (`self` being mutated)
-    public func channelConvenienceOptions(_ options: ChannelOptions.NIOTCPShorthandOptions) -> NIOClientTCPBootstrap {
+    public func channelConvenienceOptions(_ options: ChannelOptions.TCPConvenienceOptions) -> NIOClientTCPBootstrap {
         var optionsRemaining = options
         // First give the underlying a chance to consume options.
         let withUnderlyingOverrides =
@@ -43,16 +44,16 @@ extension NIOClientTCPBootstrap {
 // MARK: Utility
 extension ChannelOptions.Types {
     /// Has an option been set?
-    /// Option has a value of generic type T.
-    public enum NIOOptionValue<T> {
+    /// Option has a value of generic type ValueType.
+    public enum ConvenienceOptionValue<ValueType> {
         /// The option was not set.
         case notSet
-        /// The option was set with a value of type T.
-        case set(T)
+        /// The option was set with a value of type ValueType.
+        case set(ValueType)
     }
 }
 
-extension ChannelOptions.Types.NIOOptionValue where T == () {
+extension ChannelOptions.Types.ConvenienceOptionValue where ValueType == () {
     /// Convenience method working with bool options as bool values for set.
     public var isSet: Bool {
         get {
@@ -66,7 +67,7 @@ extension ChannelOptions.Types.NIOOptionValue where T == () {
     }
 }
 
-extension ChannelOptions.Types.NIOOptionValue where T == () {
+extension ChannelOptions.Types.ConvenienceOptionValue where ValueType == () {
     fileprivate init(flag: Bool) {
         if flag {
             self = .set(())
@@ -78,29 +79,29 @@ extension ChannelOptions.Types.NIOOptionValue where T == () {
 
 // MARK: TCP - data
 extension ChannelOptions {
-    /// A TCP channel option which can be applied to a bootstrap using shorthand notation.
-    public struct NIOTCPShorthandOption: Hashable {
-        fileprivate var data: ShorthandOption
+    /// A TCP channel option which can be applied to a bootstrap using convenience notation.
+    public struct TCPConvenienceOption: Hashable {
+        fileprivate var data: ConvenienceOption
         
-        private init(_ data: ShorthandOption) {
+        private init(_ data: ConvenienceOption) {
             self.data = data
         }
         
-        fileprivate enum ShorthandOption: Hashable {
-            case reuseAddr
+        fileprivate enum ConvenienceOption: Hashable {
+            case allowLocalEndpointReuse
             case disableAutoRead
             case allowRemoteHalfClosure
         }
     }
 }
 
-/// Approved shorthand options.
-extension ChannelOptions.NIOTCPShorthandOption {
+/// Approved convenience options.
+extension ChannelOptions.TCPConvenienceOption {
     /// Allow immediately reusing a local address.
-    public static let allowLocalEndpointReuse = ChannelOptions.NIOTCPShorthandOption(.reuseAddr)
+    public static let allowLocalEndpointReuse = ChannelOptions.TCPConvenienceOption(.allowLocalEndpointReuse)
     
     /// The user will manually call `Channel.read` once all the data is read from the transport.
-    public static let disableAutoRead = ChannelOptions.NIOTCPShorthandOption(.disableAutoRead)
+    public static let disableAutoRead = ChannelOptions.TCPConvenienceOption(.disableAutoRead)
     
     /// Allows users to configure whether the `Channel` will close itself when its remote
     /// peer shuts down its send stream, or whether it will remain open. If set to `false` (the default), the `Channel`
@@ -108,28 +109,28 @@ extension ChannelOptions.NIOTCPShorthandOption {
     /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
     /// and no more data will be received.
     public static let allowRemoteHalfClosure =
-                        ChannelOptions.NIOTCPShorthandOption(.allowRemoteHalfClosure)
+                        ChannelOptions.TCPConvenienceOption(.allowRemoteHalfClosure)
 }
 
 extension ChannelOptions {
-    /// A set of `NIOTCPShorthandOption`s
-    public struct NIOTCPShorthandOptions: ExpressibleByArrayLiteral, Hashable {
+    /// A set of `TCPConvenienceOption`s
+    public struct TCPConvenienceOptions: ExpressibleByArrayLiteral, Hashable {
         var allowLocalEndpointReuse = false
         var disableAutoRead = false
         var allowRemoteHalfClosure = false
         
         /// Construct from an array literal.
         @inlinable
-        public init(arrayLiteral elements: NIOTCPShorthandOption...) {
+        public init(arrayLiteral elements: TCPConvenienceOption...) {
             for element in elements {
                 add(element)
             }
         }
         
         @usableFromInline
-        mutating func add(_ element: NIOTCPShorthandOption) {
+        mutating func add(_ element: TCPConvenienceOption) {
             switch element.data {
-            case .reuseAddr:
+            case .allowLocalEndpointReuse:
                 self.allowLocalEndpointReuse = true
             case .allowRemoteHalfClosure:
                 self.allowRemoteHalfClosure = true
@@ -141,31 +142,31 @@ extension ChannelOptions {
         /// Caller is consuming the knowledge that `allowLocalEndpointReuse` was set or not.
         /// The setting will nolonger be set after this call.
         /// - Returns: If `allowLocalEndpointReuse` was set.
-        public mutating func consumeAllowLocalEndpointReuse() -> Types.NIOOptionValue<Void> {
+        public mutating func consumeAllowLocalEndpointReuse() -> Types.ConvenienceOptionValue<Void> {
             defer {
                 self.allowLocalEndpointReuse = false
             }
-            return Types.NIOOptionValue<Void>(flag: self.allowLocalEndpointReuse)
+            return Types.ConvenienceOptionValue<Void>(flag: self.allowLocalEndpointReuse)
         }
         
         /// Caller is consuming the knowledge that disableAutoRead was set or not.
         /// The setting will nolonger be set after this call.
         /// - Returns: If disableAutoRead was set.
-        public mutating func consumeDisableAutoRead() -> Types.NIOOptionValue<Void> {
+        public mutating func consumeDisableAutoRead() -> Types.ConvenienceOptionValue<Void> {
             defer {
                 self.disableAutoRead = false
             }
-            return Types.NIOOptionValue<Void>(flag: self.disableAutoRead)
+            return Types.ConvenienceOptionValue<Void>(flag: self.disableAutoRead)
         }
         
         /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
         /// The setting will nolonger be set after this call.
         /// - Returns: If allowRemoteHalfClosure was set.
-        public mutating func consumeAllowRemoteHalfClosure() -> Types.NIOOptionValue<Void> {
+        public mutating func consumeAllowRemoteHalfClosure() -> Types.ConvenienceOptionValue<Void> {
             defer {
                 self.allowRemoteHalfClosure = false
             }
-            return Types.NIOOptionValue<Void>(flag: self.allowRemoteHalfClosure)
+            return Types.ConvenienceOptionValue<Void>(flag: self.allowRemoteHalfClosure)
         }
         
         mutating func applyFallbackMapping(_ universalBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
