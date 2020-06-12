@@ -501,57 +501,50 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         var buffer = self.recvAllocator.buffer(allocator: self.allocator)
         var readResult = ReadResult.none
         
-        let controlBytes = self.reportExplicitCongestionNotifications ?
-                // Guess at max 4 int32 payload messages.
-                UnsafeMutableRawBufferPointer.allocate(
-                    byteCount: Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.size) * 4,
-                    alignment: MemoryLayout<Int32>.alignment) :
-                UnsafeMutableRawBufferPointer(start: nil, count: 0)
-        defer {
-            if controlBytes.baseAddress != nil {
-                controlBytes.deallocate()
-            }
-        }
-        
+        return try self.selectableEventLoop.withControlMessageBytes {
+            let controlBytes = self.reportExplicitCongestionNotifications ?
+                    $0:
+                    UnsafeMutableRawBufferPointer(start: nil, count: 0)
 
-        for i in 1...self.maxMessagesPerRead {
-            guard self.isOpen else {
-                throw ChannelError.eof
-            }
-            buffer.clear()
-
-            var controlByteSlice = controlBytes[...]
-            var controlMessageReceiver = ControlMessageReceiver()
-            
-            let result = try buffer.withMutableWritePointer {
-                try self.socket.recvmsg(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength,
-                                        controlBytes: &controlByteSlice,
-                                        controlMessageReceiver: { (controlMessage) in controlMessageReceiver.receiveMessage(controlMessage) })
-            }
-            switch result {
-            case .processed(let bytesRead):
-                assert(bytesRead > 0)
-                assert(self.isOpen)
-                let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
-                readPending = false
-
-                let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
-                                            data: buffer,
-                                            metadata: self.reportExplicitCongestionNotifications ?
-                                                AddressedEnvelope.Metadata(ecnState: controlMessageReceiver.ecnValue) :
-                                                nil)
-                assert(self.isActive)
-                pipeline.fireChannelRead0(NIOAny(msg))
-                if mayGrow && i < maxMessagesPerRead {
-                    buffer = recvAllocator.buffer(allocator: allocator)
+            for i in 1...self.maxMessagesPerRead {
+                guard self.isOpen else {
+                    throw ChannelError.eof
                 }
-                readResult = .some
-            case .wouldBlock(let bytesRead):
-                assert(bytesRead == 0)
-                return readResult
+                buffer.clear()
+
+                var controlByteSlice = controlBytes[...]
+                var controlMessageReceiver = ControlMessageReceiver()
+                
+                let result = try buffer.withMutableWritePointer {
+                    try self.socket.recvmsg(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength,
+                                            controlBytes: &controlByteSlice,
+                                            controlMessageReceiver: { (controlMessage) in controlMessageReceiver.receiveMessage(controlMessage) })
+                }
+                switch result {
+                case .processed(let bytesRead):
+                    assert(bytesRead > 0)
+                    assert(self.isOpen)
+                    let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
+                    readPending = false
+
+                    let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
+                                                data: buffer,
+                                                metadata: self.reportExplicitCongestionNotifications ?
+                                                    AddressedEnvelope.Metadata(ecnState: controlMessageReceiver.ecnValue) :
+                                                    nil)
+                    assert(self.isActive)
+                    pipeline.fireChannelRead0(NIOAny(msg))
+                    if mayGrow && i < maxMessagesPerRead {
+                        buffer = recvAllocator.buffer(allocator: allocator)
+                    }
+                    readResult = .some
+                case .wouldBlock(let bytesRead):
+                    assert(bytesRead == 0)
+                    return readResult
+                }
             }
+            return readResult
         }
-        return readResult
     }
     
     private struct ControlMessageReceiver {

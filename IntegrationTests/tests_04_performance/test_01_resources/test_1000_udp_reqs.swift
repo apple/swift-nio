@@ -105,6 +105,7 @@ func run(identifier: String) {
 
     let clientChannel = try! DatagramBootstrap(group: group)
         .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
         .channelInitializer { channel in
             channel.pipeline.addHandler(clientHandler)
         }
