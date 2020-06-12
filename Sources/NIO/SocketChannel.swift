@@ -507,6 +507,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     byteCount: Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.size) * 4,
                     alignment: MemoryLayout<Int32>.alignment) :
                 UnsafeMutableRawBufferPointer(start: nil, count: 0)
+        defer {
+            if controlBytes.baseAddress != nil {
+                controlBytes.deallocate()
+            }
+        }
         
 
         for i in 1...self.maxMessagesPerRead {
