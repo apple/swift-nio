@@ -33,6 +33,21 @@ else
   printf "\033[0;32mokay.\033[0m\n"
 fi
 
+printf "=> Checking for unacceptable language... "
+# This greps for unacceptable terminology. The square bracket[s] are so that
+# "git grep" doesn't find the lines that greps :).
+unacceptable_terms=(
+    -e blacklis[t]
+    -e whitelis[t]
+    -e slav[e]
+)
+if git grep --color=never -i "${unacceptable_terms[@]}" > /dev/null; then
+    printf "\033[0;31mUnacceptable language found.\033[0m\n"
+    git grep -i "${unacceptable_terms[@]}"
+    exit 1
+fi
+printf "\033[0;32mokay.\033[0m\n"
+
 printf "=> Checking license headers... "
 tmp=$(mktemp /tmp/.swift-nio-sanity_XXXXXX)
 
