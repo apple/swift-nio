@@ -65,7 +65,9 @@ private final class GrepHandler: ChannelInboundHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let line = self.unwrapInboundIn(data)
-        if line.lowercased().starts(with: "fatal error: ") || line.lowercased().starts(with: "precondition failed: ") {
+        if line.lowercased().starts(with: "fatal error: ") ||
+            line.lowercased().starts(with: "precondition failed: ") ||
+            line.lowercased().starts(with: "assertion failed: ") {
             self.promise.succeed(line)
             context.close(promise: nil)
         }
