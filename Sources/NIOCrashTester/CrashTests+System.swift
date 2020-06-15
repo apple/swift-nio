@@ -12,9 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-let crashTestSuites: [String: Any] = [
-    "EventLoopCrashTests": EventLoopCrashTests(),
-    "ByteBufferCrashTests": ByteBufferCrashTests(),
-    "SystemCrashTests": SystemCrashTests(),
-    "HTTPCrashTests": HTTPCrashTests(),
-]
+import NIO
+import Foundation
+
+fileprivate let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+
+struct SystemCrashTests {
+    let testEBADFIsUnacceptable = CrashTest(
+        regex: "^Precondition failed: unacceptable errno \(EBADF) Bad file descriptor in", {
+            _ = try? NIOPipeBootstrap(group: group).withPipes(inputDescriptor: .max, outputDescriptor: .max - 1).wait()
+        })
+}
