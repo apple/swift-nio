@@ -27,7 +27,7 @@ extension NIOClientTCPBootstrapProtocol {
 extension NIOClientTCPBootstrap {
     /// Specifies some `TCPConvenienceOption`s to be applied to the channel.
     /// These are preferred over regular channel options as they are easier to use and restrict
-    /// options to those with a normal user would consider.
+    /// options to those which a normal user would consider.
     /// - Parameter options: Set of convenience options to apply.
     /// - Returns: The updated bootstrap (`self` being mutated)
     public func channelConvenienceOptions(_ options: ChannelOptions.TCPConvenienceOptions) -> NIOClientTCPBootstrap {
