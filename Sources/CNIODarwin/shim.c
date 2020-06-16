@@ -58,6 +58,7 @@ struct cmsghdr *CNIODarwin_CMSG_FIRSTHDR(const struct msghdr *mhdr) {
 
 struct cmsghdr *CNIODarwin_CMSG_NXTHDR(const struct msghdr *mhdr, const struct cmsghdr *cmsg) {
     assert(mhdr != NULL);
+    assert(cmsg != NULL);   // Not required by Darwin but Linux needs this so we should match.
     return CMSG_NXTHDR(mhdr, cmsg);
 }
 

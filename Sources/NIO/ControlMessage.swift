@@ -53,16 +53,14 @@ struct UnsafeControlMessageCollection: Collection {
     }
     
     var startIndex: Index {
-        get {
-            var messageHeader = self.messageHeader
-            return withUnsafePointer(to: &messageHeader) { messageHeaderPtr in
-                let firstCMsg = Posix.cmsgFirstHeader(inside: messageHeaderPtr)
-                return ControlMessageIndex(cmsgPointer: firstCMsg)
-            }
+        var messageHeader = self.messageHeader
+        return withUnsafePointer(to: &messageHeader) { messageHeaderPtr in
+            let firstCMsg = Posix.cmsgFirstHeader(inside: messageHeaderPtr)
+            return ControlMessageIndex(cmsgPointer: firstCMsg)
         }
     }
     
-    let endIndex: Index = ControlMessageIndex(cmsgPointer: nil)
+    let endIndex = ControlMessageIndex(cmsgPointer: nil)
     
     func index(after: Index) -> Index {
         var msgHdr = messageHeader
@@ -73,12 +71,10 @@ struct UnsafeControlMessageCollection: Collection {
     }
     
     public subscript(position: Index) -> Element {
-        get {
-            let cmsg = position.cmsgPointer!
-            return UnsafeControlMessage(level: cmsg.pointee.cmsg_level,
-                                        type: cmsg.pointee.cmsg_type,
-                                        data: Posix.cmsgData(for: cmsg))
-        }
+        let cmsg = position.cmsgPointer!
+        return UnsafeControlMessage(level: cmsg.pointee.cmsg_level,
+                                    type: cmsg.pointee.cmsg_type,
+                                    data: Posix.cmsgData(for: cmsg))
     }
         
     private var messageHeader: msghdr
@@ -92,13 +88,14 @@ struct UnsafeControlMessageCollection: Collection {
 struct ControlMessageReceiver {
     var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable // Default
     
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    private static let ipv4TosType = IP_RECVTOS
+    #else
+    private static let ipv4TosType = IP_TOS    // Linux
+    #endif
+    
     mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
-        #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-        let ipv4TosType = IP_RECVTOS
-        #else
-        let ipv4TosType = IP_TOS    // Linux
-        #endif
-        if controlMessage.level == IPPROTO_IP && controlMessage.type == ipv4TosType {
+        if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageReceiver.ipv4TosType {
             if let data = controlMessage.data {
                 assert(data.count == 1)
                 precondition(data.count >= 1)

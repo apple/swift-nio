@@ -170,7 +170,9 @@ typealias IOVector = iovec
         }
     }
 
-    func recvmsg(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t,
+    func recvmsg(pointer: UnsafeMutableRawBufferPointer,
+                 storage: inout sockaddr_storage,
+                 storageLen: inout socklen_t,
                  controlBytes: inout Slice<UnsafeMutableRawBufferPointer>,
                  controlMessageReceiver: (UnsafeControlMessage) -> ()) throws -> IOResult<Int> {
         var vec = iovec(iov_base: pointer.baseAddress, iov_len: pointer.count)

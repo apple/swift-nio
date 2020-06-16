@@ -416,12 +416,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let valueAsInt: Int32 = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
-                reportExplicitCongestionNotifications = true
+                self.reportExplicitCongestionNotifications = true
                 try self.socket.setOption(level: .ip,
                                           name: .ip_recv_tos,
                                           value: valueAsInt)
             case .some(.inet6):
-                reportExplicitCongestionNotifications = true
+                self.reportExplicitCongestionNotifications = true
                 try self.socket.setOption(level: .ipv6,
                                           name: .ipv6_recv_tclass,
                                           value: valueAsInt)
@@ -494,9 +494,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         var readResult = ReadResult.none
         
         return try self.selectableEventLoop.withControlMessageBytes {
-            let controlBytes = self.reportExplicitCongestionNotifications ?
-                    $0:
-                    UnsafeMutableRawBufferPointer(start: nil, count: 0)
+            let controlBytes: UnsafeMutableRawBufferPointer
+            if self.reportExplicitCongestionNotifications {
+                controlBytes = $0
+            } else {
+                controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+            }
 
             for i in 1...self.maxMessagesPerRead {
                 guard self.isOpen else {
