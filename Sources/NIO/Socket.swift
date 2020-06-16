@@ -210,9 +210,11 @@ typealias IOVector = iovec
         }
     }
 
-    func recvmsg(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t,
+    func recvmsg(pointer: UnsafeMutableRawBufferPointer,
+                 storage: inout sockaddr_storage,
+                 storageLen: inout socklen_t,
                  controlBytes: inout Slice<UnsafeMutableRawBufferPointer>,
-                 controlMessageReceiver: (ControlMessage) -> ()) throws -> IOResult<Int> {
+                 controlMessageReceiver: (UnsafeControlMessage) -> ()) throws -> IOResult<Int> {
         var vec = iovec(iov_base: pointer.baseAddress, iov_len: pointer.count)
         let localControlBytePointer = UnsafeMutableRawBufferPointer(rebasing: controlBytes)
 
@@ -249,72 +251,6 @@ typealias IOVector = iovec
         }
     }
     
-    struct ControlMessage {
-        var level: Int32
-        var type: Int32
-        var data: UnsafeBufferPointer<UInt8>?
-    }
-    
-    // Unsafe as captures pointers held in msghdr structure which must not escape scope of validity.
-    struct UnsafeControlMessageCollection: Collection {
-        typealias Index = ControlMessageIndex
-        typealias Element = ControlMessage
-        
-        struct ControlMessageIndex: Equatable, Comparable {
-            fileprivate var cmsgPointer: UnsafeMutablePointer<cmsghdr>?
-            
-            static func < (lhs: Socket.UnsafeControlMessageCollection.ControlMessageIndex,
-                           rhs: Socket.UnsafeControlMessageCollection.ControlMessageIndex) -> Bool {
-                if let lhsPointer = lhs.cmsgPointer {
-                    if let rhsPointer = rhs.cmsgPointer {
-                        return lhsPointer < rhsPointer
-                    }
-                    return true
-                }
-                return false
-            }
-            
-            fileprivate init(cmsgPointer: UnsafeMutablePointer<cmsghdr>?) {
-                self.cmsgPointer = cmsgPointer
-            }
-        }
-        
-        var startIndex: Index {
-            get {
-                var messageHeader = self.messageHeader
-                return withUnsafePointer(to: &messageHeader) { messageHeaderPtr in
-                    let firstCMsg = Posix.cmsgFirstHeader(inside: messageHeaderPtr)
-                    return ControlMessageIndex(cmsgPointer: firstCMsg)
-                }
-            }
-        }
-        
-        let endIndex: Index = ControlMessageIndex(cmsgPointer: nil)
-        
-        func index(after: Index) -> Index {
-            var msgHdr = messageHeader
-            return withUnsafeMutablePointer(to: &msgHdr) { messageHeaderPtr in
-                return ControlMessageIndex(cmsgPointer:
-                                            Posix.cmsgNextHeader(inside: messageHeaderPtr, from: after.cmsgPointer))
-            }
-        }
-        
-        public subscript(position: Index) -> Element {
-            get {
-                let cmsg = position.cmsgPointer!
-                return ControlMessage(level: cmsg.pointee.cmsg_level,
-                                      type: cmsg.pointee.cmsg_type,
-                                      data: Posix.cmsgData(for: cmsg))
-            }
-        }
-            
-        private var messageHeader: msghdr
-        
-        init(messageHeader: msghdr) {
-            self.messageHeader = messageHeader
-        }
-    }
-
     /// Send the content of a file descriptor to the remote peer (if possible a zero-copy strategy is applied).
     ///
     /// - parameters:
