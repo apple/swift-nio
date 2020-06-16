@@ -113,7 +113,7 @@ class SystemTest: XCTestCase {
             var msgHdr = msghdr()
             msgHdr.msg_control = pCmsgHdr.baseAddress
             msgHdr.msg_controllen = .init(pCmsgHdr.count)
-            let collection = Socket.UnsafeControlMessageCollection(messageHeader: msgHdr)
+            let collection = UnsafeControlMessageCollection(messageHeader: msgHdr)
             var msgNum = 0
             for cmsg in collection {
                 if msgNum == 0 {

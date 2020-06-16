@@ -12,14 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-import CNIODarwin
-#elseif os(Linux) || os(FreeBSD) || os(Android)
-import CNIOLinux
-#else
-let badOS = { fatalError("unsupported OS") }()
-#endif
-
 extension ByteBuffer {
     mutating func withMutableWritePointer(body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
         var singleResult: IOResult<Int>!
@@ -544,49 +536,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 }
             }
             return readResult
-        }
-    }
-    
-    private struct ControlMessageReceiver {
-        var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable // Default
-        
-        mutating func receiveMessage(_ controlMessage: Socket.ControlMessage) {
-            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-            let ipv4TosType = IP_RECVTOS
-            #else
-            let ipv4TosType = IP_TOS    // Linux
-            #endif
-            if controlMessage.level == IPPROTO_IP && controlMessage.type == ipv4TosType {
-                if let data = controlMessage.data {
-                    assert(data.count == 1)
-                    precondition(data.count >= 1)
-                    let readValue: Int32 = .init(data[0])
-                    self.ecnValue = ControlMessageReceiver.parseEcn(receivedValue: readValue)
-                }
-            } else if controlMessage.level == IPPROTO_IPV6 && controlMessage.type == IPV6_TCLASS {
-                if let data = controlMessage.data {
-                    assert(data.count == 4)
-                    precondition(data.count >= 4)
-                    var readValue: Int32 = 0
-                    withUnsafeMutableBytes(of: &readValue) { valuePtr in
-                        valuePtr.copyMemory(from: UnsafeRawBufferPointer(data))
-                    }
-                    self.ecnValue = ControlMessageReceiver.parseEcn(receivedValue: readValue)
-                }
-            }
-        }
-    
-        private static func parseEcn(receivedValue: Int32) -> NIOExplicitCongestionNotificationState {
-            switch receivedValue & IPTOS_ECN_MASK {
-            case IPTOS_ECN_ECT1:
-                return .transportCapableFlag1
-            case IPTOS_ECN_ECT0:
-                return .transportCapableFlag0
-            case IPTOS_ECN_CE:
-                return .congestionExperienced
-            default:
-                return .transportNotCapable
-            }
         }
     }
 
