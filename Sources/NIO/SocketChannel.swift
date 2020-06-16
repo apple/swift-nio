@@ -687,11 +687,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 return .processed(0)
             }
             // normal write
-            return try self.socket.sendto(pointer: ptr,
-                                          destinationPtr: destinationPtr,
-                                          destinationSize: destinationSize)
+            let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+            let controlByteSlice = controlBytes[...]
+            
+            return try self.socket.sendmsg(pointer: ptr,
+                                           destinationPtr: destinationPtr,
+                                           destinationSize: destinationSize,
+                                           controlBytes: controlByteSlice)
         }, vectorWriteOperation: { msgs in
-            try self.socket.sendmmsg(msgs: msgs)
+            print("Oh no")
+            return try self.socket.sendmmsg(msgs: msgs)
         })
         return result
     }
