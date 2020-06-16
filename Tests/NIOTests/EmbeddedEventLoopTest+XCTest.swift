@@ -44,6 +44,8 @@ extension EmbeddedEventLoopTest {
                 ("testCancelledScheduledTasksDoNotHoldOnToRunClosure", testCancelledScheduledTasksDoNotHoldOnToRunClosure),
                 ("testDrainScheduledTasks", testDrainScheduledTasks),
                 ("testDrainScheduledTasksDoesNotRunNewlyScheduledTasks", testDrainScheduledTasksDoesNotRunNewlyScheduledTasks),
+                ("testAdvanceTimeToDeadline", testAdvanceTimeToDeadline),
+                ("testWeCantTimeTravelByAdvancingTimeToThePast", testWeCantTimeTravelByAdvancingTimeToThePast),
            ]
    }
 }

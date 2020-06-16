@@ -372,4 +372,38 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         eventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
         XCTAssertEqual(tasksRun, 1)
     }
+
+    func testAdvanceTimeToDeadline() {
+        let eventLoop = EmbeddedEventLoop()
+        let deadline = NIODeadline.uptimeNanoseconds(0) + .seconds(42)
+
+        var tasksRun = 0
+        eventLoop.scheduleTask(deadline: deadline) {
+            tasksRun += 1
+        }
+
+        eventLoop.advanceTime(to: deadline)
+        XCTAssertEqual(tasksRun, 1)
+    }
+
+    func testWeCantTimeTravelByAdvancingTimeToThePast() {
+        let eventLoop = EmbeddedEventLoop()
+
+        var tasksRun = 0
+        eventLoop.scheduleTask(deadline: .uptimeNanoseconds(0) + .seconds(42)) {
+            tasksRun += 1
+        }
+
+        // t=40s
+        eventLoop.advanceTime(to: .uptimeNanoseconds(0) + .seconds(40))
+        XCTAssertEqual(tasksRun, 0)
+
+        // t=40s (still)
+        eventLoop.advanceTime(to: .distantPast)
+        XCTAssertEqual(tasksRun, 0)
+
+        // t=42s
+        eventLoop.advanceTime(by: .seconds(2))
+        XCTAssertEqual(tasksRun, 1)
+    }
 }

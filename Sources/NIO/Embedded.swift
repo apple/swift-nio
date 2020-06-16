@@ -42,6 +42,10 @@ extension EmbeddedScheduledTask: Comparable {
 /// of limited use for many application purposes, but highly valuable for testing and other
 /// kinds of mocking.
 ///
+/// Time is controllable on an `EmbeddedEventLoop`. It begins at `NIODeadline.uptimeNanoseconds(0)`
+/// and may be advanced by a fixed amount by using `advanceTime(by:)`, or advanced to a point in
+/// time with `advanceTime(to:)`.
+///
 /// - warning: Unlike `SelectableEventLoop`, `EmbeddedEventLoop` **is not thread-safe**. This
 ///     is because it is intended to be run in the thread that instantiated it. Users are
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
@@ -98,13 +102,21 @@ public final class EmbeddedEventLoop: EventLoop {
     /// - seealso: `EmbeddedEventLoop.advanceTime`.
     public func run() {
         // Execute all tasks that are currently enqueued to be executed *now*.
-        self.advanceTime(by: .nanoseconds(0))
+        self.advanceTime(to: self._now)
     }
 
     /// Runs the event loop and moves "time" forward by the given amount, running any scheduled
     /// tasks that need to be run.
-    public func advanceTime(by: TimeAmount) {
-        let newTime = self._now + by
+    public func advanceTime(by increment: TimeAmount) {
+        self.advanceTime(to: self._now + increment)
+    }
+
+    /// Runs the event loop and moves "time" forward to the given point in time, running any scheduled
+    /// tasks that need to be run.
+    ///
+    /// - Note: If `deadline` is before the current time, the current time will not be advanced.
+    public func advanceTime(to deadline: NIODeadline) {
+        let newTime = max(deadline, self._now)
 
         while let nextTask = self.scheduledTasks.peek() {
             guard nextTask.readyTime <= newTime else {
