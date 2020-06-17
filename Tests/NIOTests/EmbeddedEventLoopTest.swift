@@ -406,4 +406,50 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         eventLoop.advanceTime(by: .seconds(2))
         XCTAssertEqual(tasksRun, 1)
     }
+
+    func testExecuteInOrder() {
+        let eventLoop = EmbeddedEventLoop()
+        var counter = 0
+
+        eventLoop.execute {
+            XCTAssertEqual(counter, 0)
+            counter += 1
+        }
+
+        eventLoop.execute {
+            XCTAssertEqual(counter, 1)
+            counter += 1
+        }
+
+        eventLoop.execute {
+            XCTAssertEqual(counter, 2)
+            counter += 1
+        }
+
+        eventLoop.run()
+        XCTAssertEqual(counter, 3)
+    }
+
+    func testScheduledTasksInOrder() {
+        let eventLoop = EmbeddedEventLoop()
+        var counter = 0
+
+        eventLoop.scheduleTask(in: .seconds(1)) {
+            XCTAssertEqual(counter, 1)
+            counter += 1
+        }
+
+        eventLoop.scheduleTask(in: .milliseconds(1)) {
+            XCTAssertEqual(counter, 0)
+            counter += 1
+        }
+
+        eventLoop.scheduleTask(in: .seconds(1)) {
+            XCTAssertEqual(counter, 2)
+            counter += 1
+        }
+
+        eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(counter, 3)
+    }
 }
