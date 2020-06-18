@@ -1120,18 +1120,18 @@ class ByteBufferTest: XCTestCase {
         buf.reserveCapacity(1024)
         buf.writeStaticString("hello world, just some trap bytes here")
 
-        func testIndexAndLengthFunc<T>(_ body: (Int, Int) -> T?, file: StaticString = (#file), line: UInt = #line) {
-            XCTAssertNil(body(Int.max, 1), file: file, line: line)
-            XCTAssertNil(body(Int.max - 1, 2), file: file, line: line)
-            XCTAssertNil(body(1, Int.max), file: file, line: line)
-            XCTAssertNil(body(2, Int.max - 1), file: file, line: line)
-            XCTAssertNil(body(Int.max, Int.max), file: file, line: line)
-            XCTAssertNil(body(Int.min, Int.min), file: file, line: line)
-            XCTAssertNil(body(Int.max, Int.min), file: file, line: line)
-            XCTAssertNil(body(Int.min, Int.max), file: file, line: line)
+        func testIndexAndLengthFunc<T>(_ body: (Int, Int) -> T?, file: StaticString = #file, line: UInt = #line) {
+            XCTAssertNil(body(Int.max, 1), file: (file), line: line)
+            XCTAssertNil(body(Int.max - 1, 2), file: (file), line: line)
+            XCTAssertNil(body(1, Int.max), file: (file), line: line)
+            XCTAssertNil(body(2, Int.max - 1), file: (file), line: line)
+            XCTAssertNil(body(Int.max, Int.max), file: (file), line: line)
+            XCTAssertNil(body(Int.min, Int.min), file: (file), line: line)
+            XCTAssertNil(body(Int.max, Int.min), file: (file), line: line)
+            XCTAssertNil(body(Int.min, Int.max), file: (file), line: line)
         }
 
-        func testIndexOrLengthFunc<T>(_ body: (Int) -> T?, file: StaticString = (#file), line: UInt = #line) {
+        func testIndexOrLengthFunc<T>(_ body: (Int) -> T?, file: StaticString = #file, line: UInt = #line) {
             XCTAssertNil(body(Int.max))
             XCTAssertNil(body(Int.max - 1))
             XCTAssertNil(body(Int.min))
@@ -2786,6 +2786,18 @@ class ByteBufferTest: XCTestCase {
         let aSequenceThatIsNotACollection = Array(buffer: self.buf).makeIterator()
         XCTAssertEqual(self.buf, self.allocator.buffer(bytes: aSequenceThatIsNotACollection))
         XCTAssertEqual(self.buf, ByteBuffer(bytes: aSequenceThatIsNotACollection))
+    }
+
+    func testWeDoNotResizeIfWeHaveExactlyTheRightCapacityAvailable() {
+        let bufferSize = 32*1024
+        var buffer = self.allocator.buffer(capacity: bufferSize)
+        buffer.moveWriterIndex(forwardBy: bufferSize / 2)
+        XCTAssertEqual(bufferSize, buffer.capacity)
+        let oldBufferStorage = buffer.storagePointerIntegerValue()
+        buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: bufferSize/2, { _ in return 0 })
+        XCTAssertEqual(bufferSize, buffer.capacity)
+        let newBufferStorage = buffer.storagePointerIntegerValue()
+        XCTAssertEqual(oldBufferStorage, newBufferStorage)
     }
 }
 

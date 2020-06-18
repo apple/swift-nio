@@ -1541,13 +1541,13 @@ public final class MessageToByteEncoderTest: XCTestCase {
         try testEncoder(MessageToByteHandler(Int32ToByteEncoderWithDefaultImpl()))
     }
 
-    private func testEncoder(_ handler: ChannelHandler, file: StaticString = (#file), line: UInt = #line) throws {
+    private func testEncoder(_ handler: ChannelHandler, file: StaticString = #file, line: UInt = #line) throws {
         let channel = EmbeddedChannel()
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(MessageToByteHandler(Int32ToByteEncoder())).wait(),
-                         file: file, line: line)
+                         file: (file), line: line)
 
-        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny(Int32(5))).wait(), file: file, line: line)
+        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny(Int32(5))).wait(), file: (file), line: line)
 
         if var buffer = try channel.readOutbound(as: ByteBuffer.self) {
             XCTAssertEqual(Int32(5), buffer.readInteger())
