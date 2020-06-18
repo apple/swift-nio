@@ -114,6 +114,18 @@ final class LockedBox<T> {
     }
 }
 
+extension LockedBox where T == UserToKernel {
+    func assertParkedRightNow(file: StaticString = #file, line: UInt = #line) throws {
+        SAL.printIfDebug("\(#function)")
+        let syscall = try self.waitForValue()
+        if case .whenReady = syscall {
+            return
+        } else {
+            XCTFail("unexpected syscall \(syscall)", file: (file), line: line)
+        }
+    }
+}
+
 enum UserToKernel {
     case localAddress
     case remoteAddress
@@ -392,6 +404,9 @@ extension HookedSelector {
         try self.wakeups.takeValue()
     }
 
+    func assertParkedRightNow(file: StaticString = #file, line: UInt = #line) throws {
+        try self.userToKernel.assertParkedRightNow(file: file, line: line)
+    }
 }
 
 extension EventLoop {
@@ -410,6 +425,7 @@ extension EventLoop {
         }
         try hookedSelector.assertWakeup(file: (file), line: line)
         try syscallAssertions()
+        try hookedSelector.userToKernel.assertParkedRightNow() // We need the EventLoop to finish running its tick.
         return try box.takeValue().get()
     }
 }
@@ -434,6 +450,7 @@ extension EventLoopFuture {
             }
         }
         try hookedSelector.assertWakeup()
+        try hookedSelector.userToKernel.assertParkedRightNow() // We need the EventLoop to finish running its tick.
         return try box.takeValue().get()
     }
 }
@@ -585,13 +602,7 @@ extension SALTest {
     }
 
     func assertParkedRightNow(file: StaticString = #file, line: UInt = #line) throws {
-        SAL.printIfDebug("\(#function)")
-        let syscall = try self.userToKernelBox.waitForValue()
-        if case .whenReady = syscall {
-            return
-        } else {
-            XCTFail("unexpected syscall \(syscall)", file: (file), line: line)
-        }
+        try self.userToKernelBox.assertParkedRightNow(file: file, line: line)
     }
 
     func assertWaitingForNotification(result: SelectorEvent<NIORegistration>?,
