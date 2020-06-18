@@ -111,7 +111,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         var result: OverallWriteResult? = nil
 
         do {
-            let r = try pwm.triggerAppropriateWriteOperations(scalarWriteOperation: { (buf, addr, len) in
+            let r = try pwm.triggerAppropriateWriteOperations(scalarWriteOperation: { (buf, addr, len, metadata) in
                 defer {
                     singleState += 1
                     everythingState += 1

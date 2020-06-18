@@ -40,6 +40,7 @@ int CNIODarwin_recvmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vle
 struct cmsghdr *CNIODarwin_CMSG_FIRSTHDR(const struct msghdr *);
 struct cmsghdr *CNIODarwin_CMSG_NXTHDR(const struct msghdr *, const struct cmsghdr *);
 const unsigned char *CNIODarwin_CMSG_DATA(const struct cmsghdr *);
+unsigned char *CNIODarwin_CMSG_DATA_MUTABLE(struct cmsghdr *);
 size_t CNIODarwin_CMSG_LEN(size_t);
 size_t CNIODarwin_CMSG_SPACE(size_t);
 

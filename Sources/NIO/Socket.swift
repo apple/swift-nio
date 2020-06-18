@@ -150,9 +150,6 @@ typealias IOVector = iovec
     /// (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func sendmsg(pointer: UnsafeRawBufferPointer,
-                 /*storage: inout sockaddr_storage,
-                 storageLen: socklen_t,*/
-                 
                  destinationPtr: UnsafePointer<sockaddr>,
                  destinationSize: socklen_t,
                  controlBytes: Slice<UnsafeMutableRawBufferPointer>) throws -> IOResult<Int> {

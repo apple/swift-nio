@@ -111,6 +111,8 @@ private let sysCmsgNxtHdr: @convention(c) (UnsafePointer<msghdr>?, UnsafePointer
                 UnsafeMutablePointer<cmsghdr>? = CNIODarwin_CMSG_NXTHDR
 private let sysCmsgData: @convention(c) (UnsafePointer<cmsghdr>?) -> UnsafePointer<UInt8>? =
                 CNIODarwin_CMSG_DATA
+private let sysCmsgDataMutable: @convention(c) (UnsafeMutablePointer<cmsghdr>?) -> UnsafeMutablePointer<UInt8>? =
+                CNIODarwin_CMSG_DATA_MUTABLE
 private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_SPACE
 private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_LEN
 #endif
@@ -573,6 +575,18 @@ internal extension Posix {
             // Linux and Darwin use different types for cmsg_len.
             let length = size_t(header.pointee.cmsg_len) - cmsgLen(payloadSize: 0)
             let buffer = UnsafeBufferPointer(start: dataPointer, count: Int(length))
+            return buffer
+        } else {
+            return nil
+        }
+    }
+    
+    static func cmsgData(for header: UnsafeMutablePointer<cmsghdr>?) -> UnsafeMutableRawBufferPointer? {
+        let dataPointer = sysCmsgDataMutable(header)
+        if let header = header {
+            // Linux and Darwin use different types for cmsg_len.
+            let length = size_t(header.pointee.cmsg_len) - cmsgLen(payloadSize: 0)
+            let buffer = UnsafeMutableRawBufferPointer(start: dataPointer, count: Int(length))
             return buffer
         } else {
             return nil

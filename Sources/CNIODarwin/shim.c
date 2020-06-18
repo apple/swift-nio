@@ -67,6 +67,11 @@ const unsigned char *CNIODarwin_CMSG_DATA(const struct cmsghdr *cmsg) {
     return CMSG_DATA(cmsg);
 }
 
+unsigned char *CNIODarwin_CMSG_DATA_MUTABLE(struct cmsghdr *cmsg) {
+    assert(cmsg != NULL);
+    return CMSG_DATA(cmsg);
+}
+
 size_t CNIODarwin_CMSG_LEN(size_t payloadSizeBytes) {
     return CMSG_LEN(payloadSizeBytes);
 }

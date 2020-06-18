@@ -38,6 +38,10 @@ public struct AddressedEnvelope<DataType> {
     public struct Metadata: Hashable {
         /// Details of any congestion state.
         public var ecnState: NIOExplicitCongestionNotificationState
+        
+        public init(ecnState: NIOExplicitCongestionNotificationState) {
+            self.ecnState = ecnState
+        }
     }
 }
 

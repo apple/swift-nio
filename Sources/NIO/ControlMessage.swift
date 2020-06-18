@@ -128,3 +128,44 @@ struct ControlMessageReceiver {
         }
     }
 }
+
+func writeControlMessage<PayloadType>(into buffer: UnsafeMutableRawBufferPointer,
+                         level: Int32,
+                         type: Int32,
+                         payload: PayloadType) -> size_t {
+    let requiredSize = Posix.cmsgSpace(payloadSize: MemoryLayout.stride(ofValue: payload))
+    precondition(buffer.count >= requiredSize, "Insufficient size for cmsghdr and data")
+    
+    let bufferBase = buffer.baseAddress!
+    let cmsghdrPtr = bufferBase.bindMemory(to: cmsghdr.self, capacity: 1)
+    cmsghdrPtr.pointee.cmsg_level = level
+    cmsghdrPtr.pointee.cmsg_type = type
+    cmsghdrPtr.pointee.cmsg_len = .init(Posix.cmsgLen(payloadSize: MemoryLayout.size(ofValue: payload)))
+    
+    let dataPointer = Posix.cmsgData(for: .some(cmsghdrPtr))
+    precondition(dataPointer!.count >= MemoryLayout<PayloadType>.stride)
+    let dataPointerBase = dataPointer!.baseAddress!
+    let dataPointerTyped = dataPointerBase.bindMemory(to: PayloadType.self, capacity: 1)
+    dataPointerTyped.pointee = payload
+    
+   // dataPointer!.withMemoryRebound(to: PayloadType.self) { data in
+  //     data.baseAddress!.pointee = payload
+   // }
+    
+    return requiredSize
+}
+
+extension NIOExplicitCongestionNotificationState {
+    func asUInt8() -> UInt8 {
+        switch self {
+        case .transportNotCapable:
+            return .init(IPTOS_ECN_NOTECT)
+        case .transportCapableFlag0:
+            return .init(IPTOS_ECN_ECT0)
+        case .transportCapableFlag1:
+            return .init(IPTOS_ECN_ECT1)
+        case .congestionExperienced:
+            return .init(IPTOS_ECN_CE)
+        }
+    }
+}

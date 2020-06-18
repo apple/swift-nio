@@ -633,23 +633,45 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func writeToSocket() throws -> OverallWriteResult {
-        let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarWriteOperation: { (ptr, destinationPtr, destinationSize) in
-            guard ptr.count > 0 else {
-                // No need to call write if the buffer is empty.
-                return .processed(0)
+        let result = try self.pendingWrites.triggerAppropriateWriteOperations(
+            scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
+                guard ptr.count > 0 else {
+                    // No need to call write if the buffer is empty.
+                    return .processed(0)
+                }
+                // normal write
+                return try self.selectableEventLoop.withControlMessageBytes {
+                    let controlByteSlice:Slice<UnsafeMutableRawBufferPointer>
+                    if let metadata = metadata {
+                        switch self.localAddress {
+                        case .some(.v4):
+                            let controlBytes = $0
+                            let size = writeControlMessage(into: controlBytes, level: IPPROTO_IP, type: IP_TOS, payload: metadata.ecnState.asUInt8())
+                            controlByteSlice = controlBytes[..<size]
+                        case .some(.v6):
+                            let controlBytes = $0
+                            let size = writeControlMessage(into: controlBytes, level: IPPROTO_IPV6, type: IPV6_TCLASS, payload: UInt32(metadata.ecnState.asUInt8()))
+                            controlByteSlice = controlBytes[..<size]
+                        default:
+                            let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+                            controlByteSlice = controlBytes[...]
+                            break
+                        }
+                    } else {
+                        let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+                        controlByteSlice = controlBytes[...]
+                    }
+                    
+                    return try self.socket.sendmsg(pointer: ptr,
+                                                   destinationPtr: destinationPtr,
+                                                   destinationSize: destinationSize,
+                                                   controlBytes: controlByteSlice)
+                }
+            },
+            vectorWriteOperation: { msgs in
+                return try self.socket.sendmmsg(msgs: msgs)
             }
-            // normal write
-            let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            let controlByteSlice = controlBytes[...]
-            
-            return try self.socket.sendmsg(pointer: ptr,
-                                           destinationPtr: destinationPtr,
-                                           destinationSize: destinationSize,
-                                           controlBytes: controlByteSlice)
-        }, vectorWriteOperation: { msgs in
-            print("Oh no")
-            return try self.socket.sendmmsg(msgs: msgs)
-        })
+        )
         return result
     }
 
