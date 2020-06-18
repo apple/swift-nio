@@ -277,34 +277,34 @@ private final class TestHTTPHandler: ChannelInboundHandler {
 }
 
 extension HTTPServerRequestPart {
-    func assertHead(expectedURI: String, file: StaticString = (#file), line: UInt = #line) {
+    func assertHead(expectedURI: String, file: StaticString = #file, line: UInt = #line) {
         switch self {
         case .head(let head):
             XCTAssertEqual(.GET, head.method)
             XCTAssertEqual(expectedURI, head.uri)
             XCTAssertEqual("text/plain; charset=utf-8", head.headers["Content-Type"].first)
         default:
-            XCTFail("Expected head, got \(self)", file: file, line: line)
+            XCTFail("Expected head, got \(self)", file: (file), line: line)
         }
     }
 
-    func assertBody(expectedMessage: String, file: StaticString = (#file), line: UInt = #line) {
+    func assertBody(expectedMessage: String, file: StaticString = #file, line: UInt = #line) {
         switch self {
         case .body(let buffer):
             // Note that the test server coalesces the body parts for us.
             XCTAssertEqual(expectedMessage,
                            String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
         default:
-            XCTFail("Expected body, got \(self)", file: file, line: line)
+            XCTFail("Expected body, got \(self)", file: (file), line: line)
         }
     }
 
-    func assertEnd(file: StaticString = (#file), line: UInt = #line) {
+    func assertEnd(file: StaticString = #file, line: UInt = #line) {
         switch self {
         case .end(_):
             ()
         default:
-            XCTFail("Expected end, got \(self)", file: file, line: line)
+            XCTFail("Expected end, got \(self)", file: (file), line: line)
         }
     }
 }
@@ -339,7 +339,7 @@ func assert(_ condition: @autoclosure () -> Bool,
             within time: TimeAmount,
             testInterval: TimeAmount? = nil,
             _ message: String = "condition not satisfied in time",
-            file: StaticString = (#file), line: UInt = #line) {
+            file: StaticString = #file, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
@@ -349,6 +349,6 @@ func assert(_ condition: @autoclosure () -> Bool,
     } while (NIODeadline.now() < endTime)
 
     if !condition() {
-        XCTFail(message, file: file, line: line)
+        XCTFail(message, file: (file), line: line)
     }
 }
