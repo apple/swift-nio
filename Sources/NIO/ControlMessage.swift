@@ -156,10 +156,16 @@ func writeControlMessage<PayloadType>(into buffer: UnsafeMutableRawBufferPointer
 }
 
 extension NIOExplicitCongestionNotificationState {
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    fileprivate static let notCapableValue = IPTOS_ECN_NOTECT
+    #else
+    fileprivate static let notCapableValue = IPTOS_ECN_NOT_ECT    // Linux
+    #endif
+    
     func asUInt8() -> UInt8 {
         switch self {
         case .transportNotCapable:
-            return .init(IPTOS_ECN_NOTECT)
+            return .init(NIOExplicitCongestionNotificationState.notCapableValue)
         case .transportCapableFlag0:
             return .init(IPTOS_ECN_ECT0)
         case .transportCapableFlag1:

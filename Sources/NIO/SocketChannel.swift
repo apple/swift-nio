@@ -646,11 +646,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                         switch self.localAddress {
                         case .some(.v4):
                             let controlBytes = $0
-                            let size = writeControlMessage(into: controlBytes, level: IPPROTO_IP, type: IP_TOS, payload: metadata.ecnState.asUInt8())
+                            let size = writeControlMessage(into: controlBytes,
+                                                           level: .init(IPPROTO_IP),
+                                                           type: IP_TOS,
+                                                           payload: metadata.ecnState.asUInt8())
                             controlByteSlice = controlBytes[..<size]
                         case .some(.v6):
                             let controlBytes = $0
-                            let size = writeControlMessage(into: controlBytes, level: IPPROTO_IPV6, type: IPV6_TCLASS, payload: UInt32(metadata.ecnState.asUInt8()))
+                            let size = writeControlMessage(into: controlBytes,
+                                                           level: .init(IPPROTO_IPV6),
+                                                           type: IPV6_TCLASS,
+                                                           payload: UInt32(metadata.ecnState.asUInt8()))
                             controlByteSlice = controlBytes[..<size]
                         default:
                             let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)

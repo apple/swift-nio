@@ -130,6 +130,11 @@ const unsigned char *CNIOLinux_CMSG_DATA(const struct cmsghdr *cmsg) {
     return CMSG_DATA(cmsg);
 }
 
+unsigned char *CNIOLinux_CMSG_DATA_MUTABLE(struct cmsghdr *cmsg) {
+    assert(cmsg != NULL);
+    return CMSG_DATA(cmsg);
+}
+
 size_t CNIOLinux_CMSG_LEN(size_t payloadSizeBytes) {
     return CMSG_LEN(payloadSizeBytes);
 }

@@ -98,6 +98,8 @@ private let sysCmsgFirstHdr: @convention(c) (UnsafePointer<msghdr>?) -> UnsafeMu
 private let sysCmsgNxtHdr: @convention(c) (UnsafeMutablePointer<msghdr>?, UnsafeMutablePointer<cmsghdr>?) ->
                 UnsafeMutablePointer<cmsghdr>? = CNIOLinux_CMSG_NXTHDR
 private let sysCmsgData: @convention(c) (UnsafePointer<cmsghdr>?) -> UnsafePointer<UInt8>? = CNIOLinux_CMSG_DATA
+private let sysCmsgDataMutable: @convention(c) (UnsafeMutablePointer<cmsghdr>?) -> UnsafeMutablePointer<UInt8>? =
+                CNIOLinux_CMSG_DATA_MUTABLE
 private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_SPACE
 private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_LEN
 #else
