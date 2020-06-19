@@ -62,12 +62,12 @@ struct cmsghdr *CNIODarwin_CMSG_NXTHDR(const struct msghdr *mhdr, const struct c
     return CMSG_NXTHDR(mhdr, cmsg);
 }
 
-const unsigned char *CNIODarwin_CMSG_DATA(const struct cmsghdr *cmsg) {
+const void *CNIODarwin_CMSG_DATA(const struct cmsghdr *cmsg) {
     assert(cmsg != NULL);
     return CMSG_DATA(cmsg);
 }
 
-unsigned char *CNIODarwin_CMSG_DATA_MUTABLE(struct cmsghdr *cmsg) {
+void *CNIODarwin_CMSG_DATA_MUTABLE(struct cmsghdr *cmsg) {
     assert(cmsg != NULL);
     return CMSG_DATA(cmsg);
 }

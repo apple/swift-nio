@@ -125,12 +125,12 @@ struct cmsghdr *CNIOLinux_CMSG_NXTHDR(struct msghdr *mhdr, struct cmsghdr *cmsg)
     return CMSG_NXTHDR(mhdr, cmsg);
 }
 
-const unsigned char *CNIOLinux_CMSG_DATA(const struct cmsghdr *cmsg) {
+const void *CNIOLinux_CMSG_DATA(const struct cmsghdr *cmsg) {
     assert(cmsg != NULL);
     return CMSG_DATA(cmsg);
 }
 
-unsigned char *CNIOLinux_CMSG_DATA_MUTABLE(struct cmsghdr *cmsg) {
+void *CNIOLinux_CMSG_DATA_MUTABLE(struct cmsghdr *cmsg) {
     assert(cmsg != NULL);
     return CMSG_DATA(cmsg);
 }

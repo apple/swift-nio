@@ -69,8 +69,8 @@ int CNIOLinux_CPU_SETSIZE();
 // cmsghdr handling
 struct cmsghdr *CNIOLinux_CMSG_FIRSTHDR(const struct msghdr *);
 struct cmsghdr *CNIOLinux_CMSG_NXTHDR(struct msghdr *, struct cmsghdr *);
-const unsigned char *CNIOLinux_CMSG_DATA(const struct cmsghdr *);
-unsigned char *CNIOLinux_CMSG_DATA_MUTABLE(struct cmsghdr *);
+const void *CNIOLinux_CMSG_DATA(const struct cmsghdr *);
+void *CNIOLinux_CMSG_DATA_MUTABLE(struct cmsghdr *);
 size_t CNIOLinux_CMSG_LEN(size_t);
 size_t CNIOLinux_CMSG_SPACE(size_t);
 #endif

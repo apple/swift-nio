@@ -23,7 +23,7 @@ import CNIOLinux
 struct UnsafeControlMessage {
     var level: Int32
     var type: Int32
-    var data: UnsafeBufferPointer<UInt8>?
+    var data: UnsafeRawBufferPointer?
 }
 
 /// Collection representation of `cmsghdr` structures and associated data from `recvmsg`
@@ -108,7 +108,7 @@ struct ControlMessageReceiver {
                 precondition(data.count >= 4)
                 var readValue: Int32 = 0
                 withUnsafeMutableBytes(of: &readValue) { valuePtr in
-                    valuePtr.copyMemory(from: UnsafeRawBufferPointer(data))
+                    valuePtr.copyMemory(from: data)
                 }
                 self.ecnValue = ControlMessageReceiver.parseEcn(receivedValue: readValue)
             }
