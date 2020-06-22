@@ -484,7 +484,7 @@ extension SALTest {
         }) {
             try SocketChannel(socket: HookedSocket(userToKernel: self.userToKernelBox,
                                                    kernelToUser: self.kernelToUserBox,
-                                                   descriptor: .max),
+                                                   socket: .max),
                               eventLoop: self.loop)
         }
         try self.assertParkedRightNow()
