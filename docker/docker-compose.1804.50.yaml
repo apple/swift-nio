@@ -37,7 +37,7 @@ services:
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=18250
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=235050
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=3100
-      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=192050
+      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=188050
       - MAX_ALLOCS_ALLOWED_1000_udpbootstraps=3000
       - MAX_ALLOCS_ALLOWED_1000_udpconnections=120050
       - MAX_ALLOCS_ALLOWED_1000_udp_reqs=18050
