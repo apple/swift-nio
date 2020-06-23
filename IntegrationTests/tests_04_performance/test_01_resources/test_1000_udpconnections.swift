@@ -21,11 +21,13 @@ fileprivate final class CountReadsHandler: ChannelInboundHandler {
     private var readsRemaining: Int
     private let completed: EventLoopPromise<Void>
     
-    var completionFuture: EventLoopFuture<Void> { return self.completed.futureResult }
+    var completionFuture: EventLoopFuture<Void> {
+        return self.completed.futureResult
+    }
     
-    init(numberOfReadsExpected: Int, eventLoop: EventLoop) {
+    init(numberOfReadsExpected: Int, completionPromise: EventLoopPromise<Void>) {
         self.readsRemaining = numberOfReadsExpected
-        self.completed = eventLoop.makePromise()
+        self.completed = completionPromise
     }
     
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -39,7 +41,8 @@ fileprivate final class CountReadsHandler: ChannelInboundHandler {
 func run(identifier: String) {
     let numberOfIterations = 1000
     
-    let serverHandler = CountReadsHandler(numberOfReadsExpected: numberOfIterations, eventLoop: group.next())
+    let serverHandler = CountReadsHandler(numberOfReadsExpected: numberOfIterations,
+                                          completionPromise: group.next().makePromise())
     let serverChannel = try! DatagramBootstrap(group: group)
         .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         // Set the handlers that are applied to the bound channel
