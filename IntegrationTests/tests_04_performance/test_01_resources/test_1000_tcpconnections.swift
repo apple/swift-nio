@@ -14,16 +14,22 @@
 
 import NIO
 
-fileprivate final class DoNothingHandler: ChannelInboundHandler {
+fileprivate final class ReceiveAndCloseHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
+    
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let byteBuffer = self.unwrapInboundIn(data)
+        precondition(byteBuffer.readableBytes == 1)
+        _ = context.channel.close()
+    }
 }
 
 func run(identifier: String) {
     let serverChannel = try! ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.addHandler(DoNothingHandler())
+                channel.pipeline.addHandler(ReceiveAndCloseHandler())
             }.bind(to: localhostPickPort).wait()
     defer {
         try! serverChannel.close().wait()
@@ -37,13 +43,12 @@ func run(identifier: String) {
         for _ in 0 ..< numberOfIterations {
             let clientChannel = try! clientBootstrap.connect(to: serverChannel.localAddress!)
                     .wait()
-            defer {
-                try! clientChannel.close().wait()
-            }
             // Send a byte to make sure everything is really open.
             var buffer = clientChannel.allocator.buffer(capacity: 1)
             buffer.writeInteger(1, as: UInt8.self)
-            try! clientChannel.writeAndFlush(NIOAny(buffer)).wait()
+            _ = clientChannel.writeAndFlush(NIOAny(buffer))
+            // Wait for the close to come from the server side.
+            try! clientChannel.closeFuture.wait()
         }
         return numberOfIterations
     }
