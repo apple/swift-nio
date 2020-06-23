@@ -28,7 +28,17 @@
     printf("=====\n");
 }
 
-pid$target::malloc:entry, pid$target::posix_memalign:entry, pid$target::realloc:entry, pid$target::reallocf:entry, pid$target::calloc:entry, pid$target::valloc:entry, pid$target::posix_memalign:entry {
+pid$target::malloc:entry,
+pid$target::posix_memalign:entry,
+pid$target::realloc:entry,
+pid$target::reallocf:entry,
+pid$target::calloc:entry,
+pid$target::valloc:entry,
+pid$target::malloc_zone_malloc:entry,
+pid$target::malloc_zone_realloc:entry,
+pid$target::malloc_zone_calloc:entry,
+pid$target::malloc_zone_valloc:entry,
+pid$target::malloc_zone_memalign:entry {
     @malloc_calls[ustack()] = count();
 }
 
