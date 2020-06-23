@@ -29,8 +29,8 @@ fileprivate final class CountReadsHandler: ChannelInboundHandler {
     }
     
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        readsRemaining -= 1
-        if readsRemaining <= 0 {
+        self.readsRemaining -= 1
+        if self.readsRemaining <= 0 {
             self.completed.succeed(())
         }
     }

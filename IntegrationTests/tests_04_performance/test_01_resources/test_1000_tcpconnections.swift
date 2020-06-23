@@ -21,7 +21,7 @@ fileprivate final class ReceiveAndCloseHandler: ChannelInboundHandler {
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let byteBuffer = self.unwrapInboundIn(data)
         precondition(byteBuffer.readableBytes == 1)
-        _ = context.channel.close()
+        context.channel.close(promise: nil)
     }
 }
 
@@ -46,7 +46,7 @@ func run(identifier: String) {
             // Send a byte to make sure everything is really open.
             var buffer = clientChannel.allocator.buffer(capacity: 1)
             buffer.writeInteger(1, as: UInt8.self)
-            _ = clientChannel.writeAndFlush(NIOAny(buffer))
+            clientChannel.writeAndFlush(NIOAny(buffer), promise: nil)
             // Wait for the close to come from the server side.
             try! clientChannel.closeFuture.wait()
         }
