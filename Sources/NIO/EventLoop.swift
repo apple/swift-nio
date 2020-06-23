@@ -434,7 +434,7 @@ extension NIODeadline: CustomStringConvertible {
 
 extension NIODeadline {
     public static func - (lhs: NIODeadline, rhs: NIODeadline) -> TimeAmount {
-        // This won't ever crash, NIODeadlines are guanteed to be within 0 ..< 2^63-1 nanoseconds so the result can
+        // This won't ever crash, NIODeadlines are guaranteed to be within 0 ..< 2^63-1 nanoseconds so the result can
         // definitely be stored in a TimeAmount (which is an Int64).
         return .nanoseconds(Int64(lhs.uptimeNanoseconds) - Int64(rhs.uptimeNanoseconds))
     }

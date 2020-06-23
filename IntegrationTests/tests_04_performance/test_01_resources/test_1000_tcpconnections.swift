@@ -14,16 +14,22 @@
 
 import NIO
 
-fileprivate final class DoNothingHandler: ChannelInboundHandler {
+fileprivate final class ReceiveAndCloseHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
+    
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let byteBuffer = self.unwrapInboundIn(data)
+        precondition(byteBuffer.readableBytes == 1)
+        context.channel.close(promise: nil)
+    }
 }
 
 func run(identifier: String) {
     let serverChannel = try! ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.addHandler(DoNothingHandler())
+                channel.pipeline.addHandler(ReceiveAndCloseHandler())
             }.bind(to: localhostPickPort).wait()
     defer {
         try! serverChannel.close().wait()
@@ -37,15 +43,14 @@ func run(identifier: String) {
         for _ in 0 ..< numberOfIterations {
             let clientChannel = try! clientBootstrap.connect(to: serverChannel.localAddress!)
                     .wait()
-            defer {
-                try! clientChannel.close().wait()
-            }
             // For boring reasons we need to turn off linger.
             _ = try! (clientChannel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0)).wait()
             // Send a byte to make sure everything is really open.
             var buffer = clientChannel.allocator.buffer(capacity: 1)
             buffer.writeInteger(1, as: UInt8.self)
-            try! clientChannel.writeAndFlush(NIOAny(buffer)).wait()
+            clientChannel.writeAndFlush(NIOAny(buffer), promise: nil)
+            // Wait for the close to come from the server side.
+            try! clientChannel.closeFuture.wait()
         }
         return numberOfIterations
     }

@@ -17,17 +17,24 @@ import Dispatch
 private final class EmbeddedScheduledTask {
     let task: () -> Void
     let readyTime: NIODeadline
+    let insertOrder: UInt64
 
-    init(readyTime: NIODeadline, task: @escaping () -> Void) {
+    init(readyTime: NIODeadline, insertOrder: UInt64, task: @escaping () -> Void) {
         self.readyTime = readyTime
+        self.insertOrder = insertOrder
         self.task = task
     }
 }
 
 extension EmbeddedScheduledTask: Comparable {
     static func < (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
-        return lhs.readyTime < rhs.readyTime
+        if lhs.readyTime == rhs.readyTime {
+            return lhs.insertOrder < rhs.insertOrder
+        } else {
+            return lhs.readyTime < rhs.readyTime
+        }
     }
+
     static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
         return lhs === rhs
     }
@@ -42,6 +49,10 @@ extension EmbeddedScheduledTask: Comparable {
 /// of limited use for many application purposes, but highly valuable for testing and other
 /// kinds of mocking.
 ///
+/// Time is controllable on an `EmbeddedEventLoop`. It begins at `NIODeadline.uptimeNanoseconds(0)`
+/// and may be advanced by a fixed amount by using `advanceTime(by:)`, or advanced to a point in
+/// time with `advanceTime(to:)`.
+///
 /// - warning: Unlike `SelectableEventLoop`, `EmbeddedEventLoop` **is not thread-safe**. This
 ///     is because it is intended to be run in the thread that instantiated it. Users are
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
@@ -51,6 +62,18 @@ public final class EmbeddedEventLoop: EventLoop {
     /* private but tests */ internal var _now: NIODeadline = .uptimeNanoseconds(0)
 
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>(ascending: true)
+
+    // The number of the next task to be created. We track the order so that when we execute tasks
+    // scheduled at the same time, we may do so in the order in which they were submitted for
+    // execution.
+    private var taskNumber: UInt64 = 0
+
+    private func nextTaskNumber() -> UInt64 {
+        defer {
+            self.taskNumber += 1
+        }
+        return self.taskNumber
+    }
 
     /// - see: `EventLoop.inEventLoop`
     public var inEventLoop: Bool {
@@ -64,7 +87,7 @@ public final class EmbeddedEventLoop: EventLoop {
     @discardableResult
     public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
-        let task = EmbeddedScheduledTask(readyTime: deadline) {
+        let task = EmbeddedScheduledTask(readyTime: deadline, insertOrder: self.nextTaskNumber()) {
             do {
                 promise.succeed(try task())
             } catch let err {
@@ -98,13 +121,21 @@ public final class EmbeddedEventLoop: EventLoop {
     /// - seealso: `EmbeddedEventLoop.advanceTime`.
     public func run() {
         // Execute all tasks that are currently enqueued to be executed *now*.
-        self.advanceTime(by: .nanoseconds(0))
+        self.advanceTime(to: self._now)
     }
 
     /// Runs the event loop and moves "time" forward by the given amount, running any scheduled
     /// tasks that need to be run.
-    public func advanceTime(by: TimeAmount) {
-        let newTime = self._now + by
+    public func advanceTime(by increment: TimeAmount) {
+        self.advanceTime(to: self._now + increment)
+    }
+
+    /// Runs the event loop and moves "time" forward to the given point in time, running any scheduled
+    /// tasks that need to be run.
+    ///
+    /// - Note: If `deadline` is before the current time, the current time will not be advanced.
+    public func advanceTime(to deadline: NIODeadline) {
+        let newTime = max(deadline, self._now)
 
         while let nextTask = self.scheduledTasks.peek() {
             guard nextTask.readyTime <= newTime else {
