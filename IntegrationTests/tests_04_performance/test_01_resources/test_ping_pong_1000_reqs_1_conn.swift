@@ -56,7 +56,8 @@ private final class PingHandler: ChannelInboundHandler {
     }
 
     public func handlerAdded(context: ChannelHandlerContext) {
-        _ = (context.channel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0))
+        (context.channel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0))
+            .whenFailure({ error in fatalError("Failed to set linger \(error)") })
     }
 
     public func channelActive(context: ChannelHandlerContext) {
