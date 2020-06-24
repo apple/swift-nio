@@ -26,7 +26,7 @@ for file in "$here/test_01_resources/"test_*.swift; do
     all_tests+=( "$test_name" )
 done
 
-"$here/test_01_resources/run-nio-alloc-counter-tests.sh" -t "$tmp" > "$tmp/output"
+"$here/test_01_resources/run-nio-alloc-counter-tests.sh" -t "$tmp" | tee "$tmp/output"
 
 for test in "${all_tests[@]}"; do
     cat "$tmp/output"  # helps debugging

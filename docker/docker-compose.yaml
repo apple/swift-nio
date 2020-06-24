@@ -36,7 +36,7 @@ services:
 
   test:
     <<: *common
-    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && ./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-}"
+    command: /bin/bash -xcl "./scripts/integration_tests.sh -v -f 04"
 
   performance-test:
     <<: *common
