@@ -75,7 +75,9 @@ func run(identifier: String) {
             let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
             clientChannel.writeAndFlush(envelope, promise: nil)
         }
+        print("Wait for the server")
         try! serverHandler.completionFuture.wait()
+        print("server is done")
         return numberOfIterations
     }
 }
