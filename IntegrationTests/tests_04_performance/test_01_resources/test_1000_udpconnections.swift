@@ -15,8 +15,8 @@
 import NIO
 
 fileprivate final class CountReadsHandler: ChannelInboundHandler {
-    public typealias InboundIn = ByteBuffer
-    public typealias OutboundOut = ByteBuffer
+    public typealias InboundIn = AddressedEnvelope<ByteBuffer>
+    public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
     
     private var readsRemaining: Int
     private let completed: EventLoopPromise<Void>
@@ -31,6 +31,10 @@ fileprivate final class CountReadsHandler: ChannelInboundHandler {
     }
     
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let envelope = self.unwrapInboundIn(data)
+        let byteBuffer = envelope.data
+        precondition(byteBuffer.readableBytes == 1)
+        
         self.readsRemaining -= 1
         if self.readsRemaining <= 0 {
             self.completed.succeed(())
