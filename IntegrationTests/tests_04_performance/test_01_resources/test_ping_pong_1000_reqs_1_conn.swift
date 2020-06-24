@@ -55,6 +55,10 @@ private final class PingHandler: ChannelInboundHandler {
         self.allDone = eventLoop.makePromise()
     }
 
+    public func handlerAdded(context: ChannelHandlerContext) {
+        _ = (context.channel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0))
+    }
+
     public func channelActive(context: ChannelHandlerContext) {
         self.pingBuffer = context.channel.allocator.buffer(capacity: 1)
         self.pingBuffer.writeInteger(PingHandler.pingCode)

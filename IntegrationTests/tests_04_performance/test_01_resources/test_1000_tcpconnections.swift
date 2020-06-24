@@ -29,6 +29,19 @@ fileprivate final class ReceiveAndCloseHandler: ChannelInboundHandler {
     }
 }
 
+fileprivate final class LingerSettingHandler: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+    typealias OutboundOut = ByteBuffer
+    
+    public func handlerAdded(context: ChannelHandlerContext) {
+        _ = (context.channel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0))
+    }
+    
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        fatalError("unexpected \(error)")
+    }
+}
+
 func run(identifier: String) {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
@@ -44,7 +57,10 @@ func run(identifier: String) {
         try! serverChannel.close().wait()
     }
 
-    let clientBootstrap = ClientBootstrap(group: group)
+    let clientHandler = LingerSettingHandler()
+    let clientBootstrap = ClientBootstrap(group: group).channelInitializer { channel in
+        channel.pipeline.addHandler(clientHandler)
+    }
 
     measure(identifier: identifier) {
         let numberOfIterations = 1000
@@ -54,14 +70,18 @@ func run(identifier: String) {
 
         for _ in 0 ..< numberOfIterations {
             try! el.flatSubmit {
-                clientBootstrap.connect(to: serverAddress).flatMap { clientChannel in
-                    // Send a byte to make sure everything is really open.
-                    clientChannel.writeAndFlush(buffer).flatMap {
-                        clientChannel.closeFuture
-                    }
+                clientBootstrap.connect(to: serverAddress).flatMap { (clientChannel) -> EventLoopFuture<Void> in
+                    writeWaitAndClose(clientChannel: clientChannel, buffer: buffer)
                 }
             }.wait()
         }
         return numberOfIterations
+    }
+}
+
+fileprivate func writeWaitAndClose(clientChannel: Channel, buffer: ByteBuffer) -> EventLoopFuture<Void> {
+    // Send a byte to make sure everything is really open.
+    return clientChannel.writeAndFlush(buffer).flatMap {
+        clientChannel.closeFuture
     }
 }
