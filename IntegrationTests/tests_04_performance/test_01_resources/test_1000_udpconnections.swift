@@ -14,40 +14,36 @@
 
 import NIO
 
-fileprivate final class CountReadsHandler: ChannelInboundHandler {
+fileprivate final class WaitForReadHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
     
-    private var readsRemaining: Int
-    private let completed: EventLoopPromise<Void>
+    private var completed: EventLoopPromise<Void>
     
-    var completionFuture: EventLoopFuture<Void> {
-        return self.completed.futureResult
+    func waitAndReset(nextPromise: EventLoopPromise<Void>) {
+        try! self.completed.futureResult.wait()
+        self.completed = nextPromise
     }
     
-    init(numberOfReadsExpected: Int, completionPromise: EventLoopPromise<Void>) {
-        self.readsRemaining = numberOfReadsExpected
+    init(completionPromise: EventLoopPromise<Void>) {
         self.completed = completionPromise
     }
     
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.readsRemaining -= 1
-        if self.readsRemaining <= 0 {
-            self.completed.succeed(())
-        }
+        self.completed.succeed(())
     }
 }
 
 func run(identifier: String) {
     let numberOfIterations = 1000
     
-    let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
         try! group.syncShutdownGracefully()
     }
     
-    let serverHandler = CountReadsHandler(numberOfReadsExpected: numberOfIterations,
-                                          completionPromise: group.next().makePromise())
+    let eventLoop = group.next()
+    let serverHandler = WaitForReadHandler(completionPromise: eventLoop.makePromise())
     let serverChannel = try! DatagramBootstrap(group: group)
         .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         // Set the handlers that are applied to the bound channel
@@ -71,16 +67,13 @@ func run(identifier: String) {
         for _ in 0 ..< numberOfIterations {
             try! el.flatSubmit {
                 clientBootstrap
-                   // .childChannelInitializer { channel in
-                     //   channel.pipeline.addHandler(ReceiveAndCloseHandler())
-                   // }
                     .bind(host: "127.0.0.1", port: 0).flatMap {
                     (clientChannel) -> EventLoopFuture<Void> in
                     writeWaitAndClose(clientChannel: clientChannel, buffer: buffer, remoteAddress: remoteAddress)
                 }
             }.wait()
+            serverHandler.waitAndReset(nextPromise: eventLoop.makePromise())
         }
-        try! serverHandler.completionFuture.wait()
         return numberOfIterations
     }
 }
