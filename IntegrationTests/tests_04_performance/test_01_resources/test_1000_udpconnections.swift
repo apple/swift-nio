@@ -43,6 +43,12 @@ fileprivate final class CountReadsHandler: ChannelInboundHandler {
 }
 
 func run(identifier: String) {
+    print("starting")
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    defer {
+        try! group.syncShutdownGracefully()
+    }
+
     let numberOfIterations = 1000
     
     let serverHandler = CountReadsHandler(numberOfReadsExpected: numberOfIterations,
@@ -63,6 +69,7 @@ func run(identifier: String) {
     let clientBootstrap = DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
+    print("beginning measurement")
     measure(identifier: identifier) {
         let buffer = ByteBuffer(integer: 1, as: UInt8.self)
         for _ in 0 ..< numberOfIterations {
