@@ -41,6 +41,11 @@ fileprivate final class CountReadsHandler: ChannelInboundHandler {
 func run(identifier: String) {
     let numberOfIterations = 1000
     
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+    defer {
+        try! group.syncShutdownGracefully()
+    }
+    
     let serverHandler = CountReadsHandler(numberOfReadsExpected: numberOfIterations,
                                           completionPromise: group.next().makePromise())
     let serverChannel = try! DatagramBootstrap(group: group)
@@ -49,7 +54,7 @@ func run(identifier: String) {
         .channelInitializer { channel in
             return channel.pipeline.addHandler(serverHandler)
         }
-        .bind(to: localhostPickPort).wait()
+        .bind(host: "127.0.0.1", port: 0).wait()
     defer {
         try! serverChannel.close().wait()
     }
@@ -61,18 +66,29 @@ func run(identifier: String) {
 
     measure(identifier: identifier) {
         let buffer = ByteBuffer(integer: 1, as: UInt8.self)
+        let el = group.next()
+
         for _ in 0 ..< numberOfIterations {
-            let clientChannel = try! clientBootstrap.bind(to: localhostPickPort).wait()
-            defer {
-                try! clientChannel.close().wait()
-            }
-            
-            // Send a byte to make sure everything is really open.
-            let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
-            clientChannel.writeAndFlush(envelope, promise: nil)
+            try! el.flatSubmit {
+                clientBootstrap
+                   // .childChannelInitializer { channel in
+                     //   channel.pipeline.addHandler(ReceiveAndCloseHandler())
+                   // }
+                    .bind(host: "127.0.0.1", port: 0).flatMap {
+                    (clientChannel) -> EventLoopFuture<Void> in
+                    writeWaitAndClose(clientChannel: clientChannel, buffer: buffer, remoteAddress: remoteAddress)
+                }
+            }.wait()
         }
         try! serverHandler.completionFuture.wait()
         return numberOfIterations
     }
 }
 
+fileprivate func writeWaitAndClose(clientChannel: Channel, buffer: ByteBuffer, remoteAddress: SocketAddress) -> EventLoopFuture<Void> {
+    // Send a byte to make sure everything is really open.
+    let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
+    return clientChannel.writeAndFlush(envelope).flatMap {
+        clientChannel.close()
+    }
+}
