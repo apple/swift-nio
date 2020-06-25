@@ -61,4 +61,51 @@ class NIOThreadPoolTest: XCTestCase {
             XCTAssert(localAllThreads.contains("TP-#\(threadNumber)"), "\(localAllThreads)")
         }
     }
+
+    func testThreadPoolStartsMultipleTimes() throws {
+        let numberOfThreads = 1
+        let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
+        pool.start()
+        defer {
+            XCTAssertNoThrow(try pool.syncShutdownGracefully())
+        }
+
+        let completionGroup = DispatchGroup()
+
+        // The lock here is arguably redundant with the dispatchgroup, but let's make
+        // this test thread-safe even if I screw up.
+        let lock = Lock()
+        var threadOne = Thread?.none
+        var threadTwo = Thread?.none
+
+        completionGroup.enter()
+        pool.submit { s in
+            precondition(s == .active)
+            lock.withLockVoid {
+                XCTAssertEqual(threadOne, nil)
+                threadOne = Thread.current
+            }
+            completionGroup.leave()
+        }
+
+        // Now start the thread pool again. This must not destroy existing threads, so our thread should be the same.
+        pool.start()
+        completionGroup.enter()
+        pool.submit { s in
+            precondition(s == .active)
+            lock.withLockVoid {
+                XCTAssertEqual(threadTwo, nil)
+                threadTwo = Thread.current
+            }
+            completionGroup.leave()
+        }
+
+        completionGroup.wait()
+
+        lock.withLockVoid {
+            XCTAssertNotNil(threadOne)
+            XCTAssertNotNil(threadTwo)
+            XCTAssertEqual(threadOne, threadTwo)
+        }
+    }
 }

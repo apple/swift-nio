@@ -109,6 +109,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(StreamChannelTest.allTests),
              testCase(SystemTest.allTests),
              testCase(ThreadTest.allTests),
+             testCase(TimeAmountTests.allTests),
              testCase(TypeAssistedChannelHandlerTest.allTests),
              testCase(UniversalBootstrapSupportTest.allTests),
              testCase(UtilitiesTest.allTests),

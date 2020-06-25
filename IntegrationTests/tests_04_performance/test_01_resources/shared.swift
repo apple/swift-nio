@@ -87,6 +87,11 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
         return buffer
     }
 
+    public func handlerAdded(context: ChannelHandlerContext) {
+        (context.channel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0))
+            .whenFailure({ error in fatalError("Failed to set linger \(error)") })
+    }
+
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if case .head(let req) = self.unwrapInboundIn(data), req.uri == "/allocation-test-1" {
             context.write(self.wrapOutboundOut(.head(self.responseHead)), promise: nil)

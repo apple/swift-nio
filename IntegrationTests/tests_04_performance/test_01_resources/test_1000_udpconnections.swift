@@ -14,17 +14,40 @@
 
 import NIO
 
-fileprivate final class DoNothingHandler: ChannelInboundHandler {
+fileprivate final class CountReadsHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
+    
+    private var readsRemaining: Int
+    private let completed: EventLoopPromise<Void>
+    
+    var completionFuture: EventLoopFuture<Void> {
+        return self.completed.futureResult
+    }
+    
+    init(numberOfReadsExpected: Int, completionPromise: EventLoopPromise<Void>) {
+        self.readsRemaining = numberOfReadsExpected
+        self.completed = completionPromise
+    }
+    
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        self.readsRemaining -= 1
+        if self.readsRemaining <= 0 {
+            self.completed.succeed(())
+        }
+    }
 }
 
 func run(identifier: String) {
+    let numberOfIterations = 1000
+    
+    let serverHandler = CountReadsHandler(numberOfReadsExpected: numberOfIterations,
+                                          completionPromise: group.next().makePromise())
     let serverChannel = try! DatagramBootstrap(group: group)
         .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         // Set the handlers that are applied to the bound channel
         .channelInitializer { channel in
-            return channel.pipeline.addHandler(DoNothingHandler())
+            return channel.pipeline.addHandler(serverHandler)
         }
         .bind(to: localhostPickPort).wait()
     defer {
@@ -37,7 +60,6 @@ func run(identifier: String) {
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
     measure(identifier: identifier) {
-        let numberOfIterations = 1000
         let buffer = ByteBuffer(integer: 1, as: UInt8.self)
         for _ in 0 ..< numberOfIterations {
             let clientChannel = try! clientBootstrap.bind(to: localhostPickPort).wait()
@@ -49,6 +71,7 @@ func run(identifier: String) {
             let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
             clientChannel.writeAndFlush(envelope, promise: nil)
         }
+        try! serverHandler.completionFuture.wait()
         return numberOfIterations
     }
 }
