@@ -12,10 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Baggage
+
 /// A `DeadChannelCore` is a `ChannelCore` for a `DeadChannel`. A `DeadChannel` is used as a replacement `Channel` when
 /// the original `Channel` is closed. Given that the original `Channel` is closed the `DeadChannelCore` should fail
 /// all operations.
 private final class DeadChannelCore: ChannelCore {
+    var baggage = BaggageContext()
+
     func localAddress0() throws -> SocketAddress {
         throw ChannelError.ioOnClosedChannel
     }

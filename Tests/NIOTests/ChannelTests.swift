@@ -17,6 +17,7 @@ import XCTest
 import NIOConcurrencyHelpers
 import NIOTestUtils
 import Dispatch
+import Baggage
 
 class ChannelLifecycleHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
@@ -2814,6 +2815,54 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try handler.becameUnwritable.futureResult.wait())
         XCTAssertNoThrow(try handler.becameWritable.futureResult.wait())
     }
+    
+    func testSharedBaggageContextThroughChannelHandlerContext() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let firstBaggageExpectation = expectation(description: "")
+        let secondBaggageExpectation = expectation(description: "")
+
+        var firstBaggage: BaggageContext!
+        var secondBaggage: BaggageContext!
+
+        // two instances of `BaggageContextInspectingHandler` are added to the same channel pipeline,
+        // the first instance will mutate the baggage through its channel handler context,
+        // and the second instance reads the baggage from its channel handler context
+
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .serverChannelInitializer { channel in
+                channel.pipeline.addHandlers([
+                    BaggageContextInspectingHandler { baggage in
+                        firstBaggage = baggage
+                        baggage[FakeBaggageContextKey.self] = "test"
+                        firstBaggageExpectation.fulfill()
+                    },
+                    BaggageContextInspectingHandler { baggage in
+                        secondBaggage = baggage
+                        secondBaggageExpectation.fulfill()
+                    }
+                ])
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait())
+
+        let buffer = clientChannel.allocator.buffer(string: "test")
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
+
+        XCTAssertNoThrow(try clientChannel.close().wait())
+
+        waitForExpectations(timeout: 1)
+
+        XCTAssertNil(firstBaggage[FakeBaggageContextKey.self])
+        XCTAssertEqual(secondBaggage[FakeBaggageContextKey.self], "test")
+    }
 }
 
 fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
@@ -2925,4 +2974,23 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
             self.becameUnwritable.succeed(())
         }
     }
+}
+
+fileprivate final class BaggageContextInspectingHandler: ChannelInboundHandler {
+    typealias InboundIn = Void
+
+    private var mutateBaggageContext: (inout BaggageContext) -> Void
+
+    init(mutateBaggageContext: @escaping (inout BaggageContext) -> Void) {
+        self.mutateBaggageContext = mutateBaggageContext
+    }
+
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        self.mutateBaggageContext(&context.baggage)
+        context.fireChannelRead(data)
+    }
+}
+
+fileprivate enum FakeBaggageContextKey: BaggageContextKey {
+    typealias Value = String
 }

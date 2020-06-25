@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
+import Baggage
 
 private struct SocketChannelLifecycleManager {
     // MARK: Types
@@ -219,6 +220,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     // MARK: - Stored Properties
     // MARK: Constants & atomics (accessible everywhere)
     public let parent: Channel?
+    public var baggage = BaggageContext()
     internal let socket: SocketType
     private let closePromise: EventLoopPromise<Void>
     internal let selectableEventLoop: SelectableEventLoop

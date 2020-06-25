@@ -15,6 +15,7 @@
 import XCTest
 import NIO
 import NIOConcurrencyHelpers
+import Baggage
 
 struct NotImplementedError: Error { }
 
@@ -25,6 +26,8 @@ struct InvalidTypeError: Error { }
 /// Everything else either throws or returns a failed future, except for things that cannot,
 /// which precondition instead.
 private class IntChannelCore: ChannelCore {
+    var baggage = BaggageContext()
+
     func localAddress0() throws -> SocketAddress {
         throw NotImplementedError()
     }

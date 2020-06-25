@@ -193,6 +193,8 @@ public final class EmbeddedEventLoop: EventLoop {
     }
 }
 
+import Baggage
+
 class EmbeddedChannelCore: ChannelCore {
     var isOpen: Bool = true
     var isActive: Bool = false
@@ -200,6 +202,8 @@ class EmbeddedChannelCore: ChannelCore {
     var eventLoop: EventLoop
     var closePromise: EventLoopPromise<Void>
     var error: Optional<Error>
+
+    var baggage = BaggageContext()
 
     private let pipeline: ChannelPipeline
 

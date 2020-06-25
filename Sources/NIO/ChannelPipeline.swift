@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Baggage
+
 /// A list of `ChannelHandler`s that handle or intercept inbound events and outbound operations of a
 /// `Channel`. `ChannelPipeline` implements an advanced form of the Intercepting Filter pattern
 /// to give a user full control over how an event is handled and how the `ChannelHandler`s in a pipeline
@@ -1524,6 +1526,16 @@ extension ChannelHandlerContext {
         self.userTriggeredRemovalStarted = true
         (self.handler as! RemovableChannelHandler).removeHandler(context: self,
                                                                  removalToken: .init(promise: promise))
+    }
+}
+
+extension ChannelHandlerContext {
+    public var baggage: BaggageContext {
+        get {
+            return self.channel._channelCore.baggage
+        } set {
+            self.channel._channelCore.baggage = newValue
+        }
     }
 }
 
