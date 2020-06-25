@@ -15,8 +15,8 @@
 import NIO
 
 fileprivate final class WaitForReadHandler: ChannelInboundHandler {
-    public typealias InboundIn = ByteBuffer
-    public typealias OutboundOut = ByteBuffer
+    public typealias InboundIn = AddressedEnvelope<ByteBuffer>
+    public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
     
     private var completed: EventLoopPromise<Void>
     
