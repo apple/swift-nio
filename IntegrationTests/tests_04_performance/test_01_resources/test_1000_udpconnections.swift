@@ -80,7 +80,7 @@ func run(identifier: String) {
             
             // Send a byte to make sure everything is really open.
             let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
-            clientChannel.writeAndFlush(envelope, promise: nil)
+            try! clientChannel.writeAndFlush(envelope).wait()
         }
         print("Wait for the server")
         try! serverHandler.completionFuture.wait()
