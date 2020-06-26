@@ -59,7 +59,7 @@ func run(identifier: String) {
         .channelInitializer { channel in
             return channel.pipeline.addHandler(serverHandler)
         }
-        .bind(to: localhostPickPort).wait()
+        .bind(host: "127.0.0.1", port: 0).wait()
     defer {
         try! serverChannel.close().wait()
     }
