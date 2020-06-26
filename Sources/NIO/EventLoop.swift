@@ -144,7 +144,7 @@ public final class RepeatedTask {
         }
 
         scheduled.futureResult.whenSuccess { future in
-            future.whenComplete { (_: Result<Void, Error>) in
+            future.hop(to: self.eventLoop).whenComplete { (_: Result<Void, Error>) in
                 self.reschedule0()
             }
         }
@@ -619,7 +619,9 @@ extension EventLoop {
     ///     - initialDelay: The delay after which the first task is executed.
     ///     - delay: The delay between the end of one task and the start of the next.
     ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
-    ///     - task: The closure that will be executed.
+    ///     - task: The closure that will be executed. Task will keep repeating regardless of whether the future
+    ///             gets fulfilled with success or error.
+    ///
     /// - return: `RepeatedTask`
     @discardableResult
     public func scheduleRepeatedAsyncTask(initialDelay: TimeAmount,

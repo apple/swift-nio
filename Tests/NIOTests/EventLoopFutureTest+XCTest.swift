@@ -83,6 +83,7 @@ extension EventLoopFutureTest {
                 ("testAndAllCompleteWithPreFailedFutures", testAndAllCompleteWithPreFailedFutures),
                 ("testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures", testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures),
                 ("testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures", testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures),
+                ("testRepeatedTaskOffEventLoopGroupFuture", testRepeatedTaskOffEventLoopGroupFuture),
            ]
    }
 }
