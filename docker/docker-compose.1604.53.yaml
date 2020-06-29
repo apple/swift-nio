@@ -38,7 +38,7 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=4100
       - MAX_ALLOCS_ALLOWED_1000_tcpconnections=180010
       - MAX_ALLOCS_ALLOWED_1000_udpbootstraps=2000
-      - MAX_ALLOCS_ALLOWED_1000_udpconnections=113050
+      - MAX_ALLOCS_ALLOWED_1000_udpconnections=103050
       - MAX_ALLOCS_ALLOWED_1000_udp_reqs=16050
       - SANITIZER_ARG=--sanitize=thread
 
