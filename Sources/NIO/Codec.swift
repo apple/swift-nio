@@ -704,7 +704,7 @@ public protocol MessageToByteEncoder {
     /// - parameters:
     ///     - data: The data to encode into a `ByteBuffer`.
     ///     - out: The `ByteBuffer` into which we want to encode.
-    func encode(data: OutboundIn, out: inout ByteBuffer) throws
+    mutating func encode(data: OutboundIn, out: inout ByteBuffer) throws
 }
 
 extension ByteToMessageHandler: RemovableChannelHandler {
