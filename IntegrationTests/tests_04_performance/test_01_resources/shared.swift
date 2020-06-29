@@ -217,7 +217,6 @@ enum UDPShared {
 
     static func doUDPRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
         let serverChannel = try DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             // Set the handlers that are applied to the bound channel
             .channelInitializer { channel in
                 return channel.pipeline.addHandler(EchoHandler())
@@ -231,8 +230,6 @@ enum UDPShared {
         let remoteAddress = serverChannel.localAddress!
 
         let clientChannel = try DatagramBootstrap(group: group)
-            // Enable SO_REUSEADDR.
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(EchoHandlerClient(remoteAddress: remoteAddress,
                                                               numberOfRepetitions: numberOfRequests))

@@ -56,7 +56,6 @@ func run(identifier: String) {
     let remoteAddress = serverChannel.localAddress!
     
     let clientBootstrap = DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
     measure(identifier: identifier) {
         let buffer = ByteBuffer(integer: 1, as: UInt8.self)
