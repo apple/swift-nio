@@ -44,7 +44,6 @@ func run(identifier: String) {
     let serverHandler = CountReadsHandler(numberOfReadsExpected: numberOfIterations,
                                           completionPromise: group.next().makePromise())
     let serverChannel = try! DatagramBootstrap(group: group)
-        .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         // Set the handlers that are applied to the bound channel
         .channelInitializer { channel in
             return channel.pipeline.addHandler(serverHandler)
