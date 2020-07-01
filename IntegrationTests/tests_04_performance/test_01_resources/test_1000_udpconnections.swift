@@ -60,14 +60,13 @@ func run(identifier: String) {
     measure(identifier: identifier) {
         let buffer = ByteBuffer(integer: 1, as: UInt8.self)
         for _ in 0 ..< numberOfIterations {
-            let clientChannel = try! clientBootstrap.bind(to: localhostPickPort).wait()
-            defer {
-                try! clientChannel.close().wait()
-            }
-            
-            // Send a byte to make sure everything is really open.
-            let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
-            clientChannel.writeAndFlush(envelope, promise: nil)
+            try! clientBootstrap.bind(to: localhostPickPort).flatMap { clientChannel -> EventLoopFuture<Void> in 
+                // Send a byte to make sure everything is really open.
+                let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
+                return clientChannel.writeAndFlush(envelope).flatMap {
+                    clientChannel.close()
+                }
+            }.wait()
         }
         try! serverHandler.completionFuture.wait()
         return numberOfIterations
