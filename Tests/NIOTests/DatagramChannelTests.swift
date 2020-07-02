@@ -666,4 +666,50 @@ final class DatagramChannelTests: XCTestCase {
             XCTAssertFalse(try channel2.getOption(ChannelOptions.explicitCongestionNotification).wait())
         } ())
     }
+    
+    private func testEcnReceive(address: String) {
+        XCTAssertNoThrow(try {
+            let receiveChannel = try DatagramBootstrap(group: group)
+                .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
+                .channelInitializer { channel in
+                    channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
+                }
+                .bind(host: address, port: 0)
+                .wait()
+            let sendChannel = try DatagramBootstrap(group: group)
+                .bind(host: address, port: 0)
+                .wait()
+            
+            var buffer = sendChannel.allocator.buffer(capacity: 1)
+            buffer.writeRepeatingByte(0, count: 1)
+            let ecnStates: [NIOExplicitCongestionNotificationState] = [.transportNotCapable,
+                                                                       .congestionExperienced,
+                                                                       .transportCapableFlag0,
+                                                                       .transportCapableFlag1]
+            for ecnState in ecnStates {
+                let writeData = AddressedEnvelope(remoteAddress: receiveChannel.localAddress!,
+                                                  data: buffer,
+                                                  metadata: .init(ecnState: ecnState))
+                try sendChannel.writeAndFlush(writeData).wait()
+            }
+
+            let reads = try receiveChannel.waitForDatagrams(count: ecnStates.count)
+            XCTAssertEqual(reads.count, ecnStates.count)
+            for readNumber in 0..<4 {
+                let read = reads[readNumber]
+                XCTAssertEqual(read.metadata?.ecnState, ecnStates[readNumber])
+            }
+        } ())
+    }
+    
+    func testEcnSendReceiveIPV4() {
+        testEcnReceive(address: "127.0.0.1")
+    }
+    
+    func testEcnSendReceiveIPV6() {
+        guard System.supportsIPv6 else {
+            return // need to skip IPv6 tests if we don't support it.
+        }
+        testEcnReceive(address: "::1")
+    }
 }
