@@ -19,5 +19,5 @@
 ///     `Selectable`s are not thread-safe, only to be used on the appropriate
 ///     `EventLoop`.
 protocol Selectable {
-    func withUnsafeHandle<T>(_: (CInt) throws -> T) throws -> T
+    func withUnsafeHandle<T>(_: (NIOBSDSocket.Handle) throws -> T) throws -> T
 }

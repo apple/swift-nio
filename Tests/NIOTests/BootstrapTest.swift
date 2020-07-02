@@ -155,7 +155,7 @@ class BootstrapTest: XCTestCase {
                                               socketVector: &socketFDs))
         defer {
             // 0 is closed together with the Channel below.
-            XCTAssertNoThrow(try Posix.close(descriptor: socketFDs[1]))
+            XCTAssertNoThrow(try NIOBSDSocket.close(socket: socketFDs[1]))
         }
 
         XCTAssertNoThrow(try ClientBootstrap(group: self.freshEventLoop())
@@ -163,19 +163,20 @@ class BootstrapTest: XCTestCase {
                 XCTAssert(channel.eventLoop.inEventLoop)
                 return self.freshEventLoop().makeSucceededFuture(())
             }
-            .withConnectedSocket(descriptor: socketFDs[0])
+            .withConnectedSocket(socketFDs[0])
             .wait()
             .close()
             .wait())
     }
 
     func testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
-        let socket = try Posix.socket(domain: .inet, type: .stream, protocol: 0)
+        let socket =
+            try NIOBSDSocket.socket(domain: .inet, type: .stream, protocol: 0)
 
         let serverAddress = try assertNoThrowWithValue(SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0))
-        try serverAddress.withSockAddr { serverAddressPtr, size in
-            try Posix.bind(descriptor: socket, ptr: serverAddressPtr,
-                           bytes: size)
+        try serverAddress.withSockAddr { address, len in
+            try NIOBSDSocket.bind(socket: socket, address: address,
+                                  address_len: socklen_t(len))
         }
 
         let childChannelDone = self.freshEventLoop().next().makePromise(of: Void.self)
@@ -196,7 +197,7 @@ class BootstrapTest: XCTestCase {
                 }
                 return self.freshEventLoop().makeSucceededFuture(())
             }
-            .withBoundSocket(descriptor: socket)
+            .withBoundSocket(socket)
             .wait())
         let client = try assertNoThrowWithValue(ClientBootstrap(group: self.freshEventLoop())
             .channelInitializer { channel in
@@ -330,7 +331,7 @@ class BootstrapTest: XCTestCase {
                     }
                     return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
             }
-            .withConnectedSocket(descriptor: fd)
+            .withConnectedSocket(fd)
             .wait())
             XCTAssertNotNil(channel)
             XCTAssertNoThrow(try channel?.close().wait())

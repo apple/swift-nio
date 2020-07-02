@@ -376,9 +376,9 @@ class SelectorTest: XCTestCase {
         }
         class FakeSocket: Socket {
             private let hasBeenClosedPromise: EventLoopPromise<Void>
-            init(hasBeenClosedPromise: EventLoopPromise<Void>, descriptor: CInt) throws {
+            init(hasBeenClosedPromise: EventLoopPromise<Void>, socket: NIOBSDSocket.Handle) throws {
                 self.hasBeenClosedPromise = hasBeenClosedPromise
-                try super.init(descriptor: descriptor)
+                try super.init(socket: socket)
             }
             override func close() throws {
                 self.hasBeenClosedPromise.succeed(())
@@ -395,7 +395,7 @@ class SelectorTest: XCTestCase {
         let el = group.next() as! SelectableEventLoop
         let channelHasBeenClosedPromise = el.makePromise(of: Void.self)
         let channel = try SocketChannel(socket: FakeSocket(hasBeenClosedPromise: channelHasBeenClosedPromise,
-                                                           descriptor: socketFDs[0]), eventLoop: el)
+                                                           socket: socketFDs[0]), eventLoop: el)
         let sched = el.scheduleRepeatedTask(initialDelay: .microseconds(delayToUseInMicroSeconds),
                                             delay: .microseconds(delayToUseInMicroSeconds)) { (_: RepeatedTask) in
             _ = numberFires.add(1)

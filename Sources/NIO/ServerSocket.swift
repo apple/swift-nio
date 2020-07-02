@@ -31,7 +31,7 @@
     /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: NIOBSDSocket.ProtocolFamily, setNonBlocking: Bool = false) throws {
         let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: .stream, setNonBlocking: setNonBlocking)
-        try super.init(descriptor: sock)
+        try super.init(socket: sock)
     }
 
     /// Create a new instance.
@@ -40,8 +40,21 @@
     ///     - descriptor: The _Unix file descriptor_ representing the bound socket.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if socket is invalid.
-    init(descriptor: CInt, setNonBlocking: Bool = false) throws {
-        try super.init(descriptor: descriptor)
+    #if !os(Windows)
+        @available(*, deprecated, renamed: "init(socket:setNonBlocking:)")
+        convenience init(descriptor: CInt, setNonBlocking: Bool = false) throws {
+          try self.init(socket: descriptor, setNonBlocking: setNonBlocking)
+        }
+    #endif
+
+    /// Create a new instance.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the bound socket.
+    ///     - setNonBlocking: Set non-blocking mode on the socket.
+    /// - throws: An `IOError` if socket is invalid.
+    init(socket: NIOBSDSocket.Handle, setNonBlocking: Bool = false) throws {
+        try super.init(socket: socket)
         if setNonBlocking {
             try self.setNonBlocking()
         }
@@ -54,7 +67,7 @@
     /// - throws: An `IOError` if creation of the socket failed.
     func listen(backlog: Int32 = 128) throws {
         try withUnsafeHandle {
-            _ = try Posix.listen(descriptor: $0, backlog: backlog)
+            _ = try NIOBSDSocket.listen(socket: $0, backlog: backlog)
         }
     }
 
@@ -75,13 +88,13 @@
             }
             let result = try Linux.accept4(descriptor: fd, addr: nil, len: nil, flags: flags)
             #else
-            let result = try Posix.accept(descriptor: fd, addr: nil, len: nil)
+            let result = try NIOBSDSocket.accept(socket: fd, address: nil, address_len: nil)
             #endif
 
             guard let fd = result else {
                 return nil
             }
-            let sock = try Socket(descriptor: fd)
+            let sock = try Socket(socket: fd)
             #if !os(Linux)
             if setNonBlocking {
                 do {

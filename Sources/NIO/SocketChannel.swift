@@ -40,9 +40,9 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         try super.init(socket: socket, parent: nil, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
-    init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
-        let socket = try Socket(descriptor: descriptor, setNonBlocking: true)
-        try super.init(socket: socket, parent: nil, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
+    init(eventLoop: SelectableEventLoop, socket: NIOBSDSocket.Handle) throws {
+        let sock = try Socket(socket: socket, setNonBlocking: true)
+        try super.init(socket: sock, parent: nil, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
@@ -147,9 +147,9 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
                        recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
-    convenience init(descriptor: CInt, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
-        let socket = try ServerSocket(descriptor: descriptor, setNonBlocking: true)
-        try self.init(serverSocket: socket, eventLoop: eventLoop, group: group)
+    convenience init(socket: NIOBSDSocket.Handle, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
+        let sock = try ServerSocket(socket: socket, setNonBlocking: true)
+        try self.init(serverSocket: sock, eventLoop: eventLoop, group: group)
         try self.socket.listen(backlog: backlog)
     }
 
@@ -342,8 +342,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return super.isOpen
     }
 
-    convenience init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
-        let socket = try Socket(descriptor: descriptor)
+    convenience init(eventLoop: SelectableEventLoop, socket: NIOBSDSocket.Handle) throws {
+        let socket = try Socket(socket: socket)
 
         do {
             try self.init(socket: socket, eventLoop: eventLoop)

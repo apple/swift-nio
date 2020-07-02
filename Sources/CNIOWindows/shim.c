@@ -16,4 +16,15 @@
 
 #include "CNIOWindows.h"
 
+int CNIOWindows_sendmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec,
+                         unsigned int vlen, int flags) {
+  abort();
+}
+
+int CNIOWindows_recvmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec,
+                         unsigned int vlen, int flags,
+                         struct timespec *timeout) {
+  abort();
+}
+
 #endif
