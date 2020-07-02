@@ -146,10 +146,7 @@ internal final class SelectableEventLoop: EventLoop {
         self._addresses = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self.msgs = UnsafeMutableBufferPointer(start: _msgs, count: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
-        // Guess at max 4 int32 payload control messages.
-        self._controlMessages = UnsafeMutableRawBufferPointer.allocate(
-            byteCount: Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.stride) * 4,
-            alignment: MemoryLayout<Int32>.alignment)
+        self._controlMessages = DatagramChannel.allocateControlMessageBuffer()
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually

@@ -521,12 +521,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     assert(self.isOpen)
                     let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
                     readPending = false
+                    
+                    let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
+                    if self.reportExplicitCongestionNotifications {
+                        metadata = .init(ecnState: controlMessageReceiver.ecnValue)
+                    } else {
+                        metadata = nil
+                    }
 
                     let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
                                                 data: buffer,
-                                                metadata: self.reportExplicitCongestionNotifications ?
-                                                    AddressedEnvelope.Metadata(ecnState: controlMessageReceiver.ecnValue) :
-                                                    nil)
+                                                metadata:  metadata)
                     assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(msg))
                     if mayGrow && i < maxMessagesPerRead {
@@ -559,7 +564,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             buffer.clear()
 
             // This force-unwrap is safe, as we checked whether this is nil in the caller.
-            let result = try vectorReadManager.readFromSocket(socket: self.socket, buffer: &buffer)
+            let result = try vectorReadManager.readFromSocket(
+                socket: self.socket,
+                buffer: &buffer,
+                reportExplicitCongestionNotifications: self.reportExplicitCongestionNotifications)
             switch result {
             case .some(let results, let totalRead):
                 assert(self.isOpen)
@@ -822,5 +830,14 @@ extension DatagramChannel: MulticastChannel {
             promise?.fail(error)
             return
         }
+    }
+}
+
+extension DatagramChannel {
+    static func allocateControlMessageBuffer() -> UnsafeMutableRawBufferPointer {
+        // Guess that 4 Int32 payload messages is enough for anyone.
+        return UnsafeMutableRawBufferPointer.allocate(
+            byteCount: Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.stride) * 4,
+            alignment: MemoryLayout<Int32>.alignment)
     }
 }
