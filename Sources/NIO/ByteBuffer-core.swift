@@ -86,17 +86,26 @@ public struct ByteBufferAllocator {
     ///
     /// - note: The passed `capacity` is the `ByteBuffer`'s initial capacity, it will grow automatically if necessary.
     ///
+    /// - note: If `capacity` is `0`, this function will not allocate. If you want to trigger an allocation immediately,
+    ///         also call `.clear()`.
+    ///
     /// - parameters:
     ///     - capacity: The initial capacity of the returned `ByteBuffer`.
     public func buffer(capacity: Int) -> ByteBuffer {
+        precondition(capacity >= 0, "ByteBuffer capacity must be positive.")
+        guard capacity > 0 else {
+            return ByteBufferAllocator.zeroCapacityWithDefaultAllocator
+        }
         return ByteBuffer(allocator: self, startingCapacity: capacity)
     }
+
+    @usableFromInline
+    internal static let zeroCapacityWithDefaultAllocator = ByteBuffer(allocator: ByteBufferAllocator(), startingCapacity: 0)
 
     internal let malloc: @convention(c) (size_t) -> UnsafeMutableRawPointer?
     internal let realloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer?
     internal let free: @convention(c) (UnsafeMutableRawPointer?) -> Void
     internal let memcpy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void
-
 }
 
 @inlinable func _toCapacity(_ value: Int) -> ByteBuffer._Capacity {

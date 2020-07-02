@@ -366,11 +366,58 @@ extension SocketAddress: Equatable {
                 return false
             }
 
-            var sunpath1 = addr1.address.sun_path
-            var sunpath2 = addr2.address.sun_path
-            return memcmp(&sunpath1, &sunpath2, MemoryLayout.size(ofValue: sunpath1)) == 0
+            let bufferSize = MemoryLayout.size(ofValue: addr1.address.sun_path)
+
+            // These uses of withMemoryRebound(to:) are fine: the `strncmp` call cannot possibly re-enter Swift code, and so we cannot possibly violate
+            // Swift's strict aliasing rules by way of this type-pun.
+            return withUnsafePointer(to: addr1.address.sun_path) { sunpath1 in
+                return withUnsafePointer(to: addr2.address.sun_path) { sunpath2 in
+                    return sunpath1.withMemoryRebound(to: Int8.self, capacity: bufferSize) { sunpath1 in
+                        return sunpath2.withMemoryRebound(to: Int8.self, capacity: bufferSize) { sunpath2 in
+                            return strncmp(sunpath1, sunpath2, MemoryLayout.size(ofValue: bufferSize)) == 0
+                        }
+                    }
+                }
+            }
         case (.v4, _), (.v6, _), (.unixDomainSocket, _):
             return false
+        }
+    }
+}
+
+/// We define an extension on `SocketAddress` that gives it an elementwise hashable conformance, using
+/// only the elements defined on the structure in their man pages (excluding lengths).
+extension SocketAddress: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        switch self {
+        case .unixDomainSocket(let uds):
+            hasher.combine(0)
+            hasher.combine(uds.address.sun_family)
+
+            let pathSize = MemoryLayout.size(ofValue: uds.address.sun_path)
+            withUnsafePointer(to: uds.address.sun_path) { pathPtr in
+                // This `withMemoryRebound` is safe: we cannot violate Swift's pointer aliasing rules as this call cannot make
+                // it back into Swift code.
+                let length = pathPtr.withMemoryRebound(to: Int8.self, capacity: pathSize) {
+                    strnlen($0, pathSize)
+                }
+                let bytes = UnsafeRawBufferPointer(start: UnsafeRawPointer(pathPtr), count: length)
+                hasher.combine(bytes: bytes)
+            }
+        case .v4(let v4Addr):
+            hasher.combine(1)
+            hasher.combine(v4Addr.address.sin_family)
+            hasher.combine(v4Addr.address.sin_port)
+            hasher.combine(v4Addr.address.sin_addr.s_addr)
+        case .v6(let v6Addr):
+            hasher.combine(2)
+            hasher.combine(v6Addr.address.sin6_family)
+            hasher.combine(v6Addr.address.sin6_port)
+            hasher.combine(v6Addr.address.sin6_flowinfo)
+            hasher.combine(v6Addr.address.sin6_scope_id)
+            withUnsafeBytes(of: v6Addr.address.sin6_addr) {
+                hasher.combine(bytes: $0)
+            }
         }
     }
 }

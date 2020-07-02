@@ -87,6 +87,11 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
         return buffer
     }
 
+    public func handlerAdded(context: ChannelHandlerContext) {
+        (context.channel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0))
+            .whenFailure({ error in fatalError("Failed to set linger \(error)") })
+    }
+
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if case .head(let req) = self.unwrapInboundIn(data), req.uri == "/allocation-test-1" {
             context.write(self.wrapOutboundOut(.head(self.responseHead)), promise: nil)
@@ -187,8 +192,7 @@ enum UDPShared {
                 
                 // Set the transmission data.
                 let line = "Something to send there and back again."
-                var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
-                buffer.writeString(line)
+                let buffer = context.channel.allocator.buffer(string: line)
                 
                 // Forward the data.
                 let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
@@ -213,7 +217,6 @@ enum UDPShared {
 
     static func doUDPRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
         let serverChannel = try DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             // Set the handlers that are applied to the bound channel
             .channelInitializer { channel in
                 return channel.pipeline.addHandler(EchoHandler())
@@ -227,8 +230,6 @@ enum UDPShared {
         let remoteAddress = serverChannel.localAddress!
 
         let clientChannel = try DatagramBootstrap(group: group)
-            // Enable SO_REUSEADDR.
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(EchoHandlerClient(remoteAddress: remoteAddress,
                                                               numberOfRepetitions: numberOfRequests))

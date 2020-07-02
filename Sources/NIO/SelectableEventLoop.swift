@@ -354,21 +354,28 @@ internal final class SelectableEventLoop: EventLoop {
         self.preconditionInEventLoop()
         defer {
             var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
-            _tasksLock.withLockVoid {
-                // reserve the correct capacity so we don't need to realloc later on.
-                scheduledTasksCopy.reserveCapacity(self._scheduledTasks.count)
-                while let sched = self._scheduledTasks.pop() {
-                    scheduledTasksCopy.append(sched)
+            var iterations = 0
+            repeat { // We may need to do multiple rounds of this because failing tasks may lead to more work.
+                scheduledTasksCopy.removeAll(keepingCapacity: true)
+
+                self._tasksLock.withLockVoid {
+                    // reserve the correct capacity so we don't need to realloc later on.
+                    scheduledTasksCopy.reserveCapacity(self._scheduledTasks.count)
+                    while let sched = self._scheduledTasks.pop() {
+                        scheduledTasksCopy.append(sched)
+                    }
                 }
-            }
+
+                // Fail all the scheduled tasks.
+                for task in scheduledTasksCopy {
+                    task.fail(EventLoopError.shutdown)
+                }
+                iterations += 1
+            } while scheduledTasksCopy.count > 0 && iterations < 1000
+            precondition(scheduledTasksCopy.count == 0, "EventLoop \(self) didn't quiesce after 1000 ticks.")
 
             assert(self.internalState == .noLongerRunning, "illegal state: \(self.internalState)")
             self.internalState = .exitingThread
-
-            // Fail all the scheduled tasks.
-            for task in scheduledTasksCopy {
-                task.fail(EventLoopError.shutdown)
-            }
         }
         var nextReadyTask: ScheduledTask? = nil
         self._tasksLock.withLock {

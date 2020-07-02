@@ -29,8 +29,7 @@ func run(identifier: String) {
     let channel = EmbeddedChannel()
     try! channel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder())).wait()
     try! channel.pipeline.addHandler(UnboxingChannelHandler()).wait()
-    var data = ByteBufferAllocator().buffer(capacity: 2)
-    data.writeBytes([0x81, 0x00]) // empty websocket
+    let data = ByteBuffer(bytes: [0x81, 0x00]) // empty websocket
 
     measure(identifier: identifier) {
         for _ in 0..<1000 {

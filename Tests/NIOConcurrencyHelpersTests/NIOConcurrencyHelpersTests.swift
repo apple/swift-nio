@@ -1035,7 +1035,7 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
     } while (NIODeadline.now() < endTime)
 
     if !condition() {
-        XCTFail(message, file: file, line: line)
+        XCTFail(message, file: (file), line: line)
     }
 }
 

@@ -352,7 +352,7 @@ class BaseSocket: BaseSocketProtocol {
     ///     - name: The name of the option to set.
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
-    final func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
+    func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
         if level == .tcp && name == .tcp_nodelay && (try? self.localAddress().protocol) == Optional<NIOBSDSocket.ProtocolFamily>.some(.unix) {
             // setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
@@ -402,7 +402,7 @@ class BaseSocket: BaseSocketProtocol {
     /// - parameters:
     ///     - address: The `SocketAddress` to which the socket should be bound.
     /// - throws: An `IOError` if the operation failed.
-    final func bind(to address: SocketAddress) throws {
+    func bind(to address: SocketAddress) throws {
         try self.withUnsafeHandle { fd in
             func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
                 try NIOBSDSocket.bind(socket: fd, address: ptr, address_len: socklen_t(bytes))

@@ -143,9 +143,10 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
 
-        let expect = expectation(description: "Is cancelling RepatedTask")
         let counter = NIOAtomic<Int>.makeAtomic(value: 0)
         let loop = eventLoopGroup.next()
+        let allDone = DispatchGroup()
+        allDone.enter()
         loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
             XCTAssertTrue(loop.inEventLoop)
             let initialValue = counter.load()
@@ -153,16 +154,15 @@ public final class EventLoopTest : XCTestCase {
             if initialValue == 0 {
                 XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
             } else if initialValue == count {
-                expect.fulfill()
                 repeatedTask.cancel()
+                allDone.leave()
             }
         }
 
-        waitForExpectations(timeout: 1) { error in
-            XCTAssertNil(error)
-            XCTAssertEqual(counter.load(), count + 1)
-            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay + Int64(count) * delay)
-        }
+        allDone.wait()
+
+        XCTAssertEqual(counter.load(), count + 1)
+        XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay + Int64(count) * delay)
     }
 
     public func testScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
@@ -226,10 +226,11 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
 
-        let expect = expectation(description: "Is cancelling RepatedTask")
-        let group = DispatchGroup()
+        let hasFiredGroup = DispatchGroup()
+        let isCancelledGroup = DispatchGroup()
         let loop = eventLoopGroup.next()
-        group.enter()
+        hasFiredGroup.enter()
+        isCancelledGroup.enter()
         var isAllowedToFire = true // read/write only on `loop`
         var hasFired = false // read/write only on `loop`
         let repeatedTask = loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in
@@ -238,23 +239,22 @@ public final class EventLoopTest : XCTestCase {
                 // we can only do this once as we can only leave the DispatchGroup once but we might lose a race and
                 // the timer might fire more than once (until `shouldNoLongerFire` becomes true).
                 hasFired = true
-                group.leave()
-                expect.fulfill()
+                hasFiredGroup.leave()
             }
             XCTAssertTrue(isAllowedToFire)
         }
-        group.notify(queue: DispatchQueue.global()) {
+        hasFiredGroup.notify(queue: DispatchQueue.global()) {
             repeatedTask.cancel()
             loop.execute {
                 // only now do we know that the `cancel` must have gone through
                 isAllowedToFire = false
+                isCancelledGroup.leave()
             }
         }
 
-        waitForExpectations(timeout: 1) { error in
-            XCTAssertNil(error)
-            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
-        }
+        hasFiredGroup.wait()
+        XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
+        isCancelledGroup.wait()
     }
 
     public func testScheduleRepeatedTaskToNotRetainRepeatedTask() throws {
@@ -1232,5 +1232,51 @@ public final class EventLoopTest : XCTestCase {
 
         // All done, the EventLoop is terminated so we should be able to check the results.
         XCTAssertEqual(UInt8(ascii: "J"), receiveHandler.received)
+    }
+
+    func testWeFailOutstandingScheduledTasksOnELShutdown() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let scheduledTask = group.next().scheduleTask(in: .hours(24)) {
+            XCTFail("We lost the 24 hour race and aren't even in Le Mans.")
+        }
+        let waiter = DispatchGroup()
+        waiter.enter()
+        scheduledTask.futureResult.map {
+            XCTFail("didn't expect success")
+        }.whenFailure { error in
+            XCTAssertEqual(.shutdown, error as? EventLoopError)
+            waiter.leave()
+        }
+
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
+        waiter.wait()
+    }
+
+    func testSchedulingTaskOnFutureFailedByELShutdownDoesNotMakeUsExplode() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let scheduledTask = group.next().scheduleTask(in: .hours(24)) {
+            XCTFail("Task was scheduled in 24 hours, yet it executed.")
+        }
+        let waiter = DispatchGroup()
+        waiter.enter() // first scheduled task
+        waiter.enter() // scheduled task in the first task's whenFailure.
+        scheduledTask.futureResult.map {
+            XCTFail("didn't expect success")
+        }.whenFailure { error in
+            XCTAssertEqual(.shutdown, error as? EventLoopError)
+            group.next().execute {} // This previously blew up
+            group.next().scheduleTask(in: .hours(24)) {
+                XCTFail("Task was scheduled in 24 hours, yet it executed.")
+            }.futureResult.map {
+                XCTFail("didn't expect success")
+            }.whenFailure { error in
+                XCTAssertEqual(.shutdown, error as? EventLoopError)
+                waiter.leave()
+            }
+            waiter.leave()
+        }
+
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
+        waiter.wait()
     }
 }

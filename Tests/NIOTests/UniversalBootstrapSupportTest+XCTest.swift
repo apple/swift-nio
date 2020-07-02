@@ -28,6 +28,7 @@ extension UniversalBootstrapSupportTest {
    static var allTests : [(String, (UniversalBootstrapSupportTest) -> () throws -> Void)] {
       return [
                 ("testBootstrappingWorks", testBootstrappingWorks),
+                ("testBootstrapOverrideOfShortcutOptions", testBootstrapOverrideOfShortcutOptions),
            ]
    }
 }

@@ -233,7 +233,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     private func decodeLoop(decodeMode: DecodeMode, seenEOF: Bool = false, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
         // we want to call decodeLast once with an empty buffer if we have nothing
         if decodeMode == .last && (self._buffer == nil || self._buffer!.readableBytes == 0) {
-            var emptyBuffer = self._buffer == nil ? ByteBufferAllocator().buffer(capacity: 0) : self._buffer!
+            var emptyBuffer = self._buffer == nil ? ByteBuffer() : self._buffer!
             if let message = try self.decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF) {
                 try messageReceiver(message)
             }

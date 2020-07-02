@@ -19,9 +19,9 @@ class ChannelNotificationTest: XCTestCase {
 
     private static func assertFulfilled(promise: EventLoopPromise<Void>?, promiseName: String, trigger: String, setter: String, file: StaticString = #file, line: UInt = #line) {
         if let promise = promise {
-            XCTAssertTrue(promise.futureResult.isFulfilled, "\(promiseName) not fulfilled before \(trigger) was called", file: file, line: line)
+            XCTAssertTrue(promise.futureResult.isFulfilled, "\(promiseName) not fulfilled before \(trigger) was called", file: (file), line: line)
         } else {
-            XCTFail("\(setter) not called before \(trigger)", file: file, line: line)
+            XCTFail("\(setter) not called before \(trigger)", file: (file), line: line)
         }
     }
 

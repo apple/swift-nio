@@ -331,7 +331,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     /// Support for vector reads, if enabled.
     private var vectorReadManager: Optional<DatagramVectorReadManager>
-
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
         return pendingWrites.isWritable
@@ -412,6 +411,21 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             #else
             break
             #endif
+        case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
+            let valueAsInt: Int32 = value as! Bool ? 1 : 0
+            switch self.localAddress?.protocol {
+            case .some(.inet):
+                try self.socket.setOption(level: .ip,
+                                          name: .ip_recv_tos,
+                                          value: valueAsInt)
+            case .some(.inet6):
+                try self.socket.setOption(level: .ipv6,
+                                          name: .ipv6_recv_tclass,
+                                          value: valueAsInt)
+            default:
+                // Explicit congestion notification is only supported for IP
+                throw ChannelError.operationUnsupported
+            }
         default:
             try super.setOption0(option, value: value)
         }
@@ -431,6 +445,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return pendingWrites.waterMark as! Option.Value
         case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
             return (self.vectorReadManager?.messageCount ?? 0) as! Option.Value
+        case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
+            switch self.localAddress?.protocol {
+            case .some(.inet):
+                return try (self.socket.getOption(level: .ip,
+                                                  name: .ip_recv_tos) != 0) as! Option.Value
+            case .some(.inet6):
+                return try (self.socket.getOption(level: .ipv6,
+                                                  name: .ipv6_recv_tclass) != 0) as! Option.Value
+            default:
+                // Explicit congestion notification is only supported for IP
+                throw ChannelError.operationUnsupported
+            }
         default:
             return try super.getOption0(option)
         }

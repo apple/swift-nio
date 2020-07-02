@@ -16,6 +16,17 @@ import XCTest
 @testable import NIO
 import NIOConcurrencyHelpers
 
+extension System {
+    static var supportsIPv6: Bool {
+        do {
+            let ipv6Loopback = try SocketAddress.makeAddressResolvingHost("::1", port: 0)
+            return try System.enumerateInterfaces().filter { $0.address == ipv6Loopback }.first != nil
+        } catch {
+            return false
+        }
+    }
+}
+
 func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) throws -> [NIO.NIOFileHandle]) throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
@@ -248,7 +259,7 @@ func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue
     do {
         return try body()
     } catch {
-        XCTFail("\(message.map { $0 + ": " } ?? "")unexpected error \(error) thrown", file: file, line: line)
+        XCTFail("\(message.map { $0 + ": " } ?? "")unexpected error \(error) thrown", file: (file), line: line)
         if let defaultValue = defaultValue {
             return defaultValue
         } else {
@@ -293,21 +304,21 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
     } while (NIODeadline.now() < endTime)
 
     if !condition() {
-        XCTFail(message, file: file, line: line)
+        XCTFail(message, file: (file), line: line)
     }
 }
 
 func getBoolSocketOption(channel: Channel, level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option,
                          file: StaticString = #file, line: UInt = #line) throws -> Bool {
-    return try assertNoThrowWithValue(channel.getOption(ChannelOptions.Types.SocketOption(level: level, name: name)), file: file, line: line).wait() != 0
+    return try assertNoThrowWithValue(channel.getOption(ChannelOptions.Types.SocketOption(level: level, name: name)), file: (file), line: line).wait() != 0
 }
 
 func assertSuccess<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
-    guard case .success = result else { return XCTFail("Expected result to be successful", file: file, line: line) }
+    guard case .success = result else { return XCTFail("Expected result to be successful", file: (file), line: line) }
 }
 
 func assertFailure<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
-    guard case .failure = result else { return XCTFail("Expected result to be a failure", file: file, line: line) }
+    guard case .failure = result else { return XCTFail("Expected result to be a failure", file: (file), line: line) }
 }
 
 /// Fulfills the promise when the respective event is first received.
@@ -490,7 +501,7 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
 
     let lock = Lock()
     var ret: [T] = []
-    _ = try forEachCrossConnectedStreamChannelPair(file: file, line: line) { (chan1: Channel, chan2: Channel) throws -> Void in
+    _ = try forEachCrossConnectedStreamChannelPair(file: (file), line: line) { (chan1: Channel, chan2: Channel) throws -> Void in
         var innerRet: [T] = [try body(chan1)]
         if let parent = chan1.parent {
             innerRet.append(try body(parent))
@@ -568,7 +579,7 @@ func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
             return channel.pipeline.addHandler(FulfillOnFirstEventHandler(channelActivePromise: accepted))
         }
         .bind(to: bindTarget)
-        .wait(), file: file, line: line)
+        .wait(), file: (file), line: line)
     defer {
         XCTAssertNoThrow(try tcpServerChannel.syncCloseAcceptingAlreadyClosed())
     }
@@ -614,7 +625,7 @@ func withCrossConnectedPipeChannels<R>(forceSeparateEventLoops: Bool = false,
                                        _ body: (Channel, Channel) throws -> R) throws -> R {
     let channel1Group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
-        XCTAssertNoThrow(try channel1Group.syncShutdownGracefully(), file: file, line: line)
+        XCTAssertNoThrow(try channel1Group.syncShutdownGracefully(), file: (file), line: line)
     }
     let channel2Group: MultiThreadedEventLoopGroup
     if forceSeparateEventLoops {
@@ -652,14 +663,14 @@ func withCrossConnectedPipeChannels<R>(forceSeparateEventLoops: Bool = false,
                     }
                 }
             }
-            XCTAssertNoThrow(try pipe1Read.takeDescriptorOwnership(), file: file, line: line)
-            XCTAssertNoThrow(try pipe1Write.takeDescriptorOwnership(), file: file, line: line)
-            XCTAssertNoThrow(try pipe2Read.takeDescriptorOwnership(), file: file, line: line)
-            XCTAssertNoThrow(try pipe2Write.takeDescriptorOwnership(), file: file, line: line)
+            XCTAssertNoThrow(try pipe1Read.takeDescriptorOwnership(), file: (file), line: line)
+            XCTAssertNoThrow(try pipe1Write.takeDescriptorOwnership(), file: (file), line: line)
+            XCTAssertNoThrow(try pipe2Read.takeDescriptorOwnership(), file: (file), line: line)
+            XCTAssertNoThrow(try pipe2Write.takeDescriptorOwnership(), file: (file), line: line)
             return []
         }
         return [] // the channels are closing the pipes
-    }, file: file, line: line)
+    }, file: (file), line: line)
     return result!
 }
 

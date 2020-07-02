@@ -45,8 +45,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
     }
 
     private func sendRequest(channel: Channel, uri: String, message: String) {
-        var requestBuffer = allocator.buffer(capacity: message.utf8.count)
-        requestBuffer.writeString(message)
+        let requestBuffer = allocator.buffer(string: message)
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(requestBuffer.readableBytes)")
@@ -138,8 +137,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         XCTAssertNoThrow(try testServer.readInbound().assertEnd())
 
         // Send the response to the client
-        var responseBuffer = allocator.buffer(capacity: responseMessage.utf8.count)
-        responseBuffer.writeString(responseMessage)
+        let responseBuffer = allocator.buffer(string: responseMessage)
         XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(responseBuffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
@@ -189,8 +187,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
 
         // Send the response to client1
         let response1Message = "Response #1"
-        var response1Buffer = allocator.buffer(capacity: response1Message.utf8.count)
-        response1Buffer.writeString(response1Message)
+        let response1Buffer = allocator.buffer(string: response1Message)
         XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response1Buffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
@@ -202,8 +199,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
 
         // Send the response to client2
         let response2Message = "Response #2"
-        var response2Buffer = allocator.buffer(capacity: response2Message.utf8.count)
-        response2Buffer.writeString(response2Message)
+        let response2Buffer = allocator.buffer(string: response2Message)
         XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response2Buffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
@@ -288,7 +284,7 @@ extension HTTPServerRequestPart {
             XCTAssertEqual(expectedURI, head.uri)
             XCTAssertEqual("text/plain; charset=utf-8", head.headers["Content-Type"].first)
         default:
-            XCTFail("Expected head, got \(self)", file: file, line: line)
+            XCTFail("Expected head, got \(self)", file: (file), line: line)
         }
     }
 
@@ -299,7 +295,7 @@ extension HTTPServerRequestPart {
             XCTAssertEqual(expectedMessage,
                            String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
         default:
-            XCTFail("Expected body, got \(self)", file: file, line: line)
+            XCTFail("Expected body, got \(self)", file: (file), line: line)
         }
     }
 
@@ -308,7 +304,7 @@ extension HTTPServerRequestPart {
         case .end(_):
             ()
         default:
-            XCTFail("Expected end, got \(self)", file: file, line: line)
+            XCTFail("Expected end, got \(self)", file: (file), line: line)
         }
     }
 }
@@ -324,11 +320,7 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
         case .head:
             context.fireChannelRead(data)
         case .body(var buffer):
-            if self.receivedSoFar == nil {
-                self.receivedSoFar = buffer
-            } else {
-                self.receivedSoFar?.writeBuffer(&buffer)
-            }
+            self.receivedSoFar.setOrWriteBuffer(&buffer)
         case .end:
             if let receivedSoFar = self.receivedSoFar {
                 context.fireChannelRead(self.wrapInboundOut(.body(receivedSoFar)))
@@ -343,7 +335,11 @@ private enum ResponseError: Error {
     case missingResponse
 }
 
-func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
+func assert(_ condition: @autoclosure () -> Bool,
+            within time: TimeAmount,
+            testInterval: TimeAmount? = nil,
+            _ message: String = "condition not satisfied in time",
+            file: StaticString = #file, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
@@ -353,6 +349,6 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
     } while (NIODeadline.now() < endTime)
 
     if !condition() {
-        XCTFail(message, file: file, line: line)
+        XCTFail(message, file: (file), line: line)
     }
 }

@@ -144,7 +144,7 @@ public final class RepeatedTask {
         }
 
         scheduled.futureResult.whenSuccess { future in
-            future.whenComplete { (_: Result<Void, Error>) in
+            future.hop(to: self.eventLoop).whenComplete { (_: Result<Void, Error>) in
                 self.reschedule0()
             }
         }
@@ -276,7 +276,7 @@ extension EventLoopGroup {
 /// Represents a time _interval_.
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
-public struct TimeAmount: Equatable {
+public struct TimeAmount: Hashable {
     @available(*, deprecated, message: "This typealias doesn't serve any purpose. Please use Int64 directly.")
     public typealias Value = Int64
 
@@ -434,7 +434,7 @@ extension NIODeadline: CustomStringConvertible {
 
 extension NIODeadline {
     public static func - (lhs: NIODeadline, rhs: NIODeadline) -> TimeAmount {
-        // This won't ever crash, NIODeadlines are guanteed to be within 0 ..< 2^63-1 nanoseconds so the result can
+        // This won't ever crash, NIODeadlines are guaranteed to be within 0 ..< 2^63-1 nanoseconds so the result can
         // definitely be stored in a TimeAmount (which is an Int64).
         return .nanoseconds(Int64(lhs.uptimeNanoseconds) - Int64(rhs.uptimeNanoseconds))
     }
@@ -619,7 +619,9 @@ extension EventLoop {
     ///     - initialDelay: The delay after which the first task is executed.
     ///     - delay: The delay between the end of one task and the start of the next.
     ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
-    ///     - task: The closure that will be executed.
+    ///     - task: The closure that will be executed. Task will keep repeating regardless of whether the future
+    ///             gets fulfilled with success or error.
+    ///
     /// - return: `RepeatedTask`
     @discardableResult
     public func scheduleRepeatedAsyncTask(initialDelay: TimeAmount,

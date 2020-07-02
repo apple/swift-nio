@@ -106,14 +106,23 @@ final class DatagramChannelTests: XCTestCase {
     private var firstChannel: Channel! = nil
     private var secondChannel: Channel! = nil
 
-    private func buildChannel(group: EventLoopGroup) throws -> Channel {
+    private func buildChannel(group: EventLoopGroup, host: String = "127.0.0.1") throws -> Channel {
         return try DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
-            .bind(host: "127.0.0.1", port: 0)
+            .bind(host: host, port: 0)
             .wait()
+    }
+    
+    private var supportsIPv6: Bool {
+        do {
+            let ipv6Loopback = try SocketAddress(ipAddress: "::1", port: 0)
+            return try System.enumerateInterfaces().contains(where: { $0.address == ipv6Loopback })
+        } catch {
+            return false
+        }
     }
 
     override func setUp() {
@@ -626,5 +635,31 @@ final class DatagramChannelTests: XCTestCase {
         #else
         XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
         #endif
+    }
+    
+    // Mostly to check the types don't go pop as internally converts between bool and int and back.
+    func testSetGetEcnNotificationOption() {
+        XCTAssertNoThrow(try {
+            // IPv4
+            try self.firstChannel.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
+            XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
+            
+            try self.secondChannel.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
+            XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
+            
+            // IPv6
+            guard self.supportsIPv6 else {
+                // Skip on non-IPv6 systems
+                return
+            }
+            
+            let channel1 = try buildChannel(group: self.group, host: "::1")
+            try channel1.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
+            XCTAssertTrue(try channel1.getOption(ChannelOptions.explicitCongestionNotification).wait())
+            
+            let channel2 = try buildChannel(group: self.group, host: "::1")
+            try channel2.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
+            XCTAssertFalse(try channel2.getOption(ChannelOptions.explicitCongestionNotification).wait())
+        } ())
     }
 }

@@ -106,7 +106,7 @@ private let sysSendMmsg: @convention(c) (NIOBSDSocket.Handle, UnsafeMutablePoint
 private let sysRecvMmsg: @convention(c) (NIOBSDSocket.Handle, UnsafeMutablePointer<CNIOWindows_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIOWindows_recvmmsg
 #endif
 
-private func isBlacklistedErrno(_ code: Int32) -> Bool {
+private func isUnacceptableErrno(_ code: Int32) -> Bool {
     switch code {
     case EFAULT, EBADF:
         return true
@@ -115,9 +115,9 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
     }
 }
 
-private func preconditionIsNotBlacklistedErrno(err: CInt, where function: String) -> Void {
+private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    precondition(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+    precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
 }
 
 /*
@@ -141,7 +141,7 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
             case (EWOULDBLOCK, true):
                 return .wouldBlock(0)
             default:
-                preconditionIsNotBlacklistedErrno(err: err, where: function)
+                preconditionIsNotUnacceptableErrno(err: err, where: function)
                 throw IOError(errnoCode: err, reason: function)
             }
         }
@@ -158,7 +158,7 @@ internal func wrapErrorIsNullReturnCall<T>(where function: String = #function, _
             if err == EINTR {
                 continue
             }
-            preconditionIsNotBlacklistedErrno(err: err, where: function)
+            preconditionIsNotUnacceptableErrno(err: err, where: function)
             throw IOError(errnoCode: err, reason: function)
         }
         return res
@@ -212,7 +212,7 @@ internal enum Posix {
             //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
             //     - https://lwn.net/Articles/576478/
             if err != EINTR {
-                preconditionIsNotBlacklistedErrno(err: err, where: #function)
+                preconditionIsNotUnacceptableErrno(err: err, where: #function)
                 throw IOError(errnoCode: err, reason: "close")
             }
         }

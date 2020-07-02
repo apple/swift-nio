@@ -1175,4 +1175,37 @@ class EventLoopFutureTest : XCTestCase {
         }
         XCTAssertNoThrow(assertIsEqual(expected, try overall.wait()))
     }
+    
+    func testRepeatedTaskOffEventLoopGroupFuture() throws {
+        let elg1: EventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg1.syncShutdownGracefully())
+        }
+
+        let elg2: EventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg2.syncShutdownGracefully())
+        }
+
+        let exitPromise: EventLoopPromise<Void> = elg1.next().makePromise()
+        var callNumber = 0
+        _ = elg1.next().scheduleRepeatedAsyncTask(initialDelay: .nanoseconds(0), delay: .nanoseconds(0)) { task in
+            struct Dummy: Error {}
+
+            callNumber += 1
+            switch callNumber {
+            case 1:
+                return elg2.next().makeSucceededFuture(())
+            case 2:
+                task.cancel(promise: exitPromise)
+                return elg2.next().makeFailedFuture(Dummy())
+            default:
+                XCTFail("shouldn't be called \(callNumber)")
+                return elg2.next().makeFailedFuture(Dummy())
+            }
+        }
+        
+        try exitPromise.futureResult.wait()
+    }
+
 }

@@ -16,13 +16,6 @@ import XCTest
 import NIO
 import NIOHTTP1
 
-extension ByteBuffer {
-    init(string: String) {
-        self = ByteBufferAllocator().buffer(capacity: string.utf8.count)
-        self.writeString(string)
-    }
-}
-
 private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboundHandler {
     typealias InboundIn = HTTPPart<Head, Body>
 
@@ -141,7 +134,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         // That means, per RFC 7230 § 3.3.3, the body is framed by EOF. Because this is a response, that EOF
         // may be transmitted by channelInactive.
         let response = "HTTP/\(version.major).\(version.minor) 200 OK\r\nServer: example\r\n\r\n"
-        XCTAssertNoThrow(try channel.writeInbound(IOData.byteBuffer(ByteBuffer(string: response))))
+        XCTAssertNoThrow(try channel.writeInbound(IOData.byteBuffer(channel.allocator.buffer(string: response))))
 
         // We should have a response but no body.
         XCTAssertNotNil(handler.response)
@@ -150,7 +143,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertFalse(handler.eof)
 
         // Send a body chunk. This should be immediately passed on. Still no end or EOF.
-        XCTAssertNoThrow(try channel.writeInbound(IOData.byteBuffer(ByteBuffer(string: "some body data"))))
+        XCTAssertNoThrow(try channel.writeInbound(IOData.byteBuffer(channel.allocator.buffer(string: "some body data"))))
         XCTAssertNotNil(handler.response)
         XCTAssertEqual(handler.body!, Array("some body data".utf8))
         XCTAssertFalse(handler.receivedEnd)
@@ -299,7 +292,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Send a GET with the appropriate Transfer Encoding header.
-        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n"))) { error in
+        XCTAssertThrowsError(try channel.writeInbound(channel.allocator.buffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n"))) { error in
             XCTAssertEqual(error as? HTTPParserError, .unknown)
         }
     }
@@ -311,7 +304,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Send a GET with the appropriate Transfer Encoding header.
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\n")))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\n")))
 
         // We should have a request, no body, and immediately see end of request.
         XCTAssert(handler.seenHead)
@@ -344,13 +337,13 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Send a 200 with the appropriate Transfer Encoding header. We should see the request,
         // but no body or end.
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n")))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n")))
         XCTAssert(handler.seenHead)
         XCTAssertFalse(handler.seenBody)
         XCTAssertFalse(handler.seenEnd)
 
         // Now send body. Note that this is *not* chunk encoded. We should also see a body.
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "caribbean")))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "caribbean")))
         XCTAssert(handler.seenHead)
         XCTAssert(handler.seenBody)
         XCTAssertFalse(handler.seenEnd)
@@ -382,13 +375,13 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // Send a 200 with the appropriate Transfer Encoding header. We should see the request.
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n")))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n")))
         XCTAssert(handler.seenHead)
         XCTAssertFalse(handler.seenBody)
         XCTAssertFalse(handler.seenEnd)
 
         // Now send body. Note that this *is* chunk encoded. We should also see a body.
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "9\r\ncaribbean\r\n")))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "9\r\ncaribbean\r\n")))
         XCTAssert(handler.seenHead)
         XCTAssert(handler.seenBody)
         XCTAssertFalse(handler.seenEnd)
@@ -443,7 +436,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         // Send a GET with the invalid headers.
-        let request = ByteBuffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n")
+        let request = channel.allocator.buffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n")
         XCTAssertThrowsError(try channel.writeInbound(request)) { error in
             XCTAssertEqual(HTTPParserError.unexpectedContentLength, error as? HTTPParserError)
         }
@@ -464,7 +457,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Send a 200 OK with the invalid headers.
         let response = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n"
-        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: response))) { error in
+        XCTAssertThrowsError(try channel.writeInbound(channel.allocator.buffer(string: response))) { error in
             XCTAssertEqual(HTTPParserError.unexpectedContentLength, error as? HTTPParserError)
         }
 
@@ -478,7 +471,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Send a GET with the invalid headers.
         let request = "POST / HTTP/1.1\r\nContent-Length: \(contentLengthField)\r\n\r\n"
-        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: request))) { error in
+        XCTAssertThrowsError(try channel.writeInbound(channel.allocator.buffer(string: request))) { error in
             XCTAssert(HTTPParserError.unexpectedContentLength == error as? HTTPParserError ||
                 HTTPParserError.invalidContentLength == error as? HTTPParserError)
         }
@@ -508,7 +501,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         // Send two POSTs with repeated content length, one with one field and one with two.
         // Both should error.
         let request = "POST / HTTP/1.1\r\nContent-Length: 4, 4\r\n\r\n"
-        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: request))) { error in
+        XCTAssertThrowsError(try channel.writeInbound(channel.allocator.buffer(string: request))) { error in
             XCTAssertEqual(HTTPParserError.invalidContentLength, error as? HTTPParserError)
         }
 
@@ -523,7 +516,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         let request = "POST / HTTP/1.1\r\nContent-Length: 4\r\nContent-Length: 4\r\n\r\n"
-        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: request))) { error in
+        XCTAssertThrowsError(try channel.writeInbound(channel.allocator.buffer(string: request))) { error in
             XCTAssertEqual(HTTPParserError.unexpectedContentLength, error as? HTTPParserError)
         }
 
@@ -540,7 +533,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Send a POST without a length field of any kind. This should be a zero-length request,
         // so .end should come immediately.
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nHost: example.org\r\n\r\n")))
+        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "POST / HTTP/1.1\r\nHost: example.org\r\n\r\n")))
         XCTAssert(handler.seenHead)
         XCTAssertFalse(handler.seenBody)
         XCTAssert(handler.seenEnd)

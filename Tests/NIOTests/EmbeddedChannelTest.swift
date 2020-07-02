@@ -169,22 +169,22 @@ class EmbeddedChannelTest: XCTestCase {
                                      line: UInt = #line) {
             do {
                 _ = try channel.readOutbound(as: Expected.self)
-                XCTFail("this should have failed", file: file, line: line)
+                XCTFail("this should have failed", file: (file), line: line)
             } catch let error as EmbeddedChannel.WrongTypeError {
                 let expectedError = EmbeddedChannel.WrongTypeError(expected: Expected.self, actual: Actual.self)
-                XCTAssertEqual(error, expectedError, file: file, line: line)
+                XCTAssertEqual(error, expectedError, file: (file), line: line)
             } catch {
-                XCTFail("unexpected error: \(error)", file: file, line: line)
+                XCTFail("unexpected error: \(error)", file: (file), line: line)
             }
 
             do {
                 _ = try channel.readInbound(as: Expected.self)
-                XCTFail("this should have failed", file: file, line: line)
+                XCTFail("this should have failed", file: (file), line: line)
             } catch let error as EmbeddedChannel.WrongTypeError {
                 let expectedError = EmbeddedChannel.WrongTypeError(expected: Expected.self, actual: Actual.self)
-                XCTAssertEqual(error, expectedError, file: file, line: line)
+                XCTAssertEqual(error, expectedError, file: (file), line: line)
             } catch {
-                XCTFail("unexpected error: \(error)", file: file, line: line)
+                XCTFail("unexpected error: \(error)", file: (file), line: line)
             }
         }
 
@@ -314,8 +314,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testWriteWithoutFlushDoesNotWrite() throws {
         let channel = EmbeddedChannel()
 
-        var buf = ByteBufferAllocator().buffer(capacity: 1)
-        buf.writeBytes([1])
+        let buf = ByteBuffer(bytes: [1])
         let writeFuture = channel.write(buf)
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertFalse(writeFuture.isFulfilled)

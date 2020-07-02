@@ -25,7 +25,8 @@ import Glibc
 ///
 /// This object provides a lock on top of a single `pthread_mutex_t`. This kind
 /// of lock is safe to use with `libpthread`-based threading models, such as the
-/// one used by NIO.
+/// one used by NIO. On Windows, the lock is based on the substantially similar
+/// `SRWLOCK` type.
 public final class Lock {
 #if os(Windows)
     fileprivate let mutex: UnsafeMutablePointer<SRWLOCK> =
@@ -41,8 +42,8 @@ public final class Lock {
         InitializeSRWLock(self.mutex)
 #else
         var attr = pthread_mutexattr_t()
-        pthread_mutexattr_init(&attr);
-        pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK));
+        pthread_mutexattr_init(&attr)
+        pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
 
         let err = pthread_mutex_init(self.mutex, &attr)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
@@ -51,7 +52,7 @@ public final class Lock {
 
     deinit {
 #if os(Windows)
-        // mutexes do not need to be explicitly destroyed
+        // SRWLOCK does not need to be free'd
 #else
         let err = pthread_mutex_destroy(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")

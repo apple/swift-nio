@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __APPLE__
+
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -33,9 +35,6 @@ static char g_recursive_malloc_mem[10 * 1024 * 1024] = {0};
 /* the index of the first free byte */
 static _Atomic ptrdiff_t g_recursive_malloc_next_free_ptr = ATOMIC_VAR_INIT(0);
 
-#define DYLD_INTERPOSE(_replacement,_replacee) \
-   __attribute__((used)) static struct { const void *replacement; const void *replacee; } _interpose_##_replacee \
-            __attribute__ ((section("__DATA,__interpose"))) = { (const void *)(unsigned long)&_replacement, (const void *)(unsigned long)&_replacee };
 #define LIBC_SYMBOL(_fun) "" # _fun
 
 static __thread bool g_in_malloc = false;
@@ -86,16 +85,6 @@ static void recursive_free(void *ptr) {
     abort();
 }
 
-#if __APPLE__
-
-/* on Darwin calling the original function is super easy, just call it, done. */
-#define JUMP_INTO_LIBC_FUN(_fun, ...) /* \
-*/ do { /* \
-*/     return _fun(__VA_ARGS__); /* \
-*/ } while(0)
-
-#else
-
 /* on other UNIX systems this is slightly harder. Basically we see if we already
  * have a thread local variable that is a pointer to the original libc function.
  * If yes, easy, call it. If no, we need to resolve it which we do by using
@@ -116,8 +105,6 @@ static void recursive_free(void *ptr) {
 */     g_in_ ## _fun = false; /* \
 */     return g_libc_ ## _fun (__VA_ARGS__); /*
 */ } while(0)
-
-#endif
 
 void replacement_free(void *ptr) {
     if (ptr) {
@@ -180,12 +167,4 @@ int replacement_posix_memalign(void **memptr, size_t alignment, size_t size) {
     }
 }
 
-#if __APPLE__
-DYLD_INTERPOSE(replacement_free, free)
-DYLD_INTERPOSE(replacement_malloc, malloc)
-DYLD_INTERPOSE(replacement_realloc, realloc)
-DYLD_INTERPOSE(replacement_calloc, calloc)
-DYLD_INTERPOSE(replacement_reallocf, reallocf)
-DYLD_INTERPOSE(replacement_valloc, valloc)
-DYLD_INTERPOSE(replacement_posix_memalign, posix_memalign)
 #endif

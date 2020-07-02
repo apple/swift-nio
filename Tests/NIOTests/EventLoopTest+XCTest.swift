@@ -75,6 +75,8 @@ extension EventLoopTest {
                 ("testTakeOverThreadAndAlsoTakeItBack", testTakeOverThreadAndAlsoTakeItBack),
                 ("testThreadTakeoverUnsetsCurrentEventLoop", testThreadTakeoverUnsetsCurrentEventLoop),
                 ("testWeCanDoTrulySingleThreadedNetworking", testWeCanDoTrulySingleThreadedNetworking),
+                ("testWeFailOutstandingScheduledTasksOnELShutdown", testWeFailOutstandingScheduledTasksOnELShutdown),
+                ("testSchedulingTaskOnFutureFailedByELShutdownDoesNotMakeUsExplode", testSchedulingTaskOnFutureFailedByELShutdownDoesNotMakeUsExplode),
            ]
    }
 }
