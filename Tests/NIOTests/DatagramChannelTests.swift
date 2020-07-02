@@ -667,9 +667,17 @@ final class DatagramChannelTests: XCTestCase {
         } ())
     }
     
-    private func testEcnReceive(address: String) {
+    private func testEcnReceive(address: String, vectorRead: Bool) {
         XCTAssertNoThrow(try {
-            let receiveChannel = try DatagramBootstrap(group: group)
+            let receiveBootstrap: DatagramBootstrap
+            if vectorRead {
+                receiveBootstrap = DatagramBootstrap(group: group)
+                    .channelOption(ChannelOptions.datagramVectorReadMessageCount, value: 4)
+            } else {
+                receiveBootstrap = DatagramBootstrap(group: group)
+            }
+                
+            let receiveChannel = try receiveBootstrap
                 .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
                 .channelInitializer { channel in
                     channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
@@ -703,13 +711,24 @@ final class DatagramChannelTests: XCTestCase {
     }
     
     func testEcnSendReceiveIPV4() {
-        testEcnReceive(address: "127.0.0.1")
+        testEcnReceive(address: "127.0.0.1", vectorRead: false)
     }
     
     func testEcnSendReceiveIPV6() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        testEcnReceive(address: "::1")
+        testEcnReceive(address: "::1", vectorRead: false)
+    }
+    
+    func testEcnSendReceiveIPV4VectorRead() {
+        testEcnReceive(address: "127.0.0.1", vectorRead: true)
+    }
+    
+    func testEcnSendReceiveIPV6VectorRead() {
+        guard System.supportsIPv6 else {
+            return // need to skip IPv6 tests if we don't support it.
+        }
+        testEcnReceive(address: "::1", vectorRead: true)
     }
 }
