@@ -175,3 +175,12 @@ extension NIOExplicitCongestionNotificationState {
         }
     }
 }
+
+extension AddressedEnvelope.Metadata {
+    /// It's assumed the caller has checked that congestion information is required before calling.
+    internal init(from controlMessagesReceived: UnsafeControlMessageCollection) {
+        var controlMessageReceiver = ControlMessageReceiver()
+        controlMessagesReceived.forEach { controlMessage in controlMessageReceiver.receiveMessage(controlMessage) }
+        self.init(ecnState: controlMessageReceiver.ecnValue)
+    }
+}
