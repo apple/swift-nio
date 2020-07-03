@@ -253,10 +253,10 @@ class HookedSocket: Socket, UserKernelInterface {
     fileprivate let userToKernel: LockedBox<UserToKernel>
     fileprivate let kernelToUser: LockedBox<KernelToUser>
 
-    init(userToKernel: LockedBox<UserToKernel>, kernelToUser: LockedBox<KernelToUser>, descriptor: CInt) throws {
+    init(userToKernel: LockedBox<UserToKernel>, kernelToUser: LockedBox<KernelToUser>, socket: NIOBSDSocket.Handle) throws {
         self.userToKernel = userToKernel
         self.kernelToUser = kernelToUser
-        try super.init(descriptor: descriptor)
+        try super.init(socket: socket)
     }
 
     override func ignoreSIGPIPE() throws {
@@ -505,7 +505,7 @@ extension SALTest {
         }) {
             try SocketChannel(socket: HookedSocket(userToKernel: self.userToKernelBox,
                                                    kernelToUser: self.kernelToUserBox,
-                                                   descriptor: .max),
+                                                   socket: .max),
                               eventLoop: eventLoop)
         }
         try self.assertParkedRightNow()
@@ -527,7 +527,7 @@ extension SALTest {
         }) {
             try SocketChannel(socket: HookedSocket(userToKernel: self.userToKernelBox,
                                                    kernelToUser: self.kernelToUserBox,
-                                                   descriptor: .max),
+                                                   socket: .max),
                               eventLoop: self.loop)
         }
         try self.assertParkedRightNow()
