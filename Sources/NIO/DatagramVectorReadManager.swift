@@ -185,12 +185,8 @@ struct DatagramVectorReadManager {
             // Extract congestion information if requested.
             let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
             if reportExplicitCongestionNotifications {
-                let controlMessageCollection = UnsafeControlMessageCollection(messageHeader: messageVector[i].msg_hdr)
-                var controlMessageReceiver = ControlMessageReceiver()
-                controlMessageCollection.forEach {
-                    controlMessage in controlMessageReceiver.receiveMessage(controlMessage)
-                }
-                metadata = .init(ecnState: controlMessageReceiver.ecnValue)
+                let controlMessagesReceived = UnsafeControlMessageCollection(messageHeader: messageVector[i].msg_hdr)
+                metadata = .init(from: controlMessagesReceived)
             } else {
                 metadata = nil
             }

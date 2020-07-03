@@ -174,7 +174,7 @@ typealias IOVector = iovec
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
                  controlBytes: inout Slice<UnsafeMutableRawBufferPointer>,
-                 controlMessageReceiver: (UnsafeControlMessage) -> ()) throws -> IOResult<Int> {
+                 controlMessagesReceived: inout UnsafeControlMessageCollection?) throws -> IOResult<Int> {
         var vec = iovec(iov_base: pointer.baseAddress, iov_len: pointer.count)
         let localControlBytePointer = UnsafeMutableRawBufferPointer(rebasing: controlBytes)
 
@@ -202,8 +202,7 @@ typealias IOVector = iovec
                 
                 // Only look at the control bytes if all is good.
                 if case .processed = result {
-                    let controlMessageCollection = UnsafeControlMessageCollection(messageHeader: messageHeader)
-                    controlMessageCollection.forEach(controlMessageReceiver)
+                    controlMessagesReceived = UnsafeControlMessageCollection(messageHeader: messageHeader)
                 }
                 
                 return result

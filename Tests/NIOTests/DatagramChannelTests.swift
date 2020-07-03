@@ -386,10 +386,11 @@ final class DatagramChannelTests: XCTestCase {
                 try super.init(protocolFamily: .inet, type: .datagram)
             }
 
-            override func recvmsg(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage,
+            override func recvmsg(pointer: UnsafeMutableRawBufferPointer,
+                                  storage: inout sockaddr_storage,
                                   storageLen: inout socklen_t,
                                   controlBytes: inout Slice<UnsafeMutableRawBufferPointer>,
-                                  controlMessageReceiver: (UnsafeControlMessage) -> ())
+                                  controlMessagesReceived: inout UnsafeControlMessageCollection?)
                                   throws -> IOResult<(Int)> {
                 if let err = self.error {
                     self.error = nil

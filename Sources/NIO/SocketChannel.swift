@@ -508,12 +508,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 buffer.clear()
 
                 var controlByteSlice = controlBytes[...]
-                var controlMessageReceiver = ControlMessageReceiver()
+                var controlMessagesReceived: UnsafeControlMessageCollection?
                 
                 let result = try buffer.withMutableWritePointer {
                     try self.socket.recvmsg(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength,
                                             controlBytes: &controlByteSlice,
-                                            controlMessageReceiver: { (controlMessage) in controlMessageReceiver.receiveMessage(controlMessage) })
+                                            controlMessagesReceived: &controlMessagesReceived)
                 }
                 switch result {
                 case .processed(let bytesRead):
@@ -523,8 +523,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     readPending = false
                     
                     let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                    if self.reportExplicitCongestionNotifications {
-                        metadata = .init(ecnState: controlMessageReceiver.ecnValue)
+                    if self.reportExplicitCongestionNotifications,
+                       let controlMessagesReceived = controlMessagesReceived {
+                        metadata = .init(from: controlMessagesReceived)
                     } else {
                         metadata = nil
                     }
