@@ -153,16 +153,21 @@ public final class NIOThreadPool {
 
     /// Start the `NIOThreadPool` if not already started.
     public func start() {
-        self.lock.withLock {
+        let alreadyRunning: Bool = self.lock.withLock {
             switch self.state {
             case .running(_):
-                return
+                return true
             case .shuttingDown(_):
                 // This should never happen
                 fatalError("start() called while in shuttingDown")
             case .stopped:
                 self.state = .running(CircularBuffer(initialCapacity: 16))
+                return false
             }
+        }
+
+        if alreadyRunning {
+            return
         }
 
         let group = DispatchGroup()

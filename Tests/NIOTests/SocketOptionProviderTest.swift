@@ -24,29 +24,29 @@ final class SocketOptionProviderTest: XCTestCase {
 
     struct CastError: Error { }
 
-    private func convertedChannel(file: StaticString = (#file), line: UInt = #line) throws -> SocketOptionProvider {
+    private func convertedChannel(file: StaticString = #file, line: UInt = #line) throws -> SocketOptionProvider {
         guard let provider = self.clientChannel as? SocketOptionProvider else {
-            XCTFail("Unable to cast \(String(describing: self.clientChannel)) to SocketOptionProvider", file: file, line: line)
+            XCTFail("Unable to cast \(String(describing: self.clientChannel)) to SocketOptionProvider", file: (file), line: line)
             throw CastError()
         }
         return provider
     }
 
-    private func ipv4MulticastProvider(file: StaticString = (#file), line: UInt = #line) throws -> SocketOptionProvider {
+    private func ipv4MulticastProvider(file: StaticString = #file, line: UInt = #line) throws -> SocketOptionProvider {
         guard let provider = self.ipv4DatagramChannel as? SocketOptionProvider else {
-            XCTFail("Unable to cast \(String(describing: self.ipv4DatagramChannel)) to SocketOptionProvider", file: file, line: line)
+            XCTFail("Unable to cast \(String(describing: self.ipv4DatagramChannel)) to SocketOptionProvider", file: (file), line: line)
             throw CastError()
         }
         return provider
     }
 
-    private func ipv6MulticastProvider(file: StaticString = (#file), line: UInt = #line) throws -> SocketOptionProvider? {
+    private func ipv6MulticastProvider(file: StaticString = #file, line: UInt = #line) throws -> SocketOptionProvider? {
         guard let ipv6Channel = self.ipv6DatagramChannel else {
             return nil
         }
 
         guard let provider = ipv6Channel as? SocketOptionProvider else {
-            XCTFail("Unable to cast \(ipv6Channel)) to SocketOptionChannel", file: file, line: line)
+            XCTFail("Unable to cast \(ipv6Channel)) to SocketOptionChannel", file: (file), line: line)
             throw CastError()
         }
 

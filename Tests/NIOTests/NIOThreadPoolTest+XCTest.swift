@@ -28,6 +28,7 @@ extension NIOThreadPoolTest {
    static var allTests : [(String, (NIOThreadPoolTest) -> () throws -> Void)] {
       return [
                 ("testThreadNamesAreSetUp", testThreadNamesAreSetUp),
+                ("testThreadPoolStartsMultipleTimes", testThreadPoolStartsMultipleTimes),
            ]
    }
 }

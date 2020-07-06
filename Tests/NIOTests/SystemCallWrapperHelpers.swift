@@ -48,7 +48,7 @@ enum TestError: Error {
 func runStandalone() {
     func assertFun(condition: @autoclosure () -> Bool, string: @autoclosure () -> String, file: StaticString, line: UInt) -> Void {
         if !condition() {
-            fatalError(string(), file: file, line: line)
+            fatalError(string(), file: (file), line: line)
         }
     }
     do {

@@ -23,11 +23,11 @@ extension ChannelPipeline {
     }
 
     func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
-                                                       file: StaticString = (#file),
+                                                       file: StaticString = #file,
                                                        line: UInt = #line) throws {
         do {
             let context = try self.context(handlerType: handlerType).wait()
-            XCTFail("Found handler: \(context.handler)", file: file, line: line)
+            XCTFail("Found handler: \(context.handler)", file: (file), line: line)
         } catch ChannelPipelineError.notFound {
             // Nothing to see here
         }

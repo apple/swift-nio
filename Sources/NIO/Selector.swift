@@ -641,7 +641,7 @@ internal class Selector<R: Registration> {
             // We try! all of the closes because close can only fail in the following ways:
             // - EINTR, which we eat in Posix.close
             // - EIO, which can only happen for on-disk files
-            // - EBADF, which can't happen here because we would crash in the errno blacklisting
+            // - EBADF, which can't happen here because we would crash as EBADF is marked unacceptable
             // Therefore, we assert here that close will always succeed and if not, that's a NIO bug we need to know
             // about.
 

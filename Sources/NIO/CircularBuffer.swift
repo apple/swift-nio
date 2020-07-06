@@ -656,9 +656,8 @@ extension CircularBuffer: RangeReplaceableCollection {
         case self.headBackingIndex:
             self.advanceHeadIdx(by: 1)
             self._buffer[bufferIndex] = nil
-        case self.indexBeforeHeadIdx():
+        case self.indexBeforeTailIdx():
             self.advanceTailIdx(by: -1)
-            self.tailBackingIndex = self.indexBeforeTailIdx()
             self._buffer[bufferIndex] = nil
         default:
             self._buffer[bufferIndex] = nil
