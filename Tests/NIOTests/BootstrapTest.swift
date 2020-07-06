@@ -155,7 +155,7 @@ class BootstrapTest: XCTestCase {
                                               socketVector: &socketFDs))
         defer {
             // 0 is closed together with the Channel below.
-            XCTAssertNoThrow(try Posix.close(descriptor: socketFDs[1]))
+            XCTAssertNoThrow(try NIOBSDSocket.close(socket: socketFDs[1]))
         }
 
         XCTAssertNoThrow(try ClientBootstrap(group: self.freshEventLoop())
@@ -163,19 +163,20 @@ class BootstrapTest: XCTestCase {
                 XCTAssert(channel.eventLoop.inEventLoop)
                 return self.freshEventLoop().makeSucceededFuture(())
             }
-            .withConnectedSocket(descriptor: socketFDs[0])
+            .withConnectedSocket(socketFDs[0])
             .wait()
             .close()
             .wait())
     }
 
     func testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
-        let socket = try Posix.socket(domain: .inet, type: .stream, protocol: 0)
+        let socket =
+            try NIOBSDSocket.socket(domain: .inet, type: .stream, protocol: 0)
 
         let serverAddress = try assertNoThrowWithValue(SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0))
-        try serverAddress.withSockAddr { serverAddressPtr, size in
-            try Posix.bind(descriptor: socket, ptr: serverAddressPtr,
-                           bytes: size)
+        try serverAddress.withSockAddr { address, len in
+            try NIOBSDSocket.bind(socket: socket, address: address,
+                                  address_len: socklen_t(len))
         }
 
         let childChannelDone = self.freshEventLoop().next().makePromise(of: Void.self)
@@ -196,7 +197,7 @@ class BootstrapTest: XCTestCase {
                 }
                 return self.freshEventLoop().makeSucceededFuture(())
             }
-            .withBoundSocket(descriptor: socket)
+            .withBoundSocket(socket)
             .wait())
         let client = try assertNoThrowWithValue(ClientBootstrap(group: self.freshEventLoop())
             .channelInitializer { channel in
@@ -330,7 +331,7 @@ class BootstrapTest: XCTestCase {
                     }
                     return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
             }
-            .withConnectedSocket(descriptor: fd)
+            .withConnectedSocket(fd)
             .wait())
             XCTAssertNotNil(channel)
             XCTAssertNoThrow(try channel?.close().wait())
@@ -528,6 +529,52 @@ class BootstrapTest: XCTestCase {
 
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: elg))
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: el))
+    }
+    
+    func testConvenienceOptionsAreEquivalentUniversalClient() throws {
+        func setAndGetOption<Option>(option: Option, _ applyOptions : (NIOClientTCPBootstrap) -> NIOClientTCPBootstrap) throws
+            -> Option.Value where Option : ChannelOption {
+            var optionRead : EventLoopFuture<Option.Value>?
+            XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
+                var channel: Channel? = nil
+                XCTAssertNoThrow(channel = try applyOptions(NIOClientTCPBootstrap(
+                    ClientBootstrap(group: self.group), tls: NIOInsecureNoTLS()))
+                    .channelInitializer { channel in optionRead = channel.getOption(option)
+                        return channel.eventLoop.makeSucceededFuture(())
+                    }
+                .connect(to: server.localAddress!)
+                .wait())
+                XCTAssertNotNil(optionRead)
+                XCTAssertNotNil(channel)
+                XCTAssertNoThrow(try channel?.close().wait())
+            })
+            return try optionRead!.wait()
+        }
+        
+        func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
+                                            shortOption: ChannelOptions.TCPConvenienceOption) throws
+            where Option : ChannelOption, Option.Value : Equatable {
+            let longSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelOption(longOption, value: setValue)
+            }
+            let shortSetValue = try setAndGetOption(option: longOption) { bs in
+                bs.channelConvenienceOptions([shortOption])
+            }
+            let unsetValue = try setAndGetOption(option: longOption) { $0 }
+            
+            XCTAssertEqual(longSetValue, shortSetValue)
+            XCTAssertNotEqual(longSetValue, unsetValue)
+        }
+        
+        try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.so_reuseaddr),
+                                   setValue: 1,
+                                   shortOption: .allowLocalEndpointReuse)
+        try checkOptionEquivalence(longOption: ChannelOptions.allowRemoteHalfClosure,
+                                   setValue: true,
+                                   shortOption: .allowRemoteHalfClosure)
+        try checkOptionEquivalence(longOption: ChannelOptions.autoRead,
+                                   setValue: false,
+                                   shortOption: .disableAutoRead)
     }
 
     func testClientBindWorksOnSocketsBoundToEitherIPv4OrIPv6Only() {

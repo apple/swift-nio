@@ -18,7 +18,7 @@ extension Array where Element == UInt8 {
     
     /// Creates a `[UInt8]` from the given buffer. The entire readable portion of the buffer will be read.
     /// - parameter buffer: The buffer to read.
-    init(buffer: ByteBuffer) {
+    public init(buffer: ByteBuffer) {
         var buffer = buffer
         self = buffer.readBytes(length: buffer.readableBytes)!
     }

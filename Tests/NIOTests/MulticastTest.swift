@@ -109,7 +109,7 @@ final class MulticastTest: XCTestCase {
         }
     }
 
-    private func assertDatagramReaches(multicastChannel: Channel, sender: Channel, multicastAddress: SocketAddress, file: StaticString = (#file), line: UInt = #line) throws {
+    private func assertDatagramReaches(multicastChannel: Channel, sender: Channel, multicastAddress: SocketAddress, file: StaticString = #file, line: UInt = #line) throws {
         let receivedMulticastDatagram = multicastChannel.eventLoop.makePromise(of: AddressedEnvelope<ByteBuffer>.self)
         XCTAssertNoThrow(try multicastChannel.pipeline.addHandler(PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
 
@@ -118,11 +118,11 @@ final class MulticastTest: XCTestCase {
 
         XCTAssertNoThrow(
             try sender.writeAndFlush(AddressedEnvelope(remoteAddress: multicastAddress, data: messageBuffer)).wait(),
-            file: file,
+            file: (file),
             line: line
         )
 
-        let receivedDatagram = try assertNoThrowWithValue(receivedMulticastDatagram.futureResult.wait(), file: file, line: line)
+        let receivedDatagram = try assertNoThrowWithValue(receivedMulticastDatagram.futureResult.wait(), file: (file), line: line)
         XCTAssertEqual(receivedDatagram.remoteAddress, sender.localAddress!)
         XCTAssertEqual(receivedDatagram.data, messageBuffer)
     }
@@ -131,7 +131,7 @@ final class MulticastTest: XCTestCase {
                                             after timeout: TimeAmount,
                                             sender: Channel,
                                             multicastAddress: SocketAddress,
-                                            file: StaticString = (#file), line: UInt = #line) throws {
+                                            file: StaticString = #file, line: UInt = #line) throws {
         let timeoutPromise = multicastChannel.eventLoop.makePromise(of: Void.self)
         let receivedMulticastDatagram = multicastChannel.eventLoop.makePromise(of: AddressedEnvelope<ByteBuffer>.self)
         XCTAssertNoThrow(try multicastChannel.pipeline.addHandler(PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
@@ -146,12 +146,12 @@ final class MulticastTest: XCTestCase {
 
         XCTAssertNoThrow(
             try sender.writeAndFlush(AddressedEnvelope(remoteAddress: multicastAddress, data: messageBuffer)).wait(),
-            file: file,
+            file: (file),
             line: line
         )
 
         _ = multicastChannel.eventLoop.scheduleTask(in: timeout) { timeoutPromise.succeed(()) }
-        XCTAssertNoThrow(try timeoutPromise.futureResult.wait(), file: file, line: line)
+        XCTAssertNoThrow(try timeoutPromise.futureResult.wait(), file: (file), line: line)
     }
 
     func testCanJoinBasicMulticastGroupIPv4() throws {

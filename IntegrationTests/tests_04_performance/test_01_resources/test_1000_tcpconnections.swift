@@ -14,37 +14,75 @@
 
 import NIO
 
-fileprivate final class DoNothingHandler: ChannelInboundHandler {
+fileprivate final class ReceiveAndCloseHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
+
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let byteBuffer = self.unwrapInboundIn(data)
+        precondition(byteBuffer.readableBytes == 1)
+        context.channel.close(promise: nil)
+    }
+
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        fatalError("unexpected \(error)")
+    }
+}
+
+fileprivate final class LingerSettingHandler: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+    typealias OutboundOut = ByteBuffer
+    
+    public func handlerAdded(context: ChannelHandlerContext) {
+        (context.channel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0))
+            .whenFailure({ error in fatalError("Failed to set linger \(error)") })
+    }
+    
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        fatalError("unexpected \(error)")
+    }
 }
 
 func run(identifier: String) {
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    defer {
+        try! group.syncShutdownGracefully()
+    }
+
     let serverChannel = try! ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.addHandler(DoNothingHandler())
-            }.bind(to: localhostPickPort).wait()
+                channel.pipeline.addHandler(ReceiveAndCloseHandler())
+            }.bind(host: "127.0.0.1", port: 0).wait()
     defer {
         try! serverChannel.close().wait()
     }
-    
-    let clientBootstrap = ClientBootstrap(group: group)
-    
+
+    let clientHandler = LingerSettingHandler()
+    let clientBootstrap = ClientBootstrap(group: group).channelInitializer { channel in
+        channel.pipeline.addHandler(clientHandler)
+    }
+
     measure(identifier: identifier) {
         let numberOfIterations = 1000
-        
+        let serverAddress = serverChannel.localAddress!
+        let buffer = ByteBuffer(integer: 1, as: UInt8.self)
+        let el = group.next()
+
         for _ in 0 ..< numberOfIterations {
-            let clientChannel = try! clientBootstrap.connect(to: serverChannel.localAddress!)
-                    .wait()
-            defer {
-                try! clientChannel.close().wait()
-            }
-            // Send a byte to make sure everything is really open.
-            var buffer = clientChannel.allocator.buffer(capacity: 1)
-            buffer.writeInteger(1, as: UInt8.self)
-            try! clientChannel.writeAndFlush(NIOAny(buffer)).wait()
+            try! el.flatSubmit {
+                clientBootstrap.connect(to: serverAddress).flatMap { (clientChannel) -> EventLoopFuture<Void> in
+                    writeWaitAndClose(clientChannel: clientChannel, buffer: buffer)
+                }
+            }.wait()
         }
         return numberOfIterations
+    }
+}
+
+fileprivate func writeWaitAndClose(clientChannel: Channel, buffer: ByteBuffer) -> EventLoopFuture<Void> {
+    // Send a byte to make sure everything is really open.
+    return clientChannel.writeAndFlush(buffer).flatMap {
+        clientChannel.closeFuture
     }
 }

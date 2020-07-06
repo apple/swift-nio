@@ -330,7 +330,7 @@ public final class SocketChannelTest : XCTestCase {
         let serverSock = try Socket(protocolFamily: .inet, type: .stream)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
-            ServerBootstrap(group: group).withBoundSocket(descriptor: dup($0))
+            ServerBootstrap(group: group).withBoundSocket(dup($0))
         }
         try serverSock.close()
         let serverChannel = try serverChannelFuture.wait()
@@ -339,7 +339,7 @@ public final class SocketChannelTest : XCTestCase {
         let connected = try clientSock.connect(to: serverChannel.localAddress!)
         XCTAssertEqual(connected, true)
         let clientChannelFuture = try clientSock.withUnsafeHandle {
-            ClientBootstrap(group: group).withConnectedSocket(descriptor: dup($0))
+            ClientBootstrap(group: group).withConnectedSocket(dup($0))
         }
         try clientSock.close()
         let clientChannel = try clientChannelFuture.wait()
@@ -357,7 +357,7 @@ public final class SocketChannelTest : XCTestCase {
         let serverSock = try Socket(protocolFamily: .inet, type: .datagram)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
-            DatagramBootstrap(group: group).withBoundSocket(descriptor: dup($0))
+            DatagramBootstrap(group: group).withBoundSocket(dup($0))
         }
         try serverSock.close()
         let serverChannel = try serverChannelFuture.wait()

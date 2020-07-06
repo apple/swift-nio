@@ -372,4 +372,84 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         eventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
         XCTAssertEqual(tasksRun, 1)
     }
+
+    func testAdvanceTimeToDeadline() {
+        let eventLoop = EmbeddedEventLoop()
+        let deadline = NIODeadline.uptimeNanoseconds(0) + .seconds(42)
+
+        var tasksRun = 0
+        eventLoop.scheduleTask(deadline: deadline) {
+            tasksRun += 1
+        }
+
+        eventLoop.advanceTime(to: deadline)
+        XCTAssertEqual(tasksRun, 1)
+    }
+
+    func testWeCantTimeTravelByAdvancingTimeToThePast() {
+        let eventLoop = EmbeddedEventLoop()
+
+        var tasksRun = 0
+        eventLoop.scheduleTask(deadline: .uptimeNanoseconds(0) + .seconds(42)) {
+            tasksRun += 1
+        }
+
+        // t=40s
+        eventLoop.advanceTime(to: .uptimeNanoseconds(0) + .seconds(40))
+        XCTAssertEqual(tasksRun, 0)
+
+        // t=40s (still)
+        eventLoop.advanceTime(to: .distantPast)
+        XCTAssertEqual(tasksRun, 0)
+
+        // t=42s
+        eventLoop.advanceTime(by: .seconds(2))
+        XCTAssertEqual(tasksRun, 1)
+    }
+
+    func testExecuteInOrder() {
+        let eventLoop = EmbeddedEventLoop()
+        var counter = 0
+
+        eventLoop.execute {
+            XCTAssertEqual(counter, 0)
+            counter += 1
+        }
+
+        eventLoop.execute {
+            XCTAssertEqual(counter, 1)
+            counter += 1
+        }
+
+        eventLoop.execute {
+            XCTAssertEqual(counter, 2)
+            counter += 1
+        }
+
+        eventLoop.run()
+        XCTAssertEqual(counter, 3)
+    }
+
+    func testScheduledTasksInOrder() {
+        let eventLoop = EmbeddedEventLoop()
+        var counter = 0
+
+        eventLoop.scheduleTask(in: .seconds(1)) {
+            XCTAssertEqual(counter, 1)
+            counter += 1
+        }
+
+        eventLoop.scheduleTask(in: .milliseconds(1)) {
+            XCTAssertEqual(counter, 0)
+            counter += 1
+        }
+
+        eventLoop.scheduleTask(in: .seconds(1)) {
+            XCTAssertEqual(counter, 2)
+            counter += 1
+        }
+
+        eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(counter, 3)
+    }
 }

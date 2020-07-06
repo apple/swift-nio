@@ -165,26 +165,26 @@ class EmbeddedChannelTest: XCTestCase {
 
         func check<Expected, Actual>(expected: Expected.Type,
                                      actual: Actual.Type,
-                                     file: StaticString = (#file),
+                                     file: StaticString = #file,
                                      line: UInt = #line) {
             do {
                 _ = try channel.readOutbound(as: Expected.self)
-                XCTFail("this should have failed", file: file, line: line)
+                XCTFail("this should have failed", file: (file), line: line)
             } catch let error as EmbeddedChannel.WrongTypeError {
                 let expectedError = EmbeddedChannel.WrongTypeError(expected: Expected.self, actual: Actual.self)
-                XCTAssertEqual(error, expectedError, file: file, line: line)
+                XCTAssertEqual(error, expectedError, file: (file), line: line)
             } catch {
-                XCTFail("unexpected error: \(error)", file: file, line: line)
+                XCTFail("unexpected error: \(error)", file: (file), line: line)
             }
 
             do {
                 _ = try channel.readInbound(as: Expected.self)
-                XCTFail("this should have failed", file: file, line: line)
+                XCTFail("this should have failed", file: (file), line: line)
             } catch let error as EmbeddedChannel.WrongTypeError {
                 let expectedError = EmbeddedChannel.WrongTypeError(expected: Expected.self, actual: Actual.self)
-                XCTAssertEqual(error, expectedError, file: file, line: line)
+                XCTAssertEqual(error, expectedError, file: (file), line: line)
             } catch {
-                XCTFail("unexpected error: \(error)", file: file, line: line)
+                XCTFail("unexpected error: \(error)", file: (file), line: line)
             }
         }
 

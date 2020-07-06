@@ -205,6 +205,7 @@ extension ByteBufferTest {
                 ("testAllocatorGivesStableZeroSizedBuffers", testAllocatorGivesStableZeroSizedBuffers),
                 ("testClearOnZeroCapacityActuallyAllocates", testClearOnZeroCapacityActuallyAllocates),
                 ("testCreateBufferFromSequence", testCreateBufferFromSequence),
+                ("testWeDoNotResizeIfWeHaveExactlyTheRightCapacityAvailable", testWeDoNotResizeIfWeHaveExactlyTheRightCapacityAvailable),
                 ("testCreateArrayFromBuffer", testCreateArrayFromBuffer),
                 ("testCreateStringFromBuffer", testCreateStringFromBuffer),
                 ("testCreateDispatchDataFromBuffer", testCreateDispatchDataFromBuffer),

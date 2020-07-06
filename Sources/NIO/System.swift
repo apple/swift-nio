@@ -26,6 +26,10 @@ internal typealias MMsgHdr = CNIODarwin_mmsghdr
 @_exported import Glibc
 import CNIOLinux
 internal typealias MMsgHdr = CNIOLinux_mmsghdr
+#elseif os(Windows)
+import CNIOWindows
+internal typealias sockaddr = WinSDK.SOCKADDR
+internal typealias MMsgHdr = CNIOWindows_mmsghdr
 #else
 let badOS = { fatalError("unsupported OS") }()
 #endif
@@ -87,6 +91,7 @@ private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePoi
 private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
+private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 
 #if os(Linux)
@@ -102,7 +107,7 @@ private let sysCmsgDataMutable: @convention(c) (UnsafeMutablePointer<cmsghdr>?) 
                 CNIOLinux_CMSG_DATA_MUTABLE
 private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_SPACE
 private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_LEN
-#else
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
 private let sysKevent = kevent
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
@@ -117,9 +122,12 @@ private let sysCmsgDataMutable: @convention(c) (UnsafeMutablePointer<cmsghdr>?) 
                 CNIODarwin_CMSG_DATA_MUTABLE
 private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_SPACE
 private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_LEN
+#elseif os(Windows)
+private let sysSendMmsg: @convention(c) (NIOBSDSocket.Handle, UnsafeMutablePointer<CNIOWindows_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOWindows_sendmmsg
+private let sysRecvMmsg: @convention(c) (NIOBSDSocket.Handle, UnsafeMutablePointer<CNIOWindows_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIOWindows_recvmmsg
 #endif
 
-private func isBlacklistedErrno(_ code: Int32) -> Bool {
+private func isUnacceptableErrno(_ code: Int32) -> Bool {
     switch code {
     case EFAULT, EBADF:
         return true
@@ -128,9 +136,9 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
     }
 }
 
-private func preconditionIsNotBlacklistedErrno(err: CInt, where function: String) -> Void {
+private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    precondition(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+    precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
 }
 
 /*
@@ -154,7 +162,7 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
             case (EWOULDBLOCK, true):
                 return .wouldBlock(0)
             default:
-                preconditionIsNotBlacklistedErrno(err: err, where: function)
+                preconditionIsNotUnacceptableErrno(err: err, where: function)
                 throw IOError(errnoCode: err, reason: function)
             }
         }
@@ -171,27 +179,10 @@ internal func wrapErrorIsNullReturnCall<T>(where function: String = #function, _
             if err == EINTR {
                 continue
             }
-            preconditionIsNotBlacklistedErrno(err: err, where: function)
+            preconditionIsNotUnacceptableErrno(err: err, where: function)
             throw IOError(errnoCode: err, reason: function)
         }
         return res
-    }
-}
-
-enum Shutdown {
-    case RD
-    case WR
-    case RDWR
-
-    fileprivate var cValue: CInt {
-        switch self {
-        case .RD:
-            return CInt(Posix.SHUT_RD)
-        case .WR:
-            return CInt(Posix.SHUT_WR)
-        case .RDWR:
-            return CInt(Posix.SHUT_RDWR)
-        }
     }
 }
 
@@ -209,6 +200,15 @@ internal enum Posix {
     static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
 #else
     static var UIO_MAXIOV: Int {
+        fatalError("unsupported OS")
+    }
+    static var SHUT_RD: Int {
+        fatalError("unsupported OS")
+    }
+    static var SHUT_WR: Int {
+        fatalError("unsupported OS")
+    }
+    static var SHUT_RDWR: Int {
         fatalError("unsupported OS")
     }
 #endif
@@ -233,7 +233,7 @@ internal enum Posix {
             //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
             //     - https://lwn.net/Articles/576478/
             if err != EINTR {
-                preconditionIsNotBlacklistedErrno(err: err, where: #function)
+                preconditionIsNotUnacceptableErrno(err: err, where: #function)
                 throw IOError(errnoCode: err, reason: "close")
             }
         }
@@ -435,6 +435,15 @@ internal enum Posix {
     public static func inet_ntop(addressFamily: sa_family_t, addressBytes: UnsafeRawPointer, addressDescription: UnsafeMutablePointer<CChar>, addressDescriptionLength: socklen_t) throws -> UnsafePointer<CChar> {
         return try wrapErrorIsNullReturnCall {
             sysInet_ntop(CInt(addressFamily), addressBytes, addressDescription, addressDescriptionLength)
+        }
+    }
+
+    @inline(never)
+    public static func inet_pton(addressFamily: sa_family_t, addressDescription: UnsafePointer<CChar>, address: UnsafeMutableRawPointer) throws {
+        switch sysInet_pton(CInt(addressFamily), addressDescription, address) {
+        case 0: throw IOError(errnoCode: EINVAL, reason: #function)
+        case 1: return
+        default: throw IOError(errnoCode: errno, reason: #function)
         }
     }
 

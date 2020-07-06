@@ -225,13 +225,24 @@ public final class ServerBootstrap {
         }
     }
 
+    #if !os(Windows)
+        /// Use the existing bound socket file descriptor.
+        ///
+        /// - parameters:
+        ///     - descriptor: The _Unix file descriptor_ representing the bound stream socket.
+        @available(*, deprecated, renamed: "ServerBootstrap.withBoundSocket(_:)")
+        public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+            return withBoundSocket(descriptor)
+        }
+    #endif
+
     /// Use the existing bound socket file descriptor.
     ///
     /// - parameters:
     ///     - descriptor: The _Unix file descriptor_ representing the bound stream socket.
-    public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+    public func withBoundSocket(_ socket: NIOBSDSocket.Handle) -> EventLoopFuture<Channel> {
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerSocketChannel {
-            return try ServerSocketChannel(descriptor: descriptor, eventLoop: eventLoop, group: childEventLoopGroup)
+            return try ServerSocketChannel(socket: socket, eventLoop: eventLoop, group: childEventLoopGroup)
         }
         return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
             let promise = eventLoop.makePromise(of: Void.self)
@@ -613,17 +624,29 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         }
     }
 
+    #if !os(Windows)
+        /// Use the existing connected socket file descriptor.
+        ///
+        /// - parameters:
+        ///     - descriptor: The _Unix file descriptor_ representing the connected stream socket.
+        /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
+        @available(*, deprecated, renamed: "ClientBoostrap.withConnectedSocket(_:)")
+        public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+          return self.withConnectedSocket(descriptor)
+        }
+    #endif
+
     /// Use the existing connected socket file descriptor.
     ///
     /// - parameters:
     ///     - descriptor: The _Unix file descriptor_ representing the connected stream socket.
     /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-    public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+    public func withConnectedSocket(_ socket: NIOBSDSocket.Handle) -> EventLoopFuture<Channel> {
         let eventLoop = group.next()
         let channelInitializer = self.channelInitializer
         let channel: SocketChannel
         do {
-            channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, descriptor: descriptor)
+            channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, socket: socket)
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
@@ -783,13 +806,24 @@ public final class DatagramBootstrap {
         return self
     }
 
+    #if !os(Windows)
+        /// Use the existing bound socket file descriptor.
+        ///
+        /// - parameters:
+        ///     - descriptor: The _Unix file descriptor_ representing the bound datagram socket.
+        @available(*, deprecated, renamed: "DatagramBootstrap.withBoundSocket(_:)")
+        public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+            return self.withBoundSocket(descriptor)
+        }
+    #endif
+
     /// Use the existing bound socket file descriptor.
     ///
     /// - parameters:
     ///     - descriptor: The _Unix file descriptor_ representing the bound datagram socket.
-    public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+    public func withBoundSocket(_ socket: NIOBSDSocket.Handle) -> EventLoopFuture<Channel> {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
-            return try DatagramChannel(eventLoop: eventLoop, descriptor: descriptor)
+            return try DatagramChannel(eventLoop: eventLoop, socket: socket)
         }
         return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
             let promise = eventLoop.makePromise(of: Void.self)
