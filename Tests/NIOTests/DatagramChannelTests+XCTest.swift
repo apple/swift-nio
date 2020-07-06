@@ -55,6 +55,8 @@ extension DatagramChannelTests {
                 ("testEcnSendReceiveIPV6", testEcnSendReceiveIPV6),
                 ("testEcnSendReceiveIPV4VectorRead", testEcnSendReceiveIPV4VectorRead),
                 ("testEcnSendReceiveIPV6VectorRead", testEcnSendReceiveIPV6VectorRead),
+                ("testEcnSendReceiveIPV4VectorReadVectorWrite", testEcnSendReceiveIPV4VectorReadVectorWrite),
+                ("testEcnSendReceiveIPV6VectorReadVectorWrite", testEcnSendReceiveIPV6VectorReadVectorWrite),
            ]
    }
 }
