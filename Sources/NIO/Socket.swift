@@ -192,18 +192,16 @@ typealias IOVector = iovec
 
         return try withUnsafeHandle {
             let handle = $0
-          //  return try storage.withMutableSockAddr { (sockaddrPtr, _) in
-                return try withUnsafeMutablePointer(to: &vec) { vecPtr in
-                    var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
-                                               msg_namelen: destinationSize,
-                                               msg_iov: vecPtr,
-                                               msg_iovlen: 1,
-                                               msg_control: localControlBytePointer.baseAddress,
-                                               msg_controllen: .init(localControlBytePointer.count),
-                                               msg_flags: 0)
-                    return try Posix.sendmsg(descriptor: handle, msgHdr: &messageHeader, flags: 0)
-                }
-            //}
+            return try withUnsafeMutablePointer(to: &vec) { vecPtr in
+                var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
+                                           msg_namelen: destinationSize,
+                                           msg_iov: vecPtr,
+                                           msg_iovlen: 1,
+                                           msg_control: localControlBytePointer.baseAddress,
+                                           msg_controllen: .init(localControlBytePointer.count),
+                                           msg_flags: 0)
+                return try Posix.sendmsg(descriptor: handle, msgHdr: &messageHeader, flags: 0)
+            }
         }
     }
 
