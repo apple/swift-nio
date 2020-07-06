@@ -668,7 +668,7 @@ final class DatagramChannelTests: XCTestCase {
         } ())
     }
     
-    private func testEcnReceive(address: String, vectorRead: Bool) {
+    private func testEcnReceive(address: String, vectorRead: Bool, vectorSend: Bool) {
         XCTAssertNoThrow(try {
             let receiveBootstrap: DatagramBootstrap
             if vectorRead {
@@ -699,37 +699,53 @@ final class DatagramChannelTests: XCTestCase {
                 let writeData = AddressedEnvelope(remoteAddress: receiveChannel.localAddress!,
                                                   data: buffer,
                                                   metadata: .init(ecnState: ecnState))
+                // Sending extra data without flushing should trigger a vector send.
+                if (vectorSend) {
+                    sendChannel.write(writeData, promise: nil)
+                }
                 try sendChannel.writeAndFlush(writeData).wait()
             }
 
-            let reads = try receiveChannel.waitForDatagrams(count: ecnStates.count)
-            XCTAssertEqual(reads.count, ecnStates.count)
-            for readNumber in 0..<4 {
+            let expectedReads = ecnStates.count * (vectorSend ? 2 : 1)
+            let reads = try receiveChannel.waitForDatagrams(count: expectedReads)
+            XCTAssertEqual(reads.count, expectedReads)
+            for readNumber in 0..<reads.count {
                 let read = reads[readNumber]
-                XCTAssertEqual(read.metadata?.ecnState, ecnStates[readNumber])
+                XCTAssertEqual(read.metadata?.ecnState, ecnStates[readNumber / (vectorSend ? 2 : 1)])
             }
         } ())
     }
     
     func testEcnSendReceiveIPV4() {
-        testEcnReceive(address: "127.0.0.1", vectorRead: false)
+        testEcnReceive(address: "127.0.0.1", vectorRead: false, vectorSend: false)
     }
     
     func testEcnSendReceiveIPV6() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        testEcnReceive(address: "::1", vectorRead: false)
+        testEcnReceive(address: "::1", vectorRead: false, vectorSend: false)
     }
     
     func testEcnSendReceiveIPV4VectorRead() {
-        testEcnReceive(address: "127.0.0.1", vectorRead: true)
+        testEcnReceive(address: "127.0.0.1", vectorRead: true, vectorSend: false)
     }
     
     func testEcnSendReceiveIPV6VectorRead() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        testEcnReceive(address: "::1", vectorRead: true)
+        testEcnReceive(address: "::1", vectorRead: true, vectorSend: false)
+    }
+    
+    func testEcnSendReceiveIPV4VectorReadVectorWrite() {
+        testEcnReceive(address: "127.0.0.1", vectorRead: true, vectorSend: true)
+    }
+    
+    func testEcnSendReceiveIPV6VectorReadVectorWrite() {
+        guard System.supportsIPv6 else {
+            return // need to skip IPv6 tests if we don't support it.
+        }
+        testEcnReceive(address: "::1", vectorRead: true, vectorSend: true)
     }
 }

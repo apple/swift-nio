@@ -66,6 +66,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
                                                    msgs: UnsafeMutableBufferPointer<MMsgHdr>,
                                                    addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
                                                    storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+                                                   controlMessageBuffers: [UnsafeMutableRawBufferPointer],
                                                    _ body: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> IOResult<Int> {
     assert(msgs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal sendmmsg")
 
@@ -99,13 +100,18 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
             storageRefs[c] = storageRef.retain()
             let addressLen = p.copySocketAddress(addresses.baseAddress! + c)
             iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
+            
+            let controlMessageSlice = writeEcnToControlBytes(metadata: p.metadata,
+                                                             address: p.address,
+                                                             controlBytes: controlMessageBuffers[c])
+            let controlMessageBytePointer = UnsafeMutableRawBufferPointer(rebasing: controlMessageSlice)
 
             let msg = msghdr(msg_name: addresses.baseAddress! + c,
                              msg_namelen: addressLen,
                              msg_iov: iovecs.baseAddress! + c,
                              msg_iovlen: 1,
-                             msg_control: nil,
-                             msg_controllen: 0,
+                             msg_control: controlMessageBytePointer.baseAddress,
+                             msg_controllen: .init(controlMessageBytePointer.count),
                              msg_flags: 0)
             msgs[c] = MMsgHdr(msg_hdr: msg, msg_len: CUnsignedInt(toWriteForThisBuffer))
         }
@@ -357,6 +363,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// Storage for sockaddr structures. Only present on Linux because Darwin does not support gathering
     /// writes.
     private var addresses: UnsafeMutableBufferPointer<sockaddr_storage>
+    
+    private var controlMessageBuffers: [UnsafeMutableRawBufferPointer]
 
     private var state = PendingDatagramWritesState()
 
@@ -375,14 +383,17 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - iovecs: A pre-allocated array of `IOVector` elements
     ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
     ///     - storageRefs: A pre-allocated array of storage management tokens used to keep storage elements alive during a vector write operation
+    ///     - controlMessageBuffers: A pre-allocated array of memory buffers for storing
     init(msgs: UnsafeMutableBufferPointer<MMsgHdr>,
          iovecs: UnsafeMutableBufferPointer<IOVector>,
          addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
-         storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) {
+         storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+         controlMessageBuffers: [UnsafeMutableRawBufferPointer]) {
         self.msgs = msgs
         self.iovecs = iovecs
         self.addresses = addresses
         self.storageRefs = storageRefs
+        self.controlMessageBuffers = controlMessageBuffers
     }
 
     /// Mark the flush checkpoint.
@@ -530,6 +541,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                                                                        msgs: self.msgs,
                                                                        addresses: self.addresses,
                                                                        storageRefs: self.storageRefs,
+                                                                       controlMessageBuffers: self.controlMessageBuffers,
                                                                        { try vectorWriteOperation($0) }),
                              messages: self.msgs)
     }

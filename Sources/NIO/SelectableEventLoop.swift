@@ -87,7 +87,7 @@ internal final class SelectableEventLoop: EventLoop {
     let addresses: UnsafeMutableBufferPointer<sockaddr_storage>
     
     // Used for UDP control messages.
-    private let _controlMessages: UnsafeMutableRawBufferPointer
+    let controlMessageBuffers: [UnsafeMutableRawBufferPointer]
 
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
 
@@ -146,7 +146,12 @@ internal final class SelectableEventLoop: EventLoop {
         self._addresses = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self.msgs = UnsafeMutableBufferPointer(start: _msgs, count: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
-        self._controlMessages = DatagramChannel.allocateControlMessageBuffer()
+        var controlMessageBuffers: [UnsafeMutableRawBufferPointer] =
+            .init(repeating: .init(start: nil, count: 0), count: Socket.writevLimitIOVectors)
+        for controlIndex in 0..<controlMessageBuffers.count {
+            controlMessageBuffers[controlIndex] = DatagramChannel.allocateControlMessageBuffer()
+        }
+        self.controlMessageBuffers = controlMessageBuffers
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually
@@ -161,7 +166,9 @@ internal final class SelectableEventLoop: EventLoop {
         _storageRefs.deallocate()
         _msgs.deallocate()
         _addresses.deallocate()
-        _controlMessages.deallocate()
+        for controlBuffer in self.controlMessageBuffers {
+            controlBuffer.deallocate()
+        }
     }
 
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
@@ -563,7 +570,7 @@ internal final class SelectableEventLoop: EventLoop {
     
     func withControlMessageBytes<ReturnType>(
         _ body: (UnsafeMutableRawBufferPointer) throws -> ReturnType) rethrows -> ReturnType {
-        return try body(self._controlMessages)
+        return try body(self.controlMessageBuffers[0])
     }
 }
 

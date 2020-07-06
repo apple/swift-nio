@@ -162,7 +162,7 @@ extension NIOExplicitCongestionNotificationState {
     fileprivate static let notCapableValue = IPTOS_ECN_NOT_ECT    // Linux
     #endif
     
-    func asUInt8() -> UInt8 {
+    func asCInt() -> CInt {
         switch self {
         case .transportNotCapable:
             return .init(NIOExplicitCongestionNotificationState.notCapableValue)
@@ -183,4 +183,36 @@ extension AddressedEnvelope.Metadata {
         controlMessagesReceived.forEach { controlMessage in controlMessageReceiver.receiveMessage(controlMessage) }
         self.init(ecnState: controlMessageReceiver.ecnValue)
     }
+}
+
+/// - address:  Either local or remote will do, we just use it for extracting the right protocol.
+internal func writeEcnToControlBytes(metadata: AddressedEnvelope<ByteBuffer>.Metadata?,
+                                     address: SocketAddress?,
+                                     controlBytes: UnsafeMutableRawBufferPointer) ->
+                                        Slice<UnsafeMutableRawBufferPointer> {
+    let controlByteSlice:Slice<UnsafeMutableRawBufferPointer>
+    if let metadata = metadata {
+        switch address {
+        case .some(.v4):
+            let size = writeControlMessage(into: controlBytes,
+                                           level: .init(IPPROTO_IP),
+                                           type: IP_TOS,
+                                           payload: metadata.ecnState.asCInt())
+            controlByteSlice = controlBytes[..<size]
+        case .some(.v6):
+            let size = writeControlMessage(into: controlBytes,
+                                           level: .init(IPPROTO_IPV6),
+                                           type: IPV6_TCLASS,
+                                           payload: metadata.ecnState.asCInt())
+            controlByteSlice = controlBytes[..<size]
+        default:
+            let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+            controlByteSlice = controlBytes[...]
+            break
+        }
+    } else {
+        let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+        controlByteSlice = controlBytes[...]
+    }
+    return controlByteSlice
 }

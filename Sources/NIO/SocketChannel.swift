@@ -373,7 +373,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
                                                           iovecs: eventLoop.iovecs,
                                                           addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs)
+                                                          storageRefs: eventLoop.storageRefs,
+                                                          controlMessageBuffers: eventLoop.controlMessageBuffers)
 
         try super.init(socket: socket,
                        parent: nil,
@@ -387,7 +388,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
                                                           iovecs: eventLoop.iovecs,
                                                           addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs)
+                                                          storageRefs: eventLoop.storageRefs,
+                                                          controlMessageBuffers: eventLoop.controlMessageBuffers)
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
@@ -650,33 +652,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 }
                 // normal write
                 return try self.selectableEventLoop.withControlMessageBytes {
-                    let controlByteSlice:Slice<UnsafeMutableRawBufferPointer>
-                    if let metadata = metadata {
-                        switch self.localAddress {
-                        case .some(.v4):
-                            let controlBytes = $0
-                            let size = writeControlMessage(into: controlBytes,
-                                                           level: .init(IPPROTO_IP),
-                                                           type: IP_TOS,
-                                                           payload: metadata.ecnState.asUInt8())
-                            controlByteSlice = controlBytes[..<size]
-                        case .some(.v6):
-                            let controlBytes = $0
-                            let size = writeControlMessage(into: controlBytes,
-                                                           level: .init(IPPROTO_IPV6),
-                                                           type: IPV6_TCLASS,
-                                                           payload: UInt32(metadata.ecnState.asUInt8()))
-                            controlByteSlice = controlBytes[..<size]
-                        default:
-                            let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-                            controlByteSlice = controlBytes[...]
-                            break
-                        }
-                    } else {
-                        let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-                        controlByteSlice = controlBytes[...]
-                    }
-                    
+                    let controlBytes = $0
+                    let controlByteSlice = writeEcnToControlBytes(metadata: metadata,
+                                                                  address: self.localAddress,
+                                                                  controlBytes: controlBytes)
                     return try self.socket.sendmsg(pointer: ptr,
                                                    destinationPtr: destinationPtr,
                                                    destinationSize: destinationSize,
