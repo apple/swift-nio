@@ -652,14 +652,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 }
                 // normal write
                 return try self.selectableEventLoop.withControlMessageBytes {
-                    let controlBytes = $0
-                    let controlByteSlice = writeEcnToControlBytes(metadata: metadata,
-                                                                  address: self.localAddress,
-                                                                  controlBytes: controlBytes)
+                    var controlBytes = UnsafeOutboundControlBytes(controlBytes: $0)
+                    controlBytes.appendExplicitCongestionState(metadata: metadata,
+                                                               address: self.localAddress)
                     return try self.socket.sendmsg(pointer: ptr,
                                                    destinationPtr: destinationPtr,
                                                    destinationSize: destinationSize,
-                                                   controlBytes: controlByteSlice)
+                                                   controlBytes: controlBytes.validControlBytes)
                 }
             },
             vectorWriteOperation: { msgs in

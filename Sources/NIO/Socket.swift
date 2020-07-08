@@ -183,9 +183,8 @@ typealias IOVector = iovec
     func sendmsg(pointer: UnsafeRawBufferPointer,
                  destinationPtr: UnsafePointer<sockaddr>,
                  destinationSize: socklen_t,
-                 controlBytes: Slice<UnsafeMutableRawBufferPointer>) throws -> IOResult<Int> {
+                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         var vec = iovec(iov_base: UnsafeMutableRawPointer(mutating: pointer.baseAddress!), iov_len: pointer.count)
-        let localControlBytePointer = UnsafeMutableRawBufferPointer(rebasing: controlBytes)
         
         // Dubious const cast
         let notConstCorrectDestinationPtr = UnsafeMutableRawPointer(mutating: destinationPtr)
@@ -197,8 +196,8 @@ typealias IOVector = iovec
                                            msg_namelen: destinationSize,
                                            msg_iov: vecPtr,
                                            msg_iovlen: 1,
-                                           msg_control: localControlBytePointer.baseAddress,
-                                           msg_controllen: .init(localControlBytePointer.count),
+                                           msg_control: controlBytes.baseAddress,
+                                           msg_controllen: .init(controlBytes.count),
                                            msg_flags: 0)
                 return try Posix.sendmsg(descriptor: handle, msgHdr: &messageHeader, flags: 0)
             }

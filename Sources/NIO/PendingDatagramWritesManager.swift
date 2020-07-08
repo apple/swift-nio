@@ -101,10 +101,9 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
             let addressLen = p.copySocketAddress(addresses.baseAddress! + c)
             iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
             
-            let controlMessageSlice = writeEcnToControlBytes(metadata: p.metadata,
-                                                             address: p.address,
-                                                             controlBytes: controlMessageBuffers[c])
-            let controlMessageBytePointer = UnsafeMutableRawBufferPointer(rebasing: controlMessageSlice)
+            var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageBuffers[c])
+            controlBytes.appendExplicitCongestionState(metadata: p.metadata, address: p.address)
+            let controlMessageBytePointer = controlBytes.validControlBytes
 
             let msg = msghdr(msg_name: addresses.baseAddress! + c,
                              msg_namelen: addressLen,

@@ -150,26 +150,68 @@ extension NIOExplicitCongestionNotificationState {
     }
 }
 
-func writeControlMessage<PayloadType>(into buffer: UnsafeMutableRawBufferPointer,
-                                      level: Int32,
-                                      type: Int32,
-                                      payload: PayloadType) -> size_t {
-    let requiredSize = Posix.cmsgSpace(payloadSize: MemoryLayout.stride(ofValue: payload))
-    precondition(buffer.count >= requiredSize, "Insufficient size for cmsghdr and data")
+struct UnsafeOutboundControlBytes {
+    private var controlBytes: UnsafeMutableRawBufferPointer
+    private var writePosition: size_t = 0
     
-    let bufferBase = buffer.baseAddress!
-    let cmsghdrPtr = bufferBase.bindMemory(to: cmsghdr.self, capacity: 1)
-    cmsghdrPtr.pointee.cmsg_level = level
-    cmsghdrPtr.pointee.cmsg_type = type
-    cmsghdrPtr.pointee.cmsg_len = .init(Posix.cmsgLen(payloadSize: MemoryLayout.size(ofValue: payload)))
+    /// Control bytes are captured - this structure must not have a lifetime exceeded them.
+    init(controlBytes: UnsafeMutableRawBufferPointer) {
+        self.controlBytes = controlBytes
+    }
     
-    let dataPointer = Posix.cmsgData(for: .some(cmsghdrPtr))
-    precondition(dataPointer!.count >= MemoryLayout<PayloadType>.stride)
-    let dataPointerBase = dataPointer!.baseAddress!
-    let dataPointerTyped = dataPointerBase.bindMemory(to: PayloadType.self, capacity: 1)
-    dataPointerTyped.pointee = payload
+    mutating func appendControlMessage<PayloadType>(level: Int32,
+                                          type: Int32,
+                                          payload: PayloadType) {
+        let writableBuffer = UnsafeMutableRawBufferPointer(rebasing: self.controlBytes[writePosition...])
+        
+        let requiredSize = Posix.cmsgSpace(payloadSize: MemoryLayout.stride(ofValue: payload))
+        precondition(writableBuffer.count >= requiredSize, "Insufficient size for cmsghdr and data")
+        
+        let bufferBase = writableBuffer.baseAddress!
+        let cmsghdrPtr = bufferBase.bindMemory(to: cmsghdr.self, capacity: 1)
+        cmsghdrPtr.pointee.cmsg_level = level
+        cmsghdrPtr.pointee.cmsg_type = type
+        cmsghdrPtr.pointee.cmsg_len = .init(Posix.cmsgLen(payloadSize: MemoryLayout.size(ofValue: payload)))
+        
+        let dataPointer = Posix.cmsgData(for: .some(cmsghdrPtr))
+        precondition(dataPointer!.count >= MemoryLayout<PayloadType>.stride)
+        let dataPointerBase = dataPointer!.baseAddress!
+        let dataPointerTyped = dataPointerBase.bindMemory(to: PayloadType.self, capacity: 1)
+        dataPointerTyped.pointee = payload
+        
+        self.writePosition += requiredSize
+    }
     
-    return requiredSize
+    /// The result is only valid while this is valid.
+    var validControlBytes: UnsafeMutableRawBufferPointer {
+        if writePosition == 0 {
+            return UnsafeMutableRawBufferPointer(start: nil, count: 0)
+        }
+        return UnsafeMutableRawBufferPointer(rebasing: self.controlBytes[0 ..< self.writePosition])
+    }
+    
+}
+
+extension UnsafeOutboundControlBytes {
+    /// - address:  Either local or remote will do, we just use it for extracting the right protocol.
+    internal mutating func appendExplicitCongestionState(metadata: AddressedEnvelope<ByteBuffer>.Metadata?,
+                                                         address: SocketAddress?) {
+        if let metadata = metadata {
+            switch address {
+            case .some(.v4):
+                self.appendControlMessage(level: .init(IPPROTO_IP),
+                                          type: IP_TOS,
+                                          payload: metadata.ecnState.asCInt())
+            case .some(.v6):
+                self.appendControlMessage(level: .init(IPPROTO_IPV6),
+                                          type: IPV6_TCLASS,
+                                          payload: metadata.ecnState.asCInt())
+            default:
+                // Nothing to do - if we get here the user is probably making a mistake.
+                break
+            }
+        }
+    }
 }
 
 extension AddressedEnvelope.Metadata {
@@ -179,36 +221,4 @@ extension AddressedEnvelope.Metadata {
         controlMessagesReceived.forEach { controlMessage in controlMessageReceiver.receiveMessage(controlMessage) }
         self.init(ecnState: controlMessageReceiver.ecnValue)
     }
-}
-
-/// - address:  Either local or remote will do, we just use it for extracting the right protocol.
-internal func writeEcnToControlBytes(metadata: AddressedEnvelope<ByteBuffer>.Metadata?,
-                                     address: SocketAddress?,
-                                     controlBytes: UnsafeMutableRawBufferPointer) ->
-                                        Slice<UnsafeMutableRawBufferPointer> {
-    let controlByteSlice:Slice<UnsafeMutableRawBufferPointer>
-    if let metadata = metadata {
-        switch address {
-        case .some(.v4):
-            let size = writeControlMessage(into: controlBytes,
-                                           level: .init(IPPROTO_IP),
-                                           type: IP_TOS,
-                                           payload: metadata.ecnState.asCInt())
-            controlByteSlice = controlBytes[..<size]
-        case .some(.v6):
-            let size = writeControlMessage(into: controlBytes,
-                                           level: .init(IPPROTO_IPV6),
-                                           type: IPV6_TCLASS,
-                                           payload: metadata.ecnState.asCInt())
-            controlByteSlice = controlBytes[..<size]
-        default:
-            let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            controlByteSlice = controlBytes[...]
-            break
-        }
-    } else {
-        let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-        controlByteSlice = controlBytes[...]
-    }
-    return controlByteSlice
 }
