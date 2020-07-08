@@ -49,7 +49,10 @@ protocol SocketProtocol: BaseSocketProtocol {
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
 
-    func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<Int>
+    func recvmsg(pointer: UnsafeMutableRawBufferPointer,
+                 storage: inout sockaddr_storage,
+                 storageLen: inout socklen_t,
+                 controlBytes: inout Slice<UnsafeMutableRawBufferPointer>) throws -> IOResult<Int>
 
     func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int>
 

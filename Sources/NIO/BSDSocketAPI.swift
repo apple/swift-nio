@@ -376,11 +376,7 @@ protocol _BSDSocketProtocol {
                      buffer buf: UnsafeMutableRawPointer,
                      length len: size_t) throws -> IOResult<size_t>
 
-    static func recvfrom(socket s: NIOBSDSocket.Handle,
-                         buffer buf: UnsafeMutableRawPointer,
-                         length len: size_t,
-                         address from: UnsafeMutablePointer<sockaddr>,
-                         address_len fromlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<size_t>
+    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t>
 
     static func send(socket s: NIOBSDSocket.Handle,
                      buffer buf: UnsafeRawPointer,

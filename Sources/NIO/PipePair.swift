@@ -93,7 +93,10 @@ final class PipePair: SocketProtocol {
         }
     }
 
-    func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<Int> {
+    func recvmsg(pointer: UnsafeMutableRawBufferPointer,
+                 storage: inout sockaddr_storage,
+                 storageLen: inout socklen_t,
+                 controlBytes: inout Slice<UnsafeMutableRawBufferPointer>) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
     }
 

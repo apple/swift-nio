@@ -394,13 +394,6 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func recvfrom(descriptor: CInt, pointer: UnsafeMutableRawPointer, len: size_t, addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<ssize_t> {
-        return try syscall(blocking: true) {
-            sysRecvFrom(descriptor, pointer, len, 0, addr, addrlen)
-        }
-    }
-
-    @inline(never)
     public static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
             sysRecvMsg(descriptor, msgHdr, flags)
