@@ -490,6 +490,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         var buffer = self.recvAllocator.buffer(allocator: self.allocator)
         var readResult = ReadResult.none
 
+        // Right now we don't actually ask for any control messages. We will eventually.
+        let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+        var controlByteSlice = controlBytes[...]
+
         for i in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
                 throw ChannelError.eof
@@ -497,7 +501,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             buffer.clear()
 
             let result = try buffer.withMutableWritePointer {
-                try self.socket.recvfrom(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength)
+                try self.socket.recvmsg(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength, controlBytes: &controlByteSlice)
             }
             switch result {
             case .processed(let bytesRead):

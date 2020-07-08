@@ -340,19 +340,19 @@ final class DatagramChannelTests: XCTestCase {
         }
     }
 
-    public func testRecvFromFailsWithECONNREFUSED() throws {
-        try assertRecvFromFails(error: ECONNREFUSED, active: true)
+    public func testRecvMsgFailsWithECONNREFUSED() throws {
+        try assertRecvMsgFails(error: ECONNREFUSED, active: true)
     }
 
-    public func testRecvFromFailsWithENOMEM() throws {
-        try assertRecvFromFails(error: ENOMEM, active: true)
+    public func testRecvMsgFailsWithENOMEM() throws {
+        try assertRecvMsgFails(error: ENOMEM, active: true)
     }
 
-    public func testRecvFromFailsWithEFAULT() throws {
-        try assertRecvFromFails(error: EFAULT, active: false)
+    public func testRecvMsgFailsWithEFAULT() throws {
+        try assertRecvMsgFails(error: EFAULT, active: false)
     }
 
-    private func assertRecvFromFails(error: Int32, active: Bool) throws {
+    private func assertRecvMsgFails(error: Int32, active: Bool) throws {
         final class RecvFromHandler: ChannelInboundHandler {
             typealias InboundIn = AddressedEnvelope<ByteBuffer>
             typealias InboundOut = AddressedEnvelope<ByteBuffer>
@@ -386,7 +386,7 @@ final class DatagramChannelTests: XCTestCase {
                 try super.init(protocolFamily: .inet, type: .datagram)
             }
 
-            override func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
+            override func recvmsg(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t, controlBytes: inout Slice<UnsafeMutableRawBufferPointer>) throws -> IOResult<(Int)> {
                 if let err = self.error {
                     self.error = nil
                     throw IOError(errnoCode: err, reason: "recvfrom")
