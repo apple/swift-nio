@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -104,13 +104,17 @@ public enum SocketAddress: CustomStringConvertible {
 
             port = "\(self.port!)"
         case .unixDomainSocket(let addr):
-            var address = addr.address
+            let address = addr.address
             host = nil
             type = "UDS"
             addressString = ""
-            port = withUnsafeBytes(of: &address.sun_path) { ptr in
-                let ptr = ptr.baseAddress!.bindMemory(to: UInt8.self, capacity: 104)
-                return String(cString: ptr)
+
+            // This is a static assert that exists just to verify the safety of the assumption below.
+            assert(Swift.type(of: address.sun_path.0) == CChar.self)
+            port = withUnsafePointer(to: address.sun_path) { ptr in
+                // Homogeneous tuples are always implicitly also bound to their element type, so this assumption below is safe.
+                let charPtr = UnsafeRawPointer(ptr).assumingMemoryBound(to: CChar.self)
+                return String(cString: charPtr)
             }
             return "[\(type)]\(port)"
         }
@@ -245,11 +249,10 @@ public enum SocketAddress: CustomStringConvertible {
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
-        pathBytes.withUnsafeBufferPointer { srcPtr in
-            withUnsafeMutablePointer(to: &addr.sun_path) { dstPtr in
-                dstPtr.withMemoryRebound(to: UInt8.self, capacity: pathBytes.count) { dstPtr in
-                    dstPtr.assign(from: srcPtr.baseAddress!, count: pathBytes.count)
-                }
+
+        pathBytes.withUnsafeBytes { srcBuffer in
+            withUnsafeMutableBytes(of: &addr.sun_path) { dstPtr in
+                dstPtr.copyMemory(from: srcBuffer)
             }
         }
 
@@ -368,15 +371,17 @@ extension SocketAddress: Equatable {
 
             let bufferSize = MemoryLayout.size(ofValue: addr1.address.sun_path)
 
-            // These uses of withMemoryRebound(to:) are fine: the `strncmp` call cannot possibly re-enter Swift code, and so we cannot possibly violate
-            // Swift's strict aliasing rules by way of this type-pun.
+
+            // Swift implicitly binds the memory for homogeneous tuples to both the tuple type and the element type.
+            // This allows us to use assumingMemoryBound(to:) for managing the types. However, we add a static assertion here to validate
+            // that the element type _really is_ what we're assuming it to be.
+            assert(Swift.type(of: addr1.address.sun_path.0) == CChar.self)
+            assert(Swift.type(of: addr2.address.sun_path.0) == CChar.self)
             return withUnsafePointer(to: addr1.address.sun_path) { sunpath1 in
                 return withUnsafePointer(to: addr2.address.sun_path) { sunpath2 in
-                    return sunpath1.withMemoryRebound(to: Int8.self, capacity: bufferSize) { sunpath1 in
-                        return sunpath2.withMemoryRebound(to: Int8.self, capacity: bufferSize) { sunpath2 in
-                            return strncmp(sunpath1, sunpath2, MemoryLayout.size(ofValue: bufferSize)) == 0
-                        }
-                    }
+                    let typedSunpath1 = UnsafeRawPointer(sunpath1).assumingMemoryBound(to: CChar.self)
+                    let typedSunpath2 = UnsafeRawPointer(sunpath2).assumingMemoryBound(to: CChar.self)
+                    return strncmp(typedSunpath1, typedSunpath2, bufferSize) == 0
                 }
             }
         case (.v4, _), (.v6, _), (.unixDomainSocket, _):
@@ -395,13 +400,15 @@ extension SocketAddress: Hashable {
             hasher.combine(uds.address.sun_family)
 
             let pathSize = MemoryLayout.size(ofValue: uds.address.sun_path)
+
+            // Swift implicitly binds the memory of homogeneous tuples to both the tuple type and the element type.
+            // We can therefore use assumingMemoryBound(to:) for pointer type conversion. We add a static assert just to
+            // validate that we are actually right about the element type.
+            assert(Swift.type(of: uds.address.sun_path.0) == CChar.self)
             withUnsafePointer(to: uds.address.sun_path) { pathPtr in
-                // This `withMemoryRebound` is safe: we cannot violate Swift's pointer aliasing rules as this call cannot make
-                // it back into Swift code.
-                let length = pathPtr.withMemoryRebound(to: Int8.self, capacity: pathSize) {
-                    strnlen($0, pathSize)
-                }
-                let bytes = UnsafeRawBufferPointer(start: UnsafeRawPointer(pathPtr), count: length)
+                let typedPathPointer = UnsafeRawPointer(pathPtr).assumingMemoryBound(to: CChar.self)
+                let length = strnlen(typedPathPointer, pathSize)
+                let bytes = UnsafeRawBufferPointer(start: UnsafeRawPointer(typedPathPointer), count: length)
                 hasher.combine(bytes: bytes)
             }
         case .v4(let v4Addr):
