@@ -614,7 +614,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func cancelWritesOnClose(error: Error) {
         self.pendingWrites.failAll(error: error, close: true)
     }
-    
+
     override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
             scalarWriteOperation: { (ptr, destinationPtr, destinationSize) in
@@ -636,7 +636,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return result
     }
 
-    
+
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {

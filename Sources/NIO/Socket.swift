@@ -152,14 +152,14 @@ typealias IOVector = iovec
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
     }
-    
+
     /// Send data to a destination.
     ///
     /// - parameters:
     ///     - pointer: Pointer (and size) to the data to send.
-    ///     - controlBytes: Extra `cmsghdr` information.
     ///     - destinationPtr: The destination to which the data should be sent.
     ///     - destinationSize: The size of the destination address given.
+    ///     - controlBytes: Extra `cmsghdr` information.
     /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written
     /// (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
@@ -167,14 +167,12 @@ typealias IOVector = iovec
                  destinationPtr: UnsafePointer<sockaddr>,
                  destinationSize: socklen_t,
                  controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        var vec = iovec(iov_base: UnsafeMutableRawPointer(mutating: pointer.baseAddress!), iov_len: pointer.count)
-        
-        // Dubious const cast - it should be OK as there is no reason why this should get mutated
+        // Dubious const casts - it should be OK as there is no reason why this should get mutated
         // just bad const declaration below us.
+        var vec = iovec(iov_base: UnsafeMutableRawPointer(mutating: pointer.baseAddress!), iov_len: pointer.count)
         let notConstCorrectDestinationPtr = UnsafeMutableRawPointer(mutating: destinationPtr)
 
-        return try withUnsafeHandle {
-            let handle = $0
+        return try withUnsafeHandle { handle in
             return try withUnsafeMutablePointer(to: &vec) { vecPtr in
                 var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
                                            msg_namelen: destinationSize,
