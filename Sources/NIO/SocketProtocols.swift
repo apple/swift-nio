@@ -45,14 +45,17 @@ protocol SocketProtocol: BaseSocketProtocol {
 
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>
 
-    func sendto(pointer: UnsafeRawBufferPointer, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int>
-
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
 
     func recvmsg(pointer: UnsafeMutableRawBufferPointer,
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
                  controlBytes: inout Slice<UnsafeMutableRawBufferPointer>) throws -> IOResult<Int>
+    
+    func sendmsg(pointer: UnsafeRawBufferPointer,
+                 destinationPtr: UnsafePointer<sockaddr>,
+                 destinationSize: socklen_t,
+                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
 
     func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int>
 

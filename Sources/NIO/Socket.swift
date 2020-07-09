@@ -152,21 +152,39 @@ typealias IOVector = iovec
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
     }
-
+    
     /// Send data to a destination.
     ///
     /// - parameters:
     ///     - pointer: Pointer (and size) to the data to send.
+    ///     - controlBytes: Extra `cmsghdr` information.
     ///     - destinationPtr: The destination to which the data should be sent.
-    /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
+    ///     - destinationSize: The size of the destination address given.
+    /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written
+    /// (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
-    func sendto(pointer: UnsafeRawBufferPointer, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
+    func sendmsg(pointer: UnsafeRawBufferPointer,
+                 destinationPtr: UnsafePointer<sockaddr>,
+                 destinationSize: socklen_t,
+                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
+        var vec = iovec(iov_base: UnsafeMutableRawPointer(mutating: pointer.baseAddress!), iov_len: pointer.count)
+        
+        // Dubious const cast - it should be OK as there is no reason why this should get mutated
+        // just bad const declaration below us.
+        let notConstCorrectDestinationPtr = UnsafeMutableRawPointer(mutating: destinationPtr)
+
         return try withUnsafeHandle {
-            try NIOBSDSocket.sendto(socket: $0,
-                                    buffer: UnsafeMutableRawPointer(mutating: pointer.baseAddress!),
-                                    length: pointer.count,
-                                    dest_addr: destinationPtr,
-                                    dest_len: destinationSize)
+            let handle = $0
+            return try withUnsafeMutablePointer(to: &vec) { vecPtr in
+                var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
+                                           msg_namelen: destinationSize,
+                                           msg_iov: vecPtr,
+                                           msg_iovlen: 1,
+                                           msg_control: controlBytes.baseAddress,
+                                           msg_controllen: .init(controlBytes.count),
+                                           msg_flags: 0)
+                return try Posix.sendmsg(descriptor: handle, msgHdr: &messageHeader, flags: 0)
+            }
         }
     }
 

@@ -614,23 +614,29 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func cancelWritesOnClose(error: Error) {
         self.pendingWrites.failAll(error: error, close: true)
     }
-
+    
     override func writeToSocket() throws -> OverallWriteResult {
-        let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarWriteOperation: { (ptr, destinationPtr, destinationSize) in
-            guard ptr.count > 0 else {
-                // No need to call write if the buffer is empty.
-                return .processed(0)
+        let result = try self.pendingWrites.triggerAppropriateWriteOperations(
+            scalarWriteOperation: { (ptr, destinationPtr, destinationSize) in
+                guard ptr.count > 0 else {
+                    // No need to call write if the buffer is empty.
+                    return .processed(0)
+                }
+                // normal write
+                let controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+                return try self.socket.sendmsg(pointer: ptr,
+                                               destinationPtr: destinationPtr,
+                                               destinationSize: destinationSize,
+                                               controlBytes: controlBytes)
+            },
+            vectorWriteOperation: { msgs in
+                return try self.socket.sendmmsg(msgs: msgs)
             }
-            // normal write
-            return try self.socket.sendto(pointer: ptr,
-                                          destinationPtr: destinationPtr,
-                                          destinationSize: destinationSize)
-        }, vectorWriteOperation: { msgs in
-            try self.socket.sendmmsg(msgs: msgs)
-        })
+        )
         return result
     }
 
+    
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
