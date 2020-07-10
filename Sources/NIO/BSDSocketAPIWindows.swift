@@ -164,6 +164,13 @@ extension NIOBSDSocket {
     static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
         fatalError("recvmsg not yet implemented on Windows")
     }
+    
+    @inline(never)
+    static func sendmsg(descriptor: CInt,
+                        msgHdr: UnsafePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<ssize_t> {
+        fatalError("recvmsg not yet implemented on Windows")
+    }
 
     @inline(never)
     static func send(socket s: NIOBSDSocket.Handle,
@@ -186,22 +193,6 @@ extension NIOBSDSocket {
                                   optval, optlen) == SOCKET_ERROR {
             throw IOError(winsock: WSAGetLastError(), reason: "setsockopt")
         }
-    }
-
-    // NOTE: this should return a `ssize_t`, however, that is not a standard
-    // type, and defining that type is difficult.  Opt to return a `size_t`
-    // which is the same size, but is unsigned.
-    @inline(never)
-    static func sendto(socket s: NIOBSDSocket.Handle,
-                       buffer buf: UnsafeRawPointer,
-                       length len: size_t,
-                       dest_addr to: UnsafePointer<sockaddr>,
-                       dest_len tolen: socklen_t) throws -> IOResult<size_t> {
-        let iResult: CInt = CNIOWindows_sendto(s, buf, CInt(len), 0, to, tolen)
-        if iResult == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "sendto")
-        }
-        return .processed(size_t(iResult))
     }
 
     @inline(never)

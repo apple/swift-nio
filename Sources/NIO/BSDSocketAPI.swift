@@ -377,6 +377,10 @@ protocol _BSDSocketProtocol {
                      length len: size_t) throws -> IOResult<size_t>
 
     static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t>
+    
+    static func sendmsg(descriptor: CInt,
+                        msgHdr: UnsafePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<ssize_t>
 
     static func send(socket s: NIOBSDSocket.Handle,
                      buffer buf: UnsafeRawPointer,
@@ -387,15 +391,6 @@ protocol _BSDSocketProtocol {
                            option_name optname: NIOBSDSocket.Option,
                            option_value optval: UnsafeRawPointer,
                            option_len optlen: socklen_t) throws
-
-    // NOTE: this should return a `ssize_t`, however, that is not a standard
-    // type, and defining that type is difficult.  Opt to return a `size_t`
-    // which is the same size, but is unsigned.
-    static func sendto(socket s: NIOBSDSocket.Handle,
-                       buffer buf: UnsafeRawPointer,
-                       length len: size_t,
-                       dest_addr to: UnsafePointer<sockaddr>,
-                       dest_len tolen: socklen_t) throws -> IOResult<size_t>
 
     static func shutdown(socket: NIOBSDSocket.Handle, how: Shutdown) throws
 

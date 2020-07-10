@@ -83,10 +83,6 @@ final class PipePair: SocketProtocol {
         }
     }
 
-    func sendto(pointer: UnsafeRawBufferPointer, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
-        throw ChannelError.operationUnsupported
-    }
-
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         return try self.inputFD.withUnsafeHandle {
             try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
@@ -97,6 +93,13 @@ final class PipePair: SocketProtocol {
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
                  controlBytes: inout Slice<UnsafeMutableRawBufferPointer>) throws -> IOResult<Int> {
+        throw ChannelError.operationUnsupported
+    }
+    
+    func sendmsg(pointer: UnsafeRawBufferPointer,
+                 destinationPtr: UnsafePointer<sockaddr>,
+                 destinationSize: socklen_t,
+                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
     }
 
