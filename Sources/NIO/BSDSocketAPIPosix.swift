@@ -87,6 +87,12 @@ extension NIOBSDSocket {
     static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
         return try Posix.recvmsg(descriptor: descriptor, msgHdr: msgHdr, flags: flags)
     }
+    
+    static func sendmsg(descriptor: CInt,
+                        msgHdr: UnsafePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<ssize_t> {
+        return try Posix.sendmsg(descriptor: descriptor, msgHdr: msgHdr, flags: flags)
+    }
 
     static func send(socket s: NIOBSDSocket.Handle,
                      buffer buf: UnsafeRawPointer,
@@ -104,21 +110,6 @@ extension NIOBSDSocket {
                                     optionName: optname.rawValue,
                                     optionValue: optval,
                                     optionLen: optlen)
-    }
-
-    // NOTE: this should return a `ssize_t`, however, that is not a standard
-    // type, and defining that type is difficult.  Opt to return a `size_t`
-    // which is the same size, but is unsigned.
-    static func sendto(socket s: NIOBSDSocket.Handle,
-                       buffer buf: UnsafeRawPointer,
-                       length len: size_t,
-                       dest_addr to: UnsafePointer<sockaddr>,
-                       dest_len tolen: socklen_t) throws -> IOResult<size_t> {
-        return try Posix.sendto(descriptor: s,
-                                pointer: buf,
-                                size: len,
-                                destinationPtr: to,
-                                destinationSize: tolen)
     }
 
     static func shutdown(socket: NIOBSDSocket.Handle, how: Shutdown) throws {

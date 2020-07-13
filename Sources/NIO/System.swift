@@ -81,7 +81,6 @@ private let sysWritev = sysWritev_wrapper
 private let sysRecvFrom: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong, CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CLong = recvfrom
 private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
 #endif
-private let sysSendTo: @convention(c) (CInt, UnsafeRawPointer?, CLong, CInt, UnsafePointer<sockaddr>?, socklen_t) -> CLong = sendto
 private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>?, CInt) -> ssize_t = recvmsg
 private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>?, CInt) -> ssize_t = sendmsg
 private let sysDup: @convention(c) (CInt) -> CInt = dup
@@ -368,14 +367,6 @@ internal enum Posix {
     public static func writev(descriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         return try syscall(blocking: true) {
             sysWritev(descriptor, iovecs.baseAddress!, CInt(iovecs.count))
-        }
-    }
-
-    @inline(never)
-    public static func sendto(descriptor: CInt, pointer: UnsafeRawPointer, size: size_t,
-                              destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
-        return try syscall(blocking: true) {
-            sysSendTo(descriptor, pointer, size, 0, destinationPtr, destinationSize)
         }
     }
 
