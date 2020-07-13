@@ -46,16 +46,41 @@ class SystemTest: XCTestCase {
             return [readFD, writeFD]
         }
     }
-    
-    // Example twin data options on apple - will not work safely on other platforms.
+
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    // Example twin data options captured on macOS
     private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
                                                   0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
-                                                  0x07, 0x00, 0x00, 0x00, // IP_RECVDSTADDR???
+                                                  0x07, 0x00, 0x00, 0x00, // IP_RECVDSTADDR
                                                   0x7F, 0x00, 0x00, 0x01, // 127.0.0.1
                                                   0x0D, 0x00, 0x00, 0x00, // Length 13 including header
                                                   0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
                                                   0x1B, 0x00, 0x00, 0x00, // IP_RECVTOS
                                                   0x01, 0x00, 0x00, 0x00] // ECT-1 (1 byte)
+    private static let cmsghdr_secondStartPosition = 16
+    private static let cmsghdr_firstDataStart = 12
+    private static let cmsghdr_firstDataCount = 4
+    private static let cmsghdr_secondDataCount = 1
+    private static let cmsghdr_firstType = IP_RECVDSTADDR
+    private static let cmsghdr_secondType = IP_RECVTOS
+    #elseif os(Linux)
+    // Example twin data options captured on Linux
+    private static let cmsghdrExample: [UInt8] = [
+        0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 28 including header.
+        0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_PKTINFO
+        0x01, 0x00, 0x00, 0x00, 0x7F, 0x00, 0x00, 0x01, // interface number, 127.0.0.1 (local)
+        0x7F, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // 127.0.0.1 (destination), 4 bytes to align length
+        0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 17
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_TOS
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  // ECT-1 (1 byte)
+    ]
+    private static let cmsghdr_secondStartPosition = 32
+    private static let cmsghdr_firstDataStart = 16
+    private static let cmsghdr_firstDataCount = 12
+    private static let cmsghdr_secondDataCount = 1
+    private static let cmsghdr_firstType = IP_PKTINFO
+    private static let cmsghdr_secondType = IP_TOS
+    #endif
 
     func testCmsgFirstHeader() {
         var exampleCmsgHrd = SystemTest.cmsghdrExample
@@ -72,7 +97,6 @@ class SystemTest: XCTestCase {
     }
     
     func testCMsgNextHeader() {
-        #if os(macOS) // Looking at message internals not an apple is not going to work for captured data.
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
@@ -82,17 +106,16 @@ class SystemTest: XCTestCase {
             withUnsafeMutablePointer(to: &msgHdr) { pMsgHdr in
                 let first = Posix.cmsgFirstHeader(inside: pMsgHdr)
                 let second = Posix.cmsgNextHeader(inside: pMsgHdr, from: first)
-                let expectedSecondSlice = UnsafeMutableRawBufferPointer(rebasing: pCmsgHdr[16...])
+                let expectedSecondSlice = UnsafeMutableRawBufferPointer(
+                    rebasing: pCmsgHdr[SystemTest.cmsghdr_secondStartPosition...])
                 XCTAssertEqual(expectedSecondSlice.baseAddress, second)
                 let third = Posix.cmsgNextHeader(inside: pMsgHdr, from: second)
                 XCTAssertEqual(third, nil)
             }
         }
-        #endif
     }
     
     func testCMsgData() {
-        #if os(macOS) // Looking at message internals not an apple is not going to work for captured data.
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
@@ -102,16 +125,16 @@ class SystemTest: XCTestCase {
             withUnsafePointer(to: msgHdr) { pMsgHdr in
                 let first = Posix.cmsgFirstHeader(inside: pMsgHdr)
                 let firstData = Posix.cmsgData(for: first)
-                let expecedFirstData = UnsafeRawBufferPointer(rebasing: pCmsgHdr[12..<16])
+                let expecedFirstData = UnsafeRawBufferPointer(
+                    rebasing: pCmsgHdr[SystemTest.cmsghdr_firstDataStart..<(
+                                        SystemTest.cmsghdr_firstDataStart + SystemTest.cmsghdr_firstDataCount)])
                 XCTAssertEqual(expecedFirstData.baseAddress, firstData?.baseAddress)
                 XCTAssertEqual(expecedFirstData.count, firstData?.count)
             }
         }
-        #endif
     }
     
     func testCMsgCollection() {
-        #if os(macOS) // Looking at message internals not an apple is not going to work for captured data.
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
@@ -122,17 +145,16 @@ class SystemTest: XCTestCase {
             for cmsg in collection {
                 if msgNum == 0 {
                     XCTAssertEqual(cmsg.level, .init(IPPROTO_IP))
-                    XCTAssertEqual(cmsg.type, .init(IP_RECVDSTADDR))
-                    XCTAssertEqual(cmsg.data?.count, 4)
+                    XCTAssertEqual(cmsg.type, .init(SystemTest.cmsghdr_firstType))
+                    XCTAssertEqual(cmsg.data?.count, SystemTest.cmsghdr_firstDataCount)
                 } else if msgNum == 1 {
                     XCTAssertEqual(cmsg.level, .init(IPPROTO_IP))
-                    XCTAssertEqual(cmsg.type, .init(IP_RECVTOS))
-                    XCTAssertEqual(cmsg.data?.count, 1)
+                    XCTAssertEqual(cmsg.type, .init(SystemTest.cmsghdr_secondType))
+                    XCTAssertEqual(cmsg.data?.count, SystemTest.cmsghdr_secondDataCount)
                 }
                 msgNum += 1
             }
             XCTAssertEqual(msgNum, 2)
         }
-        #endif
     }
 }
