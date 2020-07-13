@@ -46,4 +46,115 @@ class SystemTest: XCTestCase {
             return [readFD, writeFD]
         }
     }
+
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    // Example twin data options captured on macOS
+    private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
+                                                  0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
+                                                  0x07, 0x00, 0x00, 0x00, // IP_RECVDSTADDR
+                                                  0x7F, 0x00, 0x00, 0x01, // 127.0.0.1
+                                                  0x0D, 0x00, 0x00, 0x00, // Length 13 including header
+                                                  0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
+                                                  0x1B, 0x00, 0x00, 0x00, // IP_RECVTOS
+                                                  0x01, 0x00, 0x00, 0x00] // ECT-1 (1 byte)
+    private static let cmsghdr_secondStartPosition = 16
+    private static let cmsghdr_firstDataStart = 12
+    private static let cmsghdr_firstDataCount = 4
+    private static let cmsghdr_secondDataCount = 1
+    private static let cmsghdr_firstType = IP_RECVDSTADDR
+    private static let cmsghdr_secondType = IP_RECVTOS
+    #elseif os(Linux)
+    // Example twin data options captured on Linux
+    private static let cmsghdrExample: [UInt8] = [
+        0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 28 including header.
+        0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_PKTINFO
+        0x01, 0x00, 0x00, 0x00, 0x7F, 0x00, 0x00, 0x01, // interface number, 127.0.0.1 (local)
+        0x7F, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // 127.0.0.1 (destination), 4 bytes to align length
+        0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 17
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_TOS
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  // ECT-1 (1 byte)
+    ]
+    private static let cmsghdr_secondStartPosition = 32
+    private static let cmsghdr_firstDataStart = 16
+    private static let cmsghdr_firstDataCount = 12
+    private static let cmsghdr_secondDataCount = 1
+    private static let cmsghdr_firstType = IP_PKTINFO
+    private static let cmsghdr_secondType = IP_TOS
+    #endif
+
+    func testCmsgFirstHeader() {
+        var exampleCmsgHrd = SystemTest.cmsghdrExample
+        exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
+            var msgHdr = msghdr()
+            msgHdr.msg_control = pCmsgHdr.baseAddress
+            msgHdr.msg_controllen = .init(pCmsgHdr.count)
+
+            withUnsafePointer(to: msgHdr) { pMsgHdr in
+                let result = Posix.cmsgFirstHeader(inside: pMsgHdr)
+                XCTAssertEqual(pCmsgHdr.baseAddress, result)
+            }
+        }
+    }
+    
+    func testCMsgNextHeader() {
+        var exampleCmsgHrd = SystemTest.cmsghdrExample
+        exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
+            var msgHdr = msghdr()
+            msgHdr.msg_control = pCmsgHdr.baseAddress
+            msgHdr.msg_controllen = .init(pCmsgHdr.count)
+
+            withUnsafeMutablePointer(to: &msgHdr) { pMsgHdr in
+                let first = Posix.cmsgFirstHeader(inside: pMsgHdr)
+                let second = Posix.cmsgNextHeader(inside: pMsgHdr, from: first)
+                let expectedSecondSlice = UnsafeMutableRawBufferPointer(
+                    rebasing: pCmsgHdr[SystemTest.cmsghdr_secondStartPosition...])
+                XCTAssertEqual(expectedSecondSlice.baseAddress, second)
+                let third = Posix.cmsgNextHeader(inside: pMsgHdr, from: second)
+                XCTAssertEqual(third, nil)
+            }
+        }
+    }
+    
+    func testCMsgData() {
+        var exampleCmsgHrd = SystemTest.cmsghdrExample
+        exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
+            var msgHdr = msghdr()
+            msgHdr.msg_control = pCmsgHdr.baseAddress
+            msgHdr.msg_controllen = .init(pCmsgHdr.count)
+
+            withUnsafePointer(to: msgHdr) { pMsgHdr in
+                let first = Posix.cmsgFirstHeader(inside: pMsgHdr)
+                let firstData = Posix.cmsgData(for: first)
+                let expecedFirstData = UnsafeRawBufferPointer(
+                    rebasing: pCmsgHdr[SystemTest.cmsghdr_firstDataStart..<(
+                                        SystemTest.cmsghdr_firstDataStart + SystemTest.cmsghdr_firstDataCount)])
+                XCTAssertEqual(expecedFirstData.baseAddress, firstData?.baseAddress)
+                XCTAssertEqual(expecedFirstData.count, firstData?.count)
+            }
+        }
+    }
+    
+    func testCMsgCollection() {
+        var exampleCmsgHrd = SystemTest.cmsghdrExample
+        exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
+            var msgHdr = msghdr()
+            msgHdr.msg_control = pCmsgHdr.baseAddress
+            msgHdr.msg_controllen = .init(pCmsgHdr.count)
+            let collection = UnsafeControlMessageCollection(messageHeader: msgHdr)
+            var msgNum = 0
+            for cmsg in collection {
+                if msgNum == 0 {
+                    XCTAssertEqual(cmsg.level, .init(IPPROTO_IP))
+                    XCTAssertEqual(cmsg.type, .init(SystemTest.cmsghdr_firstType))
+                    XCTAssertEqual(cmsg.data?.count, SystemTest.cmsghdr_firstDataCount)
+                } else if msgNum == 1 {
+                    XCTAssertEqual(cmsg.level, .init(IPPROTO_IP))
+                    XCTAssertEqual(cmsg.type, .init(SystemTest.cmsghdr_secondType))
+                    XCTAssertEqual(cmsg.data?.count, SystemTest.cmsghdr_secondDataCount)
+                }
+                msgNum += 1
+            }
+            XCTAssertEqual(msgNum, 2)
+        }
+    }
 }

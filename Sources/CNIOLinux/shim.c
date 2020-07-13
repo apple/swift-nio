@@ -24,6 +24,7 @@ void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug(void) {}
 #include <sched.h>
 #include <stdio.h>
 #include <sys/prctl.h>
+#include <assert.h>
 
 _Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr),
                "sizes of CNIOLinux_mmsghdr and struct mmsghdr differ");
@@ -111,5 +112,34 @@ int CNIOLinux_CPU_ISSET(int cpu, cpu_set_t *set) {
 
 int CNIOLinux_CPU_SETSIZE() {
     return CPU_SETSIZE;
+}
+
+struct cmsghdr *CNIOLinux_CMSG_FIRSTHDR(const struct msghdr *mhdr) {
+    assert(mhdr != NULL);
+    return CMSG_FIRSTHDR(mhdr);
+}
+
+struct cmsghdr *CNIOLinux_CMSG_NXTHDR(struct msghdr *mhdr, struct cmsghdr *cmsg) {
+    assert(mhdr != NULL);
+    assert(cmsg != NULL);
+    return CMSG_NXTHDR(mhdr, cmsg);
+}
+
+const void *CNIOLinux_CMSG_DATA(const struct cmsghdr *cmsg) {
+    assert(cmsg != NULL);
+    return CMSG_DATA(cmsg);
+}
+
+void *CNIOLinux_CMSG_DATA_MUTABLE(struct cmsghdr *cmsg) {
+    assert(cmsg != NULL);
+    return CMSG_DATA(cmsg);
+}
+
+size_t CNIOLinux_CMSG_LEN(size_t payloadSizeBytes) {
+    return CMSG_LEN(payloadSizeBytes);
+}
+
+size_t CNIOLinux_CMSG_SPACE(size_t payloadSizeBytes) {
+    return CMSG_SPACE(payloadSizeBytes);
 }
 #endif

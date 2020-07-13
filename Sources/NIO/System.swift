@@ -97,11 +97,30 @@ private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointe
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
+private let sysCmsgFirstHdr: @convention(c) (UnsafePointer<msghdr>?) -> UnsafeMutablePointer<cmsghdr>? =
+                CNIOLinux_CMSG_FIRSTHDR
+private let sysCmsgNxtHdr: @convention(c) (UnsafeMutablePointer<msghdr>?, UnsafeMutablePointer<cmsghdr>?) ->
+                UnsafeMutablePointer<cmsghdr>? = CNIOLinux_CMSG_NXTHDR
+private let sysCmsgData: @convention(c) (UnsafePointer<cmsghdr>?) -> UnsafeRawPointer? = CNIOLinux_CMSG_DATA
+private let sysCmsgDataMutable: @convention(c) (UnsafeMutablePointer<cmsghdr>?) -> UnsafeMutableRawPointer? =
+                CNIOLinux_CMSG_DATA_MUTABLE
+private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_SPACE
+private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_LEN
 #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
 private let sysKevent = kevent
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
+private let sysCmsgFirstHdr: @convention(c) (UnsafePointer<msghdr>?) -> UnsafeMutablePointer<cmsghdr>? =
+                CNIODarwin_CMSG_FIRSTHDR
+private let sysCmsgNxtHdr: @convention(c) (UnsafePointer<msghdr>?, UnsafePointer<cmsghdr>?) ->
+                UnsafeMutablePointer<cmsghdr>? = CNIODarwin_CMSG_NXTHDR
+private let sysCmsgData: @convention(c) (UnsafePointer<cmsghdr>?) -> UnsafeRawPointer? =
+                CNIODarwin_CMSG_DATA
+private let sysCmsgDataMutable: @convention(c) (UnsafeMutablePointer<cmsghdr>?) -> UnsafeMutableRawPointer? =
+                CNIODarwin_CMSG_DATA_MUTABLE
+private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_SPACE
+private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_LEN
 #elseif os(Windows)
 private let sysSendMmsg: @convention(c) (NIOBSDSocket.Handle, UnsafeMutablePointer<CNIOWindows_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOWindows_sendmmsg
 private let sysRecvMmsg: @convention(c) (NIOBSDSocket.Handle, UnsafeMutablePointer<CNIOWindows_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIOWindows_recvmmsg
@@ -373,7 +392,9 @@ internal enum Posix {
     }
     
     @inline(never)
-    public static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
+    public static func sendmsg(descriptor: CInt,
+                               msgHdr: UnsafePointer<msghdr>,
+                               flags: CInt) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
             sysSendMsg(descriptor, msgHdr, flags)
         }
@@ -533,6 +554,50 @@ internal extension Posix {
             throw error
         }
     }
+}
+
+internal extension Posix {
+    static func cmsgFirstHeader(inside msghdr: UnsafePointer<msghdr>?) -> UnsafeMutablePointer<cmsghdr>? {
+        return sysCmsgFirstHdr(msghdr)
+    }
+    
+    static func cmsgNextHeader(inside msghdr: UnsafeMutablePointer<msghdr>?, from: UnsafeMutablePointer<cmsghdr>?)
+        -> UnsafeMutablePointer<cmsghdr>? {
+        return sysCmsgNxtHdr(msghdr, from)
+    }
+    
+    static func cmsgData(for header: UnsafePointer<cmsghdr>?) -> UnsafeRawBufferPointer? {
+        let dataPointer = sysCmsgData(header)
+        if let header = header {
+            // Linux and Darwin use different types for cmsg_len.
+            let length = size_t(header.pointee.cmsg_len) - cmsgLen(payloadSize: 0)
+            let buffer = UnsafeRawBufferPointer(start: dataPointer, count: Int(length))
+            return buffer
+        } else {
+            return nil
+        }
+    }
+    
+    static func cmsgData(for header: UnsafeMutablePointer<cmsghdr>?) -> UnsafeMutableRawBufferPointer? {
+        let dataPointer = sysCmsgDataMutable(header)
+        if let header = header {
+            // Linux and Darwin use different types for cmsg_len.
+            let length = size_t(header.pointee.cmsg_len) - cmsgLen(payloadSize: 0)
+            let buffer = UnsafeMutableRawBufferPointer(start: dataPointer, count: Int(length))
+            return buffer
+        } else {
+            return nil
+        }
+    }
+    
+    static func cmsgLen(payloadSize: size_t) -> size_t {
+        return sysCmsgLen(payloadSize)
+    }
+    
+    static func cmsgSpace(payloadSize: size_t) -> size_t {
+        return sysCmsgSpace(payloadSize)
+    }
+    
 }
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
