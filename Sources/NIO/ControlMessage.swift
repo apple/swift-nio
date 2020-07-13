@@ -89,7 +89,7 @@ extension UnsafeControlMessageCollection: Collection {
 }
 
 /// Extract information from a collection of control messages.
-struct ControlMessageReceiver {
+struct ControlMessageParser {
     var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable // Default
     
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
@@ -109,7 +109,7 @@ struct ControlMessageReceiver {
     }
     
     mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
-        if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageReceiver.ipv4TosType {
+        if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
                 assert(data.count == 1)
                 precondition(data.count >= 1)
@@ -118,7 +118,7 @@ struct ControlMessageReceiver {
             }
         } else if controlMessage.level == IPPROTO_IPV6 && controlMessage.type == IPV6_TCLASS {
             if let data = controlMessage.data {
-                let readValue = ControlMessageReceiver.readCInt(data: data)
+                let readValue = ControlMessageParser.readCInt(data: data)
                 self.ecnValue = .init(receivedValue: readValue)
             }
         }
@@ -238,7 +238,7 @@ extension UnsafeOutboundControlBytes {
 extension AddressedEnvelope.Metadata {
     /// It's assumed the caller has checked that congestion information is required before calling.
     internal init(from controlMessagesReceived: UnsafeControlMessageCollection) {
-        var controlMessageReceiver = ControlMessageReceiver()
+        var controlMessageReceiver = ControlMessageParser()
         controlMessagesReceived.forEach { controlMessage in controlMessageReceiver.receiveMessage(controlMessage) }
         self.init(ecnState: controlMessageReceiver.ecnValue)
     }

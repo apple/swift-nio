@@ -65,7 +65,7 @@ class ControlMessageTests: XCTestCase {
         var decoded: [DecodedMessage] = []
         for cmsg in decoder {
             XCTAssertEqual(cmsg.data!.count, MemoryLayout<CInt>.size)
-            let payload = ControlMessageReceiver.readCInt(data: cmsg.data!)
+            let payload = ControlMessageParser.readCInt(data: cmsg.data!)
             decoded.append(DecodedMessage(level: cmsg.level, type: cmsg.type, payload: payload))
         }
         XCTAssertEqual(expected, decoded)
@@ -85,7 +85,7 @@ class ControlMessageTests: XCTestCase {
         var decoded: [DecodedMessage] = []
         for cmsg in decoder {
             XCTAssertEqual(cmsg.data!.count, MemoryLayout<CInt>.size)
-            let payload = ControlMessageReceiver.readCInt(data: cmsg.data!)
+            let payload = ControlMessageParser.readCInt(data: cmsg.data!)
             decoded.append(DecodedMessage(level: cmsg.level, type: cmsg.type, payload: payload))
         }
         XCTAssertEqual(expected, decoded)
