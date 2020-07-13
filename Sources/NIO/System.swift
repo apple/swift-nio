@@ -392,9 +392,7 @@ internal enum Posix {
     }
     
     @inline(never)
-    public static func sendmsg(descriptor: CInt,
-                               msgHdr: UnsafePointer<msghdr>,
-                               flags: CInt) throws -> IOResult<ssize_t> {
+    public static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
             sysSendMsg(descriptor, msgHdr, flags)
         }
@@ -531,6 +529,39 @@ internal enum Posix {
             sysSocketpair(domain.rawValue, type.rawValue, `protocol`, socketVector)
         }
     }
+
+    static func cmsgFirstHeader(inside msghdr: UnsafePointer<msghdr>) -> UnsafeMutablePointer<cmsghdr>? {
+        return sysCmsgFirstHdr(msghdr)
+    }
+
+    static func cmsgNextHeader(inside msghdr: UnsafeMutablePointer<msghdr>,
+                               after: UnsafeMutablePointer<cmsghdr>) -> UnsafeMutablePointer<cmsghdr>? {
+        return sysCmsgNxtHdr(msghdr, after)
+    }
+
+    static func cmsgData(for header: UnsafePointer<cmsghdr>) -> UnsafeRawBufferPointer? {
+        let dataPointer = sysCmsgData(header)
+        // Linux and Darwin use different types for cmsg_len.
+        let length = size_t(header.pointee.cmsg_len) - cmsgLen(payloadSize: 0)
+        let buffer = UnsafeRawBufferPointer(start: dataPointer, count: Int(length))
+        return buffer
+    }
+
+    static func cmsgData(for header: UnsafeMutablePointer<cmsghdr>) -> UnsafeMutableRawBufferPointer? {
+        let dataPointer = sysCmsgDataMutable(header)
+        // Linux and Darwin use different types for cmsg_len.
+        let length = size_t(header.pointee.cmsg_len) - cmsgLen(payloadSize: 0)
+        let buffer = UnsafeMutableRawBufferPointer(start: dataPointer, count: Int(length))
+        return buffer
+    }
+
+    static func cmsgLen(payloadSize: size_t) -> size_t {
+        return sysCmsgLen(payloadSize)
+    }
+
+    static func cmsgSpace(payloadSize: size_t) -> size_t {
+        return sysCmsgSpace(payloadSize)
+    }
 }
 
 /// `NIOFailedToSetSocketNonBlockingError` indicates that NIO was unable to set a socket to non-blocking mode, either
@@ -554,50 +585,6 @@ internal extension Posix {
             throw error
         }
     }
-}
-
-internal extension Posix {
-    static func cmsgFirstHeader(inside msghdr: UnsafePointer<msghdr>?) -> UnsafeMutablePointer<cmsghdr>? {
-        return sysCmsgFirstHdr(msghdr)
-    }
-    
-    static func cmsgNextHeader(inside msghdr: UnsafeMutablePointer<msghdr>?, from: UnsafeMutablePointer<cmsghdr>?)
-        -> UnsafeMutablePointer<cmsghdr>? {
-        return sysCmsgNxtHdr(msghdr, from)
-    }
-    
-    static func cmsgData(for header: UnsafePointer<cmsghdr>?) -> UnsafeRawBufferPointer? {
-        let dataPointer = sysCmsgData(header)
-        if let header = header {
-            // Linux and Darwin use different types for cmsg_len.
-            let length = size_t(header.pointee.cmsg_len) - cmsgLen(payloadSize: 0)
-            let buffer = UnsafeRawBufferPointer(start: dataPointer, count: Int(length))
-            return buffer
-        } else {
-            return nil
-        }
-    }
-    
-    static func cmsgData(for header: UnsafeMutablePointer<cmsghdr>?) -> UnsafeMutableRawBufferPointer? {
-        let dataPointer = sysCmsgDataMutable(header)
-        if let header = header {
-            // Linux and Darwin use different types for cmsg_len.
-            let length = size_t(header.pointee.cmsg_len) - cmsgLen(payloadSize: 0)
-            let buffer = UnsafeMutableRawBufferPointer(start: dataPointer, count: Int(length))
-            return buffer
-        } else {
-            return nil
-        }
-    }
-    
-    static func cmsgLen(payloadSize: size_t) -> size_t {
-        return sysCmsgLen(payloadSize)
-    }
-    
-    static func cmsgSpace(payloadSize: size_t) -> size_t {
-        return sysCmsgSpace(payloadSize)
-    }
-    
 }
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
