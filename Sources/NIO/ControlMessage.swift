@@ -72,7 +72,6 @@ extension UnsafeControlMessageCollection: Collection {
     var endIndex: Index { return Index(cmsgPointer: nil) }
     
     func index(after: Index) -> Index {
-        precondition(after.cmsgPointer != nil)
         var msgHdr = messageHeader
         return withUnsafeMutablePointer(to: &msgHdr) { messageHeaderPtr in
             return Index(cmsgPointer: Posix.cmsgNextHeader(inside: messageHeaderPtr,
