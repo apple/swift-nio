@@ -117,7 +117,8 @@ struct ControlMessageParser {
     mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
         if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
-                precondition(data.count == 1)
+                assert(data.count == 1)
+                precondition(data.count >= 1)
                 let readValue = CInt(data[0])
                 self.ecnValue = .init(receivedValue: readValue)
             }
