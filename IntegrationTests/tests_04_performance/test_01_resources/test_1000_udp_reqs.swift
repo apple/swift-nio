@@ -69,8 +69,9 @@ fileprivate final class ClientHandler: ChannelInboundHandler {
     private func sendBytes(clientChannel: Channel) {
         var buffer = clientChannel.allocator.buffer(capacity: 1)
         buffer.writeInteger(3, as: UInt8.self)
-        // Send the data.
-        let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
+        // Send the data with ECN
+        let metadata = AddressedEnvelope<ByteBuffer>.Metadata(ecnState: .transportCapableFlag1)
+        let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer, metadata: metadata)
         clientChannel.writeAndFlush(self.wrapOutboundOut(envelope), promise: nil)
     }
     
@@ -90,6 +91,7 @@ fileprivate final class ClientHandler: ChannelInboundHandler {
 
 func run(identifier: String) {
     let serverChannel = try! DatagramBootstrap(group: group)
+        .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
         // Set the handlers that are applied to the bound channel
         .channelInitializer { channel in
             return channel.pipeline.addHandler(ServerEchoHandler())
@@ -103,6 +105,7 @@ func run(identifier: String) {
     let clientHandler = ClientHandler(remoteAddress: remoteAddress)
 
     let clientChannel = try! DatagramBootstrap(group: group)
+        .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
         .channelInitializer { channel in
             channel.pipeline.addHandler(clientHandler)
         }
