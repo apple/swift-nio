@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
+#include <assert.h>
 
 int CNIODarwin_sendmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vlen, int flags) {
     // Some quick error checking. If vlen can't fit into int, we bail.
@@ -48,6 +49,35 @@ int CNIODarwin_sendmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vle
 
 int CNIODarwin_recvmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vlen, int flags, struct timespec *timeout) {
     errx(EX_SOFTWARE, "recvmmsg shim not implemented on Darwin platforms\n");
+}
+
+struct cmsghdr *CNIODarwin_CMSG_FIRSTHDR(const struct msghdr *mhdr) {
+    assert(mhdr != NULL);
+    return CMSG_FIRSTHDR(mhdr);
+}
+
+struct cmsghdr *CNIODarwin_CMSG_NXTHDR(const struct msghdr *mhdr, const struct cmsghdr *cmsg) {
+    assert(mhdr != NULL);
+    assert(cmsg != NULL);   // Not required by Darwin but Linux needs this so we should match.
+    return CMSG_NXTHDR(mhdr, cmsg);
+}
+
+const void *CNIODarwin_CMSG_DATA(const struct cmsghdr *cmsg) {
+    assert(cmsg != NULL);
+    return CMSG_DATA(cmsg);
+}
+
+void *CNIODarwin_CMSG_DATA_MUTABLE(struct cmsghdr *cmsg) {
+    assert(cmsg != NULL);
+    return CMSG_DATA(cmsg);
+}
+
+size_t CNIODarwin_CMSG_LEN(size_t payloadSizeBytes) {
+    return CMSG_LEN(payloadSizeBytes);
+}
+
+size_t CNIODarwin_CMSG_SPACE(size_t payloadSizeBytes) {
+    return CMSG_SPACE(payloadSizeBytes);
 }
 
 #endif  // __APPLE__
