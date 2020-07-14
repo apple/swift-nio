@@ -617,7 +617,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
-            scalarWriteOperation: { (ptr, destinationPtr, destinationSize) in
+            scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
                 guard ptr.count > 0 else {
                     // No need to call write if the buffer is empty.
                     return .processed(0)
