@@ -80,11 +80,13 @@ class SystemTest: XCTestCase {
     private static let cmsghdr_secondDataCount = 1
     private static let cmsghdr_firstType = IP_PKTINFO
     private static let cmsghdr_secondType = IP_TOS
+    #else
+    #error("No cmsg support on this platform.")
     #endif
 
     func testCmsgFirstHeader() {
-        var exampleCmsgHrd = SystemTest.cmsghdrExample
-        exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
+        var exampleCmsgHdr = SystemTest.cmsghdrExample
+        exampleCmsgHdr.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
             msgHdr.msg_control = pCmsgHdr.baseAddress
             msgHdr.msg_controllen = .init(pCmsgHdr.count)
@@ -97,19 +99,18 @@ class SystemTest: XCTestCase {
     }
     
     func testCMsgNextHeader() {
-        var exampleCmsgHrd = SystemTest.cmsghdrExample
-        exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
+        var exampleCmsgHdr = SystemTest.cmsghdrExample
+        exampleCmsgHdr.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
             msgHdr.msg_control = pCmsgHdr.baseAddress
             msgHdr.msg_controllen = .init(pCmsgHdr.count)
 
             withUnsafeMutablePointer(to: &msgHdr) { pMsgHdr in
                 let first = Posix.cmsgFirstHeader(inside: pMsgHdr)
-                let second = Posix.cmsgNextHeader(inside: pMsgHdr, from: first)
-                let expectedSecondSlice = UnsafeMutableRawBufferPointer(
-                    rebasing: pCmsgHdr[SystemTest.cmsghdr_secondStartPosition...])
-                XCTAssertEqual(expectedSecondSlice.baseAddress, second)
-                let third = Posix.cmsgNextHeader(inside: pMsgHdr, from: second)
+                let second = Posix.cmsgNextHeader(inside: pMsgHdr, after: first!)
+                let expectedSecondStart = pCmsgHdr.baseAddress! + SystemTest.cmsghdr_secondStartPosition
+                XCTAssertEqual(expectedSecondStart, second!)
+                let third = Posix.cmsgNextHeader(inside: pMsgHdr, after: second!)
                 XCTAssertEqual(third, nil)
             }
         }
@@ -124,7 +125,7 @@ class SystemTest: XCTestCase {
 
             withUnsafePointer(to: msgHdr) { pMsgHdr in
                 let first = Posix.cmsgFirstHeader(inside: pMsgHdr)
-                let firstData = Posix.cmsgData(for: first)
+                let firstData = Posix.cmsgData(for: first!)
                 let expecedFirstData = UnsafeRawBufferPointer(
                     rebasing: pCmsgHdr[SystemTest.cmsghdr_firstDataStart..<(
                                         SystemTest.cmsghdr_firstDataStart + SystemTest.cmsghdr_firstDataCount)])

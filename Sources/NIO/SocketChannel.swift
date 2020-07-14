@@ -654,7 +654,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 return try self.selectableEventLoop.withControlMessageBytes {
                     var controlBytes = UnsafeOutboundControlBytes(controlBytes: $0)
                     controlBytes.appendExplicitCongestionState(metadata: metadata,
-                                                               address: self.localAddress)
+                                                               protocolFamily: self.localAddress?.protocol)
                     return try self.socket.sendmsg(pointer: ptr,
                                                    destinationPtr: destinationPtr,
                                                    destinationSize: destinationSize,

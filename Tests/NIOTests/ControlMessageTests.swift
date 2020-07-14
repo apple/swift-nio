@@ -29,42 +29,65 @@ fileprivate extension UnsafeControlMessageCollection {
 }
 
 class ControlMessageTests: XCTestCase {
+    var encoderBytes: UnsafeMutableRawBufferPointer?
     var encoder: UnsafeOutboundControlBytes!
     
     override func setUp() {
-        let encoderBytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1000,
+        self.encoderBytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1000,
                                                                   alignment: MemoryLayout<Int>.alignment)
-        self.encoder = UnsafeOutboundControlBytes(controlBytes: encoderBytes)
+        self.encoder = UnsafeOutboundControlBytes(controlBytes: self.encoderBytes!)
+    }
+
+    override func tearDown() {
+        if let encoderBytes = self.encoderBytes {
+            self.encoderBytes = nil
+            encoderBytes.deallocate()
+        }
     }
     
     func testEmptyEncode() {
         XCTAssertEqual(self.encoder.validControlBytes.count, 0)
     }
+
+    struct DecodedMessage: Equatable {
+        var level: CInt
+        var type: CInt
+        var payload: CInt
+    }
     
     func testEncodeDecode1() {
         self.encoder.appendControlMessage(level: 1, type: 2, payload: 3)
+        let expected = [DecodedMessage(level: 1, type: 2, payload: 3)]
         let encodedBytes = self.encoder.validControlBytes
         
         let decoder = UnsafeControlMessageCollection(controlBytes: encodedBytes)
         XCTAssertEqual(decoder.count, 1)
-        XCTAssertEqual(decoder.first!.level, 1)
-        XCTAssertEqual(decoder.first!.type, 2)
-        XCTAssertEqual(decoder.first!.data!.count, MemoryLayout<Int>.size)
+        var decoded: [DecodedMessage] = []
+        for cmsg in decoder {
+            XCTAssertEqual(cmsg.data!.count, MemoryLayout<CInt>.size)
+            let payload = ControlMessageParser._readCInt(data: cmsg.data!)
+            decoded.append(DecodedMessage(level: cmsg.level, type: cmsg.type, payload: payload))
+        }
+        XCTAssertEqual(expected, decoded)
     }
     
     func testEncodeDecode2() {
         self.encoder.appendControlMessage(level: 1, type: 2, payload: 3)
         self.encoder.appendControlMessage(level: 4, type: 5, payload: 6)
+        let expected = [
+            DecodedMessage(level: 1, type: 2, payload: 3),
+            DecodedMessage(level: 4, type: 5, payload: 6)
+        ]
         let encodedBytes = self.encoder.validControlBytes
         
         let decoder = UnsafeControlMessageCollection(controlBytes: encodedBytes)
         XCTAssertEqual(decoder.count, 2)
-        XCTAssertEqual(decoder.first!.level, 1)
-        XCTAssertEqual(decoder.first!.type, 2)
-        XCTAssertEqual(decoder.first!.data!.count, MemoryLayout<Int>.size)
-        XCTAssertEqual(decoder[decoder.index(after: decoder.startIndex)].level, 4)
-        XCTAssertEqual(decoder[decoder.index(after: decoder.startIndex)].type, 5)
-        XCTAssertEqual(decoder[decoder.index(after: decoder.startIndex)].data!.count, MemoryLayout<Int>.size)
-
+        var decoded: [DecodedMessage] = []
+        for cmsg in decoder {
+            XCTAssertEqual(cmsg.data!.count, MemoryLayout<CInt>.size)
+            let payload = ControlMessageParser._readCInt(data: cmsg.data!)
+            decoded.append(DecodedMessage(level: cmsg.level, type: cmsg.type, payload: payload))
+        }
+        XCTAssertEqual(expected, decoded)
     }
 }

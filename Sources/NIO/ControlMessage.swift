@@ -21,30 +21,39 @@ import CNIOLinux
 /// Representation of a `cmsghdr` and associated data.
 /// Unsafe as captures pointers and must not escape the scope where those pointers are valid.
 struct UnsafeControlMessage {
-    var level: Int32
-    var type: Int32
+    var level: CInt
+    var type: CInt
     var data: UnsafeRawBufferPointer?
 }
 
 /// Collection representation of `cmsghdr` structures and associated data from `recvmsg`
 /// Unsafe as captures pointers held in msghdr structure which must not escape scope of validity.
-struct UnsafeControlMessageCollection: Collection {
-    typealias Index = ControlMessageIndex
+struct UnsafeControlMessageCollection {
+    private var messageHeader: msghdr
+
+    init(messageHeader: msghdr) {
+        self.messageHeader = messageHeader
+    }
+}
+
+// Add the `Collection` functionality to UnsafeControlMessageCollection.
+extension UnsafeControlMessageCollection: Collection {
     typealias Element = UnsafeControlMessage
     
-    struct ControlMessageIndex: Equatable, Comparable {
+    struct Index: Equatable, Comparable {
         fileprivate var cmsgPointer: UnsafeMutablePointer<cmsghdr>?
         
-        static func < (lhs: UnsafeControlMessageCollection.ControlMessageIndex,
-                       rhs: UnsafeControlMessageCollection.ControlMessageIndex) -> Bool {
-            // Nil must be high as it represents the end of the collection.
-            if let lhsPointer = lhs.cmsgPointer {
-                if let rhsPointer = rhs.cmsgPointer {
-                    return lhsPointer < rhsPointer
-                }
+        static func < (lhs: UnsafeControlMessageCollection.Index,
+                       rhs: UnsafeControlMessageCollection.Index) -> Bool {
+            // nil is high, as that's the end of the collection.
+            switch (lhs.cmsgPointer, rhs.cmsgPointer) {
+            case (.some(let lhs), .some(let rhs)):
+                return lhs < rhs
+            case (.some, .none):
                 return true
+            case (.none, .some), (.none, .none):
+                return false
             }
-            return false
         }
         
         fileprivate init(cmsgPointer: UnsafeMutablePointer<cmsghdr>?) {
@@ -56,17 +65,17 @@ struct UnsafeControlMessageCollection: Collection {
         var messageHeader = self.messageHeader
         return withUnsafePointer(to: &messageHeader) { messageHeaderPtr in
             let firstCMsg = Posix.cmsgFirstHeader(inside: messageHeaderPtr)
-            return ControlMessageIndex(cmsgPointer: firstCMsg)
+            return Index(cmsgPointer: firstCMsg)
         }
     }
     
-    let endIndex = ControlMessageIndex(cmsgPointer: nil)
+    var endIndex: Index { return Index(cmsgPointer: nil) }
     
     func index(after: Index) -> Index {
         var msgHdr = messageHeader
         return withUnsafeMutablePointer(to: &msgHdr) { messageHeaderPtr in
-            return ControlMessageIndex(cmsgPointer: Posix.cmsgNextHeader(inside: messageHeaderPtr,
-                                                                         from: after.cmsgPointer))
+            return Index(cmsgPointer: Posix.cmsgNextHeader(inside: messageHeaderPtr,
+                                                           after: after.cmsgPointer!))
         }
     }
     
@@ -76,108 +85,123 @@ struct UnsafeControlMessageCollection: Collection {
                                     type: cmsg.pointee.cmsg_type,
                                     data: Posix.cmsgData(for: cmsg))
     }
-        
-    private var messageHeader: msghdr
-    
-    init(messageHeader: msghdr) {
-        self.messageHeader = messageHeader
-    }
 }
 
 /// Extract information from a collection of control messages.
-struct ControlMessageReceiver {
+struct ControlMessageParser {
     var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable // Default
+
+    init(parsing controlMessagesReceived: UnsafeControlMessageCollection) {
+        for controlMessage in controlMessagesReceived {
+            self.receiveMessage(controlMessage)
+        }
+    }
     
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     private static let ipv4TosType = IP_RECVTOS
     #else
     private static let ipv4TosType = IP_TOS    // Linux
     #endif
+
+    static func _readCInt(data: UnsafeRawBufferPointer) -> CInt {
+        assert(data.count == MemoryLayout<CInt>.size)
+        precondition(data.count >= MemoryLayout<CInt>.size)
+        var readValue = CInt(0)
+        withUnsafeMutableBytes(of: &readValue) { valuePtr in
+            valuePtr.copyMemory(from: data)
+        }
+        return readValue
+    }
     
     mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
-        if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageReceiver.ipv4TosType {
+        if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
                 assert(data.count == 1)
                 precondition(data.count >= 1)
-                let readValue: Int32 = .init(data[0])
-                self.ecnValue = ControlMessageReceiver.parseEcn(receivedValue: readValue)
+                let readValue = CInt(data[0])
+                self.ecnValue = .init(receivedValue: readValue)
             }
         } else if controlMessage.level == IPPROTO_IPV6 && controlMessage.type == IPV6_TCLASS {
             if let data = controlMessage.data {
-                assert(data.count == 4)
-                precondition(data.count >= 4)
-                var readValue: Int32 = 0
-                withUnsafeMutableBytes(of: &readValue) { valuePtr in
-                    valuePtr.copyMemory(from: data)
-                }
-                self.ecnValue = ControlMessageReceiver.parseEcn(receivedValue: readValue)
+                let readValue = ControlMessageParser._readCInt(data: data)
+                self.ecnValue = .init(receivedValue: readValue)
             }
-        }
-    }
-
-    private static func parseEcn(receivedValue: Int32) -> NIOExplicitCongestionNotificationState {
-        switch receivedValue & IPTOS_ECN_MASK {
-        case IPTOS_ECN_ECT1:
-            return .transportCapableFlag1
-        case IPTOS_ECN_ECT0:
-            return .transportCapableFlag0
-        case IPTOS_ECN_CE:
-            return .congestionExperienced
-        default:
-            return .transportNotCapable
         }
     }
 }
 
 extension NIOExplicitCongestionNotificationState {
+    /// Initialise a NIOExplicitCongestionNotificationState from a value received via either TCLASS or TOS cmsg.
+    init(receivedValue: CInt) {
+        switch receivedValue & IPTOS_ECN_MASK {
+        case IPTOS_ECN_ECT1:
+            self = .transportCapableFlag1
+        case IPTOS_ECN_ECT0:
+            self = .transportCapableFlag0
+        case IPTOS_ECN_CE:
+            self = .congestionExperienced
+        default:
+            self = .transportNotCapable
+        }
+    }
+}
+
+extension CInt {
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    fileprivate static let notCapableValue = IPTOS_ECN_NOTECT
+    private static let notCapableValue = IPTOS_ECN_NOTECT
     #else
-    fileprivate static let notCapableValue = IPTOS_ECN_NOT_ECT    // Linux
+    private static let notCapableValue = IPTOS_ECN_NOT_ECT    // Linux
     #endif
-    
-    func asCInt() -> CInt {
-        switch self {
+
+    /// Create a CInt encoding of ExplicitCongestionNotification suitable for sending in TCLASS or TOS cmsg.
+    init(ecnValue: NIOExplicitCongestionNotificationState) {
+        switch ecnValue {
         case .transportNotCapable:
-            return .init(NIOExplicitCongestionNotificationState.notCapableValue)
+            self = CInt.notCapableValue
         case .transportCapableFlag0:
-            return .init(IPTOS_ECN_ECT0)
+            self = IPTOS_ECN_ECT0
         case .transportCapableFlag1:
-            return .init(IPTOS_ECN_ECT1)
+            self = IPTOS_ECN_ECT1
         case .congestionExperienced:
-            return .init(IPTOS_ECN_CE)
+            self = IPTOS_ECN_CE
         }
     }
 }
 
 struct UnsafeOutboundControlBytes {
     private var controlBytes: UnsafeMutableRawBufferPointer
-    private var writePosition: size_t = 0
+    private var writePosition: UnsafeMutableRawBufferPointer.Index
     
-    /// Control bytes are captured - this structure must not have a lifetime exceeded them.
+    /// This structure must not outlive `controlBytes`
     init(controlBytes: UnsafeMutableRawBufferPointer) {
         self.controlBytes = controlBytes
+        self.writePosition = controlBytes.startIndex
     }
-    
-    mutating func appendControlMessage<PayloadType>(level: Int32,
-                                          type: Int32,
-                                          payload: PayloadType) {
+
+    mutating func appendControlMessage(level: CInt, type: CInt, payload: CInt) {
+        self.appendGenericControlMessage(level: level, type: type, payload: payload)
+    }
+
+    /// Appends a control message.
+    /// PayloadType needs to be trivial (eg CInt)
+    private mutating func appendGenericControlMessage<PayloadType>(level: CInt,
+                                                                   type: CInt,
+                                                                   payload: PayloadType) {
         let writableBuffer = UnsafeMutableRawBufferPointer(rebasing: self.controlBytes[writePosition...])
         
         let requiredSize = Posix.cmsgSpace(payloadSize: MemoryLayout.stride(ofValue: payload))
         precondition(writableBuffer.count >= requiredSize, "Insufficient size for cmsghdr and data")
         
         let bufferBase = writableBuffer.baseAddress!
+        // Binding to cmsghdr is safe here as this is the only place where we bind to non-Raw.
         let cmsghdrPtr = bufferBase.bindMemory(to: cmsghdr.self, capacity: 1)
         cmsghdrPtr.pointee.cmsg_level = level
         cmsghdrPtr.pointee.cmsg_type = type
         cmsghdrPtr.pointee.cmsg_len = .init(Posix.cmsgLen(payloadSize: MemoryLayout.size(ofValue: payload)))
         
-        let dataPointer = Posix.cmsgData(for: .some(cmsghdrPtr))
-        precondition(dataPointer!.count >= MemoryLayout<PayloadType>.stride)
-        let dataPointerBase = dataPointer!.baseAddress!
-        let dataPointerTyped = dataPointerBase.bindMemory(to: PayloadType.self, capacity: 1)
-        dataPointerTyped.pointee = payload
+        let dataPointer = Posix.cmsgData(for: cmsghdrPtr)!
+        precondition(dataPointer.count >= MemoryLayout<PayloadType>.stride)
+        dataPointer.storeBytes(of: payload, as: PayloadType.self)
         
         self.writePosition += requiredSize
     }
@@ -193,23 +217,26 @@ struct UnsafeOutboundControlBytes {
 }
 
 extension UnsafeOutboundControlBytes {
-    /// - address:  Either local or remote will do, we just use it for extracting the right protocol.
+    /// Add a message describing the explicit congestion state if requested in metadata and valid for this protocol.
+    ///  Parameters:
+    ///     - metadata:   Metadata from the addressed envelope which will describe any desired state.
+    ///     - protocolFamily:  The type of protocol to encode for.
     internal mutating func appendExplicitCongestionState(metadata: AddressedEnvelope<ByteBuffer>.Metadata?,
-                                                         address: SocketAddress?) {
-        if let metadata = metadata {
-            switch address {
-            case .some(.v4):
-                self.appendControlMessage(level: .init(IPPROTO_IP),
-                                          type: IP_TOS,
-                                          payload: metadata.ecnState.asCInt())
-            case .some(.v6):
-                self.appendControlMessage(level: .init(IPPROTO_IPV6),
-                                          type: IPV6_TCLASS,
-                                          payload: metadata.ecnState.asCInt())
-            default:
-                // Nothing to do - if we get here the user is probably making a mistake.
-                break
-            }
+                                                         protocolFamily: NIOBSDSocket.ProtocolFamily?) {
+        guard let metadata = metadata else { return }
+
+        switch protocolFamily {
+        case .some(.inet):
+            self.appendControlMessage(level: .init(IPPROTO_IP),
+                                      type: IP_TOS,
+                                      payload: CInt(ecnValue: metadata.ecnState))
+        case .some(.inet6):
+            self.appendControlMessage(level: .init(IPPROTO_IPV6),
+                                      type: IPV6_TCLASS,
+                                      payload: CInt(ecnValue: metadata.ecnState))
+        default:
+            // Nothing to do - if we get here the user is probably making a mistake.
+            break
         }
     }
 }
@@ -217,8 +244,7 @@ extension UnsafeOutboundControlBytes {
 extension AddressedEnvelope.Metadata {
     /// It's assumed the caller has checked that congestion information is required before calling.
     internal init(from controlMessagesReceived: UnsafeControlMessageCollection) {
-        var controlMessageReceiver = ControlMessageReceiver()
-        controlMessagesReceived.forEach { controlMessage in controlMessageReceiver.receiveMessage(controlMessage) }
+        let controlMessageReceiver = ControlMessageParser(parsing: controlMessagesReceived)
         self.init(ecnState: controlMessageReceiver.ecnValue)
     }
 }
