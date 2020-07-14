@@ -91,6 +91,12 @@ extension UnsafeControlMessageCollection: Collection {
 /// Extract information from a collection of control messages.
 struct ControlMessageParser {
     var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable // Default
+
+    init(parsing controlMessagesReceived: UnsafeControlMessageCollection) {
+        for controlMessage in controlMessagesReceived {
+            self.receiveMessage(controlMessage)
+        }
+    }
     
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     private static let ipv4TosType = IP_RECVTOS
@@ -98,7 +104,7 @@ struct ControlMessageParser {
     private static let ipv4TosType = IP_TOS    // Linux
     #endif
 
-    static func readCInt(data: UnsafeRawBufferPointer) -> CInt {
+    static func _readCInt(data: UnsafeRawBufferPointer) -> CInt {
         assert(data.count == MemoryLayout<CInt>.size)
         precondition(data.count >= MemoryLayout<CInt>.size)
         var readValue = CInt(0)
@@ -111,14 +117,13 @@ struct ControlMessageParser {
     mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
         if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
-                assert(data.count == 1)
-                precondition(data.count >= 1)
+                precondition(data.count == 1)
                 let readValue = CInt(data[0])
                 self.ecnValue = .init(receivedValue: readValue)
             }
         } else if controlMessage.level == IPPROTO_IPV6 && controlMessage.type == IPV6_TCLASS {
             if let data = controlMessage.data {
-                let readValue = ControlMessageParser.readCInt(data: data)
+                let readValue = ControlMessageParser._readCInt(data: data)
                 self.ecnValue = .init(receivedValue: readValue)
             }
         }
@@ -143,9 +148,9 @@ extension NIOExplicitCongestionNotificationState {
 
 extension CInt {
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    fileprivate static let notCapableValue = IPTOS_ECN_NOTECT
+    private static let notCapableValue = IPTOS_ECN_NOTECT
     #else
-    fileprivate static let notCapableValue = IPTOS_ECN_NOT_ECT    // Linux
+    private static let notCapableValue = IPTOS_ECN_NOT_ECT    // Linux
     #endif
 
     /// Create a CInt encoding of ExplicitCongestionNotification suitable for sending in TCLASS or TOS cmsg.
@@ -165,11 +170,12 @@ extension CInt {
 
 struct UnsafeOutboundControlBytes {
     private var controlBytes: UnsafeMutableRawBufferPointer
-    private var writePosition: UnsafeMutableRawBufferPointer.Index = 0
+    private var writePosition: UnsafeMutableRawBufferPointer.Index
     
     /// This structure must not outlive `controlBytes`
     init(controlBytes: UnsafeMutableRawBufferPointer) {
         self.controlBytes = controlBytes
+        self.writePosition = controlBytes.startIndex
     }
 
     mutating func appendControlMessage(level: CInt, type: CInt, payload: CInt) {
@@ -193,9 +199,9 @@ struct UnsafeOutboundControlBytes {
         cmsghdrPtr.pointee.cmsg_type = type
         cmsghdrPtr.pointee.cmsg_len = .init(Posix.cmsgLen(payloadSize: MemoryLayout.size(ofValue: payload)))
         
-        let dataPointer = Posix.cmsgData(for: cmsghdrPtr)
-        precondition(dataPointer!.count >= MemoryLayout<PayloadType>.stride)
-        dataPointer!.storeBytes(of: payload, as: PayloadType.self)
+        let dataPointer = Posix.cmsgData(for: cmsghdrPtr)!
+        precondition(dataPointer.count >= MemoryLayout<PayloadType>.stride)
+        dataPointer.storeBytes(of: payload, as: PayloadType.self)
         
         self.writePosition += requiredSize
     }
@@ -238,8 +244,7 @@ extension UnsafeOutboundControlBytes {
 extension AddressedEnvelope.Metadata {
     /// It's assumed the caller has checked that congestion information is required before calling.
     internal init(from controlMessagesReceived: UnsafeControlMessageCollection) {
-        var controlMessageReceiver = ControlMessageParser()
-        controlMessagesReceived.forEach { controlMessage in controlMessageReceiver.receiveMessage(controlMessage) }
+        let controlMessageReceiver = ControlMessageParser(parsing: controlMessagesReceived)
         self.init(ecnState: controlMessageReceiver.ecnValue)
     }
 }
