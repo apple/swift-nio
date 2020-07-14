@@ -392,9 +392,7 @@ internal enum Posix {
     }
     
     @inline(never)
-    public static func sendmsg(descriptor: CInt,
-                               msgHdr: UnsafePointer<msghdr>,
-                               flags: CInt) throws -> IOResult<ssize_t> {
+    public static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
             sysSendMsg(descriptor, msgHdr, flags)
         }
