@@ -19,7 +19,7 @@ import CNIOLinux
 #endif
 
 /// Memory for use as `cmsghdr` and associated data.
-/// Supports multiple messages each with enough stroage for multiple `cmsghdr`
+/// Supports multiple messages each with enough storage for multiple `cmsghdr`
 struct UnsafeControlMessageStorage: Collection {
     let bytesPerMessage: Int
     var buffer: UnsafeMutableRawBufferPointer
