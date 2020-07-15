@@ -90,4 +90,29 @@ class ControlMessageTests: XCTestCase {
         }
         XCTAssertEqual(expected, decoded)
     }
+
+    private func assertBuffersNonOverlapping(_ b1: UnsafeMutableRawBufferPointer,
+                                             _ b2: UnsafeMutableRawBufferPointer,
+                                             file: StaticString = #file,
+                                             line: UInt = #line) {
+        XCTAssert((b1.baseAddress! < b2.baseAddress! && (b1.baseAddress! + b1.count) <= b2.baseAddress!) ||
+                  (b2.baseAddress! < b1.baseAddress! && (b2.baseAddress! + b2.count) <= b1.baseAddress!))
+    }
+
+    func testStorageIndexing() {
+        let storage = UnsafeControlMessageStorage.allocate(msghdrCount: 3)
+        defer {
+            storage.deallocate()
+        }
+        // Check size
+        XCTAssertEqual(storage.count, 3)
+        // Buffers issued should not overlap.
+        assertBuffersNonOverlapping(storage[0], storage[1])
+        assertBuffersNonOverlapping(storage[0], storage[2])
+        assertBuffersNonOverlapping(storage[1], storage[2])
+        // Buffers should have a suitable size.
+        XCTAssertGreaterThan(storage[0].count, MemoryLayout<cmsghdr>.stride)
+        XCTAssertGreaterThan(storage[1].count, MemoryLayout<cmsghdr>.stride)
+        XCTAssertGreaterThan(storage[2].count, MemoryLayout<cmsghdr>.stride)
+    }
 }
