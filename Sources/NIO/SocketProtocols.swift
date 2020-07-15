@@ -50,7 +50,8 @@ protocol SocketProtocol: BaseSocketProtocol {
     func recvmsg(pointer: UnsafeMutableRawBufferPointer,
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
-                 controlBytes: inout Slice<UnsafeMutableRawBufferPointer>) throws -> IOResult<Int>
+                 controlBytes: inout Slice<UnsafeMutableRawBufferPointer>,
+                 controlMessagesReceived: inout UnsafeControlMessageCollection?) throws -> IOResult<Int>
     
     func sendmsg(pointer: UnsafeRawBufferPointer,
                  destinationPtr: UnsafePointer<sockaddr>,
