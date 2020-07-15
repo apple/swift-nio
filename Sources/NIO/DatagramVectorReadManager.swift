@@ -137,8 +137,7 @@ struct DatagramVectorReadManager {
             return self.buildMessages(messageCount: messagesProcessed,
                                       sliceSize: messageSize,
                                       buffer: &buffer,
-                                      reportExplicitCongestionNotifications: reportExplicitCongestionNotifications,
-                                      messageVector: self.messageVector)
+                                      reportExplicitCongestionNotifications: reportExplicitCongestionNotifications)
         }
     }
 
@@ -153,8 +152,7 @@ struct DatagramVectorReadManager {
     private func buildMessages(messageCount: Int,
                                sliceSize: Int,
                                buffer: inout ByteBuffer,
-                               reportExplicitCongestionNotifications: Bool,
-                               messageVector: UnsafeMutableBufferPointer<MMsgHdr>) -> ReadResult {
+                               reportExplicitCongestionNotifications: Bool) -> ReadResult {
         var sliceOffset = buffer.readerIndex
         var totalReadSize = 0
 
@@ -179,7 +177,8 @@ struct DatagramVectorReadManager {
             // Extract congestion information if requested.
             let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
             if reportExplicitCongestionNotifications {
-                let controlMessagesReceived = UnsafeControlMessageCollection(messageHeader: messageVector[i].msg_hdr)
+                let controlMessagesReceived =
+                    UnsafeControlMessageCollection(messageHeader: self.messageVector[i].msg_hdr)
                 metadata = .init(from: controlMessagesReceived)
             } else {
                 metadata = nil
