@@ -54,10 +54,9 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             var managed: [Unmanaged<AnyObject>] = Array(repeating: Unmanaged.passUnretained(o), count: Socket.writevLimitIOVectors + 1)
             var msgs: [MMsgHdr] = Array(repeating: MMsgHdr(), count: Socket.writevLimitIOVectors + 1)
             var addresses: [sockaddr_storage] = Array(repeating: sockaddr_storage(), count: Socket.writevLimitIOVectors + 1)
-            let controlMessageBuffers = DatagramChannel.allocateControlMessageBuffer(
-                msghdrCount: Socket.writevLimitIOVectors)
+            let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
             defer {
-                controlMessageBuffers.deallocate()
+                controlMessageStorage.deallocate()
             }
             /* put a canary value at the end */
             iovecs[iovecs.count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!, iov_len: 0xdeadbee)
@@ -69,7 +68,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                                        iovecs: iovecs,
                                                                        addresses: addresses,
                                                                        storageRefs: managed,
-                                                                       controlMessageBuffers: controlMessageBuffers)
+                                                                       controlMessageStorage: controlMessageStorage)
                             XCTAssertTrue(pwm.isEmpty)
                             XCTAssertTrue(pwm.isOpen)
                             XCTAssertFalse(pwm.isFlushPending)

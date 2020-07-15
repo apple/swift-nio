@@ -18,6 +18,49 @@ import CNIODarwin
 import CNIOLinux
 #endif
 
+/// Memory for use as `cmsghdr` and associated data.
+/// Supports multiple messages each with enough stroage for multiple `cmsghdr`
+struct UnsafeControlMessageStorage: Collection {
+    let bytesPerMessage: Int
+    var buffer: UnsafeMutableRawBufferPointer
+
+    /// Initialise which includes allocating memory
+    /// parameter:
+    /// - msghdrCount: How many messages we need space for.
+    private init(msghdrCount: Int) {
+        // Guess that 4 Int32 payload messages is enough for anyone.
+        self.bytesPerMessage = Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.stride) * 4
+        self.buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: self.bytesPerMessage * msghdrCount,
+                                                             alignment: MemoryLayout<cmsghdr>.alignment)
+    }
+
+    /// Allocate new memory - Caller must call `deallocate` when no longer required..
+    /// parameter:
+    ///   - msghdrCount:   How many `msghdr` structures will be fed from this buffer - we assume 4 Int32 cmsgs for each.
+    static func allocate(msghdrCount: Int) -> UnsafeControlMessageStorage {
+        return UnsafeControlMessageStorage(msghdrCount: msghdrCount)
+    }
+
+    func deallocate() {
+        self.buffer.deallocate()
+    }
+
+    /// Get the part of the buffer for use with a message.
+    public subscript(position: Int) -> UnsafeMutableRawBufferPointer {
+        return UnsafeMutableRawBufferPointer(
+            rebasing: self.buffer[(position * self.bytesPerMessage)..<((position+1) * self.bytesPerMessage)])
+    }
+
+    var startIndex: Int { return 0 }
+
+    var endIndex: Int { return self.buffer.count / bytesPerMessage }
+
+    func index(after: Int) -> Int {
+        return after + 1
+    }
+
+}
+
 /// Representation of a `cmsghdr` and associated data.
 /// Unsafe as captures pointers and must not escape the scope where those pointers are valid.
 struct UnsafeControlMessage {

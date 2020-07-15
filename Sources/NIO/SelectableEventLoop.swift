@@ -87,7 +87,7 @@ internal final class SelectableEventLoop: EventLoop {
     let addresses: UnsafeMutableBufferPointer<sockaddr_storage>
     
     // Used for UDP control messages.
-    let controlMessageBuffers: UnsafeMutableRawBufferPointer
+    let controlMessageStorage: UnsafeControlMessageStorage
 
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
 
@@ -146,8 +146,7 @@ internal final class SelectableEventLoop: EventLoop {
         self._addresses = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self.msgs = UnsafeMutableBufferPointer(start: _msgs, count: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
-        self.controlMessageBuffers = DatagramChannel.allocateControlMessageBuffer(
-            msghdrCount: Socket.writevLimitIOVectors)
+        self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually
@@ -162,7 +161,7 @@ internal final class SelectableEventLoop: EventLoop {
         _storageRefs.deallocate()
         _msgs.deallocate()
         _addresses.deallocate()
-        self.controlMessageBuffers.deallocate()
+        self.controlMessageStorage.deallocate()
     }
 
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
@@ -560,11 +559,6 @@ internal final class SelectableEventLoop: EventLoop {
                 callback(EventLoopError.unsupportedOperation)
             }
         }
-    }
-    
-    func withControlMessageBytes<ReturnType>(
-        _ body: (UnsafeMutableRawBufferPointer) throws -> ReturnType) rethrows -> ReturnType {
-        return try body(self.controlMessageBuffers)
     }
 }
 

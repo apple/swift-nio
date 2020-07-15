@@ -35,12 +35,12 @@ struct DatagramVectorReadManager {
             self.messageVector.deinitializeAndDeallocate()
             self.ioVector.deinitializeAndDeallocate()
             self.sockaddrVector.deinitializeAndDeallocate()
-            self.controlMessageBuffers.deallocate()
+            self.controlMessageStorage.deallocate()
 
             self.messageVector = .allocateAndInitialize(repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0), count: newValue)
             self.ioVector = .allocateAndInitialize(repeating: IOVector(), count: newValue)
             self.sockaddrVector = .allocateAndInitialize(repeating: sockaddr_storage(), count: newValue)
-            self.controlMessageBuffers = DatagramChannel.allocateControlMessageBuffer(msghdrCount: newValue)
+            self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: newValue)
         }
     }
 
@@ -52,8 +52,9 @@ struct DatagramVectorReadManager {
 
     /// The vector of sockaddr structures used for saving addresses.
     private var sockaddrVector: UnsafeMutableBufferPointer<sockaddr_storage>
-    
-    private var controlMessageBuffers: UnsafeMutableRawBufferPointer
+
+    /// Storage to use for `cmsghdr` data when reading messages.
+    private var controlMessageStorage: UnsafeControlMessageStorage
 
     // FIXME(cory): Right now there's no good API for specifying the various parameters of multi-read, especially how
     // it should interact with RecvByteBufferAllocator. For now I'm punting on this to see if I can get it working,
@@ -61,11 +62,11 @@ struct DatagramVectorReadManager {
     fileprivate init(messageVector: UnsafeMutableBufferPointer<MMsgHdr>,
                      ioVector: UnsafeMutableBufferPointer<IOVector>,
                      sockaddrVector: UnsafeMutableBufferPointer<sockaddr_storage>,
-                     controlMessageBuffers: UnsafeMutableRawBufferPointer) {
+                     controlMessageStorage: UnsafeControlMessageStorage) {
         self.messageVector = messageVector
         self.ioVector = ioVector
         self.sockaddrVector = sockaddrVector
-        self.controlMessageBuffers = controlMessageBuffers
+        self.controlMessageStorage = controlMessageStorage
     }
 
     /// Performs a socket vector read.
@@ -93,9 +94,6 @@ struct DatagramVectorReadManager {
         assert(buffer.readerIndex == 0, "Buffer was not cleared between calls to readFromSocket!")
 
         let messageSize = buffer.capacity / self.messageCount
-        let controlBytesPerMessage =
-            (self.controlMessageBuffers.count / self.messageCount / MemoryLayout<cmsghdr>.alignment)
-            * MemoryLayout<cmsghdr>.alignment
 
         let result = try buffer.withVeryUnsafeMutableBytes { bufferPointer -> IOResult<Int> in
             for i in 0..<self.messageCount {
@@ -107,8 +105,7 @@ struct DatagramVectorReadManager {
                 let controlBytes: UnsafeMutableRawBufferPointer
                 if reportExplicitCongestionNotifications {
                     // This will be used in buildMessages below but should not be used beyond return of this function.
-                    controlBytes = UnsafeMutableRawBufferPointer(
-                        rebasing: self.controlMessageBuffers[(i * controlBytesPerMessage)..<((i+1) * controlBytesPerMessage)])
+                    controlBytes = self.controlMessageStorage[i]
                 } else {
                     controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
                 }
@@ -150,7 +147,7 @@ struct DatagramVectorReadManager {
         self.messageVector.deinitializeAndDeallocate()
         self.ioVector.deinitializeAndDeallocate()
         self.sockaddrVector.deinitializeAndDeallocate()
-        self.controlMessageBuffers.deallocate()
+        self.controlMessageStorage.deallocate()
     }
 
     private func buildMessages(messageCount: Int,
@@ -206,12 +203,12 @@ extension DatagramVectorReadManager {
         let messageVector = UnsafeMutableBufferPointer.allocateAndInitialize(repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0), count: messageCount)
         let ioVector = UnsafeMutableBufferPointer.allocateAndInitialize(repeating: IOVector(), count: messageCount)
         let sockaddrVector = UnsafeMutableBufferPointer.allocateAndInitialize(repeating: sockaddr_storage(), count: messageCount)
-        let controlMessageBuffers = DatagramChannel.allocateControlMessageBuffer(msghdrCount: messageCount)
+        let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: messageCount)
 
         return DatagramVectorReadManager(messageVector: messageVector,
                                          ioVector: ioVector,
                                          sockaddrVector: sockaddrVector,
-                                         controlMessageBuffers: controlMessageBuffers)
+                                         controlMessageStorage: controlMessageStorage)
     }
 }
 

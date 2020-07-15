@@ -374,7 +374,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           iovecs: eventLoop.iovecs,
                                                           addresses: eventLoop.addresses,
                                                           storageRefs: eventLoop.storageRefs,
-                                                          controlMessageBuffers: eventLoop.controlMessageBuffers)
+                                                          controlMessageStorage: eventLoop.controlMessageStorage)
 
         try super.init(socket: socket,
                        parent: nil,
@@ -389,7 +389,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           iovecs: eventLoop.iovecs,
                                                           addresses: eventLoop.addresses,
                                                           storageRefs: eventLoop.storageRefs,
-                                                          controlMessageBuffers: eventLoop.controlMessageBuffers)
+                                                          controlMessageStorage: eventLoop.controlMessageStorage)
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
@@ -494,60 +494,59 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
         var buffer = self.recvAllocator.buffer(allocator: self.allocator)
         var readResult = ReadResult.none
-        
-        return try self.selectableEventLoop.withControlMessageBytes {
-            let controlBytes: UnsafeMutableRawBufferPointer
-            if self.reportExplicitCongestionNotifications {
-                controlBytes = $0
-            } else {
-                controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            }
 
-            for i in 1...self.maxMessagesPerRead {
-                guard self.isOpen else {
-                    throw ChannelError.eof
-                }
-                buffer.clear()
-
-                var controlByteSlice = controlBytes[...]
-                var controlMessagesReceived: UnsafeControlMessageCollection?
-                
-                let result = try buffer.withMutableWritePointer {
-                    try self.socket.recvmsg(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength,
-                                            controlBytes: &controlByteSlice,
-                                            controlMessagesReceived: &controlMessagesReceived)
-                }
-                switch result {
-                case .processed(let bytesRead):
-                    assert(bytesRead > 0)
-                    assert(self.isOpen)
-                    let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
-                    readPending = false
-                    
-                    let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                    if self.reportExplicitCongestionNotifications,
-                       let controlMessagesReceived = controlMessagesReceived {
-                        metadata = .init(from: controlMessagesReceived)
-                    } else {
-                        metadata = nil
-                    }
-
-                    let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
-                                                data: buffer,
-                                                metadata:  metadata)
-                    assert(self.isActive)
-                    pipeline.fireChannelRead0(NIOAny(msg))
-                    if mayGrow && i < maxMessagesPerRead {
-                        buffer = recvAllocator.buffer(allocator: allocator)
-                    }
-                    readResult = .some
-                case .wouldBlock(let bytesRead):
-                    assert(bytesRead == 0)
-                    return readResult
-                }
-            }
-            return readResult
+        // These control bytes must not escape the current call stack
+        let controlBytes: UnsafeMutableRawBufferPointer
+        if self.reportExplicitCongestionNotifications {
+            controlBytes = self.selectableEventLoop.controlMessageStorage[0]
+        } else {
+            controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
+
+        for i in 1...self.maxMessagesPerRead {
+            guard self.isOpen else {
+                throw ChannelError.eof
+            }
+            buffer.clear()
+
+            var controlByteSlice = controlBytes[...]
+            var controlMessagesReceived: UnsafeControlMessageCollection?
+
+            let result = try buffer.withMutableWritePointer {
+                try self.socket.recvmsg(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength,
+                                        controlBytes: &controlByteSlice,
+                                        controlMessagesReceived: &controlMessagesReceived)
+            }
+            switch result {
+            case .processed(let bytesRead):
+                assert(bytesRead > 0)
+                assert(self.isOpen)
+                let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
+                readPending = false
+
+                let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
+                if self.reportExplicitCongestionNotifications,
+                   let controlMessagesReceived = controlMessagesReceived {
+                    metadata = .init(from: controlMessagesReceived)
+                } else {
+                    metadata = nil
+                }
+
+                let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
+                                            data: buffer,
+                                            metadata:  metadata)
+                assert(self.isActive)
+                pipeline.fireChannelRead0(NIOAny(msg))
+                if mayGrow && i < maxMessagesPerRead {
+                    buffer = recvAllocator.buffer(allocator: allocator)
+                }
+                readResult = .some
+            case .wouldBlock(let bytesRead):
+                assert(bytesRead == 0)
+                return readResult
+            }
+        }
+        return readResult
     }
 
     private func vectorReadFromSocket() throws -> ReadResult {
@@ -651,15 +650,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     return .processed(0)
                 }
                 // normal write
-                return try self.selectableEventLoop.withControlMessageBytes {
-                    var controlBytes = UnsafeOutboundControlBytes(controlBytes: $0)
-                    controlBytes.appendExplicitCongestionState(metadata: metadata,
-                                                               protocolFamily: self.localAddress?.protocol)
-                    return try self.socket.sendmsg(pointer: ptr,
-                                                   destinationPtr: destinationPtr,
-                                                   destinationSize: destinationSize,
-                                                   controlBytes: controlBytes.validControlBytes)
-                }
+                // Control bytes must not escape current stack.
+                var controlBytes = UnsafeOutboundControlBytes(
+                    controlBytes: self.selectableEventLoop.controlMessageStorage[0])
+                controlBytes.appendExplicitCongestionState(metadata: metadata,
+                                                           protocolFamily: self.localAddress?.protocol)
+                return try self.socket.sendmsg(pointer: ptr,
+                                               destinationPtr: destinationPtr,
+                                               destinationSize: destinationSize,
+                                               controlBytes: controlBytes.validControlBytes)
+
             },
             vectorWriteOperation: { msgs in
                 return try self.socket.sendmmsg(msgs: msgs)
@@ -843,17 +843,5 @@ extension DatagramChannel: MulticastChannel {
             promise?.fail(error)
             return
         }
-    }
-}
-
-extension DatagramChannel {
-    /// Caller must deallocate this memory.
-    /// Parameters:
-    ///   - msghdrCount:   How many `msghdr` structures will be fed from this buffer - we assume 4 Int32 cmsgs for each.
-    static func allocateControlMessageBuffer(msghdrCount: Int) -> UnsafeMutableRawBufferPointer {
-        // Guess that 4 Int32 payload messages is enough for anyone.
-        return UnsafeMutableRawBufferPointer.allocate(
-            byteCount: Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.stride) * 4 * msghdrCount,
-            alignment: MemoryLayout<cmsghdr>.alignment)
     }
 }
