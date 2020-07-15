@@ -847,10 +847,13 @@ extension DatagramChannel: MulticastChannel {
 }
 
 extension DatagramChannel {
-    static func allocateControlMessageBuffer() -> UnsafeMutableRawBufferPointer {
+    /// Caller must deallocate this memory.
+    /// Parameters:
+    ///   - msghdrCount:   How many `msghdr` structures will be fed from this buffer - we assume 4 Int32 cmsgs for each.
+    static func allocateControlMessageBuffer(msghdrCount: Int) -> UnsafeMutableRawBufferPointer {
         // Guess that 4 Int32 payload messages is enough for anyone.
         return UnsafeMutableRawBufferPointer.allocate(
-            byteCount: Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.stride) * 4,
-            alignment: MemoryLayout<Int32>.alignment)
+            byteCount: Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.stride) * 4 * msghdrCount,
+            alignment: MemoryLayout<cmsghdr>.alignment)
     }
 }

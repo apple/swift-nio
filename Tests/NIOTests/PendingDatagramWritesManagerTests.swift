@@ -54,15 +54,10 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             var managed: [Unmanaged<AnyObject>] = Array(repeating: Unmanaged.passUnretained(o), count: Socket.writevLimitIOVectors + 1)
             var msgs: [MMsgHdr] = Array(repeating: MMsgHdr(), count: Socket.writevLimitIOVectors + 1)
             var addresses: [sockaddr_storage] = Array(repeating: sockaddr_storage(), count: Socket.writevLimitIOVectors + 1)
-            var controlMessageBuffers: [UnsafeMutableRawBufferPointer] =
-                .init(repeating: .init(start: nil, count: 0), count: Socket.writevLimitIOVectors)
-            for controlIndex in 0..<controlMessageBuffers.count {
-                controlMessageBuffers[controlIndex] = DatagramChannel.allocateControlMessageBuffer()
-            }
+            let controlMessageBuffers = DatagramChannel.allocateControlMessageBuffer(
+                msghdrCount: Socket.writevLimitIOVectors)
             defer {
-                for controlBuffer in controlMessageBuffers {
-                    controlBuffer.deallocate()
-                }
+                controlMessageBuffers.deallocate()
             }
             /* put a canary value at the end */
             iovecs[iovecs.count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!, iov_len: 0xdeadbee)
