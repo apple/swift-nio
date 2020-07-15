@@ -206,7 +206,7 @@ typealias IOVector = iovec
     ///     - storageLen: The size of the storage itself.
     ///     - controlBytes: A region of a buffer into which control data can be written. This parameter will be modified on return to be
     ///         the slice of the data actually written into, if any.
-    ///     - controlMessagesReceived: if data is received this is populated using the received control bytes.
+    ///     - controlMessagesReceived: If data is received this is populated using the received control bytes.
     /// - returns: The `IOResult` which indicates how much data could be received and if the operation returned before all the data could be received
     ///     (because the socket is in non-blocking mode)
     /// - throws: An `IOError` if the operation failed.
@@ -231,12 +231,11 @@ typealias IOVector = iovec
                     // We need to write back the length of the message and the control bytes.
                     storageLen = messageHeader.msg_namelen
                     controlBytes = controlBytes.prefix(.init(messageHeader.msg_controllen))
-                    
                 }
 
                 let result = try withUnsafeMutablePointer(to: &messageHeader) { messageHeader in
                     return try withUnsafeHandle { fd in
-                        return try Posix.recvmsg(descriptor: fd, msgHdr: messageHeader, flags: 0)
+                        return try NIOBSDSocket.recvmsg(descriptor: fd, msgHdr: messageHeader, flags: 0)
                     }
                 }
                 
@@ -249,7 +248,7 @@ typealias IOVector = iovec
             }
         }
     }
-    
+
     /// Send the content of a file descriptor to the remote peer (if possible a zero-copy strategy is applied).
     ///
     /// - parameters:

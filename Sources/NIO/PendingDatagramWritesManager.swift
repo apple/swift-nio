@@ -382,7 +382,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - iovecs: A pre-allocated array of `IOVector` elements
     ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
     ///     - storageRefs: A pre-allocated array of storage management tokens used to keep storage elements alive during a vector write operation
-    ///     - controlMessageStorage: A pre-allocated memory for storing cmsghdr data during a vector write operation.
+    ///     - controlMessageStorage: Pre-allocated memory for storing cmsghdr data during a vector write operation.
     init(msgs: UnsafeMutableBufferPointer<MMsgHdr>,
          iovecs: UnsafeMutableBufferPointer<IOVector>,
          addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
