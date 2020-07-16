@@ -69,6 +69,8 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
                                                    controlMessageStorage: UnsafeControlMessageStorage,
                                                    _ body: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> IOResult<Int> {
     assert(msgs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal sendmmsg")
+    assert(controlMessageStorage.count >= Socket.writevLimitIOVectors,
+           "Insufficiently sized control message storage for a maximal sendmmsg")
 
     // the numbers of storage refs that we need to decrease later.
     var c = 0

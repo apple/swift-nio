@@ -87,7 +87,7 @@ internal final class SelectableEventLoop: EventLoop {
     let addresses: UnsafeMutableBufferPointer<sockaddr_storage>
     
     // Used for UDP control messages.
-    let controlMessageStorage: UnsafeControlMessageStorage
+    private(set) var controlMessageStorage: UnsafeControlMessageStorage
 
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
 

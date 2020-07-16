@@ -389,8 +389,7 @@ final class DatagramChannelTests: XCTestCase {
             override func recvmsg(pointer: UnsafeMutableRawBufferPointer,
                                   storage: inout sockaddr_storage,
                                   storageLen: inout socklen_t,
-                                  controlBytes: inout Slice<UnsafeMutableRawBufferPointer>,
-                                  controlMessagesReceived: inout UnsafeControlMessageCollection?)
+                                  controlBytes: inout UnsafeReceivedControlBytes)
                                   throws -> IOResult<(Int)> {
                 if let err = self.error {
                     self.error = nil

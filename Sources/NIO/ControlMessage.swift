@@ -26,23 +26,27 @@ struct UnsafeControlMessageStorage: Collection {
 
     /// Initialise which includes allocating memory
     /// parameter:
-    /// - msghdrCount: How many messages we need space for.
-    private init(msghdrCount: Int) {
-        // Guess that 4 Int32 payload messages is enough for anyone.
-        self.bytesPerMessage = Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.stride) * 4
-        self.buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: self.bytesPerMessage * msghdrCount,
-                                                             alignment: MemoryLayout<cmsghdr>.alignment)
+    /// - bytesPerMessage: How many bytes have been allocated for each supported message.
+    /// - buffer: The memory allocated to use for control messages.
+    private init(bytesPerMessage: Int, buffer: UnsafeMutableRawBufferPointer) {
+        self.bytesPerMessage = bytesPerMessage
+        self.buffer = buffer
     }
 
     /// Allocate new memory - Caller must call `deallocate` when no longer required.
     /// parameter:
     ///   - msghdrCount: How many `msghdr` structures will be fed from this buffer - we assume 4 Int32 cmsgs for each.
     static func allocate(msghdrCount: Int) -> UnsafeControlMessageStorage {
-        return UnsafeControlMessageStorage(msghdrCount: msghdrCount)
+        // Guess that 4 Int32 payload messages is enough for anyone.
+        let bytesPerMessage = Posix.cmsgSpace(payloadSize: MemoryLayout<Int32>.stride) * 4
+        let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: bytesPerMessage * msghdrCount,
+                                                             alignment: MemoryLayout<cmsghdr>.alignment)
+        return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, buffer: buffer)
     }
 
-    func deallocate() {
+    mutating func deallocate() {
         self.buffer.deallocate()
+        self.buffer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer(bitPattern: 0xdeadbeef), count: 0)
     }
 
     /// Get the part of the buffer for use with a message.
@@ -127,6 +131,17 @@ extension UnsafeControlMessageCollection: Collection {
         return UnsafeControlMessage(level: cmsg.pointee.cmsg_level,
                                     type: cmsg.pointee.cmsg_type,
                                     data: Posix.cmsgData(for: cmsg))
+    }
+}
+
+/// Small struct to link a buffer used for control bytes and the processing of those bytes.
+struct UnsafeReceivedControlBytes {
+    var controlBytesBuffer: UnsafeMutableRawBufferPointer
+    /// Set when a message is received which is using the controlBytesBuffer - the lifetime will be tied to that of `controlBytesBuffer`
+    var receivedControlMessages: UnsafeControlMessageCollection?
+
+    init(controlBytesBuffer: UnsafeMutableRawBufferPointer) {
+        self.controlBytesBuffer = controlBytesBuffer
     }
 }
 

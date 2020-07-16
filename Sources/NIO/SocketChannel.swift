@@ -496,11 +496,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         var readResult = ReadResult.none
 
         // These control bytes must not escape the current call stack
-        let controlBytes: UnsafeMutableRawBufferPointer
+        let controlBytesBuffer: UnsafeMutableRawBufferPointer
         if self.reportExplicitCongestionNotifications {
-            controlBytes = self.selectableEventLoop.controlMessageStorage[0]
+            controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
         } else {
-            controlBytes = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+            controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
 
         for i in 1...self.maxMessagesPerRead {
@@ -509,13 +509,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             }
             buffer.clear()
 
-            var controlByteSlice = controlBytes[...]
-            var controlMessagesReceived: UnsafeControlMessageCollection?
+            var controlBytes = UnsafeReceivedControlBytes(controlBytesBuffer: controlBytesBuffer)
 
             let result = try buffer.withMutableWritePointer {
-                try self.socket.recvmsg(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength,
-                                        controlBytes: &controlByteSlice,
-                                        controlMessagesReceived: &controlMessagesReceived)
+                try self.socket.recvmsg(pointer: $0,
+                                        storage: &rawAddress,
+                                        storageLen: &rawAddressLength,
+                                        controlBytes: &controlBytes)
             }
             switch result {
             case .processed(let bytesRead):
@@ -526,7 +526,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
                 if self.reportExplicitCongestionNotifications,
-                   let controlMessagesReceived = controlMessagesReceived {
+                   let controlMessagesReceived = controlBytes.receivedControlMessages {
                     metadata = .init(from: controlMessagesReceived)
                 } else {
                     metadata = nil

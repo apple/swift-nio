@@ -96,11 +96,13 @@ class ControlMessageTests: XCTestCase {
                                              file: StaticString = #file,
                                              line: UInt = #line) {
         XCTAssert((b1.baseAddress! < b2.baseAddress! && (b1.baseAddress! + b1.count) <= b2.baseAddress!) ||
-                  (b2.baseAddress! < b1.baseAddress! && (b2.baseAddress! + b2.count) <= b1.baseAddress!))
+                  (b2.baseAddress! < b1.baseAddress! && (b2.baseAddress! + b2.count) <= b1.baseAddress!),
+                  file: (file),
+                  line: line)
     }
 
     func testStorageIndexing() {
-        let storage = UnsafeControlMessageStorage.allocate(msghdrCount: 3)
+        var storage = UnsafeControlMessageStorage.allocate(msghdrCount: 3)
         defer {
             storage.deallocate()
         }
