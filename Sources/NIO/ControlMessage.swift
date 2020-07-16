@@ -34,9 +34,9 @@ struct UnsafeControlMessageStorage: Collection {
                                                              alignment: MemoryLayout<cmsghdr>.alignment)
     }
 
-    /// Allocate new memory - Caller must call `deallocate` when no longer required..
+    /// Allocate new memory - Caller must call `deallocate` when no longer required.
     /// parameter:
-    ///   - msghdrCount:   How many `msghdr` structures will be fed from this buffer - we assume 4 Int32 cmsgs for each.
+    ///   - msghdrCount: How many `msghdr` structures will be fed from this buffer - we assume 4 Int32 cmsgs for each.
     static func allocate(msghdrCount: Int) -> UnsafeControlMessageStorage {
         return UnsafeControlMessageStorage(msghdrCount: msghdrCount)
     }
@@ -53,7 +53,7 @@ struct UnsafeControlMessageStorage: Collection {
 
     var startIndex: Int { return 0 }
 
-    var endIndex: Int { return self.buffer.count / bytesPerMessage }
+    var endIndex: Int { return self.buffer.count / self.bytesPerMessage }
 
     func index(after: Int) -> Int {
         return after + 1
