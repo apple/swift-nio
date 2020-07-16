@@ -30,6 +30,7 @@ extension ControlMessageTests {
                 ("testEmptyEncode", testEmptyEncode),
                 ("testEncodeDecode1", testEncodeDecode1),
                 ("testEncodeDecode2", testEncodeDecode2),
+                ("testStorageIndexing", testStorageIndexing),
            ]
    }
 }
