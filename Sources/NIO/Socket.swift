@@ -204,17 +204,15 @@ typealias IOVector = iovec
     ///     - pointer: The pointer (and size) to the storage into which the data should be read.
     ///     - storage: The address from which the data was received
     ///     - storageLen: The size of the storage itself.
-    ///     - controlBytes: A region of a buffer into which control data can be written. This parameter will be modified on return to be
-    ///         the slice of the data actually written into, if any.
+    ///     - controlBytes: A buffer in memory for use receiving control bytes. This parameter will be modified to hold any data actually received.
     /// - returns: The `IOResult` which indicates how much data could be received and if the operation returned before all the data could be received
     ///     (because the socket is in non-blocking mode)
     /// - throws: An `IOError` if the operation failed.
     func recvmsg(pointer: UnsafeMutableRawBufferPointer,
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
-                 controlBytes: inout Slice<UnsafeMutableRawBufferPointer>) throws -> IOResult<Int> {
+                 controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int> {
         var vec = iovec(iov_base: pointer.baseAddress, iov_len: pointer.count)
-        let localControlBytePointer = UnsafeMutableRawBufferPointer(rebasing: controlBytes)
 
         return try withUnsafeMutablePointer(to: &vec) { vecPtr in
             return try storage.withMutableSockAddr { (sockaddrPtr, _) in
@@ -222,20 +220,26 @@ typealias IOVector = iovec
                                            msg_namelen: storageLen,
                                            msg_iov: vecPtr,
                                            msg_iovlen: 1,
-                                           msg_control: localControlBytePointer.baseAddress,
-                                           msg_controllen: .init(localControlBytePointer.count),
+                                           msg_control: controlBytes.controlBytesBuffer.baseAddress,
+                                           msg_controllen: .init(controlBytes.controlBytesBuffer.count),
                                            msg_flags: 0)
                 defer {
-                    // We need to write back the length of the message and the control bytes.
+                    // We need to write back the length of the message.
                     storageLen = messageHeader.msg_namelen
-                    controlBytes = controlBytes.prefix(.init(messageHeader.msg_controllen))
                 }
 
-                return try withUnsafeMutablePointer(to: &messageHeader) { messageHeader in
+                let result = try withUnsafeMutablePointer(to: &messageHeader) { messageHeader in
                     return try withUnsafeHandle { fd in
                         return try NIOBSDSocket.recvmsg(descriptor: fd, msgHdr: messageHeader, flags: 0)
                     }
                 }
+                
+                // Only look at the control bytes if all is good.
+                if case .processed = result {
+                    controlBytes.receivedControlMessages = UnsafeControlMessageCollection(messageHeader: messageHeader)
+                }
+                
+                return result
             }
         }
     }

@@ -51,6 +51,12 @@ extension DatagramChannelTests {
                 ("testMmsgWillTruncateWithoutChangeToAllocator", testMmsgWillTruncateWithoutChangeToAllocator),
                 ("testRecvMmsgForMultipleCycles", testRecvMmsgForMultipleCycles),
                 ("testSetGetEcnNotificationOption", testSetGetEcnNotificationOption),
+                ("testEcnSendReceiveIPV4", testEcnSendReceiveIPV4),
+                ("testEcnSendReceiveIPV6", testEcnSendReceiveIPV6),
+                ("testEcnSendReceiveIPV4VectorRead", testEcnSendReceiveIPV4VectorRead),
+                ("testEcnSendReceiveIPV6VectorRead", testEcnSendReceiveIPV6VectorRead),
+                ("testEcnSendReceiveIPV4VectorReadVectorWrite", testEcnSendReceiveIPV4VectorReadVectorWrite),
+                ("testEcnSendReceiveIPV6VectorReadVectorWrite", testEcnSendReceiveIPV6VectorReadVectorWrite),
            ]
    }
 }

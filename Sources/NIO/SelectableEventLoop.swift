@@ -85,6 +85,9 @@ internal final class SelectableEventLoop: EventLoop {
     private let _addresses: UnsafeMutablePointer<sockaddr_storage>
     let msgs: UnsafeMutableBufferPointer<MMsgHdr>
     let addresses: UnsafeMutableBufferPointer<sockaddr_storage>
+    
+    // Used for UDP control messages.
+    private(set) var controlMessageStorage: UnsafeControlMessageStorage
 
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
 
@@ -143,6 +146,7 @@ internal final class SelectableEventLoop: EventLoop {
         self._addresses = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self.msgs = UnsafeMutableBufferPointer(start: _msgs, count: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
+        self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually
@@ -157,6 +161,7 @@ internal final class SelectableEventLoop: EventLoop {
         _storageRefs.deallocate()
         _msgs.deallocate()
         _addresses.deallocate()
+        self.controlMessageStorage.deallocate()
     }
 
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
