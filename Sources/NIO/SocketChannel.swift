@@ -534,7 +534,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
                 let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
                                             data: buffer,
-                                            metadata:  metadata)
+                                            metadata: metadata)
                 assert(self.isActive)
                 pipeline.fireChannelRead0(NIOAny(msg))
                 if mayGrow && i < maxMessagesPerRead {
