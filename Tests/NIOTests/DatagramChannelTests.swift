@@ -684,9 +684,15 @@ final class DatagramChannelTests: XCTestCase {
                 }
                 .bind(host: address, port: 0)
                 .wait()
+            defer {
+                XCTAssertNoThrow(try receiveChannel.close().wait())
+            }
             let sendChannel = try DatagramBootstrap(group: group)
                 .bind(host: address, port: 0)
                 .wait()
+            defer {
+                XCTAssertNoThrow(try! sendChannel.close().wait())
+            }
             
             var buffer = sendChannel.allocator.buffer(capacity: 1)
             buffer.writeRepeatingByte(0, count: 1)
