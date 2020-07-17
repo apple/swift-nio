@@ -691,7 +691,7 @@ final class DatagramChannelTests: XCTestCase {
                 .bind(host: address, port: 0)
                 .wait()
             defer {
-                XCTAssertNoThrow(try! sendChannel.close().wait())
+                XCTAssertNoThrow(try sendChannel.close().wait())
             }
             
             var buffer = sendChannel.allocator.buffer(capacity: 1)
