@@ -7,6 +7,7 @@ services:
     build:
       args:
         base_image: "swiftlang/swift:nightly-5.3-xenial"
+        ubuntu_version: "xenial"
 
   unit-tests:
     image: swift-nio:16.04-5.3
