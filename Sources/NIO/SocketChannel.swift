@@ -258,6 +258,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
         switch err.errnoCode {
         case ECONNABORTED,
+             EINVAL,
              EMFILE,
              ENFILE,
              ENOBUFS,
