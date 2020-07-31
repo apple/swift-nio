@@ -19,6 +19,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <assert.h>
+#include <netinet/ip.h>
 
 int CNIODarwin_sendmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vlen, int flags) {
     // Some quick error checking. If vlen can't fit into int, we bail.
@@ -79,5 +80,11 @@ size_t CNIODarwin_CMSG_LEN(size_t payloadSizeBytes) {
 size_t CNIODarwin_CMSG_SPACE(size_t payloadSizeBytes) {
     return CMSG_SPACE(payloadSizeBytes);
 }
+
+int CNIODarwin_IPTOS_ECN_NOTECT = IPTOS_ECN_NOTECT;
+int CNIODarwin_IPTOS_ECN_MASK = IPTOS_ECN_MASK;
+int CNIODarwin_IPTOS_ECN_ECT0 = IPTOS_ECN_ECT0;
+int CNIODarwin_IPTOS_ECN_ECT1 = IPTOS_ECN_ECT1;
+int CNIODarwin_IPTOS_ECN_CE = IPTOS_ECN_CE;
 
 #endif  // __APPLE__

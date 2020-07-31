@@ -18,8 +18,6 @@
 #include <sys/socket.h>
 #include <time.h>
 
-#include <netinet/ip.h>
-
 // Darwin platforms do not have a sendmmsg implementation available to them. This C module
 // provides a shim that implements sendmmsg on top of sendmsg. It also provides a shim for
 // recvmmsg, but does not actually implement that shim, instantly throwing errors if called.
@@ -32,6 +30,12 @@ typedef struct {
     struct msghdr msg_hdr;
     unsigned int msg_len;
 } CNIODarwin_mmsghdr;
+
+extern int CNIODarwin_IPTOS_ECN_NOTECT;
+extern int CNIODarwin_IPTOS_ECN_MASK;
+extern int CNIODarwin_IPTOS_ECN_ECT0;
+extern int CNIODarwin_IPTOS_ECN_ECT1;
+extern int CNIODarwin_IPTOS_ECN_CE;
 
 int CNIODarwin_sendmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vlen, int flags);
 int CNIODarwin_recvmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vlen, int flags, struct timespec *timeout);
