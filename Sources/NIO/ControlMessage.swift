@@ -191,12 +191,12 @@ struct ControlMessageParser {
 extension NIOExplicitCongestionNotificationState {
     /// Initialise a NIOExplicitCongestionNotificationState from a value received via either TCLASS or TOS cmsg.
     init(receivedValue: CInt) {
-        switch receivedValue & IPTOS_ECN_MASK {
-        case IPTOS_ECN_ECT1:
+        switch receivedValue & Posix.IPTOS_ECN_MASK {
+        case Posix.IPTOS_ECN_ECT1:
             self = .transportCapableFlag1
-        case IPTOS_ECN_ECT0:
+        case Posix.IPTOS_ECN_ECT0:
             self = .transportCapableFlag0
-        case IPTOS_ECN_CE:
+        case Posix.IPTOS_ECN_CE:
             self = .congestionExperienced
         default:
             self = .transportNotCapable
@@ -205,23 +205,17 @@ extension NIOExplicitCongestionNotificationState {
 }
 
 extension CInt {
-    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    private static let notCapableValue = IPTOS_ECN_NOTECT
-    #else
-    private static let notCapableValue = IPTOS_ECN_NOT_ECT    // Linux
-    #endif
-
     /// Create a CInt encoding of ExplicitCongestionNotification suitable for sending in TCLASS or TOS cmsg.
     init(ecnValue: NIOExplicitCongestionNotificationState) {
         switch ecnValue {
         case .transportNotCapable:
-            self = CInt.notCapableValue
+            self = Posix.IPTOS_ECN_NOTECT
         case .transportCapableFlag0:
-            self = IPTOS_ECN_ECT0
+            self = Posix.IPTOS_ECN_ECT0
         case .transportCapableFlag1:
-            self = IPTOS_ECN_ECT1
+            self = Posix.IPTOS_ECN_ECT1
         case .congestionExperienced:
-            self = IPTOS_ECN_CE
+            self = Posix.IPTOS_ECN_CE
         }
     }
 }

@@ -191,12 +191,22 @@ internal enum Posix {
     static let SHUT_RD: CInt = CInt(Darwin.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
+    static let IPTOS_ECN_NOTECT: CInt = CNIODarwin_IPTOS_ECN_NOTECT
+    static let IPTOS_ECN_MASK: CInt = CNIODarwin_IPTOS_ECN_MASK
+    static let IPTOS_ECN_ECT0: CInt = CNIODarwin_IPTOS_ECN_ECT0
+    static let IPTOS_ECN_ECT1: CInt = CNIODarwin_IPTOS_ECN_ECT1
+    static let IPTOS_ECN_CE: CInt = CNIODarwin_IPTOS_ECN_CE
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
     static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
+    static let IPTOS_ECN_NOTECT: CInt = CInt(CNIOLinux.IPTOS_ECN_NOT_ECT)
+    static let IPTOS_ECN_MASK: CInt = CInt(CNIOLinux.IPTOS_ECN_MASK)
+    static let IPTOS_ECN_ECT0: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT0)
+    static let IPTOS_ECN_ECT1: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT1)
+    static let IPTOS_ECN_CE: CInt = CInt(CNIOLinux.IPTOS_ECN_CE)
 #else
     static var UIO_MAXIOV: Int {
         fatalError("unsupported OS")
