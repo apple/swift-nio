@@ -111,7 +111,7 @@
 ///
 /// Note:   Handlers may choose not to progagate messages down the pipeline immediaitely.  For example a handler may need to wait
 /// for additional data before sending a protocol event to the next handler in the pipeline.  Due to this you can't assume that later handlers
-/// in the pipeline will recienve the same number of events as were sent, or that events of different types will arrive in the same order.
+/// in the pipeline will receive the same number of events as were sent, or that events of different types will arrive in the same order.
 /// For example - a user event could overtake a data event if a handler is aggregating data events before propagating but immediately
 /// propagating user events.
 ///
