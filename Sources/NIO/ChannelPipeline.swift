@@ -109,6 +109,11 @@
 /// - 1 and 2 don't implement `ChannelOutboundHandler`, and therefore the actual evaluation order of a outbound event will be: 5, 4, and 3.
 /// - If 5 implements both `ChannelInboundHandler` and `ChannelOutboundHandler`, the evaluation order of an inbound and a outbound event could be 125 and 543 respectively.
 ///
+/// Note:   Handlers may choose not to progagate messages down the pipeline immediaitely.  For example a handler may need to wait
+/// for additional data before sending a protocol event to the next handler in the pipeline.  Due to this you can't assume that later handlers
+/// in the pipeline will recienve the same number of events as were sent, or that events of different types will arrive in the same order.
+/// For example - a user event could overtake a data event if a handler is aggregating data events before propagating but immediately
+/// propagating user events.
 ///
 /// # Forwarding an event to the next handler
 ///
