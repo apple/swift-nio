@@ -1286,7 +1286,7 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
 
-        let provider = EventLoopGroupProvider.shared(eventLoopGroup)
+        let provider = NIOEventLoopGroupProvider.shared(eventLoopGroup)
 
         if case .shared(let sharedEventLoopGroup) = provider {
             XCTAssertTrue(sharedEventLoopGroup is MultiThreadedEventLoopGroup)
