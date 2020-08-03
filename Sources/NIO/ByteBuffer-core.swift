@@ -731,7 +731,7 @@ public struct ByteBuffer {
     /// - parameters:
     ///     - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
     public mutating func clear(minimumCapacity: Int) {
-        precondition(minimumCapacity >= 0, "Cannot have a minimum capacity")
+        precondition(minimumCapacity >= 0, "Cannot have a minimum capacity < 0")
         precondition(minimumCapacity <= _Capacity.max, "Minimum capacity must be <= \(_Capacity.max)")
         
         let minimumCapacity = _Capacity(minimumCapacity)
