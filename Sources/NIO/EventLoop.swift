@@ -776,7 +776,8 @@ extension EventLoopGroup {
 /// to `.share` an existing event loop group or create (and manage) a new one (`.createNew`) and let it be 
 /// managed by given library and its lifecycle.
 public enum EventLoopGroupProvider {
-    /// `EventLoopGroup` will be provided by the user. Owner of this group is responsible for its lifecycle.
+    /// Use an `EventLoopGroup` provided by the user. 
+    /// The owner of this group is responsible for its lifecycle.
     case shared(EventLoopGroup)
     /// `EventLoopGroup` will be created by the client. When `syncShutdown` is called, created `EventLoopGroup` will be shut down as well.
     case createNew
