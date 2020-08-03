@@ -1279,4 +1279,25 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertNoThrow(try group.syncShutdownGracefully())
         waiter.wait()
     }
+
+    func testEventLoopGroupProvider() {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let eventLoopGroup2 = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+            XCTAssertNoThrow(try eventLoopGroup2.syncShutdownGracefully())
+        }
+
+        let provider = EventLoopGroupProvider.shared(eventLoopGroup)
+
+        if case EventLoopGroupProvider.shared(let sharedEventLoopGroup) = provider {
+            XCTAssertTrue(sharedEventLoopGroup is MultiThreadedEventLoopGroup)
+            // this is sketchy but I dont think we can do better without changing MultiThreadedEventLoopGroup
+            // note that the description contains `myGroupID`
+            XCTAssertEqual(sharedEventLoopGroup.description, eventLoopGroup.description)
+            XCTAssertNotEqual(sharedEventLoopGroup.description, eventLoopGroup2.description)
+        } else {
+            XCTFail("Not the same")
+        }
+    }
 }

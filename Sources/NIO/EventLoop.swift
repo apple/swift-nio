@@ -770,6 +770,14 @@ extension EventLoopGroup {
     }
 }
 
+/// Specifies how `EventLoopGroup` will be created and establishes lifecycle ownership.
+public enum EventLoopGroupProvider {
+    /// `EventLoopGroup` will be provided by the user. Owner of this group is responsible for its lifecycle.
+    case shared(EventLoopGroup)
+    /// `EventLoopGroup` will be created by the client. When `syncShutdown` is called, created `EventLoopGroup` will be shut down as well.
+    case createNew
+}
+
 private let nextEventLoopGroupID = NIOAtomic.makeAtomic(value: 0)
 
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
