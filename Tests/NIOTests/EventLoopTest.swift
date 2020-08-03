@@ -1279,4 +1279,20 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertNoThrow(try group.syncShutdownGracefully())
         waiter.wait()
     }
+
+    func testEventLoopGroupProvider() {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let provider = NIOEventLoopGroupProvider.shared(eventLoopGroup)
+
+        if case .shared(let sharedEventLoopGroup) = provider {
+            XCTAssertTrue(sharedEventLoopGroup is MultiThreadedEventLoopGroup)
+            XCTAssertTrue(sharedEventLoopGroup === eventLoopGroup)
+        } else {
+            XCTFail("Not the same")
+        }
+    }
 }

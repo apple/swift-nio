@@ -770,6 +770,19 @@ extension EventLoopGroup {
     }
 }
 
+/// This type is intended to be used by libraries which use NIO, and offer their users either the option
+/// to `.share` an existing event loop group or create (and manage) a new one (`.createNew`) and let it be
+/// managed by given library and its lifecycle.
+public enum NIOEventLoopGroupProvider {
+    /// Use an `EventLoopGroup` provided by the user.
+    /// The owner of this group is responsible for its lifecycle.
+    case shared(EventLoopGroup)
+    /// Create a new `EventLoopGroup` when necessary.
+    /// The library which accepts this provider takes ownership of the created event loop group,
+    /// and must ensure its proper shutdown when the library is being shut down.
+    case createNew
+}
+
 private let nextEventLoopGroupID = NIOAtomic.makeAtomic(value: 0)
 
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
