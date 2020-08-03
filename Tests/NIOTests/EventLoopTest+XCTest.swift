@@ -77,6 +77,7 @@ extension EventLoopTest {
                 ("testWeCanDoTrulySingleThreadedNetworking", testWeCanDoTrulySingleThreadedNetworking),
                 ("testWeFailOutstandingScheduledTasksOnELShutdown", testWeFailOutstandingScheduledTasksOnELShutdown),
                 ("testSchedulingTaskOnFutureFailedByELShutdownDoesNotMakeUsExplode", testSchedulingTaskOnFutureFailedByELShutdownDoesNotMakeUsExplode),
+                ("testEventLoopGroupProvider", testEventLoopGroupProvider),
            ]
    }
 }
