@@ -771,6 +771,10 @@ extension EventLoopGroup {
 }
 
 /// Specifies how `EventLoopGroup` will be created and establishes lifecycle ownership.
+///
+/// This type is intended to be used by libraries which use NIO, and offer their users either the option
+/// to `.share` an existing event loop group or create (and manage) a new one (`.createNew`) and let it be 
+/// managed by given library and its lifecycle.
 public enum EventLoopGroupProvider {
     /// `EventLoopGroup` will be provided by the user. Owner of this group is responsible for its lifecycle.
     case shared(EventLoopGroup)
