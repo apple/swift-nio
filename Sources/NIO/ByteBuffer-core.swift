@@ -709,16 +709,8 @@ public struct ByteBuffer {
     /// - parameters:
     ///     - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
     @available(*, deprecated, message: "Use an `Int` as the argument")
-    public mutating func clear(minimumCapacity: _Capacity) {
-        if !isKnownUniquelyReferenced(&self._storage) {
-            self._storage = self._storage.allocateStorage(capacity: minimumCapacity)
-        } else if minimumCapacity > self._storage.capacity {
-            self._storage.reallocStorage(capacity: minimumCapacity)
-        }
-        self._slice = self._storage.fullSlice
-
-        self._moveWriterIndex(to: 0)
-        self._moveReaderIndex(to: 0)
+    public mutating func clear(minimumCapacity: UInt32) {
+        self.clear(minimumCapacity: Int(minimumCapacity))
     }
     
     /// Set both reader index and writer index to `0`. This will reset the state of this `ByteBuffer` to the state
