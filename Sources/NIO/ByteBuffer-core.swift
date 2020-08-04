@@ -708,7 +708,25 @@ public struct ByteBuffer {
     ///
     /// - parameters:
     ///     - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
-    public mutating func clear(minimumCapacity: _Capacity) {
+    @available(*, deprecated, message: "Use an `Int` as the argument")
+    public mutating func clear(minimumCapacity: UInt32) {
+        self.clear(minimumCapacity: Int(minimumCapacity))
+    }
+    
+    /// Set both reader index and writer index to `0`. This will reset the state of this `ByteBuffer` to the state
+    /// of a freshly allocated one, if possible without allocations. This is the cheapest way to recycle a `ByteBuffer`
+    /// for a new use-case.
+    ///
+    /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
+    ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
+    ///
+    /// - parameters:
+    ///     - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
+    public mutating func clear(minimumCapacity: Int) {
+        precondition(minimumCapacity >= 0, "Cannot have a minimum capacity < 0")
+        precondition(minimumCapacity <= _Capacity.max, "Minimum capacity must be <= \(_Capacity.max)")
+        
+        let minimumCapacity = _Capacity(minimumCapacity)
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.allocateStorage(capacity: minimumCapacity)
         } else if minimumCapacity > self._storage.capacity {
