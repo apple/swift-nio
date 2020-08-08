@@ -89,8 +89,12 @@ extension BaseSocketProtocol {
         assert(fd >= 0, "illegal file descriptor \(fd)")
         do {
             try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
-        } catch {
-            _ = try? Posix.close(descriptor: fd) // don't care about failure here
+        } catch let error as IOError {
+            if error.errnoCode == EINVAL {
+                // Darwin seems to sometimes do this despite the docs claiming it can't happen
+                throw NIOFailedToSetSocketCommand()
+            }
+            try? Posix.close(descriptor: fd) // don't care about failure here
             throw error
         }
         #endif
