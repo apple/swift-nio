@@ -594,9 +594,9 @@ public final class SocketChannelTest : XCTestCase {
             serverChannel.read()
         
             // Wait for the server to have something
-            let result = try assertNoThrowWithValue(serverPromise.futureResult.wait())
-        
-            XCTAssertEqual(result.errnoCode, EINVAL)
+            XCTAssertThrowsError(try serverPromise.futureResult.wait()) { error in
+                XCTAssert(error is NIOFailedToSetSocketCommand)
+            }
         #endif
     }
 
