@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -57,7 +57,7 @@ internal final class SelectableEventLoop: EventLoop {
     /* private but tests */ internal let _selector: NIO.Selector<NIORegistration>
     private let thread: NIOThread
     @usableFromInline
-    internal var _scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
+    internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
     private var tasksCopy = ContiguousArray<() -> Void>()
 
     private let canBeShutdownIndividually: Bool
