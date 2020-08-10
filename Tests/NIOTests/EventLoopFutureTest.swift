@@ -1023,6 +1023,28 @@ class EventLoopFutureTest : XCTestCase {
             XCTAssert(type(of: error) == EventLoopFutureTestError.self)
         }
     }
+    
+    func testPromiseCompletedWithResultantFuture() throws {
+        let group = EmbeddedEventLoop()
+        let loop = group.next()
+        
+        let success: Result<Int, Error> = .success(42)
+        let failure: Result<Int, Error> = .failure(EventLoopFutureTestError.example)
+
+        let future = (success: loop.makeResultantFuture(success),
+                      failure: loop.makeResultantFuture(failure))
+        
+        let promised = (success: loop.makePromise(of: Int.self),
+                        failure: loop.makePromise(of: Int.self))
+        
+        promised.success.completeWith(future.success)
+        promised.failure.completeWith(future.failure)
+        
+        XCTAssertEqual(try promised.success.futureResult.wait(), 42)
+        XCTAssertThrowsError(try promised.failure.futureResult.wait()) { error in
+            XCTAssert(type(of: error) == EventLoopFutureTestError.self)
+        }
+    }
 
     func testPromiseCompletedWithSuccessfulResult() throws {
         let group = EmbeddedEventLoop()

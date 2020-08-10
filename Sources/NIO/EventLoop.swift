@@ -566,11 +566,24 @@ extension EventLoop {
     /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `NIOThread`.
     ///
     /// - parameters:
-    ///     - result: the value that is used by the `EventLoopFuture`.
+    ///     - value: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
     @inlinable
     public func makeSucceededFuture<Success>(_ value: Success, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Success> {
         return EventLoopFuture<Success>(eventLoop: self, value: value, file: file, line: line)
+    }
+    
+    /// Creates and returns a new `EventLoopFuture` with state arbitrated from a provided `Result`. Notifications will be done using this `EventLoop` as execution `NIOThread`.
+    ///
+    /// - parameters:
+    ///     - value: the `Result` whose state will arbitrate the resultant `EventLoopFuture`.
+    /// - returns: a succeeded or failed `EventLoopFuture`.
+    @inlinable
+    public func makeResultantFuture<T>(_ value: Result<T, Error>, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<T> {
+        switch value {
+            case .success(let success): return makeSucceededFuture(success, file: file, line: line)
+            case .failure(let failure): return makeFailedFuture(failure, file: file, line: line)
+        }
     }
 
     /// An `EventLoop` forms a singular `EventLoopGroup`, returning itself as the 'next' `EventLoop`.
