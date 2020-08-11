@@ -562,11 +562,19 @@ internal enum Posix {
     }
 }
 
-/// `NIOFailedToSetSocketCommand` indicates that NIO was unable to perform an
+/// `NIOFcntlFailedError` indicates that NIO was unable to perform an
 /// operation on a socket.
 ///
 /// This error should never happen, unfortunately, we have seen this happen on Darwin.
-public struct NIOFailedToSetSocketCommand: Error {}
+public struct NIOFcntlFailedError: Error {}
+
+/// `NIOFailedToSetSocketNonBlockingError` indicates that NIO was unable to set a socket to non-blocking mode, either
+/// when connecting a socket as a client or when accepting a socket as a server.
+///
+/// This error should never happen because a socket should always be able to be set to non-blocking mode. Unfortunately,
+/// we have seen this happen on Darwin.
+@available(*, deprecated, renamed: "NIOFcntlFailedError")
+public struct NIOFailedToSetSocketNonBlockingError: Error {}
 
 internal extension Posix {
     static func setNonBlocking(socket: CInt) throws {
@@ -577,7 +585,7 @@ internal extension Posix {
         } catch let error as IOError {
             if error.errnoCode == EINVAL {
                 // Darwin seems to sometimes do this despite the docs claiming it can't happen
-                throw NIOFailedToSetSocketCommand()
+                throw NIOFcntlFailedError()
             }
             throw error
         }

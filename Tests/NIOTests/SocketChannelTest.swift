@@ -595,7 +595,7 @@ public final class SocketChannelTest : XCTestCase {
         
             // Wait for the server to have something
             XCTAssertThrowsError(try serverPromise.futureResult.wait()) { error in
-                XCTAssert(error is NIOFailedToSetSocketCommand)
+                XCTAssert(error is NIOFcntlFailedError)
             }
         #endif
     }
@@ -673,7 +673,7 @@ public final class SocketChannelTest : XCTestCase {
             override func accept(setNonBlocking: Bool = false) throws -> Socket? {
                 XCTAssertTrue(setNonBlocking)
                 if self.shouldAcceptsFail.load() {
-                    throw NIOFailedToSetSocketCommand()
+                    throw NIOFcntlFailedError()
                 } else {
                     return try Socket(protocolFamily: .inet,
                                       type: .stream,
@@ -690,7 +690,7 @@ public final class SocketChannelTest : XCTestCase {
             }
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
-                XCTAssert(error is NIOFailedToSetSocketCommand, "unexpected error: \(error)")
+                XCTAssert(error is NIOFcntlFailedError, "unexpected error: \(error)")
             }
         }
 

@@ -249,7 +249,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
-        if err is NIOFailedToSetSocketCommand {
+        if err is NIOFcntlFailedError {
             // See:
             // - https://github.com/apple/swift-nio/issues/1030
             // - https://github.com/apple/swift-nio/issues/1598

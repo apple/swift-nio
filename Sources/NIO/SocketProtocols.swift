@@ -92,7 +92,7 @@ extension BaseSocketProtocol {
         } catch let error as IOError {
             if error.errnoCode == EINVAL {
                 // Darwin seems to sometimes do this despite the docs claiming it can't happen
-                throw NIOFailedToSetSocketCommand()
+                throw NIOFcntlFailedError()
             }
             try? Posix.close(descriptor: fd) // don't care about failure here
             throw error
