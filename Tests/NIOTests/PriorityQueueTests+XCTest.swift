@@ -30,7 +30,6 @@ extension PriorityQueueTest {
                 ("testSomeStringsAsc", testSomeStringsAsc),
                 ("testRemoveNonExisting", testRemoveNonExisting),
                 ("testRemoveFromEmpty", testRemoveFromEmpty),
-                ("testSomeStringsDesc", testSomeStringsDesc),
                 ("testBuildAndRemoveFromRandomPriorityQueues", testBuildAndRemoveFromRandomPriorityQueues),
                 ("testPartialOrder", testPartialOrder),
                 ("testDescription", testDescription),

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,33 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 @usableFromInline
-internal enum HeapType {
-    case maxHeap
-    case minHeap
-
-    @inlinable
-    internal func comparator<T: Comparable>(type: T.Type) -> (T, T) -> Bool {
-        switch self {
-        case .maxHeap:
-            return (>)
-        case .minHeap:
-            return (<)
-        }
-    }
-}
-
-@usableFromInline
 internal struct Heap<Element: Comparable> {
     @usableFromInline
-    internal let type: HeapType
-    @usableFromInline
     internal private(set) var storage: ContiguousArray<Element> = []
-    internal let comparator: (Element, Element) -> Bool
 
     @usableFromInline
-    internal init(type: HeapType) {
-        self.comparator = type.comparator(type: Element.self)
-        self.type = type
+    internal init() {}
+
+    internal func comparator(_ lhs: Element, _ rhs: Element) -> Bool {
+        // This heap is always a min-heap.
+        return lhs < rhs
     }
 
     // named `PARENT` in CLRS
@@ -126,10 +109,9 @@ internal struct Heap<Element: Comparable> {
             return nil
         }
         let element = self.storage[index]
-        let comparator = self.comparator
         if self.storage.count == 1 || self.storage[index] == self.storage[self.storage.count - 1] {
             self.storage.removeLast()
-        } else if !comparator(self.storage[index], self.storage[self.storage.count - 1]) {
+        } else if !self.comparator(self.storage[index], self.storage[self.storage.count - 1]) {
             self.heapRootify(index: index, key: self.storage[self.storage.count - 1])
             self.storage.removeLast()
         } else {

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -61,7 +61,7 @@ public final class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     /* private but tests */ internal var _now: NIODeadline = .uptimeNanoseconds(0)
 
-    private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>(ascending: true)
+    private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>()
 
     // The number of the next task to be created. We track the order so that when we execute tasks
     // scheduled at the same time, we may do so in the order in which they were submitted for
