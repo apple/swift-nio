@@ -202,6 +202,68 @@ extension ByteBuffer {
     public init(data: Data) {
         self = ByteBufferAllocator().buffer(data: data)
     }
+
+    // MARK: ContiguousBytes and DataProtocol
+    /// Write `bytes` into this `ByteBuffer` at the writer index, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - bytes: The bytes to write.
+    /// - returns: The number of bytes written.
+    @inlinable
+    @discardableResult
+    public mutating func writeContiguousBytes<Bytes: ContiguousBytes>(_ bytes: Bytes) -> Int {
+        let written = self.setContiguousBytes(bytes, at: self.writerIndex)
+        self.moveWriterIndex(forwardBy: written)
+        return written
+    }
+
+    /// Write `bytes` into this `ByteBuffer` at `index`. Does not move the writer index.
+    ///
+    /// - parameters:
+    ///     - bytes: The bytes to write.
+    ///     - index: The index for the first byte.
+    /// - returns: The number of bytes written.
+    @inlinable
+    @discardableResult
+    public mutating func setContiguousBytes<Bytes: ContiguousBytes>(_ bytes: Bytes, at index: Int) -> Int {
+        return bytes.withUnsafeBytes { bufferPointer in
+            self.setBytes(bufferPointer, at: index)
+        }
+    }
+
+    /// Write the bytes of `data` into this `ByteBuffer` at the writer index, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - data: The data to write.
+    /// - returns: The number of bytes written.
+    @inlinable
+    @discardableResult
+    public mutating func writeData<D: DataProtocol>(_ data: D) -> Int {
+        let written = self.setData(data, at: self.writerIndex)
+        self.moveWriterIndex(forwardBy: written)
+        return written
+    }
+
+    /// Write the bytes of `data` into this `ByteBuffer` at `index`. Does not move the writer index.
+    ///
+    /// - parameters:
+    ///     - data: The data to write.
+    ///     - index: The index for the first byte.
+    /// - returns: The number of bytes written.
+    @inlinable
+    @discardableResult
+    public mutating func setData<D: DataProtocol>(_ data: D, at index: Int) -> Int {
+        // DataProtocol refines RandomAccessCollection, so getting `count` must be O(1). This avoids
+        // intermediate allocations in the awkward case by ensuring we definitely have sufficient
+        // space for these writes.
+        self.reserveCapacity(minimumWritableBytes: data.count)
+
+        var written = 0
+        for region in data.regions {
+            written += self.setContiguousBytes(region, at: index + written)
+        }
+        return written
+    }
 }
 
 extension ByteBufferAllocator {
