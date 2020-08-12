@@ -50,6 +50,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(ByteBufferDataProtocolTests.allTests),
              testCase(ByteBufferTest.allTests),
              testCase(ByteBufferUtilsTest.allTests),
+             testCase(ByteBufferViewDataProtocolTests.allTests),
              testCase(ByteToMessageDecoderTest.allTests),
              testCase(ByteToMessageDecoderVerifierTest.allTests),
              testCase(ChannelNotificationTest.allTests),
