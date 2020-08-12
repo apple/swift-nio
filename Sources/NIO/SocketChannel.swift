@@ -249,9 +249,12 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
-        if err is NIOFailedToSetSocketNonBlockingError {
-            // see https://github.com/apple/swift-nio/issues/1030
-            // on Darwin, fcntl(fd, F_SETFL, O_NONBLOCK) sometimes returns EINVAL...
+        if err is NIOFcntlFailedError {
+            // See:
+            // - https://github.com/apple/swift-nio/issues/1030
+            // - https://github.com/apple/swift-nio/issues/1598
+            // on Darwin, fcntl(fd, F_SETFL, O_NONBLOCK) or fcntl(fd, F_SETNOSIGPIPE)
+            // sometimes returns EINVAL...
             return false
         }
         guard let err = err as? IOError else { return true }

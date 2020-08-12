@@ -300,19 +300,7 @@ internal enum Posix {
                               addr: UnsafeMutablePointer<sockaddr>?,
                               len: UnsafeMutablePointer<socklen_t>?) throws -> CInt? {
         let result: IOResult<CInt> = try syscall(blocking: true) {
-            let fd = sysAccept(descriptor, addr, len)
-
-            #if !os(Linux)
-                if fd != -1 {
-                    do {
-                        try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
-                    } catch {
-                        _ = sysClose(fd) // don't care about failure here
-                        throw error
-                    }
-                }
-            #endif
-            return fd
+            return sysAccept(descriptor, addr, len)
         }
 
         if case .processed(let fd) = result {
@@ -574,11 +562,18 @@ internal enum Posix {
     }
 }
 
+/// `NIOFcntlFailedError` indicates that NIO was unable to perform an
+/// operation on a socket.
+///
+/// This error should never happen, unfortunately, we have seen this happen on Darwin.
+public struct NIOFcntlFailedError: Error {}
+
 /// `NIOFailedToSetSocketNonBlockingError` indicates that NIO was unable to set a socket to non-blocking mode, either
 /// when connecting a socket as a client or when accepting a socket as a server.
 ///
 /// This error should never happen because a socket should always be able to be set to non-blocking mode. Unfortunately,
 /// we have seen this happen on Darwin.
+@available(*, deprecated, renamed: "NIOFcntlFailedError")
 public struct NIOFailedToSetSocketNonBlockingError: Error {}
 
 internal extension Posix {
@@ -590,7 +585,7 @@ internal extension Posix {
         } catch let error as IOError {
             if error.errnoCode == EINVAL {
                 // Darwin seems to sometimes do this despite the docs claiming it can't happen
-                throw NIOFailedToSetSocketNonBlockingError()
+                throw NIOFcntlFailedError()
             }
             throw error
         }

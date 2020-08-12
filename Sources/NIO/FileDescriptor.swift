@@ -41,7 +41,7 @@ extension FileDescriptor {
         } catch let error as IOError {
             if error.errnoCode == EINVAL {
                 // Darwin seems to sometimes do this despite the docs claiming it can't happen
-                throw NIOFailedToSetSocketNonBlockingError()
+                throw NIOFcntlFailedError()
             }
             throw error
         }
