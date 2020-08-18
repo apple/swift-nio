@@ -98,7 +98,7 @@ public protocol ChannelCore: class {
 extension ChannelCore {
     public var baggage: BaggageContext {
         get {
-            BaggageContext()
+            return BaggageContext()
         } set {}
     }
 }
