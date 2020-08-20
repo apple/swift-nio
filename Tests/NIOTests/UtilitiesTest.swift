@@ -20,6 +20,7 @@ class UtilitiesTest: XCTestCase {
         XCTAssertGreaterThan(System.coreCount, 0)
     }
 
+    @available(*, deprecated)
     func testEnumeratingInterfaces() throws {
         // This is a tricky test, because we can't really assert much and expect this
         // to pass on all systems. The best we can do is assume there is a loopback:
@@ -42,6 +43,34 @@ class UtilitiesTest: XCTestCase {
                 XCTAssertEqual(interface.netmask, try SocketAddress(ipAddress: "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", port: 0))
                 XCTAssertNil(interface.broadcastAddress)
                 XCTAssertNil(interface.pointToPointDestinationAddress)
+            }
+        }
+
+        XCTAssertTrue(ipv4LoopbackPresent || ipv6LoopbackPresent)
+    }
+
+    func testEnumeratingDevices() throws {
+        // This is a tricky test, because we can't really assert much and expect this
+        // to pass on all systems. The best we can do is assume there is a loopback:
+        // maybe an IPv4 one, maybe an IPv6 one, but there will be one. We look for
+        // both.
+        let devices = try System.enumerateDevices()
+        XCTAssertGreaterThan(devices.count, 0)
+
+        var ipv4LoopbackPresent = false
+        var ipv6LoopbackPresent = false
+
+        for device in devices {
+            if try device.address == SocketAddress(ipAddress: "127.0.0.1", port: 0) {
+                ipv4LoopbackPresent = true
+                XCTAssertEqual(device.netmask, try SocketAddress(ipAddress: "255.0.0.0", port: 0))
+                XCTAssertNil(device.broadcastAddress)
+                XCTAssertNil(device.pointToPointDestinationAddress)
+            } else if try device.address == SocketAddress(ipAddress: "::1", port: 0) {
+                ipv6LoopbackPresent = true
+                XCTAssertEqual(device.netmask, try SocketAddress(ipAddress: "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", port: 0))
+                XCTAssertNil(device.broadcastAddress)
+                XCTAssertNil(device.pointToPointDestinationAddress)
             }
         }
 
