@@ -16,7 +16,7 @@
 set -eu
 
 function usage() {
-  echo "$0 [-u] VERSION"
+  echo "$0 [-u] [-f skipUpToTarget] version"
   echo
   echo "OPTIONS:"
   echo "  -u: Additionally, upload the podspecs as they are generated"
