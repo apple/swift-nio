@@ -594,9 +594,9 @@ public final class SocketChannelTest : XCTestCase {
             serverChannel.read()
         
             // Wait for the server to have something
-            let result = try assertNoThrowWithValue(serverPromise.futureResult.wait())
-        
-            XCTAssertEqual(result.errnoCode, EINVAL)
+            XCTAssertThrowsError(try serverPromise.futureResult.wait()) { error in
+                XCTAssert(error is NIOFcntlFailedError)
+            }
         #endif
     }
 
@@ -665,13 +665,15 @@ public final class SocketChannelTest : XCTestCase {
     }
 
     func testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL() throws {
-        // regression test for https://github.com/apple/swift-nio/issues/1030
+        // regression test for:
+        // - https://github.com/apple/swift-nio/issues/1030
+        // - https://github.com/apple/swift-nio/issues/1598
         class HandsOutMoodySocketsServerSocket: ServerSocket {
             let shouldAcceptsFail: NIOAtomic<Bool> = .makeAtomic(value: true)
             override func accept(setNonBlocking: Bool = false) throws -> Socket? {
                 XCTAssertTrue(setNonBlocking)
                 if self.shouldAcceptsFail.load() {
-                    throw NIOFailedToSetSocketNonBlockingError()
+                    throw NIOFcntlFailedError()
                 } else {
                     return try Socket(protocolFamily: .inet,
                                       type: .stream,
@@ -688,7 +690,7 @@ public final class SocketChannelTest : XCTestCase {
             }
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
-                XCTAssert(error is NIOFailedToSetSocketNonBlockingError, "unexpected error: \(error)")
+                XCTAssert(error is NIOFcntlFailedError, "unexpected error: \(error)")
             }
         }
 

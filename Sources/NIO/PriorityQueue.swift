@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -17,8 +17,8 @@ internal struct PriorityQueue<Element: Comparable> {
     @usableFromInline
     internal var _heap: Heap<Element>
 
-    internal init(ascending: Bool = false) {
-        self._heap = Heap(type: ascending ? .minHeap : .maxHeap)
+    internal init() {
+        self._heap = Heap()
     }
 
     @inlinable
@@ -49,7 +49,7 @@ internal struct PriorityQueue<Element: Comparable> {
 
     @inlinable
     internal mutating func clear() {
-        self._heap = Heap(type: self._heap.type)
+        self._heap = Heap()
     }
 }
 
