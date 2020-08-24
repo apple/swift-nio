@@ -100,6 +100,7 @@ public enum System {
     ///
     /// - returns: An array of network interfaces available on this machine.
     /// - throws: If an error is encountered while enumerating interfaces.
+    @available(*, deprecated, renamed: "enumerateDevices")
     public static func enumerateInterfaces() throws -> [NIONetworkInterface] {
         var interface: UnsafeMutablePointer<ifaddrs>? = nil
         try Posix.getifaddrs(&interface)
@@ -112,6 +113,34 @@ public enum System {
         results.reserveCapacity(12)  // Arbitrary choice.
         while let concreteInterface = interface {
             if let nioInterface = NIONetworkInterface(concreteInterface.pointee) {
+                results.append(nioInterface)
+            }
+            interface = concreteInterface.pointee.ifa_next
+        }
+
+        return results
+    }
+
+    /// A utility function that enumerates the available network devices on this machine.
+    ///
+    /// This function returns values that are true for a brief snapshot in time. These results can
+    /// change, and the returned values will not change to reflect them. This function must be called
+    /// again to get new results.
+    ///
+    /// - returns: An array of network devices available on this machine.
+    /// - throws: If an error is encountered while enumerating interfaces.
+    public static func enumerateDevices() throws -> [NIONetworkDevice] {
+        var interface: UnsafeMutablePointer<ifaddrs>? = nil
+        try Posix.getifaddrs(&interface)
+        let originalInterface = interface
+        defer {
+            freeifaddrs(originalInterface)
+        }
+
+        var results: [NIONetworkDevice] = []
+        results.reserveCapacity(12)  // Arbitrary choice.
+        while let concreteInterface = interface {
+            if let nioInterface = NIONetworkDevice(concreteInterface.pointee) {
                 results.append(nioInterface)
             }
             interface = concreteInterface.pointee.ifa_next

@@ -46,18 +46,18 @@ private final class ChatMessageEncoder: ChannelOutboundHandler {
 
 
 // We allow users to specify the interface they want to use here.
-var targetInterface: NIONetworkInterface? = nil
+var targetDevice: NIONetworkDevice? = nil
 if let interfaceAddress = CommandLine.arguments.dropFirst().first,
    let targetAddress = try? SocketAddress(ipAddress: interfaceAddress, port: 0) {
-    for interface in try! System.enumerateInterfaces() {
-        if interface.address == targetAddress {
-            targetInterface = interface
+    for device in try! System.enumerateDevices() {
+        if device.address == targetAddress {
+            targetDevice = device
             break
         }
     }
 
-    if targetInterface == nil {
-        fatalError("Could not find interface for \(interfaceAddress)")
+    if targetDevice == nil {
+        fatalError("Could not find device for \(interfaceAddress)")
     }
 }
 
@@ -81,20 +81,22 @@ let datagramChannel = try datagramBootstrap
     .bind(host: "0.0.0.0", port: 7654)
     .flatMap { channel -> EventLoopFuture<Channel> in
         let channel = channel as! MulticastChannel
-        return channel.joinGroup(chatMulticastGroup, interface: targetInterface).map { channel }
+        return channel.joinGroup(chatMulticastGroup, device: targetDevice).map { channel }
     }.flatMap { channel -> EventLoopFuture<Channel> in
-        guard let targetInterface = targetInterface else {
+        guard let targetDevice = targetDevice else {
             return channel.eventLoop.makeSucceededFuture(channel)
         }
 
         let provider = channel as! SocketOptionProvider
-        switch targetInterface.address {
-        case .v4(let addr):
+        switch targetDevice.address {
+        case .some(.v4(let addr)):
             return provider.setIPMulticastIF(addr.address.sin_addr).map { channel }
-        case .v6:
-            return provider.setIPv6MulticastIF(CUnsignedInt(targetInterface.interfaceIndex)).map { channel }
-        case .unixDomainSocket:
+        case .some(.v6):
+            return provider.setIPv6MulticastIF(CUnsignedInt(targetDevice.interfaceIndex)).map { channel }
+        case .some(.unixDomainSocket):
             preconditionFailure("Should not be possible to create a multicast socket on a unix domain socket")
+        case .none:
+            preconditionFailure("Should not be possible to create a multicast socket on an interface without an address")
         }
     }.wait()
 

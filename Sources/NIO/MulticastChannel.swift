@@ -33,7 +33,18 @@ public protocol MulticastChannel: Channel {
     ///     - interface: The interface on which to join the given group, or `nil` to allow the kernel to choose.
     ///     - promise: The `EventLoopPromise` that will be notified once the operation is complete, or
     ///         `nil` if you are not interested in the result of the operation.
+    @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
     func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?)
+
+    /// Request that the `MulticastChannel` join the multicast group given by `group` on the device
+    /// given by `device`.
+    ///
+    /// - parameters:
+    ///     - group: The IP address corresponding to the relevant multicast group.
+    ///     - device: The device on which to join the given group, or `nil` to allow the kernel to choose.
+    ///     - promise: The `EventLoopPromise` that will be notified once the operation is complete, or
+    ///         `nil` if you are not interested in the result of the operation.
+    func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?)
 
     /// Request that the `MulticastChannel` leave the multicast group given by `group`.
     ///
@@ -51,14 +62,25 @@ public protocol MulticastChannel: Channel {
     ///     - interface: The interface on which to leave the given group, or `nil` to allow the kernel to choose.
     ///     - promise: The `EventLoopPromise` that will be notified once the operation is complete, or
     ///         `nil` if you are not interested in the result of the operation.
+    @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
     func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?)
+
+    /// Request that the `MulticastChannel` leave the multicast group given by `group` on the device
+    /// given by `device`.
+    ///
+    /// - parameters:
+    ///     - group: The IP address corresponding to the relevant multicast group.
+    ///     - device: The device on which to leave the given group, or `nil` to allow the kernel to choose.
+    ///     - promise: The `EventLoopPromise` that will be notified once the operation is complete, or
+    ///         `nil` if you are not interested in the result of the operation.
+    func leaveGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?)
 }
 
 
 // MARK:- Default implementations for MulticastChannel
 extension MulticastChannel {
     public func joinGroup(_ group: SocketAddress, promise: EventLoopPromise<Void>?) {
-        self.joinGroup(group, interface: nil, promise: promise)
+        self.joinGroup(group, device: nil, promise: promise)
     }
 
     public func joinGroup(_ group: SocketAddress) -> EventLoopFuture<Void> {
@@ -67,14 +89,21 @@ extension MulticastChannel {
         return promise.futureResult
     }
 
+    @available(*, deprecated, renamed: "joinGroup(_:device:)")
     public func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
         self.joinGroup(group, interface: interface, promise: promise)
         return promise.futureResult
     }
 
+    public func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
+        self.joinGroup(group, device: device, promise: promise)
+        return promise.futureResult
+    }
+
     public func leaveGroup(_ group: SocketAddress, promise: EventLoopPromise<Void>?) {
-        self.leaveGroup(group, interface: nil, promise: promise)
+        self.leaveGroup(group, device: nil, promise: promise)
     }
 
     public func leaveGroup(_ group: SocketAddress) -> EventLoopFuture<Void> {
@@ -83,9 +112,45 @@ extension MulticastChannel {
         return promise.futureResult
     }
 
+    @available(*, deprecated, renamed: "leaveGroup(_:device:)")
     public func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
         self.leaveGroup(group, interface: interface, promise: promise)
         return promise.futureResult
+    }
+
+    public func leaveGroup(_ group: SocketAddress, device: NIONetworkDevice?) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
+        self.leaveGroup(group, device: device, promise: promise)
+        return promise.futureResult
+    }
+}
+
+// MARK:- API Compatibility shims for MulticastChannel
+extension MulticastChannel {
+    /// Request that the `MulticastChannel` join the multicast group given by `group` on the device
+    /// given by `device`.
+    ///
+    /// - parameters:
+    ///     - group: The IP address corresponding to the relevant multicast group.
+    ///     - device: The device on which to join the given group, or `nil` to allow the kernel to choose.
+    ///     - promise: The `EventLoopPromise` that will be notified once the operation is complete, or
+    ///         `nil` if you are not interested in the result of the operation.
+    public func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
+        // We just fail this in the default implementation. Users should override it.
+        promise?.fail(NIOMulticastNotImplementedError())
+    }
+
+    /// Request that the `MulticastChannel` leave the multicast group given by `group` on the device
+    /// given by `device`.
+    ///
+    /// - parameters:
+    ///     - group: The IP address corresponding to the relevant multicast group.
+    ///     - device: The device on which to leave the given group, or `nil` to allow the kernel to choose.
+    ///     - promise: The `EventLoopPromise` that will be notified once the operation is complete, or
+    ///         `nil` if you are not interested in the result of the operation.
+    public func leaveGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
+        // We just fail this in the default implementation. Users should override it.
+        promise?.fail(NIOMulticastNotImplementedError())
     }
 }

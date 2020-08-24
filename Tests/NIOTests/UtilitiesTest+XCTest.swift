@@ -29,6 +29,7 @@ extension UtilitiesTest {
       return [
                 ("testCoreCountWorks", testCoreCountWorks),
                 ("testEnumeratingInterfaces", testEnumeratingInterfaces),
+                ("testEnumeratingDevices", testEnumeratingDevices),
            ]
    }
 }

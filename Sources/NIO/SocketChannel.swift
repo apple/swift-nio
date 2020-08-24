@@ -755,22 +755,44 @@ extension DatagramChannel: MulticastChannel {
         }
     }
 
+    @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
     func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, interface: interface, promise: promise, operation: .join)
+            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
         } else {
             eventLoop.execute {
-                self.performGroupOperation0(group, interface: interface, promise: promise, operation: .join)
+                self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
             }
         }
     }
 
+    @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
     func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, interface: interface, promise: promise, operation: .leave)
+            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
         } else {
             eventLoop.execute {
-                self.performGroupOperation0(group, interface: interface, promise: promise, operation: .leave)
+                self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+            }
+        }
+    }
+
+    func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, device: device, promise: promise, operation: .join)
+        } else {
+            eventLoop.execute {
+                self.performGroupOperation0(group, device: device, promise: promise, operation: .join)
+            }
+        }
+    }
+
+    func leaveGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, device: device, promise: promise, operation: .leave)
+        } else {
+            eventLoop.execute {
+                self.performGroupOperation0(group, device: device, promise: promise, operation: .leave)
             }
         }
     }
@@ -779,7 +801,7 @@ extension DatagramChannel: MulticastChannel {
     ///
     /// Joining and leaving a multicast group ultimately corresponds to a single, carefully crafted, socket option.
     private func performGroupOperation0(_ group: SocketAddress,
-                                        interface: NIONetworkInterface?,
+                                        device: NIONetworkDevice?,
                                         promise: EventLoopPromise<Void>?,
                                         operation: GroupOperation) {
         self.eventLoop.assertInEventLoop()
@@ -789,10 +811,10 @@ extension DatagramChannel: MulticastChannel {
             return
         }
 
-        /// Check if the interface supports multicast
-        if let interface = interface {
-            guard interface.multicastSupported else {
-                promise?.fail(ChannelError.multicastNotSupported(interface))
+        /// Check if the device supports multicast
+        if let device = device {
+            guard device.multicastSupported else {
+                promise?.fail(NIOMulticastNotSupportedError(device: device))
                 return
             }
         }
@@ -817,7 +839,7 @@ extension DatagramChannel: MulticastChannel {
 
         // Ok, we now have reason to believe this will actually work. We need to pass this on to the socket.
         do {
-            switch (group, interface?.address) {
+            switch (group, device?.address) {
             case (.unixDomainSocket, _):
                 preconditionFailure("Should not be reachable, UNIX sockets are never multicast addresses")
             case (.v4(let groupAddress), .some(.v4(let interfaceAddress))):
@@ -830,7 +852,7 @@ extension DatagramChannel: MulticastChannel {
                 try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
             case (.v6(let groupAddress), .some(.v6)):
                 // IPv6 binding with specific target interface.
-                let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: UInt32(interface!.interfaceIndex))
+                let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: UInt32(device!.interfaceIndex))
                 try self.socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)
             case (.v6(let groupAddress), .none):
                 // IPv6 binding with no specific interface requested.

@@ -31,6 +31,10 @@ extension MulticastTest {
                 ("testCanJoinBasicMulticastGroupIPv6", testCanJoinBasicMulticastGroupIPv6),
                 ("testCanLeaveAnIPv4MulticastGroup", testCanLeaveAnIPv4MulticastGroup),
                 ("testCanLeaveAnIPv6MulticastGroup", testCanLeaveAnIPv6MulticastGroup),
+                ("testCanJoinBasicMulticastGroupIPv4WithDevice", testCanJoinBasicMulticastGroupIPv4WithDevice),
+                ("testCanJoinBasicMulticastGroupIPv6WithDevice", testCanJoinBasicMulticastGroupIPv6WithDevice),
+                ("testCanLeaveAnIPv4MulticastGroupWithDevice", testCanLeaveAnIPv4MulticastGroupWithDevice),
+                ("testCanLeaveAnIPv6MulticastGroupWithDevice", testCanLeaveAnIPv6MulticastGroupWithDevice),
            ]
    }
 }
