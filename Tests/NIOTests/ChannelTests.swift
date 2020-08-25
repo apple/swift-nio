@@ -2780,6 +2780,40 @@ public final class ChannelTests: XCTestCase {
             }.wait())
         }
     }
+
+    func testWritabilityChangeDuringReentrantFlushNow() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let loop = group.next()
+        let handler = ReentrantWritabilityChangingHandler(becameUnwritable: loop.makePromise(),
+                                                          becameWritable: loop.makePromise())
+
+        let serverFuture = ServerBootstrap(group: group)
+            .childChannelOption(ChannelOptions.writeBufferWaterMark, value: handler.watermark)
+            .childChannelInitializer { channel in
+                return channel.pipeline.addHandler(handler)
+            }
+            .bind(host: "localhost", port: 0)
+
+        let server: Channel = try assertNoThrowWithValue(try serverFuture.wait())
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+
+        let clientFuture = ClientBootstrap(group: group)
+            .connect(host: "localhost", port: server.localAddress!.port!)
+
+        let client: Channel = try assertNoThrowWithValue(try clientFuture.wait())
+        defer {
+            XCTAssertNoThrow(try client.close().wait())
+        }
+
+        XCTAssertNoThrow(try handler.becameUnwritable.futureResult.wait())
+        XCTAssertNoThrow(try handler.becameWritable.futureResult.wait())
+    }
 }
 
 fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
@@ -2833,5 +2867,62 @@ fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
         self.state = .unregistered
         self.allDone.succeed(())
         context.fireChannelUnregistered()
+    }
+}
+
+final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+    typealias OutboundOut = ByteBuffer
+
+    let watermark = ChannelOptions.Types.WriteBufferWaterMark(low: 100, high: 200)
+
+    let becameWritable: EventLoopPromise<Void>
+    let becameUnwritable: EventLoopPromise<Void>
+
+    var isWritableCount = 0
+    var isNotWritableCount = 0
+
+    init(becameUnwritable: EventLoopPromise<Void>, becameWritable: EventLoopPromise<Void>) {
+        self.becameUnwritable = becameUnwritable
+        self.becameWritable = becameWritable
+    }
+
+    func channelActive(context: ChannelHandlerContext) {
+        // We want to enqueue at least two pending writes before flushing. Neither of which
+        // should cause writability to change. However, we'll hang a callback off the first
+        // write which will make the channel unwritable and a writability change to be
+        // emitted. The flush for that write should result in the writability flipping back
+        // again.
+        let b1 = context.channel.allocator.buffer(repeating: 0, count: 50)
+        context.write(self.wrapOutboundOut(b1)).whenSuccess { _ in
+            // We should still be writable.
+            XCTAssertTrue(context.channel.isWritable)
+            XCTAssertEqual(self.isNotWritableCount, 0)
+            XCTAssertEqual(self.isWritableCount, 0)
+
+            // Write again. But now breach high water mark. This should cause us to become
+            // unwritable.
+            let b2 = context.channel.allocator.buffer(repeating: 0, count: 250)
+            context.write(self.wrapOutboundOut(b2), promise: nil)
+            XCTAssertFalse(context.channel.isWritable)
+            XCTAssertEqual(self.isNotWritableCount, 1)
+            XCTAssertEqual(self.isWritableCount, 0)
+
+            // Now flush. This should lead to us becoming writable again.
+            context.flush()
+        }
+
+        // Queue another write and flush.
+        context.writeAndFlush(self.wrapOutboundOut(b1), promise: nil)
+    }
+
+    func channelWritabilityChanged(context: ChannelHandlerContext) {
+        if context.channel.isWritable {
+            self.isWritableCount += 1
+            self.becameWritable.succeed(())
+        } else {
+            self.isNotWritableCount += 1
+            self.becameUnwritable.succeed(())
+        }
     }
 }

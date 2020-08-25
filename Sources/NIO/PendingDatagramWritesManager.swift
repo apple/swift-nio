@@ -371,8 +371,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag: NIOAtomic<Bool> = .makeAtomic(value: true)
+    internal var publishedWritability = true
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true
+
 
     /// Initialize with a pre-allocated array of message headers and storage references. We pass in these pre-allocated
     /// objects to save allocations. They can be safely be re-used for all `Channel`s on a given `EventLoop` as an
@@ -426,7 +428,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                                 metadata: envelope.metadata))
 
         if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
-            // Returns false to signal the Channel became non-writable and we need to notify the user
+            // Returns false to signal the Channel became non-writable and we need to notify the user.
+            self.publishedWritability = false
             return false
         }
         return true
