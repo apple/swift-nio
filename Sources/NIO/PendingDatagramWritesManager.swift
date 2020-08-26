@@ -375,7 +375,6 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true
 
-
     /// Initialize with a pre-allocated array of message headers and storage references. We pass in these pre-allocated
     /// objects to save allocations. They can be safely be re-used for all `Channel`s on a given `EventLoop` as an
     /// `EventLoop` always runs on one and the same thread. That means that there can't be any writes of more than
