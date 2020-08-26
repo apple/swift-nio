@@ -283,6 +283,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag: NIOAtomic<Bool> = .makeAtomic(value: true)
+    internal var publishedWritability = true
 
     internal var writeSpinCount: UInt = 16
 
@@ -314,7 +315,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
         self.state.append(.init(data: data, promise: promise))
 
         if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
-            // Returns false to signal the Channel became non-writable and we need to notify the user
+            // Returns false to signal the Channel became non-writable and we need to notify the user.
+            self.publishedWritability = false
             return false
         }
         return true
@@ -451,12 +453,17 @@ internal enum WriteMechanism {
     case nothingToBeWritten
 }
 
-internal protocol PendingWritesManager {
+internal protocol PendingWritesManager: class {
     var isOpen: Bool { get }
     var isFlushPending: Bool { get }
     var writeSpinCount: UInt { get }
     var currentBestWriteMechanism: WriteMechanism { get }
     var channelWritabilityFlag: NIOAtomic<Bool> { get }
+
+    /// Represents the writability state the last time we published a writability change to the `Channel`.
+    /// This is used in `triggerWriteOperations` to determine whether we need to trigger a writability
+    /// change.
+    var publishedWritability: Bool { get set }
 }
 
 extension PendingWritesManager {
@@ -466,7 +473,6 @@ extension PendingWritesManager {
     }
 
     internal func triggerWriteOperations(triggerOneWriteOperation: (WriteMechanism) throws -> OneWriteOperationResult) throws -> OverallWriteResult {
-        let wasWritable = self.isWritable
         var result = OverallWriteResult(writeResult: .couldNotWriteEverything, writabilityChange: false)
 
         writeSpinLoop: for _ in 0...self.writeSpinCount {
@@ -494,9 +500,11 @@ extension PendingWritesManager {
         // Also, it is very important to not do any outcalls to user code outside of the loop until the `flushNow`
         // re-entrancy protection is off again.
 
-        if !wasWritable {
-            // Was not writable before so signal back to the caller the possible state change
+        if !self.publishedWritability {
+            // When we last published a writability change the `Channel` wasn't writable, signal back to the caller
+            // whether we should emit a writability change.
             result.writabilityChange = self.isWritable
+            self.publishedWritability = result.writabilityChange
         }
         return result
     }
