@@ -1,0 +1,19 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift",
+      "line": 202,
+      "symbol": "ByteBuffer.init(data:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift",
+      "line": 285,
+      "symbol": "ByteBufferView.Regions",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}
