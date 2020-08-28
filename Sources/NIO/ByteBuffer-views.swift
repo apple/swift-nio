@@ -24,6 +24,7 @@ public struct ByteBufferView: RandomAccessCollection {
     /* private but usableFromInline */ @usableFromInline var _buffer: ByteBuffer
     /* private but usableFromInline */ @usableFromInline var _range: Range<Index>
 
+    @inlinable
     internal init(buffer: ByteBuffer, range: Range<Index>) {
         precondition(range.lowerBound >= 0 && range.upperBound <= buffer.capacity)
         self._buffer = buffer
@@ -31,10 +32,12 @@ public struct ByteBufferView: RandomAccessCollection {
     }
 
     /// Creates a `ByteBufferView` from the readable bytes of the given `buffer`.
+    @inlinable
     public init(_ buffer: ByteBuffer) {
         self = ByteBufferView(buffer: buffer, range: buffer.readerIndex ..< buffer.writerIndex)
     }
 
+    @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try self._buffer.withVeryUnsafeBytes { ptr in
             try body(UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: self._range.lowerBound),
@@ -42,18 +45,22 @@ public struct ByteBufferView: RandomAccessCollection {
         }
     }
 
+    @inlinable
     public var startIndex: Index {
         return self._range.lowerBound
     }
 
+    @inlinable
     public var endIndex: Index {
         return self._range.upperBound
     }
 
+    @inlinable
     public func index(after i: Index) -> Index {
         return i + 1
     }
 
+    @inlinable
     public subscript(position: Index) -> UInt8 {
         get {
             guard position >= self._range.lowerBound && position < self._range.upperBound else {
@@ -69,6 +76,7 @@ public struct ByteBufferView: RandomAccessCollection {
         }
     }
 
+    @inlinable
     public subscript(range: Range<Index>) -> ByteBufferView {
         get {
             return ByteBufferView(buffer: self._buffer, range: range)
@@ -85,12 +93,14 @@ public struct ByteBufferView: RandomAccessCollection {
         }
     }
 
+    @inlinable
     public func _customIndexOfEquatableElement(_ element : Element) -> Index?? {
         return .some(self.withUnsafeBytes { ptr -> Index? in
             return ptr.firstIndex(of: element).map { $0 + self._range.lowerBound }
         })
     }
 
+    @inlinable
     public func _customLastIndexOfEquatableElement(_ element: Element) -> Index?? {
         return .some(self.withUnsafeBytes { ptr -> Index? in
             return ptr.lastIndex(of: element).map { $0 + self._range.lowerBound }
@@ -102,6 +112,7 @@ extension ByteBufferView: MutableCollection {}
 
 extension ByteBufferView: RangeReplaceableCollection {
     // required by `RangeReplaceableCollection`
+    @inlinable
     public init() {
         self = ByteBufferView(ByteBuffer())
     }
@@ -148,6 +159,7 @@ extension ByteBufferView: RangeReplaceableCollection {
 
 extension ByteBuffer {
     /// A view into the readable bytes of the `ByteBuffer`.
+    @inlinable
     public var readableBytesView: ByteBufferView {
         return ByteBufferView(self)
     }
@@ -158,6 +170,7 @@ extension ByteBuffer {
     ///   - index: The index the view should start at
     ///   - length: The length of the view (in bytes)
     /// - returns: A view into a portion of a `ByteBuffer` or `nil` if the requested bytes were not readable.
+    @inlinable
     public func viewBytes(at index: Int, length: Int) -> ByteBufferView? {
         guard length >= 0 && index >= self.readerIndex && index <= self.writerIndex - length else {
             return nil
@@ -169,6 +182,7 @@ extension ByteBuffer {
     /// Create a `ByteBuffer` from the given `ByteBufferView`s range.
     ///
     /// - parameter view: The `ByteBufferView` which you want to get a `ByteBuffer` from.
+    @inlinable
     public init(_ view: ByteBufferView) {
         self = view._buffer.getSlice(at: view.startIndex, length: view.count)!
     }
