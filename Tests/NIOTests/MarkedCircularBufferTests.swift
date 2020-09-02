@@ -123,11 +123,24 @@ class MarkedCircularBufferTests: XCTestCase {
             buf.append(i)
         }
         XCTAssertFalse(buf.isEmpty)
-        let _ = buf.removeFirst()
-        let _ = buf.removeFirst()
-        let _ = buf.removeFirst()
-        let _ = buf.removeFirst()
+        XCTAssertEqual(buf.removeFirst(), 1)
+        XCTAssertEqual(buf.removeFirst(), 2)
+        XCTAssertEqual(buf.removeFirst(), 3)
+        XCTAssertEqual(buf.removeFirst(), 4)
         XCTAssertTrue(buf.isEmpty)
     }
-    
+
+    func testPopFirst() throws {
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 4)
+        for i in 1...4 {
+            buf.append(i)
+        }
+        XCTAssertFalse(buf.isEmpty)
+        XCTAssertEqual(buf.popFirst(), 1)
+        XCTAssertEqual(buf.popFirst(), 2)
+        XCTAssertEqual(buf.popFirst(), 3)
+        XCTAssertEqual(buf.popFirst(), 4)
+        XCTAssertNil(buf.popFirst())
+        XCTAssertTrue(buf.isEmpty)
+    }
 }

@@ -41,12 +41,12 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     /// Removes the first element from the buffer.
     @inlinable
     public mutating func removeFirst() -> Element {
+        assert(self._buffer.count > 0)
         return self.popFirst()!
     }
 
     @inlinable
     public mutating func popFirst() -> Element? {
-        assert(self._buffer.count > 0)
         if let markedIndexOffset = self._markedIndexOffset {
             if markedIndexOffset > 0 {
                 self._markedIndexOffset = markedIndexOffset - 1
