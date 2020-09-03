@@ -133,6 +133,7 @@ class ByteBufferTest: XCTestCase {
     func testMakeSureUniquelyOwnedSliceDoesNotGetReallocatedOnWrite() {
         var slice = self.makeSliceToBufferWhichIsDeallocated()
         XCTAssertEqual(1, slice.capacity)
+        XCTAssertEqual(16, slice.storageCapacity)
         let oldStorageBegin = slice.withUnsafeReadableBytes { ptr in
             return UInt(bitPattern: ptr.baseAddress!)
         }
@@ -146,6 +147,7 @@ class ByteBufferTest: XCTestCase {
     func testWriteToUniquelyOwnedSliceWhichTriggersAReallocation() {
         var slice = self.makeSliceToBufferWhichIsDeallocated()
         XCTAssertEqual(1, slice.capacity)
+        XCTAssertEqual(16, slice.storageCapacity)
         // this will cause a re-allocation, the whole buffer should be 32 bytes then, the slice having 17 of that.
         // this fills 16 bytes so will still fit
         slice.writeBytes(Array(16..<32))
