@@ -98,7 +98,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// Called to request that the `Channel` perform a read when data is ready. The read operation will signal that we are ready to read more data.
     ///
     /// This should call `context.read` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or just
-    /// discard it if the flush should be suppressed.
+    /// discard it if the read should be suppressed.
     ///
     /// - parameters:
     ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
