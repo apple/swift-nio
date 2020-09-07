@@ -134,7 +134,7 @@ extension NIOFileHandle {
         }
     }
 
-    /// Open a new `NIOFileHandle`.
+    /// Open a new `NIOFileHandle`. This operation is blocking.
     ///
     /// - parameters:
     ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
@@ -145,7 +145,7 @@ extension NIOFileHandle {
         self.init(descriptor: fd)
     }
 
-    /// Open a new `NIOFileHandle`.
+    /// Open a new `NIOFileHandle`. This operation is blocking.
     ///
     /// - parameters:
     ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
