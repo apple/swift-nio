@@ -301,6 +301,29 @@ class BaseSocket: BaseSocketProtocol {
         }
         return sock
     }
+    
+    /// Cleanup the unix domain socket.
+    ///
+    /// Deletes the associated file if it exists and has socket type.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The pathname of the UDS.
+    /// - throws: An `IOError` if the operation failed.
+    static func cleanupSocket(unixDomainSocketPath: String) throws {
+        let sb: UnsafeMutablePointer<stat> = UnsafeMutablePointer<stat>.allocate(capacity: 1)
+        if lstat(unixDomainSocketPath, sb) == 0 {
+            // Only unlink the existing file if it is a socket
+            if sb.pointee.st_mode & S_IFSOCK == S_IFSOCK {
+                let res = unlink(unixDomainSocketPath)
+                if res == -1 {
+                    let err = errno
+                    throw IOError(errnoCode: err, reason: "Failed to unlink existing socket file \(unixDomainSocketPath)")
+                }
+            } else {
+                throw IOError(errnoCode: EEXIST, reason: "Pathname \(unixDomainSocketPath) exists and is not a socket")
+            }
+        }
+    }
 
     /// Create a new instance.
     ///

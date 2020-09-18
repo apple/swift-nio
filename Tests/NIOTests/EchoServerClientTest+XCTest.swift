@@ -31,6 +31,8 @@ extension EchoServerClientTest {
                 ("testLotsOfUnflushedWrites", testLotsOfUnflushedWrites),
                 ("testEchoUnixDomainSocket", testEchoUnixDomainSocket),
                 ("testConnectUnixDomainSocket", testConnectUnixDomainSocket),
+                ("testCleanupUnixDomainSocket", testCleanupUnixDomainSocket),
+                ("testBootstrapUnixDomainSocketNameClash", testBootstrapUnixDomainSocketNameClash),
                 ("testChannelActiveOnConnect", testChannelActiveOnConnect),
                 ("testWriteThenRead", testWriteThenRead),
                 ("testCloseInInactive", testCloseInInactive),

@@ -172,6 +172,45 @@ class EchoServerClientTest : XCTestCase {
         }
     }
 
+    func testCleanupUnixDomainSocket() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        try withTemporaryUnixDomainSocketPathName { udsPath in
+            let bootstrap = ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            
+            let serverChannel = try assertNoThrowWithValue(
+                bootstrap.bind(unixDomainSocketPath: udsPath).wait())
+
+            XCTAssertNoThrow(try serverChannel.close().wait())
+
+            let reusedPathServerChannel = try assertNoThrowWithValue(
+                bootstrap.bind(unixDomainSocketPath: udsPath).wait())
+
+            XCTAssertNoThrow(try reusedPathServerChannel.close().wait())
+        }
+    }
+
+    func testBootstrapUnixDomainSocketNameClash() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        try withTemporaryUnixDomainSocketPathName { udsPath in
+            // Bootstrap should not overwrite an existing file unless it is a socket
+            FileManager.default.createFile(atPath: udsPath, contents: nil, attributes: nil)
+            let bootstrap = ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+
+            XCTAssertThrowsError(
+                try bootstrap.bind(unixDomainSocketPath: udsPath).wait())
+        }
+    }
+
     func testChannelActiveOnConnect() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {

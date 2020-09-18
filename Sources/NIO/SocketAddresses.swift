@@ -103,20 +103,10 @@ public enum SocketAddress: CustomStringConvertible {
             addressString = try! descriptionForAddress(family: .inet6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
 
             port = "\(self.port!)"
-        case .unixDomainSocket(let addr):
-            let address = addr.address
+        case .unixDomainSocket(_):
             host = nil
             type = "UDS"
-            addressString = ""
-
-            // This is a static assert that exists just to verify the safety of the assumption below.
-            assert(Swift.type(of: address.sun_path.0) == CChar.self)
-            port = withUnsafePointer(to: address.sun_path) { ptr in
-                // Homogeneous tuples are always implicitly also bound to their element type, so this assumption below is safe.
-                let charPtr = UnsafeRawPointer(ptr).assumingMemoryBound(to: CChar.self)
-                return String(cString: charPtr)
-            }
-            return "[\(type)]\(port)"
+            return "[\(type)]\(self.pathname ?? "")"
         }
 
         return "[\(type)]\(host.map { "\($0)/\(addressString):" } ?? "\(addressString):")\(port)"
@@ -185,6 +175,25 @@ public enum SocketAddress: CustomStringConvertible {
             case .unixDomainSocket:
                 precondition(newValue == nil, "attempting to set a non-nil value to a unix socket is not valid")
             }
+        }
+    }
+    
+    /// Get the pathname of a UNIX domain socket as a string
+    public var pathname: String? {
+        switch self {
+        case .v4(_):
+            return nil
+        case .v6(_):
+            return nil
+        case .unixDomainSocket(let addr):
+            // This is a static assert that exists just to verify the safety of the assumption below.
+            assert(Swift.type(of: addr.address.sun_path.0) == CChar.self)
+            let pathname: String = withUnsafePointer(to: addr.address.sun_path) { ptr in
+                // Homogeneous tuples are always implicitly also bound to their element type, so this assumption below is safe.
+                let charPtr = UnsafeRawPointer(ptr).assumingMemoryBound(to: CChar.self)
+                return String(cString: charPtr)
+            }
+            return pathname
         }
     }
 

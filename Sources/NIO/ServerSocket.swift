@@ -109,4 +109,17 @@
             return sock
         }
     }
+    
+    /// Close the socket.
+    ///
+    /// After the socket was closed all other methods will throw an `IOError` when called.
+    ///
+    /// - throws: An `IOError` if the operation failed.
+    override func close() throws {
+        let maybePathname = try? self.localAddress().pathname
+        try super.close()
+        if let socketPath = maybePathname {
+            try BaseSocket.cleanupSocket(unixDomainSocketPath: socketPath)
+        }
+    }
 }
