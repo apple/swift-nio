@@ -296,7 +296,6 @@ extension NIOBSDSocket {
         return result
     }
 
-    @discardableResult
     @inline(never)
     static func inet_pton(af family: NIOBSDSocket.AddressFamily,
                           src description: UnsafePointer<CChar>,
