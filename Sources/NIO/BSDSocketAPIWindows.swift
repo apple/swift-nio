@@ -275,13 +275,6 @@ extension NIOBSDSocket {
         return .processed(CInt(nNumberOfBytesWritten))
     }
 
-    @inline(never)
-    static func poll(fds: UnsafeMutablePointer<pollfd>,
-                     nfds: nfds_t,
-                     timeout: CInt) throws -> CInt {
-        fatalError("Poll unsupported on Windows")
-    }
-
     @discardableResult
     @inline(never)
     static func inet_ntop(af family: NIOBSDSocket.AddressFamily,
