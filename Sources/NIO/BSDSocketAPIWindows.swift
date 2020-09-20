@@ -99,7 +99,9 @@ extension NIOBSDSocket {
 
     @inline(never)
     static func close(socket s: NIOBSDSocket.Handle) throws {
-        try Posix.close(descriptor: s)
+        if WinSDK.closesocket(s) == SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "close")
+        }
     }
 
     @inline(never)
