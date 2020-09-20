@@ -376,11 +376,17 @@ protocol _BSDSocketProtocol {
                      buffer buf: UnsafeMutableRawPointer,
                      length len: size_t) throws -> IOResult<size_t>
 
-    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t>
-    
-    static func sendmsg(descriptor: CInt,
-                        msgHdr: UnsafePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<ssize_t>
+    // NOTE: this should return a `ssize_t`, however, that is not a standard
+    // type, and defining that type is difficult.  Opt to return a `size_t`
+    // which is the same size, but is unsigned.
+    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<size_t>
+
+    // NOTE: this should return a `ssize_t`, however, that is not a standard
+    // type, and defining that type is difficult.  Opt to return a `size_t`
+    // which is the same size, but is unsigned.
+    static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<size_t>
 
     static func send(socket s: NIOBSDSocket.Handle,
                      buffer buf: UnsafeRawPointer,
