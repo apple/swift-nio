@@ -161,14 +161,14 @@ extension NIOBSDSocket {
     }
 
     @inline(never)
-    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
+    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<size_t> {
         fatalError("recvmsg not yet implemented on Windows")
     }
-    
+
     @inline(never)
-    static func sendmsg(descriptor: CInt,
-                        msgHdr: UnsafePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<ssize_t> {
+    static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<size_t> {
         fatalError("recvmsg not yet implemented on Windows")
     }
 

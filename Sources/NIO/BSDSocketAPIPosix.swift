@@ -84,13 +84,13 @@ extension NIOBSDSocket {
         return try Posix.read(descriptor: s, pointer: buf, size: len)
     }
 
-    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
+    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<size_t> {
         return try Posix.recvmsg(descriptor: descriptor, msgHdr: msgHdr, flags: flags)
     }
-    
+
     static func sendmsg(descriptor: CInt,
                         msgHdr: UnsafePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<ssize_t> {
+                        flags: CInt) throws -> IOResult<size_t> {
         return try Posix.sendmsg(descriptor: descriptor, msgHdr: msgHdr, flags: flags)
     }
 
