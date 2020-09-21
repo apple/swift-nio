@@ -99,7 +99,9 @@ extension NIOBSDSocket {
 
     @inline(never)
     static func close(socket s: NIOBSDSocket.Handle) throws {
-        try Posix.close(descriptor: s)
+        if WinSDK.closesocket(s) == SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "close")
+        }
     }
 
     @inline(never)
@@ -161,14 +163,14 @@ extension NIOBSDSocket {
     }
 
     @inline(never)
-    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
+    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<size_t> {
         fatalError("recvmsg not yet implemented on Windows")
     }
-    
+
     @inline(never)
-    static func sendmsg(descriptor: CInt,
-                        msgHdr: UnsafePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<ssize_t> {
+    static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<size_t> {
         fatalError("recvmsg not yet implemented on Windows")
     }
 
@@ -275,13 +277,6 @@ extension NIOBSDSocket {
         return .processed(CInt(nNumberOfBytesWritten))
     }
 
-    @inline(never)
-    static func poll(fds: UnsafeMutablePointer<pollfd>,
-                     nfds: nfds_t,
-                     timeout: CInt) throws -> CInt {
-        fatalError("Poll unsupported on Windows")
-    }
-
     @discardableResult
     @inline(never)
     static func inet_ntop(af family: NIOBSDSocket.AddressFamily,
@@ -296,7 +291,6 @@ extension NIOBSDSocket {
         return result
     }
 
-    @discardableResult
     @inline(never)
     static func inet_pton(af family: NIOBSDSocket.AddressFamily,
                           src description: UnsafePointer<CChar>,
