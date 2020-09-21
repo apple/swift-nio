@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(_WIN32)
+
 #include <Winsock2.h>
 
 #include <stdlib.h>
@@ -29,3 +31,5 @@ NIOWSAStartup(void) {
 
 __declspec(allocate(".CRT$XCU"))
 static void (*pNIOWSAStartup)(void) = &NIOWSAStartup;
+
+#endif
