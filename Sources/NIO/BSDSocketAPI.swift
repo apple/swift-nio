@@ -376,11 +376,17 @@ protocol _BSDSocketProtocol {
                      buffer buf: UnsafeMutableRawPointer,
                      length len: size_t) throws -> IOResult<size_t>
 
-    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t>
-    
-    static func sendmsg(descriptor: CInt,
-                        msgHdr: UnsafePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<ssize_t>
+    // NOTE: this should return a `ssize_t`, however, that is not a standard
+    // type, and defining that type is difficult.  Opt to return a `size_t`
+    // which is the same size, but is unsigned.
+    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<size_t>
+
+    // NOTE: this should return a `ssize_t`, however, that is not a standard
+    // type, and defining that type is difficult.  Opt to return a `size_t`
+    // which is the same size, but is unsigned.
+    static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>,
+                        flags: CInt) throws -> IOResult<size_t>
 
     static func send(socket s: NIOBSDSocket.Handle,
                      buffer buf: UnsafeRawPointer,
@@ -425,9 +431,15 @@ protocol _BSDSocketProtocol {
                        size: size_t,
                        offset: off_t) throws -> IOResult<size_t>
 
-    static func poll(fds: UnsafeMutablePointer<pollfd>,
-                     nfds: nfds_t,
+#if !os(Windows)
+    // NOTE: We do not support this on Windows as WSAPoll behaves differently
+    // from poll with reporting of failed connections (Connect Report 309411),
+    // which recommended that you use NetAPI instead.
+    //
+    // This is safe to exclude as this is a testing-only API.
+    static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t,
                      timeout: CInt) throws -> CInt
+#endif
 
     static func inet_ntop(af family: NIOBSDSocket.AddressFamily,
                           src addr: UnsafeRawPointer,
