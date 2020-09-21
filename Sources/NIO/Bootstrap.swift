@@ -219,8 +219,18 @@ public final class ServerBootstrap {
     ///
     /// - parameters:
     ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
+    public func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
+        return bind0 {
+            try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+        }
+    }
+    
+    /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
     ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `path`.
-    public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool = true) -> EventLoopFuture<Channel> {
+    public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool) -> EventLoopFuture<Channel> {
         if cleanupExistingSocketFile {
             do {
                 try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
@@ -229,9 +239,7 @@ public final class ServerBootstrap {
             }
         }
 
-        return bind0 {
-            try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
-        }
+        return self.bind(unixDomainSocketPath: unixDomainSocketPath)
     }
 
     #if !os(Windows)
@@ -864,8 +872,18 @@ public final class DatagramBootstrap {
     ///
     /// - parameters:
     ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. `path` must not exist, it will be created by the system.
+    public func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
+        return bind0 {
+            return try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+        }
+    }
+    
+    /// Bind the `DatagramChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. `path` must not exist, it will be created by the system.
     ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `path`.
-    public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool = true) -> EventLoopFuture<Channel> {
+    public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool) -> EventLoopFuture<Channel> {
         if cleanupExistingSocketFile {
             do {
                 try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
@@ -874,9 +892,7 @@ public final class DatagramBootstrap {
             }
         }
 
-        return bind0 {
-            return try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
-        }
+        return self.bind(unixDomainSocketPath: unixDomainSocketPath)
     }
 
     private func bind0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {

@@ -180,7 +180,6 @@ class EchoServerClientTest : XCTestCase {
 
         try withTemporaryUnixDomainSocketPathName { udsPath in
             let bootstrap = ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             
             let serverChannel = try assertNoThrowWithValue(
                 bootstrap.bind(unixDomainSocketPath: udsPath).wait())
@@ -188,7 +187,8 @@ class EchoServerClientTest : XCTestCase {
             XCTAssertNoThrow(try serverChannel.close().wait())
 
             let reusedPathServerChannel = try assertNoThrowWithValue(
-                bootstrap.bind(unixDomainSocketPath: udsPath).wait())
+                bootstrap.bind(unixDomainSocketPath: udsPath,
+                               cleanupExistingSocketFile: true).wait())
 
             XCTAssertNoThrow(try reusedPathServerChannel.close().wait())
         }
@@ -204,7 +204,6 @@ class EchoServerClientTest : XCTestCase {
             // Bootstrap should not overwrite an existing file unless it is a socket
             FileManager.default.createFile(atPath: udsPath, contents: nil, attributes: nil)
             let bootstrap = ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
             XCTAssertThrowsError(
                 try bootstrap.bind(unixDomainSocketPath: udsPath).wait())

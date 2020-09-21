@@ -181,9 +181,9 @@ public enum SocketAddress: CustomStringConvertible {
     /// Get the pathname of a UNIX domain socket as a string
     public var pathname: String? {
         switch self {
-        case .v4(_):
+        case .v4:
             return nil
-        case .v6(_):
+        case .v6:
             return nil
         case .unixDomainSocket(let addr):
             // This is a static assert that exists just to verify the safety of the assumption below.
