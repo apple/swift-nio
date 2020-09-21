@@ -304,24 +304,30 @@ class BaseSocket: BaseSocketProtocol {
     
     /// Cleanup the unix domain socket.
     ///
-    /// Deletes the associated file if it exists and has socket type.
+    /// Deletes the associated file if it exists and has socket type. Does nothing if pathname does not exist.
     ///
     /// - parameters:
     ///     - unixDomainSocketPath: The pathname of the UDS.
-    /// - throws: An `IOError` if the operation failed.
+    /// - throws: An `SocketAddressError.unixDomainSocketPathWrongType` if the pathname exists and is not a socket.
     static func cleanupSocket(unixDomainSocketPath: String) throws {
-        let sb: UnsafeMutablePointer<stat> = UnsafeMutablePointer<stat>.allocate(capacity: 1)
-        if lstat(unixDomainSocketPath, sb) == 0 {
-            // Only unlink the existing file if it is a socket
-            if sb.pointee.st_mode & S_IFSOCK == S_IFSOCK {
-                let res = unlink(unixDomainSocketPath)
-                if res == -1 {
-                    let err = errno
-                    throw IOError(errnoCode: err, reason: "Failed to unlink existing socket file \(unixDomainSocketPath)")
-                }
-            } else {
-                throw IOError(errnoCode: EEXIST, reason: "Pathname \(unixDomainSocketPath) exists and is not a socket")
+        do {
+            var sb: stat = stat()
+            try withUnsafeMutablePointer(to: &sb) { sbPtr in
+                try Posix.stat(pathname: unixDomainSocketPath, outStat: sbPtr)
             }
+
+            // Only unlink the existing file if it is a socket
+            if sb.st_mode & S_IFSOCK == S_IFSOCK {
+                try Posix.unlink(pathname: unixDomainSocketPath)
+            } else {
+                throw SocketAddressError.unixDomainSocketPathWrongType
+            }
+        } catch let err as IOError {
+            // If the filepath did not exist, we consider it cleaned up
+            if err.errnoCode == ENOENT {
+                return ();
+            }
+            throw err
         }
     }
 

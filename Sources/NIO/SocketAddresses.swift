@@ -22,6 +22,8 @@ public enum SocketAddressError: Error {
     case unsupported
     /// The requested UDS path is too long.
     case unixDomainSocketPathTooLong
+    /// The requested UDS path exists and has wrong type (not a socket).
+    case unixDomainSocketPathWrongType
     /// Unable to parse a given IP string
     case failedToParseIPString(String)
 }

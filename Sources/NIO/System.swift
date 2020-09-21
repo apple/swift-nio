@@ -95,6 +95,8 @@ private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointe
 
 #if os(Linux)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
+private let sysStat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = stat
+private let sysUnlink: @convention(c) (UnsafePointer<CChar>) -> CInt = unlink
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
 private let sysCmsgFirstHdr: @convention(c) (UnsafePointer<msghdr>?) -> UnsafeMutablePointer<cmsghdr>? =
@@ -108,6 +110,8 @@ private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_SPA
 private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIOLinux_CMSG_LEN
 #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
+private let sysStat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = stat
+private let sysUnlink: @convention(c) (UnsafePointer<CChar>?) -> CInt = unlink
 private let sysKevent = kevent
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
@@ -515,6 +519,20 @@ internal enum Posix {
     public static func fstat(descriptor: CInt, outStat: UnsafeMutablePointer<stat>) throws {
         _ = try syscall(blocking: false) {
             sysFstat(descriptor, outStat)
+        }
+    }
+
+    @inline(never)
+    public static func stat(pathname: String, outStat: UnsafeMutablePointer<stat>) throws {
+        _ = try syscall(blocking: false) {
+            sysStat(pathname, outStat)
+        }
+    }
+
+    @inline(never)
+    public static func unlink(pathname: String) throws {
+        _ = try syscall(blocking: false) {
+            sysUnlink(pathname)
         }
     }
 
