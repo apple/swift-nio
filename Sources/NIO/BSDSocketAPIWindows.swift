@@ -18,6 +18,14 @@ import let WinSDK.AF_INET
 import let WinSDK.AF_INET6
 import let WinSDK.AF_UNIX
 
+import let WinSDK.FIONBIO
+
+import let WinSDK.INET_ADDRSTRLEN
+import let WinSDK.INET6_ADDRSTRLEN
+
+import let WinSDK.INVALID_HANDLE_VALUE
+import let WinSDK.INVALID_SOCKET
+
 import let WinSDK.IPPROTO_IP
 import let WinSDK.IPPROTO_IPV6
 import let WinSDK.IPPROTO_TCP
@@ -41,6 +49,10 @@ import let WinSDK.PF_UNIX
 
 import let WinSDK.TCP_NODELAY
 
+import let WinSDK.SD_BOTH
+import let WinSDK.SD_RECEIVE
+import let WinSDK.SD_SEND
+
 import let WinSDK.SO_ERROR
 import let WinSDK.SO_KEEPALIVE
 import let WinSDK.SO_LINGER
@@ -56,11 +68,41 @@ import let WinSDK.SOCK_STREAM
 
 import let WinSDK.SOCKET_ERROR
 
+import let WinSDK.TF_USE_KERNEL_APC
+
+import func WinSDK.accept
+import func WinSDK.bind
+import func WinSDK.closesocket
+import func WinSDK.connect
+import func WinSDK.getpeername
+import func WinSDK.getsockname
+import func WinSDK.inet_ntop
+import func WinSDK.inet_pton
+import func WinSDK.ioctlsocket
+import func WinSDK.listen
+import func WinSDK.shutdown
+import func WinSDK.socket
+import func WinSDK.GetLastError
+import func WinSDK.ReadFile
+import func WinSDK.TransmitFile
+import func WinSDK.WriteFile
 import func WinSDK.WSAGetLastError
 
 import struct WinSDK.socklen_t
+import struct WinSDK.u_long
+import struct WinSDK.DWORD
+import struct WinSDK.HANDLE
+import struct WinSDK.OVERLAPPED
 import struct WinSDK.SOCKADDR
+import struct WinSDK.SOCKADDR_IN
+import struct WinSDK.SOCKADDR_IN6
+import struct WinSDK.SOCKADDR_UN
+import struct WinSDK.SOCKADDR_STORAGE
 
+internal typealias sockaddr_in = SOCKADDR_IN
+internal typealias sockaddr_in6 = SOCKADDR_IN6
+internal typealias sockaddr_un = SOCKADDR_UN
+internal typealias sockaddr_storage = SOCKADDR_STORAGE
 
 extension Shutdown {
     internal var cValue: CInt {
