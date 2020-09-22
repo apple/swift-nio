@@ -228,7 +228,7 @@ final class SALChannelTest: XCTestCase, SALTest {
         XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
             try self.assertWaitingForNotification(result: .some(.init(io: [.read],
                                                                       registration: .socketChannel(channel, [.read]))))
-            try self.assertRead(expectedFD: .max, expectedBufferSpace: 1024, return: buffer)
+            try self.assertRead(expectedFD: .max, expectedBufferSpace: 2048, return: buffer)
         }) {
             channel.pipeline.addHandler(SignalGroupOnRead(group: g))
         })
