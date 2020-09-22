@@ -224,6 +224,23 @@ public final class ServerBootstrap {
             try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
         }
     }
+    
+    /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
+    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `path`.
+    public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool) -> EventLoopFuture<Channel> {
+        if cleanupExistingSocketFile {
+            do {
+                try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
+            } catch {
+                return group.next().makeFailedFuture(error)
+            }
+        }
+
+        return self.bind(unixDomainSocketPath: unixDomainSocketPath)
+    }
 
     #if !os(Windows)
         /// Use the existing bound socket file descriptor.
@@ -859,6 +876,23 @@ public final class DatagramBootstrap {
         return bind0 {
             return try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
         }
+    }
+    
+    /// Bind the `DatagramChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. `path` must not exist, it will be created by the system.
+    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `path`.
+    public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool) -> EventLoopFuture<Channel> {
+        if cleanupExistingSocketFile {
+            do {
+                try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
+            } catch {
+                return group.next().makeFailedFuture(error)
+            }
+        }
+
+        return self.bind(unixDomainSocketPath: unixDomainSocketPath)
     }
 
     private func bind0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {

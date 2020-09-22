@@ -15,6 +15,7 @@
 /// A server socket that can accept new connections.
 /* final but tests */ class ServerSocket: BaseSocket, ServerSocketProtocol {
     typealias SocketType = ServerSocket
+    private let cleanupOnClose: Bool
 
     public final class func bootstrap(protocolFamily: NIOBSDSocket.ProtocolFamily, host: String, port: Int) throws -> ServerSocket {
         let socket = try ServerSocket(protocolFamily: protocolFamily)
@@ -31,6 +32,12 @@
     /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: NIOBSDSocket.ProtocolFamily, setNonBlocking: Bool = false) throws {
         let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: .stream, setNonBlocking: setNonBlocking)
+        switch protocolFamily {
+        case .unix:
+            cleanupOnClose = true
+        default:
+            cleanupOnClose = false
+        }
         try super.init(socket: sock)
     }
 
@@ -54,6 +61,7 @@
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if socket is invalid.
     init(socket: NIOBSDSocket.Handle, setNonBlocking: Bool = false) throws {
+        cleanupOnClose = false  // socket already bound, owner must clean up
         try super.init(socket: socket)
         if setNonBlocking {
             try self.setNonBlocking()
@@ -107,6 +115,19 @@
             }
             #endif
             return sock
+        }
+    }
+    
+    /// Close the socket.
+    ///
+    /// After the socket was closed all other methods will throw an `IOError` when called.
+    ///
+    /// - throws: An `IOError` if the operation failed.
+    override func close() throws {
+        let maybePathname = self.cleanupOnClose ? (try? self.localAddress().pathname) : nil
+        try super.close()
+        if let socketPath = maybePathname {
+            try BaseSocket.cleanupSocket(unixDomainSocketPath: socketPath)
         }
     }
 }

@@ -18,6 +18,9 @@ import NIOConcurrencyHelpers
 import let WinSDK.INVALID_SOCKET
 #endif
 
+/// The requested UDS path exists and has wrong type (not a socket).
+public struct UnixDomainSocketPathWrongType: Error {}
+
 /// A Registration on a `Selector`, which is interested in an `SelectorEventSet`.
 protocol Registration {
     /// The `SelectorEventSet` in which the `Registration` is interested.
@@ -300,6 +303,35 @@ class BaseSocket: BaseSocketProtocol {
             }
         }
         return sock
+    }
+    
+    /// Cleanup the unix domain socket.
+    ///
+    /// Deletes the associated file if it exists and has socket type. Does nothing if pathname does not exist.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The pathname of the UDS.
+    /// - throws: An `UnixDomainSocketPathWrongType` if the pathname exists and is not a socket.
+    static func cleanupSocket(unixDomainSocketPath: String) throws {
+        do {
+            var sb: stat = stat()
+            try withUnsafeMutablePointer(to: &sb) { sbPtr in
+                try Posix.stat(pathname: unixDomainSocketPath, outStat: sbPtr)
+            }
+
+            // Only unlink the existing file if it is a socket
+            if sb.st_mode & S_IFSOCK == S_IFSOCK {
+                try Posix.unlink(pathname: unixDomainSocketPath)
+            } else {
+                throw UnixDomainSocketPathWrongType()
+            }
+        } catch let err as IOError {
+            // If the filepath did not exist, we consider it cleaned up
+            if err.errnoCode == ENOENT {
+                return
+            }
+            throw err
+        }
     }
 
     /// Create a new instance.
