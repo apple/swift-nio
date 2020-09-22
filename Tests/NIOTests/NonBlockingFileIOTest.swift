@@ -764,6 +764,74 @@ class NonBlockingFileIOTest: XCTestCase {
             })
     }
 
+    func testOpenFileWithRegionWorks() throws {
+        let content = "123"
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            let (fh, fr) = try self.fileIO.openFileWithRegion(path: path, mode: .read, flags: .default, eventLoop: self.eventLoop).wait()
+            try fh.withUnsafeFileDescriptor { fd in
+                XCTAssertGreaterThanOrEqual(fd, 0)
+            }
+            XCTAssertTrue(fh.isOpen)
+            XCTAssertEqual(0, fr.readerIndex)
+            XCTAssertEqual(3, fr.endIndex)
+            try fh.close()
+        }
+    }
+
+    func testOpenFileWithRegionForReadingAndWritingWorks() throws {
+        let content = "123"
+        var buffer = allocator.buffer(capacity: 3)
+        buffer.writeStaticString("hello")
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            let (fh, fr) = try self.fileIO.openFileWithRegion(
+                path: path,
+                mode: [.write, .read],
+                flags: .allowFileCreation(),
+                eventLoop: self.eventLoop).wait()
+            defer {
+                try! fh.close()
+            }
+            try fh.withUnsafeFileDescriptor { fd in
+                XCTAssertGreaterThanOrEqual(fd, 0)
+            }
+            XCTAssertTrue(fh.isOpen)
+
+            // Write at an offset
+            try self.fileIO.write(fileHandle: fh,
+                                  toOffset: 1,
+                                  buffer: buffer,
+                                  eventLoop: self.eventLoop).wait()
+
+            var buf = try self.fileIO.read(fileRegion: fr,
+                                           allocator: self.allocator,
+                                           eventLoop: self.eventLoop).wait()
+
+            // Readable file region hasn't changed, but some of the content has
+            XCTAssertEqual(3, buf.readableBytes)
+            XCTAssertEqual("1he", buf.readString(length: 3))
+        }
+    }
+
+    func testOpenFileWithRegionForWritingNoRead() throws {
+        try withTemporaryFile(content: "123") { (fileHandle, path) -> Void in
+            let (fh, fr) = try self.fileIO.openFileWithRegion(
+                path: path,
+                mode: .write,
+                flags: .allowFileCreation(),
+                eventLoop: self.eventLoop).wait()
+            defer {
+                try! fh.close()
+            }
+
+            XCTAssertThrowsError(
+                try self.fileIO.read(fileRegion: fr,
+                                     allocator: self.allocator,
+                                     eventLoop: self.eventLoop).wait()) { error in
+                XCTAssertEqual(EBADF, (error as? IOError)?.errnoCode)
+            }
+        }
+    }
+
     func testReadFromOffset() {
         XCTAssertNoThrow(try withTemporaryFile(content: "hello world") { (fileHandle, path) in
             let buffer = self.fileIO.read(fileHandle: fileHandle,
