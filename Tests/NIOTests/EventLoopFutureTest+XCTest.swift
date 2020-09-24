@@ -84,6 +84,12 @@ extension EventLoopFutureTest {
                 ("testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures", testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures),
                 ("testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures", testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures),
                 ("testRepeatedTaskOffEventLoopGroupFuture", testRepeatedTaskOffEventLoopGroupFuture),
+                ("testEventLoopFutureOrErrorNoThrow", testEventLoopFutureOrErrorNoThrow),
+                ("testEventLoopFutureOrThrows", testEventLoopFutureOrThrows),
+                ("testEventLoopFutureOrNoReplacement", testEventLoopFutureOrNoReplacement),
+                ("testEventLoopFutureOrReplacement", testEventLoopFutureOrReplacement),
+                ("testEventLoopFutureOrNoElse", testEventLoopFutureOrNoElse),
+                ("testEventLoopFutureOrElse", testEventLoopFutureOrElse),
            ]
    }
 }

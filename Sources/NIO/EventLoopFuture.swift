@@ -1325,3 +1325,80 @@ extension EventLoopFuture {
         return self
     }
 }
+
+// MARK: unwrap
+
+extension EventLoopFuture {
+    /// Unwrap an `EventLoopFuture` where its type parameter is an `Optional`.
+    ///
+    /// Unwrap a future returning a new `EventLoopFuture`. When the resolved future's value is `Optional.some(...)`
+    /// the new future is created with the identical value. Otherwise the `Error` passed in the `orError` parameter
+    /// is thrown. For example:
+    /// ```
+    /// do {
+    ///     try promise.futureResult.unwrap(orError: ErrorToThrow).wait()
+    /// } catch ErrorToThrow {
+    ///     ...
+    /// }
+    /// ```
+    ///
+    /// - parameters:
+    ///     - orError: the `Error` that is thrown when then resolved future's value is `Optional.none`.
+    /// - returns: an new `EventLoopFuture` with new type parameter `NewValue` and the same value as the resolved
+    ///     future.
+    /// - throws: the `Error` passed in the `orError` parameter when the resolved future's value is `Optional.none`.
+    @inlinable
+    public func unwrap<NewValue>(orError error: Error) -> EventLoopFuture<NewValue> where Value == Optional<NewValue> {
+        return self.flatMapThrowing { (value) throws -> NewValue in
+            guard let value = value else {
+                throw error
+            }
+            return value
+        }
+    }
+
+    /// Unwrap an `EventLoopFuture` where its type parameter is an `Optional`.
+    ///
+    /// Unwraps a future returning a new `EventLoopFuture` with either: the value passed in the `orReplace`
+    /// parameter when the future resolved with value Optional.none, or the same value otherwise. For example:
+    /// ```
+    /// promise.futureResult.unwrap(orReplace: 42).wait()
+    /// ```
+    ///
+    /// - parameters:
+    ///     - orReplace: the value of the returned `EventLoopFuture` when then resolved future's value is `Optional.some()`.
+    /// - returns: an new `EventLoopFuture` with new type parameter `NewValue` and the value passed in the `orReplace` parameter.
+    @inlinable
+    public func unwrap<NewValue>(orReplace replacement: NewValue) -> EventLoopFuture<NewValue> where Value == Optional<NewValue> {
+        return self.map { (value) -> NewValue in
+            guard let value = value else {
+                return replacement
+            }
+            return value 
+        }
+    }
+
+    /// Unwrap an `EventLoopFuture` where its type parameter is an `Optional`.
+    ///
+    /// Unwraps a future returning a new `EventLoopFuture` with either: the value returned by the closure passed in
+    /// the `orElse` parameter when the future resolved with value Optional.none, or the same value otherwise. For example:
+    /// ```
+    /// var x = 2
+    /// promise.futureResult.unwrap(orElse: { x * 2 }).wait()
+    /// ```
+    ///
+    /// - parameters:
+    ///     - orElse: a closure that returns the value of the returned `EventLoopFuture` when then resolved future's value
+    ///         is `Optional.some()`.
+    /// - returns: an new `EventLoopFuture` with new type parameter `NewValue` and with the value returned by the closure
+    ///     passed in the `orElse` parameter.
+    @inlinable
+    public func unwrap<NewValue>(orElse callback: @escaping () -> NewValue) -> EventLoopFuture<NewValue> where Value == Optional<NewValue> {
+        return self.map { (value) -> NewValue  in
+            guard let value = value else {
+                return callback()
+            }
+            return value 
+        }
+    }
+}
