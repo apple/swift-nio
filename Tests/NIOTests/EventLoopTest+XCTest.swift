@@ -78,6 +78,7 @@ extension EventLoopTest {
                 ("testWeFailOutstandingScheduledTasksOnELShutdown", testWeFailOutstandingScheduledTasksOnELShutdown),
                 ("testSchedulingTaskOnFutureFailedByELShutdownDoesNotMakeUsExplode", testSchedulingTaskOnFutureFailedByELShutdownDoesNotMakeUsExplode),
                 ("testEventLoopGroupProvider", testEventLoopGroupProvider),
+                ("testScheduleMaximum", testScheduleMaximum),
            ]
    }
 }

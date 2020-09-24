@@ -1295,4 +1295,26 @@ public final class EventLoopTest : XCTestCase {
             XCTFail("Not the same")
         }
     }
+
+    // Test that scheduling a task at the maximum value doesn't crash.
+    // (Crashing resulted from an EINVAL/IOException thrown by the kevent
+    // syscall when the timeout value exceeded the maximum supported by
+    // the Darwin kernel #1056).
+    public func testScheduleMaximum() {
+        let eventLoop = EmbeddedEventLoop()
+        let maxAmount: TimeAmount = .nanoseconds(.max)
+        let scheduled = eventLoop.scheduleTask(in: maxAmount) { true }
+
+        var result: Bool?
+        var error: Error?
+        scheduled.futureResult.whenSuccess { result = $0 }
+        scheduled.futureResult.whenFailure { error = $0 }
+        
+        scheduled.cancel()
+
+        XCTAssertTrue(scheduled.futureResult.isFulfilled)
+        XCTAssertNil(result)
+        XCTAssertEqual(error as? EventLoopError, .cancelled)
+    }
+
 }
