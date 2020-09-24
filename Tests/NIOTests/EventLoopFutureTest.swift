@@ -1207,5 +1207,62 @@ class EventLoopFutureTest : XCTestCase {
         
         try exitPromise.futureResult.wait()
     }
+ 
+    func testEventLoopFutureOrErrorNoThrow() {
+        let eventLoop = EmbeddedEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(42)
+        promise.completeWith(result)
+
+        XCTAssertEqual(try promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait(), 42)
+    }
+ 
+    func testEventLoopFutureOrThrows() {
+        let eventLoop = EmbeddedEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(nil)
+        promise.completeWith(result)
+
+        XCTAssertThrowsError(try _ = promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait()) { (error) -> Void in
+            XCTAssertEqual(error as! EventLoopFutureTestError, EventLoopFutureTestError.example)
+        }
+    }
+  
+     func testEventLoopFutureOrNoReplacement() {
+        let eventLoop = EmbeddedEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(42)
+        promise.completeWith(result)
+
+        XCTAssertEqual(try! promise.futureResult.unwrap(orReplace: 41).wait(), 42)
+    }
+ 
+    func testEventLoopFutureOrReplacement() {
+        let eventLoop = EmbeddedEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(nil)
+        promise.completeWith(result)
+
+        XCTAssertEqual(try! promise.futureResult.unwrap(orReplace: 42).wait(), 42)
+    }
+ 
+    func testEventLoopFutureOrNoElse() {
+        let eventLoop = EmbeddedEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(42)
+        promise.completeWith(result)
+
+        XCTAssertEqual(try! promise.futureResult.unwrap(orElse: { 41 } ).wait(), 42)
+    }
+ 
+    func testEventLoopFutureOrElse() {
+        let eventLoop = EmbeddedEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(4)
+        promise.completeWith(result)
+
+        let x = 2
+        XCTAssertEqual(try! promise.futureResult.unwrap(orElse: { x * 2 } ).wait(), 4)
+    }
 
 }
