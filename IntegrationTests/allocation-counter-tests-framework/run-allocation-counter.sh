@@ -3,7 +3,7 @@
 ##
 ## This source file is part of the SwiftNIO open source project
 ##
-## Copyright (c) 2019 Apple Inc. and the SwiftNIO project authors
+## Copyright (c) 2019-2020 Apple Inc. and the SwiftNIO project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -24,6 +24,7 @@ function die() {
 
 function make_git_commit_all() {
     git init > /dev/null
+    git checkout -b main > /dev/null
     if [[ "$(git config user.email)" == "" ]]; then
         git config --local user.email does@really-not.matter
         git config --local user.name 'Does Not Matter'
@@ -54,8 +55,8 @@ EOF
     cat <<EOF
     ],
     dependencies: [
-        .package(url: "HookedFunctions/", .branch("master")),
-        .package(url: "$swiftpm_pkg_name/", .branch("master")),
+        .package(url: "HookedFunctions/", .branch("main")),
+        .package(url: "$swiftpm_pkg_name/", .branch("main")),
 EOF
     if [[ -n "$extra_dependencies_file" ]]; then
         cat "$extra_dependencies_file"
