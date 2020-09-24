@@ -3,7 +3,7 @@
 ##
 ## This source file is part of the SwiftNIO open source project
 ##
-## Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+## Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -51,8 +51,8 @@ function usage() {
     echo >&2
     echo >&2 "Examples:"
     echo >&2
-    echo >&2 "Check between master and tag 2.1.1 of swift-nio:"
-    echo >&2 "  $0 https://github.com/apple/swift-nio master 2.1.1"
+    echo >&2 "Check between main and tag 2.1.1 of swift-nio:"
+    echo >&2 "  $0 https://github.com/apple/swift-nio main 2.1.1"
     echo >&2
     echo >&2 "Check between HEAD and commit 64cf63d7 using the provided toolchain:"
     echo >&2 "  xcrun --toolchain org.swift.5120190702a $0 ../some-local-repo HEAD 64cf63d7"

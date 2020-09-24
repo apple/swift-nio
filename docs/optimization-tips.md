@@ -29,5 +29,5 @@ making it an `indirect case`.
 
 
 [swift-repo]: https://github.com/apple/swift
-[swift-optimization-tips]: https://github.com/apple/swift/blob/master/docs/OptimizationTips.rst
+[swift-optimization-tips]: https://github.com/apple/swift/blob/main/docs/OptimizationTips.rst
 [docs-memory-layout]: https://developer.apple.com/documentation/swift/memorylayout
