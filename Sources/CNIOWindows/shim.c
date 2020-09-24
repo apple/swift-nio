@@ -16,13 +16,17 @@
 
 #include "CNIOWindows.h"
 
-int NIO(sendmmsg)(SOCKET s, NIO(mmsghdr) *msgvec, unsigned int vlen, int flags) {
+#include <assert.h>
+
+int CNIOWindows_sendmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec, unsigned int vlen,
+                         int flags) {
   assert(!"sendmmsg not implemented");
   abort();
 }
 
-int NIO(recvmmsg)(SOCKET s, NIO(mmsghdr) *msgvec, unsigned int vlen, int flags,
-                  struct timespec *timeout) {
+int CNIOWindows_recvmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec,
+                         unsigned int vlen, int flags,
+                         struct timespec *timeout) {
   assert(!"recvmmsg not implemented");
   abort();
 }
