@@ -12,6 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import let WinSDK.ECONNABORTED
+import let WinSDK.ECONNREFUSED
+import let WinSDK.EMFILE
+import let WinSDK.ENFILE
+import let WinSDK.ENOBUFS
+import let WinSDK.ENOMEM
+#endif
+
 extension ByteBuffer {
     mutating func withMutableWritePointer(body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
         var singleResult: IOResult<Int>!
@@ -755,6 +764,7 @@ extension DatagramChannel: MulticastChannel {
         }
     }
 
+#if !os(Windows)
     @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
     func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
@@ -776,6 +786,7 @@ extension DatagramChannel: MulticastChannel {
             }
         }
     }
+#endif
 
     func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
