@@ -491,7 +491,7 @@ public struct NonBlockingFileIO {
     ///     - mode: File access mode.
     ///     - flags: Additional POSIX flags.
     ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
-    /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
+    /// - returns: An `EventLoopFuture` containing the `NIOFileHandle`.
     public func openFile(path: String, mode: NIOFileHandle.Mode, flags: NIOFileHandle.Flags = .default, eventLoop: EventLoop) -> EventLoopFuture<NIOFileHandle> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
             return try NIOFileHandle(path: path, mode: mode, flags: flags)

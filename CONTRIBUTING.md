@@ -82,7 +82,7 @@ SwiftNIO has been created to be high performance.  The integration tests cover s
 
 Try to keep your lines less than 120 characters long so github can correctly display your changes.
 
-It is intended SwiftNIO will use the swift-format tool in the future to bring consistency to code formatting.  To follow the discussion on this topic see the swift evolution proposal [SE-250](https://github.com/apple/swift-evolution/blob/master/proposals/0250-swift-style-guide-and-formatter.md)
+It is intended SwiftNIO will use the swift-format tool in the future to bring consistency to code formatting.  To follow the discussion on this topic see the swift evolution proposal [SE-250](https://github.com/apple/swift-evolution/blob/main/proposals/0250-swift-style-guide-and-formatter.md)
 
 ### Extensibility
 

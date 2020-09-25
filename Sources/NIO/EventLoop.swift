@@ -255,6 +255,7 @@ public protocol EventLoop: EventLoopGroup {
     ///            on the completion of the task.
     ///
     /// - note: You can only cancel a task before it has started executing.
+    /// - note: The `in` value is clamped to a maximum when running on a Darwin-kernel.
     @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 

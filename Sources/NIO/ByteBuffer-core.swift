@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import ucrt
+#endif
+
 let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
 let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer? = realloc
 let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free

@@ -372,7 +372,24 @@ internal class Selector<R: Registration> {
         case .now:
             return timespec(tv_sec: 0, tv_nsec: 0)
         case .blockUntilTimeout(let nanoseconds):
-            return timespec(timeAmount: nanoseconds)
+            // A scheduledTask() specified with a zero or negative timeAmount, will be scheduled immediately
+            // and therefore SHOULD NOT result in a kevent being created with a negative or zero timespec.
+            precondition(nanoseconds.nanoseconds > 0, "\(nanoseconds) is invalid (0 < nanoseconds)")
+
+            var ts = timespec(timeAmount: nanoseconds)
+            // Check that the timespec tv_nsec field conforms to the definition in the C11 standard (ISO/IEC 9899:2011).
+            assert((0..<1_000_000_000).contains(ts.tv_nsec), "\(ts) is invalid (0 <= tv_nsec < 1_000_000_000)")
+
+            // The maximum value in seconds supported by the Darwin-kernel interval timer (kern_time.c:itimerfix())
+            // (note that - whilst unlikely - this value *could* change).
+            let sysIntervalTimerMaxSec = 100_000_000
+
+            // Clamp the timespec tv_sec value to the maximum supported by the Darwin-kernel.
+            // Whilst this schedules the event far into the future (several years) it will still be triggered provided
+            // the system stays up.
+            ts.tv_sec = min(ts.tv_sec, sysIntervalTimerMaxSec)
+
+            return ts
         }
     }
 

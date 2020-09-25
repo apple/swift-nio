@@ -73,7 +73,7 @@ which is literally just the exact numbers of each of the 10 runs we considered. 
 
 The exact allocation counts are _not_ directly comparable between different operating systems and even different versions of the same operating system. Every new Swift version will also introduce differences (hopefully decreasing over time).
 
-This means that if you get hit by a CI failure, you will have to first reproduce the regression locally by running the allocation counter tests once on `master` and then again on your failing branch.
+This means that if you get hit by a CI failure, you will have to first reproduce the regression locally by running the allocation counter tests once on `main` and then again on your failing branch.
 
 ## Debugging a regression in a particular test
 
@@ -105,7 +105,7 @@ which should run very quickly. But _do not_ forget to pass `-c release`, otherwi
 
 ### Debugging with other tools
 
-Often, you will want to use external tools such as Instruments or `dtrace` to analyse why a performance test regressed. Unfortunately, that is a little harder than you might expect because to implement the allocation tests, the allocation counter test framework actually [hijacks](https://github.com/apple/swift-nio/blob/master/IntegrationTests/tests_04_performance/test_01_resources/README.md) functions like `malloc` and `free`. The counting of allocations happens in the hijacked or 'hooked' functions.
+Often, you will want to use external tools such as Instruments or `dtrace` to analyse why a performance test regressed. Unfortunately, that is a little harder than you might expect because to implement the allocation tests, the allocation counter test framework actually [hijacks](https://github.com/apple/swift-nio/blob/main/IntegrationTests/tests_04_performance/test_01_resources/README.md) functions like `malloc` and `free`. The counting of allocations happens in the hijacked or 'hooked' functions.
 To use an external memory analysis tool, it's best to not do the hooking and fortunately it's very straightforward to switch the hooking off.
 
 To disable the hooking, run the runner script with `-- -n` followed by the file name of the test you would like to debug. For example

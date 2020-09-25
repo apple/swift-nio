@@ -26,7 +26,7 @@ RUN mkdir -p $HOME/.tools
 RUN echo 'export PATH="$HOME/.tools:$PATH"' >> $HOME/.profile
 
 # script to allow mapping framepointers on linux (until part of the toolchain)
-RUN wget -q https://raw.githubusercontent.com/apple/swift/master/utils/symbolicate-linux-fatal -O $HOME/.tools/symbolicate-linux-fatal
+RUN wget -q https://raw.githubusercontent.com/apple/swift/main/utils/symbolicate-linux-fatal -O $HOME/.tools/symbolicate-linux-fatal
 RUN chmod 755 $HOME/.tools/symbolicate-linux-fatal
 
 # swiftformat (until part of the toolchain)
