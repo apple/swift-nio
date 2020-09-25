@@ -25,6 +25,7 @@ import let WinSDK.FILE_FLAG_OPEN_REPARSE_POINT
 import let WinSDK.FILE_SHARE_DELETE
 import let WinSDK.FILE_SHARE_READ
 import let WinSDK.FILE_SHARE_WRITE
+import let WinSDK.FileDispositionInfoEx
 
 import let WinSDK.GENERIC_READ
 
@@ -42,17 +43,17 @@ import let WinSDK.OPEN_EXISTING
 
 import func WinSDK.CloseHandle
 import func WinSDK.CreateFileW
-import func WinSDK.DeleteFileW
 import func WinSDK.DeviceIoControl
 import func WinSDK.GetFileInformationByHandle
 import func WinSDK.GetFileType
 import func WinSDK.GetLastError
+import func WinSDK.SetFileInformationByHandle
 
 import struct WinSDK.BY_HANDLE_FILE_INFORMATION
 import struct WinSDK.DWORD
+import struct WinSDK.FILE_DISPOSITION_INFO
 import struct WinSDK.socklen_t
 
-@_implementationOnly
 import CNIOWindows
 #endif
 
@@ -352,22 +353,16 @@ class BaseSocket: BaseSocketProtocol {
     /// - throws: An `UnixDomainSocketPathWrongType` if the pathname exists and is not a socket.
     static func cleanupSocket(unixDomainSocketPath: String) throws {
 #if os(Windows)
-        var hFile = unixDomainSocketPath.withCString(encodedAs: UTF16.self) {
+        guard let hFile = (unixDomainSocketPath.withCString(encodedAs: UTF16.self) {
             CreateFileW($0, GENERIC_READ,
                         DWORD(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE),
                         nil, DWORD(OPEN_EXISTING),
                         DWORD(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS),
                         nil)
-        }
-        guard hFile != INVALID_HANDLE_VALUE else {
+        }) else {
             throw IOError(windows: DWORD(EBADF), reason: "CreateFileW")
         }
-
-        defer {
-            if hFile != INVALID_HANDLE_VALUE {
-                CloseHandle(hFile)
-            }
-        }
+        defer { CloseHandle(hFile) }
 
         let ftFileType =  GetFileType(hFile)
         let dwError = GetLastError()
@@ -399,11 +394,12 @@ class BaseSocket: BaseSocketProtocol {
             throw UnixDomainSocketPathWrongType()
         }
 
-        CloseHandle(hFile)
-        hFile = INVALID_HANDLE_VALUE
+        var fdi: FILE_DISPOSITION_INFO_EX = FILE_DISPOSITION_INFO_EX()
+        fdi.Flags = DWORD(FILE_DISPOSITION_FLAG_DELETE | FILE_DISPOSITION_FLAG_POSIX_SEMANTICS)
 
-        if !unixDomainSocketPath.withCString(encodedAs: UTF16.self, DeleteFileW) {
-            throw IOError(windows: GetLastError(), reason: "DeleteFileW")
+        if !SetFileInformationByHandle(hFile, FileDispositionInfoEx, &fdi,
+                                       DWORD(MemoryLayout<FILE_DISPOSITION_INFO_EX>.stride)) {
+            throw IOError(windows: GetLastError(), reason: "GetFileInformationByHandle")
         }
 #else
         do {
