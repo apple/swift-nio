@@ -445,6 +445,13 @@ public struct ByteBuffer {
         return self._slice.count
     }
 
+    /// The current capacity of the underlying storage of this `ByteBuffer`.
+    /// A COW slice of the buffer (e.g. readSlice(length: x)) will posses the same storageCapacity as the original
+    /// buffer until new data is written.
+    public var storageCapacity: Int {
+        return self._storage.fullSlice.count
+    }
+
     /// Reserves enough space to store the specified number of bytes.
     ///
     /// This method will ensure that the buffer has space for at least as many bytes as requested.
@@ -746,7 +753,7 @@ public struct ByteBuffer {
 extension ByteBuffer: CustomStringConvertible {
     /// A `String` describing this `ByteBuffer`. Example:
     ///
-    ///     ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, slice: 256..<768, storage: 0x0000000103001000 (1024 bytes)}
+    ///     ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, storageCapacity: 1024, slice: 256..<768, storage: 0x0000000103001000 (1024 bytes)}
     ///
     /// The format of the description is not API.
     ///
@@ -758,6 +765,7 @@ extension ByteBuffer: CustomStringConvertible {
         writerIndex: \(self.writerIndex), \
         readableBytes: \(self.readableBytes), \
         capacity: \(self.capacity), \
+        storageCapacity: \(self.storageCapacity), \
         slice: \(self._slice), \
         storage: \(self._storage.bytes) (\(self._storage.capacity) bytes) \
         }
