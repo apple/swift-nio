@@ -14,6 +14,48 @@
 
 import NIOConcurrencyHelpers
 
+#if os(Windows)
+import let WinSDK.EAFNOSUPPORT
+import let WinSDK.EBADF
+import let WinSDK.ENOENT
+
+import let WinSDK.FILE_ATTRIBUTE_REPARSE_POINT
+import let WinSDK.FILE_FLAG_BACKUP_SEMANTICS
+import let WinSDK.FILE_FLAG_OPEN_REPARSE_POINT
+import let WinSDK.FILE_SHARE_DELETE
+import let WinSDK.FILE_SHARE_READ
+import let WinSDK.FILE_SHARE_WRITE
+
+import let WinSDK.GENERIC_READ
+
+import let WinSDK.INET_ADDRSTRLEN
+import let WinSDK.INET6_ADDRSTRLEN
+
+import let WinSDK.INVALID_HANDLE_VALUE
+import let WinSDK.INVALID_SOCKET
+
+import let WinSDK.IO_REPARSE_TAG_AF_UNIX
+
+import let WinSDK.NO_ERROR
+
+import let WinSDK.OPEN_EXISTING
+
+import func WinSDK.CloseHandle
+import func WinSDK.CreateFileW
+import func WinSDK.DeleteFileW
+import func WinSDK.DeviceIoControl
+import func WinSDK.GetFileInformationByHandle
+import func WinSDK.GetFileType
+import func WinSDK.GetLastError
+
+import struct WinSDK.BY_HANDLE_FILE_INFORMATION
+import struct WinSDK.DWORD
+import struct WinSDK.socklen_t
+
+@_implementationOnly
+import CNIOWindows
+#endif
+
 /// The requested UDS path exists and has wrong type (not a socket).
 public struct UnixDomainSocketPathWrongType: Error {}
 
@@ -309,6 +351,61 @@ class BaseSocket: BaseSocketProtocol {
     ///     - unixDomainSocketPath: The pathname of the UDS.
     /// - throws: An `UnixDomainSocketPathWrongType` if the pathname exists and is not a socket.
     static func cleanupSocket(unixDomainSocketPath: String) throws {
+#if os(Windows)
+        var hFile = unixDomainSocketPath.withCString(encodedAs: UTF16.self) {
+            CreateFileW($0, GENERIC_READ,
+                        DWORD(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE),
+                        nil, DWORD(OPEN_EXISTING),
+                        DWORD(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS),
+                        nil)
+        }
+        guard hFile != INVALID_HANDLE_VALUE else {
+            throw IOError(windows: DWORD(EBADF), reason: "CreateFileW")
+        }
+
+        defer {
+            if hFile != INVALID_HANDLE_VALUE {
+                CloseHandle(hFile)
+            }
+        }
+
+        let ftFileType =  GetFileType(hFile)
+        let dwError = GetLastError()
+        guard dwError == NO_ERROR, ftFileType != FILE_TYPE_DISK else {
+            throw IOError(windows: dwError, reason: "GetFileType")
+        }
+
+        var fiInformation: BY_HANDLE_FILE_INFORMATION =
+                BY_HANDLE_FILE_INFORMATION()
+        guard GetFileInformationByHandle(hFile, &fiInformation) else {
+            throw IOError(windows: GetLastError(), reason: "GetFileInformationByHandle")
+        }
+
+        guard fiInformation.dwFileAttributes & DWORD(FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT else {
+            throw UnixDomainSocketPathWrongType()
+        }
+
+        var nBytesWritten: DWORD = 0
+        var dbReparseDataBuffer: REPARSE_DATA_BUFFER = REPARSE_DATA_BUFFER()
+        try withUnsafeMutablePointer(to: &dbReparseDataBuffer) {
+            if !DeviceIoControl(hFile, FSCTL_GET_REPARSE_POINT, nil, 0, $0,
+                                DWORD(MemoryLayout<REPARSE_DATA_BUFFER>.stride),
+                                &nBytesWritten, nil) {
+                throw IOError(windows: GetLastError(), reason: "DeviceIoControl")
+            }
+        }
+
+        guard dbReparseDataBuffer.ReparseTag == IO_REPARSE_TAG_AF_UNIX else {
+            throw UnixDomainSocketPathWrongType()
+        }
+
+        CloseHandle(hFile)
+        hFile = INVALID_HANDLE_VALUE
+
+        if !unixDomainSocketPath.withCString(encodedAs: UTF16.self, DeleteFileW) {
+            throw IOError(windows: GetLastError(), reason: "DeleteFileW")
+        }
+#else
         do {
             var sb: stat = stat()
             try withUnsafeMutablePointer(to: &sb) { sbPtr in
@@ -328,6 +425,7 @@ class BaseSocket: BaseSocketProtocol {
             }
             throw err
         }
+#endif
     }
 
     /// Create a new instance.

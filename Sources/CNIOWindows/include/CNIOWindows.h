@@ -20,6 +20,36 @@
 #include <WinSock2.h>
 #include <time.h>
 
+// This is a DDK type which is not available in the WinSDK as it is not part of
+// the shared, usermode (um), or ucrt portions of the code.  We must replicate
+// this datastructure manually from the MSDN references or the DDK.
+// https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer
+typedef struct _REPARSE_DATA_BUFFER {
+  ULONG   ReparseTag;
+  USHORT  ReparseDataLength;
+  USHORT  Reserved;
+  union {
+    struct {
+      USHORT  SubstituteNameOffset;
+      USHORT  SubstituteNameLength;
+      USHORT  PrintNameOffset;
+      USHORT  PrintNameLength;
+      ULONG   Flags;
+      WCHAR   PathBuffer[1];
+    } SymbolicLinkReparseBuffer;
+    struct {
+      USHORT  SubstituteNameOffset;
+      USHORT  SubstituteNameLength;
+      USHORT  PrintNameOffset;
+      USHORT  PrintNameLength;
+      WCHAR   PathBuffer[1];
+    } MountPointReparseBuffer;
+    struct {
+      UCHAR   DataBuffer[1];
+    } GenericReparsaeBuffer;
+  } DUMMYUNIONNAME;
+} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
+
 #define NIO(name) CNIOWindows_ ## name
 
 typedef struct {
