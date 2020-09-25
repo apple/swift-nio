@@ -471,7 +471,11 @@ class BaseSocket: BaseSocketProtocol {
     /// - throws: An `IOError` if the operation failed.
     final func takeDescriptorOwnership() throws -> NIOBSDSocket.Handle {
         return try self.withUnsafeHandle {
+#if os(Windows)
+            self.descriptor = INVALID_SOCKET
+#else
             self.descriptor = -1
+#endif
             return $0
         }
     }
