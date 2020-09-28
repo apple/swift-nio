@@ -1435,3 +1435,118 @@ extension HTTPMethod: RawRepresentable {
         }
     }
 }
+
+extension HTTPResponseHead {
+    public var hasContentLength: Bool {
+        return headers.hasContentLength
+    }
+
+    public var contentLength: Int? {
+        return headers.contentLength
+    }
+}
+
+extension HTTPRequestHead {
+    // Returns {@code true} if and only if the specified message contains an expect header and the only expectation
+    // present is the 100-continue expectation. Note that this method returns {@code false} if the expect header is
+    // not valid for the message (e.g., the version on the message is HTTP/1.0).
+    public var isContinueExpected: Bool {
+        return headers.isContinueExpected(version: version)
+    }
+
+    // Returns {@code true} if the specified message contains an expect header specifying an expectation that is not
+    // supported. Note that this method returns {@code false} if the expect header is not valid for the message
+    // (e.g., the version on the message is HTTP/1.0).
+    public var isUnsupportedExpectation: Bool {
+        return headers.isUnsupportedExpectation(version: version)
+    }
+
+    public var hasContentLength: Bool {
+        return headers.hasContentLength
+    }
+
+    public var contentLength: Int? {
+        return headers.contentLength
+    }
+}
+
+extension HTTPHeaders {
+    var hasContentLength: Bool {
+        return self.contains(name: "content-length") && self[canonicalForm: "content-length"].count == 1
+    }
+
+    var contentLength: Int? {
+        return self.hasContentLength ? Int(self.first(name: "content-length") ?? "") : nil
+    }
+
+    func isUnsupportedExpectation(version: HTTPVersion) -> Bool {
+        if version.major == 1 && version.minor >= 1 {
+            var unsupported: Bool? = nil
+            for word in self[canonicalForm: "expect"] {
+                if word.utf8.compareCaseInsensitiveASCIIBytes(to: "100-continue".utf8) {
+                    // if we see multiple values, that's clearly bad and we default to 'unsupported'
+                    unsupported = unsupported != nil ? true : false
+                } else {
+                    unsupported = true
+                }
+            }
+            return unsupported ?? false
+        } else {
+            return false
+        }
+    }
+
+    func isContinueExpected(version: HTTPVersion) -> Bool {
+        if version.major == 1 && version.minor >= 1 {
+            var cont: Bool? = nil
+            for word in self[canonicalForm: "expect"] {
+                if word.utf8.compareCaseInsensitiveASCIIBytes(to: "100-continue".utf8) {
+                    // if we see multiple values, that's unsupported and we default to 'false'
+                    cont = cont != nil ? false : true
+                }
+            }
+            return cont ?? false
+        } else {
+            return false
+        }
+    }
+}
+
+extension HTTPResponseStatus {
+    public var clientErrorClass: Bool {
+        switch self {
+        case .badRequest,
+             .unauthorized,
+             .paymentRequired,
+             .forbidden,
+             .notFound,
+             .methodNotAllowed,
+             .notAcceptable,
+             .proxyAuthenticationRequired,
+             .requestTimeout,
+             .conflict,
+             .gone,
+             .lengthRequired,
+             .preconditionFailed,
+             .payloadTooLarge,
+             .uriTooLong,
+             .unsupportedMediaType,
+             .rangeNotSatisfiable,
+             .expectationFailed,
+             .imATeapot,
+             .misdirectedRequest,
+             .unprocessableEntity,
+             .locked,
+             .failedDependency,
+             .upgradeRequired,
+             .preconditionRequired,
+             .tooManyRequests,
+             .requestHeaderFieldsTooLarge,
+             .unavailableForLegalReasons,
+             .custom where (code >= 400) && (code < 500):
+            return true
+        default:
+            return false
+        }
+    }
+}
