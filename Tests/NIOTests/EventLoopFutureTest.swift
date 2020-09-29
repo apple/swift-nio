@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -1263,6 +1263,117 @@ class EventLoopFutureTest : XCTestCase {
 
         let x = 2
         XCTAssertEqual(try! promise.futureResult.unwrap(orElse: { x * 2 } ).wait(), 4)
+    }
+
+    func testFlatBlockingMapOnto() {
+        let eventLoop = EmbeddedEventLoop()
+        let p = eventLoop.makePromise(of: String.self)
+        let sem = DispatchSemaphore(value: 0)
+        var blockingRan = false
+        var nonBlockingRan = false
+        p.futureResult.map {
+            $0.count
+        }.flatMapBlocking(onto: DispatchQueue.global()) { value -> Int in
+            sem.wait() // Block in chained EventLoopFuture
+            blockingRan = true
+            return  1 + value
+        }.whenSuccess {
+            XCTAssertEqual($0, 6)
+            XCTAssertTrue(blockingRan)
+            XCTAssertTrue(nonBlockingRan)
+        }
+        p.succeed("hello")
+       
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan = true
+        }
+        p2.succeed(true)
+
+        sem.signal()
+    }
+
+    func testWhenSuccessBlocking() {
+        let eventLoop = EmbeddedEventLoop()
+        let sem = DispatchSemaphore(value: 0)
+        var nonBlockingRan = false
+        let p = eventLoop.makePromise(of: String.self)
+        p.futureResult.whenSuccessBlocking(onto: DispatchQueue.global()) {
+            sem.wait() // Block in callback
+            XCTAssertEqual($0, "hello")
+            XCTAssertTrue(nonBlockingRan)
+        }
+        p.succeed("hello")
+    
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan = true
+        }
+        p2.succeed(true)
+
+        sem.signal()
+    }
+
+    func testWhenFailureBlocking() {
+        let eventLoop = EmbeddedEventLoop()
+        let sem = DispatchSemaphore(value: 0)
+        var nonBlockingRan = false
+        let p = eventLoop.makePromise(of: String.self)
+        p.futureResult.whenFailureBlocking (onto: DispatchQueue.global()) { err in
+            sem.wait() // Block in callback
+            XCTAssertEqual(err as! EventLoopFutureTestError, EventLoopFutureTestError.example)
+            XCTAssertTrue(nonBlockingRan)
+        }
+        p.fail(EventLoopFutureTestError.example)
+    
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan = true
+        }
+        p2.succeed(true)
+
+        sem.signal()
+    }
+
+    func testWhenCompleteBlockingSuccess() {
+        let eventLoop = EmbeddedEventLoop()
+        let sem = DispatchSemaphore(value: 0)
+        var nonBlockingRan = false
+        let p = eventLoop.makePromise(of: String.self)
+        p.futureResult.whenCompleteBlocking (onto: DispatchQueue.global()) { _ in
+            sem.wait() // Block in callback
+            XCTAssertTrue(nonBlockingRan)
+        }
+        p.succeed("hello")
+    
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan = true
+        }
+        p2.succeed(true)
+
+        sem.signal()
+    }
+
+
+    func testWhenCompleteBlockingFailure() {
+        let eventLoop = EmbeddedEventLoop()
+        let sem = DispatchSemaphore(value: 0)
+        var nonBlockingRan = false
+        let p = eventLoop.makePromise(of: String.self)
+        p.futureResult.whenCompleteBlocking (onto: DispatchQueue.global()) { _ in
+            sem.wait() // Block in callback
+            XCTAssertTrue(nonBlockingRan)
+        }
+        p.fail(EventLoopFutureTestError.example)
+    
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan = true
+        }
+        p2.succeed(true)
+
+        sem.signal()
     }
 
 }

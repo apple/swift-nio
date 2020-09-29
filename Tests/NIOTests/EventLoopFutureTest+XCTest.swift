@@ -90,6 +90,11 @@ extension EventLoopFutureTest {
                 ("testEventLoopFutureOrReplacement", testEventLoopFutureOrReplacement),
                 ("testEventLoopFutureOrNoElse", testEventLoopFutureOrNoElse),
                 ("testEventLoopFutureOrElse", testEventLoopFutureOrElse),
+                ("testFlatBlockingMapOnto", testFlatBlockingMapOnto),
+                ("testWhenSuccessBlocking", testWhenSuccessBlocking),
+                ("testWhenFailureBlocking", testWhenFailureBlocking),
+                ("testWhenCompleteBlockingSuccess", testWhenCompleteBlockingSuccess),
+                ("testWhenCompleteBlockingFailure", testWhenCompleteBlockingFailure),
            ]
    }
 }
