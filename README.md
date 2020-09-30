@@ -1,4 +1,4 @@
-[![sswg:graduated|104x20](https://img.shields.io/badge/sswg-graduated-green.svg)](https://github.com/swift-server/sswg/blob/master/process/incubation.md#graduated-level)
+[![sswg:graduated|104x20](https://img.shields.io/badge/sswg-graduated-green.svg)](https://github.com/swift-server/sswg/blob/main/process/incubation.md#graduated-level)
 
 # SwiftNIO
 
@@ -186,16 +186,16 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 
 There are currently several example projects that demonstrate how to use SwiftNIO.
 
-- **chat client** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatClient
-- **chat server** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatServer
-- **echo client** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoClient
-- **echo server** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoServer
-- **UDP echo client** https://github.com/apple/swift-nio/tree/master/Sources/NIOUDPEchoClient
-- **UDP echo server** https://github.com/apple/swift-nio/tree/master/Sources/NIOUDPEchoServer
-- **HTTP client** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Client
-- **HTTP server** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Server
-- **WebSocket client** https://github.com/apple/swift-nio/tree/master/Sources/NIOWebSocketClient
-- **WebSocket server** https://github.com/apple/swift-nio/tree/master/Sources/NIOWebSocketServer
+- **chat client** https://github.com/apple/swift-nio/tree/main/Sources/NIOChatClient
+- **chat server** https://github.com/apple/swift-nio/tree/main/Sources/NIOChatServer
+- **echo client** https://github.com/apple/swift-nio/tree/main/Sources/NIOEchoClient
+- **echo server** https://github.com/apple/swift-nio/tree/main/Sources/NIOEchoServer
+- **UDP echo client** https://github.com/apple/swift-nio/tree/main/Sources/NIOUDPEchoClient
+- **UDP echo server** https://github.com/apple/swift-nio/tree/main/Sources/NIOUDPEchoServer
+- **HTTP client** https://github.com/apple/swift-nio/tree/main/Sources/NIOHTTP1Client
+- **HTTP server** https://github.com/apple/swift-nio/tree/main/Sources/NIOHTTP1Server
+- **WebSocket client** https://github.com/apple/swift-nio/tree/main/Sources/NIOWebSocketClient
+- **WebSocket server** https://github.com/apple/swift-nio/tree/main/Sources/NIOWebSocketServer
 
 To build & run them, run following command, replace TARGET_NAME with the folder name under `./Sources`
 
@@ -299,7 +299,7 @@ For the most part, SwiftNIO development is as straightforward as any other Swift
 
 ### Prerequisites
 
-SwiftNIO's `master` branch is the development branch for the next releases of SwiftNIO 2, it's Swift 5-only.
+SwiftNIO's `main` branch is the development branch for the next releases of SwiftNIO 2, it's Swift 5-only.
 
 To be able to compile and run SwiftNIO and the integration tests, you need to
 have a few prerequisites installed on your system.

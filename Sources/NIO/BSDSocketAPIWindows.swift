@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
 #if os(Windows)
 import ucrt
 
@@ -104,6 +105,8 @@ internal typealias sockaddr_in6 = SOCKADDR_IN6
 internal typealias sockaddr_un = SOCKADDR_UN
 internal typealias sockaddr_storage = SOCKADDR_STORAGE
 
+import CNIOWindows
+
 extension Shutdown {
     internal var cValue: CInt {
         switch self {
@@ -151,6 +154,8 @@ extension NIOBSDSocket {
                         address name: UnsafePointer<sockaddr>,
                         address_len namelen: socklen_t) throws -> Bool {
         if WinSDK.connect(s, name, namelen) == SOCKET_ERROR {
+            let iResult = WSAGetLastError()
+            if iResult == WSAEWOULDBLOCK { return true }
             throw IOError(winsock: WSAGetLastError(), reason: "connect")
         }
         return true
@@ -260,25 +265,18 @@ extension NIOBSDSocket {
     @inline(never)
     static func recvmmsg(socket: NIOBSDSocket.Handle,
                          msgvec: UnsafeMutablePointer<MMsgHdr>,
-                         vlen: CUnsignedInt,
-                         flags: CInt,
-                         timeout: UnsafeMutablePointer<timespec>?) throws -> IOResult<Int> {
-        return try Posix.recvmmsg(sockfd: socket,
-                                  msgvec: msgvec,
-                                  vlen: vlen,
-                                  flags: flags,
-                                  timeout: timeout)
+                         vlen: CUnsignedInt, flags: CInt,
+                         timeout: UnsafeMutablePointer<timespec>?)
+            throws -> IOResult<Int> {
+        return CNIOWindows_recvmmsg(socket, msgvec, vlen, flags, timeout)
     }
 
     @inline(never)
     static func sendmmsg(socket: NIOBSDSocket.Handle,
                          msgvec: UnsafeMutablePointer<MMsgHdr>,
-                         vlen: CUnsignedInt,
-                         flags: CInt) throws -> IOResult<Int> {
-        return try Posix.sendmmsg(sockfd: socket,
-                                  msgvec: msgvec,
-                                  vlen: vlen,
-                                  flags: flags)
+                         vlen: CUnsignedInt, flags: CInt)
+            throws -> IOResult<Int> {
+        return CNIOWindows_sendmmsg(socket, msgvec, vlen, flags)
     }
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard
@@ -287,8 +285,7 @@ extension NIOBSDSocket {
     @inline(never)
     static func pread(socket: NIOBSDSocket.Handle,
                       pointer: UnsafeMutableRawPointer,
-                      size: size_t,
-                      offset: off_t) throws -> IOResult<size_t> {
+                      size: size_t, offset: off_t) throws -> IOResult<size_t> {
         var ovlOverlapped: OVERLAPPED = OVERLAPPED()
         ovlOverlapped.OffsetHigh = DWORD(UInt32(offset >> 32) & 0xffffffff)
         ovlOverlapped.Offset = DWORD(UInt32(offset >> 0) & 0xffffffff)
@@ -297,17 +294,15 @@ extension NIOBSDSocket {
                      &nNumberOfBytesRead, &ovlOverlapped) {
             throw IOError(windows: GetLastError(), reason: "ReadFile")
         }
-        return .processed(CInt(nNumberOfBytesRead))
+        return .processed(size_t(nNumberOfBytesRead))
     }
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard
     // type, and defining that type is difficult.  Opt to return a `size_t`
     // which is the same size, but is unsigned.
     @inline(never)
-    static func pwrite(socket: NIOBSDSocket.Handle,
-                       pointer: UnsafeRawPointer,
-                       size: size_t,
-                       offset: off_t) throws -> IOResult<size_t> {
+    static func pwrite(socket: NIOBSDSocket.Handle, pointer: UnsafeRawPointer,
+                       size: size_t, offset: off_t) throws -> IOResult<size_t> {
         var ovlOverlapped: OVERLAPPED = OVERLAPPED()
         ovlOverlapped.OffsetHigh = DWORD(UInt32(offset >> 32) & 0xffffffff)
         ovlOverlapped.Offset = DWORD(UInt32(offset >> 0) & 0xffffffff)
@@ -316,7 +311,7 @@ extension NIOBSDSocket {
                       &nNumberOfBytesWritten, &ovlOverlapped) {
             throw IOError(windows: GetLastError(), reason: "WriteFile")
         }
-        return .processed(CInt(nNumberOfBytesWritten))
+        return .processed(size_t(nNumberOfBytesWritten))
     }
 
     @discardableResult
@@ -346,10 +341,9 @@ extension NIOBSDSocket {
     }
 
     @inline(never)
-    static func sendfile(socket s: NIOBSDSocket.Handle,
-                         fd: CInt,
-                         offset: off_t,
-                         len: off_t) throws -> IOResult<Int> {
+    static func sendfile(socket s: NIOBSDSocket.Handle, fd: CInt, offset: off_t,
+                         len nNumberOfBytesToWrite: off_t)
+            throws -> IOResult<Int> {
         let hFile: HANDLE = HANDLE(bitPattern: ucrt._get_osfhandle(fd))!
         if hFile == INVALID_HANDLE_VALUE {
             throw IOError(errnoCode: EBADF, reason: "_get_osfhandle")
@@ -370,10 +364,12 @@ extension NIOBSDSocket {
     static func setNonBlocking(socket: NIOBSDSocket.Handle) throws {
         var ulMode: u_long = 1
         if WinSDK.ioctlsocket(socket, FIONBIO, &ulMode) == SOCKET_ERROR {
+            let iResult = WSAGetLastError()
+            if iResult == WSAEINVAL {
+                throw NIOFailedToSetSocketNonBlockingError()
+            }
             throw IOError(winsock: WSAGetLastError(), reason: "ioctlsocket")
         }
     }
 }
-
-
 #endif
