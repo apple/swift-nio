@@ -12,6 +12,54 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import ucrt
+
+import let WinSDK.IPPROTO_IP
+import let WinSDK.IPPROTO_IPV6
+import let WinSDK.IPPROTO_TCP
+
+import let WinSDK.IP_ADD_MEMBERSHIP
+import let WinSDK.IP_DROP_MEMBERSHIP
+import let WinSDK.IP_MULTICAST_IF
+import let WinSDK.IP_MULTICAST_LOOP
+import let WinSDK.IP_MULTICAST_TTL
+import let WinSDK.IP_RECVTOS
+import let WinSDK.IPV6_JOIN_GROUP
+import let WinSDK.IPV6_LEAVE_GROUP
+import let WinSDK.IPV6_MULTICAST_HOPS
+import let WinSDK.IPV6_MULTICAST_IF
+import let WinSDK.IPV6_MULTICAST_LOOP
+import let WinSDK.IPV6_RECVTCLASS
+import let WinSDK.IPV6_V6ONLY
+
+import let WinSDK.AF_INET
+import let WinSDK.AF_INET6
+import let WinSDK.AF_UNIX
+
+import let WinSDK.PF_INET
+import let WinSDK.PF_INET6
+import let WinSDK.PF_UNIX
+
+import let WinSDK.SOCK_DGRAM
+import let WinSDK.SOCK_STREAM
+
+import let WinSDK.SO_ERROR
+import let WinSDK.SO_KEEPALIVE
+import let WinSDK.SO_LINGER
+import let WinSDK.SO_RCVBUF
+import let WinSDK.SO_RCVTIMEO
+import let WinSDK.SO_REUSEADDR
+
+import let WinSDK.SOL_SOCKET
+
+import let WinSDK.TCP_NODELAY
+
+import struct WinSDK.SOCKET
+
+import struct WinSDK.socklen_t
+#endif
+
 protocol _SocketShutdownProtocol {
     var cValue: CInt { get }
 }
