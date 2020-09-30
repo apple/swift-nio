@@ -86,6 +86,7 @@ extension BaseSocketProtocol {
             fatalError("BUG in NIO. We did not ignore SIGPIPE, this code path should definitely not be reachable.")
         }
         #elseif os(Windows)
+        // Deliberately empty: SIGPIPE just ain't a thing on Windows
         #else
         assert(fd >= 0, "illegal file descriptor \(fd)")
         do {
