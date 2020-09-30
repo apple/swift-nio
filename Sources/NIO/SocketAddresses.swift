@@ -15,6 +15,20 @@
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 import CNIOLinux
 
+#if os(Windows)
+import let WinSDK.AF_INET
+import let WinSDK.AF_INET6
+
+import func WinSDK.FreeAddrInfoW
+import func WinSDK.GetAddrInfoW
+
+import struct WinSDK.ADDRESS_FAMILY
+import struct WinSDK.ADDRINFOW
+import struct WinSDK.in_addr_t
+
+import typealias WinSDK.u_short
+#endif
+
 public enum SocketAddressError: Error {
     /// The host is unknown (could not be resolved).
     case unknown(host: String, port: Int)
@@ -320,6 +334,38 @@ public enum SocketAddress: CustomStringConvertible {
     /// - returns: the `SocketAddress` for the host / port pair.
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
+#if os(Windows)
+        return try host.withCString(encodedAs: UTF16.self) { wszHost in
+            return try String(port).withCString(encodedAs: UTF16.self) { wszPort in
+                var pResult: UnsafeMutablePointer<ADDRINFOW>?
+
+                guard GetAddrInfoW(wsHost, wszPort, nil, &pResult) == 0 else {
+                    throw SocketAddressError.unknown(host: host, port: port)
+                }
+
+                defer {
+                    FreeAddrInfoW(pResult)
+                }
+
+                if let pResult = pResult {
+                    switch pResult.pointee.ai_family {
+                    case AF_INET:
+                        return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                            .v4(IPv4Address(address: $0.pointee, host: host))
+                        }
+                    case AF_INET6:
+                        return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self) {
+                            .v6(IPv6Address(address: $0.pointee, host: host))
+                        }
+                    default:
+                        break
+                    }
+                }
+
+                throw SocketAddressErro.unsupported
+            }
+        }
+#else
         var info: UnsafeMutablePointer<addrinfo>?
 
         /* FIXME: this is blocking! */
@@ -350,6 +396,7 @@ public enum SocketAddress: CustomStringConvertible {
             /* this is odd, getaddrinfo returned NULL */
             throw SocketAddressError.unsupported
         }
+#endif
     }
 }
 
