@@ -15,6 +15,8 @@
 #if os(Windows)
 import ucrt
 
+import let WinSDK.INVALID_SOCKET
+
 import let WinSDK.IPPROTO_IP
 import let WinSDK.IPPROTO_IPV6
 import let WinSDK.IPPROTO_TCP
@@ -75,6 +77,12 @@ public enum NIOBSDSocket {
     public typealias Handle = SOCKET
 #else
     public typealias Handle = CInt
+#endif
+
+#if os(Windows)
+    internal static let invalidHandle: Handle = INVALID_SOCKET
+#else
+    internal static let invalidHandle: Handle = -1
 #endif
 }
 

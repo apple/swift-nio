@@ -14,10 +14,6 @@
 
 import NIOConcurrencyHelpers
 
-#if os(Windows)
-import let WinSDK.INVALID_SOCKET
-#endif
-
 /// The requested UDS path exists and has wrong type (not a socket).
 public struct UnixDomainSocketPathWrongType: Error {}
 
@@ -218,7 +214,7 @@ class BaseSocket: BaseSocketProtocol {
     private var descriptor: NIOBSDSocket.Handle
     public var isOpen: Bool {
         #if os(Windows)
-            return descriptor != WinSDK.INVALID_SOCKET
+            return descriptor != NIOBSDSocket.invalidHandle
         #else
             return descriptor >= 0
         #endif
@@ -343,7 +339,7 @@ class BaseSocket: BaseSocketProtocol {
     ///     - descriptor: The file descriptor to wrap.
     init(socket descriptor: NIOBSDSocket.Handle) throws {
         #if os(Windows)
-            precondition(descriptor != WinSDK.INVALID_SOCKET, "invalid socket")
+            precondition(descriptor != NIOBSDSocket.invalidHandle, "invalid socket")
         #else
             precondition(descriptor >= 0, "invalid socket")
         #endif
@@ -351,11 +347,7 @@ class BaseSocket: BaseSocketProtocol {
         do {
             try self.ignoreSIGPIPE()
         } catch {
-#if os(Windows)
-            self.descriptor = INVALID_SOCKET // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
-#else
-            self.descriptor = -1 // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
-#endif
+            self.descriptor = NIOBSDSocket.invalidHandle // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
             throw error
         }
     }
@@ -475,11 +467,7 @@ class BaseSocket: BaseSocketProtocol {
     /// - throws: An `IOError` if the operation failed.
     final func takeDescriptorOwnership() throws -> NIOBSDSocket.Handle {
         return try self.withUnsafeHandle {
-#if os(Windows)
-            self.descriptor = INVALID_SOCKET
-#else
-            self.descriptor = -1
-#endif
+            self.descriptor = NIOBSDSocket.invalidHandle
             return $0
         }
     }
