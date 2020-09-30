@@ -62,6 +62,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(ControlMessageTests.allTests),
              testCase(CustomChannelTests.allTests),
              testCase(DatagramChannelTests.allTests),
+             testCase(DispatchQueueWithFutureTest.allTests),
              testCase(EchoServerClientTest.allTests),
              testCase(EmbeddedChannelTest.allTests),
              testCase(EmbeddedEventLoopTest.allTests),

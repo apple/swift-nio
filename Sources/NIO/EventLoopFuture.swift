@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
+import Dispatch
 
 /// Internal list of callbacks.
 ///
@@ -1399,6 +1400,81 @@ extension EventLoopFuture {
                 return callback()
             }
             return value 
+        }
+    }
+}
+
+// MARK: may block 
+
+extension EventLoopFuture {
+    /// Chain an `EventLoopFuture<NewValue>` providing the result of a IO / task that may block. For example:
+    ///
+    ///     promise.futureResult.flatMapBlocking(onto: DispatchQueue.global()) { value in Int
+    ///         blockingTask(value)
+    ///     }
+    ///
+    /// - parameters:
+    ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is scheduled.
+    ///     - callbackMayBlock: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new `EventLoopFuture`.
+    @inlinable
+    public func flatMapBlocking<NewValue>(onto queue: DispatchQueue, _ callbackMayBlock: @escaping (Value) throws -> NewValue)
+        -> EventLoopFuture<NewValue> {
+        return self.flatMap { result in
+            queue.asyncWithFuture(eventLoop: self.eventLoop) { try callbackMayBlock(result) }
+        }
+    }
+
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has a success result. The observer callback is permitted to block.
+    ///
+    /// An observer callback cannot return a value, meaning that this function cannot be chained
+    /// from. If you are attempting to create a computation pipeline, consider `map` or `flatMap`.
+    /// If you find yourself passing the results from this `EventLoopFuture` to a new `EventLoopPromise`
+    /// in the body of this function, consider using `cascade` instead.
+    ///
+    /// - parameters:
+    ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is scheduled.
+    ///     - callbackMayBlock: The callback that is called with the successful result of the `EventLoopFuture`.
+    @inlinable
+    public func whenSuccessBlocking(onto queue: DispatchQueue, _ callbackMayBlock: @escaping (Value) -> Void) {
+        self.whenSuccess { value in
+            queue.async { callbackMayBlock(value) }
+        }
+    }
+
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has a failure result. The observer callback is permitted to block.
+    ///
+    /// An observer callback cannot return a value, meaning that this function cannot be chained
+    /// from. If you are attempting to create a computation pipeline, consider `recover` or `flatMapError`.
+    /// If you find yourself passing the results from this `EventLoopFuture` to a new `EventLoopPromise`
+    /// in the body of this function, consider using `cascade` instead.
+    ///
+    /// - parameters:
+    ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is scheduled.
+    ///     - callbackMayBlock: The callback that is called with the failed result of the `EventLoopFuture`.
+    @inlinable
+    public func whenFailureBlocking(onto queue: DispatchQueue, _ callbackMayBlock: @escaping (Error) -> Void) {
+        self.whenFailure { err in
+            queue.async { callbackMayBlock(err) }
+        }
+    }
+
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has any result. The observer callback is permitted to block.
+    ///
+    /// Unlike its friends `whenSuccess` and `whenFailure`, `whenComplete` does not receive the result
+    /// of the `EventLoopFuture`. This is because its primary purpose is to do the appropriate cleanup
+    /// of any resources that needed to be kept open until the `EventLoopFuture` had resolved.
+    ///
+    /// - parameters:
+    ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is schedulded.
+    ///     - callbackMayBlock: The callback that is called when the `EventLoopFuture` is fulfilled.
+    @inlinable
+    public func whenCompleteBlocking(onto queue: DispatchQueue, _ callbackMayBlock: @escaping (Result<Value, Error>) -> Void) {
+        self.whenComplete { value in
+            queue.async { callbackMayBlock(value) }
         }
     }
 }
