@@ -81,17 +81,21 @@ private let sysWritev = sysWritev_wrapper
 private let sysRecvFrom: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong, CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CLong = recvfrom
 private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
 #endif
+#if !os(Windows)
 private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>?, CInt) -> ssize_t = recvmsg
 private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>?, CInt) -> ssize_t = sendmsg
+#endif
 private let sysDup: @convention(c) (CInt) -> CInt = dup
 private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
 private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockname
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
 private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
+#if !os(Windows)
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
+#endif
 
 #if os(Linux)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
@@ -386,6 +390,7 @@ internal enum Posix {
         }
     }
 
+#if !os(Windows)
     @inline(never)
     public static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
@@ -399,6 +404,7 @@ internal enum Posix {
             sysSendMsg(descriptor, msgHdr, flags)
         }
     }
+#endif
 
     @discardableResult
     @inline(never)
@@ -416,6 +422,7 @@ internal enum Posix {
         }.result
     }
 
+#if !os(Windows)
     @discardableResult
     @inline(never)
     public static func inet_ntop(addressFamily: sa_family_t, addressBytes: UnsafeRawPointer, addressDescription: UnsafeMutablePointer<CChar>, addressDescriptionLength: socklen_t) throws -> UnsafePointer<CChar> {
@@ -432,6 +439,7 @@ internal enum Posix {
         default: throw IOError(errnoCode: errno, reason: #function)
         }
     }
+#endif
 
     // It's not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
     @inline(never)
@@ -515,6 +523,7 @@ internal enum Posix {
         }.result
     }
 
+#if !os(Windows)
     @inline(never)
     public static func fstat(descriptor: CInt, outStat: UnsafeMutablePointer<stat>) throws {
         _ = try syscall(blocking: false) {
@@ -578,6 +587,7 @@ internal enum Posix {
     static func cmsgSpace(payloadSize: size_t) -> size_t {
         return sysCmsgSpace(payloadSize)
     }
+#endif
 }
 
 /// `NIOFcntlFailedError` indicates that NIO was unable to perform an
@@ -594,6 +604,7 @@ public struct NIOFcntlFailedError: Error {}
 @available(*, deprecated, renamed: "NIOFcntlFailedError")
 public struct NIOFailedToSetSocketNonBlockingError: Error {}
 
+#if !os(Windows)
 internal extension Posix {
     static func setNonBlocking(socket: CInt) throws {
         let flags = try Posix.fcntl(descriptor: socket, command: F_GETFL, value: 0)
@@ -609,6 +620,7 @@ internal extension Posix {
         }
     }
 }
+#endif
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 internal enum KQueue {
