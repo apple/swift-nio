@@ -220,7 +220,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     // MARK: - Stored Properties
     // MARK: Constants & atomics (accessible everywhere)
     public let parent: Channel?
-    public var baggage = BaggageContext()
+    public var baggage = Baggage.topLevel
     internal let socket: SocketType
     private let closePromise: EventLoopPromise<Void>
     internal let selectableEventLoop: SelectableEventLoop

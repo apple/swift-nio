@@ -203,7 +203,7 @@ class EmbeddedChannelCore: ChannelCore {
     var closePromise: EventLoopPromise<Void>
     var error: Optional<Error>
 
-    var baggage = BaggageContext()
+    var baggage = Baggage.topLevel
 
     private let pipeline: ChannelPipeline
 

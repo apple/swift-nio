@@ -2825,10 +2825,10 @@ public final class ChannelTests: XCTestCase {
         let firstBaggageExpectation = expectation(description: "")
         let secondBaggageExpectation = expectation(description: "")
 
-        var firstBaggage: BaggageContext!
-        var secondBaggage: BaggageContext!
+        var firstBaggage: Baggage!
+        var secondBaggage: Baggage!
 
-        // two instances of `BaggageContextInspectingHandler` are added to the same channel pipeline,
+        // two instances of `BaggageInspectingHandler` are added to the same channel pipeline,
         // the first instance will mutate the baggage through its channel handler context,
         // and the second instance reads the baggage from its channel handler context
 
@@ -2836,12 +2836,12 @@ public final class ChannelTests: XCTestCase {
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .serverChannelInitializer { channel in
                 channel.pipeline.addHandlers([
-                    BaggageContextInspectingHandler { baggage in
+                    BaggageInspectingHandler { baggage in
                         firstBaggage = baggage
                         baggage[FakeBaggageContextKey.self] = "test"
                         firstBaggageExpectation.fulfill()
                     },
-                    BaggageContextInspectingHandler { baggage in
+                    BaggageInspectingHandler { baggage in
                         secondBaggage = baggage
                         secondBaggageExpectation.fulfill()
                     }
@@ -2976,21 +2976,21 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
     }
 }
 
-fileprivate final class BaggageContextInspectingHandler: ChannelInboundHandler {
+fileprivate final class BaggageInspectingHandler: ChannelInboundHandler {
     typealias InboundIn = Void
 
-    private var mutateBaggageContext: (inout BaggageContext) -> Void
+    private var mutateBaggage: (inout Baggage) -> Void
 
-    init(mutateBaggageContext: @escaping (inout BaggageContext) -> Void) {
-        self.mutateBaggageContext = mutateBaggageContext
+    init(mutateBaggage: @escaping (inout Baggage) -> Void) {
+        self.mutateBaggage = mutateBaggage
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.mutateBaggageContext(&context.baggage)
+        self.mutateBaggage(&context.baggage)
         context.fireChannelRead(data)
     }
 }
 
-fileprivate enum FakeBaggageContextKey: BaggageContextKey {
+fileprivate enum FakeBaggageContextKey: Baggage.Key {
     typealias Value = String
 }

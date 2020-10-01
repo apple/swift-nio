@@ -18,7 +18,7 @@ import Baggage
 /// the original `Channel` is closed. Given that the original `Channel` is closed the `DeadChannelCore` should fail
 /// all operations.
 private final class DeadChannelCore: ChannelCore {
-    var baggage = BaggageContext()
+    var baggage = Baggage.topLevel
 
     func localAddress0() throws -> SocketAddress {
         throw ChannelError.ioOnClosedChannel

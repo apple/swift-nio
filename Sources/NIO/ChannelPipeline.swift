@@ -1530,7 +1530,7 @@ extension ChannelHandlerContext {
 }
 
 extension ChannelHandlerContext {
-    public var baggage: BaggageContext {
+    public var baggage: Baggage {
         get {
             return self.channel._channelCore.baggage
         } set {

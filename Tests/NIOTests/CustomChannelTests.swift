@@ -26,7 +26,7 @@ struct InvalidTypeError: Error { }
 /// Everything else either throws or returns a failed future, except for things that cannot,
 /// which precondition instead.
 private class IntChannelCore: ChannelCore {
-    var baggage = BaggageContext()
+    var baggage = Baggage.topLevel
 
     func localAddress0() throws -> SocketAddress {
         throw NotImplementedError()

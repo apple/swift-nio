@@ -92,13 +92,13 @@ public protocol ChannelCore: class {
     ///     - error: The `Error` that was encountered.
     func errorCaught0(error: Error)
 
-    var baggage: BaggageContext { get set }
+    var baggage: Baggage { get set }
 }
 
 extension ChannelCore {
-    public var baggage: BaggageContext {
+    public var baggage: Baggage {
         get {
-            return BaggageContext()
+            return Baggage.topLevel
         } set {}
     }
 }
