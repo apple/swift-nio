@@ -44,7 +44,7 @@ done
 shift "$((OPTIND-1))"
 
 if [[ $# -eq 0 ]]; then
-  echo "Must provide target version"
+  usage
   exit 1
 fi
 
