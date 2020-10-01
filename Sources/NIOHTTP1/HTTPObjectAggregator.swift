@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2020 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -164,13 +164,13 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
         switch msg {
         case .head(let httpHead):
             self.state.messageHeadReceived()
-            serverResponse = beginAggregation(context: context, request: httpHead, message: msg)
+            serverResponse = self.beginAggregation(context: context, request: httpHead, message: msg)
         case .body(var content):
             if self.state == .receiving {
-                serverResponse = aggregate(context: context, content: &content, message: msg)
+                serverResponse = self.aggregate(context: context, content: &content, message: msg)
             }
         case .end(let trailingHeaders):
-            endAggregation(context: context, trailingHeaders: trailingHeaders)
+            self.endAggregation(context: context, trailingHeaders: trailingHeaders)
             self.state.messageEndReceived()
         }
 
@@ -187,7 +187,7 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
 
     func beginAggregation(context: ChannelHandlerContext, request: HTTPRequestHead, message: InboundIn) -> HTTPResponseHead? {
         self.fullMessageHead = request
-        if let response = generateContinueResponse(context: context, request: request) {
+        if let response = self.generateContinueResponse(context: context, request: request) {
             if self.shouldCloseAfterContinueResponse(response: response) {
                 self.state.closed()
             } else {
@@ -199,7 +199,7 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
             return response
         } else if request.hasContentLength && request.contentLength! > self.maxContentLength {
             // If client has no `Expect` header, but indicated content length is too large
-            return handleOversizeMessage(message: message)
+            return self.handleOversizeMessage(message: message)
         }
         return nil
     }
@@ -349,13 +349,13 @@ public final class HTTPClientResponseAggregator: ChannelInboundHandler, Removabl
         switch msg {
         case .head(let httpHead):
             self.state.messageHeadReceived()
-            beginAggregation(context: context, request: httpHead)
+            self.beginAggregation(context: context, request: httpHead)
         case .body(var content):
             if self.state == .receiving {
-                aggregate(context: context, content: &content)
+                self.aggregate(context: context, content: &content)
             }
         case .end(let trailingHeaders):
-            endAggregation(context: context, trailingHeaders: trailingHeaders)
+            self.endAggregation(context: context, trailingHeaders: trailingHeaders)
             self.state.messageEndReceived()
         }
     }
