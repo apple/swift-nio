@@ -212,6 +212,7 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
             context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
             if !response.headers.isKeepAlive(version: response.version) {
                 context.close(promise: nil)
+                self.state.closed()
             }
         }
     }
@@ -305,14 +306,12 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
                 // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
                 // Send back a 413 and close the connection.
                 payloadTooLargeHead.headers.add(name: "connection", value: "close")
-                self.state.closed()
                 return payloadTooLargeHead
             }
         default:
             // The client started to send data already, close because it's impossible to recover.
             // Send back a 413 and close the connection.
             payloadTooLargeHead.headers.add(name: "connection", value: "close")
-            self.state.closed()
             return payloadTooLargeHead
         }
     }
