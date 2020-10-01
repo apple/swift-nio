@@ -511,7 +511,11 @@ protocol _BSDSocketProtocol {
                          offset: off_t,
                          len: off_t) throws -> IOResult<Int>
 
+    // MARK: non-BSD APIs added by NIO
+
     static func setNonBlocking(socket: NIOBSDSocket.Handle) throws
+
+    static func cleanupUnixDomainSocket(atPath path: String) throws
 }
 
 /// If this extension is hitting a compile error, your platform is missing one of the functions defined above!

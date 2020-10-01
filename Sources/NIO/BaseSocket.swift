@@ -352,76 +352,7 @@ class BaseSocket: BaseSocketProtocol {
     ///     - unixDomainSocketPath: The pathname of the UDS.
     /// - throws: An `UnixDomainSocketPathWrongType` if the pathname exists and is not a socket.
     static func cleanupSocket(unixDomainSocketPath: String) throws {
-#if os(Windows)
-        guard let hFile = (unixDomainSocketPath.withCString(encodedAs: UTF16.self) {
-            CreateFileW($0, GENERIC_READ,
-                        DWORD(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE),
-                        nil, DWORD(OPEN_EXISTING),
-                        DWORD(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS),
-                        nil)
-        }) else {
-            throw IOError(windows: DWORD(EBADF), reason: "CreateFileW")
-        }
-        defer { CloseHandle(hFile) }
-
-        let ftFileType =  GetFileType(hFile)
-        let dwError = GetLastError()
-        guard dwError == NO_ERROR, ftFileType != FILE_TYPE_DISK else {
-            throw IOError(windows: dwError, reason: "GetFileType")
-        }
-
-        var fiInformation: BY_HANDLE_FILE_INFORMATION =
-                BY_HANDLE_FILE_INFORMATION()
-        guard GetFileInformationByHandle(hFile, &fiInformation) else {
-            throw IOError(windows: GetLastError(), reason: "GetFileInformationByHandle")
-        }
-
-        guard fiInformation.dwFileAttributes & DWORD(FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT else {
-            throw UnixDomainSocketPathWrongType()
-        }
-
-        var nBytesWritten: DWORD = 0
-        var dbReparseDataBuffer: REPARSE_DATA_BUFFER = REPARSE_DATA_BUFFER()
-        try withUnsafeMutablePointer(to: &dbReparseDataBuffer) {
-            if !DeviceIoControl(hFile, FSCTL_GET_REPARSE_POINT, nil, 0, $0,
-                                DWORD(MemoryLayout<REPARSE_DATA_BUFFER>.stride),
-                                &nBytesWritten, nil) {
-                throw IOError(windows: GetLastError(), reason: "DeviceIoControl")
-            }
-        }
-
-        guard dbReparseDataBuffer.ReparseTag == IO_REPARSE_TAG_AF_UNIX else {
-            throw UnixDomainSocketPathWrongType()
-        }
-
-        var fdi: FILE_DISPOSITION_INFO_EX = FILE_DISPOSITION_INFO_EX()
-        fdi.Flags = DWORD(FILE_DISPOSITION_FLAG_DELETE | FILE_DISPOSITION_FLAG_POSIX_SEMANTICS)
-
-        if !SetFileInformationByHandle(hFile, FileDispositionInfoEx, &fdi,
-                                       DWORD(MemoryLayout<FILE_DISPOSITION_INFO_EX>.stride)) {
-            throw IOError(windows: GetLastError(), reason: "GetFileInformationByHandle")
-        }
-#else
-        do {
-            var sb: stat = stat()
-            try withUnsafeMutablePointer(to: &sb) { sbPtr in
-                try Posix.stat(pathname: unixDomainSocketPath, outStat: sbPtr)
-            }
-
-            // Only unlink the existing file if it is a socket
-            if sb.st_mode & S_IFSOCK == S_IFSOCK {
-                try Posix.unlink(pathname: unixDomainSocketPath)
-            } else {
-                throw UnixDomainSocketPathWrongType()
-            }
-        } catch let err as IOError {
-            // If the filepath did not exist, we consider it cleaned up
-            if err.errnoCode == ENOENT {
-                return
-            }
-            throw err
-        }
-#endif
+        try NIOBSDSocket.cleanupUnixDomainSocket(atPath: unixDomainSocketPath)
     }
 
     /// Create a new instance.
