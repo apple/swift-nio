@@ -1487,8 +1487,8 @@ extension HTTPHeaders {
     }
 
     private func isContinue(expectations: [Substring]) -> Bool {
-        expectations.count == 1
-            && expectations.first.map { $0.utf8.compareCaseInsensitiveASCIIBytes(to: "100-continue".utf8) } != nil
+        return expectations.count == 1 &&
+            expectations.first.map { $0.utf8.compareCaseInsensitiveASCIIBytes(to: "100-continue".utf8) } != nil
     }
 }
 
