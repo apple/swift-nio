@@ -1437,83 +1437,63 @@ extension HTTPMethod: RawRepresentable {
 }
 
 extension HTTPResponseHead {
-    public var hasContentLength: Bool {
-        return headers.hasContentLength
-    }
-
-    public var contentLength: Int? {
+    internal var contentLength: Int? {
         return headers.contentLength
     }
 }
 
 extension HTTPRequestHead {
-    // Returns {@code true} if and only if the specified message contains an expect header and the only expectation
-    // present is the 100-continue expectation. Note that this method returns {@code false} if the expect header is
-    // not valid for the message (e.g., the version on the message is HTTP/1.0).
-    public var isContinueExpected: Bool {
+    /// Returns `true` if and only if the specified message contains an expect header and the only expectation
+    /// present is the 100-continue expectation. Note that this method returns `false` if the expect header is
+    /// not valid for the message (e.g., the version on the message is HTTP/1.0).
+    internal var isContinueExpected: Bool {
         return headers.isContinueExpected(version: version)
     }
 
-    // Returns {@code true} if the specified message contains an expect header specifying an expectation that is not
-    // supported. Note that this method returns {@code false} if the expect header is not valid for the message
-    // (e.g., the version on the message is HTTP/1.0).
-    public var isUnsupportedExpectation: Bool {
+    /// Returns `true` if the specified message contains an expect header specifying an expectation that is not
+    /// supported. Note that this method returns `false` if the expect header is not valid for the message
+    /// (e.g., the version on the message is HTTP/1.0).
+    internal var isUnsupportedExpectation: Bool {
         return headers.isUnsupportedExpectation(version: version)
     }
 
-    public var hasContentLength: Bool {
-        return headers.hasContentLength
-    }
-
-    public var contentLength: Int? {
+    internal var contentLength: Int? {
         return headers.contentLength
     }
 }
 
 extension HTTPHeaders {
-    var hasContentLength: Bool {
-        return self.contains(name: "content-length") && self[canonicalForm: "content-length"].count == 1
+    internal var contentLength: Int? {
+        return self.first(name: "content-length").flatMap { Int($0) }
     }
 
-    var contentLength: Int? {
-        return self.hasContentLength ? Int(self.first(name: "content-length") ?? "") : nil
-    }
-
-    func isUnsupportedExpectation(version: HTTPVersion) -> Bool {
+    internal func isUnsupportedExpectation(version: HTTPVersion) -> Bool {
         if version.major == 1 && version.minor >= 1 {
-            var unsupported: Bool? = nil
-            for word in self[canonicalForm: "expect"] {
-                if word.utf8.compareCaseInsensitiveASCIIBytes(to: "100-continue".utf8) {
-                    // if we see multiple values, that's clearly bad and we default to 'unsupported'
-                    unsupported = unsupported != nil ? true : false
-                } else {
-                    unsupported = true
-                }
-            }
-            return unsupported ?? false
+            let expectations = self[canonicalForm: "expect"]
+            // No `Expect` is a valid expectation
+            return expectations.count != 0 && !isContinue(expectations: expectations)
         } else {
             return false
         }
     }
 
-    func isContinueExpected(version: HTTPVersion) -> Bool {
+    internal func isContinueExpected(version: HTTPVersion) -> Bool {
         if version.major == 1 && version.minor >= 1 {
-            var cont: Bool? = nil
-            for word in self[canonicalForm: "expect"] {
-                if word.utf8.compareCaseInsensitiveASCIIBytes(to: "100-continue".utf8) {
-                    // if we see multiple values, that's unsupported and we default to 'false'
-                    cont = cont != nil ? false : true
-                }
-            }
-            return cont ?? false
+            // The only valid `Expect` header value is a single `100-continue`
+            return isContinue(expectations: self[canonicalForm: "expect"])
         } else {
             return false
         }
+    }
+
+    private func isContinue(expectations: [Substring]) -> Bool {
+        expectations.count == 1
+            && expectations.first.map { $0.utf8.compareCaseInsensitiveASCIIBytes(to: "100-continue".utf8) } != nil
     }
 }
 
 extension HTTPResponseStatus {
-    public var clientErrorClass: Bool {
+    internal var clientErrorClass: Bool {
         switch self {
         case .badRequest,
              .unauthorized,

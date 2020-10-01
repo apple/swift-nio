@@ -161,14 +161,11 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
                                                         channel.allocator.buffer(string: "hello"))))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
-
-        var reqWithContentLength: HTTPRequestHead = self.requestHead
-        reqWithContentLength.headers.add(name: "content-length", value: "5")
         
         // Only one request should have made it through.
         XCTAssertEqual(self.readRecorder.reads, [
                         .channelRead(HTTPServerRequestFull(
-                                        head: reqWithContentLength,
+                                        head: self.requestHead,
                                         body: channel.allocator.buffer(string: "hello")))])
     }
     
@@ -180,14 +177,11 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
                                                         channel.allocator.buffer(string: "world"))))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
-
-        var reqWithContentLength: HTTPRequestHead = self.requestHead
-        reqWithContentLength.headers.add(name: "content-length", value: "10")
         
         // Only one request should have made it through.
         XCTAssertEqual(self.readRecorder.reads, [
                         .channelRead(HTTPServerRequestFull(
-                                        head: reqWithContentLength,
+                                        head: self.requestHead,
                                         body: channel.allocator.buffer(string: "helloworld")))])
     }
     
@@ -204,7 +198,6 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(
                                                         HTTPHeaders.init([("X-Trailer", "true")]))))
 
-        reqWithChunking.headers.add(name: "content-length", value: "10")
         reqWithChunking.headers.add(name: "X-Trailer", value: "true")
         
         XCTAssertEqual(self.readRecorder.reads, [
@@ -235,9 +228,6 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
                         HTTPServerResponsePart.head(resTooLarge),
                         HTTPServerResponsePart.end(nil)])
 
-        let response = asHTTPResponseHead(self.writeRecorder.writes.first!)!
-        XCTAssertEqual(response.contentLength, 0)
-
         XCTAssertFalse(channel.isActive)
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
             XCTAssertEqual(.connectionClosed, error as? HTTPObjectAggregatorError)
@@ -256,10 +246,14 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(requestHead)))
 
-        let response = asHTTPResponseHead(self.writeRecorder.writes.first!)!
-        XCTAssertEqual(response.status, .payloadTooLarge)
-        XCTAssertEqual(response.contentLength, 0)
-        XCTAssertEqual(response.version, requestHead.version)
+        let resTooLarge = HTTPResponseHead(
+            version: .init(major: 1, minor: 0),
+            status: .payloadTooLarge,
+            headers: HTTPHeaders([("Content-Length", "0"), ("connection", "close")]))
+
+        XCTAssertEqual(self.writeRecorder.writes, [
+                        HTTPServerResponsePart.head(resTooLarge),
+                        HTTPServerResponsePart.end(nil)])
 
         // Connection should be closed right away
         XCTAssertFalse(channel.isActive)
@@ -285,7 +279,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
 
         let response = asHTTPResponseHead(self.writeRecorder.writes.first!)!
         XCTAssertEqual(response.status, .payloadTooLarge)
-        XCTAssertEqual(response.contentLength, 0)
+        XCTAssertEqual(response.headers[canonicalForm: "content-length"], ["0"])
         XCTAssertEqual(response.version, requestHead.version)
 
         // Connection should be kept open
@@ -356,14 +350,11 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
                                                         channel.allocator.buffer(string: "test"))))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
-
-        var aggregatedReqHead: HTTPRequestHead = self.requestHead
-        aggregatedReqHead.headers.replaceOrAdd(name: "content-length", value: "4")
-
+        
         XCTAssertEqual(self.readRecorder.reads, [
                         .httpExpectationFailedEvent,
                         .channelRead(HTTPServerRequestFull(
-                                        head: aggregatedReqHead,
+                                        head: self.requestHead,
                                         body: channel.allocator.buffer(string: "test")))])
     }
 }
@@ -457,7 +448,6 @@ class HTTPClientResponseAggregatorTest: XCTestCase {
 
         var aggregatedHead: HTTPResponseHead = self.responseHead
         aggregatedHead.headers.add(name: "X-Trail", value: "true")
-        aggregatedHead.headers.add(name: "content-length", value: String(10))
 
         XCTAssertEqual(self.readRecorder.reads, [
                         .channelRead(HTTPClientResponseFull(
@@ -486,13 +476,10 @@ class HTTPClientResponseAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.body(self.channel.allocator.buffer(string: "test"))))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
 
-        var aggregatedHead: HTTPResponseHead = self.responseHead
-        aggregatedHead.headers.add(name: "content-length", value: String(4))
-
         XCTAssertEqual(self.readRecorder.reads, [
                         .httpFrameTooLongEvent,
                         .channelRead(HTTPClientResponseFull(
-                                        head: aggregatedHead,
+                                        head: self.responseHead,
                                         body: self.channel.allocator.buffer(string: "test")))])
     }
 
