@@ -14,8 +14,8 @@
 import NIO
 
 private final class EchoHandler: ChannelInboundHandler {
-    public typealias InboundIn = ByteBuffer
-    public typealias OutboundOut = ByteBuffer
+    public typealias InboundIn = AddressedEnvelope<ByteBuffer>
+    public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
