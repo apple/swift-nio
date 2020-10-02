@@ -49,9 +49,9 @@ private final class ReadRecorder<T: Equatable>: ChannelInboundHandler, Removable
     
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
-        case let evt as HTTPObjectAggregatorEvents where evt == HTTPObjectAggregatorEvents.httpFrameTooLongEvent:
+        case let evt as HTTPObjectAggregatorEvent where evt == HTTPObjectAggregatorEvent.httpFrameTooLong:
             self.reads.append(.httpFrameTooLongEvent)
-        case let evt as HTTPObjectAggregatorEvents where evt == HTTPObjectAggregatorEvents.httpExpectationFailedEvent:
+        case let evt as HTTPObjectAggregatorEvent where evt == HTTPObjectAggregatorEvent.httpExpectationFailed:
             self.reads.append(.httpExpectationFailedEvent)
         default:
             context.fireUserInboundEventTriggered(event)
@@ -230,7 +230,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
 
         XCTAssertFalse(channel.isActive)
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
-            XCTAssertEqual(.connectionClosed, error as? HTTPObjectAggregatorError)
+            XCTAssertEqual(HTTPObjectAggregatorError.connectionClosed, error as? HTTPObjectAggregatorError)
         }
     }
 
@@ -244,7 +244,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
             headers: HTTPHeaders(
                 [("Host", "example.com"), ("X-Test", "True"), ("content-length", "5")]))
 
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(requestHead)))
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.head(requestHead)))
 
         let resTooLarge = HTTPResponseHead(
             version: .init(major: 1, minor: 0),
@@ -259,7 +259,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertFalse(channel.isActive)
 
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
-            XCTAssertEqual(.connectionClosed, error as? HTTPObjectAggregatorError)
+            XCTAssertEqual(HTTPObjectAggregatorError.connectionClosed, error as? HTTPObjectAggregatorError)
         }
     }
 
@@ -275,7 +275,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
 
         resetSmallHandler(maxContentLength: 4)
 
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(requestHead)))
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.head(requestHead)))
 
         let response = asHTTPResponseHead(self.writeRecorder.writes.first!)!
         XCTAssertEqual(response.status, .payloadTooLarge)
@@ -292,12 +292,12 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         ]
 
         for requestPart in requestParts {
-            XCTAssertNoThrow(try self.channel.writeInbound(requestPart))
+            XCTAssertThrowsError(try self.channel.writeInbound(requestPart))
         }
 
         // The aggregated message should not get passed up as it is too large
         XCTAssertEqual(self.readRecorder.reads, [])
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         XCTAssertEqual(self.readRecorder.reads, [])
 
         // Write another request that is small enough
@@ -338,9 +338,9 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertEqual(self.readRecorder.reads, [.httpExpectationFailedEvent])
 
         // An ill-behaving client could continue to send data without a response, and such data should be discarded.
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.body(
                                                         channel.allocator.buffer(string: "hello"))))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
         // Channel should stay open because keep-alive is on
         XCTAssertTrue(channel.isActive)
@@ -412,8 +412,8 @@ class HTTPClientResponseAggregatorTest: XCTestCase {
         var resHead: HTTPResponseHead = self.responseHead
         resHead.headers.replaceOrAdd(name: "content-length", value: "10")
 
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.head(resHead)))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPClientResponsePart.head(resHead)))
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
 
         // User event triggered
         XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
@@ -426,10 +426,10 @@ class HTTPClientResponseAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.body(
                                                         self.channel.allocator.buffer(string: "hello"))))
 
-        XCTAssertNoThrow(try self.channel.writeInbound(
+        XCTAssertThrowsError(try self.channel.writeInbound(
                             HTTPClientResponsePart.body(
                                 self.channel.allocator.buffer(string: "world"))))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
 
         // User event triggered
         XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
@@ -459,21 +459,24 @@ class HTTPClientResponseAggregatorTest: XCTestCase {
         resetSmallHandler(maxContentLength: 4)
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.head(self.responseHead)))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.body(self.channel.allocator.buffer(string: "hello"))))
-
         XCTAssertNoThrow(try self.channel.writeInbound(
                             HTTPClientResponsePart.body(
-                                self.channel.allocator.buffer(string: "wor"))))
-        XCTAssertNoThrow(try self.channel.writeInbound(
+                                self.channel.allocator.buffer(string: "hell"))))
+        XCTAssertThrowsError(try self.channel.writeInbound(
+                            HTTPClientResponsePart.body(
+                                self.channel.allocator.buffer(string: "owor"))))
+        XCTAssertThrowsError(try self.channel.writeInbound(
                             HTTPClientResponsePart.body(
                                 self.channel.allocator.buffer(string: "ld"))))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
 
         // User event triggered
         XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.head(self.responseHead)))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.body(self.channel.allocator.buffer(string: "test"))))
+        XCTAssertNoThrow(try self.channel.writeInbound(
+                            HTTPClientResponsePart.body(
+                                self.channel.allocator.buffer(string: "test"))))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
 
         XCTAssertEqual(self.readRecorder.reads, [

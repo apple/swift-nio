@@ -16,7 +16,7 @@ import NIO
 
 /// The parts of a complete HTTP response from the view of the client.
 ///
-/// Afull HTTP request is made up of a response header encoded by `.head`
+/// A full HTTP request is made up of a response header encoded by `.head`
 /// and an optional `.body`.
 public struct HTTPServerRequestFull {
     public var head: HTTPRequestHead
@@ -46,20 +46,46 @@ public struct HTTPClientResponseFull {
 
 extension HTTPClientResponseFull: Equatable {}
 
-public enum HTTPObjectAggregatorError: Error {
-    case frameTooLong
-    case connectionClosed
-    case messageDropped
-    case channelStateError(event: String, state: String)
-    case finishedIgnoringContent
+public struct HTTPObjectAggregatorError: Error, Equatable {
+    private enum Base {
+        case frameTooLong
+        case connectionClosed
+        case endingIgnoredMessage
+        case unexpectedMessageHead
+        case unexpectedMessageBody
+        case unexpectedMessageEnd
+    }
+
+    private var base: Base
+
+    private init(base: Base) {
+        self.base = base
+    }
+
+    public static let frameTooLong = HTTPObjectAggregatorError(base: .frameTooLong)
+    public static let connectionClosed = HTTPObjectAggregatorError(base: .connectionClosed)
+    public static let endingIgnoredMessage = HTTPObjectAggregatorError(base: .endingIgnoredMessage)
+    public static let unexpectedMessageHead = HTTPObjectAggregatorError(base: .unexpectedMessageHead)
+    public static let unexpectedMessageBody = HTTPObjectAggregatorError(base: .unexpectedMessageBody)
+    public static let unexpectedMessageEnd = HTTPObjectAggregatorError(base: .unexpectedMessageEnd)
 }
 
-extension HTTPObjectAggregatorError: Equatable {}
+public struct HTTPObjectAggregatorEvent: Hashable {
+    private enum Base {
+        case httpExpectationFailed
+        case httpContinue
+        case httpFrameTooLong
+    }
 
-public enum HTTPObjectAggregatorEvents {
-    case httpExpectationFailedEvent
-    case httpContinueEvent
-    case httpFrameTooLongEvent
+    private var base: Base
+
+    private init(base: Base) {
+        self.base = base
+    }
+
+    public static let httpExpectationFailed = HTTPObjectAggregatorEvent(base: .httpExpectationFailed)
+    public static let httpContinue = HTTPObjectAggregatorEvent(base: .httpContinue)
+    public static let httpFrameTooLong = HTTPObjectAggregatorEvent(base: .httpFrameTooLong)
 }
 
 /// The state of the aggregator  connection.
@@ -80,17 +106,23 @@ internal enum AggregatorState {
         switch self {
         case .idle:
             self = .receiving
-        case .ignoringContent, .receiving, .closed:
-            throw HTTPObjectAggregatorError.channelStateError(event: "head", state: "\(self)")
+        case .ignoringContent, .receiving:
+            throw HTTPObjectAggregatorError.unexpectedMessageHead
+        case .closed:
+            throw HTTPObjectAggregatorError.connectionClosed
         }
     }
 
     mutating func messageBodyReceived() throws {
         switch self {
-        case .idle, .closed:
-            throw HTTPObjectAggregatorError.channelStateError(event: "body", state: "\(self)")
-        case .receiving, .ignoringContent:
+        case .receiving:
             ()
+        case .ignoringContent:
+            throw HTTPObjectAggregatorError.frameTooLong
+        case .idle:
+            throw HTTPObjectAggregatorError.unexpectedMessageBody
+        case .closed:
+            throw HTTPObjectAggregatorError.connectionClosed
         }
     }
 
@@ -101,11 +133,16 @@ internal enum AggregatorState {
             // Got the request end we were waiting for.
             self = .idle
         case .ignoringContent:
-            // Finished ignoring message contents
+            // Expected transition from a state where message contents are getting
+            // ignored because the message is too large. Throwing an error prevents
+            // the normal control flow from continuing into dispatching the completed
+            // invalid message to the next handler.
             self = .idle
-            throw HTTPObjectAggregatorError.finishedIgnoringContent
-        case .idle, .closed:
-            throw HTTPObjectAggregatorError.channelStateError(event: "end", state: "\(self)")
+            throw HTTPObjectAggregatorError.endingIgnoredMessage
+        case .idle:
+            throw HTTPObjectAggregatorError.unexpectedMessageEnd
+        case .closed:
+            throw HTTPObjectAggregatorError.connectionClosed
         }
     }
 
@@ -113,8 +150,12 @@ internal enum AggregatorState {
         switch self {
         case .receiving, .idle:
             self = .ignoringContent
-        case .ignoringContent, .closed:
+        case .ignoringContent:
+            // If we are already ignoring content, do not want to proceed to
+            // sending entity too large response
             throw HTTPObjectAggregatorError.frameTooLong
+        case .closed:
+            throw HTTPObjectAggregatorError.connectionClosed
         }
     }
 
@@ -169,11 +210,6 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        guard self.state != .closed else {
-            context.fireErrorCaught(HTTPObjectAggregatorError.connectionClosed)
-            return
-        }
-
         let msg = self.unwrapInboundIn(data)
         var serverResponse: HTTPResponseHead? = nil
 
@@ -193,15 +229,10 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
                 self.endAggregation(context: context, trailingHeaders: trailingHeaders)
             }
         } catch let error as HTTPObjectAggregatorError {
-            switch error {
-            case .channelStateError:
-                context.fireErrorCaught(error)
-                fallthrough
-            default:
-                // Won't be able to complete those
-                self.fullMessageHead = nil
-                self.buffer.clear()
-            }
+            context.fireErrorCaught(error)
+            // Won't be able to complete those
+            self.fullMessageHead = nil
+            self.buffer.clear()
         } catch {
             // Ignore other types of errors
         }
@@ -225,14 +256,16 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
             return response
         } else if let contentLength = request.contentLength, contentLength > self.maxContentLength {
             // If client has no `Expect` header, but indicated content length is too large
-            return try self.handleOversizeMessage(message: message)
+            try self.state.handlingOversizeMessage()
+            return self.handleOversizeMessage(message: message)
         }
         return nil
     }
 
     private func aggregate(context: ChannelHandlerContext, content: inout ByteBuffer, message: InboundIn) throws -> HTTPResponseHead? {
         if (content.readableBytes > self.maxContentLength - self.buffer.readableBytes) {
-            return try self.handleOversizeMessage(message: message)
+            try self.state.handlingOversizeMessage()
+            return self.handleOversizeMessage(message: message)
         } else {
             self.buffer.writeBuffer(&content)
             return nil
@@ -260,21 +293,21 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
         var maybeResponse: HTTPResponseHead? = nil
         if request.isUnsupportedExpectation {
             // if the request contains an unsupported expectation, we return 417
-            context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvents.httpExpectationFailedEvent)
+            context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpExpectationFailed)
             maybeResponse = HTTPResponseHead(
                 version: request.version,
                 status: .expectationFailed,
                 headers: HTTPHeaders([("content-length", "0")]))
         } else if request.isContinueExpected {
             if let contentLength = request.contentLength, contentLength <= self.maxContentLength {
-                context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvents.httpContinueEvent)
+                context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpContinue)
                 maybeResponse = HTTPResponseHead(
                     version: request.version,
                     status: .continue,
                     headers: HTTPHeaders())
             } else {
                 // if the request contains 100-continue but the content-length is too large, we return 413
-                context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvents.httpExpectationFailedEvent)
+                context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpExpectationFailed)
                 maybeResponse = HTTPResponseHead(
                     version: request.version,
                     status: .payloadTooLarge,
@@ -288,13 +321,11 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
         return maybeResponse
     }
     
-    private func handleOversizeMessage(message: InboundIn) throws -> HTTPResponseHead {
+    private func handleOversizeMessage(message: InboundIn) -> HTTPResponseHead {
         var payloadTooLargeHead = HTTPResponseHead(
             version: self.fullMessageHead?.version ?? .init(major: 1, minor: 1),
             status: .payloadTooLarge,
             headers: HTTPHeaders([("content-length", "0")]))
-
-        try self.state.handlingOversizeMessage()
 
         switch message {
         case .head(let request):
@@ -367,15 +398,10 @@ public final class HTTPClientResponseAggregator: ChannelInboundHandler, Removabl
                 self.endAggregation(context: context, trailingHeaders: trailingHeaders)
             }
         } catch let error as HTTPObjectAggregatorError {
-            switch error {
-            case .channelStateError:
-                context.fireErrorCaught(error)
-                fallthrough
-            default:
-                // Won't be able to complete those
-                self.fullMessageHead = nil
-                self.buffer.clear()
-            }
+            context.fireErrorCaught(error)
+            // Won't be able to complete those
+            self.fullMessageHead = nil
+            self.buffer.clear()
         } catch {
             // Ignore other types of errors
         }
@@ -385,14 +411,16 @@ public final class HTTPClientResponseAggregator: ChannelInboundHandler, Removabl
         self.fullMessageHead = response
         if let contentLength = response.contentLength, contentLength > self.maxContentLength {
             try self.state.handlingOversizeMessage()
-            context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvents.httpFrameTooLongEvent)
+            context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpFrameTooLong)
+            context.fireErrorCaught(HTTPObjectAggregatorError.frameTooLong)
         }
     }
 
     private func aggregate(context: ChannelHandlerContext, content: inout ByteBuffer) throws {
         if (content.readableBytes > self.maxContentLength - self.buffer.readableBytes) {
             try self.state.handlingOversizeMessage()
-            context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvents.httpFrameTooLongEvent)
+            context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpFrameTooLong)
+            context.fireErrorCaught(HTTPObjectAggregatorError.frameTooLong)
         } else {
             self.buffer.writeBuffer(&content)
         }
