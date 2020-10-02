@@ -34,7 +34,6 @@ extension HTTPServerRequestAggregatorTest {
                 ("testOversizeRequest", testOversizeRequest),
                 ("testOversizedRequestWithoutKeepAlive", testOversizedRequestWithoutKeepAlive),
                 ("testOversizedRequestWithContentLength", testOversizedRequestWithContentLength),
-                ("testOversizedRequestWith100Continue", testOversizedRequestWith100Continue),
            ]
    }
 }

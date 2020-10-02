@@ -296,9 +296,9 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         }
 
         // The aggregated message should not get passed up as it is too large
-        XCTAssertEqual(self.readRecorder.reads, [])
+        XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
-        XCTAssertEqual(self.readRecorder.reads, [])
+        XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
 
         // Write another request that is small enough
         var secondReqWithContentLength: HTTPRequestHead = self.requestHead
@@ -308,54 +308,16 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
                                                         channel.allocator.buffer(bytes: [1]))))
-        XCTAssertEqual(self.readRecorder.reads, [])
+        XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
                                                         channel.allocator.buffer(bytes: [2]))))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
         XCTAssertEqual(self.readRecorder.reads, [
+                        .httpFrameTooLongEvent,
                         .channelRead(HTTPServerRequestFull(
                                         head: secondReqWithContentLength,
                                         body: channel.allocator.buffer(bytes: [1, 2])))])
-    }
-
-    func testOversizedRequestWith100Continue() {
-        resetSmallHandler(maxContentLength: 4)
-
-        var reqWithContinue: HTTPRequestHead = self.requestHead
-        reqWithContinue.headers.replaceOrAdd(name: "expect", value: "100-continue")
-        reqWithContinue.headers.replaceOrAdd(name: "content-length", value: "16")
-
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(reqWithContinue)))
-
-        XCTAssertEqual(self.writeRecorder.writes, [
-                        HTTPServerResponsePart.head(HTTPResponseHead(
-                                                        version: .init(major: 1, minor: 1),
-                                                        status: .payloadTooLarge,
-                                                        headers: HTTPHeaders([("Content-Length", "0")]))),
-                        HTTPServerResponsePart.end(nil)])
-
-        XCTAssertEqual(self.readRecorder.reads, [.httpExpectationFailedEvent])
-
-        // An ill-behaving client could continue to send data without a response, and such data should be discarded.
-        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "hello"))))
-        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
-
-        // Channel should stay open because keep-alive is on
-        XCTAssertTrue(channel.isActive)
-
-        // Now send a valid request.
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "test"))))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
-        
-        XCTAssertEqual(self.readRecorder.reads, [
-                        .httpExpectationFailedEvent,
-                        .channelRead(HTTPServerRequestFull(
-                                        head: self.requestHead,
-                                        body: channel.allocator.buffer(string: "test")))])
     }
 }
 

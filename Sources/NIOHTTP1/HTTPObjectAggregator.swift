@@ -73,7 +73,6 @@ public struct HTTPObjectAggregatorError: Error, Equatable {
 public struct HTTPObjectAggregatorEvent: Hashable {
     private enum Base {
         case httpExpectationFailed
-        case httpContinue
         case httpFrameTooLong
     }
 
@@ -84,7 +83,6 @@ public struct HTTPObjectAggregatorEvent: Hashable {
     }
 
     public static let httpExpectationFailed = HTTPObjectAggregatorEvent(base: .httpExpectationFailed)
-    public static let httpContinue = HTTPObjectAggregatorEvent(base: .httpContinue)
     public static let httpFrameTooLong = HTTPObjectAggregatorEvent(base: .httpFrameTooLong)
 }
 
@@ -176,17 +174,12 @@ internal enum AggregatorState {
 /// everything has been received.
 ///
 /// `HTTPServerRequestAggregator` may end up sending a `HTTPResponseHead`:
-/// - Response status `100 Continue` when a `100-continue` expectation is received
-///     and the `content-length` doesn't exceed `maxContentLength`.
-/// - Response status `417 Expectation Failed` when a `100-continue`
-///     expectation is received and the `content-length` exceeds `maxContentLength`.
 /// - Response status `413 Request Entity Too Large` when either the
 ///     `content-length` or the bytes received so far exceed `maxContentLength`.
 ///
 /// `HTTPServerRequestAggregator` may close the connection if it is impossible
 /// to recover:
-/// - If `content-length` is too large and no `100-continue` expectation is received
-///     and `keep-alive` is off.
+/// - If `content-length` is too large and `keep-alive` is off.
 /// - If the bytes received exceed `maxContentLength` and the client didn't signal
 ///     `content-length`
 public final class HTTPServerRequestAggregator: ChannelInboundHandler, RemovableChannelHandler {
@@ -250,13 +243,10 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
 
     private func beginAggregation(context: ChannelHandlerContext, request: HTTPRequestHead, message: InboundIn) throws -> HTTPResponseHead? {
         self.fullMessageHead = request
-        if let response = self.generateContinueResponse(context: context, request: request) {
-            // Remove `Expect` header from the aggregated message
-            self.fullMessageHead?.headers.remove(name: "expect")
-            return response
-        } else if let contentLength = request.contentLength, contentLength > self.maxContentLength {
-            // If client has no `Expect` header, but indicated content length is too large
+        if let contentLength = request.contentLength, contentLength > self.maxContentLength {
+            // If indicated content length is too large
             try self.state.handlingOversizeMessage()
+            context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpFrameTooLong)
             return self.handleOversizeMessage(message: message)
         }
         return nil
@@ -265,6 +255,7 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
     private func aggregate(context: ChannelHandlerContext, content: inout ByteBuffer, message: InboundIn) throws -> HTTPResponseHead? {
         if (content.readableBytes > self.maxContentLength - self.buffer.readableBytes) {
             try self.state.handlingOversizeMessage()
+            context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpFrameTooLong)
             return self.handleOversizeMessage(message: message)
         } else {
             self.buffer.writeBuffer(&content)
@@ -288,39 +279,7 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
             context.fireChannelRead(NIOAny(fullMessage))
         }
     }
-    
-    private func generateContinueResponse(context: ChannelHandlerContext, request: HTTPRequestHead) -> HTTPResponseHead? {
-        var maybeResponse: HTTPResponseHead? = nil
-        if request.isUnsupportedExpectation {
-            // if the request contains an unsupported expectation, we return 417
-            context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpExpectationFailed)
-            maybeResponse = HTTPResponseHead(
-                version: request.version,
-                status: .expectationFailed,
-                headers: HTTPHeaders([("content-length", "0")]))
-        } else if request.isContinueExpected {
-            if let contentLength = request.contentLength, contentLength <= self.maxContentLength {
-                context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpContinue)
-                maybeResponse = HTTPResponseHead(
-                    version: request.version,
-                    status: .continue,
-                    headers: HTTPHeaders())
-            } else {
-                // if the request contains 100-continue but the content-length is too large, we return 413
-                context.fireUserInboundEventTriggered(HTTPObjectAggregatorEvent.httpExpectationFailed)
-                maybeResponse = HTTPResponseHead(
-                    version: request.version,
-                    status: .payloadTooLarge,
-                    headers: HTTPHeaders([("content-length", "0")]))
-            }
-        }
 
-        if var response = maybeResponse, self.closeOnExpectationFailed && response.status.clientErrorClass {
-            response.headers.add(name: "connection", value: "close")
-        }
-        return maybeResponse
-    }
-    
     private func handleOversizeMessage(message: InboundIn) -> HTTPResponseHead {
         var payloadTooLargeHead = HTTPResponseHead(
             version: self.fullMessageHead?.version ?? .init(major: 1, minor: 1),
@@ -329,22 +288,18 @@ public final class HTTPServerRequestAggregator: ChannelInboundHandler, Removable
 
         switch message {
         case .head(let request):
-            if request.isContinueExpected || request.isKeepAlive {
-                // Message too large, but 'Expect: 100-continue' or keep-alive is on.
-                // Send back a 413 and keep the connection open.
-                return payloadTooLargeHead
-            } else {
-                // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
+            if !request.isKeepAlive {
+                // If keep-alive is off and, no need to leave the connection open.
                 // Send back a 413 and close the connection.
                 payloadTooLargeHead.headers.add(name: "connection", value: "close")
-                return payloadTooLargeHead
             }
         default:
             // The client started to send data already, close because it's impossible to recover.
             // Send back a 413 and close the connection.
             payloadTooLargeHead.headers.add(name: "connection", value: "close")
-            return payloadTooLargeHead
         }
+
+        return payloadTooLargeHead
     }
 
     public func handlerAdded(context: ChannelHandlerContext) {

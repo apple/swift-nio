@@ -1443,20 +1443,6 @@ extension HTTPResponseHead {
 }
 
 extension HTTPRequestHead {
-    /// Returns `true` if and only if the specified message contains an expect header and the only expectation
-    /// present is the 100-continue expectation. Note that this method returns `false` if the expect header is
-    /// not valid for the message (e.g., the version on the message is HTTP/1.0).
-    internal var isContinueExpected: Bool {
-        return headers.isContinueExpected(version: version)
-    }
-
-    /// Returns `true` if the specified message contains an expect header specifying an expectation that is not
-    /// supported. Note that this method returns `false` if the expect header is not valid for the message
-    /// (e.g., the version on the message is HTTP/1.0).
-    internal var isUnsupportedExpectation: Bool {
-        return headers.isUnsupportedExpectation(version: version)
-    }
-
     internal var contentLength: Int? {
         return headers.contentLength
     }
@@ -1465,68 +1451,5 @@ extension HTTPRequestHead {
 extension HTTPHeaders {
     internal var contentLength: Int? {
         return self.first(name: "content-length").flatMap { Int($0) }
-    }
-
-    internal func isUnsupportedExpectation(version: HTTPVersion) -> Bool {
-        if version.major == 1 && version.minor >= 1 {
-            let expectations = self[canonicalForm: "expect"]
-            // No `Expect` is a valid expectation
-            return expectations.count != 0 && !isContinue(expectations: expectations)
-        } else {
-            return false
-        }
-    }
-
-    internal func isContinueExpected(version: HTTPVersion) -> Bool {
-        if version.major == 1 && version.minor >= 1 {
-            // The only valid `Expect` header value is a single `100-continue`
-            return isContinue(expectations: self[canonicalForm: "expect"])
-        } else {
-            return false
-        }
-    }
-
-    private func isContinue(expectations: [Substring]) -> Bool {
-        return expectations.count == 1 &&
-            expectations.first.map { $0.utf8.compareCaseInsensitiveASCIIBytes(to: "100-continue".utf8) } != nil
-    }
-}
-
-extension HTTPResponseStatus {
-    internal var clientErrorClass: Bool {
-        switch self {
-        case .badRequest,
-             .unauthorized,
-             .paymentRequired,
-             .forbidden,
-             .notFound,
-             .methodNotAllowed,
-             .notAcceptable,
-             .proxyAuthenticationRequired,
-             .requestTimeout,
-             .conflict,
-             .gone,
-             .lengthRequired,
-             .preconditionFailed,
-             .payloadTooLarge,
-             .uriTooLong,
-             .unsupportedMediaType,
-             .rangeNotSatisfiable,
-             .expectationFailed,
-             .imATeapot,
-             .misdirectedRequest,
-             .unprocessableEntity,
-             .locked,
-             .failedDependency,
-             .upgradeRequired,
-             .preconditionRequired,
-             .tooManyRequests,
-             .requestHeaderFieldsTooLarge,
-             .unavailableForLegalReasons,
-             .custom where (code >= 400) && (code < 500):
-            return true
-        default:
-            return false
-        }
     }
 }
