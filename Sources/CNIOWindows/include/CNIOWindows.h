@@ -20,11 +20,13 @@
 #include <WinSock2.h>
 #include <time.h>
 
+#define NIO(name) CNIOWindows_ ## name
+
 // This is a DDK type which is not available in the WinSDK as it is not part of
 // the shared, usermode (um), or ucrt portions of the code.  We must replicate
 // this datastructure manually from the MSDN references or the DDK.
 // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer
-typedef struct _REPARSE_DATA_BUFFER {
+typedef struct NIO(_REPARSE_DATA_BUFFER) {
   ULONG   ReparseTag;
   USHORT  ReparseDataLength;
   USHORT  Reserved;
@@ -48,9 +50,7 @@ typedef struct _REPARSE_DATA_BUFFER {
       UCHAR   DataBuffer[1];
     } GenericReparsaeBuffer;
   } DUMMYUNIONNAME;
-} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
-
-#define NIO(name) CNIOWindows_ ## name
+} NIO(REPARSE_DATA_BUFFER), *NIO(PREPARSE_DATA_BUFFER);
 
 typedef struct {
   WSAMSG msg_hdr;

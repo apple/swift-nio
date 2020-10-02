@@ -403,7 +403,8 @@ extension NIOBSDSocket {
         }
 
         var nBytesWritten: DWORD = 0
-        var dbReparseDataBuffer: REPARSE_DATA_BUFFER = REPARSE_DATA_BUFFER()
+        var dbReparseDataBuffer: CNIOWindows_REPARSE_DATA_BUFFER =
+            CNIOWindows_REPARSE_DATA_BUFFER()
         try withUnsafeMutablePointer(to: &dbReparseDataBuffer) {
             if !DeviceIoControl(hFile, FSCTL_GET_REPARSE_POINT, nil, 0, $0,
                                 DWORD(MemoryLayout<REPARSE_DATA_BUFFER>.stride),
