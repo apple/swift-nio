@@ -393,6 +393,8 @@ extension NIOBSDSocket.Option {
 }
 #endif
 
+/// The requested UDS path exists and has wrong type (not a socket).
+public struct UnixDomainSocketPathWrongType: Error {}
 
 /// This protocol defines the methods that are expected to be found on `NIOBSDSocket`. While defined as a protocol
 /// there is no expectation that any object other than `NIOBSDSocket` will implement this protocol: instead, this protocol

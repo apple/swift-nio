@@ -57,9 +57,6 @@ import struct WinSDK.socklen_t
 import CNIOWindows
 #endif
 
-/// The requested UDS path exists and has wrong type (not a socket).
-public struct UnixDomainSocketPathWrongType: Error {}
-
 /// A Registration on a `Selector`, which is interested in an `SelectorEventSet`.
 protocol Registration {
     /// The `SelectorEventSet` in which the `Registration` is interested.
