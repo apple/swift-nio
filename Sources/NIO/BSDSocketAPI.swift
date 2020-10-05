@@ -393,6 +393,8 @@ extension NIOBSDSocket.Option {
 }
 #endif
 
+/// The requested UDS path exists and has wrong type (not a socket).
+public struct UnixDomainSocketPathWrongType: Error {}
 
 /// This protocol defines the methods that are expected to be found on `NIOBSDSocket`. While defined as a protocol
 /// there is no expectation that any object other than `NIOBSDSocket` will implement this protocol: instead, this protocol
@@ -511,7 +513,11 @@ protocol _BSDSocketProtocol {
                          offset: off_t,
                          len: off_t) throws -> IOResult<Int>
 
+    // MARK: non-BSD APIs added by NIO
+
     static func setNonBlocking(socket: NIOBSDSocket.Handle) throws
+
+    static func cleanupUnixDomainSocket(atPath path: String) throws
 }
 
 /// If this extension is hitting a compile error, your platform is missing one of the functions defined above!

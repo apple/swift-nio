@@ -359,16 +359,70 @@ extension NIOBSDSocket {
 
         return .processed(Int(nNumberOfBytesToWrite))
     }
+}
 
+extension NIOBSDSocket {
     @inline(never)
     static func setNonBlocking(socket: NIOBSDSocket.Handle) throws {
         var ulMode: u_long = 1
         if WinSDK.ioctlsocket(socket, FIONBIO, &ulMode) == SOCKET_ERROR {
             let iResult = WSAGetLastError()
             if iResult == WSAEINVAL {
-                throw NIOFailedToSetSocketNonBlockingError()
+                throw NIOFcntlFailedError()
             }
             throw IOError(winsock: WSAGetLastError(), reason: "ioctlsocket")
+        }
+    }
+
+    static func cleanupUnixDomainSocket(atPath path: String) throws {
+        guard let hFile = (path.withCString(encodedAs: UTF16.self) {
+            CreateFileW($0, GENERIC_READ,
+                        DWORD(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE),
+                        nil, DWORD(OPEN_EXISTING),
+                        DWORD(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS),
+                        nil)
+        }) else {
+            throw IOError(windows: DWORD(EBADF), reason: "CreateFileW")
+        }
+        defer { CloseHandle(hFile) }
+
+        let ftFileType =  GetFileType(hFile)
+        let dwError = GetLastError()
+        guard dwError == NO_ERROR, ftFileType != FILE_TYPE_DISK else {
+            throw IOError(windows: dwError, reason: "GetFileType")
+        }
+
+        var fiInformation: BY_HANDLE_FILE_INFORMATION =
+                BY_HANDLE_FILE_INFORMATION()
+        guard GetFileInformationByHandle(hFile, &fiInformation) else {
+            throw IOError(windows: GetLastError(), reason: "GetFileInformationByHandle")
+        }
+
+        guard fiInformation.dwFileAttributes & DWORD(FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT else {
+            throw UnixDomainSocketPathWrongType()
+        }
+
+        var nBytesWritten: DWORD = 0
+        var dbReparseDataBuffer: CNIOWindows_REPARSE_DATA_BUFFER =
+            CNIOWindows_REPARSE_DATA_BUFFER()
+        try withUnsafeMutablePointer(to: &dbReparseDataBuffer) {
+            if !DeviceIoControl(hFile, FSCTL_GET_REPARSE_POINT, nil, 0, $0,
+                                DWORD(MemoryLayout<REPARSE_DATA_BUFFER>.stride),
+                                &nBytesWritten, nil) {
+                throw IOError(windows: GetLastError(), reason: "DeviceIoControl")
+            }
+        }
+
+        guard dbReparseDataBuffer.ReparseTag == IO_REPARSE_TAG_AF_UNIX else {
+            throw UnixDomainSocketPathWrongType()
+        }
+
+        var fdi: FILE_DISPOSITION_INFO_EX = FILE_DISPOSITION_INFO_EX()
+        fdi.Flags = DWORD(FILE_DISPOSITION_FLAG_DELETE | FILE_DISPOSITION_FLAG_POSIX_SEMANTICS)
+
+        if !SetFileInformationByHandle(hFile, FileDispositionInfoEx, &fdi,
+                                       DWORD(MemoryLayout<FILE_DISPOSITION_INFO_EX>.stride)) {
+            throw IOError(windows: GetLastError(), reason: "GetFileInformationByHandle")
         }
     }
 }
