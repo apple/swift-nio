@@ -49,9 +49,9 @@ private final class ReadRecorder<T: Equatable>: ChannelInboundHandler, Removable
     
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
-        case let evt as HTTPObjectAggregatorEvent where evt == HTTPObjectAggregatorEvent.httpFrameTooLong:
+        case let evt as NIOHTTPObjectAggregatorEvent where evt == NIOHTTPObjectAggregatorEvent.httpFrameTooLong:
             self.reads.append(.httpFrameTooLongEvent)
-        case let evt as HTTPObjectAggregatorEvent where evt == HTTPObjectAggregatorEvent.httpExpectationFailed:
+        case let evt as NIOHTTPObjectAggregatorEvent where evt == NIOHTTPObjectAggregatorEvent.httpExpectationFailed:
             self.reads.append(.httpExpectationFailedEvent)
         default:
             context.fireUserInboundEventTriggered(event)
@@ -96,19 +96,19 @@ private func asHTTPResponseHead(_ response: HTTPServerResponsePart) -> HTTPRespo
 }
 
 
-class HTTPServerRequestAggregatorTest: XCTestCase {
+class NIOHTTPServerRequestAggregatorTest: XCTestCase {
     var channel: EmbeddedChannel! = nil
     var requestHead: HTTPRequestHead! = nil
     var responseHead: HTTPResponseHead! = nil
-    fileprivate var readRecorder: ReadRecorder<HTTPServerRequestFull>! = nil
+    fileprivate var readRecorder: ReadRecorder<NIOHTTPServerRequestFull>! = nil
     fileprivate var writeRecorder: WriteRecorder! = nil
-    fileprivate var aggregatorHandler: HTTPServerRequestAggregator! = nil
+    fileprivate var aggregatorHandler: NIOHTTPServerRequestAggregator! = nil
     
     override func setUp() {
         self.channel = EmbeddedChannel()
         self.readRecorder = ReadRecorder()
         self.writeRecorder = WriteRecorder()
-        self.aggregatorHandler = HTTPServerRequestAggregator(maxContentLength: 1024 * 1024)
+        self.aggregatorHandler = NIOHTTPServerRequestAggregator(maxContentLength: 1024 * 1024)
         
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.writeRecorder).wait())
@@ -130,7 +130,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
     private func resetSmallHandler(maxContentLength: Int) {
         XCTAssertNoThrow(try self.channel.pipeline.removeHandler(self.readRecorder!).wait())
         XCTAssertNoThrow(try self.channel.pipeline.removeHandler(self.aggregatorHandler!).wait())
-        self.aggregatorHandler = HTTPServerRequestAggregator(maxContentLength: maxContentLength)
+        self.aggregatorHandler = NIOHTTPServerRequestAggregator(maxContentLength: maxContentLength)
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(self.aggregatorHandler).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
     }
@@ -153,7 +153,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
 
         // Only one request should have made it through.
         XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestFull(head: self.requestHead, body: nil))])
+                       [.channelRead(NIOHTTPServerRequestFull(head: self.requestHead, body: nil))])
     }
     
     func testAggregateWithBody() {
@@ -164,7 +164,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         
         // Only one request should have made it through.
         XCTAssertEqual(self.readRecorder.reads, [
-                        .channelRead(HTTPServerRequestFull(
+                        .channelRead(NIOHTTPServerRequestFull(
                                         head: self.requestHead,
                                         body: channel.allocator.buffer(string: "hello")))])
     }
@@ -180,7 +180,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         
         // Only one request should have made it through.
         XCTAssertEqual(self.readRecorder.reads, [
-                        .channelRead(HTTPServerRequestFull(
+                        .channelRead(NIOHTTPServerRequestFull(
                                         head: self.requestHead,
                                         body: channel.allocator.buffer(string: "helloworld")))])
     }
@@ -188,6 +188,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
     func testAggregateWithTrailer() {
         var reqWithChunking: HTTPRequestHead = self.requestHead
         reqWithChunking.headers.add(name: "transfer-encoding", value: "chunked")
+        reqWithChunking.headers.add(name: "Trailer", value: "X-Trailer")
         
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(reqWithChunking)))
         
@@ -198,10 +199,12 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(
                                                         HTTPHeaders.init([("X-Trailer", "true")]))))
 
+        reqWithChunking.headers.remove(name: "Trailer")
         reqWithChunking.headers.add(name: "X-Trailer", value: "true")
-        
+
+        // Trailer headers should get moved to normal ones
         XCTAssertEqual(self.readRecorder.reads, [
-                        .channelRead(HTTPServerRequestFull(
+                        .channelRead(NIOHTTPServerRequestFull(
                                         head: reqWithChunking,
                                         body: channel.allocator.buffer(string: "helloworld")))])
     }
@@ -230,7 +233,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
 
         XCTAssertFalse(channel.isActive)
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
-            XCTAssertEqual(HTTPObjectAggregatorError.connectionClosed, error as? HTTPObjectAggregatorError)
+            XCTAssertEqual(NIOHTTPObjectAggregatorError.connectionClosed, error as? NIOHTTPObjectAggregatorError)
         }
     }
 
@@ -259,7 +262,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertFalse(channel.isActive)
 
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
-            XCTAssertEqual(HTTPObjectAggregatorError.connectionClosed, error as? HTTPObjectAggregatorError)
+            XCTAssertEqual(NIOHTTPObjectAggregatorError.connectionClosed, error as? NIOHTTPObjectAggregatorError)
         }
     }
 
@@ -271,7 +274,7 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
             version: .init(major: 1, minor: 1),
             method: .PUT, uri: "/path",
             headers: HTTPHeaders(
-                [("Host", "example.com"), ("X-Test", "True"), ("content-length", "5")]))
+                [("Host", "example.com"), ("X-Test", "True"), ("content-length", "8")]))
 
         resetSmallHandler(maxContentLength: 4)
 
@@ -288,14 +291,16 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
         // An ill-behaved client may continue writing the request
         let requestParts = [
             HTTPServerRequestPart.body(channel.allocator.buffer(bytes: [1, 2, 3, 4])),
-            HTTPServerRequestPart.body(channel.allocator.buffer(bytes: [5]))
+            HTTPServerRequestPart.body(channel.allocator.buffer(bytes: [5,6])),
+            HTTPServerRequestPart.body(channel.allocator.buffer(bytes: [7,8]))
         ]
 
         for requestPart in requestParts {
             XCTAssertThrowsError(try self.channel.writeInbound(requestPart))
         }
 
-        // The aggregated message should not get passed up as it is too large
+        // The aggregated message should not get passed up as it is too large.
+        // There should only be one "frame too long" event despite multiple writes
         XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
@@ -315,23 +320,23 @@ class HTTPServerRequestAggregatorTest: XCTestCase {
 
         XCTAssertEqual(self.readRecorder.reads, [
                         .httpFrameTooLongEvent,
-                        .channelRead(HTTPServerRequestFull(
+                        .channelRead(NIOHTTPServerRequestFull(
                                         head: secondReqWithContentLength,
                                         body: channel.allocator.buffer(bytes: [1, 2])))])
     }
 }
 
-class HTTPClientResponseAggregatorTest: XCTestCase {
+class NIOHTTPClientResponseAggregatorTest: XCTestCase {
     var channel: EmbeddedChannel! = nil
     var requestHead: HTTPRequestHead! = nil
     var responseHead: HTTPResponseHead! = nil
-    fileprivate var readRecorder: ReadRecorder<HTTPClientResponseFull>! = nil
-    fileprivate var aggregatorHandler: HTTPClientResponseAggregator! = nil
+    fileprivate var readRecorder: ReadRecorder<NIOHTTPClientResponseFull>! = nil
+    fileprivate var aggregatorHandler: NIOHTTPClientResponseAggregator! = nil
 
     override func setUp() {
         self.channel = EmbeddedChannel()
         self.readRecorder = ReadRecorder()
-        self.aggregatorHandler = HTTPClientResponseAggregator(maxContentLength: 1024 * 1024)
+        self.aggregatorHandler = NIOHTTPClientResponseAggregator(maxContentLength: 1024 * 1024)
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.aggregatorHandler).wait())
@@ -352,7 +357,7 @@ class HTTPClientResponseAggregatorTest: XCTestCase {
     private func resetSmallHandler(maxContentLength: Int) {
         XCTAssertNoThrow(try self.channel.pipeline.removeHandler(self.readRecorder!).wait())
         XCTAssertNoThrow(try self.channel.pipeline.removeHandler(self.aggregatorHandler!).wait())
-        self.aggregatorHandler = HTTPClientResponseAggregator(maxContentLength: maxContentLength)
+        self.aggregatorHandler = NIOHTTPClientResponseAggregator(maxContentLength: maxContentLength)
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(self.aggregatorHandler).wait())
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(self.readRecorder!).wait())
     }
@@ -412,7 +417,7 @@ class HTTPClientResponseAggregatorTest: XCTestCase {
         aggregatedHead.headers.add(name: "X-Trail", value: "true")
 
         XCTAssertEqual(self.readRecorder.reads, [
-                        .channelRead(HTTPClientResponseFull(
+                        .channelRead(NIOHTTPClientResponseFull(
                                         head: aggregatedHead,
                                         body: self.channel.allocator.buffer(string: "helloworld")))])
     }
@@ -443,7 +448,7 @@ class HTTPClientResponseAggregatorTest: XCTestCase {
 
         XCTAssertEqual(self.readRecorder.reads, [
                         .httpFrameTooLongEvent,
-                        .channelRead(HTTPClientResponseFull(
+                        .channelRead(NIOHTTPClientResponseFull(
                                         head: self.responseHead,
                                         body: self.channel.allocator.buffer(string: "test")))])
     }
