@@ -219,8 +219,10 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
                                                         channel.allocator.buffer(string: "he"))))
         XCTAssertEqual(self.writeRecorder.writes, [])
 
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "llo"))))
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.body(
+                                                        channel.allocator.buffer(string: "llo")))) { error in
+            XCTAssertEqual(NIOHTTPObjectAggregatorError.frameTooLong, error as? NIOHTTPObjectAggregatorError)
+        }
 
         let resTooLarge = HTTPResponseHead(
             version: .init(major: 1, minor: 1),
