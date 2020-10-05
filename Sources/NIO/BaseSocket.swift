@@ -379,7 +379,7 @@ class BaseSocket: BaseSocketProtocol {
     }
 
     func ignoreSIGPIPE() throws {
-        try BaseSocket.ignoreSIGPIPE(descriptor: self.descriptor)
+        try BaseSocket.ignoreSIGPIPE(socket: self.descriptor)
     }
 
     /// Set the socket as non-blocking.
