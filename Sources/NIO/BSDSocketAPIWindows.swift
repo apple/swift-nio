@@ -268,7 +268,7 @@ extension NIOBSDSocket {
                          vlen: CUnsignedInt, flags: CInt,
                          timeout: UnsafeMutablePointer<timespec>?)
             throws -> IOResult<Int> {
-        return CNIOWindows_recvmmsg(socket, msgvec, vlen, flags, timeout)
+        return .processed(Int(CNIOWindows_recvmmsg(socket, msgvec, vlen, flags, timeout)))
     }
 
     @inline(never)
@@ -276,7 +276,7 @@ extension NIOBSDSocket {
                          msgvec: UnsafeMutablePointer<MMsgHdr>,
                          vlen: CUnsignedInt, flags: CInt)
             throws -> IOResult<Int> {
-        return CNIOWindows_sendmmsg(socket, msgvec, vlen, flags)
+        return .processed(Int(CNIOWindows_sendmmsg(socket, msgvec, vlen, flags)))
     }
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard
