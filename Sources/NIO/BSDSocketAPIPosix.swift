@@ -202,6 +202,28 @@ extension NIOBSDSocket {
     static func setNonBlocking(socket: NIOBSDSocket.Handle) throws {
         return try Posix.setNonBlocking(socket: socket)
     }
+
+    static func cleanupUnixDomainSocket(atPath path: String) throws {
+        do {
+            var sb: stat = stat()
+            try withUnsafeMutablePointer(to: &sb) { sbPtr in
+                try Posix.stat(pathname: path, outStat: sbPtr)
+            }
+
+            // Only unlink the existing file if it is a socket
+            if sb.st_mode & S_IFSOCK == S_IFSOCK {
+                try Posix.unlink(pathname: path)
+            } else {
+                throw UnixDomainSocketPathWrongType()
+            }
+        } catch let err as IOError {
+            // If the filepath did not exist, we consider it cleaned up
+            if err.errnoCode == ENOENT {
+                return
+            }
+            throw err
+        }
+    }
 }
 
 #endif

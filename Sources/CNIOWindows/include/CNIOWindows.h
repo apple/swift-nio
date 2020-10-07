@@ -22,6 +22,36 @@
 
 #define NIO(name) CNIOWindows_ ## name
 
+// This is a DDK type which is not available in the WinSDK as it is not part of
+// the shared, usermode (um), or ucrt portions of the code.  We must replicate
+// this datastructure manually from the MSDN references or the DDK.
+// https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer
+typedef struct NIO(_REPARSE_DATA_BUFFER) {
+  ULONG   ReparseTag;
+  USHORT  ReparseDataLength;
+  USHORT  Reserved;
+  union {
+    struct {
+      USHORT  SubstituteNameOffset;
+      USHORT  SubstituteNameLength;
+      USHORT  PrintNameOffset;
+      USHORT  PrintNameLength;
+      ULONG   Flags;
+      WCHAR   PathBuffer[1];
+    } SymbolicLinkReparseBuffer;
+    struct {
+      USHORT  SubstituteNameOffset;
+      USHORT  SubstituteNameLength;
+      USHORT  PrintNameOffset;
+      USHORT  PrintNameLength;
+      WCHAR   PathBuffer[1];
+    } MountPointReparseBuffer;
+    struct {
+      UCHAR   DataBuffer[1];
+    } GenericReparsaeBuffer;
+  } DUMMYUNIONNAME;
+} NIO(REPARSE_DATA_BUFFER), *NIO(PREPARSE_DATA_BUFFER);
+
 typedef struct {
   WSAMSG msg_hdr;
   unsigned int msg_len;
