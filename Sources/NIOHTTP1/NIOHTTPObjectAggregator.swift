@@ -220,8 +220,8 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
             // Won't be able to complete those
             self.fullMessageHead = nil
             self.buffer.clear()
-        } catch {
-            // Ignore other types of errors
+        } catch let error {
+            context.fireErrorCaught(error)
         }
 
         // Generated a server esponse to send back
@@ -352,8 +352,8 @@ public final class NIOHTTPClientResponseAggregator: ChannelInboundHandler, Remov
             // Won't be able to complete those
             self.fullMessageHead = nil
             self.buffer.clear()
-        } catch {
-            // Ignore other types of errors
+        } catch let error {
+            context.fireErrorCaught(error)
         }
     }
 
