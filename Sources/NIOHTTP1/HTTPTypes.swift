@@ -1435,3 +1435,21 @@ extension HTTPMethod: RawRepresentable {
         }
     }
 }
+
+extension HTTPResponseHead {
+    internal var contentLength: Int? {
+        return headers.contentLength
+    }
+}
+
+extension HTTPRequestHead {
+    internal var contentLength: Int? {
+        return headers.contentLength
+    }
+}
+
+extension HTTPHeaders {
+    internal var contentLength: Int? {
+        return self.first(name: "content-length").flatMap { Int($0) }
+    }
+}

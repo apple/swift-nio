@@ -98,6 +98,8 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(NIOCloseOnErrorHandlerTest.allTests),
              testCase(NIOConcurrencyHelpersTests.allTests),
              testCase(NIOHTTP1TestServerTest.allTests),
+             testCase(NIOHTTPClientResponseAggregatorTest.allTests),
+             testCase(NIOHTTPServerRequestAggregatorTest.allTests),
              testCase(NIOSingleStepByteToMessageDecoderTest.allTests),
              testCase(NIOThreadPoolTest.allTests),
              testCase(NonBlockingFileIOTest.allTests),
