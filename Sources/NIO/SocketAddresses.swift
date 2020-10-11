@@ -339,7 +339,7 @@ public enum SocketAddress: CustomStringConvertible {
             return try String(port).withCString(encodedAs: UTF16.self) { wszPort in
                 var pResult: UnsafeMutablePointer<ADDRINFOW>?
 
-                guard GetAddrInfoW(wsHost, wszPort, nil, &pResult) == 0 else {
+                guard GetAddrInfoW(wszHost, wszPort, nil, &pResult) == 0 else {
                     throw SocketAddressError.unknown(host: host, port: port)
                 }
 
