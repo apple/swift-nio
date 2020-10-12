@@ -451,14 +451,16 @@ protocol _BSDSocketProtocol {
     // NOTE: this should return a `ssize_t`, however, that is not a standard
     // type, and defining that type is difficult.  Opt to return a `size_t`
     // which is the same size, but is unsigned.
-    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<size_t>
+    static func recvmsg(socket: NIOBSDSocket.Handle,
+                        msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt)
+            throws -> IOResult<size_t>
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard
     // type, and defining that type is difficult.  Opt to return a `size_t`
     // which is the same size, but is unsigned.
-    static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<size_t>
+    static func sendmsg(socket: NIOBSDSocket.Handle,
+                        msgHdr: UnsafePointer<msghdr>, flags: CInt)
+            throws -> IOResult<size_t>
 
     static func send(socket s: NIOBSDSocket.Handle,
                      buffer buf: UnsafeRawPointer,
