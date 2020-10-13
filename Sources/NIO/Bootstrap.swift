@@ -247,7 +247,7 @@ public final class ServerBootstrap {
         ///
         /// - parameters:
         ///     - descriptor: The _Unix file descriptor_ representing the bound stream socket.
-        @available(*, deprecated, renamed: "ServerBootstrap.withBoundSocket(_:)")
+        @available(*, deprecated, renamed: "withBoundSocket(_:)")
         public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
             return withBoundSocket(descriptor)
         }
@@ -647,7 +647,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         /// - parameters:
         ///     - descriptor: The _Unix file descriptor_ representing the connected stream socket.
         /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-        @available(*, deprecated, renamed: "ClientBoostrap.withConnectedSocket(_:)")
+        @available(*, deprecated, renamed: "withConnectedSocket(_:)")
         public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
           return self.withConnectedSocket(descriptor)
         }
@@ -828,7 +828,7 @@ public final class DatagramBootstrap {
         ///
         /// - parameters:
         ///     - descriptor: The _Unix file descriptor_ representing the bound datagram socket.
-        @available(*, deprecated, renamed: "DatagramBootstrap.withBoundSocket(_:)")
+        @available(*, deprecated, renamed: "withBoundSocket(_:)")
         public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
             return self.withBoundSocket(descriptor)
         }

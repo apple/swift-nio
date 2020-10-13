@@ -49,6 +49,7 @@ extension ipv6_mreq { // http://lkml.iu.edu/hypermail/linux/kernel/0106.1/0080.h
 #endif
 
 // Declare aliases to share more code and not need to repeat #if #else blocks
+#if !os(Windows)
 private let sysClose = close
 private let sysShutdown = shutdown
 private let sysBind = bind
@@ -68,6 +69,8 @@ private let sysRead = read
 private let sysPread = pread
 private let sysLseek = lseek
 private let sysPoll = poll
+#endif
+
 #if os(Android)
 func sysRecvFrom_wrapper(sockfd: CInt, buf: UnsafeMutableRawPointer, len: CLong, flags: CInt, src_addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) -> CLong {
     return recvfrom(sockfd, buf, len, flags, src_addr, addrlen) // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
@@ -75,10 +78,8 @@ func sysRecvFrom_wrapper(sockfd: CInt, buf: UnsafeMutableRawPointer, len: CLong,
 func sysWritev_wrapper(fd: CInt, iov: UnsafePointer<iovec>?, iovcnt: CInt) -> CLong {
     return CLong(writev(fd, iov, iovcnt)) // cast 'Int32' to 'CLong'
 }
-private let sysRecvFrom = sysRecvFrom_wrapper
 private let sysWritev = sysWritev_wrapper
-#else
-private let sysRecvFrom: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong, CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CLong = recvfrom
+#elseif !os(Windows)
 private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
 #endif
 #if !os(Windows)
@@ -86,9 +87,11 @@ private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>?, CIn
 private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>?, CInt) -> ssize_t = sendmsg
 #endif
 private let sysDup: @convention(c) (CInt) -> CInt = dup
+#if !os(Windows)
 private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
 private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockname
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
+#endif
 private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 #if !os(Windows)
@@ -129,9 +132,6 @@ private let sysCmsgDataMutable: @convention(c) (UnsafeMutablePointer<cmsghdr>?) 
                 CNIODarwin_CMSG_DATA_MUTABLE
 private let sysCmsgSpace: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_SPACE
 private let sysCmsgLen: @convention(c) (size_t) -> size_t = CNIODarwin_CMSG_LEN
-#elseif os(Windows)
-private let sysSendMmsg: @convention(c) (NIOBSDSocket.Handle, UnsafeMutablePointer<CNIOWindows_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOWindows_sendmmsg
-private let sysRecvMmsg: @convention(c) (NIOBSDSocket.Handle, UnsafeMutablePointer<CNIOWindows_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIOWindows_recvmmsg
 #endif
 
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
@@ -230,6 +230,7 @@ internal enum Posix {
     }
 #endif
 
+#if !os(Windows)
     @inline(never)
     public static func shutdown(descriptor: CInt, how: Shutdown) throws {
         _ = try syscall(blocking: false) {
@@ -369,12 +370,14 @@ internal enum Posix {
         }
     }
 
+#if !os(Windows)
     @inline(never)
     public static func writev(descriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         return try syscall(blocking: true) {
             sysWritev(descriptor, iovecs.baseAddress!, CInt(iovecs.count))
         }
     }
+#endif
 
     @inline(never)
     public static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> IOResult<ssize_t> {
@@ -390,7 +393,6 @@ internal enum Posix {
         }
     }
 
-#if !os(Windows)
     @inline(never)
     public static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
@@ -404,7 +406,6 @@ internal enum Posix {
             sysSendMsg(descriptor, msgHdr, flags)
         }
     }
-#endif
 
     @discardableResult
     @inline(never)
@@ -413,6 +414,7 @@ internal enum Posix {
             sysLseek(descriptor, offset, whence)
         }.result
     }
+#endif
 
     @discardableResult
     @inline(never)
@@ -439,7 +441,6 @@ internal enum Posix {
         default: throw IOError(errnoCode: errno, reason: #function)
         }
     }
-#endif
 
     // It's not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
     @inline(never)
@@ -508,6 +509,7 @@ internal enum Posix {
             sysGetifaddrs(addrs)
         }
     }
+#endif
 
     @inline(never)
     public static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
@@ -516,6 +518,7 @@ internal enum Posix {
         }.result
     }
 
+#if !os(Windows)
     @inline(never)
     public static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t, timeout: CInt) throws -> CInt {
         return try syscall(blocking: false) {
@@ -523,7 +526,6 @@ internal enum Posix {
         }.result
     }
 
-#if !os(Windows)
     @inline(never)
     public static func fstat(descriptor: CInt, outStat: UnsafeMutablePointer<stat>) throws {
         _ = try syscall(blocking: false) {
