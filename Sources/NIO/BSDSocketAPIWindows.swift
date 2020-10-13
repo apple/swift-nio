@@ -93,6 +93,7 @@ import struct WinSDK.socklen_t
 import struct WinSDK.u_long
 import struct WinSDK.DWORD
 import struct WinSDK.HANDLE
+import struct WinSDK.LINGER
 import struct WinSDK.OVERLAPPED
 import struct WinSDK.SOCKADDR
 import struct WinSDK.SOCKADDR_IN
@@ -104,6 +105,8 @@ internal typealias sockaddr_in = SOCKADDR_IN
 internal typealias sockaddr_in6 = SOCKADDR_IN6
 internal typealias sockaddr_un = SOCKADDR_UN
 internal typealias sockaddr_storage = SOCKADDR_STORAGE
+
+public typealias linger = LINGER
 
 import CNIOWindows
 
