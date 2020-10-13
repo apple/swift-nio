@@ -429,4 +429,42 @@ extension NIOBSDSocket {
         }
     }
 }
+
+// MARK: _BSDSocketControlMessageProtocol implementation
+extension NIOBSDSocketControlMessage {
+    static func firstHeader(inside msghdr: UnsafePointer<msghdr>)
+            -> UnsafeMutablePointer<cmsghdr>? {
+        return CNIOWindows_CMSG_FIRSTHDR(msghdr)
+    }
+
+    static func nextHeader(inside msghdr: UnsafeMutablePointer<msghdr>,
+                           after: UnsafeMutablePointer<cmsghdr>)
+            -> UnsafeMutablePointer<cmsghdr>? {
+        return CNIOWindows_CMSG_NXTHDR(msghdr, after)
+    }
+
+    static func data(for header: UnsafePointer<cmsghdr>)
+            -> UnsafeRawBufferPointer? {
+        let data = CNIOWindows_CMSG_DATA(header)
+        let length =
+            size_t(header.pointee.cmsg_len) - NIOBSDSocketControlMessage.length(payloadSize: 0)
+        return UnsafeRawBufferPointer(start: data, count: Int(length))
+    }
+
+    static func data(for header: UnsafeMutablePointer<cmsghdr>)
+            -> UnsafeMutableRawBufferPointer? {
+        let data = CNIOWindows_CMSG_DATA_MUTABLE(header)
+        let length =
+            size_t(header.pointee.cmsg_len) - NIOBSDSocketControlMessage.length(payloadSize: 0)
+        return UnsafeMutableRawBufferPointer(start: data, count: Int(length))
+    }
+
+    static func length(payloadSize: size_t) -> size_t {
+        return CNIOWindows_CMSG_LEN(payloadSize)
+    }
+
+    static func space(payloadSize: size_t) -> size_t {
+        return CNIOWindows_CMSG_SPACE(payloadSize)
+    }
+}
 #endif
