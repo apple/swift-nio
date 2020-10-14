@@ -101,4 +101,12 @@ extension BaseSocketProtocol {
         }
         #endif
     }
+
+    internal static func ignoreSIGPIPE(socket handle: NIOBSDSocket.Handle) throws {
+        #if os(Windows)
+        // Deliberately empty: SIGPIPE just ain't a thing on Windows
+        #else
+            try ignoreSIGPIPE(descriptor: handle)
+        #endif
+    }
 }
