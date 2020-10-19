@@ -19,6 +19,7 @@
 
 #include <WinSock2.h>
 #include <time.h>
+#include <stdint.h>
 
 #define NIO(name) CNIOWindows_ ## name
 
@@ -94,6 +95,16 @@ int NIO(sendmmsg)(SOCKET s, NIO(mmsghdr) *msgvec, unsigned int vlen, int flags);
 
 int NIO(recvmmsg)(SOCKET s, NIO(mmsghdr) *msgvec, unsigned int vlen, int flags,
                   struct timespec *timeout);
+
+
+const void *NIO(CMSG_DATA)(const WSACMSGHDR *);
+void *NIO(CMSG_DATA_MUTABLE)(LPWSACMSGHDR);
+
+WSACMSGHDR *NIO(CMSG_FIRSTHDR)(const WSAMSG *);
+WSACMSGHDR *NIO(CMSG_NXTHDR)(const WSAMSG *, LPWSACMSGHDR);
+
+size_t NIO(CMSG_LEN)(size_t);
+size_t NIO(CMSG_SPACE)(size_t);
 
 #undef NIO
 
