@@ -88,6 +88,7 @@ import func WinSDK.ReadFile
 import func WinSDK.TransmitFile
 import func WinSDK.WriteFile
 import func WinSDK.WSAGetLastError
+import func WinSDK.WSAIoctl
 
 import struct WinSDK.socklen_t
 import struct WinSDK.u_long
@@ -101,12 +102,55 @@ import struct WinSDK.SOCKADDR_IN6
 import struct WinSDK.SOCKADDR_UN
 import struct WinSDK.SOCKADDR_STORAGE
 
+import typealias WinSDK.LPFN_WSARECVMSG
+
 internal typealias sockaddr_in = SOCKADDR_IN
 internal typealias sockaddr_in6 = SOCKADDR_IN6
 internal typealias sockaddr_un = SOCKADDR_UN
 internal typealias sockaddr_storage = SOCKADDR_STORAGE
 
 public typealias linger = LINGER
+
+fileprivate var IOC_IN: DWORD {
+  0x8000_0000
+}
+
+fileprivate var IOC_OUT: DWORD {
+  0x4000_0000
+}
+
+fileprivate var IOC_INOUT: DWORD {
+  IOC_IN | IOC_OUT
+}
+
+fileprivate var IOC_WS2: DWORD {
+  0x0800_0000
+}
+
+fileprivate func _WSAIORW(_ x: DWORD, _ y: DWORD) -> DWORD {
+  IOC_INOUT | x | y
+}
+
+fileprivate var SIO_GET_EXTENSION_FUNCTION_POINTER: DWORD {
+  _WSAIORW(IOC_WS2, 6)
+}
+
+fileprivate var WSAID_WSARECVMSG: _GUID {
+  _GUID(Data1: 0xf689d7c8, Data2: 0x6f1f, Data3: 0x436b,
+        Data4: (0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22))
+}
+
+fileprivate var WSAID_WSASENDMSG: _GUID {
+  _GUID(Data1: 0xa441e712, Data2: 0x754f, Data3: 0x43ca,
+        Data4: (0x84,0xa7,0x0d,0xee,0x44,0xcf,0x60,0x6d))
+}
+
+// TODO(compnerd) rather than query the `WSARecvMsg` and `WSASendMsg` on each
+// message, we should query that and cache the value.  This requires
+// understanding the lifetime validity of the pointer.
+// TODO(compnerd) create a simpler shared wrapper to query the extension
+// function from WinSock and de-duplicate the operations in
+// `NIOBSDSocketAPI.recvmsg` and `NIOBSDSocketAPI.sendmsg`.
 
 import CNIOWindows
 
@@ -213,15 +257,64 @@ extension NIOBSDSocket {
     }
 
     @inline(never)
-    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<size_t> {
-        fatalError("recvmsg not yet implemented on Windows")
+    static func recvmsg(socket s: NIOBSDSocket.Handle,
+                        msgHdr lpMsg: UnsafeMutablePointer<msghdr>,
+                        flags: CInt)
+            throws -> IOResult<size_t> {
+        // TODO(compnerd) see comment above
+        var InBuffer = WSAID_WSARECVMSG
+        var pfnWSARecvMsg: LPFN_WSARECVMSG?
+        var cbBytesReturned: DWORD = 0
+        if WinSDK.WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER,
+                           &InBuffer, DWORD(MemoryLayout.stride(ofValue: InBuffer)),
+                           &pfnWSARecvMsg,
+                           DWORD(MemoryLayout.stride(ofValue: pfnWSARecvMsg)),
+                           &cbBytesReturned, nil, nil) == SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "WSAIoctl")
+        }
+
+        guard let WSARecvMsg = pfnWSARecvMsg else {
+            throw IOError(windows: DWORD(ERROR_INVALID_FUNCTION),
+                          reason: "recvmsg")
+        }
+
+        var dwNumberOfBytesRecvd: DWORD = 0
+        // FIXME(compnerd) is the socket guaranteed to not be overlapped?
+        if WSARecvMsg(s, lpMsg, &dwNumberOfBytesRecvd, nil, nil) == SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "recvmsg")
+        }
+        return .processed(size_t(dwNumberOfBytesRecvd))
     }
 
     @inline(never)
-    static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<size_t> {
-        fatalError("recvmsg not yet implemented on Windows")
+    static func sendmsg(socket Handle: NIOBSDSocket.Handle,
+                        msgHdr lpMsg: UnsafePointer<msghdr>,
+                        flags dwFlags: CInt) throws -> IOResult<size_t> {
+        // TODO(compnerd) see comment above
+        var InBuffer = WSAID_WSASENDMSG
+        var pfnWSASendMsg: LPFN_WSASENDMSG?
+        var cbBytesReturned: DWORD = 0
+        if WinSDK.WSAIoctl(Handle, SIO_GET_EXTENSION_FUNCTION_POINTER,
+                           &InBuffer, DWORD(MemoryLayout.stride(ofValue: InBuffer)),
+                           &pfnWSASendMsg,
+                           DWORD(MemoryLayout.stride(ofValue: pfnWSASendMsg)),
+                           &cbBytesReturned, nil, nil) == SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "WSAIoctl")
+        }
+
+        guard let WSASendMsg = pfnWSASendMsg else {
+            throw IOError(windows: DWORD(ERROR_INVALID_FUNCTION),
+                          reason: "sendmsg")
+        }
+
+        let lpMsg: LPWSAMSG = UnsafeMutablePointer<WSAMSG>(mutating: lpMsg)
+        var NumberOfBytesSent: DWORD = 0
+        // FIXME(compnerd) is the socket guaranteed to not be overlapped?
+        if WSASendMsg(Handle, lpMsg, DWORD(dwFlags), &NumberOfBytesSent, nil,
+                      nil) == SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "sendmsg")
+        }
+        return .processed(size_t(NumberOfBytesSent))
     }
 
     @inline(never)
@@ -410,7 +503,7 @@ extension NIOBSDSocket {
             CNIOWindows_REPARSE_DATA_BUFFER()
         try withUnsafeMutablePointer(to: &dbReparseDataBuffer) {
             if !DeviceIoControl(hFile, FSCTL_GET_REPARSE_POINT, nil, 0, $0,
-                                DWORD(MemoryLayout<REPARSE_DATA_BUFFER>.stride),
+                                DWORD(MemoryLayout<CNIOWindows_REPARSE_DATA_BUFFER>.stride),
                                 &nBytesWritten, nil) {
                 throw IOError(windows: GetLastError(), reason: "DeviceIoControl")
             }
@@ -427,6 +520,44 @@ extension NIOBSDSocket {
                                        DWORD(MemoryLayout<FILE_DISPOSITION_INFO_EX>.stride)) {
             throw IOError(windows: GetLastError(), reason: "GetFileInformationByHandle")
         }
+    }
+}
+
+// MARK: _BSDSocketControlMessageProtocol implementation
+extension NIOBSDSocketControlMessage {
+    static func firstHeader(inside msghdr: UnsafePointer<msghdr>)
+            -> UnsafeMutablePointer<cmsghdr>? {
+        return CNIOWindows_CMSG_FIRSTHDR(msghdr)
+    }
+
+    static func nextHeader(inside msghdr: UnsafeMutablePointer<msghdr>,
+                           after: UnsafeMutablePointer<cmsghdr>)
+            -> UnsafeMutablePointer<cmsghdr>? {
+        return CNIOWindows_CMSG_NXTHDR(msghdr, after)
+    }
+
+    static func data(for header: UnsafePointer<cmsghdr>)
+            -> UnsafeRawBufferPointer? {
+        let data = CNIOWindows_CMSG_DATA(header)
+        let length =
+            size_t(header.pointee.cmsg_len) - NIOBSDSocketControlMessage.length(payloadSize: 0)
+        return UnsafeRawBufferPointer(start: data, count: Int(length))
+    }
+
+    static func data(for header: UnsafeMutablePointer<cmsghdr>)
+            -> UnsafeMutableRawBufferPointer? {
+        let data = CNIOWindows_CMSG_DATA_MUTABLE(header)
+        let length =
+            size_t(header.pointee.cmsg_len) - NIOBSDSocketControlMessage.length(payloadSize: 0)
+        return UnsafeMutableRawBufferPointer(start: data, count: Int(length))
+    }
+
+    static func length(payloadSize: size_t) -> size_t {
+        return CNIOWindows_CMSG_LEN(payloadSize)
+    }
+
+    static func space(payloadSize: size_t) -> size_t {
+        return CNIOWindows_CMSG_SPACE(payloadSize)
     }
 }
 #endif

@@ -84,14 +84,16 @@ extension NIOBSDSocket {
         return try Posix.read(descriptor: s, pointer: buf, size: len)
     }
 
-    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt) throws -> IOResult<size_t> {
-        return try Posix.recvmsg(descriptor: descriptor, msgHdr: msgHdr, flags: flags)
+    static func recvmsg(socket: NIOBSDSocket.Handle,
+                        msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt)
+            throws -> IOResult<size_t> {
+        return try Posix.recvmsg(descriptor: socket, msgHdr: msgHdr, flags: flags)
     }
 
-    static func sendmsg(descriptor: CInt,
-                        msgHdr: UnsafePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<size_t> {
-        return try Posix.sendmsg(descriptor: descriptor, msgHdr: msgHdr, flags: flags)
+    static func sendmsg(socket: NIOBSDSocket.Handle,
+                        msgHdr: UnsafePointer<msghdr>, flags: CInt)
+            throws -> IOResult<size_t> {
+        return try Posix.sendmsg(descriptor: socket, msgHdr: msgHdr, flags: flags)
     }
 
     static func send(socket s: NIOBSDSocket.Handle,
@@ -223,6 +225,62 @@ extension NIOBSDSocket {
             }
             throw err
         }
+    }
+}
+
+#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+import CNIODarwin
+private let CMSG_FIRSTHDR = CNIODarwin_CMSG_FIRSTHDR
+private let CMSG_NXTHDR = CNIODarwin_CMSG_NXTHDR
+private let CMSG_DATA = CNIODarwin_CMSG_DATA
+private let CMSG_DATA_MUTABLE = CNIODarwin_CMSG_DATA_MUTABLE
+private let CMSG_SPACE = CNIODarwin_CMSG_SPACE
+private let CMSG_LEN = CNIODarwin_CMSG_LEN
+#else
+import CNIOLinux
+private let CMSG_FIRSTHDR = CNIOLinux_CMSG_FIRSTHDR
+private let CMSG_NXTHDR = CNIOLinux_CMSG_NXTHDR
+private let CMSG_DATA = CNIOLinux_CMSG_DATA
+private let CMSG_DATA_MUTABLE = CNIOLinux_CMSG_DATA_MUTABLE
+private let CMSG_SPACE = CNIOLinux_CMSG_SPACE
+private let CMSG_LEN = CNIOLinux_CMSG_LEN
+#endif
+
+// MARK: _BSDSocketControlMessageProtocol implementation
+extension NIOBSDSocketControlMessage {
+    static func firstHeader(inside msghdr: UnsafePointer<msghdr>)
+            -> UnsafeMutablePointer<cmsghdr>? {
+        return CMSG_FIRSTHDR(msghdr)
+    }
+
+    static func nextHeader(inside msghdr: UnsafeMutablePointer<msghdr>,
+                           after: UnsafeMutablePointer<cmsghdr>)
+            -> UnsafeMutablePointer<cmsghdr>? {
+        return CMSG_NXTHDR(msghdr, after)
+    }
+
+    static func data(for header: UnsafePointer<cmsghdr>)
+            -> UnsafeRawBufferPointer? {
+        let data = CMSG_DATA(header)
+        let length =
+            size_t(header.pointee.cmsg_len) - NIOBSDSocketControlMessage.length(payloadSize: 0)
+        return UnsafeRawBufferPointer(start: data, count: Int(length))
+    }
+
+    static func data(for header: UnsafeMutablePointer<cmsghdr>)
+            -> UnsafeMutableRawBufferPointer? {
+        let data = CMSG_DATA_MUTABLE(header)
+        let length =
+            size_t(header.pointee.cmsg_len) - NIOBSDSocketControlMessage.length(payloadSize: 0)
+        return UnsafeMutableRawBufferPointer(start: data, count: Int(length))
+    }
+
+    static func length(payloadSize: size_t) -> size_t {
+        return CMSG_LEN(payloadSize)
+    }
+
+    static func space(payloadSize: size_t) -> size_t {
+        return CMSG_SPACE(payloadSize)
     }
 }
 

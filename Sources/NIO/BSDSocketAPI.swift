@@ -59,7 +59,13 @@ import let WinSDK.TCP_NODELAY
 
 import struct WinSDK.SOCKET
 
+import struct WinSDK.WSACMSGHDR
+import struct WinSDK.WSAMSG
+
 import struct WinSDK.socklen_t
+
+internal typealias msghdr = WSAMSG
+internal typealias cmsghdr = WSACMSGHDR
 #endif
 
 protocol _SocketShutdownProtocol {
@@ -402,9 +408,11 @@ extension NIOBSDSocket.Option {
 /// The requested UDS path exists and has wrong type (not a socket).
 public struct UnixDomainSocketPathWrongType: Error {}
 
-/// This protocol defines the methods that are expected to be found on `NIOBSDSocket`. While defined as a protocol
-/// there is no expectation that any object other than `NIOBSDSocket` will implement this protocol: instead, this protocol
-/// acts as a reference for what new supported operating systems must implement.
+/// This protocol defines the methods that are expected to be found on
+/// `NIOBSDSocket`. While defined as a protocol there is no expectation that any
+/// object other than `NIOBSDSocket` will implement this protocol: instead, this
+/// protocol acts as a reference for what new supported operating systems must
+/// implement.
 protocol _BSDSocketProtocol {
     static func accept(socket s: NIOBSDSocket.Handle,
                        address addr: UnsafeMutablePointer<sockaddr>?,
@@ -443,14 +451,16 @@ protocol _BSDSocketProtocol {
     // NOTE: this should return a `ssize_t`, however, that is not a standard
     // type, and defining that type is difficult.  Opt to return a `size_t`
     // which is the same size, but is unsigned.
-    static func recvmsg(descriptor: CInt, msgHdr: UnsafeMutablePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<size_t>
+    static func recvmsg(socket: NIOBSDSocket.Handle,
+                        msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt)
+            throws -> IOResult<size_t>
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard
     // type, and defining that type is difficult.  Opt to return a `size_t`
     // which is the same size, but is unsigned.
-    static func sendmsg(descriptor: CInt, msgHdr: UnsafePointer<msghdr>,
-                        flags: CInt) throws -> IOResult<size_t>
+    static func sendmsg(socket: NIOBSDSocket.Handle,
+                        msgHdr: UnsafePointer<msghdr>, flags: CInt)
+            throws -> IOResult<size_t>
 
     static func send(socket s: NIOBSDSocket.Handle,
                      buffer buf: UnsafeRawPointer,
@@ -526,5 +536,34 @@ protocol _BSDSocketProtocol {
     static func cleanupUnixDomainSocket(atPath path: String) throws
 }
 
-/// If this extension is hitting a compile error, your platform is missing one of the functions defined above!
+/// If this extension is hitting a compile error, your platform is missing one
+/// of the functions defined above!
 extension NIOBSDSocket: _BSDSocketProtocol { }
+
+/// This protocol defines the methods that are expected to be found on
+/// `NIOBSDControlMessage`. While defined as a protocol there is no expectation
+/// that any object other than `NIOBSDControlMessage` will implement this
+/// protocol: instead, this protocol acts as a reference for what new supported
+/// operating systems must implement.
+protocol _BSDSocketControlMessageProtocol {
+    static func firstHeader(inside msghdr: UnsafePointer<msghdr>)
+            -> UnsafeMutablePointer<cmsghdr>?
+
+    static func nextHeader(inside msghdr: UnsafeMutablePointer<msghdr>,
+                           after: UnsafeMutablePointer<cmsghdr>)
+            -> UnsafeMutablePointer<cmsghdr>?
+
+    static func data(for header: UnsafePointer<cmsghdr>)
+            -> UnsafeRawBufferPointer?
+
+    static func data(for header: UnsafeMutablePointer<cmsghdr>)
+            -> UnsafeMutableRawBufferPointer?
+
+    static func length(payloadSize: size_t) -> size_t
+
+    static func space(payloadSize: size_t) -> size_t
+}
+
+/// If this extension is hitting a compile error, your platform is missing one
+/// of the functions defined above!
+enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol { }
