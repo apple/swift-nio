@@ -909,6 +909,8 @@ extension ChannelPipeline {
             individualPosition = .after(handler)
         }
 
+        let promise = self.eventLoop.makePromise(of: Void.self)
+
         // Add all the handlers.
         func addAllHandlersAndComplete() {
             // Function for reducing to propagate errors.
@@ -927,7 +929,6 @@ extension ChannelPipeline {
             promise.completeWith(result)
         }
 
-        let promise = self.eventLoop.makePromise(of: Void.self)
         if self.eventLoop.inEventLoop {
             addAllHandlersAndComplete()
         } else {
