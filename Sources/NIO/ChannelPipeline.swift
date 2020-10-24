@@ -913,20 +913,18 @@ extension ChannelPipeline {
 
         // Add all the handlers.
         func addAllHandlersAndComplete() {
-            // Function for reducing to propagate errors.
-            func firstErrorOrSuccess(initial: Result<Void, Error>, current: Result<Void, Error>) ->Result<Void, Error> {
-                switch initial {
+            for handler in handlers {
+                let addResult = self._add(handler, position: individualPosition)
+                switch addResult {
                 case .success:
-                    return current
+                    break // Keep going.
                 case .failure:
-                    return initial
+                    // Report failure and return.
+                    promise.completeWith(addResult)
+                    return
                 }
             }
-
-            let result = handlers.map {
-                _add($0, position: individualPosition)
-            }.reduce(.success(()), firstErrorOrSuccess)
-            promise.completeWith(result)
+            promise.succeed(())
         }
 
         if self.eventLoop.inEventLoop {
