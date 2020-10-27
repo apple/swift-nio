@@ -192,8 +192,8 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - position: The position in the `ChannelPipeline` to add `handler`. Defaults to `.last`.
     /// - returns: the result of adding this handler - either success or failure with an error code if this could not be completed.
     private func _add(_ handler: ChannelHandler,
-              name: String? = nil,
-              position: ChannelPipeline.Position = .last) -> Result<Void, Error> {
+                      name: String? = nil,
+                      position: ChannelPipeline.Position = .last) -> Result<Void, Error> {
         self.eventLoop.assertInEventLoop()
 
         if self.destroyed {
@@ -203,24 +203,24 @@ public final class ChannelPipeline: ChannelInvoker {
         switch position {
         case .first:
             return self.add0(name: name,
-                      handler: handler,
-                      relativeContext: head!,
-                      operation: self.add0(context:after:))
+                             handler: handler,
+                             relativeContext: head!,
+                             operation: self.add0(context:after:))
         case .last:
             return self.add0(name: name,
-                      handler: handler,
-                      relativeContext: tail!,
-                      operation: self.add0(context:before:))
+                             handler: handler,
+                             relativeContext: tail!,
+                             operation: self.add0(context:before:))
         case .before(let beforeHandler):
             return self.add0(name: name,
-                      handler: handler,
-                      relativeHandler: beforeHandler,
-                      operation: self.add0(context:before:))
+                             handler: handler,
+                             relativeHandler: beforeHandler,
+                             operation: self.add0(context:before:))
         case .after(let afterHandler):
             return self.add0(name: name,
-                      handler: handler,
-                      relativeHandler: afterHandler,
-                      operation: self.add0(context:after:))
+                             handler: handler,
+                             relativeHandler: afterHandler,
+                             operation: self.add0(context:after:))
         }
     }
 
