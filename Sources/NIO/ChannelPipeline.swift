@@ -171,50 +171,57 @@ public final class ChannelPipeline: ChannelInvoker {
                            name: String? = nil,
                            position: ChannelPipeline.Position = .last) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
-
-        func _add() {
-            if self.destroyed {
-                promise.fail(ChannelError.ioOnClosedChannel)
-                return
-            }
-
-            switch position {
-            case .first:
-                self.add0(name: name,
-                          handler: handler,
-                          relativeContext: head!,
-                          operation: self.add0(context:after:),
-                          promise: promise)
-            case .last:
-                self.add0(name: name,
-                          handler: handler,
-                          relativeContext: tail!,
-                          operation: self.add0(context:before:),
-                          promise: promise)
-            case .before(let beforeHandler):
-                self.add0(name: name,
-                          handler: handler,
-                          relativeHandler: beforeHandler,
-                          operation: self.add0(context:before:),
-                          promise: promise)
-            case .after(let afterHandler):
-                self.add0(name: name,
-                          handler: handler,
-                          relativeHandler: afterHandler,
-                          operation: self.add0(context:after:),
-                          promise: promise)
-            }
-        }
-
         if self.eventLoop.inEventLoop {
-            _add()
+            promise.completeWith(self._add(handler, name: name, position: position))
         } else {
             self.eventLoop.execute {
-                _add()
+                promise.completeWith(self._add(handler, name: name, position: position))
             }
         }
 
         return promise.futureResult
+    }
+
+    /// Synchronously add a `ChannelHandler` to the `ChannelPipeline`.
+    ///
+    /// May only be called from on the event loop.
+    ///
+    /// - parameters:
+    ///     - name: the name to use for the `ChannelHandler` when its added. If none is specified it will generate a name.
+    ///     - handler: the `ChannelHandler` to add
+    ///     - position: The position in the `ChannelPipeline` to add `handler`. Defaults to `.last`.
+    /// - returns: the result of adding this handler - either success or failure with an error code if this could not be completed.
+    private func _add(_ handler: ChannelHandler,
+                      name: String? = nil,
+                      position: ChannelPipeline.Position = .last) -> Result<Void, Error> {
+        self.eventLoop.assertInEventLoop()
+
+        if self.destroyed {
+            return .failure(ChannelError.ioOnClosedChannel)
+        }
+
+        switch position {
+        case .first:
+            return self.add0(name: name,
+                             handler: handler,
+                             relativeContext: head!,
+                             operation: self.add0(context:after:))
+        case .last:
+            return self.add0(name: name,
+                             handler: handler,
+                             relativeContext: tail!,
+                             operation: self.add0(context:before:))
+        case .before(let beforeHandler):
+            return self.add0(name: name,
+                             handler: handler,
+                             relativeHandler: beforeHandler,
+                             operation: self.add0(context:before:))
+        case .after(let afterHandler):
+            return self.add0(name: name,
+                             handler: handler,
+                             relativeHandler: afterHandler,
+                             operation: self.add0(context:after:))
+        }
     }
 
     /// Synchronously add a `ChannelHandler` to the pipeline, relative to another `ChannelHandler`,
@@ -232,25 +239,21 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - relativeHandler: The `ChannelHandler` already in the `ChannelPipeline` that `handler` will be
     ///         inserted relative to.
     ///     - operation: A callback that will insert `handler` relative to `relativeHandler`.
-    ///     - promise: An `EventLoopPromise<Void>` that will fire when the operation is complete, or will fire with
-    ///         an error if it could not be completed.
+    /// - returns: the result of adding this handler - either success or failure with an error code if this could not be completed.
     private func add0(name: String?,
                       handler: ChannelHandler,
                       relativeHandler: ChannelHandler,
-                      operation: (ChannelHandlerContext, ChannelHandlerContext) -> Void,
-                      promise: EventLoopPromise<Void>) {
+                      operation: (ChannelHandlerContext, ChannelHandlerContext) -> Void) -> Result<Void, Error> {
         self.eventLoop.assertInEventLoop()
         if self.destroyed {
-            promise.fail(ChannelError.ioOnClosedChannel)
-            return
+            return .failure(ChannelError.ioOnClosedChannel)
         }
 
         guard let context = self.contextForPredicate0({ $0.handler === relativeHandler }) else {
-            promise.fail(ChannelPipelineError.notFound)
-            return
+            return .failure(ChannelPipelineError.notFound)
         }
 
-        self.add0(name: name, handler: handler, relativeContext: context, operation: operation, promise: promise)
+        return self.add0(name: name, handler: handler, relativeContext: context, operation: operation)
     }
 
     /// Synchronously add a `ChannelHandler` to the pipeline, relative to a `ChannelHandlerContext`,
@@ -268,18 +271,15 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - relativeContext: The `ChannelHandlerContext` already in the `ChannelPipeline` that `handler` will be
     ///         inserted relative to.
     ///     - operation: A callback that will insert `handler` relative to `relativeHandler`.
-    ///     - promise: An `EventLoopPromise<Void>` that will fire when the operation is complete, or will fire with
-    ///         an error if it could not be completed.
+    /// - returns: the result of adding this handler - either success or failure with an error code if this could not be completed.
     private func add0(name: String?,
                       handler: ChannelHandler,
                       relativeContext: ChannelHandlerContext,
-                      operation: (ChannelHandlerContext, ChannelHandlerContext) -> Void,
-                      promise: EventLoopPromise<Void>) {
+                      operation: (ChannelHandlerContext, ChannelHandlerContext) -> Void) -> Result<Void, Error> {
         self.eventLoop.assertInEventLoop()
 
         if destroyed {
-            promise.fail(ChannelError.ioOnClosedChannel)
-            return
+            return .failure(ChannelError.ioOnClosedChannel)
         }
 
         let context = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
@@ -287,10 +287,10 @@ public final class ChannelPipeline: ChannelInvoker {
 
         do {
             try context.invokeHandlerAdded()
-            promise.succeed(())
+            return .success(())
         } catch let err {
             removeHandlerFromPipeline(context: context, promise: nil)
-            promise.fail(err)
+            return .failure(err)
         }
     }
 
@@ -907,9 +907,35 @@ extension ChannelPipeline {
         case .after(let handler):
             handlers.reverse()
             individualPosition = .after(handler)
-
         }
-        return .andAllSucceed(handlers.map { addHandler($0, position: individualPosition) }, on: eventLoop)
+
+        let promise = self.eventLoop.makePromise(of: Void.self)
+
+        // Add all the handlers.
+        func addAllHandlersAndComplete() {
+            for handler in handlers {
+                let addResult = self._add(handler, position: individualPosition)
+                switch addResult {
+                case .success:
+                    break // Keep going.
+                case .failure:
+                    // Report failure and return.
+                    promise.completeWith(addResult)
+                    return
+                }
+            }
+            promise.succeed(())
+        }
+
+        if self.eventLoop.inEventLoop {
+            addAllHandlersAndComplete()
+        } else {
+            self.eventLoop.execute {
+                addAllHandlersAndComplete()
+            }
+        }
+
+        return promise.futureResult
     }
 
     /// Adds the provided channel handlers to the pipeline in the order given, taking account
