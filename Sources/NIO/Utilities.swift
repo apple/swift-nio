@@ -17,10 +17,17 @@ import CNIOLinux
 #if os(Windows)
 import let WinSDK.RelationProcessorCore
 
+import let WinSDK.AF_UNSPEC
+import let WinSDK.ERROR_SUCCESS
+
+import func WinSDK.GetAdaptersAddresses
 import func WinSDK.GetLastError
 import func WinSDK.GetLogicalProcessorInformation
 
+import struct WinSDK.IP_ADAPTER_ADDRESSES
+import struct WinSDK.IP_ADAPTER_UNICAST_ADDRESS
 import struct WinSDK.SYSTEM_LOGICAL_PROCESSOR_INFORMATION
+import struct WinSDK.ULONG
 
 import typealias WinSDK.DWORD
 #endif
@@ -92,6 +99,7 @@ public enum System {
 #endif
     }
 
+#if !os(Windows)
     /// A utility function that enumerates the available network interfaces on this machine.
     ///
     /// This function returns values that are true for a brief snapshot in time. These results can
@@ -102,6 +110,9 @@ public enum System {
     /// - throws: If an error is encountered while enumerating interfaces.
     @available(*, deprecated, renamed: "enumerateDevices")
     public static func enumerateInterfaces() throws -> [NIONetworkInterface] {
+        var interfaces: [NIONetworkInterface] = []
+        interfaces.reserveCapacity(12)  // Arbitrary choice.
+
         var interface: UnsafeMutablePointer<ifaddrs>? = nil
         try Posix.getifaddrs(&interface)
         let originalInterface = interface
@@ -109,17 +120,16 @@ public enum System {
             freeifaddrs(originalInterface)
         }
 
-        var results: [NIONetworkInterface] = []
-        results.reserveCapacity(12)  // Arbitrary choice.
         while let concreteInterface = interface {
             if let nioInterface = NIONetworkInterface(concreteInterface.pointee) {
-                results.append(nioInterface)
+                interfaces.append(nioInterface)
             }
             interface = concreteInterface.pointee.ifa_next
         }
 
-        return results
+        return interfaces
     }
+#endif
 
     /// A utility function that enumerates the available network devices on this machine.
     ///
@@ -130,6 +140,43 @@ public enum System {
     /// - returns: An array of network devices available on this machine.
     /// - throws: If an error is encountered while enumerating interfaces.
     public static func enumerateDevices() throws -> [NIONetworkDevice] {
+        var devices: [NIONetworkDevice] = []
+        devices.reserveCapacity(12)  // Arbitrary choice.
+
+#if os(Windows)
+        var ulSize: ULONG = 0
+        _ = GetAdaptersAddresses(ULONG(AF_UNSPEC), 0, nil, nil, &ulSize)
+
+        let stride: Int = MemoryLayout<IP_ADAPTER_ADDRESSES>.stride
+        let pBuffer: UnsafeMutableBufferPointer<IP_ADAPTER_ADDRESSES> =
+            UnsafeMutableBufferPointer.allocate(capacity: Int(ulSize) / stride)
+        defer {
+            pBuffer.deallocate()
+        }
+
+        let ulResult: ULONG =
+            GetAdaptersAddresses(ULONG(AF_UNSPEC), 0, nil, pBuffer.baseAddress,
+                                 &ulSize)
+        guard ulResult == ERROR_SUCCESS else {
+            throw IOError(windows: ulResult, reason: "GetAdaptersAddresses")
+        }
+
+        var pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>? =
+            UnsafeMutablePointer(pBuffer.baseAddress)
+        while pAdapter != nil {
+            let pUnicastAddresses: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>? =
+                pAdapter!.pointee.FirstUnicastAddress
+            var pUnicastAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>? =
+                pUnicastAddresses
+            while pUnicastAddress != nil {
+                if let device = NIONetworkDevice(pAdapter!, pUnicastAddress!) {
+                    devices.append(device)
+                }
+                pUnicastAddress = pUnicastAddress!.pointee.Next
+            }
+            pAdapter = pAdapter!.pointee.Next
+        }
+#else
         var interface: UnsafeMutablePointer<ifaddrs>? = nil
         try Posix.getifaddrs(&interface)
         let originalInterface = interface
@@ -137,15 +184,14 @@ public enum System {
             freeifaddrs(originalInterface)
         }
 
-        var results: [NIONetworkDevice] = []
-        results.reserveCapacity(12)  // Arbitrary choice.
         while let concreteInterface = interface {
             if let nioInterface = NIONetworkDevice(concreteInterface.pointee) {
-                results.append(nioInterface)
+                devices.append(nioInterface)
             }
             interface = concreteInterface.pointee.ifa_next
         }
 
-        return results
+#endif
+        return devices
     }
 }
