@@ -12,6 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import struct WinSDK.CHAR
+import struct WinSDK.INT
+import struct WinSDK.SOCKADDR
+import struct WinSDK.ULONG
+import struct WinSDK.WSABUF
+import struct WinSDK.WSAMSG
+#endif
+
 /// An object that manages issuing vector reads for datagram channels.
 ///
 /// Datagram channels have slightly complex read semantics, as high-throughput datagram
@@ -99,8 +108,27 @@ struct DatagramVectorReadManager {
             for i in 0..<self.messageCount {
                 // TODO(cory): almost all of this except for the iovec could be done at allocation time. Maybe we should?
 
+                let buffer: UnsafeMutableRawPointer =
+                    bufferPointer.baseAddress! + (i * messageSize)
+                let address: UnsafeMutablePointer<sockaddr_storage> =
+                    self.sockaddrVector.baseAddress! + i
+
+#if os(Windows)
+                // First we setup up the iovec and save it off.
+                self.ioVector[i] = IOVector(len: ULONG(messageSize),
+                                            buf: buffer.assumingMemoryBound(to: CHAR.self))
+
+                let msgHdr = address.withMemoryRebound(to: SOCKADDR.self, capacity: 1) {
+                    WSAMSG(name: $0,
+                           namelen: INT(MemoryLayout<sockaddr_storage>.size),
+                           lpBuffers: self.ioVector.baseAddress! + i,
+                           dwBufferCount: 1,  // This is weird, but each message gets only one array.  Duh.
+                           Control: WSABUF(),
+                           dwFlags: 0)
+                }
+#else
                 // First we set up the iovec and save it off.
-                self.ioVector[i] = IOVector(iov_base: bufferPointer.baseAddress! + (i * messageSize), iov_len: messageSize)
+                self.ioVector[i] = IOVector(iov_base: buffer, iov_len: messageSize)
                 
                 let controlBytes: UnsafeMutableRawBufferPointer
                 if reportExplicitCongestionNotifications {
@@ -111,13 +139,14 @@ struct DatagramVectorReadManager {
                 }
 
                 // Next we set up the msghdr structure. This points into the other vectors.
-                let msgHdr = msghdr(msg_name: self.sockaddrVector.baseAddress! + i ,
+                let msgHdr = msghdr(msg_name: address,
                                     msg_namelen: socklen_t(MemoryLayout<sockaddr_storage>.size),
                                     msg_iov: self.ioVector.baseAddress! + i,
                                     msg_iovlen: 1,  // This is weird, but each message gets only one array. Duh.
                                     msg_control: controlBytes.baseAddress,
                                     msg_controllen: .init(controlBytes.count),
                                     msg_flags: 0)
+#endif
                 self.messageVector[i] = MMsgHdr(msg_hdr: msgHdr, msg_len: 0)
 
                 // Note that we don't set up the sockaddr vector: that's because it needs no initialization,
@@ -171,7 +200,11 @@ struct DatagramVectorReadManager {
             totalReadSize += readBytes
 
             // Next we extract the remote peer address.
+#if os(Windows)
+            precondition(self.messageVector[i].msg_hdr.namelen != 0, "Unexpected zero length peer name")
+#else
             precondition(self.messageVector[i].msg_hdr.msg_namelen != 0, "Unexpected zero length peer name")
+#endif
             let address: SocketAddress = self.sockaddrVector[i].convert()
             
             // Extract congestion information if requested.

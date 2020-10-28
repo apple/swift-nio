@@ -13,7 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 /// The container used for writing multiple buffers via `writev`.
+#if os(Windows)
+import ucrt
+
+import struct WinSDK.CHAR
+import struct WinSDK.ULONG
+import struct WinSDK.WSABUF
+import struct WinSDK.WSAMSG
+import struct WinSDK.SOCKADDR
+import struct WinSDK.socklen_t
+
+typealias IOVector = WSABUF
+#else
 typealias IOVector = iovec
+#endif
 
 // TODO: scattering support
 /* final but tests */ class Socket: BaseSocket, SocketProtocol {
@@ -23,7 +36,11 @@ typealias IOVector = iovec
     static var writevLimitBytes = Int(Int32.max)
 
     /// The maximum number of `IOVector`s to write per `writev` call.
+#if os(Windows)
+    static let writevLimitIOVectors: Int = 128
+#else
     static let writevLimitIOVectors: Int = Posix.UIO_MAXIOV
+#endif
 
     /// Create a new instance.
     ///
@@ -169,7 +186,11 @@ typealias IOVector = iovec
                  controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         // Dubious const casts - it should be OK as there is no reason why this should get mutated
         // just bad const declaration below us.
-        var vec = iovec(iov_base: UnsafeMutableRawPointer(mutating: pointer.baseAddress!), iov_len: pointer.count)
+#if os(Windows)
+        var vec = IOVector(len: ULONG(pointer.count), buf: UnsafeMutablePointer<CHAR>(mutating: pointer.baseAddress!.assumingMemoryBound(to: CHAR.self)))
+#else
+        var vec = IOVector(iov_base: UnsafeMutableRawPointer(mutating: pointer.baseAddress!), iov_len: pointer.count)
+#endif
         let notConstCorrectDestinationPtr = UnsafeMutableRawPointer(mutating: destinationPtr)
 
         return try withUnsafeHandle { handle in
@@ -208,7 +229,7 @@ typealias IOVector = iovec
     /// - throws: An `IOError` if the operation failed.
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         return try withUnsafeHandle {
-            try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
+            try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: numericCast(pointer.count))
         }
     }
 
@@ -226,7 +247,12 @@ typealias IOVector = iovec
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
                  controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int> {
-        var vec = iovec(iov_base: pointer.baseAddress, iov_len: pointer.count)
+#if os(Windows)
+        var vec = IOVector(len: ULONG(pointer.count),
+                           buf: pointer.baseAddress?.assumingMemoryBound(to: CHAR.self))
+#else
+        var vec = IOVector(iov_base: pointer.baseAddress, iov_len: pointer.count)
+#endif
 
         return try withUnsafeMutablePointer(to: &vec) { vecPtr in
             return try storage.withMutableSockAddr { (sockaddrPtr, _) in
