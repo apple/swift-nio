@@ -32,6 +32,7 @@ public protocol FileDescriptor {
     func close() throws
 }
 
+#if !os(Windows)
 extension FileDescriptor {
     internal static func setNonBlocking(fileDescriptor: CInt) throws {
         let flags = try Posix.fcntl(descriptor: fileDescriptor, command: F_GETFL, value: 0)
@@ -47,3 +48,4 @@ extension FileDescriptor {
         }
     }
 }
+#endif

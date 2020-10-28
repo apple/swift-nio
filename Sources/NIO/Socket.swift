@@ -165,9 +165,13 @@ typealias IOVector = iovec
     /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
+#if os(Windows)
+        return .processed(0)
+#else
         return try withUnsafeHandle {
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
+#endif
     }
 
     /// Send data to a destination.

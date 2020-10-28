@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import ucrt
+#endif
+
 /// A `FileRegion` represent a readable portion usually created to be sent over the network.
 ///
 /// Usually a `FileRegion` will allow the underlying transport to use `sendfile` to transfer its content and so allows transferring

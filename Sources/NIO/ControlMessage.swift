@@ -16,6 +16,10 @@
 import CNIODarwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#elseif os(Windows)
+import CNIOWindows
+
+import let WinSDK.IP_RECVTOS
 #endif
 
 /// Memory for use as `cmsghdr` and associated data.
@@ -157,6 +161,8 @@ struct ControlMessageParser {
     
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     private static let ipv4TosType = IP_RECVTOS
+    #elseif os(Windows)
+    private static let ipv4TosType = IP_RECVTOS
     #else
     private static let ipv4TosType = IP_TOS    // Linux
     #endif
@@ -191,12 +197,12 @@ struct ControlMessageParser {
 extension NIOExplicitCongestionNotificationState {
     /// Initialise a NIOExplicitCongestionNotificationState from a value received via either TCLASS or TOS cmsg.
     init(receivedValue: CInt) {
-        switch receivedValue & Posix.IPTOS_ECN_MASK {
-        case Posix.IPTOS_ECN_ECT1:
+        switch receivedValue & /* Posix.IPTOS_ECN_MASK */ 0x03 {
+        case /* Posix.IPTOS_ECN_ECT1 */ 0x01:
             self = .transportCapableFlag1
-        case Posix.IPTOS_ECN_ECT0:
+        case /* Posix.IPTOS_ECN_ECT0 */ 0x02:
             self = .transportCapableFlag0
-        case Posix.IPTOS_ECN_CE:
+        case /* Posix.IPTOS_ECN_CE */ 0x03:
             self = .congestionExperienced
         default:
             self = .transportNotCapable
@@ -209,13 +215,13 @@ extension CInt {
     init(ecnValue: NIOExplicitCongestionNotificationState) {
         switch ecnValue {
         case .transportNotCapable:
-            self = Posix.IPTOS_ECN_NOTECT
+            self = /* Posix.IPTOS_ECN_NOTECT */ 0x00
         case .transportCapableFlag0:
-            self = Posix.IPTOS_ECN_ECT0
+            self = /* Posix.IPTOS_ECN_ECT0 */ 0x02
         case .transportCapableFlag1:
-            self = Posix.IPTOS_ECN_ECT1
+            self = /* Posix.IPTOS_ECN_ECT1 */ 0x01
         case .congestionExperienced:
-            self = Posix.IPTOS_ECN_CE
+            self = /* Posix.IPTOS_ECN_CE */ 0x03
         }
     }
 }

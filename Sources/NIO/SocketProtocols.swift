@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import struct WinSDK.socklen_t
+#endif
+
 protocol BaseSocketProtocol: CustomStringConvertible {
     associatedtype SelectableType: Selectable
 

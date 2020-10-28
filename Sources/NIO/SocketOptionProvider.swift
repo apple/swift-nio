@@ -12,6 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import struct WinSDK.IN_ADDR
+
+fileprivate typealias in_addr = WinSDK.IN_ADDR
+#endif
+
 /// This protocol defines an object, most commonly a `Channel`, that supports
 /// setting and getting socket options (via `setsockopt`/`getsockopt` or similar).
 /// It provides a strongly typed API that makes working with larger, less-common

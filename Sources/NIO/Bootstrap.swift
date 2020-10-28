@@ -12,6 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import ucrt
+
+import struct WinSDK.DWORD
+import struct WinSDK.HANDLE
+
+import func WinSDK.GetFileType
+
+import let WinSDK.FILE_TYPE_PIPE
+import let WinSDK.INVALID_HANDLE_VALUE
+#endif
+
 /// The type of all `channelInitializer` callbacks.
 internal typealias ChannelInitializerCallback = (Channel) -> EventLoopFuture<Void>
 
@@ -1024,6 +1036,20 @@ public final class NIOPipeBootstrap {
     private func validateFileDescriptorIsNotAFile(_ descriptor: CInt) throws {
         precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil,
                      "limitation in SwiftNIO: cannot bootstrap PipeChannel on EventLoop")
+#if os(Windows)
+        // NOTE: this is a *non-owning* handle, do *NOT* call `CloseHandle`
+        let hFile: HANDLE = HANDLE(bitPattern: _get_osfhandle(descriptor))!
+        if hFile == INVALID_HANDLE_VALUE {
+          throw IOError(errnoCode: EBADF, reason: "_get_osfhandle")
+        }
+        switch GetFileType(hFile) {
+        case DWORD(FILE_TYPE_PIPE):
+          break
+        default:
+          throw ChannelError.operationUnsupported
+        }
+
+#else
         var s: stat = .init()
         try withUnsafeMutablePointer(to: &s) { ptr in
             try Posix.fstat(descriptor: descriptor, outStat: ptr)
@@ -1034,6 +1060,7 @@ public final class NIOPipeBootstrap {
         default:
             () // Let's default to ok
         }
+#endif
     }
 
     /// Create the `PipeChannel` with the provided file descriptor which is used for both input & output.
@@ -1050,7 +1077,7 @@ public final class NIOPipeBootstrap {
     /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
     public func withInputOutputDescriptor(_ fileDescriptor: CInt) -> EventLoopFuture<Channel> {
         let inputFD = fileDescriptor
-        let outputFD = dup(fileDescriptor)
+        let outputFD = try! Posix.dup(descriptor: fileDescriptor)
 
         return self.withPipes(inputDescriptor: inputFD, outputDescriptor: outputFD).flatMapErrorThrowing { error in
             try! Posix.close(descriptor: outputFD)

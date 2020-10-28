@@ -14,12 +14,38 @@
 
 import NIOConcurrencyHelpers
 
+#if os(Windows)
+import let WinSDK.EBADF
+
+import let WinSDK.FD_ACCEPT
+import let WinSDK.FD_CLOSE
+import let WinSDK.FD_CONNECT
+import let WinSDK.FD_READ
+import let WinSDK.FD_WRITE
+
+import let WinSDK.INFINITE
+import let WinSDK.INVALID_HANDLE_VALUE
+import let WinSDK.WAIT_OBJECT_0
+
+import struct WinSDK.DWORD
+import struct WinSDK.HANDLE
+import struct WinSDK.WSANETWORKEVENTS
+
+import func WinSDK.WaitForSingleObject
+import func WinSDK.WaitForMultipleObjects
+import func WinSDK.WSACloseEvent
+import func WinSDK.WSACreateEvent
+import func WinSDK.WSAEnumNetworkEvents
+import func WinSDK.WSAEventSelect
+#endif
+
 private enum SelectorLifecycleState {
     case open
     case closing
     case closed
 }
 
+#if !os(Windows)
 private extension timespec {
     init(timeAmount amount: TimeAmount) {
         let nsecPerSec: Int64 = 1_000_000_000
@@ -28,6 +54,7 @@ private extension timespec {
         self = timespec(tv_sec: Int(sec), tv_nsec: Int(ns - sec * nsecPerSec))
     }
 }
+#endif
 
 private extension Optional {
     func withUnsafeOptionalPointer<T>(_ body: (UnsafePointer<Wrapped>?) throws -> T) rethrows -> T {
@@ -249,6 +276,93 @@ extension EpollFilterSet {
 #endif
 
 
+#if os(Windows)
+    private struct WSAEventSelectEvents: OptionSet, Equatable {
+        typealias RawValue = CLong
+
+        let rawValue: RawValue
+        init(rawValue: RawValue) {
+            self.rawValue = rawValue
+        }
+    }
+
+    extension WSAEventSelectEvents {
+        static let _none = WSAEventSelectEvents([])
+
+        static let accept = WSAEventSelectEvents(rawValue: FD_ACCEPT)
+        static let close = WSAEventSelectEvents(rawValue: FD_CLOSE)
+        static let connect = WSAEventSelectEvents(rawValue: FD_CONNECT)
+        static let read = WSAEventSelectEvents(rawValue: FD_READ)
+        static let write = WSAEventSelectEvents(rawValue: FD_WRITE)
+    }
+
+    extension WSAEventSelectEvents {
+        init(for events: SelectorEventSet) {
+            var value: WSAEventSelectEvents = []
+            if events.contains(.read) {
+                value.formUnion([.accept, .read])
+            }
+            if events.contains(.write) {
+                value.formUnion([.connect, .write])
+            }
+            if events.contains([.reset, .readEOF, .writeEOF]) {
+                value.formUnion([.close])
+            }
+            self = value
+        }
+    }
+
+    extension SelectorEventSet {
+        init(for events: WSANETWORKEVENTS) {
+            var value: SelectorEventSet = ._none
+            if events.lNetworkEvents & FD_ACCEPT == FD_ACCEPT {
+                value.formUnion(.read)
+            }
+            if events.lNetworkEvents & FD_READ == FD_READ {
+                value.formUnion(.read)
+            }
+            if events.lNetworkEvents & FD_CONNECT == FD_CONNECT {
+                value.formUnion(.write)
+            }
+            if events.lNetworkEvents & FD_WRITE == FD_WRITE {
+                value.formUnion(.write)
+            }
+            if events.lNetworkEvents & FD_CLOSE == FD_CLOSE {
+                value.formUnion(.reset)
+            }
+            self = value
+        }
+    }
+
+    extension SelectorEventSet: CustomDebugStringConvertible {
+        var debugDescription: String {
+            var events: [String] = []
+            if self.contains(.read) { events.append("read") }
+            if self.contains(.write) { events.append("write") }
+            if self.contains(.reset) { events.append("reset") }
+            if self.contains(.readEOF) || self.contains(.writeEOF) { events.append("EOF") }
+            return "[\(self.rawValue) :: \(events.joined(separator: ","))]"
+        }
+    }
+
+    extension SelectorEventSet {
+        var lNetworkEvents: CLong {
+          var lEvents: CLong = 0
+          if self.contains(.read) {
+              lEvents |= (FD_READ | FD_ACCEPT)
+          }
+          if self.contains(.write) {
+              lEvents |= (FD_WRITE | FD_CONNECT)
+          }
+          if self.contains([.reset, .readEOF, .writeEOF]) {
+              lEvents |= FD_CLOSE
+          }
+          return lEvents
+        }
+    }
+#endif
+
+
 ///  A `Selector` allows a user to register different `Selectable` sources to an underlying OS selector, and for that selector to notify them once IO is ready for them to process.
 ///
 /// This implementation offers an consistent API over epoll (for linux) and kqueue (for Darwin, BSD).
@@ -258,18 +372,25 @@ internal class Selector<R: Registration> {
 
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     private typealias EventType = kevent
+    #elseif os(Windows)
     #else
     private typealias EventType = Epoll.epoll_event
     private var earliestTimer: NIODeadline = .distantFuture
     #endif
 
+#if !os(Windows)
     private var eventsCapacity = 64
     private var events: UnsafeMutablePointer<EventType>
-    private var registrations = [Int: R]()
+#endif
+    private var registrations = [NIOBSDSocket.Handle: R]()
     // temporary workaround to stop us delivering outdated events; read in `whenReady`, set in `deregister`
     private var deregistrationsHappened: Bool = false
 
     private let externalSelectorFDLock = Lock()
+#if os(Windows)
+    private var hEvents: [HANDLE?] = []
+    private var mSocketIndex: [UInt64:Int] = [:]
+#else
     // The rules for `self.selectorFD`, `self.eventFD`, and `self.timerFD`:
     // reads: `self.externalSelectorFDLock` OR access from the EventLoop thread
     // writes: `self.externalSelectorFDLock` AND access from the EventLoop thread
@@ -278,8 +399,10 @@ internal class Selector<R: Registration> {
     private var eventFD: CInt // -1 == we're closed
     private var timerFD: CInt // -1 == we're closed
     #endif
+#endif
     private let myThread: NIOThread
 
+#if !os(Windows)
     private static func allocateEventsArray(capacity: Int) -> UnsafeMutablePointer<EventType> {
         let events: UnsafeMutablePointer<EventType> = UnsafeMutablePointer.allocate(capacity: capacity)
         events.initialize(to: EventType())
@@ -290,17 +413,23 @@ internal class Selector<R: Registration> {
         events.deinitialize(count: capacity)
         events.deallocate()
     }
+#endif
 
     internal func testsOnly_withUnsafeSelectorFD<T>(_ body: (CInt) throws -> T) throws -> T {
         assert(self.myThread != NIOThread.current)
         return try self.externalSelectorFDLock.withLock {
+#if os(Windows)
+            throw EventLoopError.shutdown
+#else
             guard self.selectorFD != -1 else {
                 throw EventLoopError.shutdown
             }
             return try body(self.selectorFD)
+#endif
         }
     }
 
+#if !os(Windows)
     private func growEventArrayIfNeeded(ready: Int) {
         assert(self.myThread == NIOThread.current)
         guard ready == eventsCapacity else {
@@ -312,10 +441,13 @@ internal class Selector<R: Registration> {
         eventsCapacity = ready << 1
         events = Selector.allocateEventsArray(capacity: eventsCapacity)
     }
+#endif
 
     init() throws {
         self.myThread = NIOThread.current
+#if !os(Windows)
         events = Selector.allocateEventsArray(capacity: eventsCapacity)
+#endif
         self.lifecycleState = .closed
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
@@ -332,6 +464,8 @@ internal class Selector<R: Registration> {
         try withUnsafeMutablePointer(to: &event) { ptr in
             try kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
         }
+#elseif os(Windows)
+        self.lifecycleState = .open
 #else
         self.selectorFD = try Epoll.epoll_create(size: 128)
         self.eventFD = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
@@ -355,12 +489,14 @@ internal class Selector<R: Registration> {
     deinit {
         assert(self.registrations.count == 0, "left-over registrations: \(self.registrations)")
         assert(self.lifecycleState == .closed, "Selector \(self.lifecycleState) (expected .closed) on deinit")
+#if !os(Windows)
         Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
 
         assert(self.selectorFD == -1, "self.selectorFD == \(self.selectorFD) on Selector deinit, forgot close?")
         #if os(Linux)
         assert(self.eventFD == -1, "self.eventFD == \(self.eventFD) on Selector deinit, forgot close?")
         #endif
+#endif
     }
 
 
@@ -447,10 +583,16 @@ internal class Selector<R: Registration> {
             throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
         }
 
-        try selectable.withUnsafeHandle { fd in
-            assert(registrations[Int(fd)] == nil)
+        try (selectable as! BaseSocket).withUnsafeHandle { (handle: NIOBSDSocket.Handle) -> () in
+            // assert(registrations[Int(fd)] == nil)
             #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
                 try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil)
+            #elseif os(Windows)
+                let index = hEvents.count
+
+                mSocketIndex[handle] = index
+                hEvents.insert(WSACreateEvent(), at: index)
+                WSAEventSelect(handle, hEvents[index], FD_READ | FD_ACCEPT | FD_WRITE | FD_CONNECT)
             #else
                 var ev = Epoll.epoll_event()
                 ev.events = interested.epollEventSet
@@ -458,7 +600,7 @@ internal class Selector<R: Registration> {
 
                 try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
             #endif
-            registrations[Int(fd)] = makeRegistration(interested)
+            registrations[handle] = makeRegistration(interested)
         }
     }
 
@@ -473,11 +615,13 @@ internal class Selector<R: Registration> {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
         assert(interested.contains(.reset), "must register for at least .reset but tried registering for \(interested)")
-        try selectable.withUnsafeHandle { fd in
-            var reg = registrations[Int(fd)]!
+        try (selectable as! BaseSocket).withUnsafeHandle { (handle: NIOBSDSocket.Handle) -> () in
+            var reg = registrations[handle]!
 
             #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
                 try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: reg.interested)
+            #elseif os(Windows)
+                WSAEventSelect(handle, hEvents[mSocketIndex[handle]!], FD_ACCEPT | FD_READ | FD_CLOSE)
             #else
                 var ev = Epoll.epoll_event()
                 ev.events = interested.epollEventSet
@@ -486,7 +630,7 @@ internal class Selector<R: Registration> {
                 _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: fd, event: &ev)
             #endif
             reg.interested = interested
-            registrations[Int(fd)] = reg
+            registrations[handle] = reg
         }
     }
 
@@ -503,13 +647,18 @@ internal class Selector<R: Registration> {
         }
         // temporary workaround to stop us delivering outdated events
         self.deregistrationsHappened = true
-        try selectable.withUnsafeHandle { fd in
-            guard let reg = registrations.removeValue(forKey: Int(fd)) else {
+        try (selectable as! BaseSocket).withUnsafeHandle { (handle: NIOBSDSocket.Handle) -> () in
+            guard let reg = registrations.removeValue(forKey: handle) else {
                 return
             }
 
             #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
                 try kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: reg.interested)
+            #elseif os(Windows)
+                let index: Int = mSocketIndex[handle]!
+                WSAEventSelect(handle, hEvents[index], 0)
+                WSACloseEvent(hEvents[index])
+                hEvents[index] = INVALID_HANDLE_VALUE
             #else
                 var ev = Epoll.epoll_event()
                 _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_DEL, fd: fd, event: &ev)
@@ -579,6 +728,28 @@ internal class Selector<R: Registration> {
         }
 
         growEventArrayIfNeeded(ready: ready)
+#elseif os(Windows)
+        switch strategy {
+        case .now:
+fatalError("\(#file):\(#line)")
+        case .blockUntilTimeout(let timeout):
+            _ = timeout
+fatalError("\(#file):\(#line)")
+        case .block:
+            // TODO(compnerd) use WaitForMultipleObjectsEx to avoid unnecessary
+            // syscalls
+            let dwResult: DWORD = WaitForMultipleObjects(DWORD(hEvents.count), hEvents, /*fWaitAll=*/false, INFINITE)
+            if dwResult >= WAIT_OBJECT_0 && dwResult <= (Int(WAIT_OBJECT_0) + hEvents.count - 1) {
+                try mSocketIndex.filter { (key, value) in value == dwResult }.forEach { (key, value) in
+                    guard let registration = registrations[NIOBSDSocket.Handle(bitPattern: Int64(key))] else { return }
+
+                    var wsaNE: WSANETWORKEVENTS = WSANETWORKEVENTS()
+                    WSAEnumNetworkEvents(key, hEvents[value], &wsaNE)
+                    try body(SelectorEvent(io: SelectorEventSet(for: wsaNE),
+                                           registration: registration))
+                }
+            }
+        }
 #else
         let ready: Int
 
@@ -662,6 +833,9 @@ internal class Selector<R: Registration> {
             // Therefore, we assert here that close will always succeed and if not, that's a NIO bug we need to know
             // about.
 
+#if os(Windows)
+fatalError("\(#file):\(#line)")
+#else
             #if os(Linux)
             try! Posix.close(descriptor: self.timerFD)
             try! Posix.close(descriptor: self.eventFD)
@@ -672,6 +846,7 @@ internal class Selector<R: Registration> {
             try! Posix.close(descriptor: self.selectorFD)
 
             self.selectorFD = -1
+#endif
         }
     }
 
@@ -693,6 +868,8 @@ internal class Selector<R: Registration> {
                 try withUnsafeMutablePointer(to: &event) { ptr in
                     try self.kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
                 }
+            #elseif os(Windows)
+fatalError("\(#file):\(#line)")
             #else
                 guard self.eventFD >= 0 else {
                     throw EventLoopError.shutdown
@@ -706,7 +883,11 @@ internal class Selector<R: Registration> {
 extension Selector: CustomStringConvertible {
     var description: String {
         func makeDescription() -> String {
+#if os(Windows)
+            return "Selector { }"
+#else
             return "Selector { descriptor = \(self.selectorFD) }"
+#endif
         }
 
         if NIOThread.current == self.myThread {

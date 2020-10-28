@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import struct WinSDK.socklen_t
+#endif
+
 struct SelectableFileHandle {
     var handle: NIOFileHandle
 
@@ -44,11 +48,17 @@ final class PipePair: SocketProtocol {
         self.inputFD = SelectableFileHandle(inputFD)
         self.outputFD = SelectableFileHandle(outputFD)
         try self.ignoreSIGPIPE()
+
+        // FIXME: there are underdocumented, ill-convcieved ways to emulate this
+        // vaugely, but, it might just not be worth it and be better to always
+        // just use overlapped IO on Winodws.
+#if !os(Windows)
         for fileHandle in [inputFD, outputFD] {
             try fileHandle.withUnsafeFileDescriptor {
                 try NIOFileHandle.setNonBlocking(fileDescriptor: $0)
             }
         }
+#endif
     }
 
     func ignoreSIGPIPE() throws {
@@ -72,21 +82,33 @@ final class PipePair: SocketProtocol {
     }
 
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
+#if os(Windows)
+return .processed(0)
+#else
         return try self.outputFD.withUnsafeHandle {
             try Posix.write(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
+#endif
     }
 
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
+#if os(Windows)
+return .processed(0)
+#else
         return try self.outputFD.withUnsafeHandle {
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
+#endif
     }
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
+#if os(Windows)
+return .processed(0)
+#else
         return try self.inputFD.withUnsafeHandle {
             try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
+#endif
     }
 
     func recvmsg(pointer: UnsafeMutableRawBufferPointer,
