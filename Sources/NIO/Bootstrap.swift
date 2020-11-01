@@ -581,7 +581,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         let loop = self.group.next()
         let resolver = self.resolver ?? GetaddrinfoResolver(loop: loop,
                                                             aiSocktype: .stream,
-                                                            aiProtocol: CInt(IPPROTO_TCP))
+                                                            aiProtocol: .tcp)
         let connector = HappyEyeballsConnector(resolver: resolver,
                                                loop: loop,
                                                host: host,

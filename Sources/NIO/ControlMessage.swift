@@ -68,7 +68,7 @@ struct UnsafeControlMessageStorage: Collection {
 /// Representation of a `cmsghdr` and associated data.
 /// Unsafe as captures pointers and must not escape the scope where those pointers are valid.
 struct UnsafeControlMessage {
-    var level: CInt
+    var level: NIOBSDSocket.OptionLevel
     var type: CInt
     var data: UnsafeRawBufferPointer?
 }
@@ -128,7 +128,7 @@ extension UnsafeControlMessageCollection: Collection {
     
     public subscript(position: Index) -> Element {
         let cmsg = position.cmsgPointer!
-        return UnsafeControlMessage(level: cmsg.pointee.cmsg_level,
+        return UnsafeControlMessage(level: NIOBSDSocket.OptionLevel(rawValue: cmsg.pointee.cmsg_level),
                                     type: cmsg.pointee.cmsg_type,
                                     data: NIOBSDSocketControlMessage.data(for: cmsg))
     }
@@ -172,14 +172,14 @@ struct ControlMessageParser {
     }
     
     mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
-        if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageParser.ipv4TosType {
+        if controlMessage.level == .ip && controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
                 assert(data.count == 1)
                 precondition(data.count >= 1)
                 let readValue = CInt(data[0])
                 self.ecnValue = .init(receivedValue: readValue)
             }
-        } else if controlMessage.level == IPPROTO_IPV6 && controlMessage.type == IPV6_TCLASS {
+        } else if controlMessage.level == .ipv6 && controlMessage.type == IPV6_TCLASS {
             if let data = controlMessage.data {
                 let readValue = ControlMessageParser._readCInt(data: data)
                 self.ecnValue = .init(receivedValue: readValue)
@@ -230,13 +230,13 @@ struct UnsafeOutboundControlBytes {
         self.writePosition = controlBytes.startIndex
     }
 
-    mutating func appendControlMessage(level: CInt, type: CInt, payload: CInt) {
+    mutating func appendControlMessage(level: NIOBSDSocket.OptionLevel, type: CInt, payload: CInt) {
         self.appendGenericControlMessage(level: level, type: type, payload: payload)
     }
 
     /// Appends a control message.
     /// PayloadType needs to be trivial (eg CInt)
-    private mutating func appendGenericControlMessage<PayloadType>(level: CInt,
+    private mutating func appendGenericControlMessage<PayloadType>(level: NIOBSDSocket.OptionLevel,
                                                                    type: CInt,
                                                                    payload: PayloadType) {
         let writableBuffer = UnsafeMutableRawBufferPointer(rebasing: self.controlBytes[writePosition...])
@@ -247,7 +247,7 @@ struct UnsafeOutboundControlBytes {
         let bufferBase = writableBuffer.baseAddress!
         // Binding to cmsghdr is safe here as this is the only place where we bind to non-Raw.
         let cmsghdrPtr = bufferBase.bindMemory(to: cmsghdr.self, capacity: 1)
-        cmsghdrPtr.pointee.cmsg_level = level
+        cmsghdrPtr.pointee.cmsg_level = level.rawValue
         cmsghdrPtr.pointee.cmsg_type = type
         cmsghdrPtr.pointee.cmsg_len = .init(NIOBSDSocketControlMessage.length(payloadSize: MemoryLayout.size(ofValue: payload)))
         
@@ -279,11 +279,11 @@ extension UnsafeOutboundControlBytes {
 
         switch protocolFamily {
         case .some(.inet):
-            self.appendControlMessage(level: .init(IPPROTO_IP),
+            self.appendControlMessage(level: .ip,
                                       type: IP_TOS,
                                       payload: CInt(ecnValue: metadata.ecnState))
         case .some(.inet6):
-            self.appendControlMessage(level: .init(IPPROTO_IPV6),
+            self.appendControlMessage(level: .ipv6,
                                       type: IPV6_TCLASS,
                                       payload: CInt(ecnValue: metadata.ecnState))
         default:
