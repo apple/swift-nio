@@ -727,10 +727,6 @@ extension EventLoopFuture {
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result.
     ///
-    /// Unlike its friends `whenSuccess` and `whenFailure`, `whenComplete` does not receive the result
-    /// of the `EventLoopFuture`. This is because its primary purpose is to do the appropriate cleanup
-    /// of any resources that needed to be kept open until the `EventLoopFuture` had resolved.
-    ///
     /// - parameters:
     ///     - callback: The callback that is called when the `EventLoopFuture` is fulfilled.
     @inlinable
@@ -1463,10 +1459,6 @@ extension EventLoopFuture {
 
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result. The observer callback is permitted to block.
-    ///
-    /// Unlike its friends `whenSuccess` and `whenFailure`, `whenComplete` does not receive the result
-    /// of the `EventLoopFuture`. This is because its primary purpose is to do the appropriate cleanup
-    /// of any resources that needed to be kept open until the `EventLoopFuture` had resolved.
     ///
     /// - parameters:
     ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is schedulded.
