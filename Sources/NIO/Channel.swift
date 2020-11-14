@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
+import Baggage
 
 /// The core `Channel` methods that are for internal use of the `Channel` implementation only.
 ///
@@ -90,6 +91,16 @@ public protocol ChannelCore: class {
     /// - parameters:
     ///     - error: The `Error` that was encountered.
     func errorCaught0(error: Error)
+
+    var baggage: Baggage { get set }
+}
+
+extension ChannelCore {
+    public var baggage: Baggage {
+        get {
+            return Baggage.topLevel
+        } set {}
+    }
 }
 
 /// A `Channel` is easiest thought of as a network socket. But it can be anything that is capable of I/O operations such
