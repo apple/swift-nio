@@ -277,9 +277,15 @@ extension EventLoopGroup {
 /// Represents a time _interval_.
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
-public struct TimeAmount: Hashable {
+public struct TimeAmount: Hashable, AdditiveArithmetic {
+    
     @available(*, deprecated, message: "This typealias doesn't serve any purpose. Please use Int64 directly.")
     public typealias Value = Int64
+    
+    /// The zero value for `TimeAmount`.
+    public static var zero: TimeAmount {
+        return TimeAmount.nanoseconds(0)
+    }
 
     /// The nanoseconds representation of the `TimeAmount`.
     public let nanoseconds: Int64
@@ -353,8 +359,16 @@ extension TimeAmount {
     public static func + (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds + rhs.nanoseconds)
     }
+    
+    public static func += (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
+        return TimeAmount(lhs.nanoseconds + rhs.nanoseconds)
+    }
 
     public static func - (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
+        return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
+    }
+    
+    public static func -= (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
     }
 

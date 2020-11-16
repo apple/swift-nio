@@ -28,4 +28,14 @@ class TimeAmountTests: XCTestCase {
         let amounts: Set<TimeAmount> = [.seconds(1), .milliseconds(4), .seconds(1)]
         XCTAssertEqual(amounts, [.seconds(1), .milliseconds(4)])
     }
+    
+    func testTimeAmountDoesAddTime() {
+        let amount = TimeAmount.milliseconds(0)
+        XCTAssertEqual(amount += .milliseconds(5), .milliseconds(5))
+    }
+    
+    func testTimeAmountDoesSubtractTime() {
+        let amount = TimeAmount.nanoseconds(5)
+        XCTAssertEqual(amount -= .nanoseconds(5), .zero)
+    }
 }
