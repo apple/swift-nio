@@ -360,7 +360,7 @@ extension TimeAmount {
         return TimeAmount(lhs.nanoseconds + rhs.nanoseconds)
     }
     
-    public static func += (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
+    public static func += (lhs: inout TimeAmount, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds + rhs.nanoseconds)
     }
 
@@ -368,7 +368,7 @@ extension TimeAmount {
         return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
     }
     
-    public static func -= (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
+    public static func -= (lhs: inout TimeAmount, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
     }
 

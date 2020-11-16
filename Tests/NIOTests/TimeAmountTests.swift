@@ -30,12 +30,12 @@ class TimeAmountTests: XCTestCase {
     }
     
     func testTimeAmountDoesAddTime() {
-        let amount = TimeAmount.milliseconds(0)
+        var amount = TimeAmount.milliseconds(0)
         XCTAssertEqual(amount += .milliseconds(5), .milliseconds(5))
     }
     
     func testTimeAmountDoesSubtractTime() {
-        let amount = TimeAmount.nanoseconds(5)
+        var amount = TimeAmount.nanoseconds(5)
         XCTAssertEqual(amount -= .nanoseconds(5), .zero)
     }
 }
