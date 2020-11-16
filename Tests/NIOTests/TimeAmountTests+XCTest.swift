@@ -29,8 +29,6 @@ extension TimeAmountTests {
       return [
                 ("testTimeAmountConversion", testTimeAmountConversion),
                 ("testTimeAmountIsHashable", testTimeAmountIsHashable),
-                ("testTimeAmountDoesAddTime", testTimeAmountDoesAddTime),
-                ("testTimeAmountDoesSubtractTime", testTimeAmountDoesSubtractTime),
            ]
    }
 }
