@@ -278,7 +278,6 @@ extension EventLoopGroup {
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
 public struct TimeAmount: Hashable {
-    
     @available(*, deprecated, message: "This typealias doesn't serve any purpose. Please use Int64 directly.")
     public typealias Value = Int64
 
