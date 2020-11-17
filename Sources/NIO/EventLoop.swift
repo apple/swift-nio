@@ -354,15 +354,15 @@ extension TimeAmount: AdditiveArithmetic {
     public static var zero: TimeAmount {
         return TimeAmount.nanoseconds(0)
     }
-    
+
     public static func + (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds + rhs.nanoseconds)
     }
-    
+
     public static func - (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
          return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
     }
-    
+
     public static func * <T: BinaryInteger>(lhs: T, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(Int64(lhs) * rhs.nanoseconds)
     }
