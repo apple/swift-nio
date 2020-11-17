@@ -364,7 +364,7 @@ extension TimeAmount: AdditiveArithmetic {
     }
 
     public static func - (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
-         return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
+        return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
     }
     
     public static func -=(lhs: inout TimeAmount, rhs: TimeAmount){
