@@ -40,6 +40,46 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual("[IPv4]10.0.0.2:12345", sa.description)
     }
     
+    func testDescriptionWorksWithByteBufferIPv4IP() throws {
+        let IPv4: [UInt8] = [0x01, 0x7F, 0x00, 0x00, 0x01, 0x7B, 0x00]
+        let ipAddress: ByteBuffer = ByteBuffer.init(bytes: IPv4)
+        let sa = try! SocketAddress(ipAddress: ipAddress)
+        XCTAssertEqual("[IPv4]127.0.0.1:123", sa.description)
+    }
+    
+    func testDescriptionWorksWithByteBufferIPv6IP() throws {
+        let IPv6: [UInt8] = [0x04, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x7B, 0x00]
+        let ipAddress: ByteBuffer = ByteBuffer.init(bytes: IPv6)
+        let sa = try! SocketAddress(ipAddress: ipAddress)
+        XCTAssertEqual("[IPv6]fe80::5:123", sa.description)
+    }
+    
+    func testRejectsWrongIPByteBufferLength() {
+        let IPv4: [UInt8] = [0x01, 0x7F, 0x00]
+        let ipAddress: ByteBuffer = ByteBuffer.init(bytes: IPv4)
+        XCTAssertThrowsError(try SocketAddress(ipAddress: ipAddress)) { error in
+            switch error as? SocketAddressError {
+            case .some(.failedToParseIPByteBuffer(ipAddress)):
+                () // ok
+            default:
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
+    
+    func testRejectsWrongIPByteBufferATYP() {
+        let IPv4: [UInt8] = [0x06, 0x7F, 0x00, 0x00, 0x01, 0x7B, 0x00]
+        let ipAddress: ByteBuffer = ByteBuffer.init(bytes: IPv4)
+        XCTAssertThrowsError(try SocketAddress(ipAddress: ipAddress)) { error in
+            switch error as? SocketAddressError {
+            case .some(.unsupported):
+                () // ok
+            default:
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
+    
     func testIn6AddrDescriptionWorks() throws {
         let sampleString = "::1"
         let sampleIn6Addr: [UInt8] = [ // ::1
