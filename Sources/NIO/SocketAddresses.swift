@@ -332,37 +332,27 @@ public enum SocketAddress: CustomStringConvertible {
     ///
     /// - parameters:
     ///     - ipAddress: The IP address, in ByteBuffer form.
+    ///     - port: The target port.
     /// - returns: the `SocketAddress` corresponding to this string and port combination.
     /// - throws: may throw `SocketAddressError.failedToParseIPByteBuffer` if the IP address cannot be parsed or `SocketAddressError.unsupported` if the ATYP is wrong.
-    public init(ipAddress: ByteBuffer) throws {
-        var addressPointer = ipAddress
-        guard let type = addressPointer.readInteger(as: UInt8.self) else {
-            throw SocketAddressError.failedToParseIPByteBuffer(ipAddress)
-        }
+    public init(ipAddress: ByteBuffer, port: Int) throws {
+        let packed = ipAddress.readableBytesView
         
-        switch type {
-        case 1:
-            guard let packed = addressPointer.readSlice(length: 4)?.readableBytesView,
-                  let port = addressPointer.readInteger(as: UInt16.self) else {
-                throw SocketAddressError.failedToParseIPByteBuffer(ipAddress)
-            }
-            var addr = sockaddr_in()
-            addr.sin_family = sa_family_t(AF_INET)
-            addr.sin_port = port.littleEndian
-            withUnsafeMutableBytes(of: &addr.sin_addr) { $0.copyBytes(from: packed) }
-            self = .v4(.init(address: addr, host: ""))
+        switch ipAddress.readableBytes {
         case 4:
-            guard let packed = addressPointer.readSlice(length: 16)?.readableBytesView,
-                  let port = addressPointer.readInteger(as: UInt16.self) else {
-                throw SocketAddressError.failedToParseIPByteBuffer(ipAddress)
-            }
-            var addr = sockaddr_in6()
-            addr.sin6_family = sa_family_t(AF_INET6)
-            addr.sin6_port = port.littleEndian
-            withUnsafeMutableBytes(of: &addr.sin6_addr) { $0.copyBytes(from: packed) }
-            self = .v6(.init(address: addr, host: ""))
+            var ipv4Addr = sockaddr_in()
+            ipv4Addr.sin_family = sa_family_t(AF_INET)
+            ipv4Addr.sin_port = in_port_t(port).bigEndian
+            withUnsafeMutableBytes(of: &ipv4Addr.sin_addr) { $0.copyBytes(from: packed) }
+            self = .v4(.init(address: ipv4Addr, host: ""))
+        case 16:
+            var ipv6Addr = sockaddr_in6()
+            ipv6Addr.sin6_family = sa_family_t(AF_INET6)
+            ipv6Addr.sin6_port = in_port_t(port).bigEndian
+            withUnsafeMutableBytes(of: &ipv6Addr.sin6_addr) { $0.copyBytes(from: packed) }
+            self = .v6(.init(address: ipv6Addr, host: ""))
         default:
-            throw SocketAddressError.unsupported
+            throw SocketAddressError.failedToParseIPByteBuffer(ipAddress)
         }
     }
 
