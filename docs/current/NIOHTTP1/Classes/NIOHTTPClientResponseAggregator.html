@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>NIOHTTPClientResponseAggregator Class Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Class/NIOHTTPClientResponseAggregator" class="dashAnchor"></a>
+
+    <a title="NIOHTTPClientResponseAggregator Class Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIOHTTP1 2.24.0 Docs
+        </a>
+         (51% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple.github.io%2Fswift-nio%2Fdocs%2F2.24.0%2FNIOHTTP1%2Fdocsets%2FNIOHTTP1.xml">
+            <img class="header-icon" src="../img/dash.png"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIOHTTP1 Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      NIOHTTPClientResponseAggregator Class Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPDecoder.html">HTTPDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPRequestEncoder.html">HTTPRequestEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPResponseEncoder.html">HTTPResponseEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPServerPipelineHandler.html">HTTPServerPipelineHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPServerProtocolErrorHandler.html">HTTPServerProtocolErrorHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPServerUpgradeHandler.html">HTTPServerUpgradeHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOHTTPClientResponseAggregator.html">NIOHTTPClientResponseAggregator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOHTTPClientUpgradeHandler.html">NIOHTTPClientUpgradeHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOHTTPServerRequestAggregator.html">NIOHTTPServerRequestAggregator</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPDecoderKind.html">HTTPDecoderKind</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPMethod.html">HTTPMethod</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPParserError.html">HTTPParserError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPPart.html">HTTPPart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPResponseStatus.html">HTTPResponseStatus</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPServerUpgradeErrors.html">HTTPServerUpgradeErrors</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPServerUpgradeEvents.html">HTTPServerUpgradeEvents</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/RemoveAfterUpgradeStrategy.html">RemoveAfterUpgradeStrategy</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/ChannelPipeline.html">ChannelPipeline</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/HTTPServerProtocolUpgrader.html">HTTPServerProtocolUpgrader</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/NIOHTTPClientProtocolUpgrader.html">NIOHTTPClientProtocolUpgrader</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPHeaders.html">HTTPHeaders</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPHeaders/Index.html">– Index</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPRequestHead.html">HTTPRequestHead</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPResponseHead.html">HTTPResponseHead</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPVersion.html">HTTPVersion</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOHTTPClientResponseFull.html">NIOHTTPClientResponseFull</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOHTTPClientUpgradeError.html">NIOHTTPClientUpgradeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOHTTPDecoderError.html">NIOHTTPDecoderError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOHTTPObjectAggregatorError.html">NIOHTTPObjectAggregatorError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOHTTPObjectAggregatorEvent.html">NIOHTTPObjectAggregatorEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOHTTPServerRequestFull.html">NIOHTTPServerRequestFull</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP121HTTPClientRequestParta">HTTPClientRequestPart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP122HTTPClientResponseParta">HTTPClientResponsePart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP118HTTPRequestDecodera">HTTPRequestDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP119HTTPResponseDecodera">HTTPResponseDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP121HTTPServerRequestParta">HTTPServerRequestPart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP122HTTPServerResponseParta">HTTPServerResponsePart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP124HTTPUpgradeConfigurationa">HTTPUpgradeConfiguration</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP133NIOHTTPClientUpgradeConfigurationa">NIOHTTPClientUpgradeConfiguration</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP133NIOHTTPServerUpgradeConfigurationa">NIOHTTPServerUpgradeConfiguration</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content top-matter">
+            <h1>NIOHTTPClientResponseAggregator</h1>
+              <div class="declaration">
+                <div class="language">
+                  
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">NIOHTTPClientResponseAggregator</span> <span class="p">:</span> <span class="kt">ChannelInboundHandler</span><span class="p">,</span> <span class="kt">RemovableChannelHandler</span></code></pre>
+
+                </div>
+              </div>
+            <p>A <code>ChannelInboundHandler</code> that handles HTTP chunked <code><a href="../Typealiases.html#/s:8NIOHTTP122HTTPClientResponseParta">HTTPClientResponsePart</a></code>
+messages by aggregating individual message chunks into a single
+<code><a href="../Structs/NIOHTTPClientResponseFull.html">NIOHTTPClientResponseFull</a></code>.</p>
+
+<p>This is achieved by buffering the contents of all received <code><a href="../Typealiases.html#/s:8NIOHTTP122HTTPClientResponseParta">HTTPClientResponsePart</a></code>
+messages until <code>HTTPClientResponsePart.end</code> is received, then assembling the
+full message and firing a channel read upstream with it. Useful when you do not
+want to deal with chunked messages and just want to receive everything at once, and
+are happy with the additional memory used and delay handling of the message until
+everything has been received.</p>
+
+<p>If <code>NIOHTTPClientResponseAggregator</code> encounters a message larger than
+<code>maxContentLength</code>, it discards the aggregated contents until the next
+<code>HTTPClientResponsePart.end</code> and signals that via
+<code>fireUserInboundEventTriggered</code>.</p>
+
+              <div class="slightly-smaller">
+                <a href="https://github.com/apple/swift-nio/tree/2.24.0/Sources/NIOHTTP1/NIOHTTPObjectAggregator.swift#L320-L400">Show on GitHub</a>
+              </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO21ChannelInboundHandlerP0C2InQa"></a>
+                    <a name="//apple_ref/swift/Alias/InboundIn" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO21ChannelInboundHandlerP0C2InQa">InboundIn</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">typealias</span> <span class="kt">InboundIn</span> <span class="o">=</span> <span class="kt"><a href="../Typealiases.html#/s:8NIOHTTP122HTTPClientResponseParta">HTTPClientResponsePart</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.24.0/Sources/NIOHTTP1/NIOHTTPObjectAggregator.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO21ChannelInboundHandlerP0C3OutQa"></a>
+                    <a name="//apple_ref/swift/Alias/InboundOut" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO21ChannelInboundHandlerP0C3OutQa">InboundOut</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">typealias</span> <span class="kt">InboundOut</span> <span class="o">=</span> <span class="kt"><a href="../Structs/NIOHTTPClientResponseFull.html">NIOHTTPClientResponseFull</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.24.0/Sources/NIOHTTP1/NIOHTTPObjectAggregator.swift#L">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP131NIOHTTPClientResponseAggregatorC16maxContentLengthACSi_tcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(maxContentLength:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP131NIOHTTPClientResponseAggregatorC16maxContentLengthACSi_tcfc">init(maxContentLength:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">(</span><span class="nv">maxContentLength</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.24.0/Sources/NIOHTTP1/NIOHTTPObjectAggregator.swift#L329-L333">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22_ChannelInboundHandlerP11channelRead7context4datayAA0bD7ContextC_AA6NIOAnyVtF"></a>
+                    <a name="//apple_ref/swift/Method/channelRead(context:data:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22_ChannelInboundHandlerP11channelRead7context4datayAA0bD7ContextC_AA6NIOAnyVtF">channelRead(context:<wbr>data:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">channelRead</span><span class="p">(</span><span class="nv">context</span><span class="p">:</span> <span class="kt">ChannelHandlerContext</span><span class="p">,</span> <span class="nv">data</span><span class="p">:</span> <span class="kt">NIOAny</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.24.0/Sources/NIOHTTP1/NIOHTTPObjectAggregator.swift#L335-L358">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO14ChannelHandlerP12handlerAdded7contextyAA0bC7ContextC_tF"></a>
+                    <a name="//apple_ref/swift/Method/handlerAdded(context:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO14ChannelHandlerP12handlerAdded7contextyAA0bC7ContextC_tF">handlerAdded(context:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">handlerAdded</span><span class="p">(</span><span class="nv">context</span><span class="p">:</span> <span class="kt">ChannelHandlerContext</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.24.0/Sources/NIOHTTP1/NIOHTTPObjectAggregator.swift#L397-L399">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2020 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2020-11-19)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.5</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>
