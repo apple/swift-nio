@@ -58,9 +58,9 @@ class SocketAddressTest: XCTestCase {
         let wrongIP: [UInt8] = [0x01, 0x7F, 0x00]
         let ipAddress: ByteBuffer = ByteBuffer.init(bytes: wrongIP)
         XCTAssertThrowsError(try SocketAddress(packedIpAddress: ipAddress, port: 12345)) { error in
-            switch error as? SocketAddressError {
-            case .some(.failedToParseIPByteBuffer(ipAddress)):
-                () // ok
+            switch error {
+            case is SocketAddressError.FailedToParseIPByteBuffer:
+                XCTAssertEqual(ipAddress, (error as! SocketAddressError.FailedToParseIPByteBuffer).address)
             default:
                 XCTFail("unexpected error: \(error)")
             }

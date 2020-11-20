@@ -38,8 +38,17 @@ public enum SocketAddressError: Error {
     case unixDomainSocketPathTooLong
     /// Unable to parse a given IP string
     case failedToParseIPString(String)
+}
+
+extension SocketAddressError {
     /// Unable to parse a given IP ByteBuffer
-    case failedToParseIPByteBuffer(ByteBuffer)
+    public struct FailedToParseIPByteBuffer: Error, Hashable {
+        public var address: ByteBuffer
+        
+        public init(address: ByteBuffer) {
+            self.address = address
+        }
+    }
 }
 
 /// Represent a socket address to which we may want to connect or bind.
@@ -352,7 +361,7 @@ public enum SocketAddress: CustomStringConvertible {
             withUnsafeMutableBytes(of: &ipv6Addr.sin6_addr) { $0.copyBytes(from: packed) }
             self = .v6(.init(address: ipv6Addr, host: ""))
         default:
-            throw SocketAddressError.failedToParseIPByteBuffer(packedIpAddress)
+            throw SocketAddressError.FailedToParseIPByteBuffer(address: packedIpAddress)
         }
     }
 
