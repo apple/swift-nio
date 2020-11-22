@@ -27,6 +27,7 @@ internal typealias MMsgHdr = CNIODarwin_mmsghdr
 import CNIOLinux
 internal typealias MMsgHdr = CNIOLinux_mmsghdr
 #elseif os(Windows)
+import ucrt
 import CNIOWindows
 internal typealias sockaddr = WinSDK.SOCKADDR
 internal typealias MMsgHdr = CNIOWindows_mmsghdr
@@ -71,6 +72,11 @@ private let sysLseek = lseek
 private let sysPoll = poll
 #endif
 
+#if os(Windows)
+private let sysClose: @convention(c) (CInt) -> CInt = _close
+private let sysLseek: @convention(c) (CInt, CLong, CInt) -> CLong = _lseek
+#endif
+
 #if os(Android)
 func sysRecvFrom_wrapper(sockfd: CInt, buf: UnsafeMutableRawPointer, len: CLong, flags: CInt, src_addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) -> CLong {
     return recvfrom(sockfd, buf, len, flags, src_addr, addrlen) // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
@@ -86,13 +92,18 @@ private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CL
 private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>?, CInt) -> ssize_t = recvmsg
 private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>?, CInt) -> ssize_t = sendmsg
 #endif
+
+#if os(Windows)
+private let sysDup: @convention(c) (CInt) -> CInt = _dup
+#else
 private let sysDup: @convention(c) (CInt) -> CInt = dup
+#endif
+
 #if !os(Windows)
 private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
 private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockname
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
 #endif
-private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 #if !os(Windows)
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
@@ -143,7 +154,12 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
     while true {
         let res = try body()
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            _ = ucrt._get_errno(&err)
+#else
             let err = errno
+#endif
             switch (err, blocking) {
             case (EINTR, _):
                 continue
@@ -163,7 +179,12 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
 internal func wrapErrorIsNullReturnCall<T>(where function: String = #function, _ body: () throws -> T?) throws -> T {
     while true {
         guard let res = try body() else {
+#if os(Windows)
+            var err: CInt = 0
+            _ = ucrt._get_errno(&err)
+#else
             let err = errno
+#endif
             if err == EINTR {
                 continue
             }
@@ -218,12 +239,18 @@ internal enum Posix {
             sysShutdown(descriptor, how.cValue)
         }
     }
+#endif
 
     @inline(never)
     public static func close(descriptor: CInt) throws {
         let res = sysClose(descriptor)
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            _ = ucrt._get_errno(&err)
+#else
             let err = errno
+#endif
 
             // There is really nothing "sane" we can do when EINTR was reported on close.
             // So just ignore it and "assume" everything is fine == we closed the file descriptor.
@@ -238,6 +265,7 @@ internal enum Posix {
         }
     }
 
+#if !os(Windows)
     @inline(never)
     public static func bind(descriptor: CInt, ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
          _ = try syscall(blocking: false) {
@@ -314,14 +342,28 @@ internal enum Posix {
             throw err
         }
     }
+#endif
 
+#if os(Windows)
+    @inline(never)
+    static func open(file filename: UnsafePointer<CChar>, oFlag oflag: CInt,
+                     mode pmode: CInt) throws -> CInt {
+        return try syscall(blocking: false) {
+            var fh: CInt = -1
+            let _ = ucrt._sopen_s(&fh, filename, oflag, _SH_DENYNO, pmode)
+            return fh
+        }.result
+    }
+#else
     @inline(never)
     public static func open(file: UnsafePointer<CChar>, oFlag: CInt, mode: mode_t) throws -> CInt {
         return try syscall(blocking: false) {
             sysOpenWithMode(file, oFlag, mode)
         }.result
     }
+#endif
 
+#if !os(Windows)
     @inline(never)
     public static func open(file: UnsafePointer<CChar>, oFlag: CInt) throws -> CInt {
         return try syscall(blocking: false) {
@@ -351,7 +393,6 @@ internal enum Posix {
         }
     }
 
-#if !os(Windows)
     @inline(never)
     public static func writev(descriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         return try syscall(blocking: true) {
@@ -360,13 +401,24 @@ internal enum Posix {
     }
 #endif
 
+#if os(Windows)
+    @inline(never)
+    static func read(descriptor fd: CInt, pointer buffer: UnsafeMutableRawPointer,
+                     size buffer_size: CUnsignedInt) throws -> IOResult<CInt> {
+        return try syscall(blocking: true) {
+            ucrt._read(fd, buffer, buffer_size)
+        }
+    }
+#else
     @inline(never)
     public static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
             sysRead(descriptor, pointer, size)
         }
     }
+#endif
 
+#if !os(Windows)
     @inline(never)
     public static func pread(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t, offset: off_t) throws -> IOResult<ssize_t> {
         return try syscall(blocking: true) {
@@ -387,6 +439,7 @@ internal enum Posix {
             sysSendMsg(descriptor, msgHdr, flags)
         }
     }
+#endif
 
     @discardableResult
     @inline(never)
@@ -395,7 +448,6 @@ internal enum Posix {
             sysLseek(descriptor, offset, whence)
         }.result
     }
-#endif
 
     @discardableResult
     @inline(never)

@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import ucrt
+#endif
+
 /// A `NIOFileHandle` is a handle to an open file.
 ///
 /// When creating a `NIOFileHandle` it takes ownership of the underlying file descriptor. When a `NIOFileHandle` is no longer
@@ -110,7 +114,7 @@ extension NIOFileHandle {
 
     /// `Flags` allows to specify additional flags to `Mode`, such as permission for file creation.
     public struct Flags {
-        internal var posixMode: mode_t
+        internal var posixMode: CInt
         internal var posixFlags: CInt
 
         public static let `default` = Flags(posixMode: 0, posixFlags: 0)
@@ -119,7 +123,12 @@ extension NIOFileHandle {
         ///
         /// - parameters:
         ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
-        public static func allowFileCreation(posixMode: mode_t = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
+#if os(Windows)
+        public static let rw_r__r = _S_IREAD | _S_IWRITE
+#else
+        public static let rw_r__r = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
+#endif
+        public static func allowFileCreation(posixMode: CInt = rw_r__r) -> Flags {
             return Flags(posixMode: posixMode, posixFlags: O_CREAT)
         }
 
@@ -129,7 +138,7 @@ extension NIOFileHandle {
         ///     - flags: The POSIX open flags (the second parameter for `open(2)`).
         ///     - mode: The POSIX mode (the third parameter for `open(2)`).
         /// - returns: A `NIOFileHandle.Mode` equivalent to the given POSIX flags and mode.
-        public static func posix(flags: CInt, mode: mode_t) -> Flags {
+        public static func posix(flags: CInt, mode: CInt) -> Flags {
             return Flags(posixMode: mode, posixFlags: flags)
         }
     }
@@ -141,7 +150,12 @@ extension NIOFileHandle {
     ///     - mode: Access mode. Default mode is `.read`.
     ///     - flags: Additional POSIX flags.
     public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
-        let fd = try Posix.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
+#if os(Windows)
+      let fl: CInt = mode.posixFlags | flags.posixFlags | _O_NOINHERIT
+#else
+      let fl: CInt = mode.posixFlags | flags.posixFlags | O_CLOEXEC
+#endif
+        let fd = try Posix.open(file: path, oFlag: fl, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
 

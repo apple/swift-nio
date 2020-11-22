@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Windows)
+import CRT
+#endif
+
 @usableFromInline
 internal struct Heap<Element: Comparable> {
     @usableFromInline

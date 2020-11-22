@@ -14,6 +14,10 @@
 
 import NIOConcurrencyHelpers
 
+#if os(Windows)
+import ucrt
+#endif
+
 /// `NonBlockingFileIO` is a helper that allows you to read files without blocking the calling thread.
 ///
 /// It is worth noting that `kqueue`, `epoll` or `poll` returning claiming a file is readable does not mean that the
@@ -318,7 +322,7 @@ public struct NonBlockingFileIO {
             var bytesRead = 0
             while bytesRead < byteCount {
                 let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
-                    let res = try fileHandle.withUnsafeFileDescriptor { descriptor -> IOResult<ssize_t> in
+                    let res = try fileHandle.withUnsafeFileDescriptor { descriptor -> IOResult<size_t> in
                         if let offset = fromOffset {
                             return try Posix.pread(descriptor: descriptor,
                                                    pointer: ptr.baseAddress!,
@@ -327,7 +331,7 @@ public struct NonBlockingFileIO {
                         } else {
                             return try Posix.read(descriptor: descriptor,
                                                   pointer: ptr.baseAddress!,
-                                                  size: byteCount - bytesRead)
+                                                  size: numericCast(byteCount - bytesRead))
                         }
                     }
                     switch res {
@@ -364,7 +368,10 @@ public struct NonBlockingFileIO {
                                eventLoop: EventLoop) -> EventLoopFuture<()> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
             try fileHandle.withUnsafeFileDescriptor { descriptor -> Void in
+#if os(Windows)
+#else
                 try Posix.ftruncate(descriptor: descriptor, size: off_t(size))
+#endif
             }
         }
     }
@@ -432,7 +439,7 @@ public struct NonBlockingFileIO {
             repeat {
                 let n = try buf.readWithUnsafeReadableBytes { ptr in
                     precondition(ptr.count == byteCount - offsetAccumulator)
-                    let res: IOResult<ssize_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
+                    let res: IOResult<size_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
                         if let toOffset = toOffset {
                             return try Posix.pwrite(descriptor: descriptor,
                                                     pointer: ptr.baseAddress!,

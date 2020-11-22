@@ -14,6 +14,12 @@
 
 import NIOConcurrencyHelpers
 
+#if os(Windows)
+import let WinSDK.EBADF
+import let WinSDK.ECONNRESET
+import let WinSDK.ENOENT
+#endif
+
 private struct SocketChannelLifecycleManager {
     // MARK: Types
     private enum State {

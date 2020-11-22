@@ -19,5 +19,17 @@
 ///     `Selectable`s are not thread-safe, only to be used on the appropriate
 ///     `EventLoop`.
 protocol Selectable {
+    // FIXME: this should use an associated type `Selectable.Handle`
     func withUnsafeHandle<T>(_: (NIOBSDSocket.Handle) throws -> T) throws -> T
+    func withUnsafeHandle<T>(_: (CInt) throws -> T) throws -> T
+}
+
+extension Selectable {
+    func withUnsafeHandle<T>(_: (NIOBSDSocket.Handle) throws -> T) throws -> T {
+        fatalError("PAT is desired")
+    }
+    
+    func withUnsafeHandle<T>(_: (CInt) throws -> T) throws -> T {
+        fatalError("PAT is desired")
+    }
 }

@@ -42,7 +42,7 @@ internal class GetaddrinfoResolver: Resolver {
     private let v4Future: EventLoopPromise<[SocketAddress]>
     private let v6Future: EventLoopPromise<[SocketAddress]>
     private let aiSocktype: NIOBSDSocket.SocketType
-    private let aiProtocol: CInt
+    private let aiProtocol: NIOBSDSocket.OptionLevel
 
     /// Create a new resolver.
     ///
@@ -50,7 +50,7 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - loop: The `EventLoop` whose thread this resolver will block.
     ///     - aiSocktype: The sock type to use as hint when calling getaddrinfo.
     ///     - aiProtocol: the protocol to use as hint when calling getaddrinfo.
-    init(loop: EventLoop, aiSocktype: NIOBSDSocket.SocketType, aiProtocol: CInt) {
+    init(loop: EventLoop, aiSocktype: NIOBSDSocket.SocketType, aiProtocol: NIOBSDSocket.OptionLevel) {
         self.v4Future = loop.makePromise()
         self.v6Future = loop.makePromise()
         self.aiSocktype = aiSocktype
