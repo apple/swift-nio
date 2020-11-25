@@ -71,14 +71,6 @@ This product contains "sha1.c" and "sha1.h" from FreeBSD (Copyright (C) 1995, 19
     * https://github.com/freebsd/freebsd/tree/master/sys/crypto
 
 ---
-This product contains "ifaddrs-android.c" and "ifaddrs-android.h" from dxr.mozilla.org. Webrtc is the owner, but we use edited version from mozilla repo (Copyright (c) 2011, The WebRTC project authors. All rights reserved)
-
-  * LICENSE (BSD):
-    * https://webrtc.googlesource.com/src/+/master/LICENSE
-  * HOMEPAGE:
-    * https://webrtc.googlesource.com/
-
----
 
 This product contains a derivation of Fabian Fett's 'Base64.swift'.
 

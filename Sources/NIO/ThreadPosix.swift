@@ -14,7 +14,7 @@
 
 #if os(Linux) || os(Android) || os(FreeBSD) || os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
 
-#if os(Linux)
+#if os(Linux) || os(Android)
 import CNIOLinux
 
 private let sys_pthread_getname_np = CNIOLinux_pthread_getname_np

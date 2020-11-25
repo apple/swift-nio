@@ -86,7 +86,7 @@ public enum System {
             .filter { $0.Relationship == RelationProcessorCore }
             .map { $0.ProcessorMask.nonzeroBitCount }
             .reduce(0, +)
-#elseif os(Linux)
+#elseif os(Linux) || os(Android)
         if let quota = Linux.coreCount(quota: Linux.cfsQuotaPath, period: Linux.cfsPeriodPath) {
             return quota
         } else if let cpusetCount = Linux.coreCount(cpuset: Linux.cpuSetPath) {

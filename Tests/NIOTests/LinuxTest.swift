@@ -17,7 +17,7 @@ import XCTest
 
 class LinuxTest: XCTestCase {
     func testCoreCountQuota() {
-        #if os(Linux)
+        #if os(Linux) || os(Android)
         [
             ("50000", "100000", 1),
             ("100000", "100000", 1),
@@ -41,7 +41,7 @@ class LinuxTest: XCTestCase {
     }
 
     func testCoreCountCpuset() {
-        #if os(Linux)
+        #if os(Linux) || os(Android)
         [
             ("0", 1),
             ("0,3", 2),

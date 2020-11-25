@@ -50,7 +50,7 @@ class SocketAddressTest: XCTestCase {
         ]
 
         var address         = sockaddr_in6()
-        #if os(Linux) // no sin_len on Linux
+        #if os(Linux) || os(Android) // no sin6_len on Linux/Android
         #else
           address.sin6_len  = UInt8(MemoryLayout<sockaddr_in6>.size)
         #endif

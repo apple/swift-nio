@@ -36,16 +36,26 @@ let badOS = { fatalError("unsupported OS") }()
 
 #if os(Android)
 let INADDR_ANY = UInt32(0) // #define INADDR_ANY ((unsigned long int) 0x00000000)
-internal typealias sockaddr_storage = __kernel_sockaddr_storage
+let IFF_BROADCAST: CUnsignedInt = numericCast(CNIOLinux.IFF_BROADCAST.rawValue)
+let IFF_POINTOPOINT: CUnsignedInt = numericCast(CNIOLinux.IFF_POINTOPOINT.rawValue)
+let IFF_MULTICAST: CUnsignedInt = numericCast(CNIOLinux.IFF_MULTICAST.rawValue)
 internal typealias in_port_t = UInt16
-let getifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = android_getifaddrs
-let freeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = android_freeifaddrs
 extension ipv6_mreq { // http://lkml.iu.edu/hypermail/linux/kernel/0106.1/0080.html
     init (ipv6mr_multiaddr: in6_addr, ipv6mr_interface: UInt32) {
-        self.ipv6mr_multiaddr = ipv6mr_multiaddr
-        self.ipv6mr_ifindex = Int32(bitPattern: ipv6mr_interface)
+        self.init(ipv6mr_multiaddr: ipv6mr_multiaddr,
+                  ipv6mr_ifindex: Int32(bitPattern: ipv6mr_interface))
     }
 }
+#if arch(arm)
+let SO_RCVTIMEO = SO_RCVTIMEO_OLD
+let SO_TIMESTAMP = SO_TIMESTAMP_OLD
+let S_IFSOCK = UInt32(SwiftGlibc.S_IFSOCK)
+let S_IFMT = UInt32(SwiftGlibc.S_IFMT)
+let S_IFREG = UInt32(SwiftGlibc.S_IFREG)
+let S_IFDIR = UInt32(SwiftGlibc.S_IFDIR)
+let S_IFLNK = UInt32(SwiftGlibc.S_IFLNK)
+let S_IFBLK = UInt32(SwiftGlibc.S_IFBLK)
+#endif
 #endif
 
 // Declare aliases to share more code and not need to repeat #if #else blocks
@@ -104,12 +114,15 @@ private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointe
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = stat
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>) -> CInt = unlink
-private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
-private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
-#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(Android)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = stat
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>?) -> CInt = unlink
+#endif
+#if os(Linux) || os(Android)
+private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
+private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 private let sysKevent = kevent
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
@@ -191,7 +204,11 @@ internal enum Posix {
     static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
+    #if os(Android)
+    static let IPTOS_ECN_NOTECT: CInt = CInt(CNIOLinux.IPTOS_ECN_NOTECT)
+    #else
     static let IPTOS_ECN_NOTECT: CInt = CInt(CNIOLinux.IPTOS_ECN_NOT_ECT)
+    #endif
     static let IPTOS_ECN_MASK: CInt = CInt(CNIOLinux.IPTOS_ECN_MASK)
     static let IPTOS_ECN_ECT0: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT0)
     static let IPTOS_ECN_ECT1: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT1)
@@ -438,7 +455,7 @@ internal enum Posix {
                     var off: off_t = offset
                     let result: ssize_t = Glibc.sendfile(descriptor, fd, &off, count)
                     if result >= 0 {
-                        written = result
+                        written = off_t(result)
                     } else {
                         written = 0
                     }

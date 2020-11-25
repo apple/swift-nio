@@ -169,7 +169,7 @@ typealias IOVector = iovec
                  controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         // Dubious const casts - it should be OK as there is no reason why this should get mutated
         // just bad const declaration below us.
-        var vec = iovec(iov_base: UnsafeMutableRawPointer(mutating: pointer.baseAddress!), iov_len: pointer.count)
+        var vec = iovec(iov_base: UnsafeMutableRawPointer(mutating: pointer.baseAddress!), iov_len: numericCast(pointer.count))
         let notConstCorrectDestinationPtr = UnsafeMutableRawPointer(mutating: destinationPtr)
 
         return try withUnsafeHandle { handle in
@@ -226,7 +226,7 @@ typealias IOVector = iovec
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
                  controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int> {
-        var vec = iovec(iov_base: pointer.baseAddress, iov_len: pointer.count)
+        var vec = iovec(iov_base: pointer.baseAddress, iov_len: numericCast(pointer.count))
 
         return try withUnsafeMutablePointer(to: &vec) { vecPtr in
             return try storage.withMutableSockAddr { (sockaddrPtr, _) in

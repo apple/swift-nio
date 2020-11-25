@@ -208,7 +208,7 @@ extension EpollFilterSet {
     }
 }
 
-#if os(Linux)
+#if os(Linux) || os(Android)
     extension SelectorEventSet {
         var epollEventSet: UInt32 {
             assert(self != ._none)
@@ -274,7 +274,7 @@ internal class Selector<R: Registration> {
     // reads: `self.externalSelectorFDLock` OR access from the EventLoop thread
     // writes: `self.externalSelectorFDLock` AND access from the EventLoop thread
     private var selectorFD: CInt // -1 == we're closed
-    #if os(Linux)
+    #if os(Linux) || os(Android)
     private var eventFD: CInt // -1 == we're closed
     private var timerFD: CInt // -1 == we're closed
     #endif
@@ -358,7 +358,7 @@ internal class Selector<R: Registration> {
         Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
 
         assert(self.selectorFD == -1, "self.selectorFD == \(self.selectorFD) on Selector deinit, forgot close?")
-        #if os(Linux)
+        #if os(Linux) || os(Android)
         assert(self.eventFD == -1, "self.eventFD == \(self.eventFD) on Selector deinit, forgot close?")
         #endif
     }
@@ -662,7 +662,7 @@ internal class Selector<R: Registration> {
             // Therefore, we assert here that close will always succeed and if not, that's a NIO bug we need to know
             // about.
 
-            #if os(Linux)
+            #if os(Linux) || os(Android)
             try! Posix.close(descriptor: self.timerFD)
             try! Posix.close(descriptor: self.eventFD)
 
