@@ -40,6 +40,17 @@ public enum SocketAddressError: Error {
     case failedToParseIPString(String)
 }
 
+extension SocketAddressError {
+    /// Unable to parse a given IP ByteBuffer
+    public struct FailedToParseIPByteBuffer: Error, Hashable {
+        public var address: ByteBuffer
+        
+        public init(address: ByteBuffer) {
+            self.address = address
+        }
+    }
+}
+
 /// Represent a socket address to which we may want to connect or bind.
 public enum SocketAddress: CustomStringConvertible {
 
@@ -323,6 +334,34 @@ public enum SocketAddress: CustomStringConvertible {
             }
 
             throw SocketAddressError.failedToParseIPString(ipAddress)
+        }
+    }
+    
+    /// Create a new `SocketAddress` for an IP address in ByteBuffer form.
+    ///
+    /// - parameters:
+    ///     - packedIpAddress: The IP address, in ByteBuffer form.
+    ///     - port: The target port.
+    /// - returns: the `SocketAddress` corresponding to this string and port combination.
+    /// - throws: may throw `SocketAddressError.failedToParseIPByteBuffer` if the IP address cannot be parsed.
+    public init(packedIpAddress: ByteBuffer, port: Int) throws {
+        let packed = packedIpAddress.readableBytesView
+        
+        switch packedIpAddress.readableBytes {
+        case 4:
+            var ipv4Addr = sockaddr_in()
+            ipv4Addr.sin_family = sa_family_t(AF_INET)
+            ipv4Addr.sin_port = in_port_t(port).bigEndian
+            withUnsafeMutableBytes(of: &ipv4Addr.sin_addr) { $0.copyBytes(from: packed) }
+            self = .v4(.init(address: ipv4Addr, host: ""))
+        case 16:
+            var ipv6Addr = sockaddr_in6()
+            ipv6Addr.sin6_family = sa_family_t(AF_INET6)
+            ipv6Addr.sin6_port = in_port_t(port).bigEndian
+            withUnsafeMutableBytes(of: &ipv6Addr.sin6_addr) { $0.copyBytes(from: packed) }
+            self = .v6(.init(address: ipv6Addr, host: ""))
+        default:
+            throw SocketAddressError.FailedToParseIPByteBuffer(address: packedIpAddress)
         }
     }
 
