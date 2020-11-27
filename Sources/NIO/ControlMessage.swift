@@ -52,7 +52,7 @@ struct UnsafeControlMessageStorage: Collection {
     /// Get the part of the buffer for use with a message.
     public subscript(position: Int) -> UnsafeMutableRawBufferPointer {
         return UnsafeMutableRawBufferPointer(
-            rebasing: self.buffer[(position * self.bytesPerMessage)..<((position+1) * self.bytesPerMessage)])
+            fastRebase: self.buffer[(position * self.bytesPerMessage)..<((position+1) * self.bytesPerMessage)])
     }
 
     var startIndex: Int { return 0 }
@@ -239,7 +239,7 @@ struct UnsafeOutboundControlBytes {
     private mutating func appendGenericControlMessage<PayloadType>(level: CInt,
                                                                    type: CInt,
                                                                    payload: PayloadType) {
-        let writableBuffer = UnsafeMutableRawBufferPointer(rebasing: self.controlBytes[writePosition...])
+        let writableBuffer = UnsafeMutableRawBufferPointer(fastRebase: self.controlBytes[writePosition...])
         
         let requiredSize = NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout.stride(ofValue: payload))
         precondition(writableBuffer.count >= requiredSize, "Insufficient size for cmsghdr and data")
@@ -263,7 +263,7 @@ struct UnsafeOutboundControlBytes {
         if writePosition == 0 {
             return UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
-        return UnsafeMutableRawBufferPointer(rebasing: self.controlBytes[0 ..< self.writePosition])
+        return UnsafeMutableRawBufferPointer(fastRebase: self.controlBytes[0 ..< self.writePosition])
     }
     
 }

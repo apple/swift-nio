@@ -62,7 +62,7 @@ extension ByteBuffer {
         return self.withUnsafeReadableBytes { ptr in
             var value: T = 0
             withUnsafeMutableBytes(of: &value) { valuePtr in
-                valuePtr.copyMemory(from: UnsafeRawBufferPointer(rebasing: ptr[range]))
+                valuePtr.copyMemory(from: UnsafeRawBufferPointer(fastRebase: ptr[range]))
             }
             return _toEndianness(value: value, endianness: endianness)
         }
