@@ -22,10 +22,25 @@ class TimeAmountTests: XCTestCase {
         XCTAssertEqual(TimeAmount.seconds(9), .nanoseconds(9_000_000_000))
         XCTAssertEqual(TimeAmount.minutes(2), .nanoseconds(120_000_000_000))
         XCTAssertEqual(TimeAmount.hours(6), .nanoseconds(21_600_000_000_000))
+        XCTAssertEqual(TimeAmount.zero, .nanoseconds(0))
     }
 
     func testTimeAmountIsHashable() {
         let amounts: Set<TimeAmount> = [.seconds(1), .milliseconds(4), .seconds(1)]
         XCTAssertEqual(amounts, [.seconds(1), .milliseconds(4)])
+    }
+    
+    func testTimeAmountDoesAddTime() {
+        var lhs = TimeAmount.nanoseconds(0)
+        let rhs = TimeAmount.nanoseconds(5)
+        lhs += rhs
+        XCTAssertEqual(lhs, .nanoseconds(5))
+    }
+
+    func testTimeAmountDoesSubtractTime() {
+        var lhs = TimeAmount.nanoseconds(5)
+        let rhs = TimeAmount.nanoseconds(5)
+        lhs -= rhs
+        XCTAssertEqual(lhs, .nanoseconds(0))
     }
 }
