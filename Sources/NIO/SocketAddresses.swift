@@ -275,11 +275,7 @@ public enum SocketAddress: CustomStringConvertible {
             throw SocketAddressError.unixDomainSocketPathTooLong
         }
 
-#if os(Android) // in Android first byte must be zero to use abstract namespace
-        let pathBytes = [0] + Array(unixDomainSocketPath.utf8) + [0]
-#else
         let pathBytes = unixDomainSocketPath.utf8 + [0]
-#endif
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)

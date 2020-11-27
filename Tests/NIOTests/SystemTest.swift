@@ -63,7 +63,7 @@ class SystemTest: XCTestCase {
     private static let cmsghdr_secondDataCount = 1
     private static let cmsghdr_firstType = IP_RECVDSTADDR
     private static let cmsghdr_secondType = IP_RECVTOS
-    #elseif os(Linux)
+    #elseif os(Linux) || os(Android)
     // Example twin data options captured on Linux
     private static let cmsghdrExample: [UInt8] = [
         0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 28 including header.

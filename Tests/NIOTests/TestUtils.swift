@@ -127,9 +127,7 @@ var temporaryDirectory: String {
         // for UNIX Domain Socket paths (which are limited to 103 bytes).
         return "/tmp"
 #else
-#if os(Android)
-        return "/data/local/tmp"
-#elseif os(Linux)
+#if os(Linux)
         return "/tmp"
 #else
         if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {

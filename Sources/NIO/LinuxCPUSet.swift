@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import CNIOLinux
 
-#if os(Linux)
+#if os(Linux) || os(Android)
 
     /// A set that contains CPU ids to use.
     struct LinuxCPUSet {

@@ -37,7 +37,7 @@ import typealias WinSDK.UINT8
 #if !os(Windows)
 private extension ifaddrs {
     var dstaddr: UnsafeMutablePointer<sockaddr>? {
-        #if os(Linux)
+        #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_dstaddr
         #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
         return self.ifa_dstaddr
@@ -45,7 +45,7 @@ private extension ifaddrs {
     }
 
     var broadaddr: UnsafeMutablePointer<sockaddr>? {
-        #if os(Linux)
+        #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_broadaddr
         #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
         return self.ifa_dstaddr
@@ -462,6 +462,11 @@ public final class NIONetworkInterface {
 #else
     internal init?(_ caddr: ifaddrs) {
         self.name = String(cString: caddr.ifa_name)
+
+        guard caddr.ifa_addr != nil else {
+            return nil
+        }
+
         guard let address = caddr.ifa_addr!.convert() else {
             return nil
         }

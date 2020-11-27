@@ -252,7 +252,7 @@ extension SocketOptionProvider {
         return self.unsafeGetSocketOption(level: .ipv6, name: .ipv6_multicast_loop)
     }
 
-    #if os(Linux) || os(FreeBSD)
+    #if os(Linux) || os(FreeBSD) || os(Android)
         /// Gets the value of the socket option TCP_INFO.
         ///
         /// This socket option cannot be set.

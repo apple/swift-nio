@@ -269,8 +269,8 @@ final class SocketOptionProviderTest: XCTestCase {
     }
 
     func testTCPInfo() throws {
-        // This test only runs on Linux and FreeBSD.
-        #if os(Linux) || os(FreeBSD)
+        // This test only runs on Linux, FreeBSD, and Android.
+        #if os(Linux) || os(FreeBSD) || os(Android)
         let channel = self.clientChannel! as! SocketOptionProvider
         let tcpInfo = try assertNoThrowWithValue(channel.getTCPInfo().wait())
 

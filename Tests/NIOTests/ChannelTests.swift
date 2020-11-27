@@ -1646,7 +1646,7 @@ public final class ChannelTests: XCTestCase {
 
     func testCloseInSameReadThatEOFGetsDelivered() throws {
         guard isEarlyEOFDeliveryWorkingOnThisOS else {
-            #if os(Linux)
+            #if os(Linux) || os(Android)
             preconditionFailure("this should only ever be entered on Darwin.")
             #else
             return
@@ -1705,7 +1705,7 @@ public final class ChannelTests: XCTestCase {
 
     func testEOFReceivedWithoutReadRequests() throws {
         guard isEarlyEOFDeliveryWorkingOnThisOS else {
-            #if os(Linux)
+            #if os(Linux) || os(Android)
             preconditionFailure("this should only ever be entered on Darwin.")
             #else
             return
