@@ -336,14 +336,14 @@ public enum SocketAddress: CustomStringConvertible {
     /// Create a new `SocketAddress` for an IP address in ByteBuffer form.
     ///
     /// - parameters:
-    ///     - packedIpAddress: The IP address, in ByteBuffer form.
+    ///     - packedIPAddress: The IP address, in ByteBuffer form.
     ///     - port: The target port.
     /// - returns: the `SocketAddress` corresponding to this string and port combination.
     /// - throws: may throw `SocketAddressError.failedToParseIPByteBuffer` if the IP address cannot be parsed.
-    public init(packedIpAddress: ByteBuffer, port: Int) throws {
-        let packed = packedIpAddress.readableBytesView
+    public init(packedIPAddress: ByteBuffer, port: Int) throws {
+        let packed = packedIPAddress.readableBytesView
         
-        switch packedIpAddress.readableBytes {
+        switch packedIPAddress.readableBytes {
         case 4:
             var ipv4Addr = sockaddr_in()
             ipv4Addr.sin_family = sa_family_t(AF_INET)
@@ -357,7 +357,7 @@ public enum SocketAddress: CustomStringConvertible {
             withUnsafeMutableBytes(of: &ipv6Addr.sin6_addr) { $0.copyBytes(from: packed) }
             self = .v6(.init(address: ipv6Addr, host: ""))
         default:
-            throw SocketAddressError.FailedToParseIPByteBuffer(address: packedIpAddress)
+            throw SocketAddressError.FailedToParseIPByteBuffer(address: packedIPAddress)
         }
     }
 
