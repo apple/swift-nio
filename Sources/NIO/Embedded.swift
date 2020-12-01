@@ -281,7 +281,10 @@ class EmbeddedChannelCore: ChannelCore {
 
     func flush0() {
         let pendings = self.pendingOutboundBuffer
-        self.pendingOutboundBuffer.removeAll(keepingCapacity: true)
+        // removeAll(keepingCapacity:) is strictly more expensive than doing this, see
+        // https://bugs.swift.org/browse/SR-13923.
+        self.pendingOutboundBuffer = []
+        self.pendingOutboundBuffer.reserveCapacity(pendings.capacity)
         for dataAndPromise in pendings {
             self.addToBuffer(buffer: &self.outboundBuffer, data: dataAndPromise.0)
             dataAndPromise.1?.succeed(())
