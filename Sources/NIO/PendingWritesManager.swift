@@ -453,7 +453,7 @@ internal enum WriteMechanism {
     case nothingToBeWritten
 }
 
-internal protocol PendingWritesManager: class {
+internal protocol PendingWritesManager: AnyObject {
     var isOpen: Bool { get }
     var isFlushPending: Bool { get }
     var writeSpinCount: UInt { get }

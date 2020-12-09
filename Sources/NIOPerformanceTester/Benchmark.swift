@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-protocol Benchmark: class {
+protocol Benchmark: AnyObject {
     func setUp() throws
     func tearDown()
     func run() throws -> Int

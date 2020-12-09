@@ -19,7 +19,7 @@ import NIOConcurrencyHelpers
 /// - warning: If you are not implementing a custom `Channel` type, you should never call any of these.
 ///
 /// - note: All methods must be called from the `EventLoop` thread.
-public protocol ChannelCore: class {
+public protocol ChannelCore: AnyObject {
     /// Returns the local bound `SocketAddress`.
     func localAddress0() throws -> SocketAddress
 
@@ -102,7 +102,7 @@ public protocol ChannelCore: class {
 /// passed to or returned by the operations are used to retrieve the result of an operation after it has completed.
 ///
 /// A `Channel` owns its `ChannelPipeline` which handles all I/O events and requests associated with the `Channel`.
-public protocol Channel: class, ChannelOutboundInvoker {
+public protocol Channel: AnyObject, ChannelOutboundInvoker {
     /// The `Channel`'s `ByteBuffer` allocator. This is _the only_ supported way of allocating `ByteBuffer`s to be used with this `Channel`.
     var allocator: ByteBufferAllocator { get }
 
