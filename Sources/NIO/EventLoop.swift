@@ -732,7 +732,7 @@ enum NIORegistration: Registration {
 }
 
 /// Provides an endless stream of `EventLoop`s to use.
-public protocol EventLoopGroup: class {
+public protocol EventLoopGroup: AnyObject {
     /// Returns the next `EventLoop` to use.
     ///
     /// The algorithm that is used to select the next `EventLoop` is specific to each `EventLoopGroup`. A common choice

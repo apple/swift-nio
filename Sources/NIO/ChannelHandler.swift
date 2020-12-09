@@ -17,7 +17,7 @@
 /// All methods are called from within the `EventLoop` that is assigned to the `Channel` itself.
 //
 /// You should _never_ implement this protocol directly. Please implement one of its sub-protocols.
-public protocol ChannelHandler: class {
+public protocol ChannelHandler: AnyObject {
     /// Called when this `ChannelHandler` is added to the `ChannelPipeline`.
     ///
     /// - parameters:
