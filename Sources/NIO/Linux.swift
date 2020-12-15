@@ -14,9 +14,10 @@
 
 // This is a companion to System.swift that provides only Linux specials: either things that exist
 // only on Linux, or things that have Linux-specific extensions.
-import CNIOLinux
 
 #if os(Linux) || os(Android)
+import CNIOLinux
+
 internal enum TimerFd {
     public static let TFD_CLOEXEC = CNIOLinux.TFD_CLOEXEC
     public static let TFD_NONBLOCK = CNIOLinux.TFD_NONBLOCK

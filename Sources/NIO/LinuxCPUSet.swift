@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import CNIOLinux
 
 #if os(Linux) || os(Android)
+import CNIOLinux
 
     /// A set that contains CPU ids to use.
     struct LinuxCPUSet {

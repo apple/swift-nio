@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#endif
 
 #if os(Windows)
 import let WinSDK.RelationProcessorCore

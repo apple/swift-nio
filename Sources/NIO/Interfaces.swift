@@ -18,7 +18,9 @@
 //  Created by Cory Benfield on 27/02/2018.
 //
 
+#if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#endif
 
 #if os(Windows)
 import let WinSDK.AF_INET
