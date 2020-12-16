@@ -21,7 +21,9 @@
 /// needed to implement it.
 ///
 /// This resolver is a single-use object: it can only be used to perform a single host resolution.
+#if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#endif
 
 #if os(Windows)
 import let WinSDK.AF_INET

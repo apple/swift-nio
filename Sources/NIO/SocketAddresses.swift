@@ -13,7 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
+#if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#endif
 
 #if os(Windows)
 import let WinSDK.AF_INET

@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#endif
 
 enum LowLevelThreadOperations {
     
