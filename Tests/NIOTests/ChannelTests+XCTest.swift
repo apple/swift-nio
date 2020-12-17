@@ -84,6 +84,7 @@ extension ChannelTests {
                 ("testFixedSizeRecvByteBufferAllocatorSizeIsConstant", testFixedSizeRecvByteBufferAllocatorSizeIsConstant),
                 ("testCloseInConnectPromise", testCloseInConnectPromise),
                 ("testWritabilityChangeDuringReentrantFlushNow", testWritabilityChangeDuringReentrantFlushNow),
+                ("testTriggerEPROTOTYPE", testTriggerEPROTOTYPE),
            ]
    }
 }
