@@ -2814,6 +2814,40 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try handler.becameUnwritable.futureResult.wait())
         XCTAssertNoThrow(try handler.becameWritable.futureResult.wait())
     }
+
+    func testTriggerEPROTOTYPE() throws {
+        // This is a probabilistic test for https://github.com/swift-server/async-http-client/issues/322.
+        // We believe we'll see EPROTOTYPE on write syscalls if we write while the connections are being torn down.
+        // To check this we create 500 connections and close them, while the server attempts to write AS FAST AS IT CAN.
+        // As this test is probabilistic, we must not ignore transient failures in it.
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let serverLoop = group.next()
+        let clientLoop = group.next()
+        XCTAssertFalse(serverLoop === clientLoop)
+
+        let serverFuture = ServerBootstrap(group: serverLoop)
+            .childChannelInitializer { channel in
+                return channel.pipeline.addHandler(AlwaysBeWritingHandler(vectorWrites: [true, false].randomElement()!))
+            }
+            .bind(host: "localhost", port: 0)
+
+        let server: Channel = try assertNoThrowWithValue(try serverFuture.wait())
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+
+        let clientFactory = ClientBootstrap(group: clientLoop)
+        let serverAddress = server.localAddress!
+
+        for _ in 0..<500 {
+            let client = try assertNoThrowWithValue(clientFactory.connect(to: serverAddress).wait())
+            XCTAssertNoThrow(try client.close().wait())
+        }
+    }
 }
 
 fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
@@ -2923,6 +2957,52 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
         } else {
             self.isNotWritableCount += 1
             self.becameUnwritable.succeed(())
+        }
+    }
+}
+
+final class AlwaysBeWritingHandler: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+    typealias OutboundOut = ByteBuffer
+
+    static let buffer = ByteBuffer(string: "This is some data that I'm sending right now")
+
+    private let doVectorWrite: Bool
+
+    init(vectorWrites: Bool) {
+        self.doVectorWrite = vectorWrites
+    }
+
+    func channelActive(context: ChannelHandlerContext) {
+        self.keepWriting(context: context)
+    }
+
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        if let error = error as? IOError, error.errnoCode == EPROTOTYPE {
+            XCTFail("Received EPROTOTYPE error")
+        }
+    }
+
+    private func keepWriting(context: ChannelHandlerContext) {
+        if self.doVectorWrite {
+            context.write(self.wrapOutboundOut(AlwaysBeWritingHandler.buffer)).whenFailure { error in
+                if let error = error as? IOError, error.errnoCode == EPROTOTYPE {
+                    XCTFail("Received EPROTOTYPE error")
+                }
+            }
+        }
+        context.writeAndFlush(self.wrapOutboundOut(AlwaysBeWritingHandler.buffer)).whenComplete { result in
+            switch result {
+            case .success:
+                // We unroll the stack here to avoid blowing it apart.
+                context.eventLoop.execute {
+                    self.keepWriting(context: context)
+                }
+            case .failure(let error):
+                if let error = error as? IOError, error.errnoCode == EPROTOTYPE {
+                    XCTFail("Received EPROTOTYPE error")
+                }
+            }
         }
     }
 }
