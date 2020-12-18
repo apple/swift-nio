@@ -150,7 +150,6 @@ private func preconditionIsNotUnacceptableErrno(err: CInt, where function: Strin
 @inline(__always)
 @discardableResult
 internal func syscall<T: FixedWidthInteger>(blocking: Bool,
-                                            eprototypeWorkaround: Bool = false,
                                             where function: String = #function,
                                             _ body: () throws -> T)
         throws -> IOResult<T> {
@@ -158,18 +157,11 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
         let res = try body()
         if res == -1 {
             let err = errno
-            switch (err, blocking, eprototypeWorkaround) {
-            case (EINTR, _, _):
+            switch (err, blocking) {
+            case (EINTR, _):
                 continue
-            case (EWOULDBLOCK, true, _):
+            case (EWOULDBLOCK, true):
                 return .wouldBlock(0)
-            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-            case (EPROTOTYPE, _, true):
-                // EPROTOTYPE can, on Darwin platforms, sometimes fire due to a race in the XNU kernel.
-                // The socket in question is about to shut down, so we can just retry the syscall and get
-                // the actual error (usually, but not necessarily, EPIPE).
-                continue
-            #endif
             default:
                 preconditionIsNotUnacceptableErrno(err: err, where: function)
                 throw IOError(errnoCode: err, reason: function)
@@ -364,7 +356,7 @@ internal enum Posix {
     
     @inline(never)
     public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
-        return try syscall(blocking: true, eprototypeWorkaround: true) {
+        return try syscall(blocking: true) {
             sysWrite(descriptor, pointer, size)
         }
     }
@@ -379,7 +371,7 @@ internal enum Posix {
 #if !os(Windows)
     @inline(never)
     public static func writev(descriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
-        return try syscall(blocking: true, eprototypeWorkaround: true) {
+        return try syscall(blocking: true) {
             sysWritev(descriptor, iovecs.baseAddress!, CInt(iovecs.count))
         }
     }
@@ -453,7 +445,7 @@ internal enum Posix {
     public static func sendfile(descriptor: CInt, fd: CInt, offset: off_t, count: size_t) throws -> IOResult<Int> {
         var written: off_t = 0
         do {
-            _ = try syscall(blocking: false, eprototypeWorkaround: true) { () -> ssize_t in
+            _ = try syscall(blocking: false) { () -> ssize_t in
                 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
                     var w: off_t = off_t(count)
                     let result: CInt = Darwin.sendfile(fd, descriptor, offset, &w, nil, 0)
