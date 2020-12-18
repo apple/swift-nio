@@ -515,7 +515,7 @@ extension EventLoop {
     ///
     /// - parameters:
     ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
-    /// - returns: An `EventLoopFuture` identical to the `EventLooopFuture` returned from `task`.
+    /// - returns: An `EventLoopFuture` identical to the `EventLoopFuture` returned from `task`.
     @inlinable
     public func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
         return self.submit(task).flatMap { $0 }
@@ -530,6 +530,7 @@ extension EventLoop {
     ///
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
+    @inlinable
     public func flatScheduleTask<T>(deadline: NIODeadline,
                                     file: StaticString = #file,
                                     line: UInt = #line,
@@ -550,6 +551,7 @@ extension EventLoop {
     ///
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
+    @inlinable
     public func flatScheduleTask<T>(in delay: TimeAmount,
                                     file: StaticString = #file,
                                     line: UInt = #line,

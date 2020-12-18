@@ -113,7 +113,11 @@ internal struct CallbackList {
 }
 
 /// Internal error for operations that return results that were not replaced
-private struct OperationPlaceholderError: Error { }
+@usableFromInline
+internal struct OperationPlaceholderError: Error {
+    @usableFromInline
+    internal init() {}
+}
 
 /// A promise to provide a result later.
 ///
@@ -891,6 +895,7 @@ extension EventLoopFuture {
     ///
     /// - returns: The value of the `EventLoopFuture` when it completes.
     /// - throws: The error value of the `EventLoopFuture` if it errors.
+    @inlinable
     public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value {
         if !(self.eventLoop is EmbeddedEventLoop) {
             let explainer: () -> String = { """
@@ -1176,6 +1181,7 @@ extension EventLoopFuture {
     ///     - futures: An array of homogenous `EventLoopFuture`s to wait for.
     ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will execute on.
     /// - Returns: A new `EventLoopFuture` that succeeds after all futures complete.
+    @inlinable
     public static func andAllComplete(_ futures: [EventLoopFuture<Value>], on eventLoop: EventLoop) -> EventLoopFuture<Void> {
         let promise = eventLoop.makePromise(of: Void.self)
 
@@ -1201,6 +1207,7 @@ extension EventLoopFuture {
     ///     - futures: An array of homogenous `EventLoopFuture`s to gather results from.
     ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
     /// - Returns: A new `EventLoopFuture` with all the results of the provided futures.
+    @inlinable
     public static func whenAllComplete(_ futures: [EventLoopFuture<Value>],
                                        on eventLoop: EventLoop) -> EventLoopFuture<[Result<Value, Error>]> {
         let promise = eventLoop.makePromise(of: Void.self)
@@ -1233,10 +1240,11 @@ extension EventLoopFuture {
     /// they complete. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
     ///
     /// Once all the futures have completed, the provided promise will succeed.
-    private static func _reduceCompletions0<InputValue>(_ promise: EventLoopPromise<Void>,
-                                                        _ futures: [EventLoopFuture<InputValue>],
-                                                        _ eventLoop: EventLoop,
-                                                        onResult: @escaping (Int, Result<InputValue, Error>) -> Void) {
+    @inlinable
+    internal static func _reduceCompletions0<InputValue>(_ promise: EventLoopPromise<Void>,
+                                                         _ futures: [EventLoopFuture<InputValue>],
+                                                         _ eventLoop: EventLoop,
+                                                         onResult: @escaping (Int, Result<InputValue, Error>) -> Void) {
         eventLoop.assertInEventLoop()
 
         var remainingCount = futures.count
@@ -1317,6 +1325,7 @@ extension EventLoopFuture {
     /// - parameters:
     ///     - callback: the callback that is called when the `EventLoopFuture` is fulfilled.   
     /// - returns: the current `EventLoopFuture`
+    @inlinable
     public func always(_ callback: @escaping (Result<Value, Error>) -> Void) -> EventLoopFuture<Value> {
         self.whenComplete { result in callback(result) }
         return self
