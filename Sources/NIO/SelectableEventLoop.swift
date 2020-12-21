@@ -95,14 +95,14 @@ internal final class SelectableEventLoop: EventLoop {
     private var _promiseCreationStore: [UInt: (file: StaticString, line: UInt)] = [:]
 
     @usableFromInline
-    internal func promiseCreationStoreAdd<T>(future: EventLoopFuture<T>, file: StaticString, line: UInt) {
+    internal func promiseCreationStoreAdd<T>(future: EventLoopFuture2<T>, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         self.promiseCreationStoreLock.withLock {
             self._promiseCreationStore[self.obfuscatePointerValue(future)] = (file: file, line: line)
         }
     }
 
-    internal func promiseCreationStoreRemove<T>(future: EventLoopFuture<T>) -> (file: StaticString, line: UInt) {
+    internal func promiseCreationStoreRemove<T>(future: EventLoopFuture2<T>) -> (file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         return self.promiseCreationStoreLock.withLock {
             self._promiseCreationStore.removeValue(forKey: self.obfuscatePointerValue(future))!
@@ -346,7 +346,7 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
     
-    private func obfuscatePointerValue<T>(_ future: EventLoopFuture<T>) -> UInt {
+    private func obfuscatePointerValue<T>(_ future: EventLoopFuture2<T>) -> UInt {
         // Note:
         // 1. 0xbf15ca5d is randomly picked such that it fits into both 32 and 64 bit address spaces
         // 2. XOR with 0xbf15ca5d so that Memory Graph Debugger and other memory debugging tools

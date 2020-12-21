@@ -27,7 +27,7 @@
 
 private extension Array where Element == EventLoopFuture<Channel> {
     mutating func remove(element: Element) {
-        guard let channelIndex = self.firstIndex(where: { $0 === element }) else {
+        guard let channelIndex = self.firstIndex(where: { $0 == element }) else {
             return
         }
 
@@ -556,7 +556,7 @@ internal class HappyEyeballsConnector {
                     // The connection attempt failed. If we're in the complete state then there's nothing
                     // to do. Otherwise, notify the state machine of the failure.
                     if case .complete = self.state {
-                        assert(self.pendingConnections.firstIndex { $0 === channelFuture } == nil, "failed but was still in pending connections")
+                        assert(self.pendingConnections.firstIndex { $0 == channelFuture } == nil, "failed but was still in pending connections")
                     } else {
                         self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
                         self.pendingConnections.remove(element: channelFuture)

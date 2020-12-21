@@ -154,7 +154,12 @@ internal struct OperationPlaceholderError: Error {
 public struct EventLoopPromise<Value> {
     /// The `EventLoopFuture` which is used by the `EventLoopPromise`. You can use it to add callbacks which are notified once the
     /// `EventLoopPromise` is completed.
-    public let futureResult: EventLoopFuture<Value>
+    @usableFromInline
+    internal let realFutureResult: EventLoopFuture2<Value>
+
+    public var futureResult: EventLoopFuture<Value> {
+        return EventLoopFuture(realFuture: self.realFutureResult)
+    }
 
     /// General initializer
     ///
@@ -164,7 +169,7 @@ public struct EventLoopPromise<Value> {
     ///     - line: The line this promise was allocated on, for debugging purposes.
     @inlinable
     internal init(eventLoop: EventLoop, file: StaticString, line: UInt) {
-        self.futureResult = EventLoopFuture<Value>(_eventLoop: eventLoop, file: file, line: line)
+        self.realFutureResult = EventLoopFuture2<Value>(_eventLoop: eventLoop, file: file, line: line)
     }
 
     /// Deliver a successful result to the associated `EventLoopFuture<Value>` object.
@@ -227,10 +232,10 @@ public struct EventLoopPromise<Value> {
     ///     - value: The value to fire the future with.
     @inlinable
     internal func _resolve(value: Result<Value, Error>) {
-        if self.futureResult.eventLoop.inEventLoop {
+        if self.realFutureResult.eventLoop.inEventLoop {
             self._setValue(value: value)._run()
         } else {
-            self.futureResult.eventLoop.execute {
+            self.realFutureResult.eventLoop.execute {
                 self._setValue(value: value)._run()
             }
         }
@@ -370,7 +375,52 @@ public struct EventLoopPromise<Value> {
 /// or `EventLoopFuture` callbacks need to invoke a lock (either directly or in the form of `DispatchQueue`) this
 /// should be considered a code smell worth investigating: the `EventLoop`-based synchronization guarantees of
 /// `EventLoopFuture` should be sufficient to guarantee thread-safety.
-public final class EventLoopFuture<Value> {
+public struct EventLoopFuture<Value>: Equatable {
+    @usableFromInline
+    internal enum ELFType: Equatable {
+        case regular(EventLoopFuture2<Value>)
+    }
+
+    @usableFromInline
+    internal var value: ELFType
+
+    public var eventLoop: EventLoop {
+        switch self.value {
+        case .regular(let realFuture):
+            return realFuture.eventLoop
+        }
+    }
+
+    @usableFromInline
+    internal var _value: Optional<Result<Value, Error>> {
+        get {
+            switch self.value {
+            case .regular(let realFuture):
+                return realFuture._value
+            }
+        }
+    }
+
+    internal init(realFuture: EventLoopFuture2<Value>) {
+        self.value = .regular(realFuture)
+    }
+
+    /// A EventLoopFuture<Value> that has already succeeded
+    @inlinable
+    internal init(eventLoop: EventLoop, value: Value, file: StaticString, line: UInt) {
+        // TODO:  Magic here!
+        self.value = .regular(EventLoopFuture2(_eventLoop: eventLoop, value: .success(value), file: file, line: line))
+    }
+
+    /// A EventLoopFuture<Value> that has already failed
+    @inlinable
+    internal init(eventLoop: EventLoop, error: Error, file: StaticString, line: UInt) {
+        // TODO: Magic here!
+        self.value = .regular(EventLoopFuture2(_eventLoop: eventLoop, value: .failure(error), file: file, line: line))
+    }
+}
+
+public final class EventLoopFuture2<Value> {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
     @usableFromInline
     internal var _value: Optional<Result<Value, Error>>
@@ -429,8 +479,8 @@ public final class EventLoopFuture<Value> {
     }
 }
 
-extension EventLoopFuture: Equatable {
-    public static func ==(lhs: EventLoopFuture, rhs: EventLoopFuture) -> Bool {
+extension EventLoopFuture2: Equatable {
+    public static func ==(lhs: EventLoopFuture2, rhs: EventLoopFuture2) -> Bool {
         return lhs === rhs
     }
 }
@@ -662,8 +712,12 @@ extension EventLoopFuture {
     internal func _addCallback(_ callback: @escaping () -> CallbackList) -> CallbackList {
         self.eventLoop.assertInEventLoop()
         if self._value == nil {
-            self._callbacks.append(callback)
-            return CallbackList()
+            switch self.value {
+            case .regular(let realFuture):
+                realFuture._callbacks.append(callback)
+                return CallbackList()
+            }
+
         }
         return callback()
     }
@@ -747,10 +801,13 @@ extension EventLoopFuture {
     internal func _setValue(value: Result<Value, Error>) -> CallbackList {
         self.eventLoop.assertInEventLoop()
         if self._value == nil {
-            self._value = value
-            let callbacks = self._callbacks
-            self._callbacks = CallbackList()
-            return callbacks
+            switch self.value {
+            case .regular(let realFuture):
+                realFuture._value = value
+                let callbacks = realFuture._callbacks
+                realFuture._callbacks = CallbackList()
+                return callbacks
+            }
         }
         return CallbackList()
     }

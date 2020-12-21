@@ -764,7 +764,7 @@ class EventLoopFutureTest : XCTestCase {
 
         let noHoppingPromise = loop1.makePromise(of: Void.self)
         let noHoppingFuture = noHoppingPromise.futureResult.hop(to: loop1)
-        XCTAssertTrue(noHoppingFuture === noHoppingPromise.futureResult)
+        XCTAssertTrue(noHoppingFuture == noHoppingPromise.futureResult)
         noHoppingPromise.succeed(())
     }
 
