@@ -14,7 +14,7 @@
 
 import NIOConcurrencyHelpers
 import Dispatch
-import Foundation
+import Atomics
 
 /// Internal list of callbacks.
 ///
@@ -402,7 +402,7 @@ public struct EventLoopFuture<Value>: Equatable {
         }
 
         case regular(EventLoopFuture2<Value>)
-        case answered(Result<Value, Error>, EventLoop, UUID, StaticString, UInt)
+        case answered(Result<Value, Error>, EventLoop, UniqueValue, StaticString, UInt)
     }
 
     @usableFromInline
@@ -437,14 +437,26 @@ public struct EventLoopFuture<Value>: Equatable {
     @inlinable
     internal init(eventLoop: EventLoop, value: Value, file: StaticString, line: UInt) {
         // Magic here!
-        self.value = .answered(.success(value), eventLoop, UUID(), file, line)
+        self.value = .answered(.success(value), eventLoop, UniqueValue(), file, line)
     }
 
     /// A EventLoopFuture<Value> that has already failed
     @inlinable
     internal init(eventLoop: EventLoop, error: Error, file: StaticString, line: UInt) {
         // Magic here!
-        self.value = .answered(.failure(error), eventLoop, UUID(), file, line)
+        self.value = .answered(.failure(error), eventLoop, UniqueValue(), file, line)
+    }
+}
+
+@usableFromInline
+struct UniqueValue: Equatable {
+    private let value: UInt64
+
+    private static var hiddenAtomic = ManagedAtomic<UInt64>(0)
+
+    @usableFromInline
+    init() {
+        self.value = UniqueValue.hiddenAtomic.wrappingIncrementThenLoad(by: 1, ordering: .relaxed)
     }
 }
 
