@@ -14,6 +14,7 @@
 
 import NIOConcurrencyHelpers
 import Dispatch
+import Foundation
 
 /// Internal list of callbacks.
 ///
@@ -375,10 +376,33 @@ public struct EventLoopPromise<Value> {
 /// or `EventLoopFuture` callbacks need to invoke a lock (either directly or in the form of `DispatchQueue`) this
 /// should be considered a code smell worth investigating: the `EventLoop`-based synchronization guarantees of
 /// `EventLoopFuture` should be sufficient to guarantee thread-safety.
+
 public struct EventLoopFuture<Value>: Equatable {
     @usableFromInline
     internal enum ELFType: Equatable {
+        @usableFromInline
+        static func == (lhs: EventLoopFuture<Value>.ELFType, rhs: EventLoopFuture<Value>.ELFType) -> Bool {
+            switch lhs {
+            case .regular(let realFutureLHS):
+                switch rhs {
+                case .regular(let realFutureRHS):
+                    return realFutureLHS == realFutureRHS
+                case .answered:
+                    return false
+                }
+            case .answered(_, _, let uuidLHS, _, _):
+                switch rhs {
+                case .regular:
+                    return false
+                case .answered(_, _, let uuidRHS, _, _):
+                    // TODO:  Need something better than this as obviously wrong.
+                    return uuidLHS == uuidRHS
+                }
+            }
+        }
+
         case regular(EventLoopFuture2<Value>)
+        case answered(Result<Value, Error>, EventLoop, UUID, StaticString, UInt)
     }
 
     @usableFromInline
@@ -388,6 +412,8 @@ public struct EventLoopFuture<Value>: Equatable {
         switch self.value {
         case .regular(let realFuture):
             return realFuture.eventLoop
+        case .answered(_, let eventLoop, _, _, _):
+            return eventLoop
         }
     }
 
@@ -397,6 +423,8 @@ public struct EventLoopFuture<Value>: Equatable {
             switch self.value {
             case .regular(let realFuture):
                 return realFuture._value
+            case .answered(let result, _, _, _, _):
+                return result
             }
         }
     }
@@ -408,15 +436,15 @@ public struct EventLoopFuture<Value>: Equatable {
     /// A EventLoopFuture<Value> that has already succeeded
     @inlinable
     internal init(eventLoop: EventLoop, value: Value, file: StaticString, line: UInt) {
-        // TODO:  Magic here!
-        self.value = .regular(EventLoopFuture2(_eventLoop: eventLoop, value: .success(value), file: file, line: line))
+        // Magic here!
+        self.value = .answered(.success(value), eventLoop, UUID(), file, line)
     }
 
     /// A EventLoopFuture<Value> that has already failed
     @inlinable
     internal init(eventLoop: EventLoop, error: Error, file: StaticString, line: UInt) {
-        // TODO: Magic here!
-        self.value = .regular(EventLoopFuture2(_eventLoop: eventLoop, value: .failure(error), file: file, line: line))
+        // Magic here!
+        self.value = .answered(.failure(error), eventLoop, UUID(), file, line)
     }
 }
 
@@ -716,6 +744,8 @@ extension EventLoopFuture {
             case .regular(let realFuture):
                 realFuture._callbacks.append(callback)
                 return CallbackList()
+            case .answered:
+                precondition(false) // This shouldn't happen
             }
 
         }
@@ -807,6 +837,8 @@ extension EventLoopFuture {
                 let callbacks = realFuture._callbacks
                 realFuture._callbacks = CallbackList()
                 return callbacks
+            case .answered:
+                precondition(false)  // This should never happen.
             }
         }
         return CallbackList()
