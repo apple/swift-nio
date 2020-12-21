@@ -909,33 +909,38 @@ extension ChannelPipeline {
             individualPosition = .after(handler)
         }
 
-        let promise = self.eventLoop.makePromise(of: Void.self)
+        func addHandlersMakingPromise(handlers: [ChannelHandler],
+                                      individualPositin: ChannelPipeline.Position) -> EventLoopFuture<Void> {
+            let promise = self.eventLoop.makePromise(of: Void.self)
 
-        // Add all the handlers.
-        func addAllHandlersAndComplete() {
-            for handler in handlers {
-                let addResult = self._add(handler, position: individualPosition)
-                switch addResult {
-                case .success:
-                    break // Keep going.
-                case .failure:
-                    // Report failure and return.
-                    promise.completeWith(addResult)
-                    return
+            // Add all the handlers.
+            func addAllHandlersAndComplete() {
+                for handler in handlers {
+                    let addResult = self._add(handler, position: individualPosition)
+                    switch addResult {
+                    case .success:
+                        break // Keep going.
+                    case .failure:
+                        // Report failure and return.
+                        promise.completeWith(addResult)
+                        return
+                    }
+                }
+                promise.succeed(())
+            }
+
+            if self.eventLoop.inEventLoop {
+                addAllHandlersAndComplete()
+            } else {
+                self.eventLoop.execute {
+                    addAllHandlersAndComplete()
                 }
             }
-            promise.succeed(())
+
+            return promise.futureResult
         }
 
-        if self.eventLoop.inEventLoop {
-            addAllHandlersAndComplete()
-        } else {
-            self.eventLoop.execute {
-                addAllHandlersAndComplete()
-            }
-        }
-
-        return promise.futureResult
+        return addHandlersMakingPromise(handlers: handlers, individualPositin: individualPosition)
     }
 
     /// Adds the provided channel handlers to the pipeline in the order given, taking account
