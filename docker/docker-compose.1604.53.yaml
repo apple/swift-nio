@@ -41,6 +41,7 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_udpbootstraps=2000
       - MAX_ALLOCS_ALLOWED_1000_udpconnections=102050
       - MAX_ALLOCS_ALLOWED_1000_udp_reqs=16050
+      - MAX_ALLOCS_ALLOWED_1000_addHandlers=48050
       - SANITIZER_ARG=--sanitize=thread
 
   performance-test:
