@@ -156,7 +156,7 @@ public struct EventLoopPromise<Value> {
     /// The `EventLoopFuture` which is used by the `EventLoopPromise`. You can use it to add callbacks which are notified once the
     /// `EventLoopPromise` is completed.
     @usableFromInline
-    internal let realFutureResult: EventLoopFuture2<Value>
+    internal let realFutureResult: RealEventLoopFuture<Value>
 
     public var futureResult: EventLoopFuture<Value> {
         return EventLoopFuture(realFuture: self.realFutureResult)
@@ -170,7 +170,7 @@ public struct EventLoopPromise<Value> {
     ///     - line: The line this promise was allocated on, for debugging purposes.
     @inlinable
     internal init(eventLoop: EventLoop, file: StaticString, line: UInt) {
-        self.realFutureResult = EventLoopFuture2<Value>(_eventLoop: eventLoop, file: file, line: line)
+        self.realFutureResult = RealEventLoopFuture<Value>(_eventLoop: eventLoop, file: file, line: line)
     }
 
     /// Deliver a successful result to the associated `EventLoopFuture<Value>` object.
@@ -376,9 +376,11 @@ public struct EventLoopPromise<Value> {
 /// or `EventLoopFuture` callbacks need to invoke a lock (either directly or in the form of `DispatchQueue`) this
 /// should be considered a code smell worth investigating: the `EventLoop`-based synchronization guarantees of
 /// `EventLoopFuture` should be sufficient to guarantee thread-safety.
-
+///
+/// Struct version fo EventLoopFuture - allows futures which are immediately resolved without allocating.
 public struct EventLoopFuture<Value>: Equatable {
     @usableFromInline
+    /// Enumeration for holding the various types of EventLoopFuture
     internal enum ELFType: Equatable {
         @usableFromInline
         static func == (lhs: EventLoopFuture<Value>.ELFType, rhs: EventLoopFuture<Value>.ELFType) -> Bool {
@@ -401,13 +403,15 @@ public struct EventLoopFuture<Value>: Equatable {
             }
         }
 
-        case regular(EventLoopFuture2<Value>)
+        case regular(RealEventLoopFuture<Value>)
         case answered(Result<Value, Error>, EventLoop, UniqueValue, StaticString, UInt)
     }
 
     @usableFromInline
+    /// Storage of the inner value.
     internal var value: ELFType
 
+    /// Which EventLoop is this future to run on.
     public var eventLoop: EventLoop {
         switch self.value {
         case .regular(let realFuture):
@@ -417,6 +421,7 @@ public struct EventLoopFuture<Value>: Equatable {
         }
     }
 
+    /// Get the current value or error of this future if complete or nil.
     @usableFromInline
     internal var _value: Optional<Result<Value, Error>> {
         get {
@@ -429,7 +434,8 @@ public struct EventLoopFuture<Value>: Equatable {
         }
     }
 
-    internal init(realFuture: EventLoopFuture2<Value>) {
+    /// An EventLoopFuture<Value> which will be resolved in the future.
+    internal init(realFuture: RealEventLoopFuture<Value>) {
         self.value = .regular(realFuture)
     }
 
@@ -460,13 +466,15 @@ struct UniqueValue: Equatable {
     }
 }
 
-public final class EventLoopFuture2<Value> {
+@usableFromInline
+internal final class RealEventLoopFuture<Value> {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
     @usableFromInline
     internal var _value: Optional<Result<Value, Error>>
 
     /// The `EventLoop` which is tied to the `EventLoopFuture` and is used to notify all registered callbacks.
-    public let eventLoop: EventLoop
+    @usableFromInline
+    internal let eventLoop: EventLoop
 
     /// Callbacks that should be run when this `EventLoopFuture<Value>` gets a value.
     /// These callbacks may give values to other `EventLoopFuture`s; if that happens,
@@ -493,18 +501,6 @@ public final class EventLoopFuture2<Value> {
         self.init(_eventLoop: eventLoop, value: nil, file: file, line: line)
     }
 
-    /// A EventLoopFuture<Value> that has already succeeded
-    @inlinable
-    internal convenience init(eventLoop: EventLoop, value: Value, file: StaticString, line: UInt) {
-        self.init(_eventLoop: eventLoop, value: .success(value), file: file, line: line)
-    }
-
-    /// A EventLoopFuture<Value> that has already failed
-    @inlinable
-    internal convenience init(eventLoop: EventLoop, error: Error, file: StaticString, line: UInt) {
-        self.init(_eventLoop: eventLoop, value: .failure(error), file: file, line: line)
-    }
-
     deinit {
         debugOnly {
             if let eventLoop = self.eventLoop as? SelectableEventLoop {
@@ -519,8 +515,9 @@ public final class EventLoopFuture2<Value> {
     }
 }
 
-extension EventLoopFuture2: Equatable {
-    public static func ==(lhs: EventLoopFuture2, rhs: EventLoopFuture2) -> Bool {
+extension RealEventLoopFuture: Equatable {
+    @usableFromInline
+    internal static func ==(lhs: RealEventLoopFuture, rhs: RealEventLoopFuture) -> Bool {
         return lhs === rhs
     }
 }
