@@ -901,13 +901,13 @@ extension ChannelPipeline {
         }
 
         func addHandlersMakingPromise(handlers: [ChannelHandler],
-                                      individualPositin: ChannelPipeline.Position) -> EventLoopFuture<Void> {
+                                      transformedPosition: ChannelPipeline.Position) -> EventLoopFuture<Void> {
             let promise = self.eventLoop.makePromise(of: Void.self)
 
             // Add all the handlers.
             func addAllHandlersAndComplete() {
                 for handler in handlers {
-                    let addResult = self._add(handler, position: individualPosition)
+                    let addResult = self._add(handler, position: transformedPosition)
                     switch addResult {
                     case .success:
                         break // Keep going.
@@ -931,7 +931,7 @@ extension ChannelPipeline {
             return promise.futureResult
         }
 
-        return addHandlersMakingPromise(handlers: handlers, individualPositin: individualPosition)
+        return addHandlersMakingPromise(handlers: handlers, transformedPosition: individualPosition)
     }
 
     /// Adds the provided channel handlers to the pipeline in the order given, taking account
