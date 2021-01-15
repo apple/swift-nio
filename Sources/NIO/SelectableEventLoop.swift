@@ -59,6 +59,12 @@ internal final class SelectableEventLoop: EventLoop {
     @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
     private var tasksCopy = ContiguousArray<() -> Void>()
+    @usableFromInline
+    internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
+        didSet {
+            self.assertInEventLoop()
+        }
+    }
 
     private let canBeShutdownIndividually: Bool
     @usableFromInline
@@ -150,6 +156,8 @@ internal final class SelectableEventLoop: EventLoop {
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually
+        // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
+        self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
     }
 
     deinit {
@@ -461,6 +469,9 @@ internal final class SelectableEventLoop: EventLoop {
 
         // This EventLoop was closed so also close the underlying selector.
         try self._selector.close()
+
+        // This breaks the retain cycle created in `init`.
+        self._succeededVoidFuture = nil
     }
 
     internal func initiateClose(queue: DispatchQueue, completionHandler: @escaping (Result<Void, Error>) -> Void) {
@@ -559,6 +570,14 @@ internal final class SelectableEventLoop: EventLoop {
                 callback(EventLoopError.unsupportedOperation)
             }
         }
+    }
+
+    @inlinable
+    public func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
+        guard self.inEventLoop, let voidFuture = self._succeededVoidFuture else {
+            return EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+        }
+        return voidFuture
     }
 }
 

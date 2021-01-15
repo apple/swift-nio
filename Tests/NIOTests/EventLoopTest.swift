@@ -1317,4 +1317,142 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
+    func testEventLoopsWithPreSucceededFuturesCacheThem() {
+        let el = EventLoopWithPreSucceededFuture()
+        defer {
+            XCTAssertNoThrow(try el.syncShutdownGracefully())
+        }
+
+        let future1 = el.makeSucceededFuture(())
+        let future2 = el.makeSucceededFuture(())
+        let future3 = el.makeSucceededVoidFuture()
+
+        XCTAssert(future1 === future2)
+        XCTAssert(future2 === future3)
+    }
+
+    func testEventLoopsWithoutPreSucceededFuturesDoNotCacheThem() {
+        let el = EventLoopWithoutPreSucceededFuture()
+        defer {
+            XCTAssertNoThrow(try el.syncShutdownGracefully())
+        }
+
+        let future1 = el.makeSucceededFuture(())
+        let future2 = el.makeSucceededFuture(())
+        let future3 = el.makeSucceededVoidFuture()
+
+        XCTAssert(future1 !== future2)
+        XCTAssert(future2 !== future3)
+        XCTAssert(future1 !== future3)
+    }
+
+    func testSelectableEventLoopHasPreSucceededFuturesOnlyOnTheEventLoop() {
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+
+        let el = elg.next()
+
+        let futureOutside1 = el.makeSucceededVoidFuture()
+        let futureOutside2 = el.makeSucceededFuture(())
+        XCTAssert(futureOutside1 !== futureOutside2)
+
+        XCTAssertNoThrow(try el.submit {
+            let futureInside1 = el.makeSucceededVoidFuture()
+            let futureInside2 = el.makeSucceededFuture(())
+
+            XCTAssert(futureOutside1 !== futureInside1)
+            XCTAssert(futureInside1 === futureInside2)
+        }.wait())
+    }
+}
+
+fileprivate class EventLoopWithPreSucceededFuture: EventLoop {
+    var inEventLoop: Bool {
+        return true
+    }
+
+    func execute(_ task: @escaping () -> Void) {
+        preconditionFailure("not implemented")
+    }
+
+    func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        preconditionFailure("not implemented")
+    }
+
+    @discardableResult
+    func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        preconditionFailure("not implemented")
+    }
+
+    @discardableResult
+    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        preconditionFailure("not implemented")
+    }
+
+    func preconditionInEventLoop(file: StaticString, line: UInt) {
+        preconditionFailure("not implemented")
+    }
+
+    func preconditionNotInEventLoop(file: StaticString, line: UInt) {
+        preconditionFailure("not implemented")
+    }
+
+    var _succeededVoidFuture: EventLoopFuture<Void>?
+    func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
+        guard self.inEventLoop, let voidFuture = self._succeededVoidFuture else {
+            return self.makeSucceededFuture(())
+        }
+        return voidFuture
+    }
+
+    init() {
+        self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+    }
+
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        self._succeededVoidFuture = nil
+        queue.async {
+            callback(nil)
+        }
+    }
+}
+
+fileprivate class EventLoopWithoutPreSucceededFuture: EventLoop {
+    var inEventLoop: Bool {
+        return true
+    }
+
+    func execute(_ task: @escaping () -> Void) {
+        preconditionFailure("not implemented")
+    }
+
+    func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        preconditionFailure("not implemented")
+    }
+
+    @discardableResult
+    func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        preconditionFailure("not implemented")
+    }
+
+    @discardableResult
+    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        preconditionFailure("not implemented")
+    }
+
+    func preconditionInEventLoop(file: StaticString, line: UInt) {
+        preconditionFailure("not implemented")
+    }
+
+    func preconditionNotInEventLoop(file: StaticString, line: UInt) {
+        preconditionFailure("not implemented")
+    }
+
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        queue.async {
+            callback(nil)
+        }
+    }
 }
