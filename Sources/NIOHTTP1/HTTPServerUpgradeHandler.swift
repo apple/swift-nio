@@ -267,7 +267,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
 
     /// Sends the 101 Switching Protocols response for the pipeline.
     private func sendUpgradeResponse(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead, responseHeaders: HTTPHeaders) -> EventLoopFuture<Void> {
-        var response = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .switchingProtocols)
+        var response = HTTPResponseHead(version: .http1_1, status: .switchingProtocols)
         response.headers = responseHeaders
         return context.writeAndFlush(wrapOutboundOut(HTTPServerResponsePart.head(response)))
     }

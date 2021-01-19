@@ -50,7 +50,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(requestBuffer.readableBytes)")
 
-        let requestHead = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
+        let requestHead = HTTPRequestHead(version: .http1_1,
                                           method: .GET,
                                           uri: uri,
                                           headers: headers)
@@ -87,7 +87,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         // Assert the server received the expected request.
         // Use custom methods if you only want some specific assertions on part
         // of the request.
-        XCTAssertNoThrow(XCTAssertEqual(.head(.init(version: .init(major: 1, minor: 1),
+        XCTAssertNoThrow(XCTAssertEqual(.head(.init(version: .http1_1,
                                                     method: .GET,
                                                     uri: "/some-route",
                                                     headers: .init([
@@ -105,7 +105,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         let responseBody = "pong"
         var responseBuffer = allocator.buffer(capacity: 128)
         responseBuffer.writeString(responseBody)
-        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(responseBuffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
 
@@ -138,7 +138,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
 
         // Send the response to the client
         let responseBuffer = allocator.buffer(string: responseMessage)
-        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(responseBuffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
 
@@ -188,7 +188,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         // Send the response to client1
         let response1Message = "Response #1"
         let response1Buffer = allocator.buffer(string: response1Message)
-        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response1Buffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
 
@@ -200,7 +200,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         // Send the response to client2
         let response2Message = "Response #2"
         let response2Buffer = allocator.buffer(string: response2Message)
-        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response2Buffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
 

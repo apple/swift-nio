@@ -94,7 +94,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 
         // We need to prime the decoder by seeing a GET request.
-        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 0, minor: 9), method: .GET, uri: "/")))
+        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http0_9, method: .GET, uri: "/")))
 
         // The HTTP parser has no special logic for HTTP/0.9 simple responses, but we'll send
         // one anyway just to prove it explodes.
@@ -113,7 +113,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 
         // We need to prime the decoder by seeing a GET request.
-        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 0, minor: 9), method: .GET, uri: "/")))
+        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http0_9, method: .GET, uri: "/")))
 
         // The HTTP parser rejects HTTP/1.1-formatted responses claiming 0.9 as a version.
         var buffer = channel.allocator.buffer(capacity: 64)
@@ -131,7 +131,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 
         // We need to prime the decoder by seeing a GET request.
-        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 2, minor: 0), method: .GET, uri: "/")))
+        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http2, method: .GET, uri: "/")))
 
         // This is a hypothetical HTTP/2.0 protocol response, assuming it is
         // byte for byte identical (which such a protocol would never be).
@@ -150,7 +150,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 
         // We need to prime the decoder by seeing a GET request.
-        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 2, minor: 0), method: .GET, uri: "/")))
+        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http2, method: .GET, uri: "/")))
 
         // We tolerate higher versions of HTTP/1 than we know about because RFC 7230
         // says that these should be treated like HTTP/1.1 by our users.
@@ -318,7 +318,7 @@ class HTTPDecoderTest: XCTestCase {
             typealias OutboundOut = HTTPClientRequestPart
             
             func channelActive(context: ChannelHandlerContext) {
-                var upgradeReq = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/")
+                var upgradeReq = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/")
                 upgradeReq.headers.add(name: "Connection", value: "Upgrade")
                 upgradeReq.headers.add(name: "Upgrade", value: "myprot")
                 upgradeReq.headers.add(name: "Host", value: "localhost")
@@ -373,7 +373,7 @@ class HTTPDecoderTest: XCTestCase {
 
         XCTAssertEqual(head.method, .GET)
         XCTAssertEqual(head.uri, "/")
-        XCTAssertEqual(head.version, .init(major: 1, minor: 1))
+        XCTAssertEqual(head.version, .http1_1)
         XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
 
         let secondMessage: HTTPServerRequestPart? = try self.channel.readInbound()
@@ -402,7 +402,7 @@ class HTTPDecoderTest: XCTestCase {
 
         XCTAssertEqual(head.method, .RAW(value: "SOURCE"))
         XCTAssertEqual(head.uri, "/")
-        XCTAssertEqual(head.version, .init(major: 1, minor: 1))
+        XCTAssertEqual(head.version, .http1_1)
         XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
 
         let secondMessage: HTTPServerRequestPart? = try self.channel.readInbound()
@@ -433,7 +433,7 @@ class HTTPDecoderTest: XCTestCase {
 
         XCTAssertEqual(head.method, .GET)
         XCTAssertEqual(head.uri, "/")
-        XCTAssertEqual(head.version, .init(major: 1, minor: 1))
+        XCTAssertEqual(head.version, .http1_1)
         XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
 
         let secondMessage: HTTPServerRequestPart? = try self.channel.readInbound()
@@ -484,7 +484,7 @@ class HTTPDecoderTest: XCTestCase {
             return try channel.readInbound(as: HTTPServerRequestPart.self)
         }
 
-        var expectedHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/")
+        var expectedHead = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/")
         expectedHead.headers.add(name: "foo", value: "bär")
         XCTAssertNoThrow(XCTAssertEqual(.head(expectedHead),
                                         try writeToFreshRequestDecoderChannel("GET / HTTP/1.1\r\nfoo: bär\r\n\r\n")))
@@ -520,10 +520,10 @@ class HTTPDecoderTest: XCTestCase {
         buffer.writeStaticString("HTTP/1.0 200 ok\r\n\r\n")
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: .fireError))).wait())
-        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1,
                                                                                     method: .GET, uri: "/"))))
         XCTAssertNoThrow(try channel.writeInbound(buffer))
-        XCTAssertNoThrow(XCTAssertEqual(HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 0),
+        XCTAssertNoThrow(XCTAssertEqual(HTTPClientResponsePart.head(.init(version: .http1_0,
                                                                           status: .ok)), try channel.readInbound()))
     }
 
@@ -531,27 +531,27 @@ class HTTPDecoderTest: XCTestCase {
         let byteBufferContainingJustAnX = ByteBuffer(string: "X")
         let expectedInOuts: [(String, [HTTPServerRequestPart])] = [
             ("GET / HTTP/1.1\r\n\r\n",
-             [.head(.init(version: .init(major: 1, minor: 1), method: .GET, uri: "/")),
+             [.head(.init(version: .http1_1, method: .GET, uri: "/")),
               .end(nil)]),
             ("POST /foo HTTP/1.1\r\n\r\n",
-             [.head(.init(version: .init(major: 1, minor: 1), method: .POST, uri: "/foo")),
+             [.head(.init(version: .http1_1, method: .POST, uri: "/foo")),
               .end(nil)]),
             ("POST / HTTP/1.1\r\ncontent-length: 1\r\n\r\nX",
-             [.head(.init(version: .init(major: 1, minor: 1),
+             [.head(.init(version: .http1_1,
                           method: .POST,
                           uri: "/",
                           headers: .init([("content-length", "1")]))),
               .body(byteBufferContainingJustAnX),
               .end(nil)]),
             ("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n1\r\nX\r\n0\r\n\r\n",
-             [.head(.init(version: .init(major: 1, minor: 1),
+             [.head(.init(version: .http1_1,
                           method: .POST,
                           uri: "/",
                           headers: .init([("transfer-encoding", "chunked")]))),
               .body(byteBufferContainingJustAnX),
               .end(nil)]),
             ("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\none: two\r\n\r\n1\r\nX\r\n0\r\nfoo: bar\r\n\r\n",
-             [.head(.init(version: .init(major: 1, minor: 1),
+             [.head(.init(version: .http1_1,
                           method: .POST,
                           uri: "/",
                           headers: .init([("transfer-encoding", "chunked"), ("one", "two")]))),
@@ -749,7 +749,7 @@ class HTTPDecoderTest: XCTestCase {
         }
 
         // Write a request.
-        let request = HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1), method: .GET, uri: "/"))
+        let request = HTTPClientRequestPart.head(.init(version: .http1_1, method: .GET, uri: "/"))
         XCTAssertNoThrow(try channel.writeOutbound(request))
 
         // The server sending another response should lead to another error.
@@ -769,14 +769,14 @@ class HTTPDecoderTest: XCTestCase {
         let channel = EmbeddedChannel(handler: responseDecoder)
         XCTAssertNoThrow(try channel.pipeline.addHandler(eventCounter).wait())
 
-        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1,
                                                                                     method: .GET, uri: "/"))))
         var buffer = channel.allocator.buffer(capacity: 128)
         buffer.writeString("HTTP/1.1 200 ok\r\ncontent-length: 0\r\n\r\nHTTP/1.1 200 ok\r\ncontent-length: 0\r\n\r\n")
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
             XCTAssertEqual(.unsolicitedResponse, error as? NIOHTTPDecoderError)
         }
-        XCTAssertNoThrow(XCTAssertEqual(.head(.init(version: .init(major: 1, minor: 1),
+        XCTAssertNoThrow(XCTAssertEqual(.head(.init(version: .http1_1,
                                                     status: .ok,
                                                     headers: ["content-length": "0"])),
                                         try channel.readInbound(as: HTTPClientResponsePart.self)))

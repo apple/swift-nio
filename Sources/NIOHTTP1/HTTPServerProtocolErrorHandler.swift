@@ -46,7 +46,7 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
         // to come along and close the channel right after we return from this function.
         if !self.hasUnterminatedResponse {
             let headers = HTTPHeaders([("Connection", "close"), ("Content-Length", "0")])
-            let head = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .badRequest, headers: headers)
+            let head = HTTPResponseHead(version: .http1_1, status: .badRequest, headers: headers)
             context.write(self.wrapOutboundOut(.head(head)), promise: nil)
             context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
         }

@@ -277,7 +277,7 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
 
     private func handleOversizeMessage(message: InboundIn) -> HTTPResponseHead {
         var payloadTooLargeHead = HTTPResponseHead(
-            version: self.fullMessageHead?.version ?? .init(major: 1, minor: 1),
+            version: self.fullMessageHead?.version ?? .http1_1,
             status: .payloadTooLarge,
             headers: HTTPHeaders([("content-length", "0")]))
 
