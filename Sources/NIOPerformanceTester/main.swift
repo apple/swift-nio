@@ -74,7 +74,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     private let numberOfAdditionalHeaders = 10
 
     init() {
-        var head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
+        var head = HTTPResponseHead(version: .http1_1, status: .ok)
         head.headers.add(name: "Content-Length", value: "\(self.bodyLength)")
         for i in 0..<self.numberOfAdditionalHeaders {
             head.headers.add(name: "X-Random-Extra-Header", value: "\(i)")
@@ -100,7 +100,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
                 context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             case "/perf-test-2":
-                var req = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
+                var req = HTTPResponseHead(version: .http1_1, status: .ok)
                 for i in 1...8 {
                     req.headers.add(name: "X-ResponseHeader-\(i)", value: "foo")
                 }
@@ -133,7 +133,7 @@ defer {
     try! serverChannel.close().wait()
 }
 
-var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/perf-test-1")
+var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/perf-test-1")
 head.headers.add(name: "Host", value: "localhost")
 
 final class RepeatedRequests: ChannelInboundHandler {

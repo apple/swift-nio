@@ -137,7 +137,7 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
 ///     // Assert the server received the expected request.
 ///     // Use custom methods if you only want some specific assertions on part
 ///     // of the request.
-///     XCTAssertNoThrow(XCTAssertEqual(.head(.init(version: .init(major: 1, minor: 1),
+///     XCTAssertNoThrow(XCTAssertEqual(.head(.init(version: .http1_1,
 ///                                                 method: .GET,
 ///                                                 uri: "/some-route",
 ///                                                 headers: .init([
@@ -155,7 +155,7 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
 ///     let responseBody = "pong"
 ///     var responseBuffer = allocator.buffer(capacity: 128)
 ///     responseBuffer.writeString(responseBody)
-///     XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .ok))))
+///     XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
 ///     XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(responseBuffer))))
 ///     XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
 ///

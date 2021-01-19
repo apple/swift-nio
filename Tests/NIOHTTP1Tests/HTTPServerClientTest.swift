@@ -325,7 +325,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     private func testSimpleGet(_ mode: SendMode,
-                               httpVersion: HTTPVersion = .init(major: 1, minor: 1),
+                               httpVersion: HTTPVersion = .http1_1,
                                uri: String = "/helloworld",
                                expectedHeaders maybeExpectedHeaders: HTTPHeaders? = nil) throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -391,7 +391,7 @@ class HTTPServerClientTest : XCTestCase {
         expectedHeaders.add(name: "transfer-encoding", value: "chunked")
         expectedHeaders.add(name: "connection", value: "close")
 
-        let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "12345678910")
+        let accumulation = HTTPClientResponsePartAssertHandler(.http1_1, .ok, expectedHeaders, "12345678910")
 
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
@@ -422,7 +422,7 @@ class HTTPServerClientTest : XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/count-to-ten")
+        var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/count-to-ten")
         head.headers.add(name: "Host", value: "apple.com")
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
@@ -451,7 +451,7 @@ class HTTPServerClientTest : XCTestCase {
         expectedTrailers.add(name: "x-url-path", value: "/trailers")
         expectedTrailers.add(name: "x-should-trail", value: "sure")
 
-        let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "12345678910", expectedTrailers)
+        let accumulation = HTTPClientResponsePartAssertHandler(.http1_1, .ok, expectedHeaders, "12345678910", expectedTrailers)
 
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
@@ -478,7 +478,7 @@ class HTTPServerClientTest : XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/trailers")
+        var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/trailers")
         head.headers.add(name: "Host", value: "apple.com")
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
@@ -549,7 +549,7 @@ class HTTPServerClientTest : XCTestCase {
         expectedHeaders.add(name: "content-length", value: "5000")
         expectedHeaders.add(name: "connection", value: "close")
 
-        let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "")
+        let accumulation = HTTPClientResponsePartAssertHandler(.http1_1, .ok, expectedHeaders, "")
 
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
@@ -576,7 +576,7 @@ class HTTPServerClientTest : XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .HEAD, uri: "/head")
+        var head = HTTPRequestHead(version: .http1_1, method: .HEAD, uri: "/head")
         head.headers.add(name: "Host", value: "apple.com")
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
@@ -593,7 +593,7 @@ class HTTPServerClientTest : XCTestCase {
         var expectedHeaders = HTTPHeaders()
         expectedHeaders.add(name: "connection", value: "keep-alive")
 
-        let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .noContent, expectedHeaders, "")
+        let accumulation = HTTPClientResponsePartAssertHandler(.http1_1, .noContent, expectedHeaders, "")
 
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
@@ -619,7 +619,7 @@ class HTTPServerClientTest : XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/204")
+        var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/204")
         head.headers.add(name: "Host", value: "apple.com")
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
@@ -629,7 +629,7 @@ class HTTPServerClientTest : XCTestCase {
 
     func testNoResponseHeaders() {
         XCTAssertNoThrow(try self.testSimpleGet(.byteBuffer,
-                                                httpVersion: .init(major: 1, minor: 0),
+                                                httpVersion: .http1_0,
                                                 uri: "/no-headers",
                                                 expectedHeaders: [:]))
     }

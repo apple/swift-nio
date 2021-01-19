@@ -88,7 +88,7 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
         var headers = HTTPHeaders()
         headers.add(name: "Connection", value: "close")
         headers.add(name: "Content-Length", value: "0")
-        let head = HTTPResponseHead(version: .init(major: 1, minor: 1),
+        let head = HTTPResponseHead(version: .http1_1,
                                     status: .methodNotAllowed,
                                     headers: headers)
         context.write(self.wrapOutboundOut(.head(head)), promise: nil)

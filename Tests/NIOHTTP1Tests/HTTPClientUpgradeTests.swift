@@ -217,7 +217,7 @@ extension ChannelInboundHandler where OutboundOut == HTTPClientRequestPart {
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
         
-        let requestHead = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
+        let requestHead = HTTPRequestHead(version: .http1_1,
                                           method: .GET,
                                           uri: "/",
                                           headers: headers)
@@ -863,7 +863,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         }
 
         // Send another outbound request during the upgrade.
-        let requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/")
+        let requestHead = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/")
         let secondRequest: HTTPClientRequestPart = .head(requestHead)
         clientChannel.writeAndFlush(secondRequest, promise: promise)
         
@@ -910,7 +910,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         
         let headers = HTTPHeaders([("Connection", "upgrade"),
                                    ("Upgrade", "\(upgradeProtocol)")])
-        let head = HTTPResponseHead(version: .init(major: 1, minor: 1),
+        let head = HTTPResponseHead(version: .http1_1,
                                     status: .switchingProtocols,
                                     headers: headers)
         let response = HTTPClientResponsePart.head(head)

@@ -22,7 +22,7 @@ struct HTTPCrashTests {
             let channel = EmbeddedChannel(handler: HTTPRequestEncoder())
             _ = try? channel.writeAndFlush(
                 HTTPClientRequestPart.head(
-                    HTTPRequestHead(version: .init(major: 1, minor: 1),
+                    HTTPRequestHead(version: .http1_1,
                                     method: .POST,
                                     uri: "/",
                                     headers: ["content-Length": "1",
@@ -35,7 +35,7 @@ struct HTTPCrashTests {
             let channel = EmbeddedChannel(handler: HTTPResponseEncoder())
             _ = try? channel.writeAndFlush(
                 HTTPServerResponsePart.head(
-                    HTTPResponseHead(version: .init(major: 1, minor: 1),
+                    HTTPResponseHead(version: .http1_1,
                                      status: .ok,
                                      headers: ["content-Length": "1",
                                                "transfer-Encoding": "chunked"]))).wait()
