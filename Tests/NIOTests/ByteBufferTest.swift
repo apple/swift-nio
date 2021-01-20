@@ -2903,3 +2903,60 @@ extension ByteBufferTest {
     }
     
 }
+
+// MARK: - Buffer building
+extension ByteBufferTest {
+    
+    func testCreateBufferEmpty() {
+        var buffer = ByteBuffer { }
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+    
+    func testCreateBufferSingle() {
+        var buffer = ByteBuffer { "hello" }
+        XCTAssertEqual(buffer.readString(length: 5), "hello")
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+    
+    func testCreateBufferMultiple() {
+        var buffer = ByteBuffer {
+            "hello"
+            "world"
+        }
+        XCTAssertEqual(buffer.readString(length: 5), "hello")
+        XCTAssertEqual(buffer.readString(length: 5), "world")
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+    
+    func testWriteEmpty() {
+        var buffer = ByteBuffer()
+        XCTAssertEqual(buffer.readableBytes, 0)
+        XCTAssertEqual(buffer.write {}, 0)
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+    
+    func testWriteSingle() {
+        var buffer = ByteBuffer()
+        XCTAssertEqual(buffer.readableBytes, 0)
+        XCTAssertEqual(buffer.write { "hello" }, 5)
+        XCTAssertEqual(buffer.readableBytes, 5)
+        
+        XCTAssertEqual(buffer.readString(length: 5), "hello")
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+    
+    func testWriteMultiple() {
+        var buffer = ByteBuffer()
+        XCTAssertEqual(buffer.readableBytes, 0)
+        XCTAssertEqual(buffer.write {
+            "hello"
+            "world"
+        }, 10)
+        XCTAssertEqual(buffer.readableBytes, 10)
+        
+        XCTAssertEqual(buffer.readString(length: 5), "hello")
+        XCTAssertEqual(buffer.readString(length: 5), "world")
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+    
+}
