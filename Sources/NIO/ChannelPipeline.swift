@@ -1639,3 +1639,72 @@ extension ChannelPipeline: CustomDebugStringConvertible {
         return handlers
     }
 }
+
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftNIO open source project
+//
+// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftNIO project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
+extension ChannelHandlerContext {
+    
+    public class Stream {
+        
+        fileprivate var buffer: ByteBuffer
+        
+        fileprivate init(buffer: ByteBuffer) {
+            self.buffer = buffer
+        }
+        
+    }
+    
+    public func writeOutboundWithStream(initialCapacity: Int = 1024, promise: EventLoopPromise<Void>? = nil, _ writer: (Stream) -> Void) {
+        let stream = Stream(buffer: self.channel.allocator.buffer(capacity: initialCapacity))
+        writer(stream)
+        return self.writeAndFlush(NIOAny(stream.buffer), promise: promise)
+    }
+    
+}
+
+precedencegroup StreamPrecedence {
+    associativity: left
+}
+
+infix operator <<<: StreamPrecedence
+
+extension ChannelHandlerContext.Stream {
+    
+    @discardableResult static func <<< (left: ChannelHandlerContext.Stream, right: String) -> ChannelHandlerContext.Stream {
+        left.buffer.writeString(right)
+        return left
+    }
+    
+    @discardableResult static func <<< (left: ChannelHandlerContext.Stream, right: Substring) -> ChannelHandlerContext.Stream {
+        left.buffer.writeSubstring(right)
+        return left
+    }
+    
+    @discardableResult static func <<< (left: ChannelHandlerContext.Stream, right: StaticString) -> ChannelHandlerContext.Stream {
+        left.buffer.writeStaticString(right)
+        return left
+    }
+    
+    @discardableResult static func <<< <T: FixedWidthInteger>(left: ChannelHandlerContext.Stream, right: T) -> ChannelHandlerContext.Stream {
+        left.buffer.writeInteger(right)
+        return left
+    }
+    
+    @discardableResult static func <<< <T: Sequence>(left: ChannelHandlerContext.Stream, right: T) -> ChannelHandlerContext.Stream where T.Element == UInt8 {
+        left.buffer.writeBytes(right)
+        return left
+    }
+    
+}

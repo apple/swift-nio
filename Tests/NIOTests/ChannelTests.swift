@@ -2926,3 +2926,40 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
         }
     }
 }
+
+// MARK: - Streaming
+extension ChannelTests {
+    
+    func testStreaming() {
+       
+        final class TestHandler: ChannelOutboundHandler {
+            typealias OutboundIn = Void
+            typealias OutboundOut = ByteBuffer
+            
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                
+                let string = "1234"
+                let substring = string[string.index(after: string.startIndex)...]
+                
+                context.writeOutboundWithStream(initialCapacity: 1234, promise: promise) { stream in
+                    stream <<< String("hello") <<< StaticString(stringLiteral: "world") <<< Int(1) <<< UInt8(2) <<< [UInt8(1), 2, 3] <<< substring
+                }
+            }
+            
+        }
+        
+        let channel = EmbeddedChannel(handler: TestHandler(), loop: .init())
+        XCTAssertEqual(try channel.readOutbound(as: ByteBuffer.self), nil)
+        XCTAssertNoThrow(try channel.writeOutbound(()))
+        
+        var outbound = try! channel.readOutbound(as: ByteBuffer.self)
+        XCTAssertEqual(outbound?.readString(length: 5), "hello")
+        XCTAssertEqual(outbound?.readString(length: 5), "world")
+        XCTAssertEqual(outbound?.readInteger(), Int(1))
+        XCTAssertEqual(outbound?.readInteger(), UInt8(2))
+        XCTAssertEqual(outbound?.readBytes(length: 3), [1, 2, 3])
+        XCTAssertEqual(outbound?.readString(length: 3), "234")
+        XCTAssertEqual(outbound?.readableBytes, 0)
+    }
+    
+}
