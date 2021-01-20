@@ -326,6 +326,8 @@ public final class ChannelPipeline: ChannelInvoker {
         existing.prev = new
         prev?.next = new
     }
+    
+    // MARK: - Remove channel handler
 
     /// Remove a `ChannelHandler` from the `ChannelPipeline`.
     ///
@@ -412,6 +414,30 @@ public final class ChannelPipeline: ChannelInvoker {
             }
         }
     }
+    
+    // MARK: - Replace channel handler
+    
+    /// Replace a `ChannelHandler` in the `ChannelPipeline`.
+    /// - parameter old: The `ChannelHandler` to remove.
+    /// - parameter new: The new `ChannelHandler` to insert in the position of `old`.
+    /// - parameter name: The name of the new `ChannelHandler`, defaults to `nil`.
+    /// - returns: The `EventLoopFuture` which will be notified once `old` has been replaced.
+    public func replaceHandler(_ old: RemovableChannelHandler, with new: ChannelHandler, name: String? = nil) -> EventLoopFuture<(Void, Void)> {
+        let promise = self.eventLoop.makePromise(of: (Void, Void).self)
+        self.addHandler(new, name: name, position: .before(old)).and(self.removeHandler(old)).cascade(to: promise)
+        return promise.futureResult
+    }
+    
+    /// Replace a `ChannelHandler` in the `ChannelPipeline`.
+    /// - parameter old: The `ChannelHandler` to remove.
+    /// - parameter new: The new `ChannelHandler` to insert in the position of `old`.
+    /// - parameter name: The name of the new `ChannelHandler`, defaults to `nil`.
+    /// - parameter promise: An `EventLoopPromise` that will be complete once `old` has been replaced.
+    public func replaceHandler(_ old: RemovableChannelHandler, with new: ChannelHandler, name: String? = nil, promise: EventLoopPromise<(Void, Void)>?) {
+        self.addHandler(new, name: name, position: .before(old)).and(self.removeHandler(old)).cascade(to: promise)
+    }
+    
+    // MARK: -
 
     /// Returns the `ChannelHandlerContext` that belongs to a `ChannelHandler`.
     ///
