@@ -1656,6 +1656,7 @@ extension ChannelPipeline: CustomDebugStringConvertible {
 
 extension ChannelHandlerContext {
     
+    /// Used to stream data into a `ChannelHandlerContext`
     public class Stream {
         
         fileprivate var buffer: ByteBuffer
@@ -1666,6 +1667,10 @@ extension ChannelHandlerContext {
         
     }
     
+    /// Streams data to a `ChannelHandlerContext` and then flushes.
+    /// - parameter initialCapacity: The initial capacity of the stream, defaults to 1024 bytes.
+    /// - parameter promise: An `EventLoopPromise` that will be notified when writing to the `ChannelHandlerContext` is complete.
+    /// - parameter writer: A closure that takes a `Stream` as it's first and only argument. You then write to this `Stream` using the `<<<` operator.
     public func writeOutboundWithStream(initialCapacity: Int = 1024, promise: EventLoopPromise<Void>? = nil, _ writer: (Stream) -> Void) {
         let stream = Stream(buffer: self.channel.allocator.buffer(capacity: initialCapacity))
         writer(stream)
@@ -1682,27 +1687,27 @@ infix operator <<<: StreamPrecedence
 
 extension ChannelHandlerContext.Stream {
     
-    @discardableResult static func <<< (left: ChannelHandlerContext.Stream, right: String) -> ChannelHandlerContext.Stream {
+    @discardableResult public static func <<< (left: ChannelHandlerContext.Stream, right: String) -> ChannelHandlerContext.Stream {
         left.buffer.writeString(right)
         return left
     }
     
-    @discardableResult static func <<< (left: ChannelHandlerContext.Stream, right: Substring) -> ChannelHandlerContext.Stream {
+    @discardableResult public static func <<< (left: ChannelHandlerContext.Stream, right: Substring) -> ChannelHandlerContext.Stream {
         left.buffer.writeSubstring(right)
         return left
     }
     
-    @discardableResult static func <<< (left: ChannelHandlerContext.Stream, right: StaticString) -> ChannelHandlerContext.Stream {
+    @discardableResult public static func <<< (left: ChannelHandlerContext.Stream, right: StaticString) -> ChannelHandlerContext.Stream {
         left.buffer.writeStaticString(right)
         return left
     }
     
-    @discardableResult static func <<< <T: FixedWidthInteger>(left: ChannelHandlerContext.Stream, right: T) -> ChannelHandlerContext.Stream {
+    @discardableResult public static func <<< <T: FixedWidthInteger>(left: ChannelHandlerContext.Stream, right: T) -> ChannelHandlerContext.Stream {
         left.buffer.writeInteger(right)
         return left
     }
     
-    @discardableResult static func <<< <T: Sequence>(left: ChannelHandlerContext.Stream, right: T) -> ChannelHandlerContext.Stream where T.Element == UInt8 {
+    @discardableResult public static func <<< <T: Sequence>(left: ChannelHandlerContext.Stream, right: T) -> ChannelHandlerContext.Stream where T.Element == UInt8 {
         left.buffer.writeBytes(right)
         return left
     }
