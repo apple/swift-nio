@@ -1665,11 +1665,7 @@ extension ChannelHandlerContext {
     
 }
 
-precedencegroup StreamPrecedence {
-    associativity: left
-}
-
-infix operator <<<: StreamPrecedence
+infix operator <<<: MultiplicationPrecedence
 
 extension ChannelHandlerContext.Stream {
     
