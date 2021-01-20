@@ -2908,7 +2908,7 @@ extension ByteBufferTest {
 extension ByteBufferTest {
     
     func testCreateBufferEmpty() {
-        var buffer = ByteBuffer { }
+        let buffer = ByteBuffer { }
         XCTAssertEqual(buffer.readableBytes, 0)
     }
     

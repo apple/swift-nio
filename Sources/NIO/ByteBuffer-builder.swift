@@ -14,6 +14,8 @@
 
 import Dispatch
 
+// MARK: - Serializable
+
 public protocol ByteBufferSerializable {
     
     @discardableResult func write(into buffer: inout ByteBuffer) -> Int
@@ -27,6 +29,51 @@ extension String: ByteBufferSerializable {
     }
     
 }
+
+extension Substring: ByteBufferSerializable {
+    
+    public func write(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeSubstring(self)
+    }
+    
+}
+
+extension StaticString: ByteBufferSerializable {
+    
+    public func write(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeStaticString(self)
+    }
+    
+}
+
+extension Sequence where Element == UInt8 {
+    
+    public func write(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeBytes(self)
+    }
+    
+}
+
+extension FixedWidthInteger where Self: ByteBufferSerializable {
+    
+    public func write(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeInteger(self)
+    }
+    
+}
+
+extension Int: ByteBufferSerializable {}
+extension Int8: ByteBufferSerializable {}
+extension Int16: ByteBufferSerializable {}
+extension Int32: ByteBufferSerializable {}
+extension Int64: ByteBufferSerializable {}
+extension UInt: ByteBufferSerializable {}
+extension UInt8: ByteBufferSerializable {}
+extension UInt16: ByteBufferSerializable {}
+extension UInt32: ByteBufferSerializable {}
+extension UInt64: ByteBufferSerializable {}
+
+// MARK: - Buffer builder
 
 @resultBuilder
 public struct BufferBuilder {
