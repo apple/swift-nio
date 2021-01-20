@@ -209,6 +209,12 @@ extension ByteBufferTest {
                 ("testCreateArrayFromBuffer", testCreateArrayFromBuffer),
                 ("testCreateStringFromBuffer", testCreateStringFromBuffer),
                 ("testCreateDispatchDataFromBuffer", testCreateDispatchDataFromBuffer),
+                ("testCreateBufferEmpty", testCreateBufferEmpty),
+                ("testCreateBufferSingle", testCreateBufferSingle),
+                ("testCreateBufferMultiple", testCreateBufferMultiple),
+                ("testWriteEmpty", testWriteEmpty),
+                ("testWriteSingle", testWriteSingle),
+                ("testWriteMultiple", testWriteMultiple),
            ]
    }
 }
