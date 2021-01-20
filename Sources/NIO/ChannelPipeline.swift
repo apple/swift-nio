@@ -1663,6 +1663,31 @@ extension ChannelHandlerContext {
         return self.writeAndFlush(NIOAny(stream.buffer), promise: promise)
     }
     
+    @resultBuilder
+    struct StreamBlock {
+        
+        static func buildBlock(_ content: Any...) -> [Any] {
+                content
+            }
+    }
+    
+    public func writeOutboundWithStream_builder(promise: EventLoopPromise<Void>?, @StreamBlock _ content: () -> [Any]) {
+        var buffer = ByteBuffer()
+        for part in content() {
+            switch part {
+            case is String:
+                buffer.writeString(part as! String)
+            case is Substring:
+                buffer.writeSubstring(part as! Substring)
+            case is StaticString:
+                buffer.writeStaticString(part as! StaticString)
+            default:
+                ()
+            }
+        }
+        return self.writeAndFlush(NIOAny(buffer), promise: promise)
+    }
+    
 }
 
 infix operator <<<: MultiplicationPrecedence

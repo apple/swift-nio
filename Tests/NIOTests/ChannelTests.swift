@@ -2962,4 +2962,35 @@ extension ChannelTests {
         XCTAssertEqual(outbound?.readableBytes, 0)
     }
     
+    func testStreamingResultBuilder() {
+       
+        final class TestHandler: ChannelOutboundHandler {
+            typealias OutboundIn = Void
+            typealias OutboundOut = ByteBuffer
+            
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                
+                let string = "1234"
+                let substring = string[string.index(after: string.startIndex)...]
+                
+                context.writeOutboundWithStream_builder(promise: promise) {
+                    String("hello")
+                    substring
+                    StaticString(stringLiteral: "test")
+                }
+            }
+            
+        }
+        
+        let channel = EmbeddedChannel(handler: TestHandler(), loop: .init())
+        XCTAssertEqual(try channel.readOutbound(as: ByteBuffer.self), nil)
+        XCTAssertNoThrow(try channel.writeOutbound(()))
+        
+        var outbound = try! channel.readOutbound(as: ByteBuffer.self)
+        XCTAssertEqual(outbound?.readString(length: 5), "hello")
+        XCTAssertEqual(outbound?.readString(length: 3), "234")
+        XCTAssertEqual(outbound?.readString(length: 4), "test")
+        XCTAssertEqual(outbound?.readableBytes, 0)
+    }
+    
 }
