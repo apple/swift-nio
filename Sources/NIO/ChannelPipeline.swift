@@ -1640,6 +1640,34 @@ extension ChannelPipeline: CustomDebugStringConvertible {
     }
 }
 
+public protocol ByteBufferSerializable {
+    @discardableResult func write(into buffer: inout ByteBuffer) -> Int
+}
+
+extension String: ByteBufferSerializable {
+    public func write(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeString(self)
+    }
+}
+extension Substring: ByteBufferSerializable {
+    public func write(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeSubstring(self)
+    }
+}
+extension StaticString: ByteBufferSerializable {
+    public func write(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeStaticString(self)
+    }
+}
+
+extension Int: ByteBufferSerializable {}
+extension UInt: ByteBufferSerializable {}
+extension FixedWidthInteger where Self: ByteBufferSerializable {
+    public func write(into buffer: inout ByteBuffer) -> Int {
+        buffer.writeInteger(self)
+    }
+}
+
 extension ChannelHandlerContext {
     
     /// Used to stream data into a `ChannelHandlerContext`
@@ -1666,24 +1694,15 @@ extension ChannelHandlerContext {
     @resultBuilder
     struct StreamBlock {
         
-        static func buildBlock(_ content: Any...) -> [Any] {
+        static func buildBlock(_ content: ByteBufferSerializable...) -> [ByteBufferSerializable] {
                 content
             }
     }
     
-    public func writeOutboundWithStream_builder(promise: EventLoopPromise<Void>?, @StreamBlock _ content: () -> [Any]) {
+    public func writeOutboundWithStream_builder(promise: EventLoopPromise<Void>?, @StreamBlock _ content: () -> [ByteBufferSerializable]) {
         var buffer = ByteBuffer()
         for part in content() {
-            switch part {
-            case is String:
-                buffer.writeString(part as! String)
-            case is Substring:
-                buffer.writeSubstring(part as! Substring)
-            case is StaticString:
-                buffer.writeStaticString(part as! StaticString)
-            default:
-                ()
-            }
+            part.write(into: &buffer)
         }
         return self.writeAndFlush(NIOAny(buffer), promise: promise)
     }

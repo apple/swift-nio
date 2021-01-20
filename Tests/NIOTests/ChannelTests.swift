@@ -2977,6 +2977,7 @@ extension ChannelTests {
                     String("hello")
                     substring
                     StaticString(stringLiteral: "test")
+                    123
                 }
             }
             
@@ -2990,6 +2991,7 @@ extension ChannelTests {
         XCTAssertEqual(outbound?.readString(length: 5), "hello")
         XCTAssertEqual(outbound?.readString(length: 3), "234")
         XCTAssertEqual(outbound?.readString(length: 4), "test")
+        XCTAssertEqual(outbound?.readInteger(), 123)
         XCTAssertEqual(outbound?.readableBytes, 0)
     }
     
