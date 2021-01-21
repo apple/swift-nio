@@ -222,13 +222,13 @@ extension ByteToMessageDecoder {
     public func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
         // We want to reclaim in the following cases:
         //
-        // 1. If there is more than 2kB of memory to reclaim
+        // 1. If there is at least 2kB of memory to reclaim
         // 2. If the buffer is more than 50% reclaimable memory and is at least
         //    1kB in size.
-        if buffer.readerIndex > 2048 {
+        if buffer.readerIndex >= 2048 {
             return true
         }
-        return buffer.capacity > 1024 && (buffer.capacity - buffer.readerIndex) >= buffer.readerIndex
+        return buffer.storageCapacity > 1024 && (buffer.storageCapacity - buffer.readerIndex) < buffer.readerIndex
     }
 
     public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
