@@ -806,7 +806,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Run the processing of the response, but with the upgrade delayed by the client upgrader.
         clientChannel.embeddedEventLoop.run()
         
-        // Sanity check that the upgrade was delayed.
+        // Soundness check that the upgrade was delayed.
         XCTAssertEqual(0, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
         
         // Add some non-http data.
@@ -875,7 +875,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let promiseError = errorOnAdditionalChannelWrite as! NIOHTTPClientUpgradeError
         XCTAssertEqual(NIOHTTPClientUpgradeError.writingToHandlerDuringUpgrade, promiseError)
         
-        // Sanity check that the upgrade was delayed.
+        // Soundness check that the upgrade was delayed.
         XCTAssertEqual(0, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
         
         // Upgrade now.
