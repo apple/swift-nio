@@ -22,10 +22,6 @@ services:
       - CAP_NET_RAW
       - CAP_NET_BIND_SERVICE
 
-  sanity:
-    <<: *common
-    command: /bin/bash -xcl "./scripts/soundness.sh"
-
   soundness:
     <<: *common
     command: /bin/bash -xcl "./scripts/soundness.sh"
