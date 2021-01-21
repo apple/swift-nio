@@ -58,7 +58,7 @@
 
 
 
-/* sanity check */
+/* soundness check */
 #if BYTE_ORDER != BIG_ENDIAN
 # if BYTE_ORDER != LITTLE_ENDIAN
 #  define unsupported 1

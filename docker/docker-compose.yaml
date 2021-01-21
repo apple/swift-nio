@@ -24,7 +24,11 @@ services:
 
   sanity:
     <<: *common
-    command: /bin/bash -xcl "./scripts/sanity.sh"
+    command: /bin/bash -xcl "./scripts/soundness.sh"
+
+  soundness:
+    <<: *common
+    command: /bin/bash -xcl "./scripts/soundness.sh"
 
   unit-tests:
     <<: *common
