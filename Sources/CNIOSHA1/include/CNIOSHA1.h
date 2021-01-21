@@ -1,10 +1,9 @@
 /* Additional changes for SwiftNIO:
     - prefixed all symbols by 'c_nio_'
-    - replaced the sys/systm.h include by strings.h
     - removed the _KERNEL include guards
     - defined the __min_size macro inline
-    - included sys/types.h in c_nio_sha1.h
     - included sys/endian.h on Android
+    - use welcoming language (soundness check)
 */
 /*	$FreeBSD$	*/
 /*	$KAME: sha1.h,v 1.5 2000/03/27 04:36:23 sumikawa Exp $	*/
