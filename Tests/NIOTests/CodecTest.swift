@@ -200,14 +200,14 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual(testDecoderIsNotQuadratic_reallocs, 3)
     }
 
-    func testMemoryIsReclaimedIfMostIsConsumed() throws {
+    func testMemoryIsReclaimedIfMostIsConsumed() {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertNoThrow(try channel.finish())
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
         }
 
         let decoder = ByteToMessageHandler(LargeChunkDecoder())
-        _ = try channel.pipeline.addHandler(decoder).wait()
+        XCTAssertNoThrow(try channel.pipeline.addHandler(decoder).wait())
 
         // We're going to send in 513 bytes. This will cause a chunk to be passed on, and will leave
         // a 512-byte empty region in a byte buffer with a capacity of 1024 bytes. Since 512 empty
@@ -215,7 +215,9 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         // will not be reclaimed.
         var buffer = channel.allocator.buffer(capacity: 513)
         buffer.writeBytes(Array(repeating: 0x04, count: 513))
-        XCTAssertTrue(try channel.writeInbound(buffer).isFull)
+        XCTAssertNoThrow(XCTAssertTrue(try channel.writeInbound(buffer).isFull))
+        XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 512), try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         XCTAssertEqual(decoder.cumulationBuffer!.capacity, 1024)
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 1)
@@ -230,7 +232,9 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         // reclaimed: While the capacity is more than 1024 bytes (2048 bytes), the reader index is
         // now at 1024. This means the buffer is exactly 50% consumed and not a tiny bit more, which
         // means no space will be reclaimed.
-        XCTAssertTrue(try channel.writeInbound(buffer).isFull)
+        XCTAssertNoThrow(XCTAssertTrue(try channel.writeInbound(buffer).isFull))
+        XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 512), try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         XCTAssertEqual(decoder.cumulationBuffer!.capacity, 2048)
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 2)
@@ -243,35 +247,100 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         // (3 * 512 bytes). This means that 75% of the buffer's capacity can now be reclaimed, which
         // will lead to a reclaim. The resulting buffer will have a capacity of 2048 bytes (based
         // on its previous growth), with 3 readable bytes remaining.
-        XCTAssertTrue(try channel.writeInbound(buffer).isFull)
+        XCTAssertNoThrow(XCTAssertTrue(try channel.writeInbound(buffer).isFull))
+        XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 512), try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
         
         XCTAssertEqual(decoder.cumulationBuffer!.capacity, 2048)
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 3)
         XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 0)
     }
 
-    func testMemoryIsReclaimedIfLotsIsAvailable() throws {
+    func testMemoryIsReclaimedIfLotsIsAvailable() {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertNoThrow(try channel.finish())
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
         }
 
         let decoder = ByteToMessageHandler(OnceDecoder())
-        _ = try channel.pipeline.addHandler(decoder).wait()
+        XCTAssertNoThrow(try channel.pipeline.addHandler(decoder).wait())
 
         // We're going to send in 5119 bytes. This will be held.
         var buffer = channel.allocator.buffer(capacity: 5119)
         buffer.writeBytes(Array(repeating: 0x04, count: 5119))
-        XCTAssertTrue(try channel.writeInbound(buffer).isEmpty)
+        XCTAssertNoThrow(XCTAssertTrue(try channel.writeInbound(buffer).isEmpty))
 
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 5119)
         XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 0)
 
         // Now we're going to send in one more byte. This will cause a chunk to be passed on,
         // shrinking the held memory to 3072 bytes. However, memory will be reclaimed.
-        XCTAssertTrue(try channel.writeInbound(buffer.getSlice(at: 0, length: 1)).isFull)
+        XCTAssertNoThrow(XCTAssertTrue(try channel.writeInbound(buffer.getSlice(at: 0, length: 1)).isFull))
+        XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 2048), try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
+
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 3072)
         XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 0)
+    }
+
+    func testWeDoNotCallShouldReclaimMemoryAsLongAsWeContinue() {
+        class Decoder: ByteToMessageDecoder {
+            typealias InboundOut = ByteBuffer
+
+            var numberOfDecodeCalls = 0
+            var numberOfShouldReclaimCalls = 0
+
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                self.numberOfDecodeCalls += 1
+
+                guard buffer.readSlice(length: [2048, 1024, 512, 256,
+                                                128, 64, .max][self.numberOfDecodeCalls - 1]) != nil else {
+                    return .needMoreData
+                }
+
+                XCTAssertEqual(0, self.numberOfShouldReclaimCalls)
+                return .continue
+            }
+
+            func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
+                XCTAssertEqual(7, self.numberOfDecodeCalls)
+                XCTAssertEqual(64, buffer.readableBytes)
+                self.numberOfShouldReclaimCalls += 1
+
+                return false
+            }
+
+            func decodeLast(context: ChannelHandlerContext,
+                            buffer: inout ByteBuffer,
+                            seenEOF: Bool) throws  -> DecodingState {
+                XCTAssertEqual(64, buffer.readableBytes)
+                XCTAssertTrue(seenEOF)
+                return .needMoreData
+            }
+        }
+
+        let decoder = Decoder()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
+        defer {
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+        }
+
+        let buffer = ByteBuffer(repeating: 0, count: 4096)
+        XCTAssertEqual(4096, buffer.storageCapacity)
+
+        // We're sending 4096 bytes. The decoder will do:
+        // 1. read 2048 -> .continue
+        // 2. read 1024 -> .continue
+        // 3. read 512 -> .continue
+        // 4. read 256 -> .continue
+        // 5. read 128 -> .continue
+        // 6. read 64 -> .continue
+        // 7. read Int.max -> .needMoreData
+        //
+        // So we're expecting 7 decode calls but only 1 call to shouldReclaimBytes (at the end).
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertEqual(7, decoder.numberOfDecodeCalls)
+        XCTAssertEqual(1, decoder.numberOfShouldReclaimCalls)
     }
 
     func testDecoderReentranceChannelRead() throws {
