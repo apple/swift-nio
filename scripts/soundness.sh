@@ -40,9 +40,7 @@ unacceptable_terms=(
     -e blacklis[t]
     -e whitelis[t]
     -e slav[e]
-# this needs to be commented out until we have changed the CI to pick up the
-# soundness check instead.
-#    -e sanit[y]
+    -e sanit[y]
 )
 if git grep --color=never -i "${unacceptable_terms[@]}" > /dev/null; then
     printf "\033[0;31mUnacceptable language found.\033[0m\n"
