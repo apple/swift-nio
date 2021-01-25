@@ -27,7 +27,7 @@ final class RepeatedRequests: ChannelInboundHandler {
 	private var remainingNumberOfRequests: Int
 	private let isDonePromise: EventLoopPromise<Int>
 	static var requestHead: HTTPRequestHead {
-		var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/allocation-test-1")
+        var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/allocation-test-1")
 		head.headers.add(name: "Host", value: "foo-\(ObjectIdentifier(self)).com")
 		return head
 	}
@@ -71,7 +71,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     private let numberOfAdditionalHeaders = 3
 
     private var responseHead: HTTPResponseHead {
-        var head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
+        var head = HTTPResponseHead(version: .http1_1, status: .ok)
         head.headers.add(name: "Content-Length", value: "\(self.bodyLength)")
         for i in 0..<self.numberOfAdditionalHeaders {
             head.headers.add(name: "X-Random-Extra-Header", value: "\(i)")

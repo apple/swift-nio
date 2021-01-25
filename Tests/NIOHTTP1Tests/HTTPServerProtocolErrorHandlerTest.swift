@@ -80,7 +80,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         }
 
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false, withErrorHandling: true).wait())
-        let res = HTTPServerResponsePart.head(.init(version: HTTPVersion(major: 1, minor: 1),
+        let res = HTTPServerResponsePart.head(.init(version: .http1_1,
                                                     status: .ok,
                                                     headers: .init([("Content-Length", "0")])))
         XCTAssertNoThrow(try channel.writeAndFlush(res).wait())
@@ -113,7 +113,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
                 case .head:
                     XCTAssertEqual(.head, self.nextExpected)
                     self.nextExpected = .end
-                    let res = HTTPServerResponsePart.head(.init(version: HTTPVersion(major: 1, minor: 1),
+                    let res = HTTPServerResponsePart.head(.init(version: .http1_1,
                                                                 status: .ok,
                                                                 headers: .init([("Content-Length", "0")])))
                     context.writeAndFlush(self.wrapOutboundOut(res), promise: nil)

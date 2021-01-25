@@ -157,27 +157,27 @@ class HTTPTest: XCTestCase {
     }
 
     func testHTTPSimpleNoHeaders() throws {
-        try checkHTTPRequest(HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/"))
+        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"))
     }
 
     func testHTTPSimple1Header() throws {
-        var req = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/hello/world")
+        var req = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/hello/world")
         req.headers.add(name: "foo", value: "bar")
         try checkHTTPRequest(req)
     }
 
     func testHTTPSimpleSomeHeader() throws {
-        var req = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/foo/bar/buz?qux=quux")
+        var req = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/foo/bar/buz?qux=quux")
         req.headers.add(name: "foo", value: "bar")
         req.headers.add(name: "qux", value: "quuux")
         try checkHTTPRequest(req)
     }
 
     func testHTTPPipelining() throws {
-        var req1 = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/foo/bar/buz?qux=quux")
+        var req1 = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/foo/bar/buz?qux=quux")
         req1.headers.add(name: "foo", value: "bar")
         req1.headers.add(name: "qux", value: "quuux")
-        var req2 = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/")
+        var req2 = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/")
         req2.headers.add(name: "a", value: "b")
         req2.headers.add(name: "C", value: "D")
 
@@ -186,17 +186,17 @@ class HTTPTest: XCTestCase {
     }
 
     func testHTTPBody() throws {
-        try checkHTTPRequest(HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/"),
+        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
                              body: "hello world")
     }
 
     func test1ByteHTTPBody() throws {
-        try checkHTTPRequest(HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/"),
+        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
                              body: "1")
     }
 
     func testHTTPPipeliningWithBody() throws {
-        try checkHTTPRequests(Array(repeating: HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
+        try checkHTTPRequests(Array(repeating: HTTPRequestHead(version: .http1_1,
                                                                method: .GET, uri: "/"),
                                     count: 20),
                              body: "1")
@@ -206,18 +206,18 @@ class HTTPTest: XCTestCase {
         var trailers = HTTPHeaders()
         trailers.add(name: "X-Key", value: "X-Value")
         trailers.add(name: "Something", value: "Else")
-        try checkHTTPRequest(HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .POST, uri: "/"), body: "100", trailers: trailers)
+        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .POST, uri: "/"), body: "100", trailers: trailers)
     }
 
     func testHTTPRequestHeadCoWWorks() throws {
         let headers = HTTPHeaders([("foo", "bar")])
-        var httpReq = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/uri")
+        var httpReq = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/uri")
         httpReq.headers = headers
 
         var modVersion = httpReq
-        modVersion.version = HTTPVersion(major: 2, minor: 0)
-        XCTAssertEqual(HTTPVersion(major: 1, minor: 1), httpReq.version)
-        XCTAssertEqual(HTTPVersion(major: 2, minor: 0), modVersion.version)
+        modVersion.version = .http2
+        XCTAssertEqual(.http1_1, httpReq.version)
+        XCTAssertEqual(.http2, modVersion.version)
 
         var modMethod = httpReq
         modMethod.method = .POST
@@ -243,12 +243,12 @@ class HTTPTest: XCTestCase {
 
     func testHTTPResponseHeadCoWWorks() throws {
         let headers = HTTPHeaders([("foo", "bar")])
-        let httpRes = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok, headers: headers)
+        let httpRes = HTTPResponseHead(version: .http1_1, status: .ok, headers: headers)
 
         var modVersion = httpRes
-        modVersion.version = HTTPVersion(major: 2, minor: 0)
-        XCTAssertEqual(HTTPVersion(major: 1, minor: 1), httpRes.version)
-        XCTAssertEqual(HTTPVersion(major: 2, minor: 0), modVersion.version)
+        modVersion.version = .http2
+        XCTAssertEqual(.http1_1, httpRes.version)
+        XCTAssertEqual(.http2, modVersion.version)
 
         var modStatus = httpRes
         modStatus.status = .notFound

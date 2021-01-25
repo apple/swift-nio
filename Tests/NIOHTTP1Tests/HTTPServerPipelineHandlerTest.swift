@@ -122,10 +122,10 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.quiesceEventRecorder).wait())
 
-        self.requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/path")
+        self.requestHead = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/path")
         self.requestHead.headers.add(name: "Host", value: "example.com")
 
-        self.responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
+        self.responseHead = HTTPResponseHead(version: .http1_1, status: .ok)
         self.responseHead.headers.add(name: "Server", value: "SwiftNIO")
 
         // this activates the channel
@@ -403,7 +403,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
     func testRecursiveChannelReadInvocationsDoNotCauseIssues() throws {
         func makeRequestHead(uri: String) -> HTTPRequestHead {
-            var requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: uri)
+            var requestHead = HTTPRequestHead(version: .http1_1, method: .GET, uri: uri)
             requestHead.headers.add(name: "Host", value: "example.com")
             return requestHead
         }
@@ -454,7 +454,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                     default:
                         XCTFail("didn't expect \(head)")
                     }
-                    context.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok))), promise: nil)
+                    context.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: .http1_1, status: .ok))), promise: nil)
                     if sendEnd {
                         context.write(self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
@@ -467,7 +467,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                         self.state = .req3HeadExpected
 
                         // this will cause `channelRead` to be recursively called and we need to make sure everything then still works
-                        try! (context.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/req_boom")))
+                        try! (context.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.head(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/req_boom")))
                         try! (context.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.end(nil))
                     case .req3EndExpected:
                         self.state = .reqBoomHeadExpected
@@ -763,7 +763,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
     func testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding() throws {
         func makeRequestHead(uri: String) -> HTTPRequestHead {
-            var requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: uri)
+            var requestHead = HTTPRequestHead(version: .http1_1, method: .GET, uri: uri)
             requestHead.headers.add(name: "Host", value: "example.com")
             return requestHead
         }
@@ -792,7 +792,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                     // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
                     // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
                     context.eventLoop.execute {
-                        context.writeAndFlush(self.wrapOutboundOut(.head(.init(version: HTTPVersion(major: 1, minor: 1),
+                        context.writeAndFlush(self.wrapOutboundOut(.head(.init(version: .http1_1,
                                                                            status: .ok))),
                                           promise: nil)
                     }

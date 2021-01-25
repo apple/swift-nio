@@ -266,6 +266,20 @@ public protocol EventLoop: EventLoopGroup {
     /// Asserts that the current thread is _not_ the one tied to this `EventLoop`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionNotInEventLoop(file: StaticString, line: UInt)
+
+    /// Return a succeeded `Void` future.
+    ///
+    /// Semantically, this function is equivalent to calling `makeSucceededFuture(())`.
+    /// Contrary to `makeSucceededFuture`, `makeSucceededVoidFuture` is a customization point for `EventLoop`s which
+    /// allows `EventLoop`s to cache a pre-succeded `Void` future to prevent superfluous allocations.
+    func makeSucceededVoidFuture() -> EventLoopFuture<Void>
+}
+
+extension EventLoop {
+    /// Default implementation of `makeSucceededVoidFuture`: Return a fresh future (which will allocate).
+    public func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
+        return EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+    }
 }
 
 extension EventLoopGroup {
@@ -515,7 +529,7 @@ extension EventLoop {
     ///
     /// - parameters:
     ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
-    /// - returns: An `EventLoopFuture` identical to the `EventLooopFuture` returned from `task`.
+    /// - returns: An `EventLoopFuture` identical to the `EventLoopFuture` returned from `task`.
     @inlinable
     public func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
         return self.submit(task).flatMap { $0 }
@@ -530,6 +544,7 @@ extension EventLoop {
     ///
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
+    @inlinable
     public func flatScheduleTask<T>(deadline: NIODeadline,
                                     file: StaticString = #file,
                                     line: UInt = #line,
@@ -550,6 +565,7 @@ extension EventLoop {
     ///
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
+    @inlinable
     public func flatScheduleTask<T>(in delay: TimeAmount,
                                     file: StaticString = #file,
                                     line: UInt = #line,
@@ -584,7 +600,12 @@ extension EventLoop {
     /// - returns: a succeeded `EventLoopFuture`.
     @inlinable
     public func makeSucceededFuture<Success>(_ value: Success, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Success> {
-        return EventLoopFuture<Success>(eventLoop: self, value: value, file: file, line: line)
+        if Success.self == Void.self {
+            // The as! will always succeed because we previously checked that Success.self == Void.self.
+            return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
+        } else {
+            return EventLoopFuture<Success>(eventLoop: self, value: value, file: file, line: line)
+        }
     }
 
     /// An `EventLoop` forms a singular `EventLoopGroup`, returning itself as the 'next' `EventLoop`.

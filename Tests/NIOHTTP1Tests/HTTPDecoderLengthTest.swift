@@ -164,19 +164,19 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     func testHTTP11SemanticEOFOnChannelInactive() throws {
-        try assertSemanticEOFOnChannelInactiveResponse(version: .init(major:1, minor: 1), how: .channelInactive)
+        try assertSemanticEOFOnChannelInactiveResponse(version: .http1_1, how: .channelInactive)
     }
 
     func testHTTP10SemanticEOFOnChannelInactive() throws {
-        try assertSemanticEOFOnChannelInactiveResponse(version: .init(major:1, minor: 0), how: .channelInactive)
+        try assertSemanticEOFOnChannelInactiveResponse(version: .http1_0, how: .channelInactive)
     }
 
     func testHTTP11SemanticEOFOnHalfClosure() throws {
-        try assertSemanticEOFOnChannelInactiveResponse(version: .init(major:1, minor: 1), how: .halfClosure)
+        try assertSemanticEOFOnChannelInactiveResponse(version: .http1_1, how: .halfClosure)
     }
 
     func testHTTP10SemanticEOFOnHalfClosure() throws {
-        try assertSemanticEOFOnChannelInactiveResponse(version: .init(major:1, minor: 0), how: .halfClosure)
+        try assertSemanticEOFOnChannelInactiveResponse(version: .http1_0, how: .halfClosure)
     }
 
     private func assertIgnoresLengthFields(requestMethod: HTTPMethod,
@@ -189,7 +189,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Prime the decoder with a request and consume it.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
+        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http1_1,
                                                                                            method: requestMethod,
                                                                                            uri: "/"))).isFull)
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
@@ -330,7 +330,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Prime the decoder with a request and consume it.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
+        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http1_1,
                                                                                            method: .GET,
                                                                                            uri: "/"))).isFull)
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
@@ -369,7 +369,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Prime the decoder with a request and consume it.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
+        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http1_1,
                                                                                            method: .GET,
                                                                                            uri: "/"))).isFull)
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
@@ -451,7 +451,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 
         // Prime the decoder with a request.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
+        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http1_1,
                                                                                            method: .GET,
                                                                                            uri: "/"))).isFull)
 

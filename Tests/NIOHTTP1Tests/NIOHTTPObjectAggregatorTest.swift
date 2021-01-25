@@ -115,11 +115,11 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.aggregatorHandler).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
         
-        self.requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .PUT, uri: "/path")
+        self.requestHead = HTTPRequestHead(version: .http1_1, method: .PUT, uri: "/path")
         self.requestHead.headers.add(name: "Host", value: "example.com")
         self.requestHead.headers.add(name: "X-Test", value: "True")
         
-        self.responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
+        self.responseHead = HTTPResponseHead(version: .http1_1, status: .ok)
         self.responseHead.headers.add(name: "Server", value: "SwiftNIO")
         
         // this activates the channel
@@ -225,7 +225,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         }
 
         let resTooLarge = HTTPResponseHead(
-            version: .init(major: 1, minor: 1),
+            version: .http1_1,
             status: .payloadTooLarge,
             headers: HTTPHeaders([("Content-Length", "0"), ("connection", "close")]))
         
@@ -244,7 +244,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
 
         // send an HTTP/1.0 request with no keep-alive header
         let requestHead: HTTPRequestHead = HTTPRequestHead(
-            version: .init(major: 1, minor: 0),
+            version: .http1_0,
             method: .PUT, uri: "/path",
             headers: HTTPHeaders(
                 [("Host", "example.com"), ("X-Test", "True"), ("content-length", "5")]))
@@ -252,7 +252,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.head(requestHead)))
 
         let resTooLarge = HTTPResponseHead(
-            version: .init(major: 1, minor: 0),
+            version: .http1_0,
             status: .payloadTooLarge,
             headers: HTTPHeaders([("Content-Length", "0"), ("connection", "close")]))
 
@@ -273,7 +273,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
 
         // HTTP/1.1 uses Keep-Alive unless told otherwise
         let requestHead: HTTPRequestHead = HTTPRequestHead(
-            version: .init(major: 1, minor: 1),
+            version: .http1_1,
             method: .PUT, uri: "/path",
             headers: HTTPHeaders(
                 [("Host", "example.com"), ("X-Test", "True"), ("content-length", "8")]))
@@ -344,11 +344,11 @@ class NIOHTTPClientResponseAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.aggregatorHandler).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
 
-        self.requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .PUT, uri: "/path")
+        self.requestHead = HTTPRequestHead(version: .http1_1, method: .PUT, uri: "/path")
         self.requestHead.headers.add(name: "Host", value: "example.com")
         self.requestHead.headers.add(name: "X-Test", value: "True")
 
-        self.responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
+        self.responseHead = HTTPResponseHead(version: .http1_1, status: .ok)
         self.responseHead.headers.add(name: "Server", value: "SwiftNIO")
 
         // this activates the channel

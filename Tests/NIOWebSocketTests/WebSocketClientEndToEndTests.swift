@@ -110,7 +110,7 @@ extension ChannelInboundHandler where OutboundOut == HTTPClientRequestPart {
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
         
-        let requestHead = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
+        let requestHead = HTTPRequestHead(version: .http1_1,
                                           method: .GET,
                                           uri: "/",
                                           headers: headers)

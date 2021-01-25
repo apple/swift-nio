@@ -285,13 +285,8 @@ public final class ChannelPipeline: ChannelInvoker {
         let context = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
         operation(context, relativeContext)
 
-        do {
-            try context.invokeHandlerAdded()
-            return .success(())
-        } catch let err {
-            removeHandlerFromPipeline(context: context, promise: nil)
-            return .failure(err)
-        }
+        context.invokeHandlerAdded()
+        return .success(())
     }
 
     /// Synchronously add a single new `ChannelHandlerContext` after one that currently exists in the
@@ -505,12 +500,8 @@ public final class ChannelPipeline: ChannelInvoker {
             nextCtx.prev = prevCtx
         }
 
-        do {
-            try context.invokeHandlerRemoved()
-            promise?.succeed(())
-        } catch let err {
-            promise?.fail(err)
-        }
+        context.invokeHandlerRemoved()
+        promise?.succeed(())
 
         // We need to keep the current node alive until after the callout in case the user uses the context.
         context.next = nil
@@ -909,33 +900,38 @@ extension ChannelPipeline {
             individualPosition = .after(handler)
         }
 
-        let promise = self.eventLoop.makePromise(of: Void.self)
+        func addHandlersMakingPromise(handlers: [ChannelHandler],
+                                      transformedPosition: ChannelPipeline.Position) -> EventLoopFuture<Void> {
+            let promise = self.eventLoop.makePromise(of: Void.self)
 
-        // Add all the handlers.
-        func addAllHandlersAndComplete() {
-            for handler in handlers {
-                let addResult = self._add(handler, position: individualPosition)
-                switch addResult {
-                case .success:
-                    break // Keep going.
-                case .failure:
-                    // Report failure and return.
-                    promise.completeWith(addResult)
-                    return
+            // Add all the handlers.
+            func addAllHandlersAndComplete() {
+                for handler in handlers {
+                    let addResult = self._add(handler, position: transformedPosition)
+                    switch addResult {
+                    case .success:
+                        break // Keep going.
+                    case .failure:
+                        // Report failure and return.
+                        promise.completeWith(addResult)
+                        return
+                    }
+                }
+                promise.succeed(())
+            }
+
+            if self.eventLoop.inEventLoop {
+                addAllHandlersAndComplete()
+            } else {
+                self.eventLoop.execute {
+                    addAllHandlersAndComplete()
                 }
             }
-            promise.succeed(())
+
+            return promise.futureResult
         }
 
-        if self.eventLoop.inEventLoop {
-            addAllHandlersAndComplete()
-        } else {
-            self.eventLoop.execute {
-                addAllHandlersAndComplete()
-            }
-        }
-
-        return promise.futureResult
+        return addHandlersMakingPromise(handlers: handlers, transformedPosition: individualPosition)
     }
 
     /// Adds the provided channel handlers to the pipeline in the order given, taking account
@@ -1504,13 +1500,13 @@ public final class ChannelHandlerContext: ChannelInvoker {
         }
     }
 
-    fileprivate func invokeHandlerAdded() throws {
+    fileprivate func invokeHandlerAdded() {
         self.eventLoop.assertInEventLoop()
 
         handler.handlerAdded(context: self)
     }
 
-    fileprivate func invokeHandlerRemoved() throws {
+    fileprivate func invokeHandlerRemoved() {
         self.eventLoop.assertInEventLoop()
         guard !self.removeHandlerInvoked else {
             return

@@ -245,7 +245,7 @@ public final class SNIHandler: ByteToMessageDecoder {
         //          } body;
         //      } Handshake;
         //
-        // For the sake of our own sanity, we should check the handshake type and
+        // For the sake of our own happiness, we should check the handshake type and
         // validate its length. uint24 is a stupid type, so we have to play some
         // games here to get this to work. If we check that we have 4 bytes up-front
         // we can use unsafe reads: fewer than 4 bytes makes this message bogus.
