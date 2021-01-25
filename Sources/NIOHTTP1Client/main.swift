@@ -36,7 +36,7 @@ private final class HTTPEchoHandler: ChannelInboundHandler {
         // The sample server has more functionality which can be easily tested by playing with the URI.
         // For example, try "/dynamic/count-to-ten" or "/dynamic/client-ip"
         
-        let requestHead = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
+        let requestHead = HTTPRequestHead(version: .http1_1,
                                           method: .GET,
                                           uri: "/dynamic/echo",
                                           headers: headers)

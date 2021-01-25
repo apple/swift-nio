@@ -30,7 +30,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         }
 
         try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
-        var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: method, uri: "/uri")
+        var request = HTTPRequestHead(version: .http1_1, method: method, uri: "/uri")
         request.headers = headers
         try channel.writeOutbound(HTTPClientRequestPart.head(request))
         if let buffer = try channel.readOutbound(as: ByteBuffer.self) {
@@ -93,7 +93,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
 
         // This request contains neither Transfer-Encoding: chunked or Content-Length.
-        let request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:0), method: .GET, uri: "/uri")
+        let request = HTTPRequestHead(version: .http1_0, method: .GET, uri: "/uri")
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
         let writtenData = try channel.readOutbound(as: ByteBuffer.self)!
         let writtenResponse = writtenData.getString(at: writtenData.readerIndex, length: writtenData.readableBytes)!
@@ -107,7 +107,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         }
 
         try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
-        var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: .POST, uri: "/uri")
+        var request = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri")
         request.headers.add(name: "content-length", value: "4")
 
         var buf = channel.allocator.buffer(capacity: 4)
@@ -130,7 +130,7 @@ class HTTPRequestEncoderTests: XCTestCase {
 
         let uri = "server.example.com:80"
         try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
-        var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: .CONNECT, uri: uri)
+        var request = HTTPRequestHead(version: .http1_1, method: .CONNECT, uri: uri)
         request.headers.add(name: "Host", value: uri)
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
@@ -145,7 +145,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         var expected = channel.allocator.buffer(capacity: 32)
 
-        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1,
                                                                                     method: .POST,
                                                                                     uri: "/"))))
         expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
@@ -177,7 +177,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         var expected = channel.allocator.buffer(capacity: 32)
 
-        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1,
                                                                                     method: .POST,
                                                                                     uri: "/",
                                                                                     headers: ["TrAnSfEr-encoding": "chuNKED"]))))
@@ -210,7 +210,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         var expected = channel.allocator.buffer(capacity: 32)
 
-        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1,
                                                                                     method: .POST,
                                                                                     uri: "/"))))
         expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
@@ -234,7 +234,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         var expected = channel.allocator.buffer(capacity: 32)
 
-        channel.write(HTTPClientRequestPart.head(.init(version: .init(major: 1, minor: 1),
+        channel.write(HTTPClientRequestPart.head(.init(version: .http1_1,
                                                        method: .POST,
                                                        uri: "/")), promise: nil)
         channel.flush()

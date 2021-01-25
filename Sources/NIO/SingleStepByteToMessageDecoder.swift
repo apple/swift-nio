@@ -166,7 +166,7 @@ extension NIOSingleStepByteToMessageDecoder {
 ///                 headers.add(name: "content-length", value: String(responseBuffer.readableBytes))
 ///
 ///                 context.write(self.wrapOutboundOut(HTTPServerResponsePart.head(
-///                     HTTPResponseHead(version: .init(major: 1, minor: 1),
+///                     HTTPResponseHead(version: .http1_1,
 ///                                      status: .ok, headers: headers))), promise: nil)
 ///
 ///                 context.write(self.wrapOutboundOut(HTTPServerResponsePart.body(

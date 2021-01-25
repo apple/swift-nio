@@ -30,7 +30,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
-        var switchingResponse = HTTPResponseHead(version: HTTPVersion(major: 1, minor:1), status: status)
+        var switchingResponse = HTTPResponseHead(version: .http1_1, status: status)
         switchingResponse.headers = headers
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(switchingResponse)))
         do {
@@ -108,7 +108,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
 
         // This response contains neither Transfer-Encoding: chunked or Content-Length.
-        let response = HTTPResponseHead(version: HTTPVersion(major: 1, minor:0), status: .ok)
+        let response = HTTPResponseHead(version: .http1_0, status: .ok)
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(response)))
         guard let b = try channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("Could not read byte buffer")

@@ -148,21 +148,48 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         }
 
         // We're going to send in 513 bytes. This will cause a chunk to be passed on, and will leave
-        // a 512-byte empty region in a 513 byte buffer. This will not cause a shrink.
+        // a 512-byte empty region in a byte buffer with a capacity of 1024 bytes. Since 512 empty
+        // bytes are exactly 50% of the buffers capacity and not one tiny bit more, the empty space
+        // will not be reclaimed.
         var buffer = allocator.buffer(capacity: 513)
         buffer.writeBytes(Array(repeating: 0x04, count: 513))
         XCTAssertNoThrow(try processor.process(buffer: buffer, messageReceiver.receiveMessage))
 
         XCTAssertEqual(512, messageReceiver.retrieveMessage()!.readableBytes)
 
+        XCTAssertEqual(processor._buffer!.capacity, 1024)
         XCTAssertEqual(1, processor._buffer!.readableBytes)
         XCTAssertEqual(512, processor._buffer!.readerIndex)
 
-        // Now we're going to send in another 513 bytes. This will cause another chunk to be passed in,
-        // but now we'll shrink the buffer.
+        // Next we're going to send in another 513 bytes. This will cause another chunk to be passed
+        // into our decoder buffer, which has a capacity of 1024 bytes, before we pass in another
+        // 513 bytes. Since we already have written to 513 bytes, there isn't enough space in the
+        // buffer, which will cause a resize to a new underlying storage with 2048 bytes. Since the
+        // `LargeChunkDecoder` has consumed another 512 bytes, there are now two bytes left to read
+        // (513 + 513) - (512 + 512). The reader index is at 1024. The empty space has not been
+        // reclaimed: While the capacity is more than 1024 bytes (2048 bytes), the reader index is
+        // now at 1024. This means the buffer is exactly 50% consumed and not a tiny bit more, which
+        // means no space will be reclaimed.
         XCTAssertNoThrow(try processor.process(buffer: buffer, messageReceiver.receiveMessage))
+        XCTAssertEqual(512, messageReceiver.retrieveMessage()!.readableBytes)
 
+        XCTAssertEqual(processor._buffer!.capacity, 2048)
         XCTAssertEqual(2, processor._buffer!.readableBytes)
+        XCTAssertEqual(1024, processor._buffer!.readerIndex)
+        
+        // Finally we're going to send in another 513 bytes. This will cause another chunk to be
+        // passed into our decoder buffer, which has a capacity of 2048 bytes. Since the buffer has
+        // enough available space (1022 bytes) there will be no buffer resize before the decoding.
+        // After the decoding of another 512 bytes, the buffer will have 1536 empty bytes
+        // (3 * 512 bytes). This means that 75% of the buffer's capacity can now be reclaimed, which
+        // will lead to a reclaim. The resulting buffer will have a capacity of 2048 bytes (based
+        // on its previous growth), with 3 readable bytes remaining.
+        
+        XCTAssertNoThrow(try processor.process(buffer: buffer, messageReceiver.receiveMessage))
+        XCTAssertEqual(512, messageReceiver.retrieveMessage()!.readableBytes)
+        
+        XCTAssertEqual(processor._buffer!.capacity, 2048)
+        XCTAssertEqual(3, processor._buffer!.readableBytes)
         XCTAssertEqual(0, processor._buffer!.readerIndex)
     }
 
