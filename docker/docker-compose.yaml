@@ -40,7 +40,7 @@ services:
 
   performance-test:
     <<: *common
-    command: /bin/bash -xcl "swift build -c release && ./.build/release/NIOPerformanceTester"
+    command: /bin/bash -xcl "swift build -c release -Xswiftc -Xllvm -Xswiftc -align-all-functions=5 -Xswiftc -Xllvm -Xswiftc -align-all-blocks=5 && ./.build/release/NIOPerformanceTester"
 
   # util
 
