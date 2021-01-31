@@ -30,6 +30,8 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
         
         // We are connected. It's time to send the message to the server to initialize the upgrade dance.
         var headers = HTTPHeaders()
+        let host = context.remoteAddress!
+        headers.add(name: "Host", value: "\(host.ipAddress ?? "localhost"):\(host.port ?? 80)")
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
         
