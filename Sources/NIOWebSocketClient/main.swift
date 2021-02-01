@@ -24,14 +24,21 @@ print("Establishing connection.")
 private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableChannelHandler {
     public typealias InboundIn = HTTPClientResponsePart
     public typealias OutboundOut = HTTPClientRequestPart
+
+    public let target: ConnectTo
+
+    public init(target: ConnectTo) {
+        self.target = target
+    }
     
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress!)")
-        
+
         // We are connected. It's time to send the message to the server to initialize the upgrade dance.
         var headers = HTTPHeaders()
-        let host = context.remoteAddress!
-        headers.add(name: "Host", value: "\(host.ipAddress ?? "localhost"):\(host.port ?? 80)")
+        if case let .ip(host: host, port: port) = target {
+            headers.add(name: "Host", value: "\(host):\(port)")
+        }
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
         
@@ -189,7 +196,7 @@ let bootstrap = ClientBootstrap(group: group)
     .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
 
-        let httpHandler = HTTPInitialRequestHandler()
+        let httpHandler = HTTPInitialRequestHandler(target: connectTarget)
 
         let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
                                                            upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
