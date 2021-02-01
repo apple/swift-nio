@@ -155,33 +155,6 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
     }
 }
 
-let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-let bootstrap = ClientBootstrap(group: group)
-    // Enable SO_REUSEADDR.
-    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-    .channelInitializer { channel in
-        
-        let httpHandler = HTTPInitialRequestHandler()
-        
-        let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
-                                                           upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-            channel.pipeline.addHandler(WebSocketPingPongHandler())
-        })
-        
-        let config: NIOHTTPClientUpgradeConfiguration = (
-            upgraders: [ websocketUpgrader ],
-            completionHandler: { _ in
-                channel.pipeline.removeHandler(httpHandler, promise: nil)
-        })
-
-        return channel.pipeline.addHTTPClientHandlers(withClientUpgrade: config).flatMap {
-            channel.pipeline.addHandler(httpHandler)
-        }
-}
-defer {
-    try! group.syncShutdownGracefully()
-}
-
 // First argument is the program path
 let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
@@ -208,6 +181,33 @@ case (_, .some(let p), _):
     connectTarget = .ip(host: defaultHost, port: p)
 default:
     connectTarget = .ip(host: defaultHost, port: defaultPort)
+}
+
+let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+let bootstrap = ClientBootstrap(group: group)
+    // Enable SO_REUSEADDR.
+    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .channelInitializer { channel in
+
+        let httpHandler = HTTPInitialRequestHandler()
+
+        let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
+                                                           upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
+            channel.pipeline.addHandler(WebSocketPingPongHandler())
+        })
+
+        let config: NIOHTTPClientUpgradeConfiguration = (
+            upgraders: [ websocketUpgrader ],
+            completionHandler: { _ in
+                channel.pipeline.removeHandler(httpHandler, promise: nil)
+        })
+
+        return channel.pipeline.addHTTPClientHandlers(withClientUpgrade: config).flatMap {
+            channel.pipeline.addHandler(httpHandler)
+        }
+}
+defer {
+    try! group.syncShutdownGracefully()
 }
 
 let channel = try { () -> Channel in
