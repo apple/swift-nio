@@ -17,6 +17,11 @@ import NIOWebSocket
 
 print("Establishing connection.")
 
+enum ConnectTo {
+    case ip(host: String, port: Int)
+    case unixDomainSocket(path: String)
+}
+
 // The HTTP handler to be used to initiate the request.
 // This initial request will be adapted by the WebSocket upgrader to contain the upgrade header parameters.
 // Channel read will only be called if the upgrade fails.
@@ -169,11 +174,6 @@ let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
 let defaultPort: Int = 8888
-
-enum ConnectTo {
-    case ip(host: String, port: Int)
-    case unixDomainSocket(path: String)
-}
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
