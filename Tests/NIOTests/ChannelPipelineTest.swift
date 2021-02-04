@@ -1294,6 +1294,93 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try removal1Future.wait())
         XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
     }
+
+    func testSynchronousViewAddHandler() throws {
+        let channel = EmbeddedChannel()
+        let operations = channel.pipeline.syncOperations
+
+        // Add some handlers.
+        let handler = IndexWritingHandler(1)
+        XCTAssertNoThrow(try operations.addHandler(IndexWritingHandler(2)))
+        XCTAssertNoThrow(try operations.addHandler(handler, position: .first))
+        XCTAssertNoThrow(try operations.addHandler(IndexWritingHandler(3), position: .after(handler)))
+        XCTAssertNoThrow(try operations.addHandler(IndexWritingHandler(4), position: .before(handler)))
+
+        channel.assertReadIndexOrder([4, 1, 3, 2])
+        channel.assertWriteIndexOrder([2, 3, 1, 4])
+    }
+
+    func testSynchronousViewAddHandlerAfterDestroyed() throws {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.finish())
+
+        let operations = channel.pipeline.syncOperations
+
+        XCTAssertThrowsError(try operations.addHandler(SimpleTypedHandler1())) { error in
+            XCTAssertEqual(error as? ChannelError, .ioOnClosedChannel)
+        }
+
+        // The same for 'addHandlers'.
+        XCTAssertThrowsError(try operations.addHandlers([SimpleTypedHandler1()])) { error in
+            XCTAssertEqual(error as? ChannelError, .ioOnClosedChannel)
+        }
+    }
+
+    func testSynchronousViewAddHandlers() throws {
+        let channel = EmbeddedChannel()
+        let operations = channel.pipeline.syncOperations
+
+        // Add some handlers.
+        let firstHandler = IndexWritingHandler(1)
+        XCTAssertNoThrow(try operations.addHandler(firstHandler))
+        XCTAssertNoThrow(try operations.addHandlers(IndexWritingHandler(2), IndexWritingHandler(3)))
+        XCTAssertNoThrow(try operations.addHandlers([IndexWritingHandler(4), IndexWritingHandler(5)], position: .before(firstHandler)))
+
+        channel.assertReadIndexOrder([4, 5, 1, 2, 3])
+        channel.assertWriteIndexOrder([3, 2, 1, 5, 4])
+    }
+
+    func testSynchronousViewContext() throws {
+        let channel = EmbeddedChannel()
+        let operations = channel.pipeline.syncOperations
+
+        let simpleTypedHandler1 = SimpleTypedHandler1()
+        // Add some handlers.
+        XCTAssertNoThrow(try operations.addHandler(simpleTypedHandler1))
+        XCTAssertNoThrow(try operations.addHandler(SimpleTypedHandler2(), name: "simple-2"))
+        XCTAssertNoThrow(try operations.addHandler(SimpleTypedHandler3()))
+
+        // Get contexts using different predicates.
+
+        // By identity.
+        let simpleTypedHandler1Context = try assertNoThrowWithValue(operations.context(handler: simpleTypedHandler1))
+        XCTAssertTrue(simpleTypedHandler1Context.handler === simpleTypedHandler1)
+
+        // By name.
+        let simpleTypedHandler2Context = try assertNoThrowWithValue(operations.context(name: "simple-2"))
+        XCTAssertTrue(simpleTypedHandler2Context.handler is SimpleTypedHandler2)
+
+        // By type.
+        let simpleTypedHandler3Context = try assertNoThrowWithValue(operations.context(handlerType: SimpleTypedHandler3.self))
+        XCTAssertTrue(simpleTypedHandler3Context.handler is SimpleTypedHandler3)
+    }
+
+    func testSynchronousViewGetTypedHandler() throws {
+        let channel = EmbeddedChannel()
+        let operations = channel.pipeline.syncOperations
+
+        let simpleTypedHandler1 = SimpleTypedHandler1()
+        let simpleTypedHandler2 = SimpleTypedHandler2()
+        // Add some handlers.
+        XCTAssertNoThrow(try operations.addHandler(simpleTypedHandler1))
+        XCTAssertNoThrow(try operations.addHandler(simpleTypedHandler2))
+
+        let handler1 = try assertNoThrowWithValue(try operations.handler(type: SimpleTypedHandler1.self))
+        XCTAssertTrue(handler1 === simpleTypedHandler1)
+
+        let handler2 = try assertNoThrowWithValue(try operations.handler(type: SimpleTypedHandler2.self))
+        XCTAssertTrue(handler2 === simpleTypedHandler2)
+    }
 }
 
 // this should be within `testAddMultipleHandlers` but https://bugs.swift.org/browse/SR-9956
