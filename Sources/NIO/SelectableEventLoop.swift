@@ -455,7 +455,7 @@ internal final class SelectableEventLoop: EventLoop {
                     break
                 }
 
-                // Execute all the tasks that were summited
+                // Execute all the tasks that were submitted
                 for task in self.tasksCopy {
                     /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
                     withAutoReleasePool {
