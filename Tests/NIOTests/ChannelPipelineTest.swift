@@ -1294,6 +1294,49 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try removal1Future.wait())
         XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
     }
+    
+    func testReplacingChannelHandler() {
+        
+        final class TestHandler: ChannelInboundHandler, RemovableChannelHandler {
+            
+            typealias InboundIn = Never
+            
+            var removalPromise: EventLoopPromise<Void>?
+            var addedPromise: EventLoopPromise<Void>?
+            
+            init(removalPromise: EventLoopPromise<Void>?, addedPromise: EventLoopPromise<Void>?) {
+                self.removalPromise = removalPromise
+                self.addedPromise = addedPromise
+            }
+            
+            func handlerAdded(context: ChannelHandlerContext) {
+                self.addedPromise?.succeed(())
+            }
+            
+            func handlerRemoved(context: ChannelHandlerContext) {
+                self.removalPromise?.succeed(())
+            }
+        }
+        
+        let channel = EmbeddedChannel()
+        
+        let handler1AddedPromise = channel.eventLoop.makePromise(of: Void.self)
+        let handler1RemovedPromise = channel.eventLoop.makePromise(of: Void.self)
+        let handler2AddedPromise = channel.eventLoop.makePromise(of: Void.self)
+        
+        let handler1 = TestHandler(removalPromise: handler1RemovedPromise, addedPromise: handler1AddedPromise)
+        let handler2 = TestHandler(removalPromise: nil, addedPromise: handler2AddedPromise)
+        
+        // add the first handler, we expect the `handler1AddedPromise` to succeed
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler1).wait())
+        XCTAssertNoThrow(try handler1AddedPromise.futureResult.wait())
+        
+        // replace with the second handler, we expect the first to be removed, and the second to be added
+        XCTAssertNoThrow(try channel.pipeline.replaceHandler(handler1, with: handler2).wait())
+        XCTAssertNoThrow(try handler1RemovedPromise.futureResult.wait())
+        XCTAssertNoThrow(try handler2AddedPromise.futureResult.wait())
+        
+    }
 }
 
 // this should be within `testAddMultipleHandlers` but https://bugs.swift.org/browse/SR-9956
