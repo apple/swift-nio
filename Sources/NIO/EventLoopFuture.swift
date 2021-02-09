@@ -217,6 +217,34 @@ public struct EventLoopPromise<Value> {
         self._resolve(value: result)
     }
 
+    /// Execute the given closure and complete the promise.
+    ///
+    /// The given closure is executed _synchronously_ or _asynchronously_ depending on whether
+    /// the current `NIOThread` is tied to the `EventLoop` that was used to create the promise.
+    ///
+    /// WARNING: You _must not_ call into any blocking code in the given closure if it is executed synchronously.
+    ///
+    /// - parameters:
+    ///     - body: The closure to execute.
+    @inlinable
+    public func completeWithClosure(_ body: @escaping () throws -> Value) {
+        func executeAndComplete() {
+            do {
+                self.succeed(try body())
+            } catch let e {
+                self.fail(e)
+            }
+        }
+
+        if self.futureResult.eventLoop.inEventLoop {
+            executeAndComplete()
+        } else {
+            self.futureResult.eventLoop.execute {
+                executeAndComplete()
+            }
+        }
+    }
+
     /// Fire the associated `EventLoopFuture` on the appropriate event loop.
     ///
     /// This method provides the primary difference between the `EventLoopPromise` and most
@@ -1304,17 +1332,6 @@ extension EventLoopFuture {
         return hoppingPromise.futureResult
     }
 }
-
-/// Execute the given function and synchronously complete the given `EventLoopPromise` (if not `nil`).
-func executeAndComplete<Value>(_ promise: EventLoopPromise<Value>?, _ body: () throws -> Value) {
-    do {
-        let result = try body()
-        promise?.succeed(result)
-    } catch let e {
-        promise?.fail(e)
-    }
-}
-
 
 // MARK: always
 
