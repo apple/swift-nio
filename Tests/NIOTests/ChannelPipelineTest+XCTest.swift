@@ -63,6 +63,11 @@ extension ChannelPipelineTest {
                 ("testPipelineDebugDescription", testPipelineDebugDescription),
                 ("testWeDontCallHandlerRemovedTwiceIfAHandlerCompletesRemovalOnlyAfterChannelTeardown", testWeDontCallHandlerRemovedTwiceIfAHandlerCompletesRemovalOnlyAfterChannelTeardown),
                 ("testWeFailTheSecondRemoval", testWeFailTheSecondRemoval),
+                ("testSynchronousViewAddHandler", testSynchronousViewAddHandler),
+                ("testSynchronousViewAddHandlerAfterDestroyed", testSynchronousViewAddHandlerAfterDestroyed),
+                ("testSynchronousViewAddHandlers", testSynchronousViewAddHandlers),
+                ("testSynchronousViewContext", testSynchronousViewContext),
+                ("testSynchronousViewGetTypedHandler", testSynchronousViewGetTypedHandler),
            ]
    }
 }

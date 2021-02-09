@@ -19,6 +19,9 @@ services:
     image: swift-nio:18.04-5.0
     environment:
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
+      - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
+      - MAX_ALLOCS_ALLOWED_1000_getHandlers=12050
+      - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=50
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=31990
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=3100
       - MAX_ALLOCS_ALLOWED_1000_tcpconnections=188050
