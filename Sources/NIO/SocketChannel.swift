@@ -216,7 +216,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }.whenFailure{ error in
             promise?.fail(error)
         }
-        executeAndComplete(p) {
+        self.eventLoop.executeAndComplete(p) {
             try socket.bind(to: address)
             self.updateCachedAddressesFromSocket(updateRemote: false)
             try self.socket.listen(backlog: backlog)

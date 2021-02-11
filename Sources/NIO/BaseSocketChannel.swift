@@ -545,7 +545,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     public final func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
             let promise = eventLoop.makePromise(of: Void.self)
-            executeAndComplete(promise) { try self.setOption0(option, value: value) }
+            eventLoop.executeAndComplete(promise) { try self.setOption0(option, value: value) }
             return promise.futureResult
         } else {
             return eventLoop.submit { try self.setOption0(option, value: value) }
@@ -646,7 +646,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return
         }
 
-        executeAndComplete(promise) {
+        self.eventLoop.executeAndComplete(promise) {
             try socket.bind(to: address)
             self.updateCachedAddressesFromSocket(updateRemote: false)
         }

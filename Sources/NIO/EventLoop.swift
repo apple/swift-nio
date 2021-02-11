@@ -229,6 +229,9 @@ public protocol EventLoop: EventLoopGroup {
     /// Submit a given task to be executed by the `EventLoop`
     func execute(_ task: @escaping () -> Void)
 
+    /// Execute the given function and synchronously complete the given `EventLoopPromise` (if not `nil`).
+    func executeAndComplete<T>(_ promise: EventLoopPromise<T>?, _ body: () throws -> T)
+
     /// Submit a given task to be executed by the `EventLoop`. Once the execution is complete the returned `EventLoopFuture` is notified.
     ///
     /// - parameters:
@@ -499,6 +502,17 @@ extension NIODeadline {
 }
 
 extension EventLoop {
+    /// Execute the given function and synchronously complete the given `EventLoopPromise` (if not `nil`).
+    @inlinable
+    public func executeAndComplete<T>(_ promise: EventLoopPromise<T>?, _ body: () throws -> T) {
+        do {
+            let result = try body()
+            promise?.succeed(result)
+        } catch let err {
+            promise?.fail(err)
+        }
+    }
+
     /// Submit `task` to be run on this `EventLoop`.
     ///
     /// The returned `EventLoopFuture` will be completed when `task` has finished running. It will be succeeded with

@@ -288,7 +288,7 @@ extension BaseSocketChannel: SocketOptionProvider {
     func unsafeSetSocketOption<Value>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: Value) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
             let promise = eventLoop.makePromise(of: Void.self)
-            executeAndComplete(promise) {
+            eventLoop.executeAndComplete(promise) {
                 try setSocketOption0(level: level, name: name, value: value)
             }
             return promise.futureResult
@@ -308,7 +308,7 @@ extension BaseSocketChannel: SocketOptionProvider {
     func unsafeGetSocketOption<Value>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) -> EventLoopFuture<Value> {
         if eventLoop.inEventLoop {
             let promise = eventLoop.makePromise(of: Value.self)
-            executeAndComplete(promise) {
+            eventLoop.executeAndComplete(promise) {
                 try getSocketOption0(level: level, name: name)
             }
             return promise.futureResult

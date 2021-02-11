@@ -1305,17 +1305,6 @@ extension EventLoopFuture {
     }
 }
 
-/// Execute the given function and synchronously complete the given `EventLoopPromise` (if not `nil`).
-func executeAndComplete<Value>(_ promise: EventLoopPromise<Value>?, _ body: () throws -> Value) {
-    do {
-        let result = try body()
-        promise?.succeed(result)
-    } catch let e {
-        promise?.fail(e)
-    }
-}
-
-
 // MARK: always
 
 extension EventLoopFuture {
