@@ -17,9 +17,11 @@ RUN apt-get update && apt-get install -y wget
 RUN apt-get update && apt-get install -y lsof dnsutils netcat-openbsd net-tools curl jq # used by integration tests
 
 # ruby and jazzy for docs generation
-RUN apt-get update && apt-get install -y ruby ruby-dev libsqlite3-dev
+RUN apt-get update && apt-get install -y ruby ruby-dev libsqlite3-dev build-essential
+# switch of gem docs building
+RUN echo "gem: --no-document" > ~/.gemrc
 # jazzy no longer works on xenial as ruby is too old.
-RUN if [ "${ubuntu_version}" != "xenial" ] ; then  gem install jazzy --no-ri --no-rdoc ; fi
+RUN if [ "${ubuntu_version}" != "xenial" ] ; then  gem install jazzy; fi
 
 # tools
 RUN mkdir -p $HOME/.tools
