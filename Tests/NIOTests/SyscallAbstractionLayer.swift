@@ -118,7 +118,7 @@ extension LockedBox where T == UserToKernel {
     func assertParkedRightNow(file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
         let syscall = try self.waitForValue()
-        if case .whenReady = syscall {
+        if case .whenReady(.block) = syscall {
             return
         } else {
             XCTFail("unexpected syscall \(syscall)", file: (file), line: line)
@@ -421,6 +421,12 @@ extension EventLoop {
                             _ body: @escaping () throws -> T) throws -> T {
         let hookedSelector = ((self as! SelectableEventLoop)._selector as! HookedSelector)
         let box = LockedBox<Result<T, Error>>()
+
+        // To prevent races between the test driver thread (this thread) and the EventLoop (another thread), we need
+        // to wait for the EventLoop to finish its tick and park itself. That makes sure both threads are synchronised
+        // so we know exactly what the EventLoop thread is currently up to (nothing at all, waiting for a wakeup).
+        try hookedSelector.userToKernel.assertParkedRightNow()
+
         self.execute {
             do {
                 try box.waitForEmptyAndSet(.init(catching: body))
@@ -430,7 +436,9 @@ extension EventLoop {
         }
         try hookedSelector.assertWakeup(file: (file), line: line)
         try syscallAssertions()
-        try hookedSelector.userToKernel.assertParkedRightNow() // We need the EventLoop to finish running its tick.
+
+        // Here as well, we need to synchronise and wait for the EventLoop to finish running its tick.
+        try hookedSelector.userToKernel.assertParkedRightNow()
         return try box.takeValue().get()
     }
 }
@@ -441,22 +449,15 @@ extension EventLoopFuture {
     /// Using a plain `EventLoopFuture.wait()` together with the SAL would require you to spin the `EventLoop` manually
     /// which is error prone and hard.
     internal func salWait() throws -> Value {
-        assert(Thread.isMainThread)
         let box = LockedBox<Result<Value, Error>>()
-        let hookedSelector = ((self.eventLoop as! SelectableEventLoop)._selector as! HookedSelector)
 
-        self.eventLoop.execute {
-            self.whenComplete { result in
-                do {
-                    try box.waitForEmptyAndSet(result)
-                } catch {
-                    box.value = .failure(error)
-                }
+        XCTAssertNoThrow(try self.eventLoop.runSAL() {
+            self.whenComplete { value in
+                // We can bang this because the LockedBox is empty so it'll immediately succeed.
+                try! box.waitForEmptyAndSet(value)
             }
-        }
-        try hookedSelector.assertWakeup()
-        try hookedSelector.userToKernel.assertParkedRightNow() // We need the EventLoop to finish running its tick.
-        return try box.takeValue().get()
+        })
+        return try box.waitForValue().get()
     }
 }
 
