@@ -18,6 +18,8 @@ needs to be listed here.
 - Alex Reilly <fabiobean2@gmail.com>
 - Andrew Bennett <andrew@nio.bennnn.net>
 - Andrew Edwards <andrewangeta@gmail.com>
+- Andrew Naylor <andrew_naylor@apple.com>
+- Andrius Aucinas <aaucinas@apple.com>
 - Ankit Aggarwal <ankit_aggarwal@apple.com>
 - Arjun Nayini <aanayini@gmail.com>
 - Artem Redkin <aredkin@apple.com>
@@ -39,18 +41,24 @@ needs to be listed here.
 - Emil Marashliev <marashliev@gmail.com>
 - Esteban Torres <me@estebantorr.es>
 - Eugen <eugenf78@gmail.com>
-- Fabian Fett <fabianfett@mac.com>
+- Fabian Fett <fabianfett@apple.com>
 - Frank Kair <frankkair@gmail.com>
 - Franz Busch <privat@franz-busch.de>
+- Gautier Delorme <gautier.delorme@gmail.com>
 - George Barnett <gbarnett@apple.com>
 - Gopal Sharma <gopal@the-sharmas.org>
+- Graeme Jenkinson <graeme_jenkinson@apple.com>
+- Gregor Milos (Grzegorz Miłoś) <gmilos@apple.com>
+- GuangGuang <lihansey163@163.com>
 - Gwynne Raskind <gwynne@darkrainfall.org>
+- Hailong <hailongzh@hotmail.com>
 - Heidi Puk Hermann <heidi.puk@gmail.com>
 - Helge Heß <helge@alwaysrightinstitute.com>
 - Ian Partridge <i.partridge@uk.ibm.com>
 - Ilya Puchka <ilyapuchka@gmail.com>
 - JP Simard <jp@jpsim.com>
 - Jake Foster <jakef@fastmail.com>
+- Jake Prickett <jprickett821@gmail.com>
 - Jari (LotU) <j.koopman@jarict.nl>
 - Jason Toffaletti <jtoffaletti@apple.com>
 - Jim Dovey <jimdovey@mac.com>
@@ -60,6 +68,7 @@ needs to be listed here.
 - John Connolly <connoljo2@gmail.com>
 - John Holdsworth <github@johnholdsworth.com>
 - John Lin <johnlinvc@gmail.com>
+- Joshua Rutkowski <jr.rtkski@gmail.com>
 - Jovan Milenkovic <jovan.milenkovic@htecgroup.com>
 - Julian Lettner <julian.lettner@apple.com>
 - Kaitlin Mahar <kaitlinmahar@gmail.com>
@@ -67,6 +76,7 @@ needs to be listed here.
 - Karim ElNaggar <karimfarid.naggar@gmail.com>
 - Kevin Clark <kevin.clark@apple.com>
 - Kevin Sweeney <kevin_sweeney@apple.com>
+- Kim de Vos <kimdevos12@hotmail.com>
 - Konrad `ktoso` Malawski <ktoso@apple.com>
 - Kyle Bashour <kylebshr@me.com>
 - Kyle Browning <kylebrowning@me.com>
@@ -74,13 +84,14 @@ needs to be listed here.
 - Lev Walkin <lwalkin@apple.com>
 - Liam Flynn <l.flynn@live.co.uk>
 - Ludovic Dewailly <ldewailly@apple.com>
+- Luo Xiu <luoxiustm@gmail.com>
 - Marcus Liotta <marcus@liotta.se>
 - Mario Sangiorgio <msangiorgio@apple.com>
 - Markus Jais <markusjais@googlemail.com>
 - Markus Kieselmann <markus@kieselmann.eu>
 - Marli Oshlack <marli.oshlack@apple.com>
 - Matt Eaton <agnosticdev@gmail.com>
-- Max Desiatov <max.desiatov@gmail.com>
+- Max Desiatov <max@desiatov.com>
 - Max Moiseev <moiseev@apple.com>
 - Moritz Lang <hi@slashmo.codes>
 - Nathan Harris <nathan@mordil.info>
@@ -97,6 +108,7 @@ needs to be listed here.
 - Richard Low <ral@apple.com>
 - Romain Pouclet <rpouclet@apple.com>
 - Rukshani Athapathu <arukshani@users.noreply.github.com>
+- Rémi Doreau <remi.d45@gmail.com>
 - Saleem Abdulrasool <compnerd@compnerd.org>
 - Sebastian Thiebaud <770074+SebastianThiebaud@users.noreply.github.com>
 - Semen Zhydenko <simeon.zhidenko@gmail.com>
@@ -112,6 +124,7 @@ needs to be listed here.
 - Tibor Bödecs <mail.tib@gmail.com>
 - Tim Condon <0xtimc@gmail.com>
 - Tim Kientzle <tkientzle@apple.com>
+- Timothée Peignier <timothee.peignier@icloud.com>
 - Tom Counsell <tamc@greenonblack.com>
 - Tomer Doron <tomerd@apple.com>
 - Trevör <adtrevor@users.noreply.github.com>
@@ -119,7 +132,10 @@ needs to be listed here.
 - Volodymyr Sapsai <vsapsai@users.noreply.github.com>
 - Will Lisac <will@lisac.org>
 - Wilson Ding <hello@wilsonding.com>
+- buttaface <butta@fastem.com>
 - fadi-botros <botros_fadi@yahoo.com>
+- jemmons <jemmons@users.noreply.github.com>
+- pokryfka <pokryfka@gmail.com>
 - sun_ <sunlubo.sun@gmail.com>
 - trungducc <gnurtduc@gmail.com>
 
