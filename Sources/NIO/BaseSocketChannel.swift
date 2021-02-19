@@ -1285,7 +1285,7 @@ extension BaseSocketChannel {
 
         @inlinable
         public func getOption<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
-            try self._channel.getOption0(option)
+            return try self._channel.getOption0(option)
         }
     }
 

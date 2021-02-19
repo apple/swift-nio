@@ -703,7 +703,7 @@ extension EmbeddedChannel {
 
         @inlinable
         public func getOption<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
-            self.channel.getOptionSync(option)
+            return self.channel.getOptionSync(option)
         }
     }
 
