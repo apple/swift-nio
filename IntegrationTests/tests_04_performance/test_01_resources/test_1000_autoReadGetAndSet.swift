@@ -15,19 +15,20 @@
 import NIO
 
 func run(identifier: String) {
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    defer {
+        try! group.syncShutdownGracefully()
+    }
+
+    let server = try! ServerBootstrap(group: group)
+      .bind(host: "127.0.0.1", port: 0)
+      .wait()
+    defer {
+        try! server.close().wait()
+    }
+
     measure(identifier: identifier) {
         let iterations = 1000
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
-        let server = try! ServerBootstrap(group: group)
-          .bind(host: "127.0.0.1", port: 0)
-          .wait()
-        defer {
-            try! server.close().wait()
-        }
 
         for _ in 0..<iterations {
             let autoReadOption = try! server.getOption(ChannelOptions.autoRead).wait()

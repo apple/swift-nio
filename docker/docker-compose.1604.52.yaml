@@ -20,8 +20,8 @@ services:
     environment:
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
-        MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet=33250
-        MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet_sync=250
+      - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet=33050
+      - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet_sync=50
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=12050
       - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=50
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=30540

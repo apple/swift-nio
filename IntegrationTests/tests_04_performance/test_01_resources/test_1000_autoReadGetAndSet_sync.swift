@@ -15,29 +15,22 @@
 import NIO
 
 func run(identifier: String) {
-    measure(identifier: identifier) {
-        let iterations = 1000
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
+    MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { loop in
+        ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).map { server in
+            measure(identifier: identifier) {
+                let iterations = 1000
 
-        let server = try! ServerBootstrap(group: group)
-          .bind(host: "127.0.0.1", port: 0)
-          .wait()
-        defer {
-            try! server.close().wait()
-        }
+                let syncOptions = server.syncOptions!
 
-        server.eventLoop.execute {
-            let syncOptions = server.syncOptions!
+                for _ in 0..<iterations {
+                    let autoReadOption = try! syncOptions.getOption(ChannelOptions.autoRead)
+                    try! syncOptions.setOption(ChannelOptions.autoRead, value: !autoReadOption)
+                }
 
-            for _ in 0..<iterations {
-                let autoReadOption = try! syncOptions.getOption(ChannelOptions.autoRead)
-                try! syncOptions.setOption(ChannelOptions.autoRead, value: !autoReadOption)
+                return iterations
             }
+        }.always { _ in
+            loop.shutdownGracefully { _ in }
         }
-
-        return iterations
     }
 }
