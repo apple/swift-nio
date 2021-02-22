@@ -2128,7 +2128,6 @@ public final class ChannelTests: XCTestCase {
 
     func testSocketFailingAsyncCorrectlyTearsTheChannelDownAndDoesntCrash() throws {
         // regression test for #302
-        enum DummyError: Error { case dummy }
         class SocketFailingAsyncConnect: Socket {
             init() throws {
                 try super.init(protocolFamily: .inet, type: .stream, setNonBlocking: true)
@@ -2174,7 +2173,6 @@ public final class ChannelTests: XCTestCase {
 
     func testSocketErroringSynchronouslyCorrectlyTearsTheChannelDown() throws {
         // regression test for #322
-        enum DummyError: Error { case dummy }
         class SocketFailingConnect: Socket {
             init() throws {
                 try super.init(protocolFamily: .inet, type: .stream, setNonBlocking: true)
@@ -2241,7 +2239,6 @@ public final class ChannelTests: XCTestCase {
     }
 
     func testCloseInUnregister() throws {
-        enum DummyError: Error { case dummy }
         class SocketFailingClose: Socket {
             init() throws {
                 try super.init(protocolFamily: .inet, type: .stream, setNonBlocking: true)
@@ -2833,6 +2830,10 @@ fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHan
     }
 }
 
+fileprivate enum DummyError: Error {
+    case dummy
+}
+
 fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
     typealias InboundIn = Never
     private let allDone: EventLoopPromise<Void>
@@ -2854,7 +2855,9 @@ fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
 
     func channelReadComplete(context: ChannelHandlerContext) { XCTFail("should never readComplete") }
 
-    func errorCaught(context: ChannelHandlerContext, error: Error) { XCTFail("pipeline shouldn't be told about connect error") }
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        XCTAssertEqual(.dummy, error as? DummyError)
+    }
 
     func channelRegistered(context: ChannelHandlerContext) {
         XCTAssertEqual(.fresh, self.state)

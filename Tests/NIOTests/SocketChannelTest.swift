@@ -904,6 +904,70 @@ public final class SocketChannelTest : XCTestCase {
         g.wait()
         XCTAssertNoThrow(try serverSocket.close())
     }
+    
+    func testConnectErrorIsObservedInPipeline() {
+        final class Handler: ChannelInboundHandler {
+            typealias InboundIn = Never
+            
+            let errorCaughtPromise: EventLoopPromise<Error>
+            var errorCaughtAlready = false
+            
+            init(errorCaughtPromise: EventLoopPromise<Error>) {
+                self.errorCaughtPromise = errorCaughtPromise
+            }
+            
+            func channelActive(context: ChannelHandlerContext) {
+                XCTFail("channel should never become active")
+            }
+            
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
+                XCTAssertFalse(self.errorCaughtAlready)
+                self.errorCaughtAlready = true
+                self.errorCaughtPromise.succeed(error)
+            }
+            
+            func handlerRemoved(context: ChannelHandlerContext) {
+                XCTAssertTrue(self.errorCaughtAlready)
+                self.errorCaughtPromise.fail(ChannelError.eof)
+            }
+        }
+        
+        var connectError: Error? = nil
+        var errorCaught: Error? = nil
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { el in
+            let errorCaughtPromise  = el.makePromise(of: Error.self)
+            ServerBootstrap(group: el)
+                .bind(host: "127.0.0.1", port: 0).flatMap { channel in
+                    let closedPort = channel.localAddress!.port!
+                    return channel.close().map {
+                        closedPort
+                    }
+                }.flatMap { closedPort in
+                    ClientBootstrap(group: el)
+                        .channelInitializer { channel in
+                            channel.pipeline.addHandler(Handler(errorCaughtPromise: errorCaughtPromise))
+                        }
+                        .connect(host: "127.0.0.1", port: closedPort).flatMap { bogusChannel in
+                            XCTFail("got unexpected channel \(bogusChannel)")
+                            return bogusChannel.close()
+                        }
+                }.recover { error in
+                    connectError = error
+                }.flatMap {
+                    errorCaughtPromise.futureResult.map {
+                        errorCaught = $0
+                    }
+                }.whenComplete { (_: Result<Void, Error>) -> Void in
+                    el.shutdownGracefully { error in
+                        XCTAssertNil(error)
+                    }
+                }
+        }
+        XCTAssertNotNil(connectError)
+        XCTAssertNotNil(errorCaught)
+        XCTAssert(connectError is NIOConnectionError)
+        XCTAssertEqual(ECONNREFUSED, (errorCaught as? IOError)?.errnoCode)
+    }
 }
 
 class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler {

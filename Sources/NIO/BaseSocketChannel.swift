@@ -68,73 +68,85 @@ private struct SocketChannelLifecycleManager {
     }
 
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    internal mutating func beginRegistration() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+    internal mutating func beginRegistration() -> ((EventLoopPromise<Void>?, Error?, ChannelPipeline) -> Void) {
         return self.moveState(event: .beginRegistration)
     }
 
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    internal mutating func finishRegistration() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+    internal mutating func finishRegistration() -> ((EventLoopPromise<Void>?, Error?, ChannelPipeline) -> Void) {
         return self.moveState(event: .finishRegistration)
     }
 
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    internal mutating func close() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+    internal mutating func close() -> ((EventLoopPromise<Void>?, Error?, ChannelPipeline) -> Void) {
         return self.moveState(event: .close)
     }
 
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    internal mutating func activate() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+    internal mutating func activate() -> ((EventLoopPromise<Void>?, Error?, ChannelPipeline) -> Void) {
         return self.moveState(event: .activate)
     }
 
     // MARK: private API
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    private mutating func moveState(event: Event) -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+    private mutating func moveState(event: Event) -> ((EventLoopPromise<Void>?, Error?, ChannelPipeline) -> Void) {
         self.eventLoop.assertInEventLoop()
 
         switch (self.currentState, event) {
         // origin: .fresh
         case (.fresh, .beginRegistration):
             self.currentState = .preRegistered
-            return { promise, pipeline in
+            return { promise, error, pipeline in
                 promise?.succeed(())
                 pipeline.fireChannelRegistered0()
+                assert(error == nil)
             }
 
         case (.fresh, .close):
             self.currentState = .closed
-            return { (promise, _: ChannelPipeline) in
+            return { (promise, error, pipeline) in
                 promise?.succeed(())
+                if let error = error {
+                    pipeline.fireErrorCaught(error)
+                }
             }
 
         // origin: .preRegistered
         case (.preRegistered, .finishRegistration):
             self.currentState = .fullyRegistered
-            return { (promise, _: ChannelPipeline) in
+            return { (promise, error, _: ChannelPipeline) in
                 promise?.succeed(())
+                assert(error == nil)
             }
 
         // origin: .fullyRegistered
         case (.fullyRegistered, .activate):
             self.currentState = .activated
-            return { promise, pipeline in
+            return { promise, error, pipeline in
                 promise?.succeed(())
+                assert(error == nil)
                 pipeline.fireChannelActive0()
             }
 
         // origin: .preRegistered || .fullyRegistered
         case (.preRegistered, .close), (.fullyRegistered, .close):
             self.currentState = .closed
-            return { promise, pipeline in
+            return { promise, error, pipeline in
                 promise?.succeed(())
+                if let error = error {
+                    pipeline.fireErrorCaught0(error)
+                }
                 pipeline.fireChannelUnregistered0()
             }
 
         // origin: .activated
         case (.activated, .close):
             self.currentState = .closed
-            return { promise, pipeline in
+            return { promise, error, pipeline in
                 promise?.succeed(())
+                if let error = error {
+                    pipeline.fireErrorCaught0(error)
+                }
                 pipeline.fireChannelInactive0()
                 pipeline.fireChannelUnregistered0()
             }
@@ -803,7 +815,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             try selectableEventLoop.deregister(channel: self)
         } catch let err {
             errorCallouts.append { pipeline in
-                pipeline.fireErrorCaught0(error: err)
+                pipeline.fireErrorCaught0(err)
             }
         }
 
@@ -837,8 +849,19 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             self.pendingConnect = nil
             connectPromise.fail(error)
         }
+        
+        let pipelineError: Error?
+        switch error as? ChannelError {
+        case .some(ChannelError.inputClosed),
+             .some(ChannelError.outputClosed),
+             .some(ChannelError.ioOnClosedChannel),
+             .some(ChannelError.eof):
+            pipelineError = nil
+        default:
+            pipelineError = error
+        }
 
-        callouts(p, self.pipeline)
+        callouts(p, pipelineError, self.pipeline)
 
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
@@ -867,7 +890,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
         guard self.selectableEventLoop.isOpen else {
             let error = EventLoopError.shutdown
-            self.pipeline.fireErrorCaught0(error: error)
+            self.pipeline.fireErrorCaught0(error)
             // `close0`'s error is about the result of the `close` operation, ...
             self.close0(error: error, mode: .all, promise: nil)
             // ... therefore we need to fail the registration `promise` separately.
@@ -876,7 +899,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
 
         // we can't fully register yet as epoll would give us EPOLLHUP if bind/connect wasn't called yet.
-        self.lifecycleManager.beginRegistration()(promise, self.pipeline)
+        self.lifecycleManager.beginRegistration()(promise, nil, self.pipeline)
     }
 
     public final func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
@@ -1081,7 +1104,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 }
             } else {
                 readStreamState = .error
-                self.pipeline.fireErrorCaught0(error: err)
+                self.pipeline.fireErrorCaught0(err)
             }
 
             // Call before triggering the close of the Channel.
@@ -1199,7 +1222,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         do {
             try selectableEventLoop.reregister(channel: self)
         } catch let err {
-            self.pipeline.fireErrorCaught0(error: err)
+            self.pipeline.fireErrorCaught0(err)
             self.close0(error: err, mode: .all, promise: nil)
         }
     }
@@ -1216,7 +1239,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         do {
             try self.selectableEventLoop.register(channel: self)
         } catch {
-            self.pipeline.fireErrorCaught0(error: error)
+            self.pipeline.fireErrorCaught0(error)
             self.close0(error: error, mode: .all, promise: nil)
             throw error
         }
@@ -1231,7 +1254,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         // synchronously, kevent might send us a `readEOF` because the `writable` event that marks the connect as completed.
         // See SocketChannelTest.testServerClosesTheConnectionImmediately for a regression test.
         try self.safeRegister(interested: [.reset])
-        self.lifecycleManager.finishRegistration()(nil, self.pipeline)
+        self.lifecycleManager.finishRegistration()(nil, nil, self.pipeline)
     }
 
     final func becomeActive0(promise: EventLoopPromise<Void>?) {
@@ -1246,7 +1269,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 return
             }
         }
-        self.lifecycleManager.activate()(promise, self.pipeline)
+        self.lifecycleManager.activate()(promise, nil, self.pipeline)
         guard self.lifecycleManager.isOpen else {
             // in the user callout for `channelActive` the channel got closed.
             return

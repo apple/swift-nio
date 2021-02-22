@@ -43,9 +43,9 @@ class StreamChannelTest: XCTestCase {
 
         func runTest(chan1: Channel, chan2: Channel) throws {
             var everythingBuffer = chan1.allocator.buffer(capacity: 300000)
-            let allDonePromise = chan1.eventLoop.makePromise(of: ByteBuffer.self)
+            let allDonePromise = chan1.eventLoop.makePromise(of: (ByteBuffer, [Error]).self)
             XCTAssertNoThrow(try chan1.pipeline.addHandler(EchoHandler()).wait())
-            XCTAssertNoThrow(try chan2.pipeline.addHandler(AccumulateAllReads(allDonePromise: allDonePromise)).wait())
+            XCTAssertNoThrow(try chan2.pipeline.addHandler(AccumulateAllReadsAndErrors(allDonePromise: allDonePromise)).wait())
 
             for f in [1, 10, 100, 1_000, 10_000, 300_000] {
                 let from = everythingBuffer.writerIndex
@@ -57,7 +57,14 @@ class StreamChannelTest: XCTestCase {
             let from = everythingBuffer.writerIndex
             everythingBuffer.writeString("$") // magic end marker that will cause the channel to close
             XCTAssertNoThrow(chan2.writeAndFlush(everythingBuffer.getSlice(at: from, length: 1)!))
-            XCTAssertNoThrow(XCTAssertEqual(everythingBuffer, try allDonePromise.futureResult.wait()))
+            var maybeAllReadsAndErrors: (ByteBuffer, [Error])? = nil
+            XCTAssertNoThrow(maybeAllReadsAndErrors = try allDonePromise.futureResult.wait())
+            guard let allReadsAndErrors = maybeAllReadsAndErrors else {
+                XCTFail("couldn't get all reads and errors")
+                return
+            }
+            XCTAssertEqual(everythingBuffer, allReadsAndErrors.0)
+            XCTAssertEqual(0, allReadsAndErrors.1.count, "\(allReadsAndErrors)")
         }
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
     }
@@ -127,11 +134,11 @@ class StreamChannelTest: XCTestCase {
         }
 
         func runTest(chan1: Channel, chan2: Channel) throws {
-            let allDonePromise = chan1.eventLoop.makePromise(of: ByteBuffer.self)
+            let allDonePromise = chan1.eventLoop.makePromise(of: (ByteBuffer, [Error]).self)
             let writabilityFalsePromise = chan1.eventLoop.makePromise(of: Void.self)
             let writeFullyDonePromise = chan1.eventLoop.makePromise(of: Void.self)
             XCTAssertNoThrow(try chan2.setOption(ChannelOptions.autoRead, value: false).wait())
-            XCTAssertNoThrow(try chan2.pipeline.addHandler(AccumulateAllReads(allDonePromise: allDonePromise)).wait())
+            XCTAssertNoThrow(try chan2.pipeline.addHandler(AccumulateAllReadsAndErrors(allDonePromise: allDonePromise)).wait())
             XCTAssertNoThrow(try chan1.pipeline.addHandler(WritabilityTrackerStateMachine(writabilityNowFalsePromise: writabilityFalsePromise,
                                                                                           writeFullyDonePromise: writeFullyDonePromise)).wait())
 
@@ -144,6 +151,14 @@ class StreamChannelTest: XCTestCase {
             // To finish up, let's just tear this down.
             XCTAssertNoThrow(try chan2.close().wait())
             XCTAssertNoThrow(try chan1.closeFuture.wait())
+            
+            var maybeAllReadsAndErrors: (ByteBuffer, [Error])? = nil
+            XCTAssertNoThrow(maybeAllReadsAndErrors = try allDonePromise.futureResult.wait())
+            guard let allReadsAndErrors = maybeAllReadsAndErrors else {
+                XCTFail("couldn't get all reads and errors")
+                return
+            }
+            XCTAssertEqual(0, allReadsAndErrors.1.count, "\(allReadsAndErrors)")
         }
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
     }
@@ -807,13 +822,14 @@ class StreamChannelTest: XCTestCase {
     }
 }
 
-final class AccumulateAllReads: ChannelInboundHandler {
+final class AccumulateAllReadsAndErrors: ChannelInboundHandler {
     typealias InboundIn =  ByteBuffer
 
     var accumulator: ByteBuffer!
-    let allDonePromise: EventLoopPromise<ByteBuffer>
+    var errorAccumulator: [Error]! = []
+    let allDonePromise: EventLoopPromise<(ByteBuffer, [Error])>
 
-    init(allDonePromise: EventLoopPromise<ByteBuffer>) {
+    init(allDonePromise: EventLoopPromise<(ByteBuffer, [Error])>) {
         self.allDonePromise = allDonePromise
     }
 
@@ -830,9 +846,15 @@ final class AccumulateAllReads: ChannelInboundHandler {
         }
     }
 
-    func channelInactive(context: ChannelHandlerContext) {
-        self.allDonePromise.succeed(self.accumulator)
+    func handlerRemoved(context: ChannelHandlerContext) {
+        self.allDonePromise.succeed((self.accumulator, self.errorAccumulator))
         self.accumulator = nil
+        self.errorAccumulator = nil
+    }
+    
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        self.errorAccumulator.append(error)
+        context.fireErrorCaught(error)
     }
 }
 

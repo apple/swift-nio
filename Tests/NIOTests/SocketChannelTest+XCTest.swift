@@ -54,6 +54,7 @@ extension SocketChannelTest {
                 ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide),
                 ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide),
                 ("testServerClosesTheConnectionImmediately", testServerClosesTheConnectionImmediately),
+                ("testConnectErrorIsObservedInPipeline", testConnectErrorIsObservedInPipeline),
            ]
    }
 }

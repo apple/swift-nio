@@ -669,10 +669,10 @@ public final class ChannelPipeline: ChannelInvoker {
 
     public func fireErrorCaught(_ error: Error) {
         if eventLoop.inEventLoop {
-            fireErrorCaught0(error: error)
+            self.fireErrorCaught0(error)
         } else {
             eventLoop.execute {
-                self.fireErrorCaught0(error: error)
+                self.fireErrorCaught0(error)
             }
         }
     }
@@ -893,7 +893,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    func fireErrorCaught0(error: Error) {
+    func fireErrorCaught0(_ error: Error) {
         assert((error as? ChannelError).map { $0 != .eof } ?? true)
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeErrorCaught(error)

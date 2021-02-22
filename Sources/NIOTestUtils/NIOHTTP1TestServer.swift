@@ -33,6 +33,12 @@ private final class BlockingQueue<Element> {
         defer { self.condition.unlock() }
         return self.buffer.isEmpty
     }
+    
+    internal var allElements: Array<Result<Element, Error>> {
+        self.condition.lock()
+        defer { self.condition.unlock() }
+        return Array(self.buffer)
+    }
 
     internal func popFirst(deadline: NIODeadline) throws -> Element {
         let secondsUntilDeath = deadline - NIODeadline.now()
@@ -248,7 +254,9 @@ public final class NIOHTTP1TestServer {
 
 // MARK: - Public API for test driver
 extension NIOHTTP1TestServer {
-    struct NonEmptyInboundBufferOnStop: Error {}
+    struct NonEmptyInboundBufferOnStop: Error {
+        var inboundBuffer: Array<Result<HTTPServerRequestPart, Error>>
+    }
 
     public func stop() throws {
         assert(!self.eventLoop.inEventLoop)
@@ -270,7 +278,7 @@ extension NIOHTTP1TestServer {
             return self.serverChannel.close().flatMapThrowing {
                 self.serverChannel = nil
                 guard self.inboundBuffer.isEmpty else {
-                    throw NonEmptyInboundBufferOnStop()
+                    throw NonEmptyInboundBufferOnStop(inboundBuffer: self.inboundBuffer.allElements)
                 }
             }.always { _ in
                 self.currentClientChannel?.close(promise: nil)
