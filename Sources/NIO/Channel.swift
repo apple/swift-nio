@@ -140,6 +140,30 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker {
     ///
     /// - warning: Unsafe, this is for use in NIO's core only.
     var _channelCore: ChannelCore { get }
+
+    /// Returns a view of the `Channel` exposing synchronous versions of `setOption` and `getOption`.
+    /// The default implementation returns `nil`, and `Channel` implementations must opt in to
+    /// support this behavior.
+    var syncOptions: NIOSynchronousChannelOptions? { get }
+}
+
+extension Channel {
+    /// Default implementation: `NIOSynchronousChannelOptions` are not supported.
+    public var syncOptions: NIOSynchronousChannelOptions? {
+        return nil
+    }
+}
+
+public protocol NIOSynchronousChannelOptions {
+    /// Set `option` to `value` on this `Channel`.
+    ///
+    /// - Important: Must be called on the `EventLoop` the `Channel` is running on.
+    func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) throws
+
+    /// Get the value of `option` for this `Channel`.
+    ///
+    /// - Important: Must be called on the `EventLoop` the `Channel` is running on.
+    func getOption<Option: ChannelOption>(_ option: Option) throws -> Option.Value
 }
 
 /// A `SelectableChannel` is a `Channel` that can be used with a `Selector` which notifies a user when certain events
