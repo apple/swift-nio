@@ -18,7 +18,7 @@ Repository | NIO 2 (Swift 5+) | NIO 1 (Swift 4+)
 [https://github.com/apple/swift-nio-http2][repo-nio-http2]<br> HTTP/2 support | `from: "1.0.0"` | `from: "0.1.0"`
 [https://github.com/apple/swift-nio-extras][repo-nio-extras] <br>useful additions around SwiftNIO | `from: "1.0.0"` | `from: "0.1.0"`
 [https://github.com/apple/swift-nio-transport-services][repo-nio-transport-services] <br> first-class support for macOS, iOS, tvOS, and watchOS | `from: "1.0.0"` | `from: "0.1.0"`
-[https://github.com/apple/swift-ssh][repo-nio-ssh] <br> SSH support | `.upToNextMinor(from: "0.1.0")` | _n/a_
+[https://github.com/apple/swift-nio-ssh][repo-nio-ssh] <br> SSH support | `.upToNextMinor(from: "0.1.0")` | _n/a_
 
 ### Protocol Implementations
 
@@ -351,4 +351,3 @@ dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 [repo-nio-ssl]: https://github.com/apple/swift-nio-ssl
 [repo-nio-transport-services]: https://github.com/apple/swift-nio-transport-services
 [repo-nio-ssh]: https://github.com/apple/swift-nio-ssh
-
