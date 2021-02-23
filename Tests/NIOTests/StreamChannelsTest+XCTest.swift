@@ -28,6 +28,8 @@ extension StreamChannelTest {
    static var allTests : [(String, (StreamChannelTest) -> () throws -> Void)] {
       return [
                 ("testEchoBasic", testEchoBasic),
+                ("testSyncChannelOptions", testSyncChannelOptions),
+                ("testChannelReturnsNilForDefaultSyncOptionsImplementation", testChannelReturnsNilForDefaultSyncOptionsImplementation),
                 ("testWritabilityStartsTrueGoesFalseAndBackToTrue", testWritabilityStartsTrueGoesFalseAndBackToTrue),
                 ("testHalfCloseOwnOutput", testHalfCloseOwnOutput),
                 ("testHalfCloseOwnInput", testHalfCloseOwnInput),

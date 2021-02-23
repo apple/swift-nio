@@ -632,15 +632,28 @@ public final class EmbeddedChannel: Channel {
     }
 
     /// - see: `Channel.setOption`
+    @inlinable
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
+        self.setOptionSync(option, value: value)
+        return self.eventLoop.makeSucceededVoidFuture()
+    }
+
+    @inlinable
+    internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
         // No options supported
         fatalError("no options supported")
     }
 
     /// - see: `Channel.getOption`
+    @inlinable
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value>  {
+        return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
+    }
+
+    @inlinable
+    internal func getOptionSync<Option: ChannelOption>(_ option: Option) -> Option.Value {
         if option is ChannelOptions.Types.AutoReadOption {
-            return self.eventLoop.makeSucceededFuture(true as! Option.Value)
+            return true as! Option.Value
         }
         fatalError("option \(option) not supported")
     }
@@ -671,5 +684,30 @@ public final class EmbeddedChannel: Channel {
             self.remoteAddress = address
         }
         pipeline.connect(to: address, promise: promise)
+    }
+}
+
+extension EmbeddedChannel {
+    public struct SynchronousOptions: NIOSynchronousChannelOptions {
+        @usableFromInline
+        internal let channel: EmbeddedChannel
+
+        fileprivate init(channel: EmbeddedChannel) {
+            self.channel = channel
+        }
+
+        @inlinable
+        public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
+            self.channel.setOptionSync(option, value: value)
+        }
+
+        @inlinable
+        public func getOption<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
+            return self.channel.getOptionSync(option)
+        }
+    }
+
+    public final var syncOptions: NIOSynchronousChannelOptions? {
+        return SynchronousOptions(channel: self)
     }
 }

@@ -48,6 +48,7 @@ extension EmbeddedChannelTest {
                 ("testUnprocessedOutboundUserEventFailsOnEmbeddedChannel", testUnprocessedOutboundUserEventFailsOnEmbeddedChannel),
                 ("testEmbeddedChannelWritabilityIsWritable", testEmbeddedChannelWritabilityIsWritable),
                 ("testFinishWithRecursivelyScheduledTasks", testFinishWithRecursivelyScheduledTasks),
+                ("testSyncOptionsAreSupported", testSyncOptionsAreSupported),
            ]
    }
 }
