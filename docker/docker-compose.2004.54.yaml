@@ -26,18 +26,18 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=50
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=30540
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=4100
-      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=179010
-      - MAX_ALLOCS_ALLOWED_1000_udp_reqs=16050
+      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=181050 # regression from 5.3 which was 179010
       - MAX_ALLOCS_ALLOWED_1000_udpbootstraps=2000
-      - MAX_ALLOCS_ALLOWED_1000_udpconnections=101050
-      - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=471050
+      - MAX_ALLOCS_ALLOWED_1000_udpconnections=102050 # regression from 5.3 which was 101050
+      - MAX_ALLOCS_ALLOWED_1000_udp_reqs=16050
+      - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=473050 # regression from 5.3 which was 471050
       - MAX_ALLOCS_ALLOWED_bytebuffer_lots_of_rw=2100
       - MAX_ALLOCS_ALLOWED_creating_10000_headers=100
       - MAX_ALLOCS_ALLOWED_decode_1000_ws_frames=2000
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer=1000
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer_with_space=1000
-      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer=5010
-      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_space=5010
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer=3050
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_space=3050
       - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=75010
       - MAX_ALLOCS_ALLOWED_modifying_1000_circular_buffer_elements=50
       - MAX_ALLOCS_ALLOWED_modifying_byte_buffer_view=2010
@@ -46,8 +46,8 @@ services:
       - MAX_ALLOCS_ALLOWED_schedule_10000_tasks=90050
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=16250
-      - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=202050
-      - SANITIZER_ARG=--sanitize=thread
+      - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=204050 # regression from 5.3 which was 202050
+      # - SANITIZER_ARG=--sanitize=thread # TSan broken still
 
   performance-test:
     image: swift-nio:20.04-5.4
