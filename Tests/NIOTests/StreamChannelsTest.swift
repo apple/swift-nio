@@ -62,6 +62,59 @@ class StreamChannelTest: XCTestCase {
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
     }
 
+    func testSyncChannelOptions() throws {
+        class GetAndSetAutoReadHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+
+            func handlerAdded(context: ChannelHandlerContext) {
+                guard let syncOptions = context.channel.syncOptions else {
+                    XCTFail("Sync options are not supported on \(type(of: context.channel))")
+                    return
+                }
+
+                XCTAssertTrue(try syncOptions.getOption(ChannelOptions.autoRead))
+                XCTAssertNoThrow(try syncOptions.setOption(ChannelOptions.autoRead, value: false))
+                XCTAssertFalse(try syncOptions.getOption(ChannelOptions.autoRead))
+            }
+        }
+
+        func runTest(chan1: Channel, chan2: Channel) throws {
+            XCTAssertNoThrow(try chan1.pipeline.addHandler(GetAndSetAutoReadHandler()).wait())
+            XCTAssertNoThrow(try chan2.pipeline.addHandler(GetAndSetAutoReadHandler()).wait())
+        }
+
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
+    }
+
+    func testChannelReturnsNilForDefaultSyncOptionsImplementation() throws {
+        class TestChannel: Channel {
+            var allocator: ByteBufferAllocator { fatalError() }
+            var closeFuture: EventLoopFuture<Void> { fatalError() }
+            var pipeline: ChannelPipeline { fatalError() }
+            var localAddress: SocketAddress? = nil
+            var remoteAddress: SocketAddress? = nil
+            var parent: Channel? = nil
+            var _channelCore: ChannelCore { fatalError() }
+            var eventLoop: EventLoop { fatalError() }
+            var isWritable: Bool = false
+            var isActive: Bool = false
+
+            func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
+                fatalError()
+            }
+
+            func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
+                fatalError()
+            }
+
+            init() {
+            }
+        }
+
+        let channel = TestChannel()
+        XCTAssertNil(channel.syncOptions)
+    }
+
     func testWritabilityStartsTrueGoesFalseAndBackToTrue() throws {
         class WritabilityTrackerStateMachine: ChannelInboundHandler {
             typealias InboundIn = Never

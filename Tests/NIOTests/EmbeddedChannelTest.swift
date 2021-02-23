@@ -384,4 +384,12 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(invocations, 1)
     }
 
+    func testSyncOptionsAreSupported() throws {
+        let channel = EmbeddedChannel()
+        let options = channel.syncOptions
+        XCTAssertNotNil(options)
+        // Unconditonally returns true.
+        XCTAssertEqual(try options?.getOption(ChannelOptions.autoRead), true)
+        // (Setting options isn't supported.)
+    }
 }
