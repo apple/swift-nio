@@ -3,20 +3,20 @@ version: "3"
 services:
 
   runtime-setup:
-    image: swift-nio:16.04-5.3
+    image: swift-nio:20.04-5.3
     build:
       args:
-        ubuntu_version: "xenial"
+        ubuntu_version: "focal"
         swift_version: "5.3"
 
   unit-tests:
-    image: swift-nio:16.04-5.3
+    image: swift-nio:20.04-5.3
 
   integration-tests:
-    image: swift-nio:16.04-5.3
+    image: swift-nio:20.04-5.3
 
   test:
-    image: swift-nio:16.04-5.3
+    image: swift-nio:20.04-5.3
     environment:
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
@@ -47,16 +47,16 @@ services:
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=16250
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=202050
-      - SANITIZER_ARG=--sanitize=thread
+      # - SANITIZER_ARG=--sanitize=thread # TSan broken on 20.04
 
   performance-test:
-    image: swift-nio:16.04-5.3
+    image: swift-nio:20.04-5.3
 
   shell:
-    image: swift-nio:16.04-5.3
+    image: swift-nio:20.04-5.3
 
   echo:
-    image: swift-nio:16.04-5.3
+    image: swift-nio:20.04-5.3
 
   http:
-    image: swift-nio:16.04-5.3
+    image: swift-nio:20.04-5.3

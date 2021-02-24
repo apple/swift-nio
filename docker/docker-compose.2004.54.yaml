@@ -3,20 +3,20 @@ version: "3"
 services:
 
   runtime-setup:
-    image: swift-nio:20.04-5.4
+    image: swift-nio:16.04-5.4
     build:
       args:
         base_image: "swiftlang/swift:nightly-5.4-focal"
-        ubuntu_version: "focal"
+        ubuntu_version: "xenial"
 
   unit-tests:
-    image: swift-nio:20.04-5.4
+    image: swift-nio:16.04-5.4
 
   integration-tests:
-    image: swift-nio:20.04-5.4
+    image: swift-nio:16.04-5.4
 
   test:
-    image: swift-nio:20.04-5.4
+    image: swift-nio:16.04-5.4
     environment:
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
@@ -47,16 +47,16 @@ services:
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=16250
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=204050 # regression from 5.3 which was 202050
-      # - SANITIZER_ARG=--sanitize=thread # TSan broken still
+      - SANITIZER_ARG=--sanitize=thread
 
   performance-test:
-    image: swift-nio:20.04-5.4
+    image: swift-nio:16.04-5.4
 
   shell:
-    image: swift-nio:20.04-5.4
+    image: swift-nio:16.04-5.4
 
   echo:
-    image: swift-nio:20.04-5.4
+    image: swift-nio:16.04-5.4
 
   http:
-    image: swift-nio:20.04-5.4
+    image: swift-nio:16.04-5.4
