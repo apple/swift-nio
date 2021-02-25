@@ -262,7 +262,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Asserts that the current thread is the one tied to this `EventLoop`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionInEventLoop(file: StaticString, line: UInt)
-    
+
     /// Asserts that the current thread is _not_ the one tied to this `EventLoop`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
     func preconditionNotInEventLoop(file: StaticString, line: UInt)
@@ -372,7 +372,7 @@ extension TimeAmount: AdditiveArithmetic {
     public static func + (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds + rhs.nanoseconds)
     }
-    
+
     public static func +=(lhs: inout TimeAmount, rhs: TimeAmount) {
         lhs = lhs + rhs
     }
@@ -380,7 +380,7 @@ extension TimeAmount: AdditiveArithmetic {
     public static func - (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
     }
-    
+
     public static func -=(lhs: inout TimeAmount, rhs: TimeAmount) {
         lhs = lhs - rhs
     }
@@ -551,7 +551,7 @@ extension EventLoop {
                                     _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise(file:#file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
-        
+
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
@@ -572,7 +572,7 @@ extension EventLoop {
                                     _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(in: delay, task)
-        
+
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
@@ -605,6 +605,21 @@ extension EventLoop {
             return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
         } else {
             return EventLoopFuture<Success>(eventLoop: self, value: value, file: file, line: line)
+        }
+    }
+
+    /// Creates and returns a new `EventLoopFuture` that is marked as succeeded or failed with the value held by `result`.
+    ///
+    /// - Parameters:
+    ///   - result: The value that is used by the `EventLoopFuture`
+    /// - Returns: A completed `EventLoopFuture`.
+    @inlinable
+    public func makeCompletedFuture<Success>(_ result: Result<Success, Error>) -> EventLoopFuture<Success> {
+        switch result {
+        case .success(let value):
+            return self.makeSucceededFuture(value)
+        case .failure(let error):
+            return self.makeFailedFuture(error)
         }
     }
 
@@ -922,7 +937,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
         self.init(threadInitializers: initializers, selectorFactory: selectorFactory)
     }
-    
+
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `NIOThread` per `ThreadInitializer` is created and used.
     ///
     /// - arguments:
