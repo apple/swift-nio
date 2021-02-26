@@ -2050,7 +2050,7 @@ class ByteBufferTest: XCTestCase {
                                         hookedFree: testReserveCapacityLarger_freeHook,
                                         hookedMemcpy: testReserveCapacityLarger_memcpyHook)
         var buf = alloc.buffer(capacity: 16)
-        let bufCopy = buf
+        var bufCopy = buf
 
         withExtendedLifetime(bufCopy) {
             let oldCapacity = buf.capacity
@@ -2071,6 +2071,7 @@ class ByteBufferTest: XCTestCase {
             XCTAssertNotEqual(buf.capacity, oldCapacity)
             XCTAssertNotEqual(oldPtrVal, newPtrVal)
         }
+        bufCopy.writeString("foo") // stops the optimiser removing `bufCopy` which would make `reserveCapacity` use malloc instead of realloc
     }
 
     func testReserveCapacityWithMinimumWritableBytesWhenNotEnoughWritableBytes() {
@@ -2533,6 +2534,7 @@ class ByteBufferTest: XCTestCase {
             }
             XCTAssertNil(secondResult)
             XCTAssertNil(thirdResult)
+            localCopy.writeString("foo") // stops the optimiser getting rid of `localCopy`
         }
 
         let fourthResult = buffer.modifyIfUniquelyOwned {
