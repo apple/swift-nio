@@ -15,28 +15,71 @@
 
 import sys
 import re
+import collections
 
-num_regex = "^ +([0-9a-fx]+)$"
-stack_regex = "^ +(.*)$"
+num_regex = "^ +([0-9]+)$"
 
 def put_in_dict(path):
-    dictionary = {}
+    # Our input looks something like:
+    #
+    # =====
+    # This will collect stack shots of allocations and print it when you exit dtrace.
+    # So go ahead, run your tests and then press Ctrl+C in this window to see the aggregated result
+    # =====
+    # DEBUG: After waiting 1 times, we quiesced to unfreeds=744
+    # test_1_reqs_1000_conn.total_allocations: 490000
+    # test_1_reqs_1000_conn.total_allocated_bytes: 42153000
+    # test_1_reqs_1000_conn.remaining_allocations: 0
+    # DEBUG: [["total_allocations": 490000, "total_allocated_bytes": 42153000, ...
+    #
+    # (truncated)
+    #
+    #               libsystem_malloc.dylib`malloc_zone_malloc
+    #               libswiftCore.dylib`swift_slowAlloc+0x28
+    #               libswiftCore.dylib`swift_allocObject+0x27
+    #               test_1_reqs_1000_conn`closure #3 in SelectableEventLoop.run()+0x166
+    #               test_1_reqs_1000_conn`SelectableEventLoop.run()+0x234
+    #               test_1_reqs_1000_conn`closure #1 in static MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name:selectorFactory:initializer:)+0x12e
+    #               test_1_reqs_1000_conn`partial apply for closure #1 in static MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name:selectorFactory:initializer:)+0x25
+    #               test_1_reqs_1000_conn`thunk for @escaping @callee_guaranteed (@guaranteed NIOThread) -> ()+0xf
+    #               test_1_reqs_1000_conn`partial apply for thunk for @escaping @callee_guaranteed (@guaranteed NIOThread) -> ()+0x11
+    #               test_1_reqs_1000_conn`closure #1 in static ThreadOpsPosix.run(handle:args:detachThread:)+0x1c9
+    #               libsystem_pthread.dylib`_pthread_start+0xe0
+    #               libsystem_pthread.dylib`thread_start+0xf
+    #             85945
+    #
+    #               libsystem_malloc.dylib`malloc_zone_malloc
+    #               libswiftCore.dylib`swift_slowAlloc+0x28
+    #               libswiftCore.dylib`swift_allocObject+0x27
+    # (truncated)
+    dictionary = collections.defaultdict(list)
     with open(path, "r") as f:
-        current_text = ""
+        current_stack = []
         for line in f:
-            if line == "":
-                break
-            if re.match(num_regex, line):
-                key = "\n".join(map(lambda l: l.strip().split("+")[0],
-                                    current_text.split("\n")[0:8]))
-                values = dictionary.get(key, [])
-                values.append( (int(line), current_text) )
-                dictionary[key] = values
-                current_text = ""
-            elif line.strip() == "":
+            if not line.startswith(" "):
+                # All lines we're intereted in are indented so ignore this one.
                 pass
+            elif re.match(num_regex, line):
+                # The line contains just a number. This must be the end of a
+                # stack, i.e. the number of allocations.
+
+                # Build a key for the current stack. Each line looks
+                # like: 'libswiftCore.dylib`swift_allocObject+0x27'. We want
+                # everything before the '+'. We only take at most the first 8
+                # lines for the key so that we group 'similar' stacks in our
+                # output.
+                key = "\n".join(line.split("+")[0] for line in current_stack[:8])
+
+                # Record this stack and reset our state to build a new one.
+                dictionary[key].append( (int(line), "\n".join(current_stack)) )
+                current_stack = []
             else:
-                current_text = current_text + line.strip() + "\n"
+                # This line doesn't contain just a number. This might be an
+                # entry in the current stack.
+                stripped = line.strip()
+                if stripped != "":
+                    current_stack.append(stripped)
+
     return dictionary
 
 def total_count_for_key(d, key):
@@ -61,13 +104,14 @@ def print_dictionary_member(d, key):
     print(key)
     print()
     print_dictionary_member_detail(d, key)
+    print()
 
 def print_dictionary_member_detail(d, key):
     value = d[key]
     for (count, stack) in value:
         print("    %d" % count)
         print("        " + stack.replace("\n", "\n        "))
-    
+
 
 def usage():
     print("Usage: stackdiff-dtrace.py OLD-STACKS NEW-STACKS")
@@ -129,5 +173,5 @@ for x in sorted(list(useful_before_keys & useful_after_keys)):
 
 everything_before = total_for_dictionary(before_dict)
 everything_after = total_for_dictionary(after_dict)
-print("Total of _EVERYTHING_ BEFORE:  %d,  AFTER:  %d,  DIFFERENCE:  %d" % 
+print("Total of _EVERYTHING_ BEFORE:  %d,  AFTER:  %d,  DIFFERENCE:  %d" %
     (everything_before, everything_after, everything_after - everything_before))
