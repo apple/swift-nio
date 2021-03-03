@@ -135,21 +135,22 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
 ///         body: requestBody))
 ///
 ///     // Assert the server received the expected request.
-///     // Use custom methods if you only want some specific assertions on part
-///     // of the request.
-///     XCTAssertNoThrow(XCTAssertEqual(.head(.init(version: .http1_1,
-///                                                 method: .GET,
-///                                                 uri: "/some-route",
-///                                                 headers: .init([
-///                                                     ("Content-Type", "text/plain; charset=utf-8"),
-///                                                     ("Content-Length", "4")]))),
-///                                     try testServer.readInbound()))
+///     XCTAssertNoThrow(try testServer.receiveHeadAndVerify { head in
+///         XCTAssertEqual(head, .init(version: .http1_1,
+///                                    method: .GET,
+///                                    uri: "/some-route",
+///                                    headers: .init([
+///                                        ("Content-Type", "text/plain; charset=utf-8"),
+///                                        ("Content-Length", "4")])))
+///     })
 ///     var requestBuffer = allocator.buffer(capacity: 128)
 ///     requestBuffer.writeString(requestBody)
-///     XCTAssertNoThrow(XCTAssertEqual(.body(requestBuffer),
-///                                     try testServer.readInbound()))
-///     XCTAssertNoThrow(XCTAssertEqual(.end(nil),
-///                                     try testServer.readInbound()))
+///     XCTAssertNoThrow(try testServer.receiveBodyAndVerify { body in
+///         XCTAssertEqual(body, requestBuffer)
+///     })
+///     XCTAssertNoThrow(try testServer.receiveEndAndVerify { trailers in
+///         XCTAssertNil(trailers)
+///     })
 ///
 ///     // Make the server send a response to the client.
 ///     let responseBody = "pong"
@@ -312,5 +313,107 @@ extension NIOHTTP1TestServer {
     fileprivate func pushError(_ error: Error) {
         self.eventLoop.assertInEventLoop()
         self.inboundBuffer.append(.failure(error))
+    }
+}
+
+extension NIOHTTP1TestServer {
+    /// Waits for a message part to be received and checks that it was a `.head` before returning
+    /// the `HTTPRequestHead` it contained.
+    ///
+    /// - Parameters:
+    ///   - deadline: The deadline by which a part must have been received.
+    /// - Throws: If the part was not a `.head` or nothing was read before the deadline.
+    /// - Returns: The `HTTPRequestHead` from the `.head`.
+    public func receiveHead(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPRequestHead {
+        let part = try self.readInbound(deadline: deadline)
+        switch part {
+        case .head(let head):
+            return head
+        default:
+            throw NIOHTTP1TestServerError(reason: "Expected .head but got '\(part)'")
+        }
+    }
+
+    /// Waits for a message part to be received and checks that it was a `.head` before passing
+    /// it to the `verify` block.
+    ///
+    /// - Parameters:
+    ///   - deadline: The deadline by which a part must have been received.
+    ///   - verify: A closure which can be used to verify the contents of the `HTTPRequestHead`.
+    /// - Throws: If the part was not a `.head` or nothing was read before the deadline.
+    public func receiveHeadAndVerify(deadline: NIODeadline = .now() + .seconds(10),
+                                     _ verify: (HTTPRequestHead) throws -> () = { _ in }) throws {
+        try verify(self.receiveHead(deadline: deadline))
+    }
+
+    /// Waits for a message part to be received and checks that it was a `.body` before returning
+    /// the `ByteBuffer` it contained.
+    ///
+    /// - Parameters:
+    ///   - deadline: The deadline by which a part must have been received.
+    /// - Throws: If the part was not a `.body` or nothing was read before the deadline.
+    /// - Returns: The `ByteBuffer` from the `.body`.
+    public func receiveBody(deadline: NIODeadline = .now() + .seconds(10)) throws -> ByteBuffer {
+        let part = try self.readInbound(deadline: deadline)
+        switch part {
+        case .body(let buffer):
+            return buffer
+        default:
+            throw NIOHTTP1TestServerError(reason: "Expected .body but got '\(part)'")
+        }
+    }
+
+    /// Waits for a message part to be received and checks that it was a `.body` before passing
+    /// it to the `verify` block.
+    ///
+    /// - Parameters:
+    ///   - deadline: The deadline by which a part must have been received.
+    ///   - verify: A closure which can be used to verify the contents of the `ByteBuffer`.
+    /// - Throws: If the part was not a `.body` or nothing was read before the deadline.
+    public func receiveBodyAndVerify(deadline: NIODeadline = .now() + .seconds(10),
+                                     _ verify: (ByteBuffer) throws -> () = { _ in }) throws {
+        try verify(self.receiveBody(deadline: deadline))
+    }
+
+
+    /// Waits for a message part to be received and checks that it was a `.end` before returning
+    /// the `HTTPHeaders?` it contained.
+    ///
+    /// - Parameters:
+    ///   - deadline: The deadline by which a part must have been received.
+    /// - Throws: If the part was not a `.end` or nothing was read before the deadline.
+    /// - Returns: The `HTTPHeaders?` from the `.end`.
+    public func receiveEnd(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPHeaders? {
+        let part = try self.readInbound(deadline: deadline)
+        switch part {
+        case .end(let trailers):
+            return trailers
+        default:
+            throw NIOHTTP1TestServerError(reason: "Expected .end but got '\(part)'")
+        }
+    }
+
+    /// Waits for a message part to be received and checks that it was a `.end` before passing
+    /// it to the `verify` block.
+    ///
+    /// - Parameters:
+    ///   - deadline: The deadline by which a part must have been received.
+    ///   - verify: A closure which can be used to verify the contents of the `HTTPHeaders?`.
+    /// - Throws: If the part was not a `.end` or nothing was read before the deadline.
+    public func receiveEndAndVerify(deadline: NIODeadline = .now() + .seconds(10),
+                                    _ verify: (HTTPHeaders?) throws -> () = { _ in }) throws {
+        try verify(self.receiveEnd())
+    }
+}
+
+public struct NIOHTTP1TestServerError: Error, Hashable, CustomStringConvertible {
+    public var reason: String
+
+    public init(reason: String) {
+        self.reason = reason
+    }
+
+    public var description: String {
+        return self.reason
     }
 }
