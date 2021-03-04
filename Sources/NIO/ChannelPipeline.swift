@@ -1018,6 +1018,11 @@ extension ChannelPipeline {
             self._pipeline = pipeline
         }
 
+        /// The `EventLoop` of the `Channel` this synchronous operations view corresponds to.
+        public var eventLoop: EventLoop {
+            return self._pipeline.eventLoop
+        }
+
         /// Add a handler to the pipeline.
         ///
         /// - Important: This *must* be called on the event loop.
