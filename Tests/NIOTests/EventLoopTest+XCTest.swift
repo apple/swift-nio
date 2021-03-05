@@ -82,6 +82,8 @@ extension EventLoopTest {
                 ("testEventLoopsWithPreSucceededFuturesCacheThem", testEventLoopsWithPreSucceededFuturesCacheThem),
                 ("testEventLoopsWithoutPreSucceededFuturesDoNotCacheThem", testEventLoopsWithoutPreSucceededFuturesDoNotCacheThem),
                 ("testSelectableEventLoopHasPreSucceededFuturesOnlyOnTheEventLoop", testSelectableEventLoopHasPreSucceededFuturesOnlyOnTheEventLoop),
+                ("testMakeCompletedFuture", testMakeCompletedFuture),
+                ("testMakeCompletedVoidFuture", testMakeCompletedVoidFuture),
            ]
    }
 }

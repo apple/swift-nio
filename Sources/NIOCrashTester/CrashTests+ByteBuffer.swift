@@ -16,14 +16,14 @@ import NIO
 
 struct ByteBufferCrashTests {
     let testMovingReaderIndexPastWriterIndex = CrashTest(
-        regex: #"^Precondition failed: new readerIndex: 1, expected: range\(0, 0\)"#
+        regex: #"Precondition failed: new readerIndex: 1, expected: range\(0, 0\)"#
     ) {
         var buffer = ByteBufferAllocator().buffer(capacity: 16)
         buffer.moveReaderIndex(forwardBy: 1)
     }
 
     let testAllocatingNegativeSize = CrashTest(
-        regex: #"^Precondition failed: ByteBuffer capacity must be positive."#
+        regex: #"Precondition failed: ByteBuffer capacity must be positive."#
     ) {
         _ = ByteBufferAllocator().buffer(capacity: -1)
     }
