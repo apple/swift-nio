@@ -8,8 +8,9 @@ This document specifies the security process for the SwiftNIO project.
 
 The SwiftNIO core team asks that known and suspected vulnerabilities be
 privately and responsibly disclosed by emailing
-[cve@forums.swift.org](mailto:cve@forums.swift.org) with the [details usually
-included with bug reports][issue-template]. **Do not file a public issue.**
+[sswg-security-reports@forums.swift.org](mailto:sswg-security-reports@forums.swift.org)
+with the [details usually included with bug reports][issue-template].
+**Do not file a public issue.**
 
 #### When to report a vulnerability
 
