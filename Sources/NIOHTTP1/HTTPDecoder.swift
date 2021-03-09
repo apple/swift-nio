@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
+#if compiler(>=5.1)
+@_implementationOnly import CNIOHTTPParser
+#else
 import CNIOHTTPParser
+#endif
 
 private extension UnsafeMutablePointer where Pointee == http_parser {
     /// Returns the `KeepAliveState` for the current message that is parsed.
