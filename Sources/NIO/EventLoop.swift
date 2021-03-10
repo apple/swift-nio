@@ -866,7 +866,28 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private let eventLoops: [SelectableEventLoop]
     private let shutdownLock: Lock = Lock()
     private var runState: RunState = .running
-
+    
+    // internal selectorFactory to choose variant of Selector to use.
+    // Try to use liburing on Linux by default, otherwise fall back on epoll.
+    static func defaultSelectorFactory<R>() throws -> NIO.Selector<R> {
+        #if os(Linux)
+        do {
+            return try NIO.URingSelector<R>.init()
+        } catch  {
+            // fall through and return default Selector on failure
+            // this is typically either lack of liburing or too old kernel
+        }
+        #endif
+        
+        #if os(Linux) || os(Android)
+        return try NIO.EpollSelector<R>.init()
+        #endif
+        
+        #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS) || os(FreeBSD)
+        return try NIO.KqueueSelector<R>.init()
+        #endif
+    }
+    
     private static func runTheLoop(thread: NIOThread,
                                    canEventLoopBeShutdownIndividually: Bool,
                                    selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration>,
@@ -928,7 +949,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - arguments:
     ///     - numberOfThreads: The number of `Threads` to use.
     public convenience init(numberOfThreads: Int) {
-        self.init(numberOfThreads: numberOfThreads, selectorFactory: NIO.Selector<NIORegistration>.init)
+        self.init(numberOfThreads: numberOfThreads, selectorFactory: MultiThreadedEventLoopGroup.defaultSelectorFactory)
     }
 
     internal convenience init(numberOfThreads: Int,
@@ -943,7 +964,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - arguments:
     ///     - threadInitializers: The `ThreadInitializer`s to use.
     internal init(threadInitializers: [ThreadInitializer],
-                  selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration> = { try .init() }) {
+                  selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration> = MultiThreadedEventLoopGroup.defaultSelectorFactory) {
         let myGroupID = nextEventLoopGroupID.add(1)
         self.myGroupID = myGroupID
         var idx = 0
@@ -1086,7 +1107,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         let callingThread = NIOThread.current
         MultiThreadedEventLoopGroup.runTheLoop(thread: callingThread,
                                                canEventLoopBeShutdownIndividually: true,
-                                               selectorFactory: NIO.Selector<NIORegistration>.init,
+                                               selectorFactory: MultiThreadedEventLoopGroup.defaultSelectorFactory,
                                                initializer: { _ in }) { loop in
             loop.assertInEventLoop()
             callback(loop)

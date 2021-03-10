@@ -32,7 +32,7 @@ class SelectorTest: XCTestCase {
             let socket: Socket
         }
 
-        let selector = try NIO.Selector<TestRegistration>()
+        let selector : NIO.Selector<TestRegistration> = try MultiThreadedEventLoopGroup.defaultSelectorFactory()
         defer {
             XCTAssertNoThrow(try selector.close())
         }

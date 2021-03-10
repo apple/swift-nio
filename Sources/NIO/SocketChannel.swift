@@ -531,6 +531,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             }
             switch result {
             case .processed(let bytesRead):
+                _debugPrint("SC .processed bytesRead[\(bytesRead)]")
                 assert(bytesRead > 0)
                 assert(self.isOpen)
                 let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
@@ -558,6 +559,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 return readResult
             }
         }
+        _debugPrint("singleReadFromSocket readResult[\(readResult)]")
+
         return readResult
     }
 
@@ -586,6 +589,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             case .some(let results, let totalRead):
                 assert(self.isOpen)
                 assert(self.isActive)
+                _debugPrint(".some totalRead[\(totalRead)]")
 
                 let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
                 readPending = false
@@ -603,6 +607,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 break readLoop
             }
         }
+        _debugPrint("vector read readResult[\(readResult)]")
 
         return readResult
         #else

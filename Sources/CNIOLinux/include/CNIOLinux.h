@@ -24,6 +24,20 @@
 #include <errno.h>
 #include <pthread.h>
 #include <netinet/ip.h>
+#include <poll.h>
+
+// Pull in io_uring if it's availble - liburing must be
+// installed on both development and deployment machines
+// https://github.com/axboe/liburing
+// The Linux kernel needs to be 5.13+ (not yet clear)
+// as we use the poll multishot functionality from
+// https://github.com/axboe/liburing/issues/310
+
+#if __has_include(<liburing.h>)
+#include <liburing.h>
+#else
+#define C_NIO_LIBURING_UNAVAILABLE // liburing will be disabled (falling back on epoll)
+#endif
 
 // Some explanation is required here.
 //
@@ -71,5 +85,14 @@ const void *CNIOLinux_CMSG_DATA(const struct cmsghdr *);
 void *CNIOLinux_CMSG_DATA_MUTABLE(struct cmsghdr *);
 size_t CNIOLinux_CMSG_LEN(size_t);
 size_t CNIOLinux_CMSG_SPACE(size_t);
-#endif
+#endif // __linux__
+
+// including all here to quiet compiler warnings
+
+#include "io_uring.h" // we pull in a local copy for the sqe/cqe structs and flags
+#include "barrier.h" // we pull in a local copy for the sqe/cqe structs and flags
+
+#include "liburing_stubs.h"
+#include "liburing_nio.h"
+
 #endif
