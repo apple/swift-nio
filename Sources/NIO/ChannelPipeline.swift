@@ -527,7 +527,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// Synchronously finds a `ChannelHandlerContext` in the `ChannelPipeline`.
     /// - Important: This must be called on the `EventLoop`.
     @usableFromInline // should be fileprivate
-    internal func _contextSync(_ body: @escaping ((ChannelHandlerContext) -> Bool)) -> Result<ChannelHandlerContext, Error> {
+    internal func _contextSync(_ body: (ChannelHandlerContext) -> Bool) -> Result<ChannelHandlerContext, Error> {
         self.eventLoop.assertInEventLoop()
 
         if let context = self.contextForPredicate0(body) {
@@ -544,7 +544,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - body: The predicate to execute per `ChannelHandlerContext` in the `ChannelPipeline`.
     /// - returns: The first `ChannelHandlerContext` that matches or `nil` if none did.
-    private func contextForPredicate0(_ body: @escaping((ChannelHandlerContext) -> Bool)) -> ChannelHandlerContext? {
+    private func contextForPredicate0(_ body: (ChannelHandlerContext) -> Bool) -> ChannelHandlerContext? {
         var curCtx: ChannelHandlerContext? = self.head?.next
         while let context = curCtx, context !== self.tail {
             if body(context) {
