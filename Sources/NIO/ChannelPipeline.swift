@@ -367,11 +367,22 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - handler: the `ChannelHandler` to remove.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
     public func removeHandler(_ handler: RemovableChannelHandler, promise: EventLoopPromise<Void>?) {
-        let contextFuture = self.context(handler: handler).map { context in
-            self.removeHandler(context: context, promise: promise)
+        func removeHandler0() {
+            switch self.contextSync(handler: handler) {
+            case .success(let context):
+                self.removeHandler(context: context, promise: promise)
+            case .failure(let error):
+                promise?.fail(error)
+            }
         }
 
-        contextFuture.cascadeFailure(to: promise)
+        if self.eventLoop.inEventLoop {
+            removeHandler0()
+        } else {
+            self.eventLoop.execute {
+                removeHandler0()
+            }
+        }
     }
 
     /// Remove a `ChannelHandler` from the `ChannelPipeline`.
@@ -380,11 +391,22 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
     public func removeHandler(name: String, promise: EventLoopPromise<Void>?) {
-        let contextFuture = self.context(name: name).map { context in
-            self.removeHandler(context: context, promise: promise)
+        func removeHandler0() {
+            switch self.contextSync(name: name) {
+            case .success(let context):
+                self.removeHandler(context: context, promise: promise)
+            case .failure(let error):
+                promise?.fail(error)
+            }
         }
 
-        contextFuture.cascadeFailure(to: promise)
+        if self.eventLoop.inEventLoop {
+            removeHandler0()
+        } else {
+            self.eventLoop.execute {
+                removeHandler0()
+            }
+        }
     }
 
     /// Remove a `ChannelHandler` from the `ChannelPipeline`.
