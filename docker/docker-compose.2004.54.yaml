@@ -21,8 +21,8 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlercontext=9035
-      - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlername=18035  # improvement from 5.3 which was 19035
-      - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlertype=18035  # improvement from 5.3 which was 19035
+      - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlername=9035
+      - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlertype=9035
       - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet=29050
       - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet_sync=50
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=12050
