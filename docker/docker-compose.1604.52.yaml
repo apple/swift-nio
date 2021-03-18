@@ -20,6 +20,9 @@ services:
     environment:
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
+      - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlercontext=9035
+      - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlername=19035
+      - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlertype=19035
       - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet=32050
       - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet_sync=50
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=12050
