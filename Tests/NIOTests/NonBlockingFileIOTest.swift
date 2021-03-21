@@ -138,7 +138,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                          byteCount: 1,
                                          allocator: self.allocator,
                                          eventLoop: self.eventLoop).wait()) { error in
-                XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
+                XCTAssertTrue(error is NIOThreadPoolError.ThreadPoolInactive)
             }
             return [readFH, writeFH]
         }
@@ -914,5 +914,23 @@ class NonBlockingFileIOTest: XCTestCase {
             }.wait())
             XCTAssertEqual(numberOfChunks, numberOfCalls.load())
         })
+    }
+    
+    func testThrowsErrorOnUnstartedPool() {
+        
+        let fileURL = URL(fileURLWithPath: "/tmp/nonblockingfileiotest.txt")
+        XCTAssertNoThrow(try "hello, world".write(toFile: fileURL.path, atomically: true, encoding: .utf8))
+    
+        let expectation = XCTestExpectation(description: "Opened file")
+        let threadPool = NIOThreadPool(numberOfThreads: 1)
+        let fileIO = NonBlockingFileIO(threadPool: threadPool)
+        let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+        fileIO.openFile(path: fileURL.path, eventLoop: eventLoop).whenFailure { (error) in
+            XCTAssertTrue(error is NIOThreadPoolError.ThreadPoolInactive)
+            expectation.fulfill()
+        }
+        
+        eventLoop.shutdownGracefully {_ in }
+        self.wait(for: [expectation], timeout: 1.0)
     }
 }
