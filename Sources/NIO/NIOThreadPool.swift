@@ -15,10 +15,10 @@
 import Dispatch
 import NIOConcurrencyHelpers
 
-/// Errors that may be thrown when ececuting work on a `NIOThreadPool`
+/// Errors that may be thrown when executing work on a `NIOThreadPool`
 public enum NIOThreadPoolError {
     
-    /// The thread pool was not active.
+    /// The `NIOThreadPool` was not active.
     public struct ThreadPoolInactive: Error { }
 }
 
