@@ -919,20 +919,20 @@ class NonBlockingFileIOTest: XCTestCase {
     func testThrowsErrorOnUnstartedPool() throws {
         
         try withTemporaryFile(content: "hello, world") { fileHandle, path in
+            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            defer {
+                XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+            }
             
             let expectation = XCTestExpectation(description: "Opened file")
             let threadPool = NIOThreadPool(numberOfThreads: 1)
             let fileIO = NonBlockingFileIO(threadPool: threadPool)
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
             fileIO.openFile(path: path, eventLoop: eventLoopGroup.next()).whenFailure { (error) in
                 XCTAssertTrue(error is NIOThreadPoolError.ThreadPoolInactive)
                 expectation.fulfill()
             }
             
-            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
             self.wait(for: [expectation], timeout: 1.0)
-            
         }
-    
     }
 }
