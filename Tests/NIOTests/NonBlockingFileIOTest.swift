@@ -916,21 +916,23 @@ class NonBlockingFileIOTest: XCTestCase {
         })
     }
     
-    func testThrowsErrorOnUnstartedPool() {
+    func testThrowsErrorOnUnstartedPool() throws {
         
-        let fileURL = URL(fileURLWithPath: "/tmp/nonblockingfileiotest.txt")
-        XCTAssertNoThrow(try "hello, world".write(toFile: fileURL.path, atomically: true, encoding: .utf8))
-    
-        let expectation = XCTestExpectation(description: "Opened file")
-        let threadPool = NIOThreadPool(numberOfThreads: 1)
-        let fileIO = NonBlockingFileIO(threadPool: threadPool)
-        let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
-        fileIO.openFile(path: fileURL.path, eventLoop: eventLoop).whenFailure { (error) in
-            XCTAssertTrue(error is NIOThreadPoolError.ThreadPoolInactive)
-            expectation.fulfill()
+        try withTemporaryFile(content: "hello, world") { fileHandle, path in
+            
+            let expectation = XCTestExpectation(description: "Opened file")
+            let threadPool = NIOThreadPool(numberOfThreads: 1)
+            let fileIO = NonBlockingFileIO(threadPool: threadPool)
+            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            fileIO.openFile(path: path, eventLoop: eventLoopGroup.next()).whenFailure { (error) in
+                XCTAssertTrue(error is NIOThreadPoolError.ThreadPoolInactive)
+                expectation.fulfill()
+            }
+            
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+            self.wait(for: [expectation], timeout: 1.0)
+            
         }
-        
-        eventLoop.shutdownGracefully {_ in }
-        self.wait(for: [expectation], timeout: 1.0)
+    
     }
 }
