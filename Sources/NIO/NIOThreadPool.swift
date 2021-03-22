@@ -15,6 +15,13 @@
 import Dispatch
 import NIOConcurrencyHelpers
 
+/// Errors that may be thrown when executing work on a `NIOThreadPool`
+public enum NIOThreadPoolError {
+    
+    /// The `NIOThreadPool` was not active.
+    public struct ThreadPoolInactive: Error { }
+}
+
 
 /// A thread pool that should be used if some (kernel thread) blocking work
 /// needs to be performed for which no non-blocking API exists.
@@ -206,6 +213,7 @@ public final class NIOThreadPool {
 }
 
 extension NIOThreadPool {
+    
     /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
     /// The closure will be run on the thread pool so can do blocking work.
     ///
@@ -217,7 +225,7 @@ extension NIOThreadPool {
         let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
             guard case shouldRun = NIOThreadPool.WorkItemState.active else {
-                promise.fail(ChannelError.ioOnClosedChannel)
+                promise.fail(NIOThreadPoolError.ThreadPoolInactive())
                 return
             }
             do {
