@@ -917,8 +917,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
     
     func testThrowsErrorOnUnstartedPool() throws {
-        
-        try withTemporaryFile(content: "hello, world") { fileHandle, path in
+        withTemporaryFile(content: "hello, world") { fileHandle, path in
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
             defer {
                 XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
