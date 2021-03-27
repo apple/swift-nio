@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -23,7 +23,13 @@
 #ifdef __linux__
 
 #include <stdbool.h>  // bool
-#include <linux/time_types.h> // struct __kernel_timespec
+
+// #include <linux/time_types.h> // struct __kernel_timespec - only for newer distros, copied def below for compile
+
+struct __kernel_timespec {
+    long long tv_sec;                 /* seconds */
+    long long tv_nsec;                /* nanoseconds */
+};
 
 // these are pulled in from liburing.h to allow us to manipulate flags etc
 // directly, but we cant take the header as it defines extern c functions.

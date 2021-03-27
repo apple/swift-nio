@@ -192,11 +192,6 @@ private struct SocketChannelLifecycleManager {
     }
 }
 
-func getEnvironmentVar(_ name: String) -> String? {
-    guard let rawValue = getenv(name) else { return nil }
-    return String(validatingUTF8: rawValue)
-}
-
 public func _debugPrint(_ s : @autoclosure () -> String)
 {
     if getEnvironmentVar("NIO_BSC") != nil {

@@ -872,7 +872,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     static func defaultSelectorFactory<R>() throws -> NIO.Selector<R> {
         #if os(Linux)
         do {
-            return try NIO.URingSelector<R>.init()
+            return try NIO.UringSelector<R>.init()
         } catch  {
             // fall through and return default Selector on failure
             // this is typically either lack of liburing or too old kernel

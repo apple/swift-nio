@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -133,10 +133,15 @@ static struct _liburing_functions_t
 // returns 0 on successful loading and resolving of functions, otherwise error
 
 // getting kernel version, just adopted from SO answer.
+
+// FIXME: Should replace these with actual kernel version where multishot poll is integrated, likely 5.13
+#define KERNEL_MIN_MAJOR_VERSION 5
+#define KERNEL_MIN_MINOR_VERSION 12
+#define VER_SIZE 16
 int _check_compatible_kernel_version() {
     struct utsname buffer;
     char *p;
-    long ver[16];
+    long ver[VER_SIZE];
     int i=0;
 
     if (uname(&buffer) != 0) {
@@ -145,7 +150,7 @@ int _check_compatible_kernel_version() {
 
     p = buffer.release;
 
-    while (*p) {
+    while (*p && i < VER_SIZE) {
         if (isdigit(*p)) {
             ver[i] = strtol(p, &p, 10);
             i++;
@@ -153,13 +158,13 @@ int _check_compatible_kernel_version() {
             p++;
         }
     }
-
-// FIXME: Should replace these with actual kernel version where multishot poll is integrated, likely 5.13
-    if ((ver[0] > 5) || ((ver[0] == 5) && (ver[1] >= 12))) {
+    
+    if ((i >= 1) &&
+        ((ver[0] > KERNEL_MIN_MAJOR_VERSION) ||
+        ((ver[0] == KERNEL_MIN_MAJOR_VERSION) && (ver[1] >= KERNEL_MIN_MINOR_VERSION)))) {
         return 0;
     }
-    
-    fprintf(stderr, "Trying to run with liburing on unsupported kernel version %ld.%ld\n", ver[0], ver[1]);
+
     return -1;
 }
 
@@ -168,10 +173,8 @@ int CNIOLinux_io_uring_load()
     void *dl_handle;
     const char *err;
     
-    // first a number of sanity checks, did we compile with actual liburing headers?
+    // first a number of checks, did we compile with actual liburing headers?
 #ifdef C_NIO_LIBURING_UNAVAILABLE
-// FIXME: Remove this after bringup, yields unnecessary noise on epoll platforms.
-//    fprintf(stderr, "WARNING: Tried to enable liburing for SwiftNIO which was compiled without liburing support.\n");
     return -1;
 #endif
 

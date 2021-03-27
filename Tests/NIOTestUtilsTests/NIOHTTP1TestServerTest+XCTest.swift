@@ -29,7 +29,7 @@ extension NIOHTTP1TestServerTest {
       return [
                 ("testTheExampleInTheDocs", testTheExampleInTheDocs),
                 ("testSimpleRequest", testSimpleRequest),
-// FIXME:                ("testConcurrentRequests", testConcurrentRequests),
+                ("testConcurrentRequests", testConcurrentRequests),
                 ("testTestWebServerCanBeReleased", testTestWebServerCanBeReleased),
                 ("testStopClosesAcceptedChannel", testStopClosesAcceptedChannel),
                 ("testReceiveAndVerify", testReceiveAndVerify),

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -499,13 +499,13 @@ final internal class KqueueSelector<R: Registration>: Selector<R> {
         guard ready == eventsCapacity else {
             return
         }
-        Self.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        KqueueSelector.deallocateEventsArray(events: events, capacity: eventsCapacity)
         eventsCapacity = ready << 1 // double capacity
-        events = Self.allocateEventsArray(capacity: eventsCapacity)
+        events = KqueueSelector.allocateEventsArray(capacity: eventsCapacity)
     }
     
     override init() throws {
-        events = Self.allocateEventsArray(capacity: eventsCapacity)
+        events = KqueueSelector.allocateEventsArray(capacity: eventsCapacity)
 
         try super.init()
         
@@ -525,7 +525,7 @@ final internal class KqueueSelector<R: Registration>: Selector<R> {
     }
 
     deinit {
-        Self.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        KqueueSelector.deallocateEventsArray(events: events, capacity: eventsCapacity)
     }
 
     private static func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
@@ -619,7 +619,7 @@ final internal class KqueueSelector<R: Registration>: Selector<R> {
         }
 
 
-        let timespec = Self.toKQueueTimeSpec(strategy: strategy)
+        let timespec = KqueueSelector.toKQueueTimeSpec(strategy: strategy)
         let ready = try timespec.withUnsafeOptionalPointer { ts in
             Int(try KQueue.kevent(kq: self.selectorFD, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
         }
@@ -745,13 +745,13 @@ final internal class EpollSelector<R: Registration>: Selector<R> {
         guard ready == eventsCapacity else {
             return
         }
-        Self.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        EpollSelector.deallocateEventsArray(events: events, capacity: eventsCapacity)
         eventsCapacity = ready << 1 // double capacity
-        events = Self.allocateEventsArray(capacity: eventsCapacity)
+        events = EpollSelector.allocateEventsArray(capacity: eventsCapacity)
     }
     
     override init() throws {
-        events = Self.allocateEventsArray(capacity: eventsCapacity)
+        events = EpollSelector.allocateEventsArray(capacity: eventsCapacity)
 
         try super.init()
 
@@ -774,7 +774,7 @@ final internal class EpollSelector<R: Registration>: Selector<R> {
     }
 
     deinit {
-        Self.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        EpollSelector.deallocateEventsArray(events: events, capacity: eventsCapacity)
 
         assert(self.eventFD == -1, "self.eventFD == \(self.eventFD) on EpollSelector deinit, forgot close?")
         assert(self.timerFD == -1, "self.timerFD == \(self.timerFD) on EpollSelector deinit, forgot close?")
@@ -910,7 +910,12 @@ final internal class EpollSelector<R: Registration>: Selector<R> {
     #endif
 }
 
-final internal class URingSelector<R: Registration>: Selector<R> {
+internal func getEnvironmentVar(_ name: String) -> String? {
+    guard let rawValue = getenv(name) else { return nil }
+    return String(cString: rawValue)
+}
+
+final internal class UringSelector<R: Registration>: Selector<R> {
     #if os(Linux)
     private typealias EventType = UringEvent
 
@@ -940,17 +945,12 @@ final internal class URingSelector<R: Registration>: Selector<R> {
         guard ready == eventsCapacity else {
             return
         }
-        Self.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        UringSelector.deallocateEventsArray(events: events, capacity: eventsCapacity)
         eventsCapacity = ready << 1 // double capacity
-        events = Self.allocateEventsArray(capacity: eventsCapacity)
+        events = UringSelector.allocateEventsArray(capacity: eventsCapacity)
     }
 
-    private func getEnvironmentVar(_ name: String) -> String? {
-        guard let rawValue = getenv(name) else { return nil }
-        return String(validatingUTF8: rawValue)
-    }
-
-    public func _debugPrint(_ s : @autoclosure () -> String)
+    internal func _debugPrint(_ s : @autoclosure () -> String)
     {
         if getEnvironmentVar("NIO_SELECTOR") != nil {
             print("S [\(NIOThread.current)] " + s())
@@ -958,9 +958,11 @@ final internal class URingSelector<R: Registration>: Selector<R> {
     }
     
     override init() throws {
-        try Uring.io_uring_load()
-
-        events = Self.allocateEventsArray(capacity: eventsCapacity)
+        // fail using uring unless it was successfully initialized
+        if Uring.initializedUring == false {
+            throw UringError.loadFailure
+        }
+        events = UringSelector.allocateEventsArray(capacity: eventsCapacity)
 
         try super.init()
 
@@ -968,22 +970,22 @@ final internal class URingSelector<R: Registration>: Selector<R> {
         self.selectorFD = ring.fd()
         self.eventFD = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
 
-        ring.io_uring_prep_poll_add(fd: Int32(self.eventFD), poll_mask: Uring.POLLIN) // wakeups
+        ring.io_uring_prep_poll_add(fd: Int32(self.eventFD), pollMask: Uring.POLLIN) // wakeups
 
         self.lifecycleState = .open
         _debugPrint("UringSelector up and running fd [\(self.selectorFD)]")
     }
 
     deinit {
-        Self.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        UringSelector.deallocateEventsArray(events: events, capacity: eventsCapacity)
 
-        assert(self.eventFD == -1, "self.eventFD == \(self.eventFD) on URingSelector deinit, forgot close?")
+        assert(self.eventFD == -1, "self.eventFD == \(self.eventFD) on UringSelector deinit, forgot close?")
     }
 
     override func _register<S: Selectable>(selectable : S, fd: Int, interested: SelectorEventSet) throws {
         _debugPrint("register interested \(interested) uringEventSet [\(interested.uringEventSet)]")
         
-        ring.io_uring_prep_poll_add(fd: Int32(fd), poll_mask: interested.uringEventSet)
+        ring.io_uring_prep_poll_add(fd: Int32(fd), pollMask: interested.uringEventSet)
     }
 
     override func _reregister<S: Selectable>(selectable : S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet) throws {
@@ -994,7 +996,8 @@ final internal class URingSelector<R: Registration>: Selector<R> {
 
     override func _deregister<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet) throws {
         _debugPrint("deregister interested \(selectable) reg.interested.uringEventSet [\(oldInterested.uringEventSet)]")
-        ring.io_uring_prep_poll_remove(fd: Int32(fd), poll_mask: oldInterested.uringEventSet)
+
+        ring.io_uring_prep_poll_remove(fd: Int32(fd), pollMask: oldInterested.uringEventSet)
     }
 
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
@@ -1094,7 +1097,8 @@ final internal class URingSelector<R: Registration>: Selector<R> {
                     
                } else { // remove any polling if we don't have a registration for it
                     _debugPrint("We had no registration for event.fd [\(event.fd)] event.pollMask [\(event.pollMask)] - removing it")
-                    ring.io_uring_prep_poll_remove(fd: event.fd, poll_mask: event.pollMask)
+
+                    ring.io_uring_prep_poll_remove(fd: event.fd, pollMask: event.pollMask)
                 }
             }
         }

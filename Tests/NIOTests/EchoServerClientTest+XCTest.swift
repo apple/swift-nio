@@ -40,7 +40,7 @@ extension EchoServerClientTest {
                 ("testWriteOnConnect", testWriteOnConnect),
                 ("testWriteOnAccept", testWriteOnAccept),
                 ("testWriteAfterChannelIsDead", testWriteAfterChannelIsDead),
-// FIXME: SIGPIPE                ("testPendingReadProcessedAfterWriteError", testPendingReadProcessedAfterWriteError),
+                ("testPendingReadProcessedAfterWriteError", testPendingReadProcessedAfterWriteError),
                 ("testChannelErrorEOFNotFiredThroughPipeline", testChannelErrorEOFNotFiredThroughPipeline),
                 ("testPortNumbers", testPortNumbers),
                 ("testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4", testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4),

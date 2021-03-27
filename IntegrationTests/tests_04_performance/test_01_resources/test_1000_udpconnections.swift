@@ -85,7 +85,7 @@ func run(identifier: String) {
          frame #19: 0x00007ffff7a30609 libpthread.so.0`start_thread(arg=<unavailable>) at pthread_create.c:477:8
          frame #20: 0x00007ffff65ca293 libc.so.6`clone + 67
      (lldb)
-
+*/
          
         let buffer = ByteBuffer(integer: 1, as: UInt8.self)
         for _ in 0 ..< numberOfIterations {
@@ -98,8 +98,7 @@ func run(identifier: String) {
             }.wait()
         }
         try! serverHandler.completionFuture.wait()
-        return numberOfIterations */
-        return 0
+        return numberOfIterations
     }
 }
 

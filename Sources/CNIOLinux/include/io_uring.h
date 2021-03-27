@@ -1,8 +1,25 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftNIO open source project
+//
+// Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftNIO project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
 // from liburing project, local copy needed for builds on linux platforms without liburing installed
 // (liburing will be disabled then though)
+    
 #ifdef __linux__
 
 #ifdef C_NIO_LIBURING_UNAVAILABLE // only pull in these definitions if liburing isn't actually available
+
+typedef int __kernel_rwf_t;
 
 /* SPDX-License-Identifier: (GPL-2.0 WITH Linux-syscall-note) OR MIT */
 /*
