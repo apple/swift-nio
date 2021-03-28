@@ -970,7 +970,7 @@ final internal class UringSelector<R: Registration>: Selector<R> {
         self.selectorFD = ring.fd()
         self.eventFD = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
 
-        ring.io_uring_prep_poll_add(fd: Int32(self.eventFD), pollMask: Uring.POLLIN) // wakeups
+        ring.io_uring_prep_poll_add(fd: Int32(self.eventFD), pollMask: Uring.POLLIN, multishot:false) // wakeups
 
         self.lifecycleState = .open
         _debugPrint("UringSelector up and running fd [\(self.selectorFD)]")
@@ -1051,10 +1051,12 @@ final internal class UringSelector<R: Registration>: Selector<R> {
             
             switch event.fd {
             case self.eventFD:
-               _debugPrint("wakeup successful event.fd [\(event.fd)] [\(NIOThread.current)]")
+                    _debugPrint("wakeup successful for event.fd [\(event.fd)]")
                     var val = EventFd.eventfd_t()
+                    ring.io_uring_prep_poll_add(fd: Int32(self.eventFD), pollMask: Uring.POLLIN, submitNow: false, multishot:false)
                     do {
                         _ = try EventFd.eventfd_read(fd: self.eventFD, value: &val) // consume wakeup event
+                        _debugPrint("read val [\(val)] from event.fd [\(event.fd)]")
                     } catch  { // let errorReturn
                         // FIXME: Add assertion that only EAGAIN is expected here.
                         // assert(errorReturn == EAGAIN, "eventfd_read return unexpected errno \(errorReturn)")

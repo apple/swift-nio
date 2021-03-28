@@ -48,7 +48,7 @@ internal struct UringEvent {
     var pollMask : UInt32
 }
 
-internal class Uring {
+final internal class Uring {
     internal static let POLLIN: CUnsignedInt = numericCast(CNIOLinux.POLLIN)
     internal static let POLLOUT: CUnsignedInt = numericCast(CNIOLinux.POLLOUT)
     internal static let POLLERR: CUnsignedInt = numericCast(CNIOLinux.POLLERR)
@@ -183,18 +183,27 @@ internal class Uring {
         _debugPrint("io_uring_flush done")
     }
 
-    internal func io_uring_prep_poll_add(fd: Int32, pollMask: UInt32, submitNow: Bool = true) -> () {
+    internal func io_uring_prep_poll_add(fd: Int32, pollMask: UInt32, submitNow: Bool = true, multishot: Bool = true) -> () {
         let sqe = CNIOLinux_io_uring_get_sqe(&ring)
         let bitPattern : Int = CqeEventType.poll.rawValue << 32 + Int(fd)
         let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: bitPattern)
 
-        _debugPrint("io_uring_prep_poll_add fd[\(fd)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] submitNow[\(submitNow)]")
+        _debugPrint("io_uring_prep_poll_add fd[\(fd)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] submitNow[\(submitNow)] multishot[\(multishot)]")
 
         CNIOLinux.io_uring_prep_poll_add(sqe, fd, pollMask)
         CNIOLinux.io_uring_sqe_set_data(sqe, bitpatternAsPointer) // must be done after prep_poll_add, otherwise zeroed out.
 
-        sqe!.pointee.len |= IORING_POLL_ADD_MULTI; // turn on multishots
-
+        // basically all polls will be multishot, except for the eventfd
+        // which we keep at singleshot and re-register each time around
+        // as certain use cases of nio seems to generate tons of wakeups
+        // (at least its tested for that in some of the performance tests
+        // e.g. future_whenallsucceed_100k_deferred_off_loop, future_whenallcomplete_100k_deferred_off_loop
+        // ) - if using normal ET multishots, we would get 100k events to handle basically.
+        // so using single shot for wakeups makes those tests run 30-35% faster approx.
+        if multishot {
+            sqe!.pointee.len |= IORING_POLL_ADD_MULTI; // turn on multishots
+        }
+        
         if submitNow {
             io_uring_flush()
         }
