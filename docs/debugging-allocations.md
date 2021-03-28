@@ -311,3 +311,205 @@ before: 10000, after: 20000
 ```
 
 Now we see there's another stacktrace in the `AFTER` section which has no corresponding stacktrace in `BEFORE`. From the stack we can see it's originating from `doRequests(group:number:)`. In this instance we were working on options applied in this function so it appears we have added allocations.  We have also increased the number of allocations which are reported in the different numbers section where stack traces have been paired but with different numbers of allocations.
+
+### Debugging with 'heaptrack' (Linux)
+
+Unfortunately we don't have dtrace or Instruments on Linux, but there is 'heaptrack'.
+
+Tested on Ubuntu 20.04 (and likely working on other distributions) Install it with:
+
+```
+sudo apt-get install heaptrack
+```
+
+Then using the instructions previously, you need to build without hooks, e.g.:
+
+```
+./run-nio-alloc-counter-tests.sh -- -n test_1000_autoReadGetAndSet.swift 
+```
+
+and then cd to the temp directory from the output (find the tmp directory as above), e.g.:
+
+```
+cd /tmp/.nio_alloc_counter_tests_5jMMhk
+```
+
+Finally, run the binary with heaptrack, first for 'main', then for your feature branch version, it will look 
+similar to this (this example uses SWIFTNIO_DISABLE_URING instead of running on main, but the idea
+is the same, first run a version that is the baseline, then a second one that you want to troubleshoot):
+
+```
+ubuntu@ip-172-31-25-161 /t/.nio_alloc_counter_tests_GRusAy> SWIFTNIO_DISABLE_URING=1 heaptrack .build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+heaptrack output will be written to "/tmp/.nio_alloc_counter_tests_GRusAy/heaptrack.test_1000_autoReadGetAndSet.84341.gz"
+starting application, this might take some time...
+SWIFTNIO_DISABLE_URING set, disabling liburing.
+test_1000_autoReadGetAndSet.total_allocations: 0
+test_1000_autoReadGetAndSet.total_allocated_bytes: 0
+test_1000_autoReadGetAndSet.remaining_allocations: 0
+DEBUG: [["total_allocations": 0, "total_allocated_bytes": 0, "remaining_allocations": 0], ["remaining_allocations": 0, "total_allocated_bytes": 0, "total_allocations": 0], ["total_allocations": 0, "total_allocated_bytes": 0, "remaining_allocations": 0], ["remaining_allocations": 0, "total_allocated_bytes": 0, "total_allocations": 0], ["remaining_allocations": 0, "total_allocated_bytes": 0, "total_allocations": 0], ["remaining_allocations": 0, "total_allocations": 0, "total_allocated_bytes": 0], ["total_allocated_bytes": 0, "total_allocations": 0, "remaining_allocations": 0], ["total_allocated_bytes": 0, "total_allocations": 0, "remaining_allocations": 0], ["remaining_allocations": 0, "total_allocations": 0, "total_allocated_bytes": 0], ["total_allocations": 0, "remaining_allocations": 0, "total_allocated_bytes": 0]]
+free(): invalid pointer
+Aborted (core dumped)
+heaptrack stats:
+    allocations:              319347
+    leaked allocations:       107
+    temporary allocations:    68
+Heaptrack finished! Now run the following to investigate the data:
+
+  heaptrack --analyze "/tmp/.nio_alloc_counter_tests_GRusAy/heaptrack.test_1000_autoReadGetAndSet.84341.gz"
+ubuntu@ip-172-31-25-161 /t/.nio_alloc_counter_tests_GRusAy> heaptrack .build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+heaptrack output will be written to "/tmp/.nio_alloc_counter_tests_GRusAy/heaptrack.test_1000_autoReadGetAndSet.84372.gz"
+starting application, this might take some time...
+test_1000_autoReadGetAndSet.remaining_allocations: 0
+test_1000_autoReadGetAndSet.total_allocations: 0
+test_1000_autoReadGetAndSet.total_allocated_bytes: 0
+DEBUG: [["remaining_allocations": 0, "total_allocations": 0, "total_allocated_bytes": 0], ["total_allocated_bytes": 0, "total_allocations": 0, "remaining_allocations": 0], ["total_allocated_bytes": 0, "remaining_allocations": 0, "total_allocations": 0], ["total_allocations": 0, "total_allocated_bytes": 0, "remaining_allocations": 0], ["total_allocations": 0, "remaining_allocations": 0, "total_allocated_bytes": 0], ["remaining_allocations": 0, "total_allocations": 0, "total_allocated_bytes": 0], ["total_allocations": 0, "total_allocated_bytes": 0, "remaining_allocations": 0], ["remaining_allocations": 0, "total_allocated_bytes": 0, "total_allocations": 0], ["remaining_allocations": 0, "total_allocations": 0, "total_allocated_bytes": 0], ["remaining_allocations": 0, "total_allocated_bytes": 0, "total_allocations": 0]]
+free(): invalid pointer
+Aborted (core dumped)
+heaptrack stats:
+    allocations:              673989
+    leaked allocations:       117
+    temporary allocations:    341011
+Heaptrack finished! Now run the following to investigate the data:
+
+  heaptrack --analyze "/tmp/.nio_alloc_counter_tests_GRusAy/heaptrack.test_1000_autoReadGetAndSet.84372.gz"
+ubuntu@ip-172-31-25-161 /t/.nio_alloc_counter_tests_GRusAy> 
+```
+Here we could see that we had 673989 allocations in the new version and 319347 in main, so clearly a regression.
+
+Finally, we can analyze the output as a diff from these runs:
+
+```
+heaptrack_print -T -d heaptrack.test_1000_autoReadGetAndSet.84341.gz heaptrack.test_1000_autoReadGetAndSet.84372.gz | swift demangle
+```
+-T gives us temporary allocations (as it was not a leak, but a transient alloaction - if you have leaks remove -T).
+
+The output can be very long, but scroll down to:
+
+```
+MOST TEMPORARY ALLOCATIONS
+307740 temporary allocations of 290324 allocations in total (106.00%) from
+swift_slowAlloc
+  in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
+43623 temporary allocations of 44553 allocations in total (97.91%) from:
+    swift_allocObject
+      in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
+    NIO.ServerBootstrap.(bind0 in _C131C0126670CF68D8B594DDFAE0CE57)(makeServerChannel: (NIO.SelectableEventLoop, NIO.EventLoopGroup) throws -> NIO.ServerSocketChannel, _: (NIO.EventLoop, NIO.ServerSocketChannel) -> NIO.EventLoopFuture<()>) -> NIO.EventLoopFuture<NIO.Channel>
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/Bootstrap.swift:295
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    merged NIO.ServerBootstrap.bind(host: Swift.String, port: Swift.Int) -> NIO.EventLoopFuture<NIO.Channel>
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    NIO.ServerBootstrap.bind(host: Swift.String, port: Swift.Int) -> NIO.EventLoopFuture<NIO.Channel>
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    Test_test_1000_autoReadGetAndSet.run(identifier: Swift.String) -> ()
+      at /tmp/.nio_alloc_counter_tests_GRusAy/Sources/Test_test_1000_autoReadGetAndSet/file.swift:24
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    main
+      at Sources/bootstrap_test_1000_autoReadGetAndSet/main.c:18
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+22208 temporary allocations of 22276 allocations in total (99.69%) from:
+    swift_allocObject
+      in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
+    generic specialization <Swift.UnsafeBufferPointer<Swift.Int8>> of Swift._copyCollectionToContiguousArray<A where A: Swift.Collection>(A) -> Swift.ContiguousArray<A.Element>
+      in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
+    Swift.String.utf8CString.getter : Swift.ContiguousArray<Swift.Int8>
+      in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
+    NIO.Uring.getEnvironmentVar(Swift.String) -> Swift.String?
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxUring.swift:291
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    NIO.Uring._debugPrint(@autoclosure () -> Swift.String) -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxUring.swift:297
+    NIO.Uring.io_uring_peek_batch_cqe(events: Swift.UnsafeMutablePointer<NIO.UringEvent>, maxevents: Swift.UInt32) -> Swift.Int
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxUring.swift:303
+    NIO.UringSelector.whenReady(strategy: NIO.SelectorStrategy, _: (NIO.SelectorEvent<A>) throws -> ()) throws -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/Selector.swift:1034
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    closure #2 () throws -> () in NIO.SelectableEventLoop.run() throws -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/SelectableEventLoop.swift:408
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    reabstraction thunk helper from @callee_guaranteed () -> (@error @owned Swift.Error) to @escaping @callee_guaranteed () -> (@out (), @error @owned Swift.Error)
+      at /tmp/.nio_alloc_counter_tests_GRusAy/<compiler-generated>:0
+    generic specialization <()> of NIO.withAutoReleasePool<A>(() throws -> A) throws -> A
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/SelectableEventLoop.swift:26
+    NIO.SelectableEventLoop.run() throws -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/SelectableEventLoop.swift:407
+    static NIO.MultiThreadedEventLoopGroup.(runTheLoop in _D5D78C61B22284700B9BD1ACFBC25157)(thread: NIO.NIOThread, canEventLoopBeShutdownIndividually: Swift.Bool, selectorFactory: () throws -> NIO.Selector<NIO.NIORegistration>, initializer: (NIO.NIOThread) -> (), _: (NIO.SelectableEventLoop) -> ()) -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/EventLoop.swift:908
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    closure #1 (NIO.NIOThread) -> () in static NIO.MultiThreadedEventLoopGroup.(setupThreadAndEventLoop in _D5D78C61B22284700B9BD1ACFBC25157)(name: Swift.String, selectorFactory: () throws -> NIO.Selector<NIO.NIORegistration>, initializer: (NIO.NIOThread) -> ()) -> NIO.SelectableEventLoop
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/EventLoop.swift:928
+    partial apply forwarder for closure #1 (NIO.NIOThread) -> () in static NIO.MultiThreadedEventLoopGroup.(setupThreadAndEventLoop in _D5D78C61B22284700B9BD1ACFBC25157)(name: Swift.String, selectorFactory: () throws -> NIO.Selector<NIO.NIORegistration>, initializer: (NIO.NIOThread) -> ()) -> NIO.SelectableEventLoop
+      at /tmp/.nio_alloc_counter_tests_GRusAy/<compiler-generated>:0
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    reabstraction thunk helper from @escaping @callee_guaranteed (@guaranteed NIO.NIOThread) -> () to @escaping @callee_guaranteed (@in_guaranteed NIO.NIOThread) -> (@out ())
+      at /tmp/.nio_alloc_counter_tests_GRusAy/<compiler-generated>:0
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    partial apply forwarder for reabstraction thunk helper from @escaping @callee_guaranteed (@guaranteed NIO.NIOThread) -> () to @escaping @callee_guaranteed (@in_guaranteed NIO.NIOThread) -> (@out ())
+      at /tmp/.nio_alloc_counter_tests_GRusAy/<compiler-generated>:0
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    closure #1 (Swift.UnsafeMutableRawPointer?) -> Swift.UnsafeMutableRawPointer? in static NIO.ThreadOpsPosix.run(handle: inout Swift.UInt?, args: NIO.Box<(body: (NIO.NIOThread) -> (), name: Swift.String?)>, detachThread: Swift.Bool) -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/ThreadPosix.swift:105
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    start_thread
+      in /lib/x86_64-linux-gnu/libpthread.so.0
+    __clone
+      in /lib/x86_64-linux-gnu/libc.so.6
+22204 temporary allocations of 22276 allocations in total (99.68%) from:
+    swift_allocObject
+      in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
+    generic specialization <Swift.UnsafeBufferPointer<Swift.Int8>> of Swift._copyCollectionToContiguousArray<A where A: Swift.Collection>(A) -> Swift.ContiguousArray<A.Element>
+      in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
+    Swift.String.utf8CString.getter : Swift.ContiguousArray<Swift.Int8>
+      in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
+    NIO.getEnvironmentVar(Swift.String) -> Swift.String?
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/Selector.swift:914
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    function signature specialization <Arg[1] = Dead> of NIO.UringSelector._debugPrint(@autoclosure () -> Swift.String) -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/Selector.swift:959
+    NIO.UringSelector._debugPrint(@autoclosure () -> Swift.String) -> ()
+      at /tmp/.nio_alloc_counter_tests_GRusAy/<compiler-generated>:0
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    NIO.UringSelector.whenReady(strategy: NIO.SelectorStrategy, _: (NIO.SelectorEvent<A>) throws -> ()) throws -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/Selector.swift:1033
+    closure #2 () throws -> () in NIO.SelectableEventLoop.run() throws -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/SelectableEventLoop.swift:408
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    reabstraction thunk helper from @callee_guaranteed () -> (@error @owned Swift.Error) to @escaping @callee_guaranteed () -> (@out (), @error @owned Swift.Error)
+      at /tmp/.nio_alloc_counter_tests_GRusAy/<compiler-generated>:0
+    generic specialization <()> of NIO.withAutoReleasePool<A>(() throws -> A) throws -> A
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/SelectableEventLoop.swift:26
+    NIO.SelectableEventLoop.run() throws -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/SelectableEventLoop.swift:407
+    static NIO.MultiThreadedEventLoopGroup.(runTheLoop in _D5D78C61B22284700B9BD1ACFBC25157)(thread: NIO.NIOThread, canEventLoopBeShutdownIndividually: Swift.Bool, selectorFactory: () throws -> NIO.Selector<NIO.NIORegistration>, initializer: (NIO.NIOThread) -> (), _: (NIO.SelectableEventLoop) -> ()) -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/EventLoop.swift:908
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    closure #1 (NIO.NIOThread) -> () in static NIO.MultiThreadedEventLoopGroup.(setupThreadAndEventLoop in _D5D78C61B22284700B9BD1ACFBC25157)(name: Swift.String, selectorFactory: () throws -> NIO.Selector<NIO.NIORegistration>, initializer: (NIO.NIOThread) -> ()) -> NIO.SelectableEventLoop
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/EventLoop.swift:928
+    partial apply forwarder for closure #1 (NIO.NIOThread) -> () in static NIO.MultiThreadedEventLoopGroup.(setupThreadAndEventLoop in _D5D78C61B22284700B9BD1ACFBC25157)(name: Swift.String, selectorFactory: () throws -> NIO.Selector<NIO.NIORegistration>, initializer: (NIO.NIOThread) -> ()) -> NIO.SelectableEventLoop
+      at /tmp/.nio_alloc_counter_tests_GRusAy/<compiler-generated>:0
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    reabstraction thunk helper from @escaping @callee_guaranteed (@guaranteed NIO.NIOThread) -> () to @escaping @callee_guaranteed (@in_guaranteed NIO.NIOThread) -> (@out ())
+      at /tmp/.nio_alloc_counter_tests_GRusAy/<compiler-generated>:0
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    partial apply forwarder for reabstraction thunk helper from @escaping @callee_guaranteed (@guaranteed NIO.NIOThread) -> () to @escaping @callee_guaranteed (@in_guaranteed NIO.NIOThread) -> (@out ())
+      at /tmp/.nio_alloc_counter_tests_GRusAy/<compiler-generated>:0
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    closure #1 (Swift.UnsafeMutableRawPointer?) -> Swift.UnsafeMutableRawPointer? in static NIO.ThreadOpsPosix.run(handle: inout Swift.UInt?, args: NIO.Box<(body: (NIO.NIOThread) -> (), name: Swift.String?)>, detachThread: Swift.Bool) -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/ThreadPosix.swift:105
+      in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+    start_thread
+      in /lib/x86_64-linux-gnu/libpthread.so.0
+    __clone
+      in /lib/x86_64-linux-gnu/libc.so.6
+22196 temporary allocations of 22276 allocations in total (99.64%) from:
+```
+
+And here we could fairly quickly see that the transient extra allocations was due to extra debug printing and quering of environment variables:
+
+```
+NIO.Uring.getEnvironmentVar(Swift.String) -> Swift.String?
+  at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxUring.swift:291
+  in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+NIO.Uring._debugPrint(@autoclosure () -> Swift.String) -> ()
+```
+
+And this code should be removed before final integration, so the diff will go away.

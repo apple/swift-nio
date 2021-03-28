@@ -929,6 +929,10 @@ final internal class UringSelector<R: Registration>: Selector<R> {
 
     var ring = Uring()
     
+    // some compile time configurations for testing different approaches
+    let multishot = false // if true, we run with streaming multishot polls, otherwise re-reg poll add.
+    let deferReregistrations = true // if true we only flush once at reentring whenReady()
+    
     private static func allocateEventsArray(capacity: Int) -> UnsafeMutablePointer<EventType> {
         let events: UnsafeMutablePointer<EventType> = UnsafeMutablePointer.allocate(capacity: capacity)
         events.initialize(to: EventType(fd:0, pollMask: 0))
@@ -985,19 +989,19 @@ final internal class UringSelector<R: Registration>: Selector<R> {
     override func _register<S: Selectable>(selectable : S, fd: Int, interested: SelectorEventSet) throws {
         _debugPrint("register interested \(interested) uringEventSet [\(interested.uringEventSet)]")
         
-        ring.io_uring_prep_poll_add(fd: Int32(fd), pollMask: interested.uringEventSet)
+        ring.io_uring_prep_poll_add(fd: Int32(fd), pollMask: interested.uringEventSet, multishot:multishot)
     }
 
     override func _reregister<S: Selectable>(selectable : S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet) throws {
         _debugPrint("Re-register old \(oldInterested) new \(newInterested) uringEventSet [\(oldInterested.uringEventSet)] reg.uringEventSet [\(newInterested.uringEventSet)]")
 
-        ring.io_uring_poll_update(fd: Int32(fd), newPollmask: newInterested.uringEventSet, oldPollmask:oldInterested.uringEventSet)
+        ring.io_uring_poll_update(fd: Int32(fd), newPollmask: newInterested.uringEventSet, oldPollmask:oldInterested.uringEventSet, submitNow:deferReregistrations, multishot:multishot)
     }
 
     override func _deregister<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet) throws {
         _debugPrint("deregister interested \(selectable) reg.interested.uringEventSet [\(oldInterested.uringEventSet)]")
 
-        ring.io_uring_prep_poll_remove(fd: Int32(fd), pollMask: oldInterested.uringEventSet)
+        ring.io_uring_prep_poll_remove(fd: Int32(fd), pollMask: oldInterested.uringEventSet, submitNow:deferReregistrations)
     }
 
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
@@ -1012,7 +1016,12 @@ final internal class UringSelector<R: Registration>: Selector<R> {
         }
 
         var ready: Int = 0
-
+        
+        // flush reregisteration of pending modifications if needed (nop in SQPOLL mode)
+        if deferReregistrations {
+            ring.io_uring_flush()
+        }
+        
         switch strategy {
         case .now:
             _debugPrint("whenReady.now")
@@ -1036,15 +1045,20 @@ final internal class UringSelector<R: Registration>: Selector<R> {
         for i in 0..<ready {
             let event = events[i]
                         
-            // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skipit.
             // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
             if (self.deregistrationsHappened && event.fd != self.eventFD) // allow processing of eventFD wakeups with normal loop
             {
+                // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skipit.
                 // FIXME: This is only needed due to the edge triggered nature of liburing, possibly
                 // we can get away with only updating (force triggering an event if available) for
                 // partial reads (where we currently give up after 4 iterations)
                 if let registration = registrations[Int(event.fd)] {
-                    ring.io_uring_poll_update(fd: event.fd, newPollmask: registration.interested.uringEventSet, oldPollmask:registration.interested.uringEventSet, submitNow:false)
+                    if multishot {
+                        ring.io_uring_poll_update(fd: event.fd, newPollmask: registration.interested.uringEventSet, oldPollmask:registration.interested.uringEventSet, submitNow:false)
+                    } else
+                    {
+                        ring.io_uring_prep_poll_add(fd: event.fd, pollMask: registration.interested.uringEventSet, submitNow:false, multishot:false)
+                    }
                 }
                 continue
             }
@@ -1082,6 +1096,10 @@ final internal class UringSelector<R: Registration>: Selector<R> {
                        _debugPrint("selectorEvent.contains(.readEOF) [\(selectorEvent.contains(.readEOF))]")
 
                     }
+                    
+                    if multishot == false { // must be before guard, otherwise lost wake
+                        ring.io_uring_prep_poll_add(fd: event.fd, pollMask: registration.interested.uringEventSet, submitNow:false, multishot:false)
+                    }
 
                     guard selectorEvent != ._none else {
                         _debugPrint("selectorEvent != ._none / [\(selectorEvent)] [\(registration.interested)] [\(SelectorEventSet(uringEvent: event.pollMask))] [\(event.pollMask)] [\(event.fd)]")
@@ -1093,14 +1111,16 @@ final internal class UringSelector<R: Registration>: Selector<R> {
                     // FIXME: This is only needed due to the edge triggered nature of liburing, possibly
                     // we can get away with only updating (force triggering an event if available) for
                     // partial reads (where we currently give up after 4 iterations)
-                    ring.io_uring_poll_update(fd: event.fd, newPollmask: registration.interested.uringEventSet, oldPollmask:registration.interested.uringEventSet, submitNow:false)
-
+                    if multishot { // can be after guard as it is multishot
+                        ring.io_uring_poll_update(fd: event.fd, newPollmask: registration.interested.uringEventSet, oldPollmask:registration.interested.uringEventSet, submitNow:false)
+                    }
+                    
                     try body((SelectorEvent(io: selectorEvent, registration: registration)))
                     
                } else { // remove any polling if we don't have a registration for it
                     _debugPrint("We had no registration for event.fd [\(event.fd)] event.pollMask [\(event.pollMask)] - removing it")
 
-                    ring.io_uring_prep_poll_remove(fd: event.fd, pollMask: event.pollMask)
+                    ring.io_uring_prep_poll_remove(fd: event.fd, pollMask: event.pollMask, submitNow:false)
                 }
             }
         }
@@ -1116,11 +1136,20 @@ final internal class UringSelector<R: Registration>: Selector<R> {
     /// After closing the `Selector` it's no longer possible to use it.
     override public func close() throws {
         try super.close()
-        ring.io_uring_queue_exit() // FIXME: Double-check fd is closed here
-        self.selectorFD = -1 // closed by uring_queue_exit
+        self.externalSelectorFDLock.withLock {
+            // We try! all of the closes because close can only fail in the following ways:
+            // - EINTR, which we eat in Posix.close
+            // - EIO, which can only happen for on-disk files
+            // - EBADF, which can't happen here because we would crash as EBADF is marked unacceptable
+            // Therefore, we assert here that close will always succeed and if not, that's a NIO bug we need to know
+            // about.
+            
+            ring.io_uring_queue_exit() // FIXME: Double-check fd is closed here
+            self.selectorFD = -1 // closed by uring_queue_exit
 
-        try! Posix.close(descriptor: self.eventFD)
-        self.eventFD = -1
+            try! Posix.close(descriptor: self.eventFD)
+            self.eventFD = -1
+        }
         return
     }
 

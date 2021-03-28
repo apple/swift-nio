@@ -317,6 +317,12 @@ struct io_uring_sqe *CNIOLinux_io_uring_get_sqe(struct io_uring *ring)
     struct io_uring_sqe *sqe;
     int ret;
     
+    // FIXME: io_uring_submit can fail here due to backpressure from kernel
+    // for not reaping CQE:s. I think we should consider handling that
+    // as a fatalError, as fundamentally the ring size is too small compared
+    // to the amount of events the user tries to push through in a single
+    // eventloop tick. This is basically a problem for synthetic tests that
+    // e.g. do a huge amount of registration modifications.
     while (!(sqe = liburing_functions.io_uring_get_sqe(ring))) {
         ret = CNIOLinux_io_uring_submit(ring);
         assert(ret >= 0);

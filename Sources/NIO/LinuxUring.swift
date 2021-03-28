@@ -47,6 +47,21 @@ internal struct UringEvent {
     var fd : Int32
     var pollMask : UInt32
 }
+// FIXME: Current significant malloc regressions vs epoll:
+// These seem to all be due to debugg logging (I updated debugging-allocations.md)
+// Should verify again, but should be ok after debug logs are eliminated. 
+// info: 1000_autoReadGetAndSet: total number of mallocs: 60994 (epoll 29000, 2x)
+// info: 1000_autoReadGetAndSet_sync: total number of mallocs: 5000
+// info: 1000_autoReadGetAndSet_sync: total number of mallocs: 5000
+// info: 1000_reqs_1_conn: total number of mallocs: 60760
+// info: 1000_tcpconnections: total number of mallocs: 337244
+// info: 1000_udp_reqs: total number of mallocs: 46054
+// info: 1000_udpconnections: total number of mallocs: 172523
+// info: 1_reqs_1000_conn: total number of mallocs: 812225
+// info: ping_pong_1000_reqs_1_conn: total number of mallocs: 34709
+// info: read_10000_chunks_from_file: total number of mallocs: 320000
+// info: udp_1000_reqs_1_conn: total number of mallocs: 46285
+// info: udp_1_reqs_1000_conn: total number of mallocs: 338095
 
 final internal class Uring {
     internal static let POLLIN: CUnsignedInt = numericCast(CNIOLinux.POLLIN)
@@ -58,7 +73,7 @@ final internal class Uring {
     private var ring = io_uring()
     // FIXME: These should be tunable somewhere, somehow. Maybe environment vars are ok, need to discuss with SwiftNIO team.
     private let ringEntries: CUnsignedInt = 8192 // this is a very large number due to some of the test that does 1K registration mods
-    private let cqeMaxCount : UInt32 = 4096 // shouldn't be more than ringEntries, this is the max chunk of CQE we take.
+    private let cqeMaxCount : UInt32 = 8192 // shouldn't be more than ringEntries, this is the max chunk of CQE we take.
         
     var cqes : UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>
     var fdEvents = [Int32: UInt32]() // fd : event_poll_return
@@ -152,33 +167,54 @@ final internal class Uring {
     //   would be in the hundreds rather than thousands.
     
     internal func io_uring_flush() {         // When using SQPOLL this is just a NOP
-        var submissions = 0
+        var waitingSubmissions : UInt32 = 0
+        var submissionCount = 0
         var retval : Int32
         
         _debugPrint("io_uring_flush")
 
-        // FIXME:  it may return -EAGAIN or -ENOMEM when there is not enough memory to do internal allocations.
-        //   See: https://github.com/axboe/liburing/issues/309
-        while (CNIOLinux_io_uring_sq_ready(&ring) > 0)
+        waitingSubmissions = CNIOLinux_io_uring_sq_ready(&ring)
+        
+        loop: while (waitingSubmissions > 0)
         {
             retval = CNIOLinux_io_uring_submit(&ring)
-            submissions += 1
+            submissionCount += 1
 
             // FIXME: We will fail here if the rings ar too small, one of the allocation
             // tests required 1K ring size minimum to run as it was doing registration
             // mask notification repeatedly in a loop...
-            if submissions > 1 {
-                if (retval == -EAGAIN)
-                {
-                    _debugPrint("io_uring_flush io_uring_submit -EAGAIN \(submissions)")
-
-                }
-                if (retval == -ENOMEM)
-                {
-                    _debugPrint("io_uring_flush io_uring_submit -ENOMEM \(submissions)")
-                }
-                _debugPrint("io_uring_flush io_uring_submit needed \(submissions)")
+            switch retval {
+                case -EBUSY: // same as EAGAIN practically
+                    fallthrough
+                // We can get -EAGAIN if the CQE queue is full and we get back pressure from
+                // the kernel to start processing CQE:s. If we break here with unsubmitted
+                // SQE:s, they will stay pending on the user-level side and be flushed
+                // to the kernel after we had the opportunity to reap more CQE:s
+                // In practice it will be at the end of whenReady the next
+                // time around. Given the async nature, this is fine, we will not
+                // lose any submissions. We could possibly still get stuck
+                // trying to get  new SQE if the actual SQE queue is full, but
+                // that would be due to user error in usage IMHO and we should fatalError there.
+                case -EAGAIN:
+                    _debugPrint("io_uring_flush io_uring_submit -EAGAIN waitingSubmissions[\(waitingSubmissions)] submissionCount[\(submissionCount)]. Breaking out and resubmitting later (whenReady() end).")
+                    break loop
+                // FIXME: -ENOMEM when there is not enough memory to do internal allocations on the kernel side.
+                // Right nog we just loop with a sleep trying to buy time, but could also possibly fatalError here.
+                //   See: https://github.com/axboe/liburing/issues/309
+                case -ENOMEM:
+                    usleep(1_000_000) // let's not busy loop to give the kernel some time to recover if possible
+                    _debugPrint("io_uring_flush io_uring_submit -ENOMEM \(submissionCount)")
+                case 0:
+                    _debugPrint("io_uring_flush io_uring_submit submitted 0, so far needed submissionCount[\(submissionCount)] waitingSubmissions[\(waitingSubmissions)] submitted [\(retval)] SQE:s this iteration")
+                    break
+                case 1...:
+                    _debugPrint("io_uring_flush io_uring_submit needed [\(submissionCount)] submission(s), submitted [\(retval)] SQE:s out of [\(waitingSubmissions)] possible")
+                    break
+                default: // other errors
+                    fatalError("Unexpected error [\(retval)] from io_uring_submit ")
             }
+            
+            waitingSubmissions = CNIOLinux_io_uring_sq_ready(&ring)
         }
         _debugPrint("io_uring_flush done")
     }
@@ -226,7 +262,7 @@ final internal class Uring {
         }
     }
 
-    internal func io_uring_poll_update(fd: Int32, newPollmask: UInt32, oldPollmask: UInt32, submitNow: Bool = true) -> () {
+    internal func io_uring_poll_update(fd: Int32, newPollmask: UInt32, oldPollmask: UInt32, submitNow: Bool = true, multishot : Bool = true) -> () {
         let sqe = CNIOLinux_io_uring_get_sqe(&ring)
         let oldBitpattern : Int = CqeEventType.poll.rawValue << 32 + Int(fd)
         let newBitpattern : Int = CqeEventType.poll.rawValue << 32 + Int(fd)
@@ -239,8 +275,9 @@ final internal class Uring {
         // https://git.kernel.dk/cgit/linux-block/commit/?h=poll-multiple&id=33021a19e324fb747c2038416753e63fd7cd9266
         CNIOLinux.io_uring_prep_poll_add(sqe, fd, 0)
         CNIOLinux.io_uring_sqe_set_data(sqe, userBitpatternAsPointer)
-
-        sqe!.pointee.len |= IORING_POLL_ADD_MULTI       // ask for multiple updates
+        if multishot {
+            sqe!.pointee.len |= IORING_POLL_ADD_MULTI       // ask for multiple updates
+        }
         sqe!.pointee.len |= IORING_POLL_UPDATE_EVENTS   // update existing mask
         sqe!.pointee.len |= IORING_POLL_UPDATE_USER_DATA // and update user data
         sqe!.pointee.addr = UInt64(oldBitpattern) // old user_data
@@ -266,6 +303,8 @@ final internal class Uring {
 
     internal func io_uring_peek_batch_cqe(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32) -> Int {
         _debugPrint("io_uring_peek_batch_cqe")
+        let mergeCQE = true
+        var eventCount = 0
         var currentCqeCount = CNIOLinux_io_uring_peek_batch_cqe(&ring, cqes, cqeMaxCount)
         if currentCqeCount == 0 {
             return 0
@@ -288,11 +327,19 @@ final internal class Uring {
                     switch result {
                         case -ECANCELED: // -ECANCELED for streaming polls, should signal error
                             assert(fd >= 0, "fd must be greater than zero")
+                            
                             let pollError = (Uring.POLLHUP | Uring.POLLERR)
-                            if let current = fdEvents[fd] {
-                                fdEvents[fd] = current | pollError
+                            if mergeCQE
+                            {
+                                if let current = fdEvents[fd] {
+                                    fdEvents[fd] = current | pollError
+                                } else {
+                                    fdEvents[fd] = pollError
+                                }
                             } else {
-                                fdEvents[fd] = pollError
+                                events[eventCount].fd = fd
+                                events[eventCount].pollMask = pollError
+                                eventCount += 1
                             }
                             break
                         case -ENOENT:    // -ENOENT returned for failed poll remove
@@ -309,12 +356,18 @@ final internal class Uring {
                         default: // positive success
                             assert(bitPattern > 0, "Bitpattern should never be zero")
                             assert(fd >= 0, "fd must be greater than zero")
-
                             let uresult = UInt32(result)
-                            if let current = fdEvents[fd] {
-                                fdEvents[fd] =  current | uresult
+                            
+                            if mergeCQE {
+                                if let current = fdEvents[fd] {
+                                    fdEvents[fd] =  current | uresult
+                                } else {
+                                    fdEvents[fd] = uresult
+                                }
                             } else {
-                                fdEvents[fd] = uresult
+                                events[eventCount].fd = fd
+                                events[eventCount].pollMask = uresult
+                                eventCount += 1
                             }
                     }
                 case .pollModify?:
@@ -324,9 +377,9 @@ final internal class Uring {
                 default:
                     assertionFailure("Unknown type")
             }
-            if (fdEvents.count == maxevents)
+            if (fdEvents.count == maxevents || eventCount == maxevents)
             {
-                _debugPrint("io_uring_peek_batch_cqe breaking loop early, currentCqeCount [\(currentCqeCount)] maxevents [\(maxevents)]")
+                _debugPrint("io_uring_peek_batch_cqe breaking loop early, currentCqeCount [\(currentCqeCount)] maxevents [\(maxevents)] eventCount [\(eventCount)] mergeCQE [\(mergeCQE)]")
                 currentCqeCount = maxevents // to make sure we only cq_advance the correct amount
                 break
             }
@@ -334,32 +387,35 @@ final internal class Uring {
 
         io_uring_cq_advance(&ring, currentCqeCount) // bulk variant of io_uring_cqe_seen(&ring, dataPointer)
 
-        //  return single event per fd,
-        var count = 0
-        for (fd, result_mask) in fdEvents {
-            assert(count < maxevents)
-            assert(fd >= 0)
+        //  if running with merging, just return single event per fd,
+        if mergeCQE {
+            eventCount = 0
+            for (fd, result_mask) in fdEvents {
+                assert(eventCount < maxevents)
+                assert(fd >= 0)
 
-            events[count].fd = fd
-            events[count].pollMask = result_mask
-            count+=1
+                events[eventCount].fd = fd
+                events[eventCount].pollMask = result_mask
+                eventCount+=1
 
-            let socketClosing = (result_mask & (Uring.POLLRDHUP | Uring.POLLHUP | Uring.POLLERR)) > 0 ? true : false
+                let socketClosing = (result_mask & (Uring.POLLRDHUP | Uring.POLLHUP | Uring.POLLERR)) > 0 ? true : false
 
-            if (socketClosing == true) {
-                _debugPrint("socket is going down [\(fd)] [\(result_mask)] [\((result_mask & (Uring.POLLRDHUP | Uring.POLLHUP | Uring.POLLERR)))]")
+                if (socketClosing == true) {
+                    _debugPrint("socket is going down [\(fd)] [\(result_mask)] [\((result_mask & (Uring.POLLRDHUP | Uring.POLLHUP | Uring.POLLERR)))]")
+                }
             }
-        }
+            if eventCount > 0 {
+                _debugPrint("io_uring_peek_batch_cqe returning [\(eventCount)] events")
+            } else if fdEvents.count > 0 {
+                _debugPrint("fdEvents.count > 0 but 0 event.count returning [\(eventCount)]")
+            }
 
-        if count > 0 {
-            _debugPrint("io_uring_peek_batch_cqe returning [\(count)] events")
-        } else if fdEvents.count > 0 {
-            _debugPrint("fdEvents.count > 0 but 0 event.count returning [\(count)]")
+            fdEvents.removeAll(keepingCapacity: true) // reused for next batch
+        } else {
+            _debugPrint("io_uring_peek_batch_cqe returning [\(eventCount)] events (!mergeCQE)")
         }
-
-        fdEvents.removeAll(keepingCapacity: true) // reused for next batch
-    
-        return count
+        
+        return eventCount
     }
 
     internal func io_uring_wait_cqe(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32) throws -> Int {
