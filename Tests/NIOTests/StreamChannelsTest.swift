@@ -911,7 +911,7 @@ private func assertNoSelectorChanges(fd: CInt, selector: NIO.Selector<NIORegistr
     } else if selector is NIO.UringSelector {
         let sel = selector as! NIO.UringSelector
         let events: UnsafeMutablePointer<UringEvent> = UnsafeMutablePointer.allocate(capacity: 1)
-        events.initialize(to: UringEvent(fd:0, pollMask: 0))
+        events.initialize(to: UringEvent(fd:0, pollMask: 0, sequenceIdentifier:0))
         let numberOfEvents = try sel.ring.io_uring_wait_cqe_timeout(events: events, maxevents: 1, timeout: TimeAmount.seconds(0))
         events.deinitialize(count: 1)
         events.deallocate()

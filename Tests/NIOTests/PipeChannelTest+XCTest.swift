@@ -27,7 +27,7 @@ extension PipeChannelTest {
    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (PipeChannelTest) -> () throws -> Void)] {
       return [
-// FIXME:                ("testBasicIO", testBasicIO),
+                ("testBasicIO", testBasicIO),
                 ("testWriteErrorsCloseChannel", testWriteErrorsCloseChannel),
                 ("testWeDontAcceptRegularFiles", testWeDontAcceptRegularFiles),
                 ("testWeWorkFineWithASingleFileDescriptor", testWeWorkFineWithASingleFileDescriptor),

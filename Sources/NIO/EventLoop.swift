@@ -732,35 +732,64 @@ extension EventLoop {
 /// Whenever a `Selectable` is registered to a `Selector` a `Registration` is created internally that is also provided within the
 /// `SelectorEvent` that is provided to the user when an event is ready to be consumed for a `Selectable`. As we need to have access to the `ServerSocketChannel`
 /// and `SocketChannel` (to dispatch the events) we create our own `Registration` that holds a reference to these.
+/// The `SelectableSequenceIdentifier` is used by the `Selector` to tag registrations with a serial number that can be
+/// used for external registrations (e.g. io_uring) to filter out outdated events when selectors with the same fd is repeatedly registered/deregistered.
 enum NIORegistration: Registration {
-    case serverSocketChannel(ServerSocketChannel, SelectorEventSet)
-    case socketChannel(SocketChannel, SelectorEventSet)
-    case datagramChannel(DatagramChannel, SelectorEventSet)
-    case pipeChannel(PipeChannel, PipeChannel.Direction, SelectorEventSet)
+    case serverSocketChannel(ServerSocketChannel, SelectorEventSet, SelectableSequenceIdentifier = 0)
+    case socketChannel(SocketChannel, SelectorEventSet, SelectableSequenceIdentifier = 0)
+    case datagramChannel(DatagramChannel, SelectorEventSet, SelectableSequenceIdentifier = 0)
+    case pipeChannel(PipeChannel, PipeChannel.Direction, SelectorEventSet, SelectableSequenceIdentifier = 0)
 
     /// The `SelectorEventSet` in which this `NIORegistration` is interested in.
     var interested: SelectorEventSet {
         set {
             switch self {
-            case .serverSocketChannel(let c, _):
-                self = .serverSocketChannel(c, newValue)
-            case .socketChannel(let c, _):
-                self = .socketChannel(c, newValue)
-            case .datagramChannel(let c, _):
-                self = .datagramChannel(c, newValue)
-            case .pipeChannel(let c, let d, _):
-                self = .pipeChannel(c, d, newValue)
+            case .serverSocketChannel(let c, _, let s):
+                self = .serverSocketChannel(c, newValue, s)
+            case .socketChannel(let c, _, let s):
+                self = .socketChannel(c, newValue, s)
+            case .datagramChannel(let c, _, let s):
+                self = .datagramChannel(c, newValue, s)
+            case .pipeChannel(let c, let d, _, let s):
+                self = .pipeChannel(c, d, newValue, s)
             }
         }
         get {
             switch self {
-            case .serverSocketChannel(_, let i):
+            case .serverSocketChannel(_, let i, _):
                 return i
-            case .socketChannel(_, let i):
+            case .socketChannel(_, let i, _):
                 return i
-            case .datagramChannel(_, let i):
+            case .datagramChannel(_, let i, _):
                 return i
-            case .pipeChannel(_, _, let i):
+            case .pipeChannel(_, _, let i, _):
+                return i
+            }
+        }
+    }
+    /// The `SelectableSequenceIdentifier` for  this `NIORegistration` used by the `Selector`
+    var selectableSequenceIdentifier: SelectableSequenceIdentifier {
+        set {
+            switch self {
+            case .serverSocketChannel(let c, let e, _):
+                self = .serverSocketChannel(c, e, newValue)
+            case .socketChannel(let c, let e, _):
+                self = .socketChannel(c, e, newValue)
+            case .datagramChannel(let c, let e, _):
+                self = .datagramChannel(c, e, newValue)
+            case .pipeChannel(let c, let d, let e, _):
+                self = .pipeChannel(c, d, e, newValue)
+            }
+        }
+        get {
+            switch self {
+            case .serverSocketChannel(_, _, let i):
+                return i
+            case .socketChannel(_, _, let i):
+                return i
+            case .datagramChannel(_, _, let i):
+                return i
+            case .pipeChannel(_, _, _, let i):
                 return i
             }
         }

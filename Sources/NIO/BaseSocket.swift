@@ -58,9 +58,16 @@ import CNIOWindows
 #endif
 
 /// A Registration on a `Selector`, which is interested in an `SelectorEventSet`.
+/// `selectableSequenceIdentifier` is used by some event notification backends (io_uring)
+/// to markup outbound events to allow for filtering of asynchronously received return values to not
+/// be delivered to a new Selectable instance that receives the same handle (fd). Ok if it wraps.
+/// Needed for i.e. testWeDoNotDeliverEventsForPreviouslyClosedChannels to succeed.
+typealias SelectableSequenceIdentifier = UInt32
 protocol Registration {
     /// The `SelectorEventSet` in which the `Registration` is interested.
     var interested: SelectorEventSet { get set }
+    /// The `SelectorEventSet` in which the `Registration` is interested.
+    var selectableSequenceIdentifier: SelectableSequenceIdentifier { get set }
 }
 
 protocol SockAddrProtocol {
