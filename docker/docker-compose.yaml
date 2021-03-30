@@ -28,7 +28,7 @@ services:
 
   unit-tests:
     <<: *common
-    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors"
+    command: /bin/bash -xcl "swift $${SWIFT_TEST_VERB-test} -Xswiftc -warnings-as-errors"
 
   integration-tests:
     <<: *common
@@ -36,7 +36,7 @@ services:
 
   test:
     <<: *common
-    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && ./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-}"
+    command: /bin/bash -xcl "swift $${SWIFT_TEST_VERB-test} -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && ./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-}"
 
   performance-test:
     <<: *common
