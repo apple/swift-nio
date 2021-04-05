@@ -325,6 +325,7 @@ sudo apt-get install heaptrack
 Then using the instructions previously, you need to build without hooks, e.g.:
 
 ```
+cd IntegrationTests/tests_04_performance/test_01_resources/
 ./run-nio-alloc-counter-tests.sh -- -n test_1000_autoReadGetAndSet.swift 
 ```
 
