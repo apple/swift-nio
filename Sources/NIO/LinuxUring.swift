@@ -83,8 +83,8 @@ final internal class Uring {
 
     private var ring = io_uring()
     // FIXME: These should be tunable somewhere, somehow. Maybe environment vars are ok, need to discuss with SwiftNIO team.
-    private let ringEntries: CUnsignedInt = 2048 // this is fairly large number due to some of the test that does 1K registration mods
-    private let cqeMaxCount : UInt32 = 2048 // shouldn't be more than ringEntries, this is the max chunk of CQE we take.
+    private let ringEntries: CUnsignedInt = 4096 // this is fairly large number due to some of the test that does 1K registration mods
+    private let cqeMaxCount : UInt32 = 4096 // shouldn't be more than ringEntries, this is the max chunk of CQE we take.
         
     var cqes : UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>
     let mergeCQE = true // merge all events for same fd, sequence_identifier
