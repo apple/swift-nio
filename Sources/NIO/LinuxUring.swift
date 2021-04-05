@@ -97,7 +97,7 @@ final internal class Uring {
 
     internal static let _debugPrintEnabled: Bool = {
         getEnvironmentVar("NIO_LINUX") != nil
-    }()    
+    }()
 
     internal static let _debugPrintEnabledCQE: Bool = {
         getEnvironmentVar("NIO_DUMPCQE") != nil
@@ -145,7 +145,7 @@ final internal class Uring {
     static let _sqpollEnabled: Bool = {
         getEnvironmentVar("IORING_SETUP_SQPOLL") != nil // set this env. var to enable SQPOLL
     }()
-    
+
     internal func io_uring_queue_init() throws -> () {
         // IORING_SETUP_SQPOLL will be fundamentally useful in 5.13, as we no longer need elevated privileges as previously
         // and CNIOLinux_io_uring_queue_init will setup a shared uring instance which allows us to use a single
@@ -354,7 +354,7 @@ final internal class Uring {
                         assert(bitPattern > 0, "Bitpattern should never be zero")
                         assert(fd >= 0, "fd must be greater than zero")
                         let uresult = UInt32(result)
-                        
+
                         if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
                             fdEvents[fdEventKey(fd, sequenceNumber)] =  current | uresult
                         } else {
@@ -367,7 +367,7 @@ final internal class Uring {
                         break
                     case -ECANCELED: // -ECANCELED for streaming polls, should signal error
                         assert(fd >= 0, "fd must be greater than zero")
-                        
+
                         let pollError = Uring.POLLERR // Uring.POLLERR // (Uring.POLLHUP | Uring.POLLERR)
                         if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
                             fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
@@ -397,7 +397,7 @@ final internal class Uring {
                 assertionFailure("Unknown type")
         }
     }
- 
+
     internal func io_uring_peek_batch_cqe(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32) -> Int {
         var eventCount = 0
         var currentCqeCount = CNIOLinux_io_uring_peek_batch_cqe(&ring, cqes, cqeMaxCount)
