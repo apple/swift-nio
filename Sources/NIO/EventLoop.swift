@@ -735,10 +735,10 @@ extension EventLoop {
 /// The `SelectableSequenceIdentifier` is used by the `Selector` to tag registrations with a serial number that can be
 /// used for external registrations (e.g. io_uring) to filter out outdated events when selectors with the same fd is repeatedly registered/deregistered.
 enum NIORegistration: Registration {
-    case serverSocketChannel(ServerSocketChannel, SelectorEventSet, SelectableSequenceIdentifier = 0)
-    case socketChannel(SocketChannel, SelectorEventSet, SelectableSequenceIdentifier = 0)
-    case datagramChannel(DatagramChannel, SelectorEventSet, SelectableSequenceIdentifier = 0)
-    case pipeChannel(PipeChannel, PipeChannel.Direction, SelectorEventSet, SelectableSequenceIdentifier = 0)
+    case serverSocketChannel(ServerSocketChannel, SelectorEventSet, SelectableSequenceIdentifier)
+    case socketChannel(SocketChannel, SelectorEventSet, SelectableSequenceIdentifier)
+    case datagramChannel(DatagramChannel, SelectorEventSet, SelectableSequenceIdentifier)
+    case pipeChannel(PipeChannel, PipeChannel.Direction, SelectorEventSet, SelectableSequenceIdentifier)
 
     /// The `SelectorEventSet` in which this `NIORegistration` is interested in.
     var interested: SelectorEventSet {

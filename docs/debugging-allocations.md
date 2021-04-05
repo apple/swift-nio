@@ -336,14 +336,14 @@ cd /tmp/.nio_alloc_counter_tests_5jMMhk
 ```
 
 Finally, run the binary with heaptrack, first for 'main', then for your feature branch version, it will look 
-similar to this (this example uses SWIFTNIO_DISABLE_URING instead of running on main, but the idea
+similar to this (this example uses SWIFTNIO_URING_DISABLED instead of running on main, but the idea
 is the same, first run a version that is the baseline, then a second one that you want to troubleshoot):
 
 ```
-ubuntu@ip-172-31-25-161 /t/.nio_alloc_counter_tests_GRusAy> SWIFTNIO_DISABLE_URING=1 heaptrack .build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
+ubuntu@ip-172-31-25-161 /t/.nio_alloc_counter_tests_GRusAy> SWIFTNIO_URING_DISABLED=1 heaptrack .build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
 heaptrack output will be written to "/tmp/.nio_alloc_counter_tests_GRusAy/heaptrack.test_1000_autoReadGetAndSet.84341.gz"
 starting application, this might take some time...
-SWIFTNIO_DISABLE_URING set, disabling liburing.
+SWIFTNIO_URING_DISABLED set, disabling liburing.
 test_1000_autoReadGetAndSet.total_allocations: 0
 test_1000_autoReadGetAndSet.total_allocated_bytes: 0
 test_1000_autoReadGetAndSet.remaining_allocations: 0

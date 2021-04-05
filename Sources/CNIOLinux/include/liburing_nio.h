@@ -87,6 +87,12 @@ int CNIOLinux___io_uring_get_cqe(struct io_uring *ring,
 // don't want to pull in directly.
 int CNIOLinux_io_uring_wait_cqe(struct io_uring *ring, struct io_uring_cqe **cqe_ptr);
 unsigned CNIOLinux_io_uring_sq_ready(const struct io_uring *ring);
+int CNIOLinux_io_uring_opcode_supported(const struct io_uring_probe *p, int op);
+
+// Extra interfaces
+unsigned int CNIOLinux_io_uring_ring_size(); // return ring size to use
+unsigned int CNIOLinux_io_uring_use_multishot_poll(); // true if we should use multishot poll/updates
+void CNIOLinux_io_uring_set_link_flag(struct io_uring_sqe *sqe); // set IOSQE_IO_LINK
 
 #endif /* __linux__ */
 

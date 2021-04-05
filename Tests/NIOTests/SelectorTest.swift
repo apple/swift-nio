@@ -30,7 +30,7 @@ class SelectorTest: XCTestCase {
         struct TestRegistration: Registration {
             var interested: SelectorEventSet
             let socket: Socket
-            var selectableSequenceIdentifier: SelectableSequenceIdentifier = 0
+            var selectableSequenceIdentifier: SelectableSequenceIdentifier
         }
 
         let selector : NIO.Selector<TestRegistration> = try MultiThreadedEventLoopGroup.defaultSelectorFactory()
@@ -74,11 +74,11 @@ class SelectorTest: XCTestCase {
 
         // Register both sockets with .write. This will ensure both are ready when calling selector.whenReady.
         try selector.register(selectable: socket1 , interested: [.reset, .write], makeRegistration: { ev in
-            TestRegistration(interested: ev, socket: socket1)
+            TestRegistration(interested: ev, socket: socket1, selectableSequenceIdentifier:0)
         })
 
         try selector.register(selectable: socket2 , interested: [.reset, .write], makeRegistration: { ev in
-            TestRegistration(interested: ev, socket: socket2)
+            TestRegistration(interested: ev, socket: socket2, selectableSequenceIdentifier:0)
         })
 
         var readyCount = 0

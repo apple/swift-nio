@@ -89,7 +89,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     }
 
     func registrationFor(interested: SelectorEventSet) -> NIORegistration {
-        return .socketChannel(self, interested)
+        return .socketChannel(self, interested, 0)
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
@@ -163,7 +163,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     func registrationFor(interested: SelectorEventSet) -> NIORegistration {
-        return .serverSocketChannel(self, interested)
+        return .serverSocketChannel(self, interested, 0)
     }
 
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
@@ -480,7 +480,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     func registrationFor(interested: SelectorEventSet) -> NIORegistration {
-        return .datagramChannel(self, interested)
+        return .datagramChannel(self, interested, 0)
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {

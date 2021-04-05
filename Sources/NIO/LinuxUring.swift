@@ -80,11 +80,12 @@ final internal class Uring {
     internal static let POLLERR: CUnsignedInt = numericCast(CNIOLinux.POLLERR)
     internal static let POLLRDHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLRDHUP.rawValue) // FIXME: - POLLRDHUP not in ubuntu headers?!
     internal static let POLLHUP: CUnsignedInt = numericCast(CNIOLinux.POLLHUP)
+    internal static let POLLCANCEL: CUnsignedInt = 0xF0000000 // Poll cancelled, need to reregister for singleshot polls
 
     private var ring = io_uring()
     // FIXME: These should be tunable somewhere, somehow. Maybe environment vars are ok, need to discuss with SwiftNIO team.
-    private let ringEntries: CUnsignedInt = 4096 // this is fairly large number due to some of the test that does 1K registration mods
-    private let cqeMaxCount : UInt32 = 4096 // shouldn't be more than ringEntries, this is the max chunk of CQE we take.
+    private let ringEntries: CUnsignedInt = CNIOLinux_io_uring_ring_size()
+    private let cqeMaxCount : UInt32 = 4096 // this is the max chunk of CQE we take.
         
     var cqes : UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>
     let mergeCQE = true // merge all events for same fd, sequence_identifier
@@ -143,7 +144,7 @@ final internal class Uring {
     }
 
     static let _sqpollEnabled: Bool = {
-        getEnvironmentVar("IORING_SETUP_SQPOLL") != nil // set this env. var to enable SQPOLL
+        getEnvironmentVar("SWIFTNIO_IORING_SETUP_SQPOLL") != nil // set this env. var to enable SQPOLL
     }()
 
     internal func io_uring_queue_init() throws -> () {
@@ -164,6 +165,10 @@ final internal class Uring {
         CNIOLinux_io_uring_queue_exit(&ring)
     }
 
+    static internal func io_uring_use_multishot_poll() -> Bool {
+        return CNIOLinux_io_uring_use_multishot_poll() == 0 ? false : true
+    }
+    
     //   Ok, this was a real bummer - turns out that flushing multiple SQE:s
     //   can fail midflight and this will actually happen for real when e.g. a socket
     //   has gone down and we are re-registering polls this means we will silently lose any
@@ -261,7 +266,7 @@ final internal class Uring {
         }
     }
     
-    internal func io_uring_prep_poll_remove(fd: Int32, pollMask: UInt32, sequenceIdentifier: UInt32, submitNow: Bool = true) -> () {
+    internal func io_uring_prep_poll_remove(fd: Int32, pollMask: UInt32, sequenceIdentifier: UInt32, submitNow: Bool = true, link: Bool = false) -> () {
         let sqe = CNIOLinux_io_uring_get_sqe(&ring)
         let upperQuad : Int = Int(CqeEventType.poll.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
         let bitPattern : Int = upperQuad << 32 + Int(fd)
@@ -275,6 +280,10 @@ final internal class Uring {
         CNIOLinux.io_uring_prep_poll_remove(sqe, bitpatternAsPointer)
         CNIOLinux.io_uring_sqe_set_data(sqe, userBitpatternAsPointer) // must be done after prep_poll_add, otherwise zeroed out.
 
+        if link {
+            CNIOLinux_io_uring_set_link_flag(sqe)
+        }
+        
         if submitNow {
             io_uring_flush()
         }
@@ -317,7 +326,7 @@ final internal class Uring {
     }
 
     // Merge results into fdEvents on fd, sequenceIdentifier for the given CQE
-    internal func _process_cqe(events: UnsafeMutablePointer<UringEvent>, cqeIndex: Int) {
+    internal func _process_cqe(events: UnsafeMutablePointer<UringEvent>, cqeIndex: Int, multishot: Bool) {
         let bitPattern : UInt = UInt(bitPattern:io_uring_cqe_get_data(cqes[cqeIndex]))
         let fd = Int32(bitPattern & 0x00000000FFFFFFFF)
         let sequenceNumber : UInt32 = UInt32((Int(bitPattern) >> 32) & 0x00FFFFFF)
@@ -330,13 +339,22 @@ final internal class Uring {
             case .poll?:
                 switch result {
                     case -ECANCELED: // -ECANCELED for streaming polls, should signal error
-                        assert(fd >= 0, "fd must be greater than zero")
+                        if multishot {
+                            assert(fd >= 0, "fd must be greater than zero")
 
-                        let pollError = Uring.POLLERR | Uring.POLLHUP
-                        if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
-                            fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
+                            let pollError = Uring.POLLERR | Uring.POLLHUP
+                            if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
+                                fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
+                            } else {
+                                fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
+                            }
                         } else {
-                            fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
+                            let pollError = Uring.POLLCANCEL
+                            if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
+                                fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
+                            } else {
+                                fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
+                            }
                         }
                         break
                     case -EINVAL:
@@ -398,7 +416,7 @@ final internal class Uring {
         }
     }
 
-    internal func io_uring_peek_batch_cqe(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32) -> Int {
+    internal func io_uring_peek_batch_cqe(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32, multishot : Bool = true) -> Int {
         var eventCount = 0
         var currentCqeCount = CNIOLinux_io_uring_peek_batch_cqe(&ring, cqes, cqeMaxCount)
 
@@ -416,7 +434,7 @@ final internal class Uring {
 
         for cqeIndex in 0 ..< currentCqeCount
         {
-            _process_cqe(events: events, cqeIndex: Int(cqeIndex))
+            _process_cqe(events: events, cqeIndex: Int(cqeIndex), multishot:multishot)
 
             if (fdEvents.count == maxevents) // ensure we don't generate more events than maxevents
             {
@@ -447,7 +465,7 @@ final internal class Uring {
         return eventCount
     }
 
-    internal func _io_uring_wait_cqe_shared(events: UnsafeMutablePointer<UringEvent>, error: Int32) throws -> Int {
+    internal func _io_uring_wait_cqe_shared(events: UnsafeMutablePointer<UringEvent>, error: Int32, multishot : Bool) throws -> Int {
         var eventCount = 0
 
         switch error {
@@ -467,7 +485,7 @@ final internal class Uring {
 
         dumpCqes("_io_uring_wait_cqe_shared")
 
-        _process_cqe(events: events, cqeIndex: 0)
+        _process_cqe(events: events, cqeIndex: 0, multishot:multishot)
 
         CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
 
@@ -485,22 +503,22 @@ final internal class Uring {
         return eventCount
     }
 
-    internal func io_uring_wait_cqe(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32) throws -> Int {
+    internal func io_uring_wait_cqe(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32, multishot : Bool = true) throws -> Int {
         _debugPrint("io_uring_wait_cqe")
 
         let error = CNIOLinux_io_uring_wait_cqe(&ring, cqes)
         
-        return try _io_uring_wait_cqe_shared(events: events, error: error)
+        return try _io_uring_wait_cqe_shared(events: events, error: error, multishot:multishot)
     }
 
-    internal func io_uring_wait_cqe_timeout(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32, timeout: TimeAmount) throws -> Int {
+    internal func io_uring_wait_cqe_timeout(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32, timeout: TimeAmount, multishot : Bool = true) throws -> Int {
         var ts = timeout.kernelTimespec()
 
         _debugPrint("io_uring_wait_cqe_timeout.ETIME milliseconds \(ts)")
 
         let error = CNIOLinux_io_uring_wait_cqe_timeout(&ring, cqes, &ts)
 
-        return try _io_uring_wait_cqe_shared(events: events, error: error)
+        return try _io_uring_wait_cqe_shared(events: events, error: error, multishot:multishot)
     }
 }
 
