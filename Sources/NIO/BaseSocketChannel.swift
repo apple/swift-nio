@@ -192,13 +192,6 @@ private struct SocketChannelLifecycleManager {
     }
 }
 
-public func _debugPrint(_ s : @autoclosure () -> String)
-{
-    if getEnvironmentVar("NIO_BSC") != nil {
-        print("B [\(NIOThread.current)] " + s())
-    }
-}
-
 /// The base class for all socket-based channels in NIO.
 ///
 /// There are many types of specialised socket-based channel in NIO. Each of these
@@ -1002,7 +995,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                     assert(!self.lifecycleManager.isPreRegistered)
                     break loop
                 case .normal(.none):
-                    // FIXME: We fail on this condition with uring on some tests, needs discussion
                     preconditionFailure("got .readEOF and read returned not reading any bytes, nor EOF.")
                 case .normal(.some):
                     // normal, note that there is no guarantee we're still active (as the user might have closed in callout)
@@ -1066,7 +1058,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         let readResult: ReadResult
         do {
             readResult = try self.readFromSocket()
-//            _debugPrint("readable0 self.readFromSocket() readResult[\(readResult)]")
         } catch let err {
             let readStreamState: ReadStreamState
             // ChannelError.eof is not something we want to fire through the pipeline as it just means the remote
@@ -1104,6 +1095,9 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
             return readStreamState
         }
+ // FIXME: We hit this assert with uring when we get 'an extra' POLLIN
+ // likely due to kernel prodding - this leads to the readSocket path that
+        // would block, which makes it return .none
 //        assert(readResult == .some)
 // FIXME: We hit this assert with uring as we can receive multiple
         // socket accept readiness notifications, if we then fail to

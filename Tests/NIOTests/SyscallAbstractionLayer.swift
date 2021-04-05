@@ -555,7 +555,7 @@ extension SALTest {
             try self.assertLocalAddress(address: localAddress)
             try self.assertRemoteAddress(address: remoteAddress)
             try self.assertRegister { selectable, eventSet, registration in
-                if case .socketChannel(let channel, let registrationEventSet) = registration {
+                if case .socketChannel(let channel, let registrationEventSet, _) = registration {
                     XCTAssertEqual(localAddress, channel.localAddress)
                     XCTAssertEqual(remoteAddress, channel.remoteAddress)
                     XCTAssertEqual(eventSet, registrationEventSet)

@@ -95,7 +95,6 @@
                 flags = 0
             }
             let result = try Linux.accept4(descriptor: fd, addr: nil, len: nil, flags: flags)
-            // this failed with uring due to multiple poll notifications
             #else
             let result = try NIOBSDSocket.accept(socket: fd, address: nil, address_len: nil)
             #endif

@@ -353,3 +353,9 @@ dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 [repo-nio-ssl]: https://github.com/apple/swift-nio-ssl
 [repo-nio-transport-services]: https://github.com/apple/swift-nio-transport-services
 [repo-nio-ssh]: https://github.com/apple/swift-nio-ssh
+
+### Speeding up testing
+It's possible to run the test suite in parallel, it can save significant time if you have a larger multi-core machine, just add ```--parallel``` when running the tests.
+
+```swift test --parallel
+```

@@ -39,6 +39,10 @@ void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug2(void) {}
 #include <errno.h>
 #include <ctype.h>
 #include <sys/utsname.h>
+#include <pthread.h>
+#include <string.h>
+
+pthread_once_t uring_once_control = PTHREAD_ONCE_INIT;
 
 // local typedefs for readability of function pointers
 // these should exactly match the signatures in liburing.h
@@ -233,6 +237,39 @@ int CNIOLinux_io_uring_load()
 
 // And the wrappers, should never be called unless we've done CNIOLinux_io_uring_load once first.
 
+pthread_mutex_t global_ring_mutex = PTHREAD_MUTEX_INITIALIZER;
+static struct io_uring global_ring; // shared small ring to be able to reuse SQPOLL kernel thread
+
+// FIXME: We need to look at cpu affinity and preferably bind the SQPOLL thread to a specific core
+// and support cgroup / cpu sets on Linux to isolate it - then we should set IORING_SETUP_SQ_AFF here.
+
+int CNIOLinux_io_uring_queue_init(unsigned entries, struct io_uring *ring,
+    unsigned flags)
+{
+    if (flags & IORING_SETUP_SQPOLL)
+    {
+        pthread_mutex_lock(&global_ring_mutex);
+        if (!global_ring.ring_fd)
+        {
+            // setup a small global ring whose fd we can reference to use shared kernel sqpoll thread for all rings
+            // we don't particulariy care if we fail, then no SQPOLL shared ring
+            (void) liburing_functions.io_uring_queue_init(4, &global_ring, IORING_SETUP_SQPOLL); // should have IORING_SETUP_SQ_AFF
+        }
+        pthread_mutex_unlock(&global_ring_mutex);
+
+        if (global_ring.ring_fd) // use shared kernel thread if it exists, otherwise fallthrough to normal setup
+        {
+            struct io_uring_params params;
+            memset(&params, 0, sizeof(params));
+            params.flags = flags | IORING_SETUP_ATTACH_WQ;
+            params.wq_fd = global_ring.ring_fd;
+            return CNIOLinux_io_uring_queue_init_params(entries, ring, &params);
+        }
+    }
+
+    return liburing_functions.io_uring_queue_init( entries, ring, flags);
+}
+
 struct io_uring_probe *CNIOLinux_io_uring_get_probe_ring(struct io_uring *ring)
 {
     return liburing_functions.io_uring_get_probe_ring(ring);
@@ -248,16 +285,11 @@ void CNIOLinux_io_uring_free_probe(struct io_uring_probe *probe)
     return liburing_functions.io_uring_free_probe(probe);
 }
 
+
 int CNIOLinux_io_uring_queue_init_params(unsigned entries, struct io_uring *ring,
     struct io_uring_params *p)
 {
     return liburing_functions.io_uring_queue_init_params(entries, ring, p);
-}
-
-int CNIOLinux_io_uring_queue_init(unsigned entries, struct io_uring *ring,
-    unsigned flags)
-{
-    return liburing_functions.io_uring_queue_init( entries, ring, flags);
 }
 
 int CNIOLinux_io_uring_queue_mmap(int fd, struct io_uring_params *p,

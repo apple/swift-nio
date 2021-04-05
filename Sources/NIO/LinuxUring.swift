@@ -31,7 +31,6 @@ internal enum UringError: Error {
     case loadFailure
     case uringSetupFailure
     case uringWaitCqeFailure
-    case uringWaitCqeTimeoutFailure
 }
 
 internal extension TimeAmount {
@@ -46,7 +45,9 @@ internal extension TimeAmount {
 internal struct UringEvent {
     var fd : Int32
     var pollMask : UInt32
+    var sequenceIdentifier : UInt32
 }
+
 // FIXME: Current significant malloc regressions vs epoll:
 // These seem to all be due to debugg logging (I updated debugging-allocations.md)
 // Should verify again, but should be ok after debug logs are eliminated. 
@@ -63,6 +64,16 @@ internal struct UringEvent {
 // info: udp_1000_reqs_1_conn: total number of mallocs: 46285
 // info: udp_1_reqs_1000_conn: total number of mallocs: 338095
 
+struct fdEventKey: Hashable {
+    var fileDescriptor : Int32
+    var sequenceIdentifier : UInt32
+
+    init(_ f: Int32, _ s : UInt32) {
+        self.fileDescriptor = f
+        self.sequenceIdentifier = s
+    }
+}
+
 final internal class Uring {
     internal static let POLLIN: CUnsignedInt = numericCast(CNIOLinux.POLLIN)
     internal static let POLLOUT: CUnsignedInt = numericCast(CNIOLinux.POLLOUT)
@@ -72,40 +83,49 @@ final internal class Uring {
 
     private var ring = io_uring()
     // FIXME: These should be tunable somewhere, somehow. Maybe environment vars are ok, need to discuss with SwiftNIO team.
-    private let ringEntries: CUnsignedInt = 8192 // this is a very large number due to some of the test that does 1K registration mods
-    private let cqeMaxCount : UInt32 = 8192 // shouldn't be more than ringEntries, this is the max chunk of CQE we take.
+    private let ringEntries: CUnsignedInt = 2048 // this is fairly large number due to some of the test that does 1K registration mods
+    private let cqeMaxCount : UInt32 = 2048 // shouldn't be more than ringEntries, this is the max chunk of CQE we take.
         
     var cqes : UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>
-    var fdEvents = [Int32: UInt32]() // fd : event_poll_return
+    let mergeCQE = true // merge all events for same fd, sequence_identifier
+    var fdEvents = [fdEventKey : UInt32]() // fd, sequence_identifier : event_poll_return
     var emptyCqe = io_uring_cqe()
 
     internal static let initializedUring: Bool = {
         CNIOLinux.CNIOLinux_io_uring_load() == 0
     }()
 
+    internal static let _debugPrintEnabled: Bool = {
+        getEnvironmentVar("NIO_LINUX") != nil
+    }()
+
+    internal static let _debugPrintEnabledCQE: Bool = {
+        getEnvironmentVar("NIO_DUMPCQE") != nil
+    }()
+
     func dumpCqes(_ header:String, count: Int = 1)
     {
-        if count < 0 {
-            return
+        func _debugPrintCQE(_ s : String) {
+            print("Q [\(NIOThread.current)] " + s)
         }
         
-        if getEnvironmentVar("NIO_DUMPCQE") == nil {
+        if count < 0 || Uring._debugPrintEnabledCQE == false {
             return
         }
 
-        _debugPrint(header + " CQE:s [\(cqes)] - ring flags are [\(ring.flags)]")
+        _debugPrintCQE(header + " CQE:s [\(cqes)] - ring flags are [\(ring.flags)]")
         for i in 0..<count {
             let c = cqes[i]!.pointee
 
             let dp = io_uring_cqe_get_data(cqes[i])
             let bitPattern : UInt = UInt(bitPattern:dp)
-
-            let fd = Int(bitPattern & 0x00000000FFFFFFFF)
-            let eventType = Int(bitPattern >> 32) // shift out the fd
+            let fd = Int32(bitPattern & 0x00000000FFFFFFFF)
+            let sequenceNumber : UInt32 = UInt32((Int(bitPattern) >> 32) & 0x00FFFFFF)
+            let eventType = CqeEventType(rawValue:((Int(bitPattern) >> 32) & 0xFF000000) >> 24) // shift out the fd
 
             let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: bitPattern)
 
-            _debugPrint("\(i) = fd[\(fd)] eventType[\(String(describing:CqeEventType(rawValue:eventType)))] res [\(c.res)] flags [\(c.flags)]  bitpattern[\(String(describing:bitpatternAsPointer))]")
+            _debugPrintCQE("\(i) = fd[\(fd)] eventType[\(String(describing:eventType))] sequenceNumber[\(sequenceNumber)] res [\(c.res)] flags [\(c.flags)]  bitpattern[\(String(describing:bitpatternAsPointer))]")
         }
     }
 
@@ -122,19 +142,16 @@ final internal class Uring {
        return ring.ring_fd
     }
 
+    static let _sqpollEnabled: Bool = {
+        getEnvironmentVar("IORING_SETUP_SQPOLL") != nil // set this env. var to enable SQPOLL
+    }()
+
     internal func io_uring_queue_init() throws -> () {
-        // FIXME: IORING_SETUP_SQPOLL is currently basically useless in default configuraiton as it starts one kernel
-        // poller thread per ring. It is possible to regulate this by sharing a kernel thread for the polling
-        // with IORING_SETUP_ATTACH_WQ, but it requires the first ring to be setup with polling and then the
-        // fd shared with later rings. Not very convenient or easy to use really.
-        // A New setup option is in the works IORING_SETUP_SQPOLL_PERCPU which together with IORING_SETUP_SQ_AFF
-        // will be possible to use to bind the kernel poller thread to a given cpu (and share one amongst all rings)
-        // - not yet in the kernel and work in progress, but should be a better fit and worth trying.
-        // Alternatively we could look at limiting number of threads created to numcpu / 2 or so
-        // instead of starting one thread per core in the multithreaded event loop
-        // or allowing customization of whether to use SQPOLL somewhere higher up.
-        // Also, current IORING_SETUP_SQPOLL requires correct privileges to run (root or specific privs set)
-        if (CNIOLinux.CNIOLinux_io_uring_queue_init(ringEntries, &ring, 0 ) != 0) // IORING_SETUP_SQPOLL
+        // IORING_SETUP_SQPOLL will be fundamentally useful in 5.13, as we no longer need elevated privileges as previously
+        // and CNIOLinux_io_uring_queue_init will setup a shared uring instance which allows us to use a single
+        // kernel sqpoll thread that is shared amongst all loops. NB, each process will have it's own polling thread
+        // if SQPOLL is enabled, so for hosts running multiple processes using it, some care should be taken to not overload.
+        if (CNIOLinux.CNIOLinux_io_uring_queue_init(ringEntries, &ring, Uring._sqpollEnabled ? IORING_SETUP_SQPOLL : 0 ) != 0)
          {
              throw UringError.uringSetupFailure
          }
@@ -171,8 +188,6 @@ final internal class Uring {
         var submissionCount = 0
         var retval : Int32
         
-        _debugPrint("io_uring_flush")
-
         waitingSubmissions = CNIOLinux_io_uring_sq_ready(&ring)
         
         loop: while (waitingSubmissions > 0)
@@ -216,15 +231,16 @@ final internal class Uring {
             
             waitingSubmissions = CNIOLinux_io_uring_sq_ready(&ring)
         }
-        _debugPrint("io_uring_flush done")
     }
 
-    internal func io_uring_prep_poll_add(fd: Int32, pollMask: UInt32, submitNow: Bool = true, multishot: Bool = true) -> () {
+    // we stuff event type into the upper byte, the next 3 bytes gives us the sequence number (16M before wrap) and final 4 bytes are fd.
+    internal func io_uring_prep_poll_add(fd: Int32, pollMask: UInt32, sequenceIdentifier: UInt32, submitNow: Bool = true, multishot: Bool = true) -> () {
         let sqe = CNIOLinux_io_uring_get_sqe(&ring)
-        let bitPattern : Int = CqeEventType.poll.rawValue << 32 + Int(fd)
+        let upperQuad : Int = Int(CqeEventType.poll.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
+        let bitPattern : Int = upperQuad << 32 + Int(fd)
         let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: bitPattern)
 
-        _debugPrint("io_uring_prep_poll_add fd[\(fd)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] submitNow[\(submitNow)] multishot[\(multishot)]")
+        _debugPrint("io_uring_prep_poll_add fd[\(fd)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] submitNow[\(submitNow)] multishot[\(multishot)] upperQuad [\(upperQuad)]")
 
         CNIOLinux.io_uring_prep_poll_add(sqe, fd, pollMask)
         CNIOLinux.io_uring_sqe_set_data(sqe, bitpatternAsPointer) // must be done after prep_poll_add, otherwise zeroed out.
@@ -245,14 +261,16 @@ final internal class Uring {
         }
     }
     
-    internal func io_uring_prep_poll_remove(fd: Int32, pollMask: UInt32, submitNow: Bool = true) -> () {
+    internal func io_uring_prep_poll_remove(fd: Int32, pollMask: UInt32, sequenceIdentifier: UInt32, submitNow: Bool = true) -> () {
         let sqe = CNIOLinux_io_uring_get_sqe(&ring)
-        let bitPattern : Int = CqeEventType.poll.rawValue << 32 + Int(fd) // must be same as the poll for liburing to match
-        let userbitPattern : Int = CqeEventType.pollDelete.rawValue << 32 + Int(fd)
+        let upperQuad : Int = Int(CqeEventType.poll.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
+        let bitPattern : Int = upperQuad << 32 + Int(fd)
+        let upperQuadDelete : Int = Int(CqeEventType.pollDelete.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
+        let userbitPattern : Int = upperQuadDelete << 32 + Int(fd)
         let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: bitPattern)
         let userBitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: userbitPattern)
 
-        _debugPrint("io_uring_prep_poll_remove fd[\(fd)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))] submitNow[\(submitNow)]")
+        _debugPrint("io_uring_prep_poll_remove fd[\(fd)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))] submitNow[\(submitNow)] upperQuad[\(upperQuad)] upperQuadDelete[\(upperQuadDelete)]")
 
         CNIOLinux.io_uring_prep_poll_remove(sqe, bitpatternAsPointer)
         CNIOLinux.io_uring_sqe_set_data(sqe, userBitpatternAsPointer) // must be done after prep_poll_add, otherwise zeroed out.
@@ -262,14 +280,16 @@ final internal class Uring {
         }
     }
 
-    internal func io_uring_poll_update(fd: Int32, newPollmask: UInt32, oldPollmask: UInt32, submitNow: Bool = true, multishot : Bool = true) -> () {
+    internal func io_uring_poll_update(fd: Int32, newPollmask: UInt32, oldPollmask: UInt32, sequenceIdentifier: UInt32, submitNow: Bool = true, multishot : Bool = true) -> () {
         let sqe = CNIOLinux_io_uring_get_sqe(&ring)
-        let oldBitpattern : Int = CqeEventType.poll.rawValue << 32 + Int(fd)
-        let newBitpattern : Int = CqeEventType.poll.rawValue << 32 + Int(fd)
-        let userbitPattern : Int = CqeEventType.pollModify.rawValue << 32 + Int(fd)
+        let upperQuad : Int = Int(CqeEventType.poll.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
+        let upperQuadModify : Int = Int(CqeEventType.pollModify.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
+        let oldBitpattern : Int = upperQuad << 32 + Int(fd)
+        let newBitpattern : Int = upperQuad << 32 + Int(fd)
+        let userbitPattern : Int = upperQuadModify << 32 + Int(fd)
         let userBitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: userbitPattern)
 
-        _debugPrint("io_uring_poll_update fd[\(fd)] oldPollmask[\(oldPollmask)] newPollmask[\(newPollmask)]  userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))]")
+        _debugPrint("io_uring_poll_update fd[\(fd)] oldPollmask[\(oldPollmask)] newPollmask[\(newPollmask)]  userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))] upperQuad[\(upperQuad)] upperQuadModify[\(upperQuadModify)]")
         
         // Documentation here:
         // https://git.kernel.dk/cgit/linux-block/commit/?h=poll-multiple&id=33021a19e324fb747c2038416753e63fd7cd9266
@@ -289,97 +309,118 @@ final internal class Uring {
         }
     }
 
-    internal func getEnvironmentVar(_ name: String) -> String? {
-        guard let rawValue = getenv(name) else { return nil }
-        return String(cString: rawValue)
-    }
-
     internal func _debugPrint(_ s : @autoclosure () -> String)
     {
-        if getEnvironmentVar("NIO_LINUX") != nil {
+        if Uring._debugPrintEnabled {
             print("L [\(NIOThread.current)] " + s())
         }
     }
 
+    // Merge results into fdEvents on fd, sequenceIdentifier for the given CQE
+    internal func _process_cqe(events: UnsafeMutablePointer<UringEvent>, cqeIndex: Int) {
+        let bitPattern : UInt = UInt(bitPattern:io_uring_cqe_get_data(cqes[cqeIndex]))
+        let fd = Int32(bitPattern & 0x00000000FFFFFFFF)
+        let sequenceNumber : UInt32 = UInt32((Int(bitPattern) >> 32) & 0x00FFFFFF)
+        let eventType = CqeEventType(rawValue:((Int(bitPattern) >> 32) & 0xFF000000) >> 24) // shift out the fd
+        let result = cqes[cqeIndex]!.pointee.res
+
+        // FIXME: asserts here
+
+        switch eventType {
+            case .poll?:
+                switch result {
+                    case -ECANCELED: // -ECANCELED for streaming polls, should signal error
+                        assert(fd >= 0, "fd must be greater than zero")
+
+                        let pollError = Uring.POLLERR | Uring.POLLHUP
+                        if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
+                            fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
+                        } else {
+                            fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
+                        }
+                        break
+                    case -EINVAL:
+                        _debugPrint("Failed with -EINVAL for cqeIndex[\(cqeIndex)]")
+                        break
+                    case -EBADF:
+                        _debugPrint("Failed with -EBADF for cqeIndex[\(cqeIndex)]")
+                        break
+                    case ..<0: // other errors
+                        _debugPrint("Failed with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
+                        break
+                    case 0: // successfull chained add, not an event
+                        break
+                    default: // positive success
+                        assert(bitPattern > 0, "Bitpattern should never be zero")
+                        assert(fd >= 0, "fd must be greater than zero")
+                        let uresult = UInt32(result)
+
+                        if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
+                            fdEvents[fdEventKey(fd, sequenceNumber)] =  current | uresult
+                        } else {
+                            fdEvents[fdEventKey(fd, sequenceNumber)] = uresult
+                        }
+                }
+            case .pollModify?:
+                switch result {
+                    case -EALREADY:
+                        break
+                    case -ECANCELED: // -ECANCELED for streaming polls, should signal error
+                        assert(fd >= 0, "fd must be greater than zero")
+
+                        let pollError = Uring.POLLERR // Uring.POLLERR // (Uring.POLLHUP | Uring.POLLERR)
+                        if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
+                            fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
+                        } else {
+                            fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
+                        }
+                        break
+                    case -ENOENT:
+                        _debugPrint("Failed with -ENOENT for cqeIndex [\(cqeIndex)]")
+                        break
+                    case -EINVAL:
+                        _debugPrint("Failed with -EINVAL for cqeIndex[\(cqeIndex)]")
+                        break
+                    case -EBADF:
+                        break
+                    case ..<0: // other errors
+                        break
+                    case 0: // successfull chained add, not an event
+                        break
+                    default: // positive success
+                        fatalError("pollModify returned > 0")
+                }
+                break
+            case .pollDelete?:
+                break
+            default:
+                assertionFailure("Unknown type")
+        }
+    }
+
     internal func io_uring_peek_batch_cqe(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32) -> Int {
-        _debugPrint("io_uring_peek_batch_cqe")
-        let mergeCQE = true
         var eventCount = 0
         var currentCqeCount = CNIOLinux_io_uring_peek_batch_cqe(&ring, cqes, cqeMaxCount)
+
         if currentCqeCount == 0 {
+            _debugPrint("io_uring_peek_batch_cqe found zero events, breaking out")
             return 0
         }
         
+        _debugPrint("io_uring_peek_batch_cqe found [\(currentCqeCount)] events")
+
         dumpCqes("io_uring_peek_batch_cqe", count: Int(currentCqeCount))
 
         assert(currentCqeCount >= 0, "currentCqeCount should never be negative")
         assert(maxevents > 0, "maxevents should be a positive number")
 
-        for i in 0 ..< currentCqeCount
+        for cqeIndex in 0 ..< currentCqeCount
         {
-            let bitPattern : UInt = UInt(bitPattern:io_uring_cqe_get_data(cqes[Int(i)]))
-            let fd = Int32(bitPattern & 0x00000000FFFFFFFF)
-            let eventType = CqeEventType(rawValue:Int(bitPattern) >> 32) // shift out the fd
-            let result = cqes[Int(i)]!.pointee.res
+            _process_cqe(events: events, cqeIndex: Int(cqeIndex))
 
-            switch eventType {
-                case .poll?:
-                    switch result {
-                        case -ECANCELED: // -ECANCELED for streaming polls, should signal error
-                            assert(fd >= 0, "fd must be greater than zero")
-                            
-                            let pollError = (Uring.POLLHUP | Uring.POLLERR)
-                            if mergeCQE
-                            {
-                                if let current = fdEvents[fd] {
-                                    fdEvents[fd] = current | pollError
-                                } else {
-                                    fdEvents[fd] = pollError
-                                }
-                            } else {
-                                events[eventCount].fd = fd
-                                events[eventCount].pollMask = pollError
-                                eventCount += 1
-                            }
-                            break
-                        case -ENOENT:    // -ENOENT returned for failed poll remove
-                            break
-                        case -EINVAL:
-                            _debugPrint("Failed with -EINVAL for i[\(i)]")
-                            break
-                        case -EBADF:
-                            break
-                        case ..<0: // other errors
-                            break
-                        case 0: // successfull chained add, not an event
-                            break
-                        default: // positive success
-                            assert(bitPattern > 0, "Bitpattern should never be zero")
-                            assert(fd >= 0, "fd must be greater than zero")
-                            let uresult = UInt32(result)
-                            
-                            if mergeCQE {
-                                if let current = fdEvents[fd] {
-                                    fdEvents[fd] =  current | uresult
-                                } else {
-                                    fdEvents[fd] = uresult
-                                }
-                            } else {
-                                events[eventCount].fd = fd
-                                events[eventCount].pollMask = uresult
-                                eventCount += 1
-                            }
-                    }
-                case .pollModify?:
-                    break
-                case .pollDelete?:
-                    break
-                default:
-                    assertionFailure("Unknown type")
-            }
-            if (fdEvents.count == maxevents || eventCount == maxevents)
+            if (fdEvents.count == maxevents) // ensure we don't generate more events than maxevents
             {
-                _debugPrint("io_uring_peek_batch_cqe breaking loop early, currentCqeCount [\(currentCqeCount)] maxevents [\(maxevents)] eventCount [\(eventCount)] mergeCQE [\(mergeCQE)]")
+                _debugPrint("io_uring_peek_batch_cqe breaking loop early, currentCqeCount [\(currentCqeCount)] maxevents [\(maxevents)]")
                 currentCqeCount = maxevents // to make sure we only cq_advance the correct amount
                 break
             }
@@ -387,115 +428,79 @@ final internal class Uring {
 
         io_uring_cq_advance(&ring, currentCqeCount) // bulk variant of io_uring_cqe_seen(&ring, dataPointer)
 
-        //  if running with merging, just return single event per fd,
-        if mergeCQE {
-            eventCount = 0
-            for (fd, result_mask) in fdEvents {
-                assert(eventCount < maxevents)
-                assert(fd >= 0)
+        //  we just return single event per fd, sequencenumber pair
+        eventCount = 0
+        for (eventKey, pollMask) in fdEvents {
+            assert(eventCount < maxevents)
+            assert(eventKey.fileDescriptor >= 0)
 
-                events[eventCount].fd = fd
-                events[eventCount].pollMask = result_mask
-                eventCount+=1
-
-                let socketClosing = (result_mask & (Uring.POLLRDHUP | Uring.POLLHUP | Uring.POLLERR)) > 0 ? true : false
-
-                if (socketClosing == true) {
-                    _debugPrint("socket is going down [\(fd)] [\(result_mask)] [\((result_mask & (Uring.POLLRDHUP | Uring.POLLHUP | Uring.POLLERR)))]")
-                }
-            }
-            if eventCount > 0 {
-                _debugPrint("io_uring_peek_batch_cqe returning [\(eventCount)] events")
-            } else if fdEvents.count > 0 {
-                _debugPrint("fdEvents.count > 0 but 0 event.count returning [\(eventCount)]")
-            }
-
-            fdEvents.removeAll(keepingCapacity: true) // reused for next batch
-        } else {
-            _debugPrint("io_uring_peek_batch_cqe returning [\(eventCount)] events (!mergeCQE)")
+            events[eventCount].fd = eventKey.fileDescriptor
+            events[eventCount].pollMask = pollMask
+            events[eventCount].sequenceIdentifier = eventKey.sequenceIdentifier
+            eventCount += 1
         }
+
+        fdEvents.removeAll(keepingCapacity: true) // reused for next batch
+
+        _debugPrint("io_uring_peek_batch_cqe returning [\(eventCount)] events, fdEvents.count [\(fdEvents.count)]")
+
+        return eventCount
+    }
+
+    internal func _io_uring_wait_cqe_shared(events: UnsafeMutablePointer<UringEvent>, error: Int32) throws -> Int {
+        var eventCount = 0
+
+        switch error {
+            case 0:
+                break
+            case -CNIOLinux.EINTR:
+                _debugPrint("_io_uring_wait_cqe_shared got CNIOLinux.EINTR")
+                return eventCount
+            case -CNIOLinux.ETIME:
+                _debugPrint("_io_uring_wait_cqe_shared timed out with -CNIOLinux.ETIME")
+                CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
+                return eventCount
+            default:
+                _debugPrint("UringError.uringWaitCqeFailure \(error)")
+                throw UringError.uringWaitCqeFailure
+        }
+
+        dumpCqes("_io_uring_wait_cqe_shared")
+
+        _process_cqe(events: events, cqeIndex: 0)
+
+        CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
+
+        if let firstEvent = fdEvents.first {
+            events[0].fd = firstEvent.key.fileDescriptor
+            events[0].pollMask = firstEvent.value
+            events[0].sequenceIdentifier = firstEvent.key.sequenceIdentifier
+            eventCount = 1
+        } else {
+            _debugPrint("_io_uring_wait_cqe_shared if let firstEvent = fdEvents.first failed")
+        }
+
+        fdEvents.removeAll(keepingCapacity: true) // reused for next batch
         
         return eventCount
     }
 
     internal func io_uring_wait_cqe(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32) throws -> Int {
         _debugPrint("io_uring_wait_cqe")
+
         let error = CNIOLinux_io_uring_wait_cqe(&ring, cqes)
-        var count = 0
         
-        if (error == 0)
-        {
-            dumpCqes("io_uring_wait_cqe")
-            let bitPattern : UInt = UInt(bitPattern:io_uring_cqe_get_data(cqes[0]))
-            let fd = Int32(bitPattern & 0x00000000FFFFFFFF)
-            let eventType = CqeEventType(rawValue:Int(bitPattern) >> 32) // shift out the fd
-            let result = cqes[0]!.pointee.res
-
-            if (result > 0) {
-                assert(bitPattern > 0, "Bitpattern should never be zero")
-
-                _debugPrint("io_uring_wait_cqe fd[\(fd)] eventType[\(String(describing:eventType))] bitPattern[\(bitPattern)]  cqes[0]!.pointee.res[\(String(describing:cqes[0]!.pointee.res))]")
-
-                count = 1
-                events[0].fd = fd
-                events[0].pollMask = UInt32(cqes[0]!.pointee.res)
-            } else {
-                _debugPrint("io_uring_wait_cqe non-positive result fd[\(fd)] eventType[\(String(describing:eventType))] bitPattern[\(bitPattern)] cqes[0]!.pointee.res[\(String(describing:cqes[0]!.pointee.res))]")
-            }
-            CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
-        }
-        else
-        {
-            if (error == -CNIOLinux.EINTR) // we can get EINTR normally
-            {
-                _debugPrint("UringError.error \(error)")
-            } else
-            {
-                _debugPrint("UringError.uringWaitCqeFailure \(error)")
-                throw UringError.uringWaitCqeFailure
-            }
-        }
-        
-        return count
+        return try _io_uring_wait_cqe_shared(events: events, error: error)
     }
 
     internal func io_uring_wait_cqe_timeout(events: UnsafeMutablePointer<UringEvent>, maxevents: UInt32, timeout: TimeAmount) throws -> Int {
         var ts = timeout.kernelTimespec()
-        var count = 0
 
         _debugPrint("io_uring_wait_cqe_timeout.ETIME milliseconds \(ts)")
 
         let error = CNIOLinux_io_uring_wait_cqe_timeout(&ring, cqes, &ts)
 
-        switch error {
-            case 0:
-                dumpCqes("io_uring_wait_cqe_timeout")
-                let bitPattern : UInt = UInt(bitPattern:io_uring_cqe_get_data(cqes[0]))
-                let fd = Int32(bitPattern & 0x00000000FFFFFFFF)
-                let eventType = CqeEventType(rawValue:Int(bitPattern) >> 32) // shift out the fd
-                let result = cqes[0]!.pointee.res
-
-                if (result > 0) {
-                    _debugPrint("io_uring_wait_cqe_timeout fd[\(fd)] eventType[\(String(describing:eventType))] bitPattern[\(bitPattern)] cqes[0]!.pointee.res[\(String(describing:cqes[0]!.pointee.res))]")
-
-                    count = 1
-                    events[0].fd = fd
-                    events[0].pollMask = UInt32(cqes[0]!.pointee.res)
-                } else {
-                    _debugPrint("io_uring_wait_cqe_timeout non-positive result fd[\(fd)] eventType[\(String(describing:eventType))]  bitPattern[\(bitPattern)] cqes[0]!.pointee.res[\(String(describing:cqes[0]!.pointee.res))]")
-                }
-                
-                CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
-            case -CNIOLinux.ETIME: // timed out
-                _debugPrint("io_uring_wait_cqe_timeout timed out with -CNIOLinux.ETIME")
-                CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
-            case -CNIOLinux.EINTR:
-                break
-            default:
-                throw UringError.uringWaitCqeTimeoutFailure
-        }
-        
-        return count
+        return try _io_uring_wait_cqe_shared(events: events, error: error)
     }
 }
 
