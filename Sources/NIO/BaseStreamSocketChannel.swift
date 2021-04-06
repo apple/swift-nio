@@ -153,6 +153,9 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         return result
     }
 
+    func _close0Cleanup(mode: CloseMode) {  // for e.g. PipeChannel to do custom cleanup
+    }
+
     final override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         do {
             switch mode {
@@ -161,6 +164,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     promise?.fail(ChannelError.outputClosed)
                     return
                 }
+                self._close0Cleanup(mode:mode)
                 try self.socket.shutdown(how: .WR)
                 self.outputShutdown = true
                 // Fail all pending writes and so ensure all pending promises are notified
@@ -181,6 +185,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     // ENOTCON
                     break
                 default:
+                    self._close0Cleanup(mode:mode)
                     try socket.shutdown(how: .RD)
                 }
                 self.inputShutdown = true
@@ -193,6 +198,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     self.connectTimeoutScheduled = nil
                     timeout.cancel()
                 }
+                self._close0Cleanup(mode:mode) // for symmetry, currently unused
                 super.close0(error: error, mode: mode, promise: promise)
             }
         } catch let err {
