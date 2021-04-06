@@ -31,7 +31,7 @@ extension StreamChannelTest {
                 ("testSyncChannelOptions", testSyncChannelOptions),
                 ("testChannelReturnsNilForDefaultSyncOptionsImplementation", testChannelReturnsNilForDefaultSyncOptionsImplementation),
                 ("testWritabilityStartsTrueGoesFalseAndBackToTrue", testWritabilityStartsTrueGoesFalseAndBackToTrue),
-// FIXME:                ("testHalfCloseOwnOutput", testHalfCloseOwnOutput),
+                ("testHalfCloseOwnOutput", testHalfCloseOwnOutput),
                 ("testHalfCloseOwnInput", testHalfCloseOwnInput),
                 ("testDoubleShutdownInput", testDoubleShutdownInput),
                 ("testDoubleShutdownOutput", testDoubleShutdownOutput),
