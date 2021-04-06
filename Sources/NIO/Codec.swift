@@ -287,7 +287,7 @@ extension B2MDBuffer {
         case .ready where self.buffers.count > 0:
             var buffer = self.buffers.removeFirst()
             buffer.writeBuffers(self.buffers)
-            self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16) // don't grow too much
+            self.buffers.removeAll(keepingCapacity: self.buffers.count < 16) // don't grow too much
             if buffer.readableBytes > 0 || allowEmptyBuffer {
                 self.state = .processingInProgress
                 return .available(buffer)
@@ -316,7 +316,7 @@ extension B2MDBuffer {
         } else {
             buffer.discardReadBytes()
             buffer.writeBuffers(self.buffers)
-            self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16) // don't grow too much
+            self.buffers.removeAll(keepingCapacity: self.buffers.count < 16) // don't grow too much
             self.buffers.append(buffer)
         }
     }

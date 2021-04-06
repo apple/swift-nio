@@ -78,3 +78,12 @@ This product contains a derivation of Fabian Fett's 'Base64.swift'.
     * https://github.com/fabianfett/swift-base64-kit/blob/master/LICENSE
   * HOMEPAGE:
     * https://github.com/fabianfett/swift-base64-kit
+
+---
+
+This product contains the `DequeModule` from Swift Collections.
+
+  * LICENSE (Apache License 2.0):
+    * https://github.com/apple/swift-collections/blob/main/LICENSE.txt
+  * HOMEPAGE:
+    * https://github.com/apple/swift-collections

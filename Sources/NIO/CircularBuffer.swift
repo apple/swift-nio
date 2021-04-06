@@ -12,48 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// An automatically expanding ring buffer implementation backed by a `ContiguousArray`. Even though this implementation
+/// An automatically expanding ring buffer implementation backed by a `Deque` (from Swift Collections).
+///
+/// Even though this implementation
 /// will automatically expand if more elements than `initialCapacity` are stored, it's advantageous to prevent
 /// expansions from happening frequently. Expansions will always force an allocation and a copy to happen.
 public struct CircularBuffer<Element>: CustomStringConvertible {
     @usableFromInline
-    internal var _buffer: ContiguousArray<Element?>
-
-    @usableFromInline
-    internal var headBackingIndex: Int
-
-    @usableFromInline
-    internal var tailBackingIndex: Int
-
-    @inlinable
-    internal var mask: Int {
-        return self._buffer.count &- 1
-    }
-
-    @inlinable
-    internal mutating func advanceHeadIdx(by: Int) {
-        self.headBackingIndex = indexAdvanced(index: self.headBackingIndex, by: by)
-    }
-
-    @inlinable
-    internal mutating func advanceTailIdx(by: Int) {
-        self.tailBackingIndex = indexAdvanced(index: self.tailBackingIndex, by: by)
-    }
-
-    @inlinable
-    internal func indexBeforeHeadIdx() -> Int {
-        return self.indexAdvanced(index: self.headBackingIndex, by: -1)
-    }
-
-    @inlinable
-    internal func indexBeforeTailIdx() -> Int {
-        return self.indexAdvanced(index: self.tailBackingIndex, by: -1)
-    }
-
-    @inlinable
-    internal func indexAdvanced(index: Int, by: Int) -> Int {
-        return (index &+ by) & self.mask
-    }
+    internal var _buffer: NIODeque<Element>
 
     /// An opaque `CircularBuffer` index.
     ///
@@ -63,50 +29,22 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
     /// - note: Every index is invalidated as soon as you perform a length-changing operating on the `CircularBuffer`
     ///         but remains valid when you replace one item by another using the subscript.
     public struct Index: Comparable {
-        @usableFromInline var _backingIndex: UInt32
-        @usableFromInline var _backingCheck: _UInt24
-        @usableFromInline var isIndexGEQHeadIndex: Bool
+        @usableFromInline var index: NIODeque<Element>.Index
 
         @inlinable
-        internal var backingIndex: Int {
-            return Int(self._backingIndex)
-        }
-
-        @inlinable
-        internal init(backingIndex: Int, backingCount: Int, backingIndexOfHead: Int) {
-            self.isIndexGEQHeadIndex = backingIndex >= backingIndexOfHead
-            self._backingCheck = .max
-            self._backingIndex = UInt32(backingIndex)
-            debugOnly {
-                // if we can, we store the check for the backing here
-                self._backingCheck = backingCount < Int(_UInt24.max) ? _UInt24(UInt32(backingCount)) : .max
-            }
+        init(_ index: NIODeque<Element>.Index) {
+            self.index = index
         }
 
         @inlinable
         public static func == (lhs: Index, rhs: Index) -> Bool {
-            return lhs._backingIndex == rhs._backingIndex &&
-                lhs._backingCheck == rhs._backingCheck &&
-                lhs.isIndexGEQHeadIndex == rhs.isIndexGEQHeadIndex
+            return lhs.index == rhs.index
         }
 
         @inlinable
         public static func < (lhs: Index, rhs: Index) -> Bool {
-            if lhs.isIndexGEQHeadIndex && rhs.isIndexGEQHeadIndex {
-                return lhs.backingIndex < rhs.backingIndex
-            } else if lhs.isIndexGEQHeadIndex && !rhs.isIndexGEQHeadIndex {
-                return true
-            } else if !lhs.isIndexGEQHeadIndex && rhs.isIndexGEQHeadIndex {
-                return false
-            } else {
-                return lhs.backingIndex < rhs.backingIndex
-            }
+            return lhs.index < rhs.index
         }
-
-        @usableFromInline
-        internal func isValidIndex(for ring: CircularBuffer<Element>) -> Bool {
-            return self._backingCheck == _UInt24.max || Int(self._backingCheck) == ring.count
-         }
     }
 }
 
@@ -152,16 +90,10 @@ extension CircularBuffer: Collection, MutableCollection {
     @inlinable
     public subscript(position: Index) -> Element {
         get {
-            assert(position.isValidIndex(for: self),
-                   "illegal index used, index was for CircularBuffer with count \(position._backingCheck), " +
-                   "but actual count is \(self.count)")
-            return self._buffer[position.backingIndex]!
+            return self._buffer[position.index]
         }
         set {
-            assert(position.isValidIndex(for: self),
-                   "illegal index used, index was for CircularBuffer with count \(position._backingCheck), " +
-                   "but actual count is \(self.count)")
-            self._buffer[position.backingIndex] = newValue
+            self._buffer[position.index] = newValue
         }
     }
 
@@ -170,9 +102,7 @@ extension CircularBuffer: Collection, MutableCollection {
     /// If the `CircularBuffer` is empty, `startIndex` is equal to `endIndex`.
     @inlinable
     public var startIndex: Index {
-        return .init(backingIndex: self.headBackingIndex,
-                     backingCount: self.count,
-                     backingIndexOfHead: self.headBackingIndex)
+        return Index(self._buffer.startIndex)
     }
 
     /// The `CircularBuffer`'s "past the end" position---that is, the position one
@@ -186,9 +116,7 @@ extension CircularBuffer: Collection, MutableCollection {
     /// If the `CircularBuffer` is empty, `endIndex` is equal to `startIndex`.
     @inlinable
     public var endIndex: Index {
-        return .init(backingIndex: self.tailBackingIndex,
-                     backingCount: self.count,
-                     backingIndexOfHead: self.headBackingIndex)
+        return Index(self._buffer.endIndex)
     }
 
     /// Returns the distance between two indices.
@@ -209,18 +137,7 @@ extension CircularBuffer: Collection, MutableCollection {
     ///   resulting distance.
     @inlinable
     public func distance(from start: CircularBuffer<Element>.Index, to end: CircularBuffer<Element>.Index) -> Int {
-        let backingCount = self._buffer.count
-
-        switch (start.isIndexGEQHeadIndex, end.isIndexGEQHeadIndex) {
-        case (true, true):
-            return end.backingIndex &- start.backingIndex
-        case (true, false):
-            return backingCount &- (start.backingIndex &- end.backingIndex)
-        case (false, true):
-            return -(backingCount &- (end.backingIndex &- start.backingIndex))
-        case (false, false):
-            return end.backingIndex &- start.backingIndex
-        }
+        return self._buffer.distance(from: start.index, to: end.index)
     }
 }
 
@@ -229,9 +146,7 @@ extension CircularBuffer: RandomAccessCollection {
     /// Returns the index offset by `distance` from `index`.
     @inlinable
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
-        return .init(backingIndex: (i.backingIndex &+ distance) & self.mask,
-                     backingCount: self.count,
-                     backingIndexOfHead: self.headBackingIndex)
+        return Index(self._buffer.index(i.index, offsetBy: distance))
     }
 
     /// Returns an index that is the specified distance from the given index.
@@ -263,13 +178,8 @@ extension CircularBuffer: RandomAccessCollection {
     ///   value of `distance`.
     @inlinable
     public subscript(bounds: Range<Index>) -> SubSequence {
-        precondition(self.distance(from: self.startIndex, to: bounds.lowerBound) >= 0)
-        precondition(self.distance(from: bounds.upperBound, to: self.endIndex) >= 0)
-
-        var newRing = self
-        newRing.headBackingIndex = bounds.lowerBound.backingIndex
-        newRing.tailBackingIndex = bounds.upperBound.backingIndex
-        return newRing
+        /* NOT CORRECT */
+        return CircularBuffer(self._buffer[Range(uncheckedBounds: (bounds.lowerBound.index, bounds.upperBound.index))])
     }
 }
 
@@ -279,11 +189,7 @@ extension CircularBuffer {
     /// the buffer. When the ring grows to more than `initialCapacity` elements the buffer will be expanded.
     @inlinable
     public init(initialCapacity: Int) {
-        let capacity = Int(UInt32(initialCapacity).nextPowerOf2())
-        self.headBackingIndex = 0
-        self.tailBackingIndex = 0
-        self._buffer = ContiguousArray<Element?>(repeating: nil, count: capacity)
-        assert(self._buffer.count == capacity)
+        self._buffer = NIODeque(minimumCapacity: initialCapacity)
     }
 
     /// Allocates an empty buffer.
@@ -297,13 +203,7 @@ extension CircularBuffer {
     /// Amortized *O(1)*
     @inlinable
     public mutating func append(_ value: Element) {
-        self._buffer[self.tailBackingIndex] = value
-        self.advanceTailIdx(by: 1)
-        
-        if self.headBackingIndex == self.tailBackingIndex {
-            // No more room left for another append so grow the buffer now.
-            self._doubleCapacity()
-        }
+        self._buffer.append(value)
     }
 
     /// Prepend an element to the front of the ring buffer.
@@ -311,37 +211,9 @@ extension CircularBuffer {
     /// Amortized *O(1)*
     @inlinable
     public mutating func prepend(_ value: Element) {
-        let idx = self.indexBeforeHeadIdx()
-        self._buffer[idx] = value
-        self.advanceHeadIdx(by: -1)
-
-        if self.headBackingIndex == self.tailBackingIndex {
-            // No more room left for another append so grow the buffer now.
-            self._doubleCapacity()
-        }
+        self._buffer.prepend(value)
     }
 
-    /// Double the capacity of the buffer and adjust the headIdx and tailIdx.
-    @inlinable
-    internal mutating func _doubleCapacity() {
-        var newBacking: ContiguousArray<Element?> = []
-        let newCapacity = self._buffer.count << 1 // Double the storage.
-        precondition(newCapacity > 0, "Can't double capacity of \(self._buffer.count)")
-        assert(newCapacity % 2 == 0)
-
-        newBacking.reserveCapacity(newCapacity)
-        newBacking.append(contentsOf: self._buffer[self.headBackingIndex..<self._buffer.count])
-        if self.headBackingIndex > 0 {
-            newBacking.append(contentsOf: self._buffer[0..<self.headBackingIndex])
-        }
-        let repeatitionCount = newCapacity &- newBacking.count
-        newBacking.append(contentsOf: repeatElement(nil, count: repeatitionCount))
-        self.headBackingIndex = 0
-        self.tailBackingIndex = newBacking.count &- repeatitionCount
-        self._buffer = newBacking
-        assert(self.verifyInvariants())
-    }
-    
     /// Return element `offset` from first element.
     ///
     /// *O(1)*
@@ -358,21 +230,18 @@ extension CircularBuffer {
     /// Returns whether the ring is empty.
     @inlinable
     public var isEmpty: Bool {
-        return self.headBackingIndex == self.tailBackingIndex
+        return self._buffer.isEmpty
     }
 
     /// Returns the number of element in the ring.
     @inlinable
     public var count: Int {
-        if self.tailBackingIndex >= self.headBackingIndex {
-            return self.tailBackingIndex &- self.headBackingIndex
-        } else {
-            return self._buffer.count &- (self.headBackingIndex &- self.tailBackingIndex)
-        }
+        return self._buffer.count
     }
 
     /// The total number of elements that the ring can contain without allocating new storage.
     @inlinable
+    @available(*, deprecated, message: "capacity now deprecated")
     public var capacity: Int {
         return self._buffer.count
     }
@@ -380,15 +249,7 @@ extension CircularBuffer {
     /// Removes all members from the circular buffer whist keeping the capacity.
     @inlinable
     public mutating func removeAll(keepingCapacity: Bool = false) {
-        if keepingCapacity {
-            self.removeFirst(self.count)
-        } else {
-            self._buffer.removeAll(keepingCapacity: false)
-            self._buffer.append(nil)
-        }
-        self.headBackingIndex = 0
-        self.tailBackingIndex = 0
-        assert(self.verifyInvariants())
+        self._buffer.removeAll(keepingCapacity: keepingCapacity)
     }
 
 
@@ -409,24 +270,13 @@ extension CircularBuffer {
     ///     - modifyFunc: The function to apply to the modified object.
     @inlinable
     public mutating func modify<Result>(_ index: Index, _ modifyFunc: (inout Element) throws -> Result) rethrows -> Result {
-        return try modifyFunc(&self._buffer[index.backingIndex]!)
+        return try modifyFunc(&self._buffer[index.index])
     }
     
     // MARK: CustomStringConvertible implementation
     /// Returns a human readable description of the ring.
     public var description: String {
-        var desc = "[ "
-        for el in self._buffer.enumerated() {
-            if el.0 == self.headBackingIndex {
-                desc += "<"
-            } else if el.0 == self.tailBackingIndex {
-                desc += ">"
-            }
-            desc += el.1.map { "\($0) " } ?? "_ "
-        }
-        desc += "]"
-        desc += " (bufferCapacity: \(self._buffer.count), ringLength: \(self.count))"
-        return desc
+        return self._buffer.description
     }
 }
 
@@ -487,13 +337,7 @@ extension CircularBuffer: RangeReplaceableCollection {
     /// - Complexity: O(*k*), where *k* is the specified number of elements.
     @inlinable
     public mutating func removeLast(_ k: Int) {
-        precondition(k <= self.count, "Number of elements to drop bigger than the amount of elements in the buffer.")
-        var idx = self.tailBackingIndex
-        for _ in 0 ..< k {
-            idx = self.indexAdvanced(index: idx, by: -1)
-            self._buffer[idx] = nil
-        }
-        self.tailBackingIndex = idx
+        self._buffer.removeLast(k)
     }
 
 
@@ -510,13 +354,7 @@ extension CircularBuffer: RangeReplaceableCollection {
     /// - Complexity: O(*k*), where *k* is the specified number of elements.
     @inlinable
     public mutating func removeFirst(_ k: Int) {
-        precondition(k <= self.count, "Number of elements to drop bigger than the amount of elements in the buffer.")
-        var idx = self.headBackingIndex
-        for _ in 0 ..< k {
-            self._buffer[idx] = nil
-            idx = self.indexAdvanced(index: idx, by: 1)
-        }
-        self.headBackingIndex = idx
+        return self._buffer.removeFirst(k)
     }
 
     /// Removes and returns the first element of the `CircularBuffer`.
@@ -570,47 +408,8 @@ extension CircularBuffer: RangeReplaceableCollection {
     /// *O(m)* where _m_ is the combined length of the collection and _newElements_
     @inlinable
     public mutating func replaceSubrange<C: Collection>(_ subrange: Range<Index>, with newElements: C) where Element == C.Element {
-        precondition(subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex,
-                     "Subrange out of bounds")
-        assert(subrange.lowerBound.isValidIndex(for: self),
-               "illegal index used, index was for CircularBuffer with count \(subrange.lowerBound._backingCheck), " +
-               "but actual count is \(self.count)")
-        assert(subrange.upperBound.isValidIndex(for: self),
-               "illegal index used, index was for CircularBuffer with count \(subrange.upperBound._backingCheck), " +
-               "but actual count is \(self.count)")
-
-        let subrangeCount = self.distance(from: subrange.lowerBound, to: subrange.upperBound)
-
-        if subrangeCount == newElements.count {
-            var index = subrange.lowerBound
-            for element in newElements {
-                self._buffer[index.backingIndex] = element
-                index = self.index(after: index)
-            }
-        } else if subrangeCount == self.count && newElements.isEmpty {
-            self.removeSubrange(subrange)
-        } else {
-            var newBuffer: ContiguousArray<Element?> = []
-            let neededNewCapacity = self.count + newElements.count - subrangeCount + 1 /* always one spare */
-            let newCapacity = Swift.max(self.capacity, neededNewCapacity.nextPowerOf2())
-            newBuffer.reserveCapacity(newCapacity)
-
-            // This mapping is required due to an inconsistent ability to append sequences of non-optional
-            // to optional sequences.
-            // https://bugs.swift.org/browse/SR-7921
-            newBuffer.append(contentsOf: self[self.startIndex ..< subrange.lowerBound].lazy.map { $0 })
-            newBuffer.append(contentsOf: newElements.lazy.map { $0 })
-            newBuffer.append(contentsOf: self[subrange.upperBound..<self.endIndex].lazy.map { $0 })
-
-            let repetitionCount = newCapacity &- newBuffer.count
-            if repetitionCount > 0 {
-                newBuffer.append(contentsOf: repeatElement(nil, count: repetitionCount))
-            }
-            self._buffer = newBuffer
-            self.headBackingIndex = 0
-            self.tailBackingIndex = newBuffer.count &- repetitionCount
-        }
-        assert(self.verifyInvariants())
+        self._buffer.replaceSubrange(Range(uncheckedBounds: (subrange.lowerBound.index, subrange.upperBound.index)),
+                                     with: newElements)
     }
 
     /// Removes the elements in the specified subrange from the circular buffer.
@@ -618,18 +417,7 @@ extension CircularBuffer: RangeReplaceableCollection {
     /// - Parameter bounds: The range of the circular buffer to be removed. The bounds of the range must be valid indices of the collection.
     @inlinable
     public mutating func removeSubrange(_ bounds: Range<Index>) {
-        precondition(bounds.upperBound >= self.startIndex && bounds.upperBound <= self.endIndex, "Invalid bounds.")
-
-        let boundsCount = self.distance(from: bounds.lowerBound, to: bounds.upperBound)
-        switch boundsCount {
-        case 1:
-            remove(at: bounds.lowerBound)
-        case self.count:
-            self = .init(initialCapacity: self._buffer.count)
-        default:
-            replaceSubrange(bounds, with: [])
-        }
-        assert(self.verifyInvariants())
+        self._buffer.removeSubrange(Range(uncheckedBounds: (bounds.lowerBound.index, bounds.upperBound.index)))
     }
 
     /// Removes & returns the item at `position` from the buffer
@@ -642,79 +430,19 @@ extension CircularBuffer: RangeReplaceableCollection {
     @discardableResult
     @inlinable
     public mutating func remove(at position: Index) -> Element {
-        assert(position.isValidIndex(for: self),
-               "illegal index used, index was for CircularBuffer with count \(position._backingCheck), " +
-               "but actual count is \(self.count)")
-        defer {
-            assert(self.verifyInvariants())
-        }
-        precondition(self.indices.contains(position), "Position out of bounds.")
-        var bufferIndex = position.backingIndex
-        let element = self._buffer[bufferIndex]!
-
-        switch bufferIndex {
-        case self.headBackingIndex:
-            self.advanceHeadIdx(by: 1)
-            self._buffer[bufferIndex] = nil
-        case self.indexBeforeTailIdx():
-            self.advanceTailIdx(by: -1)
-            self._buffer[bufferIndex] = nil
-        default:
-            self._buffer[bufferIndex] = nil
-            var nextIndex = self.indexAdvanced(index: bufferIndex, by: 1)
-            while nextIndex != self.tailBackingIndex {
-                self._buffer.swapAt(bufferIndex, nextIndex)
-                bufferIndex = nextIndex
-                nextIndex = self.indexAdvanced(index: bufferIndex, by: 1)
-            }
-            self.advanceTailIdx(by: -1)
-        }
-
-        return element
-    }
-}
-
-extension CircularBuffer {
-    @usableFromInline
-    internal func verifyInvariants() -> Bool {
-        var index = self.headBackingIndex
-        while index != self.tailBackingIndex {
-            if self._buffer[index] == nil {
-                return false
-            }
-            index = self.indexAdvanced(index: index, by: 1)
-        }
-        return true
-    }
-
-    // this is not a general invariant (not true for CircularBuffer that have been sliced)
-    private func unreachableAreNil() -> Bool {
-        var index = self.tailBackingIndex
-        while index != self.headBackingIndex {
-            if self._buffer[index] != nil {
-                return false
-            }
-            index = self.indexAdvanced(index: index, by: 1)
-        }
-        return true
-    }
-
-    internal func testOnly_verifyInvariantsForNonSlices() -> Bool {
-        return self.verifyInvariants() && self.unreachableAreNil()
+        self._buffer.remove(at: position.index)
     }
 }
 
 extension CircularBuffer: Equatable where Element: Equatable {
     public static func ==(lhs: CircularBuffer, rhs: CircularBuffer) -> Bool {
-        return lhs.count == rhs.count && zip(lhs, rhs).allSatisfy(==)
+        return lhs._buffer == rhs._buffer
     }
 }
 
 extension CircularBuffer: Hashable where Element: Hashable {
     public func hash(into hasher: inout Hasher) {
-        for element in self {
-            hasher.combine(element)
-        }
+        self._buffer.hash(into: &hasher)
     }
 }
 
