@@ -16,8 +16,8 @@ import NIO
 
 // note: We have to define the variable `hasAsyncAwait` here because if we copy this code into the property below,
 // it doesn't compile on Swift 5.0.
-#if compiler(>=5.4)
 #if compiler(>=5.4) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
+#if compiler(>=5.4) && $AsyncAwait
 fileprivate let hasAsyncAwait = true
 #else
 fileprivate let hasAsyncAwait = false
