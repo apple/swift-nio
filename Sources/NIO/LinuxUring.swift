@@ -298,11 +298,12 @@ final internal class Uring {
             case .poll?:
                 switch result {
                     case -ECANCELED:
+                        var pollError : UInt32 = 0
                         assert(fd >= 0, "fd must be greater than zero")
                         if multishot { // -ECANCELED for streaming polls, should signal error
-                            let pollError = Uring.POLLERR | Uring.POLLHUP
+                            pollError = Uring.POLLERR | Uring.POLLHUP
                         } else {       // this just signals that Selector just should resubmit a new fresh poll
-                            let pollError = Uring.POLLCANCEL
+                            pollError = Uring.POLLCANCEL
                         }
                         if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
                             fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
