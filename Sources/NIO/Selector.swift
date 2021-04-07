@@ -984,6 +984,14 @@ final internal class UringSelector<R: Registration>: Selector<R> {
 
         try ring.io_uring_queue_init()
         self.selectorFD = ring.fd()
+
+        // eventfd are always singleshot and re-register each time around
+        // as certain use cases of nio seems to generate tons of wakeups
+        // (at least its tested for that in some of the performance tests
+        // e.g. future_whenallsucceed_100k_deferred_off_loop, future_whenallcomplete_100k_deferred_off_loop
+        // ) - if using normal ET multishots, we would get 100k events to handle basically.
+        // so using single shot for wakeups makes those tests run 30-35% faster approx.
+
         self.eventFD = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
 
         ring.io_uring_prep_poll_add(fd: Int32(self.eventFD), pollMask: Uring.POLLIN, sequenceIdentifier:0, multishot:false) // wakeups
@@ -1024,7 +1032,7 @@ final internal class UringSelector<R: Registration>: Selector<R> {
                                            pollMask: oldInterested.uringEventSet,
                                            sequenceIdentifier: sequenceIdentifier,
                                            submitNow:!deferReregistrations,
-                                           link: true)
+                                           link: true) // next event linked will cancel if this event fails
   
             ring.io_uring_prep_poll_add(fd: Int32(fd),
                                         pollMask: newInterested.uringEventSet,
@@ -1044,13 +1052,13 @@ final internal class UringSelector<R: Registration>: Selector<R> {
                                        submitNow:!deferReregistrations)
     }
 
-    private func shouldRefreshPollForEvent(selectorEvent:SelectorEventSet) -> Bool {
+    private func _shouldRefreshPollForEvent(selectorEvent:SelectorEventSet) -> Bool {
         if selectorEvent.contains(.read) {
             // as we don't do exhaustive reads, we need to prod the kernel for
             // new events, would be even better if we knew if we had read all there is
             return true
         }
-// FIXME: Need to verify that SwiftNIO writes until blocking (exhaustive writing)
+        // FIXME: Need to verify that SwiftNIO writes until blocking (exhaustive writing)
         return false
     }
 
@@ -1069,7 +1077,7 @@ final internal class UringSelector<R: Registration>: Selector<R> {
         
         // flush reregisteration of pending modifications if needed (nop in SQPOLL mode)
         // basically this elides all reregistrations and deregistrations into a single
-        // syscall instead of one for each. Future improvement would be to even merge
+        // syscall instead of one for each. Future improvement would be to also merge
         // the pending pollmasks (now each change will be queued, but we could also
         // merge the masks for reregistrations) - but the most important thing is to
         // only trap into the kernel once for the set of changes, so needs to be measured.
@@ -1110,26 +1118,19 @@ final internal class UringSelector<R: Registration>: Selector<R> {
                     do {
                         _ = try EventFd.eventfd_read(fd: self.eventFD, value: &val) // consume wakeup event
                         _debugPrint("read val [\(val)] from event.fd [\(event.fd)]")
-                    } catch  { // let errorReturn
-                        // FIXME: Add assertion that only EAGAIN is expected here.
-                        // assert(errorReturn == EAGAIN, "eventfd_read return unexpected errno \(errorReturn)")
+                    } catch  {
                     }
             default:
                 if let registration = registrations[Int(event.fd)] {
                     _debugPrint("We found a registration for event.fd [\(event.fd)]") // \(registration)
 
-
                     var selectorEvent = SelectorEventSet(uringEvent: event.pollMask)
-                    // let socketClosing = (event.pollMask & (Uring.POLLRDHUP | Uring.POLLHUP | Uring.POLLERR)) > 0 ? true : false
 
-                    // we can only verify the events for i == 0 as for i > 0 the user might have changed the registrations since then.
-                    // we can't assert this for uring, as we possibly can get an old pollmask update as the
-                    // modifications of registrations are async. the intersection() below handles that case too.
-                    // assert(i != 0 || selectorEvent.isSubset(of: registration.interested), "selectorEvent: \(selectorEvent), registration: \(registration)")
-
-                    // in any case we only want what the user is currently registered for & what we got
                     _debugPrint("selectorEvent [\(selectorEvent)] registration.interested [\(registration.interested)]")
+
+                    // we only want what the user is currently registered for & what we got
                     selectorEvent = selectorEvent.intersection(registration.interested)
+
                     _debugPrint("intersection [\(selectorEvent)]")
 
                     if selectorEvent.contains(.readEOF) {
@@ -1161,7 +1162,7 @@ final internal class UringSelector<R: Registration>: Selector<R> {
                     // FIXME: This is only needed due to the edge triggered nature of liburing, possibly
                     // we can get away with only updating (force triggering an event if available) for
                     // partial reads (where we currently give up after 4 iterations)
-                    if multishot && shouldRefreshPollForEvent(selectorEvent:selectorEvent) { // can be after guard as it is multishot
+                    if multishot && self._shouldRefreshPollForEvent(selectorEvent:selectorEvent) { // can be after guard as it is multishot
                         ring.io_uring_poll_update(fd: event.fd,
                                                   newPollmask: registration.interested.uringEventSet,
                                                   oldPollmask: registration.interested.uringEventSet,
@@ -1215,7 +1216,6 @@ final internal class UringSelector<R: Registration>: Selector<R> {
     /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
     override func wakeup() throws {
         assert(NIOThread.current != self.myThread)
-        _debugPrint("wakeup()")
         try self.externalSelectorFDLock.withLock {
                 guard self.eventFD >= 0 else {
                     throw EventLoopError.shutdown
