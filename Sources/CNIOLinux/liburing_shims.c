@@ -185,7 +185,7 @@ int _check_capabilities() {
     return capabilities_check == 1 ? 0 : -1;
 }
 
-#define SWIFTNIO_URING_DEFAULT_SIZE 4096
+#define SWIFTNIO_URING_DEFAULT_SIZE 8192 // needed for malloc tests with oneshot polls, otherwise 4K suffices for most tests.
 #define SWIFTNIO_URING_MIN_SIZE 4
 #define SWIFTNIO_URING_MAX_SIZE 65536
 
