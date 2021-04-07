@@ -170,34 +170,34 @@ final internal class Uring {
             submissionCount += 1
 
             switch retval {
-                case -EBUSY:
-                    fallthrough
-                // We can get -EAGAIN if the CQE queue is full and we get back pressure from
-                // the kernel to start processing CQE:s. If we break here with unsubmitted
-                // SQE:s, they will stay pending on the user-level side and be flushed
-                // to the kernel after we had the opportunity to reap more CQE:s
-                // In practice it will be at the end of whenReady the next
-                // time around. Given the async nature, this is fine, we will not
-                // lose any submissions. We could possibly still get stuck
-                // trying to get new SQE if the actual SQE queue is full, but
-                // that would be due to user error in usage IMHO and we should fatalError there.
-                case -EAGAIN:
-                    _debugPrint("io_uring_flush io_uring_submit -EBUSY/-EAGAIN waitingSubmissions[\(waitingSubmissions)] submissionCount[\(submissionCount)]. Breaking out and resubmitting later (whenReady() end).")
-                    break loop
-                // -ENOMEM when there is not enough memory to do internal allocations on the kernel side.
-                // Right nog we just loop with a sleep trying to buy time, but could also possibly fatalError here.
-                // See: https://github.com/axboe/liburing/issues/309
-                case -ENOMEM:
-                    usleep(1_000_000) // let's not busy loop to give the kernel some time to recover if possible
-                    _debugPrint("io_uring_flush io_uring_submit -ENOMEM \(submissionCount)")
-                case 0:
-                    _debugPrint("io_uring_flush io_uring_submit submitted 0, so far needed submissionCount[\(submissionCount)] waitingSubmissions[\(waitingSubmissions)] submitted [\(retval)] SQE:s this iteration")
-                    break
-                case 1...:
-                    _debugPrint("io_uring_flush io_uring_submit needed [\(submissionCount)] submission(s), submitted [\(retval)] SQE:s out of [\(waitingSubmissions)] possible")
-                    break
-                default: // other errors
-                    fatalError("Unexpected error [\(retval)] from io_uring_submit ")
+            case -EBUSY:
+                fallthrough
+            // We can get -EAGAIN if the CQE queue is full and we get back pressure from
+            // the kernel to start processing CQE:s. If we break here with unsubmitted
+            // SQE:s, they will stay pending on the user-level side and be flushed
+            // to the kernel after we had the opportunity to reap more CQE:s
+            // In practice it will be at the end of whenReady the next
+            // time around. Given the async nature, this is fine, we will not
+            // lose any submissions. We could possibly still get stuck
+            // trying to get new SQE if the actual SQE queue is full, but
+            // that would be due to user error in usage IMHO and we should fatalError there.
+            case -EAGAIN:
+                _debugPrint("io_uring_flush io_uring_submit -EBUSY/-EAGAIN waitingSubmissions[\(waitingSubmissions)] submissionCount[\(submissionCount)]. Breaking out and resubmitting later (whenReady() end).")
+                break loop
+            // -ENOMEM when there is not enough memory to do internal allocations on the kernel side.
+            // Right nog we just loop with a sleep trying to buy time, but could also possibly fatalError here.
+            // See: https://github.com/axboe/liburing/issues/309
+            case -ENOMEM:
+                usleep(1_000_000) // let's not busy loop to give the kernel some time to recover if possible
+                _debugPrint("io_uring_flush io_uring_submit -ENOMEM \(submissionCount)")
+            case 0:
+                _debugPrint("io_uring_flush io_uring_submit submitted 0, so far needed submissionCount[\(submissionCount)] waitingSubmissions[\(waitingSubmissions)] submitted [\(retval)] SQE:s this iteration")
+                break
+            case 1...:
+                _debugPrint("io_uring_flush io_uring_submit needed [\(submissionCount)] submission(s), submitted [\(retval)] SQE:s out of [\(waitingSubmissions)] possible")
+                break
+            default: // other errors
+                fatalError("Unexpected error [\(retval)] from io_uring_submit ")
             }
             
             waitingSubmissions = CNIOLinux_io_uring_sq_ready(&ring)
@@ -295,81 +295,81 @@ final internal class Uring {
         let result = cqes[cqeIndex]!.pointee.res
 
         switch eventType {
-            case .poll?:
-                switch result {
-                    case -ECANCELED:
-                        var pollError : UInt32 = 0
-                        assert(fd >= 0, "fd must be greater than zero")
-                        if multishot { // -ECANCELED for streaming polls, should signal error
-                            pollError = Uring.POLLERR | Uring.POLLHUP
-                        } else {       // this just signals that Selector just should resubmit a new fresh poll
-                            pollError = Uring.POLLCANCEL
-                        }
-                        if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
-                            fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
-                        } else {
-                            fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
-                        }
-                        break
-                    case -EINVAL:
-                        _debugPrint("Failed poll with -EINVAL for cqeIndex[\(cqeIndex)]")
-                        break
-                    case -EBADF:
-                        _debugPrint("Failed poll with -EBADF for cqeIndex[\(cqeIndex)]")
-                        break
-                    case ..<0: // other errors
-                        _debugPrint("Failed poll with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
-                        break
-                    case 0: // successfull chained add for singleshots, not an event
-                        break
-                    default: // positive success
-                        assert(bitPattern > 0, "Bitpattern should never be zero")
-                        assert(fd >= 0, "fd must be greater than zero")
-                        let uresult = UInt32(result)
-
-                        if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
-                            fdEvents[fdEventKey(fd, sequenceNumber)] =  current | uresult
-                        } else {
-                            fdEvents[fdEventKey(fd, sequenceNumber)] = uresult
-                        }
+        case .poll?:
+            switch result {
+            case -ECANCELED:
+                var pollError : UInt32 = 0
+                assert(fd >= 0, "fd must be greater than zero")
+                if multishot { // -ECANCELED for streaming polls, should signal error
+                    pollError = Uring.POLLERR | Uring.POLLHUP
+                } else {       // this just signals that Selector just should resubmit a new fresh poll
+                    pollError = Uring.POLLCANCEL
                 }
-            case .pollModify?: // we only get this for multishot modifications
-                switch result {
-                    case -ECANCELED: // -ECANCELED for streaming polls, should signal error
-                        assert(fd >= 0, "fd must be greater than zero")
-
-                        let pollError = Uring.POLLERR // Uring.POLLERR // (Uring.POLLHUP | Uring.POLLERR)
-                        if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
-                            fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
-                        } else {
-                            fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
-                        }
-                        break
-                    case -EALREADY:
-                        _debugPrint("Failed pollModify with -EALREADY for cqeIndex[\(cqeIndex)]")
-                        break
-                    case -ENOENT:
-                        _debugPrint("Failed pollModify with -ENOENT for cqeIndex [\(cqeIndex)]")
-                        break
-                    case -EINVAL:
-                        _debugPrint("Failed pollModify with -EINVAL for cqeIndex[\(cqeIndex)]")
-                        break
-                    case -EBADF:
-                        _debugPrint("Failed pollModify with -EBADF for cqeIndex[\(cqeIndex)]")
-                        break
-                    case ..<0: // other errors
-                        _debugPrint("Failed pollModify with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
-                        break
-                    case 0: // successfull chained add, not an event
-                        break
-                    default: // positive success
-                        fatalError("pollModify returned > 0")
+                if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
+                    fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
+                } else {
+                    fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
                 }
                 break
-            case .pollDelete?:
+            case -EINVAL:
+                _debugPrint("Failed poll with -EINVAL for cqeIndex[\(cqeIndex)]")
                 break
-            default:
-                assertionFailure("Unknown type")
+            case -EBADF:
+                _debugPrint("Failed poll with -EBADF for cqeIndex[\(cqeIndex)]")
+                break
+            case ..<0: // other errors
+                _debugPrint("Failed poll with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
+                break
+            case 0: // successfull chained add for singleshots, not an event
+                break
+            default: // positive success
+                assert(bitPattern > 0, "Bitpattern should never be zero")
+                assert(fd >= 0, "fd must be greater than zero")
+                let uresult = UInt32(result)
+
+                if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
+                    fdEvents[fdEventKey(fd, sequenceNumber)] =  current | uresult
+                } else {
+                    fdEvents[fdEventKey(fd, sequenceNumber)] = uresult
+                }
+            }
+        case .pollModify?: // we only get this for multishot modifications
+            switch result {
+            case -ECANCELED: // -ECANCELED for streaming polls, should signal error
+                assert(fd >= 0, "fd must be greater than zero")
+
+                let pollError = Uring.POLLERR // Uring.POLLERR // (Uring.POLLHUP | Uring.POLLERR)
+                if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
+                    fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
+                } else {
+                    fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
+                }
+                break
+            case -EALREADY:
+                _debugPrint("Failed pollModify with -EALREADY for cqeIndex[\(cqeIndex)]")
+                break
+            case -ENOENT:
+                _debugPrint("Failed pollModify with -ENOENT for cqeIndex [\(cqeIndex)]")
+                break
+            case -EINVAL:
+                _debugPrint("Failed pollModify with -EINVAL for cqeIndex[\(cqeIndex)]")
+                break
+            case -EBADF:
+                _debugPrint("Failed pollModify with -EBADF for cqeIndex[\(cqeIndex)]")
+                break
+            case ..<0: // other errors
+                _debugPrint("Failed pollModify with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
+                break
+            case 0: // successfull chained add, not an event
+                break
+            default: // positive success
+                fatalError("pollModify returned > 0")
+            }
+            break
+        case .pollDelete?:
+            break
+        default:
+            assertionFailure("Unknown type")
         }
     }
 
@@ -426,18 +426,18 @@ final internal class Uring {
         var eventCount = 0
 
         switch error {
-            case 0:
-                break
-            case -CNIOLinux.EINTR:
-                _debugPrint("_io_uring_wait_cqe_shared got CNIOLinux.EINTR")
-                return eventCount
-            case -CNIOLinux.ETIME:
-                _debugPrint("_io_uring_wait_cqe_shared timed out with -CNIOLinux.ETIME")
-                CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
-                return eventCount
-            default:
-                _debugPrint("UringError.uringWaitCqeFailure \(error)")
-                throw UringError.uringWaitCqeFailure
+        case 0:
+            break
+        case -CNIOLinux.EINTR:
+            _debugPrint("_io_uring_wait_cqe_shared got CNIOLinux.EINTR")
+            return eventCount
+        case -CNIOLinux.ETIME:
+            _debugPrint("_io_uring_wait_cqe_shared timed out with -CNIOLinux.ETIME")
+            CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
+            return eventCount
+        default:
+            _debugPrint("UringError.uringWaitCqeFailure \(error)")
+            throw UringError.uringWaitCqeFailure
         }
 
         self._dumpCqes("_io_uring_wait_cqe_shared")
