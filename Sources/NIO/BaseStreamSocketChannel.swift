@@ -72,6 +72,20 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }
     }
 
+    // Hook for customizable socket shutdown processing for subclasses, e.g. PipeChannel
+    func shutdownSocket(mode: CloseMode) throws {
+        switch mode {
+        case .output:
+            try self.socket.shutdown(how: .WR)
+            self.outputShutdown = true
+        case .input:
+            try socket.shutdown(how: .RD)
+            self.inputShutdown = true
+        case .all:
+            break
+        }
+    }
+
     // MARK: BaseSocketChannel's must override API that cannot be further refined by subclasses
     // This is `Channel` API so must be thread-safe.
     final override public var isWritable: Bool {
@@ -161,15 +175,13 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     promise?.fail(ChannelError.outputClosed)
                     return
                 }
-                try self.socket.shutdown(how: .WR)
-                self.outputShutdown = true
+                try self.shutdownSocket(mode: mode)
                 // Fail all pending writes and so ensure all pending promises are notified
                 self.pendingWrites.failAll(error: error, close: false)
                 self.unregisterForWritable()
                 promise?.succeed(())
 
                 self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
-
             case .input:
                 if self.inputShutdown {
                     promise?.fail(ChannelError.inputClosed)
@@ -179,11 +191,11 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 case ChannelError.eof:
                     // No need to explicit call socket.shutdown(...) as we received an EOF and the call would only cause
                     // ENOTCON
+                    self.inputShutdown = true
                     break
                 default:
-                    try socket.shutdown(how: .RD)
+                    try self.shutdownSocket(mode: mode)
                 }
-                self.inputShutdown = true
                 self.unregisterForReadable()
                 promise?.succeed(())
 
