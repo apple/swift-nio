@@ -75,14 +75,14 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     // Hook for customizable socket shutdown processing for subclasses, e.g. PipeChannel
     func shutdownSocket(mode: CloseMode) throws {
         switch mode {
-            case .output:
-                try self.socket.shutdown(how: .WR)
-                self.outputShutdown = true
-            case .input:
-                try socket.shutdown(how: .RD)
-                self.inputShutdown = true
-            case .all:
-                break
+        case .output:
+            try self.socket.shutdown(how: .WR)
+            self.outputShutdown = true
+        case .input:
+            try socket.shutdown(how: .RD)
+            self.inputShutdown = true
+        case .all:
+            break
         }
     }
 
