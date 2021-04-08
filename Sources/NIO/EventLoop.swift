@@ -767,7 +767,7 @@ enum NIORegistration: Registration {
             }
         }
     }
-    /// The `SelectableSequenceIdentifier` for  this `NIORegistration` used by the `Selector`
+    /// The `SelectableSequenceIdentifier` for this `NIORegistration` used by the `Selector`
     var selectableSequenceIdentifier: SelectableSequenceIdentifier {
         set {
             switch self {
@@ -902,9 +902,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         #if os(Linux)
         do {
             return try NIO.UringSelector<R>.init()
-        } catch  {
-            // fall through and return default Selector on failure
-            // this is typically either lack of liburing or too old kernel
+        } catch  { // fall through and return default Selector on failure
         }
         #endif
         

@@ -26,12 +26,10 @@
 #include <netinet/ip.h>
 #include <poll.h>
 
-// Pull in io_uring if it's availble - liburing must be
-// installed on both development and deployment machines
-// https://github.com/axboe/liburing
-// The Linux kernel needs to be 5.13+ (not yet clear)
-// as we use the poll multishot functionality from
-// https://github.com/axboe/liburing/issues/310
+// Pull in io_uring if it's availble - liburing must be installed on both development and
+// deployment machines: https://github.com/axboe/liburing
+// The Linux kernel needs to be 5.13 (planned) is using the (optional) poll multishot
+// functionality from https://github.com/axboe/liburing/issues/310
 
 #if __has_include(<liburing.h>)
 #include <liburing.h>
@@ -87,10 +85,10 @@ size_t CNIOLinux_CMSG_LEN(size_t);
 size_t CNIOLinux_CMSG_SPACE(size_t);
 #endif // __linux__
 
-// including all here to quiet compiler warnings
+// including all here to quiet compiler warnings,  local copies for the sqe/cqe structs and flags
 
-#include "io_uring.h" // we pull in a local copy for the sqe/cqe structs and flags
-#include "barrier.h" // we pull in a local copy for the sqe/cqe structs and flags
+#include "io_uring.h"
+#include "barrier.h" 
 
 #include "liburing_stubs.h"
 #include "liburing_nio.h"

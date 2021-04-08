@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 // from liburing project, local copy needed for builds on linux platforms without liburing installed
-// (liburing will be disabled then though)
+
 #ifdef __linux__
 
 #ifdef C_NIO_LIBURING_UNAVAILABLE // this is to quiet compiler warnings for umbrella headers

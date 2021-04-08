@@ -12,16 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This is a companion to System.swift that provides only Linux specials: either things that exist
-// only on Linux, or things that have Linux-specific extensions.
-
 #if os(Linux)
 
 import CNIOLinux
 
 // we stuff the event type into the user data for the sqe together with
-// the fd to match the events without needing any memory allocations or
-// references. Just shift in the event type in the upper 32 bits.
+// the fd and sequenceIdentifier to match the events without needing any
+// memory allocations or references.
 
 internal enum CqeEventType : Int {
     case poll = 1, pollModify, pollDelete // start with 1 to not get zero bit patterns for stdin

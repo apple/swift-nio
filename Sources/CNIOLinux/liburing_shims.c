@@ -307,7 +307,7 @@ int CNIOLinux_io_uring_queue_init(unsigned entries, struct io_uring *ring,
         {
             // setup a small global ring whose fd we can reference to use shared kernel sqpoll thread for all rings
             // we don't particulariy care if we fail, then no SQPOLL shared ring
-            (void) liburing_functions.io_uring_queue_init(4, &global_ring, IORING_SETUP_SQPOLL); // should have IORING_SETUP_SQ_AFF
+            (void) liburing_functions.io_uring_queue_init(4, &global_ring, IORING_SETUP_SQPOLL); // should support IORING_SETUP_SQ_AFF
         }
         pthread_mutex_unlock(&global_ring_mutex);
 
@@ -408,14 +408,15 @@ struct io_uring_sqe *CNIOLinux_io_uring_get_sqe(struct io_uring *ring)
     // to the amount of events the user tries to push through in a single
     // eventloop tick. This is basically a problem for synthetic tests that
     // e.g. do a huge amount of registration modifications.
+    // I believe this is a slight design issue with SwiftNIO currently that
+    // should be discussed.
     while (!(sqe = liburing_functions.io_uring_get_sqe(ring))) {
         ret = CNIOLinux_io_uring_submit(ring);
         assert(ret >= 0);
     }
     
-    // FIXME: When adding support for SQPOLL we should probably
-    // should use this for waiting inside the loop instead/also
-    // static inline int io_uring_sqring_wait(struct io_uring *ring)
+    // FIXME: As we've added basic support for SQPOLL, we
+    // should use this io_uring_sqring_wait() for waiting inside the loop instead/also
 
     return sqe;
 }
@@ -534,18 +535,6 @@ int CNIOLinux_io_uring_opcode_supported(const struct io_uring_probe *p, int op)
 {
     return io_uring_opcode_supported(p, op);
 }
-
-/*inline extern struct io_uring_sqe *CNIOLinux_io_uring_get_sqe(struct io_uring *ring)
-{
-    return io_uring_get_sqe(ring);
-}
-
-inline void CNIOLinux_io_uring_submit(struct io_uring *ring)
-{
-    io_uring_submit(ring);
-    return;
-}
-*/
 
 void CNIOLinux_io_uring_set_link_flag(struct io_uring_sqe *sqe)
 {
