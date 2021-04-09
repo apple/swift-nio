@@ -618,14 +618,23 @@ public final class EmbeddedChannel: Channel {
     /// - parameters:
     ///     - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register or `nil` if none should be added.
     ///     - loop: The `EmbeddedEventLoop` to use.
-    public init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
+    public convenience init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
+        let handlers = handler.map { [$0] } ?? []
+        self.init(handlers: handlers, loop: loop)
+    }
+    
+    /// Create a new instance.
+    ///
+    /// During creation it will automatically also register itself on the `EmbeddedEventLoop`.
+    ///
+    /// - parameters:
+    ///     - handlers: The `ChannelHandler`s to add to the `ChannelPipeline` before register.
+    ///     - loop: The `EmbeddedEventLoop` to use.
+    public init(handlers: [ChannelHandler], loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
         self.embeddedEventLoop = loop
         self._pipeline = ChannelPipeline(channel: self)
 
-        if let handler = handler {
-            // This will be propagated via fireErrorCaught
-            _ = try? _pipeline.addHandler(handler).wait()
-        }
+        try! self._pipeline.syncOperations.addHandlers(handlers)
 
         // This will never throw...
         try! register().wait()
