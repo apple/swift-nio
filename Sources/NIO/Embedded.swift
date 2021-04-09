@@ -619,7 +619,7 @@ public final class EmbeddedChannel: Channel {
     ///     - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register or `nil` if none should be added.
     ///     - loop: The `EmbeddedEventLoop` to use.
     public convenience init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
-        let handlers = handler == nil ? [] : [handler!]
+        let handlers = handler.map { [$0] } ?? []
         self.init(handlers: handlers, loop: loop)
     }
     
