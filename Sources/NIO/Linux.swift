@@ -57,9 +57,9 @@ internal enum EventFd {
     }
 
     @inline(never)
-    public static func eventfd(initval: Int32, flags: Int32) throws -> Int32 {
+    public static func eventfd(initval: UInt32, flags: Int32) throws -> Int32 {
         return try syscall(blocking: false) {
-            CNIOLinux.eventfd(0, Int32(EFD_CLOEXEC | EFD_NONBLOCK))
+            CNIOLinux.eventfd(initval, flags)
         }.result
     }
 }
