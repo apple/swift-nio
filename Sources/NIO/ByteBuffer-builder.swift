@@ -28,7 +28,7 @@ extension String: ByteBufferSerializable {
     /// - parameter buffer: The target `ByteBuffer`.
     /// - returns: The number of bytes written.
     public func write(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeString(self)
+        return buffer.writeString(self)
     }
     
 }
@@ -39,7 +39,7 @@ extension Substring: ByteBufferSerializable {
     /// - parameter buffer: The target `ByteBuffer`.
     /// - returns: The number of bytes written.
     public func write(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeSubstring(self)
+        return buffer.writeSubstring(self)
     }
     
 }
@@ -50,7 +50,7 @@ extension StaticString: ByteBufferSerializable {
     /// - parameter buffer: The target `ByteBuffer`.
     /// - returns: The number of bytes written.
     public func write(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeStaticString(self)
+        return buffer.writeStaticString(self)
     }
     
 }
@@ -61,7 +61,7 @@ extension Sequence where Element == UInt8 {
     /// - parameter buffer: The target `ByteBuffer`.
     /// - returns: The number of bytes written.
     public func write(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeBytes(self)
+        return buffer.writeBytes(self)
     }
     
 }
@@ -72,7 +72,7 @@ extension FixedWidthInteger where Self: ByteBufferSerializable {
     /// - parameter buffer: The target `ByteBuffer`.
     /// - returns: The number of bytes written.
     public func write(into buffer: inout ByteBuffer) -> Int {
-        buffer.writeInteger(self)
+        return buffer.writeInteger(self)
     }
     
 }
@@ -95,7 +95,7 @@ extension UInt64: ByteBufferSerializable {}
 @resultBuilder
 public struct BufferBuilder {
     public static func buildBlock(_ components: ByteBufferSerializable...) -> [ByteBufferSerializable] {
-        components
+        return components
     }
 }
 
@@ -114,7 +114,7 @@ extension ByteBuffer {
     /// - parameter contents: A result builder that uses `ByteBufferSerializable` types.
     /// - returns: The number of bytes written.
     public mutating func write(@BufferBuilder contents: () -> [ByteBufferSerializable]) -> Int {
-        contents().map { $0.write(into: &self) }.reduce(0, +)
+        return contents().map { $0.write(into: &self) }.reduce(0, +)
     }
     
 }
