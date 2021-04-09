@@ -16,6 +16,7 @@ import Dispatch
 
 // MARK: - Serializable
 
+/// Used to write a conforming type into a `ByteBuffer` so that it can be used in a result builder.
 public protocol ByteBufferSerializable {
     
     @discardableResult func write(into buffer: inout ByteBuffer) -> Int
