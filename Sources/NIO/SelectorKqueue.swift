@@ -62,6 +62,7 @@ extension KQueueEventFilterSet {
     ///    - body: The closure that will then apply the change set.
     func calculateKQueueFilterSetChanges(previousKQueueFilterSet: KQueueEventFilterSet,
                                          fileDescriptor: CInt,
+                                        sequenceIdentifier: RegistrationSequenceIdentifier,
                                          _ body: (UnsafeMutableBufferPointer<kevent>) throws -> Void) rethrows {
         // we only use three filters (EVFILT_READ, EVFILT_WRITE and EVFILT_EXCEPT) so the number of changes would be 3.
         var keventsHopefullyOnStack = (kevent(), kevent(), kevent())
@@ -81,7 +82,7 @@ extension KQueueEventFilterSet {
             var index: Int = 0
             for (event, filter) in [(KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT)] {
                 if let flags = calculateKQueueChange(event: event) {
-                    keventBuffer[index].setEvent(fileDescriptor: fileDescriptor, filter: filter, flags: flags)
+                    keventBuffer[index].setEvent(fileDescriptor: fileDescriptor, filter: filter, flags: flags, sequenceIdentifier: sequenceIdentifier)
                     index += 1
                 }
             }
@@ -145,7 +146,7 @@ extension Selector: _SelectorBackendProtocol {
         }
     }
 
-    private func kqueueUpdateEventNotifications<S: Selectable>(selectable: S, interested: SelectorEventSet, oldInterested: SelectorEventSet?) throws {
+    private func kqueueUpdateEventNotifications<S: Selectable>(selectable: S, interested: SelectorEventSet, oldInterested: SelectorEventSet?, sequenceIdentifier: RegistrationSequenceIdentifier) throws {
         assert(self.myThread == NIOThread.current)
         let oldKQueueFilters = KQueueEventFilterSet(selectorEventSet: oldInterested ?? ._none)
         let newKQueueFilters = KQueueEventFilterSet(selectorEventSet: interested)
@@ -155,6 +156,7 @@ extension Selector: _SelectorBackendProtocol {
         try selectable.withUnsafeHandle {
             try newKQueueFilters.calculateKQueueFilterSetChanges(previousKQueueFilterSet: oldKQueueFilters,
                                                                  fileDescriptor: $0,
+                                                                 sequenceIdentifier: sequenceIdentifier,
                                                                  kqueueApplyEventChangeSet)
         }
     }
@@ -179,16 +181,16 @@ extension Selector: _SelectorBackendProtocol {
     func deinitAssertions0() {
     }
     
-    func register0<S: Selectable>(selectable: S, fd: Int, interested: SelectorEventSet) throws {
-        try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil)
+    func register0<S: Selectable>(selectable: S, fd: Int, interested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws {
+        try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil, sequenceIdentifier: sequenceIdentifier)
     }
 
-    func reregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet) throws {
-        try kqueueUpdateEventNotifications(selectable: selectable, interested: newInterested, oldInterested: oldInterested)
+    func reregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws {
+        try kqueueUpdateEventNotifications(selectable: selectable, interested: newInterested, oldInterested: oldInterested, sequenceIdentifier: sequenceIdentifier)
     }
     
-    func deregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet) throws {
-        try kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: oldInterested)
+    func deregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws {
+        try kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: oldInterested, sequenceIdentifier: sequenceIdentifier)
     }
 
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
@@ -202,22 +204,22 @@ extension Selector: _SelectorBackendProtocol {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
 
-
         let timespec = Selector.toKQueueTimeSpec(strategy: strategy)
         let ready = try timespec.withUnsafeOptionalPointer { ts in
             Int(try KQueue.kevent(kq: self.selectorFD, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
         }
 
-        // start with no deregistrations happened
-        self.deregistrationsHappened = false
-        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
-        for i in 0..<ready where !self.deregistrationsHappened {
+        for i in 0..<ready {
             let ev = events[i]
             let filter = Int32(ev.filter)
+            let eventSequenceIdentifier = UInt32(Int(bitPattern: ev.udata))
             guard Int32(ev.flags) & EV_ERROR == 0 else {
                 throw IOError(errnoCode: Int32(ev.data), reason: "kevent returned with EV_ERROR set: \(String(describing: ev))")
             }
             guard filter != EVFILT_USER, let registration = registrations[Int(ev.ident)] else {
+                continue
+            }
+            guard eventSequenceIdentifier == registration.sequenceIdentifier else {
                 continue
             }
             var selectorEvent: SelectorEventSet = ._none
@@ -298,11 +300,11 @@ extension Selector: _SelectorBackendProtocol {
 
 extension kevent {
     /// Update a kevent for a given filter, file descriptor, and set of flags.
-    mutating func setEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16) {
+    mutating func setEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16, sequenceIdentifier: RegistrationSequenceIdentifier) {
         self.ident = UInt(fd)
         self.filter = Int16(filter)
         self.flags = flags
-        self.udata = nil
+        self.udata = UnsafeMutableRawPointer.init(bitPattern: UInt(sequenceIdentifier))
 
         // On macOS, EVFILT_EXCEPT will fire whenever there is unread data in the socket receive
         // buffer. This is not a behaviour we want from EVFILT_EXCEPT: we only want it to tell us

@@ -98,9 +98,9 @@ protocol _SelectorBackendProtocol {
     associatedtype R: Registration
     func initialiseState0() throws
     func deinitAssertions0() // allows actual implementation to run some assertions as part of the class deinit
-    func register0<S: Selectable>(selectable: S, fd: Int, interested: SelectorEventSet) throws
-    func reregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet) throws
-    func deregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet) throws
+    func register0<S: Selectable>(selectable: S, fd: Int, interested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws
+    func reregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws
+    func deregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws
     /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
     func wakeup0() throws
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
@@ -121,18 +121,15 @@ protocol _SelectorBackendProtocol {
 /* this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly */
 internal class Selector<R: Registration>  {
     var lifecycleState: SelectorLifecycleState
-
-    // temporary workaround to stop us delivering outdated events; read in `whenReady`, set in `deregister`
-    var deregistrationsHappened: Bool = false
     var registrations = [Int: R]()
+    var sequenceIdentifier : RegistrationSequenceIdentifier = 1
 
-    let externalSelectorFDLock = Lock()
-
+    let myThread: NIOThread
     // The rules for `self.selectorFD`, `self.eventFD`, and `self.timerFD`:
     // reads: `self.externalSelectorFDLock` OR access from the EventLoop thread
     // writes: `self.externalSelectorFDLock` AND access from the EventLoop thread
+    let externalSelectorFDLock = Lock()
     var selectorFD: CInt = -1 // -1 == we're closed
-    let myThread: NIOThread
 
     // Here we add the stored properties that are used by the specific backends
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
@@ -212,8 +209,14 @@ internal class Selector<R: Registration>  {
 
         try selectable.withUnsafeHandle { fd in
             assert(registrations[Int(fd)] == nil)
-            try self.register0(selectable: selectable, fd: Int(fd), interested: interested)
-            registrations[Int(fd)] = makeRegistration(interested)
+            try self.register0(selectable: selectable,
+                               fd: Int(fd),
+                               interested: interested,
+                               sequenceIdentifier: self.sequenceIdentifier)
+            var registration = makeRegistration(interested)
+            registration.sequenceIdentifier = self.sequenceIdentifier
+            registrations[Int(fd)] = registration
+            self.sequenceIdentifier &+= 1 // we are ok to overflow
         }
     }
 
@@ -230,7 +233,11 @@ internal class Selector<R: Registration>  {
         assert(interested.contains(.reset), "must register for at least .reset but tried registering for \(interested)")
         try selectable.withUnsafeHandle { fd in
             var reg = registrations[Int(fd)]!
-            try self.reregister0(selectable: selectable, fd: Int(fd), oldInterested: reg.interested, newInterested: interested)
+            try self.reregister0(selectable: selectable,
+                                 fd: Int(fd),
+                                 oldInterested: reg.interested,
+                                 newInterested: interested,
+                                 sequenceIdentifier: reg.sequenceIdentifier)
             reg.interested = interested
             self.registrations[Int(fd)] = reg
         }
@@ -247,13 +254,15 @@ internal class Selector<R: Registration>  {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
-        // temporary workaround to stop us delivering outdated events
-        self.deregistrationsHappened = true
+
         try selectable.withUnsafeHandle { fd in
             guard let reg = registrations.removeValue(forKey: Int(fd)) else {
                 return
             }
-            try self.deregister0(selectable: selectable, fd: Int(fd), oldInterested: reg.interested)
+            try self.deregister0(selectable: selectable,
+                                 fd: Int(fd),
+                                 oldInterested: reg.interested,
+                                 sequenceIdentifier: reg.sequenceIdentifier)
         }
     }
 
@@ -336,13 +345,13 @@ extension Selector where R == NIORegistration {
             }
 
             switch reg {
-            case .serverSocketChannel(let chan, _):
+            case .serverSocketChannel(let chan, _, _):
                 return closeChannel(chan)
-            case .socketChannel(let chan, _):
+            case .socketChannel(let chan, _, _):
                 return closeChannel(chan)
-            case .datagramChannel(let chan, _):
+            case .datagramChannel(let chan, _, _):
                 return closeChannel(chan)
-            case .pipeChannel(let chan, _, _):
+            case .pipeChannel(let chan, _, _, _):
                 return closeChannel(chan)
             }
         }.map { future in

@@ -103,13 +103,13 @@ extension Selector: _SelectorBackendProtocol {
 
         var ev = Epoll.epoll_event()
         ev.events = SelectorEventSet.read.epollEventSet
-        ev.data.fd = self.eventFD
+        ev.data.u64 = UInt64(self.eventFD)
 
         try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: self.eventFD, event: &ev)
 
         var timerev = Epoll.epoll_event()
         timerev.events = Epoll.EPOLLIN | Epoll.EPOLLERR | Epoll.EPOLLRDHUP
-        timerev.data.fd = self.timerFD
+        timerev.data.u64 = UInt64(self.timerFD)
         try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: self.timerFD, event: &timerev)
     }
 
@@ -118,23 +118,23 @@ extension Selector: _SelectorBackendProtocol {
         assert(self.timerFD == -1, "self.timerFD == \(self.timerFD) in deinitAssertions0, forgot close?")
     }
 
-    func register0<S: Selectable>(selectable: S, fd: Int, interested: SelectorEventSet) throws {
+    func register0<S: Selectable>(selectable: S, fd: Int, interested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws {
         var ev = Epoll.epoll_event()
         ev.events = interested.epollEventSet
-        ev.data.fd = Int32(fd)
+        ev.data.u64 = UInt64(UInt64(sequenceIdentifier) << 32 + UInt64(fd)) // we put fd in lower 4 bytes to allow eventfd & timerfd to work as is
 
-        try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: ev.data.fd, event: &ev)
+        try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: Int32(fd), event: &ev)
     }
 
-    func reregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet) throws {
+    func reregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws {
         var ev = Epoll.epoll_event()
         ev.events = newInterested.epollEventSet
-        ev.data.fd = Int32(fd)
+        ev.data.u64 = UInt64(UInt64(sequenceIdentifier) << 32 + UInt64(fd))
 
-        _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: ev.data.fd, event: &ev)
+        _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: Int32(fd), event: &ev)
     }
 
-    func deregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet) throws {
+    func deregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws {
         var ev = Epoll.epoll_event()
         _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_DEL, fd: Int32(fd), event: &ev)
     }
@@ -171,12 +171,11 @@ extension Selector: _SelectorBackendProtocol {
             ready = Int(try Epoll.epoll_wait(epfd: self.selectorFD, events: events, maxevents: Int32(eventsCapacity), timeout: -1))
         }
 
-        // start with no deregistrations happened
-        self.deregistrationsHappened = false
-        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
-        for i in 0..<ready where !self.deregistrationsHappened {
+        for i in 0..<ready {
             let ev = events[i]
-            switch ev.data.fd {
+            let fd = Int32(UInt64(ev.data.u64 & 0x00000000FFFFFFFF))
+            let eventSequenceIdentifier = UInt32(UInt64(ev.data.u64 >> 32))
+            switch fd {
             case self.eventFD:
                 var val = EventFd.eventfd_t()
                 // Consume event
@@ -191,7 +190,11 @@ extension Selector: _SelectorBackendProtocol {
                 self.earliestTimer = .distantFuture
             default:
                 // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
-                if let registration = registrations[Int(ev.data.fd)] {
+                if let registration = registrations[Int(fd)] {
+                    guard eventSequenceIdentifier == registration.sequenceIdentifier else {
+                        continue
+                    }
+
                     var selectorEvent = SelectorEventSet(epollEvent: ev)
                     // we can only verify the events for i == 0 as for i > 0 the user might have changed the registrations since then.
                     assert(i != 0 || selectorEvent.isSubset(of: registration.interested), "selectorEvent: \(selectorEvent), registration: \(registration)")
