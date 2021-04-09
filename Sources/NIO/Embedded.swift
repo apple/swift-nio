@@ -634,9 +634,7 @@ public final class EmbeddedChannel: Channel {
         self.embeddedEventLoop = loop
         self._pipeline = ChannelPipeline(channel: self)
 
-        if !handlers.isEmpty {
-            _ = try? _pipeline.addHandlers(handlers).wait()
-        }
+        try! _pipeline.syncOperations.addHandlers(handlers)
 
         // This will never throw...
         try! register().wait()
