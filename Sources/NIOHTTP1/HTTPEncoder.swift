@@ -101,7 +101,7 @@ private enum BodyFraming {
 ///
 /// Note that for HTTP/1.0 if there is no Content-Length then the response should be followed
 /// by connection close. We require that the user send that connection close: we don't do it.
-private func sanitizeTransportHeaders(hasBody: HTTPMethod.HasBody, headers: inout HTTPHeaders, version: HTTPVersion) -> BodyFraming {
+private func correctlyFrameTransportHeaders(hasBody: HTTPMethod.HasBody, headers: inout HTTPHeaders, version: HTTPVersion) -> BodyFraming {
     switch hasBody {
     case .no:
         headers.remove(name: "content-length")
@@ -146,8 +146,8 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             assert(!(request.headers.contains(name: "content-length") &&
                         request.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
                      "illegal HTTP sent: \(request) contains both a content-length and transfer-encoding:chunked")
-            self.isChunked = sanitizeTransportHeaders(hasBody: request.method.hasRequestBody,
-                                                      headers: &request.headers, version: request.version) == .chunked
+            self.isChunked = correctlyFrameTransportHeaders(hasBody: request.method.hasRequestBody,
+                                                            headers: &request.headers, version: request.version) == .chunked
 
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(request: request)
@@ -184,8 +184,8 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             assert(!(response.headers.contains(name: "content-length") &&
                         response.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
                      "illegal HTTP sent: \(response) contains both a content-length and transfer-encoding:chunked")
-            self.isChunked = sanitizeTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no,
-                                                      headers: &response.headers, version: response.version) == .chunked
+            self.isChunked = correctlyFrameTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no,
+                                                            headers: &response.headers, version: response.version) == .chunked
 
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(response: response)

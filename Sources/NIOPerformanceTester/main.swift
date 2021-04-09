@@ -767,3 +767,6 @@ try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: Cir
 try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1mb", benchmark: CircularBufferIntoByteBufferBenchmark(iterations: 20, bufferSize: 1024*1024))
 
 try measureAndPrint(desc: "byte_buffer_view_iterator_1mb", benchmark: ByteBufferViewIteratorBenchmark(iterations: 20, bufferSize: 1024*1024))
+
+try measureAndPrint(desc: "byte_to_message_decoder_decode_many_small",
+                    benchmark: ByteToMessageDecoderDecodeManySmallsBenchmark(iterations: 1_000, bufferSize: 16384))

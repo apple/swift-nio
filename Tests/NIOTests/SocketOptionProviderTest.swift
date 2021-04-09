@@ -274,7 +274,7 @@ final class SocketOptionProviderTest: XCTestCase {
         let channel = self.clientChannel! as! SocketOptionProvider
         let tcpInfo = try assertNoThrowWithValue(channel.getTCPInfo().wait())
 
-        // We just need to sanity check something here to ensure that the data is vaguely reasonable.
+        // We just need to soundness check something here to ensure that the data is vaguely reasonable.
         XCTAssertEqual(tcpInfo.tcpi_state, UInt8(TCP_ESTABLISHED))
         #endif
     }
@@ -286,7 +286,7 @@ final class SocketOptionProviderTest: XCTestCase {
         let tcpConnectionInfo = try assertNoThrowWithValue(channel.getTCPConnectionInfo().wait())
 
         #if os(macOS) // deliberately only on macOS
-        // We just need to sanity check something here to ensure that the data is vaguely reasonable.
+        // We just need to soundness check something here to ensure that the data is vaguely reasonable.
         XCTAssertEqual(tcpConnectionInfo.tcpi_state, UInt8(TSI_S_ESTABLISHED))
         #endif
         #endif

@@ -3,6 +3,7 @@
     - removed the _KERNEL include guards
     - defined the __min_size macro inline
     - included sys/endian.h on Android
+    - use welcoming language (soundness check)
 */
 /*	$KAME: sha1.c,v 1.5 2000/11/08 06:13:08 itojun Exp $	*/
 /*-
@@ -58,7 +59,7 @@
 
 
 
-/* sanity check */
+/* soundness check */
 #if BYTE_ORDER != BIG_ENDIAN
 # if BYTE_ORDER != LITTLE_ENDIAN
 #  define unsupported 1
@@ -103,8 +104,7 @@ static uint32_t _K[] = { 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6 };
 static void sha1_step(struct sha1_ctxt *);
 
 static void
-sha1_step(ctxt)
-	struct sha1_ctxt *ctxt;
+sha1_step(struct sha1_ctxt *ctxt)
 {
 	uint32_t	a, b, c, d, e;
 	size_t t, s;
@@ -188,8 +188,7 @@ sha1_step(ctxt)
 /*------------------------------------------------------------*/
 
 void
-c_nio_sha1_init(ctxt)
-	struct sha1_ctxt *ctxt;
+c_nio_sha1_init(struct sha1_ctxt *ctxt)
 {
 	bzero(ctxt, sizeof(struct sha1_ctxt));
 	H(0) = 0x67452301;
@@ -200,8 +199,7 @@ c_nio_sha1_init(ctxt)
 }
 
 void
-c_nio_sha1_pad(ctxt)
-	struct sha1_ctxt *ctxt;
+c_nio_sha1_pad(struct sha1_ctxt *ctxt)
 {
 	size_t padlen;		/*pad length in bytes*/
 	size_t padstart;
@@ -235,10 +233,7 @@ c_nio_sha1_pad(ctxt)
 }
 
 void
-c_nio_sha1_loop(ctxt, input, len)
-	struct sha1_ctxt *ctxt;
-	const uint8_t *input;
-	size_t len;
+c_nio_sha1_loop(struct sha1_ctxt *ctxt, const uint8_t *input, size_t len)
 {
 	size_t gaplen;
 	size_t gapstart;

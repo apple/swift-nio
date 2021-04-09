@@ -31,7 +31,7 @@ if [[ "$(uname -s)" == "Linux" ]]; then
   if [[ ! -d "$source_kitten_source_path" ]]; then
     git clone https://github.com/jpsim/SourceKitten.git "$source_kitten_source_path"
   fi
-  source_kitten_path="$source_kitten_source_path/.build/x86_64-unknown-linux/debug"
+  source_kitten_path="$source_kitten_source_path/.build/debug"
   if [[ ! -d "$source_kitten_path" ]]; then
     rm -rf "$source_kitten_source_path/.swift-version"
     cd "$source_kitten_source_path" && swift build && cd "$root_path"

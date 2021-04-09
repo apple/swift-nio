@@ -17,6 +17,11 @@ import NIOWebSocket
 
 print("Establishing connection.")
 
+enum ConnectTo {
+    case ip(host: String, port: Int)
+    case unixDomainSocket(path: String)
+}
+
 // The HTTP handler to be used to initiate the request.
 // This initial request will be adapted by the WebSocket upgrader to contain the upgrade header parameters.
 // Channel read will only be called if the upgrade fails.
@@ -24,12 +29,21 @@ print("Establishing connection.")
 private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableChannelHandler {
     public typealias InboundIn = HTTPClientResponsePart
     public typealias OutboundOut = HTTPClientRequestPart
+
+    public let target: ConnectTo
+
+    public init(target: ConnectTo) {
+        self.target = target
+    }
     
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress!)")
-        
+
         // We are connected. It's time to send the message to the server to initialize the upgrade dance.
         var headers = HTTPHeaders()
+        if case let .ip(host: host, port: port) = target {
+            headers.add(name: "Host", value: "\(host):\(port)")
+        }
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
         
@@ -153,33 +167,6 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
     }
 }
 
-let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-let bootstrap = ClientBootstrap(group: group)
-    // Enable SO_REUSEADDR.
-    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-    .channelInitializer { channel in
-        
-        let httpHandler = HTTPInitialRequestHandler()
-        
-        let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
-                                                           upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-            channel.pipeline.addHandler(WebSocketPingPongHandler())
-        })
-        
-        let config: NIOHTTPClientUpgradeConfiguration = (
-            upgraders: [ websocketUpgrader ],
-            completionHandler: { _ in
-                channel.pipeline.removeHandler(httpHandler, promise: nil)
-        })
-
-        return channel.pipeline.addHTTPClientHandlers(withClientUpgrade: config).flatMap {
-            channel.pipeline.addHandler(httpHandler)
-        }
-}
-defer {
-    try! group.syncShutdownGracefully()
-}
-
 // First argument is the program path
 let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
@@ -187,11 +174,6 @@ let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
 let defaultPort: Int = 8888
-
-enum ConnectTo {
-    case ip(host: String, port: Int)
-    case unixDomainSocket(path: String)
-}
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
@@ -206,6 +188,33 @@ case (_, .some(let p), _):
     connectTarget = .ip(host: defaultHost, port: p)
 default:
     connectTarget = .ip(host: defaultHost, port: defaultPort)
+}
+
+let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+let bootstrap = ClientBootstrap(group: group)
+    // Enable SO_REUSEADDR.
+    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .channelInitializer { channel in
+
+        let httpHandler = HTTPInitialRequestHandler(target: connectTarget)
+
+        let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
+                                                           upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
+            channel.pipeline.addHandler(WebSocketPingPongHandler())
+        })
+
+        let config: NIOHTTPClientUpgradeConfiguration = (
+            upgraders: [ websocketUpgrader ],
+            completionHandler: { _ in
+                channel.pipeline.removeHandler(httpHandler, promise: nil)
+        })
+
+        return channel.pipeline.addHTTPClientHandlers(withClientUpgrade: config).flatMap {
+            channel.pipeline.addHandler(httpHandler)
+        }
+}
+defer {
+    try! group.syncShutdownGracefully()
 }
 
 let channel = try { () -> Channel in

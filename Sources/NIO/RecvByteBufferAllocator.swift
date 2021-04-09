@@ -62,7 +62,7 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
         }
 
         i = 512
-        while i > 0 {
+        while i < UInt32.max { // 1 << 32 max buffer size
             sizeTable.append(i)
             i <<= 1
         }

@@ -18,13 +18,13 @@ fileprivate let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
 
 struct EventLoopCrashTests {
     let testMultiThreadedELGCrashesOnZeroThreads = CrashTest(
-        regex: "^Precondition failed: numberOfThreads must be positive"
+        regex: "Precondition failed: numberOfThreads must be positive"
     ) {
         try? MultiThreadedEventLoopGroup(numberOfThreads: 0).syncShutdownGracefully()
     }
 
     let testWaitCrashesWhenOnEL = CrashTest(
-        regex: #"^Precondition failed: BUG DETECTED: wait\(\) must not be called when on an EventLoop"#
+        regex: #"Precondition failed: BUG DETECTED: wait\(\) must not be called when on an EventLoop"#
     ) {
         let promise = group.next().makePromise(of: Void.self)
         try? group.next().submit {
@@ -33,19 +33,19 @@ struct EventLoopCrashTests {
     }
 
     let testAssertInEventLoop = CrashTest(
-        regex: "^Precondition failed: file DUMMY, line 42"
+        regex: "Precondition failed"
     ) {
         group.next().assertInEventLoop(file: "DUMMY", line: 42)
     }
 
     let testPreconditionInEventLoop = CrashTest(
-        regex: "^Precondition failed: file DUMMY, line 42"
+        regex: "Precondition failed"
     ) {
         group.next().preconditionInEventLoop(file: "DUMMY", line: 42)
     }
 
     let testAssertNotInEventLoop = CrashTest(
-        regex: "^Precondition failed: file DUMMY, line 42"
+        regex: "Precondition failed"
     ) {
         let el = group.next()
         try? el.submit {
@@ -54,7 +54,7 @@ struct EventLoopCrashTests {
     }
 
     let testPreconditionNotInEventLoop = CrashTest(
-        regex: "^Precondition failed: file DUMMY, line 42"
+        regex: "Precondition failed"
     ) {
         let el = group.next()
         try? el.submit {
@@ -63,7 +63,7 @@ struct EventLoopCrashTests {
     }
 
     let testSchedulingEndlesslyInELShutdown = CrashTest(
-        regex: #"^Precondition failed: EventLoop SelectableEventLoop \{ .* \} didn't quiesce after 1000 ticks."#
+        regex: #"Precondition failed: EventLoop SelectableEventLoop \{ .* \} didn't quiesce after 1000 ticks."#
     ) {
         let group = MultiThreadedEventLoopGroup.init(numberOfThreads: 1)
         defer {

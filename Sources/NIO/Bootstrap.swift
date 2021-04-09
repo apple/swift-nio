@@ -536,7 +536,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     }
 
     /// Specifies a timeout to apply to a connection attempt.
-    //
+    ///
     /// - parameters:
     ///     - timeout: The timeout that will apply to the connection attempt.
     public func connectTimeout(_ timeout: TimeAmount) -> Self {

@@ -618,29 +618,51 @@ public final class EmbeddedChannel: Channel {
     /// - parameters:
     ///     - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register or `nil` if none should be added.
     ///     - loop: The `EmbeddedEventLoop` to use.
-    public init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
+    public convenience init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
+        let handlers = handler.map { [$0] } ?? []
+        self.init(handlers: handlers, loop: loop)
+    }
+    
+    /// Create a new instance.
+    ///
+    /// During creation it will automatically also register itself on the `EmbeddedEventLoop`.
+    ///
+    /// - parameters:
+    ///     - handlers: The `ChannelHandler`s to add to the `ChannelPipeline` before register.
+    ///     - loop: The `EmbeddedEventLoop` to use.
+    public init(handlers: [ChannelHandler], loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
         self.embeddedEventLoop = loop
         self._pipeline = ChannelPipeline(channel: self)
 
-        if let handler = handler {
-            // This will be propagated via fireErrorCaught
-            _ = try? _pipeline.addHandler(handler).wait()
-        }
+        try! self._pipeline.syncOperations.addHandlers(handlers)
 
         // This will never throw...
         try! register().wait()
     }
 
     /// - see: `Channel.setOption`
+    @inlinable
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
+        self.setOptionSync(option, value: value)
+        return self.eventLoop.makeSucceededVoidFuture()
+    }
+
+    @inlinable
+    internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
         // No options supported
         fatalError("no options supported")
     }
 
     /// - see: `Channel.getOption`
+    @inlinable
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value>  {
+        return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
+    }
+
+    @inlinable
+    internal func getOptionSync<Option: ChannelOption>(_ option: Option) -> Option.Value {
         if option is ChannelOptions.Types.AutoReadOption {
-            return self.eventLoop.makeSucceededFuture(true as! Option.Value)
+            return true as! Option.Value
         }
         fatalError("option \(option) not supported")
     }
@@ -671,5 +693,30 @@ public final class EmbeddedChannel: Channel {
             self.remoteAddress = address
         }
         pipeline.connect(to: address, promise: promise)
+    }
+}
+
+extension EmbeddedChannel {
+    public struct SynchronousOptions: NIOSynchronousChannelOptions {
+        @usableFromInline
+        internal let channel: EmbeddedChannel
+
+        fileprivate init(channel: EmbeddedChannel) {
+            self.channel = channel
+        }
+
+        @inlinable
+        public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
+            self.channel.setOptionSync(option, value: value)
+        }
+
+        @inlinable
+        public func getOption<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
+            return self.channel.getOptionSync(option)
+        }
+    }
+
+    public final var syncOptions: NIOSynchronousChannelOptions? {
+        return SynchronousOptions(channel: self)
     }
 }

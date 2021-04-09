@@ -25,14 +25,14 @@ public final class EventLoopTest : XCTestCase {
 
         var result: Bool?
         scheduled.futureResult.whenSuccess { result = $0 }
-        
+
         eventLoop.run() // run without time advancing should do nothing
         XCTAssertFalse(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
-        
+
         eventLoop.advanceTime(by: .seconds(1)) // should fire now
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
-        
+
         XCTAssertNotNil(result)
         XCTAssertTrue(result == true)
     }
@@ -46,14 +46,14 @@ public final class EventLoopTest : XCTestCase {
 
         var result: Bool?
         scheduled.futureResult.whenSuccess { result = $0 }
-        
+
         eventLoop.run() // run without time advancing should do nothing
         XCTAssertFalse(scheduled.futureResult.isFulfilled)
         XCTAssertNil(result)
-        
+
         eventLoop.advanceTime(by: .seconds(1)) // should fire now
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
-        
+
         XCTAssertNotNil(result)
         XCTAssertTrue(result == true)
     }
@@ -102,7 +102,7 @@ public final class EventLoopTest : XCTestCase {
         var error: Error?
         scheduled.futureResult.whenSuccess { result = $0 }
         scheduled.futureResult.whenFailure { error = $0 }
-        
+
         eventLoop.advanceTime(by: .milliseconds(500)) // advance halfway to firing time
         scheduled.cancel()
         eventLoop.advanceTime(by: .milliseconds(500)) // advance the rest of the way
@@ -123,7 +123,7 @@ public final class EventLoopTest : XCTestCase {
         var error: Error?
         scheduled.futureResult.whenSuccess { result = $0 }
         scheduled.futureResult.whenFailure { error = $0 }
-        
+
         eventLoop.advanceTime(by: .milliseconds(500)) // advance halfway to firing time
         scheduled.cancel()
         eventLoop.advanceTime(by: .milliseconds(500)) // advance the rest of the way
@@ -173,7 +173,7 @@ public final class EventLoopTest : XCTestCase {
         var error: Error?
         scheduled.futureResult.whenSuccess { result = $0 }
         scheduled.futureResult.whenFailure { error = $0 }
-        
+
         scheduled.cancel()
         eventLoop.advanceTime(by: .seconds(1))
 
@@ -192,7 +192,7 @@ public final class EventLoopTest : XCTestCase {
         var error: Error?
         scheduled.futureResult.whenSuccess { result = $0 }
         scheduled.futureResult.whenFailure { error = $0 }
-        
+
         scheduled.cancel()
         eventLoop.advanceTime(by: .seconds(1))
 
@@ -706,7 +706,7 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertTrue(result.isEmpty)
 
     }
-    
+
     public func testRepeatedTaskThatIsImmediatelyCancelledNotifies() throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -1309,7 +1309,7 @@ public final class EventLoopTest : XCTestCase {
         var error: Error?
         scheduled.futureResult.whenSuccess { result = $0 }
         scheduled.futureResult.whenFailure { error = $0 }
-        
+
         scheduled.cancel()
 
         XCTAssertTrue(scheduled.futureResult.isFulfilled)
@@ -1365,6 +1365,34 @@ public final class EventLoopTest : XCTestCase {
             XCTAssert(futureOutside1 !== futureInside1)
             XCTAssert(futureInside1 === futureInside2)
         }.wait())
+    }
+
+    func testMakeCompletedFuture() {
+        let eventLoop = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+        }
+
+        XCTAssertEqual(try eventLoop.makeCompletedFuture(.success("foo")).wait(), "foo")
+
+        struct DummyError: Error {}
+        let future = eventLoop.makeCompletedFuture(Result<String, Error>.failure(DummyError()))
+        XCTAssertThrowsError(try future.wait()) { error in
+            XCTAssertTrue(error is DummyError)
+        }
+    }
+
+    func testMakeCompletedVoidFuture() {
+        let eventLoop = EventLoopWithPreSucceededFuture()
+        defer {
+            XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+        }
+
+        let future1 = eventLoop.makeCompletedFuture(.success(()))
+        let future2 = eventLoop.makeSucceededVoidFuture()
+        let future3 = eventLoop.makeSucceededFuture(())
+        XCTAssert(future1 === future2)
+        XCTAssert(future2 === future3)
     }
 }
 

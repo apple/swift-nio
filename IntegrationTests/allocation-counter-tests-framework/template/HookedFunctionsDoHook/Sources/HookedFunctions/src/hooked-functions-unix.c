@@ -37,12 +37,20 @@ static _Atomic ptrdiff_t g_recursive_malloc_next_free_ptr = ATOMIC_VAR_INIT(0);
 
 #define LIBC_SYMBOL(_fun) "" # _fun
 
+/* Some thread-local flags we use to check if we're recursively in a hooked function. */
 static __thread bool g_in_malloc = false;
 static __thread bool g_in_realloc = false;
 static __thread bool g_in_free = false;
-static __thread void *(*g_libc_malloc)(size_t) = NULL;
-static __thread void *(*g_libc_realloc)(void *, size_t) = NULL;
-static __thread void (*g_libc_free)(void *) = NULL;
+
+/* The types of the variables holding the libc function pointers. */
+typedef void *(*type_libc_malloc)(size_t);
+typedef void *(*type_libc_realloc)(void *, size_t);
+typedef void  (*type_libc_free)(void *);
+
+/* The (atomic) globals holding the pointer to the original libc implementation. */
+_Atomic type_libc_malloc g_libc_malloc;
+_Atomic type_libc_realloc g_libc_realloc;
+_Atomic type_libc_free g_libc_free;
 
 // this is called if malloc is called whilst trying to resolve libc's realloc.
 // we just vend out pointers to a large block in the BSS (which we never free).
@@ -85,25 +93,42 @@ static void recursive_free(void *ptr) {
     abort();
 }
 
-/* on other UNIX systems this is slightly harder. Basically we see if we already
- * have a thread local variable that is a pointer to the original libc function.
- * If yes, easy, call it. If no, we need to resolve it which we do by using
- * dlsym. There's only one slight problem: dlsym might call back into the
- * function we're just trying to resolve (it does call malloc). In that case
+/* On Apple platforms getting to the original libc function from a hooked
+ * function is easy.  On other UNIX systems this is slightly harder because we
+ * have to look up the function with the dynamic linker.  Because that isn't
+ * super performant we cache the lookup result in an (atomic) global.
+ *
+ * Calling into the libc function if we have already cached it is easy, we
+ * (atomically) load it and call into it.  If have not yet cached it, we need to
+ * resolve it which we do by using dlsym and then write it into the (atomic)
+ * global.  There's only one slight problem: dlsym might call back into the
+ * function we're just trying to resolve (dlsym does call malloc). In that case
  * we need to emulate that function (named recursive_*). But that's all then.
  */
 #define JUMP_INTO_LIBC_FUN(_fun, ...) /* \
 */ do { /* \
-*/     if (!g_libc_ ## _fun) { /* \
+*/     /* Let's see if somebody else already resolved that function for us */ /* \
+*/     type_libc_ ## _fun local_fun = atomic_load(&g_libc_ ## _fun); /* \
+*/     if (!local_fun) { /* \
+*/         /* No, we're the first ones to use this function. */ /* \
 */         if (!g_in_ ## _fun) { /* \
 */             g_in_ ## _fun = true; /* \
-*/             g_libc_ ## _fun = dlsym(RTLD_NEXT, LIBC_SYMBOL(_fun)); /* \
+*/             /* If we're here, we're at least not recursively in ourselves. */ /* \
+*/             /* That means we can use dlsym to resolve the libc function. */ /* \
+*/             type_libc_ ## _fun desired = dlsym(RTLD_NEXT, LIBC_SYMBOL(_fun)); /* \
+*/             if (atomic_compare_exchange_strong(&g_libc_ ## _fun, &local_fun, desired)) { /* \
+*/                 /* If we're here, we won the race, so let's use our resolved function.  */ /* \
+*/                 local_fun = desired; /* \
+*/             } else { /* \
+*/                 /* Lost the race, let's load the global again */ /* \
+*/                 local_fun = atomic_load(&g_libc_ ## _fun); /* \
+*/              } /* \
 */         } else { /* \
+*/             /* Okay, we can't jump into libc here and need to use our own version. */ /* \
 */             return recursive_ ## _fun (__VA_ARGS__); /* \
 */         } /* \
-*/     } /*
-*/     g_in_ ## _fun = false; /* \
-*/     return g_libc_ ## _fun (__VA_ARGS__); /*
+*/     } /* \
+*/     return local_fun(__VA_ARGS__); /* \
 */ } while(0)
 
 void replacement_free(void *ptr) {

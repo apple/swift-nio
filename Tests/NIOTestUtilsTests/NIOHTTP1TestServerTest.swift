@@ -237,6 +237,81 @@ class NIOHTTP1TestServerTest: XCTestCase {
         XCTAssertNotNil(channel)
         XCTAssertNoThrow(try channel.closeFuture.wait())
     }
+
+    func testReceiveAndVerify() {
+        let testServer = NIOHTTP1TestServer(group: self.group)
+
+        let responsePromise = self.group.next().makePromise(of: String.self)
+        var channel: Channel!
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort,
+                                                    responsePromise: responsePromise).wait())
+        self.sendRequest(channel: channel, uri: "/uri", message: "hello")
+
+        XCTAssertNoThrow(try testServer.receiveHeadAndVerify { head in
+            XCTAssertEqual(head.uri, "/uri")
+        })
+
+        XCTAssertNoThrow(try testServer.receiveBodyAndVerify { buffer in
+            XCTAssertEqual(buffer, ByteBuffer(string: "hello"))
+        })
+
+        XCTAssertNoThrow(try testServer.receiveEndAndVerify { trailers in
+            XCTAssertNil(trailers)
+        })
+
+        XCTAssertNoThrow(try testServer.stop())
+        XCTAssertNotNil(channel)
+        XCTAssertNoThrow(try channel.closeFuture.wait())
+    }
+
+    func testReceive() throws {
+        let testServer = NIOHTTP1TestServer(group: self.group)
+
+        let responsePromise = self.group.next().makePromise(of: String.self)
+        var channel: Channel!
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort,
+                                                    responsePromise: responsePromise).wait())
+        self.sendRequest(channel: channel, uri: "/uri", message: "hello")
+
+        let head = try assertNoThrowWithValue(try testServer.receiveHead())
+        XCTAssertEqual(head.uri, "/uri")
+
+        let body = try assertNoThrowWithValue(try testServer.receiveBody())
+        XCTAssertEqual(body, ByteBuffer(string: "hello"))
+
+        let trailers = try assertNoThrowWithValue(try testServer.receiveEnd())
+        XCTAssertNil(trailers)
+
+        XCTAssertNoThrow(try testServer.stop())
+        XCTAssertNotNil(channel)
+        XCTAssertNoThrow(try channel.closeFuture.wait())
+    }
+
+    func testReceiveAndVerifyWrongPart() {
+        let testServer = NIOHTTP1TestServer(group: self.group)
+
+        let responsePromise = self.group.next().makePromise(of: String.self)
+        var channel: Channel!
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort,
+                                                    responsePromise: responsePromise).wait())
+        self.sendRequest(channel: channel, uri: "/uri", message: "hello")
+
+        XCTAssertThrowsError(try testServer.receiveEndAndVerify()) { error in
+            XCTAssert(error is NIOHTTP1TestServerError)
+        }
+
+        XCTAssertThrowsError(try testServer.receiveHeadAndVerify()) { error in
+            XCTAssert(error is NIOHTTP1TestServerError)
+        }
+
+        XCTAssertThrowsError(try testServer.receiveBodyAndVerify()) { error in
+            XCTAssert(error is NIOHTTP1TestServerError)
+        }
+
+        XCTAssertNoThrow(try testServer.stop())
+        XCTAssertNotNil(channel)
+        XCTAssertNoThrow(try channel.closeFuture.wait())
+    }
 }
 
 private final class TestHTTPHandler: ChannelInboundHandler {
@@ -350,5 +425,22 @@ func assert(_ condition: @autoclosure () -> Bool,
 
     if !condition() {
         XCTFail(message, file: (file), line: line)
+    }
+}
+
+func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T,
+                               defaultValue: T? = nil,
+                               message: String? = nil,
+                               file: StaticString = #file,
+                               line: UInt = #line) throws -> T {
+    do {
+        return try body()
+    } catch {
+        XCTFail("\(message.map { $0 + ": " } ?? "")unexpected error \(error) thrown", file: (file), line: line)
+        if let defaultValue = defaultValue {
+            return defaultValue
+        } else {
+            throw error
+        }
     }
 }

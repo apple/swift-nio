@@ -17,7 +17,7 @@ import NIOHTTP1
 
 struct HTTPCrashTests {
     let testEncodingChunkedAndContentLengthForRequestsCrashes = CrashTest(
-        regex: "^Assertion failed: illegal HTTP sent: HTTPRequestHead .* contains both a content-length and transfer-encoding:chunked",
+        regex: "Assertion failed: illegal HTTP sent: HTTPRequestHead .* contains both a content-length and transfer-encoding:chunked",
         {
             let channel = EmbeddedChannel(handler: HTTPRequestEncoder())
             _ = try? channel.writeAndFlush(
@@ -30,7 +30,7 @@ struct HTTPCrashTests {
         })
 
     let testEncodingChunkedAndContentLengthForResponseCrashes = CrashTest(
-        regex: "^Assertion failed: illegal HTTP sent: HTTPResponseHead .* contains both a content-length and transfer-encoding:chunked",
+        regex: "Assertion failed: illegal HTTP sent: HTTPResponseHead .* contains both a content-length and transfer-encoding:chunked",
         {
             let channel = EmbeddedChannel(handler: HTTPResponseEncoder())
             _ = try? channel.writeAndFlush(

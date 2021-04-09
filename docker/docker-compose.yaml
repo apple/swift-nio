@@ -22,13 +22,13 @@ services:
       - CAP_NET_RAW
       - CAP_NET_BIND_SERVICE
 
-  sanity:
+  soundness:
     <<: *common
-    command: /bin/bash -xcl "./scripts/sanity.sh"
+    command: /bin/bash -xcl "./scripts/soundness.sh"
 
   unit-tests:
     <<: *common
-    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors"
+    command: /bin/bash -xcl "swift $${SWIFT_TEST_VERB-test} -Xswiftc -warnings-as-errors"
 
   integration-tests:
     <<: *common
@@ -36,11 +36,11 @@ services:
 
   test:
     <<: *common
-    command: /bin/bash -xcl "swift test -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && ./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-}"
+    command: /bin/bash -xcl "swift $${SWIFT_TEST_VERB-test} -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} && ./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-}"
 
   performance-test:
     <<: *common
-    command: /bin/bash -xcl "swift build -c release && ./.build/release/NIOPerformanceTester"
+    command: /bin/bash -xcl "swift build -c release -Xswiftc -Xllvm -Xswiftc -align-all-functions=5 -Xswiftc -Xllvm -Xswiftc -align-all-blocks=5 && ./.build/release/NIOPerformanceTester"
 
   # util
 

@@ -866,14 +866,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         let channel = EmbeddedChannel()
         defer {
-            do {
-                let complete = try channel.finish()
-                XCTAssertTrue(complete.isClean)
-            } catch No.no {
-                // ok
-            } catch {
-                XCTFail("Unexpected error: \(error)")
-            }
+            XCTAssertTrue(try channel.finish().isClean)
         }
 
         var upgradingProtocol = ""
@@ -930,14 +923,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         let channel = EmbeddedChannel()
         defer {
-            do {
-                let isCleanOnFinish = try channel.finish().isClean
-                XCTAssertTrue(isCleanOnFinish)
-            } catch No.no {
-                // ok
-            } catch {
-                XCTFail("Unexpected error: \(error)")
-            }
+            XCTAssertTrue(try channel.finish().isClean)
         }
 
         var upgradeRequested = false
@@ -996,14 +982,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         let channel = EmbeddedChannel()
         defer {
-            do {
-                let isCleanOnFinish = try channel.finish().isClean
-                XCTAssertTrue(isCleanOnFinish)
-            } catch No.no {
-                // ok
-            } catch {
-                XCTFail("Unexpected error: \(error)")
-            }
+            XCTAssertTrue(try channel.finish().isClean)
         }
 
         var upgradeRequested = false
