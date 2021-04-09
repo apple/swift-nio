@@ -943,7 +943,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - arguments:
     ///     - threadInitializers: The `ThreadInitializer`s to use.
     internal init(threadInitializers: [ThreadInitializer],
-                  selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration> = { try .init() }) {
+                  selectorFactory: @escaping () throws -> NIO.Selector<NIORegistration> = NIO.Selector<NIORegistration>.init) {
         let myGroupID = nextEventLoopGroupID.add(1)
         self.myGroupID = myGroupID
         var idx = 0
