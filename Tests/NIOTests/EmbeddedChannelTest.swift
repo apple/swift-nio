@@ -16,6 +16,50 @@ import XCTest
 @testable import NIO
 
 class EmbeddedChannelTest: XCTestCase {
+    
+    func testSingleHandlerInit() {
+        class Handler: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        
+        let channel = EmbeddedChannel(handler: Handler())
+        XCTAssertNoThrow(try channel.pipeline.handler(type: Handler.self).wait())
+    }
+    
+    func testSingleHandlerInitNil() {
+        class Handler: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        
+        let channel = EmbeddedChannel(handler: nil)
+        XCTAssertThrowsError(try channel.pipeline.handler(type: Handler.self).wait()) { e in
+            XCTAssertEqual(e as? ChannelPipelineError, .notFound)
+        }
+    }
+    
+    func testMultipleHandlerInit() {
+        class Handler: ChannelInboundHandler, RemovableChannelHandler {
+            typealias InboundIn = Never
+            let identifier: String
+            
+            init(identifier: String) {
+                self.identifier = identifier
+            }
+        }
+        
+        let channel = EmbeddedChannel(
+            handlers: [Handler(identifier: "0"), Handler(identifier: "1"), Handler(identifier: "2")]
+        )
+        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).wait().identifier, "0"))
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler0").wait())
+        
+        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).wait().identifier, "1"))
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler1").wait())
+        
+        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).wait().identifier, "2"))
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler2").wait())
+    }
+    
     func testWriteOutboundByteBuffer() throws {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
