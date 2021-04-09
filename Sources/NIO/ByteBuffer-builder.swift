@@ -75,6 +75,8 @@ extension UInt64: ByteBufferSerializable {}
 
 // MARK: - Buffer builder
 
+#if compiler(>=5.4)
+
 @resultBuilder
 public struct BufferBuilder {
     public static func buildBlock(_ components: ByteBufferSerializable...) -> [ByteBufferSerializable] {
@@ -84,7 +86,7 @@ public struct BufferBuilder {
 
 extension ByteBuffer {
  
-    init(@BufferBuilder contents: () -> [ByteBufferSerializable]) {
+    public init(@BufferBuilder contents: () -> [ByteBufferSerializable]) {
         self.init()
         for part in contents() {
             part.write(into: &self)
@@ -96,3 +98,5 @@ extension ByteBuffer {
     }
     
 }
+
+#endif
