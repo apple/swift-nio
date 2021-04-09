@@ -630,6 +630,23 @@ public final class EmbeddedChannel: Channel {
         // This will never throw...
         try! register().wait()
     }
+    
+    /// Create a new instance.
+    ///
+    /// During creation it will automatically also register itself on the `EmbeddedEventLoop`.
+    ///
+    /// - parameters:
+    ///     - handlesr: The `ChannelHandler`s to add to the `ChannelPipeline` before register or `nil` if none should be added.
+    ///     - loop: The `EmbeddedEventLoop` to use.
+    public init(handlers: [ChannelHandler], loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
+        self.embeddedEventLoop = loop
+        self._pipeline = ChannelPipeline(channel: self)
+
+        _ = try? _pipeline.addHandlers(handlers).wait()
+
+        // This will never throw...
+        try! register().wait()
+    }
 
     /// - see: `Channel.setOption`
     @inlinable
