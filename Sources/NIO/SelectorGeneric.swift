@@ -122,7 +122,7 @@ protocol _SelectorBackendProtocol {
 internal class Selector<R: Registration>  {
     var lifecycleState: SelectorLifecycleState
     var registrations = [Int: R]()
-    var sequenceIdentifier : RegistrationSequenceIdentifier = 1
+    var sequenceIdentifier: RegistrationSequenceIdentifier = 1
 
     let myThread: NIOThread
     // The rules for `self.selectorFD`, `self.eventFD`, and `self.timerFD`:

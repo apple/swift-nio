@@ -121,15 +121,15 @@ extension Selector: _SelectorBackendProtocol {
     func register0<S: Selectable>(selectable: S, fd: Int, interested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws {
         var ev = Epoll.epoll_event()
         ev.events = interested.epollEventSet
-        ev.data.u64 = UInt64(UInt64(sequenceIdentifier) << 32 + UInt64(fd)) // we put fd in lower 4 bytes to allow eventfd & timerfd to work as is
+        ev.data.u64 = UInt64(sequenceIdentifier) << 32 + UInt64(fd) // we put fd in lower 4 bytes to allow eventfd & timerfd to work as is
 
-        try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: Int32(fd), event: &ev)
+        try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: CInt(fd), event: &ev)
     }
 
     func reregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws {
         var ev = Epoll.epoll_event()
         ev.events = newInterested.epollEventSet
-        ev.data.u64 = UInt64(UInt64(sequenceIdentifier) << 32 + UInt64(fd))
+        ev.data.u64 = UInt64(sequenceIdentifier) << 32 + UInt64(fd)
 
         _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: Int32(fd), event: &ev)
     }
@@ -173,8 +173,8 @@ extension Selector: _SelectorBackendProtocol {
 
         for i in 0..<ready {
             let ev = events[i]
-            let fd = Int32(UInt64(ev.data.u64 & 0x00000000FFFFFFFF))
-            let eventSequenceIdentifier = UInt32(UInt64(ev.data.u64 >> 32))
+            let fd = CInt(truncatingIfNeeded: ev.data.u64 & 0x00000000FFFFFFFF)
+            let eventSequenceIdentifier = RegistrationSequenceIdentifier(ev.data.u64 >> 32)
             switch fd {
             case self.eventFD:
                 var val = EventFd.eventfd_t()

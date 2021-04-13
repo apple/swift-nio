@@ -212,7 +212,7 @@ extension Selector: _SelectorBackendProtocol {
         for i in 0..<ready {
             let ev = events[i]
             let filter = Int32(ev.filter)
-            let eventSequenceIdentifier = UInt32(Int(bitPattern: ev.udata))
+            let eventSequenceIdentifier = RegistrationSequenceIdentifier(UInt(bitPattern: ev.udata))
             guard Int32(ev.flags) & EV_ERROR == 0 else {
                 throw IOError(errnoCode: Int32(ev.data), reason: "kevent returned with EV_ERROR set: \(String(describing: ev))")
             }
