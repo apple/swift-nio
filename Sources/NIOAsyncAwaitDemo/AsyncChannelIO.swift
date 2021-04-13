@@ -15,8 +15,8 @@
 import NIO
 import NIOHTTP1
 
-#if compiler(>=5.4) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
-#if compiler(>=5.4) && $AsyncAwait
+#if compiler(>=5.5) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
+#if compiler(>=5.5) && $AsyncAwait
 struct AsyncChannelIO<Request, Response> {
     let channel: Channel
 

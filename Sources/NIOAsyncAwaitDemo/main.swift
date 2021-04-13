@@ -17,8 +17,8 @@ import _NIOConcurrency
 import NIOHTTP1
 import Dispatch
 
-#if compiler(>=5.4) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
-#if compiler(>=5.4) && $AsyncAwait
+#if compiler(>=5.5) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
+#if compiler(>=5.5) && $AsyncAwait
 
 import _Concurrency
 
@@ -63,7 +63,7 @@ func main() async {
 
 let dg = DispatchGroup()
 dg.enter()
-let task = Task.runDetached {
+let task = detach {
     await main()
     dg.leave()
 }
