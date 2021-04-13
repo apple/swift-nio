@@ -30,6 +30,7 @@ class SelectorTest: XCTestCase {
         struct TestRegistration: Registration {
             var interested: SelectorEventSet
             let socket: Socket
+            var sequenceIdentifier: RegistrationSequenceIdentifier
         }
 
         let selector = try NIO.Selector<TestRegistration>()
@@ -73,11 +74,11 @@ class SelectorTest: XCTestCase {
 
         // Register both sockets with .write. This will ensure both are ready when calling selector.whenReady.
         try selector.register(selectable: socket1 , interested: [.reset, .write], makeRegistration: { ev in
-            TestRegistration(interested: ev, socket: socket1)
+            TestRegistration(interested: ev, socket: socket1, sequenceIdentifier: 0)
         })
 
         try selector.register(selectable: socket2 , interested: [.reset, .write], makeRegistration: { ev in
-            TestRegistration(interested: ev, socket: socket2)
+            TestRegistration(interested: ev, socket: socket2, sequenceIdentifier: 0)
         })
 
         var readyCount = 0

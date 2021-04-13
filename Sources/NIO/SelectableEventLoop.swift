@@ -407,13 +407,13 @@ internal final class SelectableEventLoop: EventLoop {
             try withAutoReleasePool {
                 try self._selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
                     switch ev.registration {
-                    case .serverSocketChannel(let chan, _):
+                    case .serverSocketChannel(let chan, _, _):
                         self.handleEvent(ev.io, channel: chan)
-                    case .socketChannel(let chan, _):
+                    case .socketChannel(let chan, _, _):
                         self.handleEvent(ev.io, channel: chan)
-                    case .datagramChannel(let chan, _):
+                    case .datagramChannel(let chan, _, _):
                         self.handleEvent(ev.io, channel: chan)
-                    case .pipeChannel(let chan, let direction, _):
+                    case .pipeChannel(let chan, let direction, _, _):
                         var ev = ev
                         if ev.io.contains(.reset) {
                             // .reset needs special treatment here because we're dealing with two separate pipes instead

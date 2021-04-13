@@ -31,11 +31,11 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
     }
 
     func registrationForInput(interested: SelectorEventSet) -> NIORegistration {
-        return .pipeChannel(self, .input, interested)
+        return .pipeChannel(self, .input, interested, 0)
     }
 
     func registrationForOutput(interested: SelectorEventSet) -> NIORegistration {
-        return .pipeChannel(self, .output, interested)
+        return .pipeChannel(self, .output, interested, 0)
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
