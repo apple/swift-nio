@@ -14,8 +14,8 @@
 
 import NIO
 
-#if compiler(>=5.4) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
-#if compiler(>=5.4) && $AsyncAwait
+#if compiler(>=5.5) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
+#if compiler(>=5.5) && $AsyncAwait
 import _Concurrency
 
 extension EventLoopFuture {
@@ -45,7 +45,7 @@ extension EventLoopPromise {
     /// - parameters:
     ///   - body: The `async` function to run.
     public func completeWithAsync(_ body: @escaping () async throws -> Value) {
-        Task.runDetached {
+        detach {
             do {
                 let value = try await body()
                 self.succeed(value)
