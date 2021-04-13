@@ -98,9 +98,9 @@ protocol _SelectorBackendProtocol {
     associatedtype R: Registration
     func initialiseState0() throws
     func deinitAssertions0() // allows actual implementation to run some assertions as part of the class deinit
-    func register0<S: Selectable>(selectable: S, fd: Int, interested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws
-    func reregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws
-    func deregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, sequenceIdentifier: RegistrationSequenceIdentifier) throws
+    func register0<S: Selectable>(selectable: S, fd: Int, interested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
+    func reregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
+    func deregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
     /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
     func wakeup0() throws
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
@@ -122,7 +122,7 @@ protocol _SelectorBackendProtocol {
 internal class Selector<R: Registration>  {
     var lifecycleState: SelectorLifecycleState
     var registrations = [Int: R]()
-    var sequenceIdentifier : RegistrationSequenceIdentifier = 1
+    var registrationID: SelectorRegistrationID = .initialRegistrationID
 
     let myThread: NIOThread
     // The rules for `self.selectorFD`, `self.eventFD`, and `self.timerFD`:
@@ -200,7 +200,9 @@ internal class Selector<R: Registration>  {
     ///     - selectable: The `Selectable` to register.
     ///     - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
     ///     - makeRegistration: Creates the registration data for the given `SelectorEventSet`.
-    func register<S: Selectable>(selectable: S, interested: SelectorEventSet, makeRegistration: (SelectorEventSet) -> R) throws {
+    func register<S: Selectable>(selectable: S,
+                                 interested: SelectorEventSet,
+                                 makeRegistration: (SelectorEventSet, SelectorRegistrationID) -> R) throws {
         assert(self.myThread == NIOThread.current)
         assert(interested.contains(.reset))
         guard self.lifecycleState == .open else {
@@ -212,11 +214,9 @@ internal class Selector<R: Registration>  {
             try self.register0(selectable: selectable,
                                fd: Int(fd),
                                interested: interested,
-                               sequenceIdentifier: self.sequenceIdentifier)
-            var registration = makeRegistration(interested)
-            registration.sequenceIdentifier = self.sequenceIdentifier
+                               registrationID: self.registrationID)
+            let registration = makeRegistration(interested, self.registrationID.nextRegistrationID())
             registrations[Int(fd)] = registration
-            self.sequenceIdentifier &+= 1 // we are ok to overflow
         }
     }
 
@@ -237,7 +237,7 @@ internal class Selector<R: Registration>  {
                                  fd: Int(fd),
                                  oldInterested: reg.interested,
                                  newInterested: interested,
-                                 sequenceIdentifier: reg.sequenceIdentifier)
+                                 registrationID: reg.registrationID)
             reg.interested = interested
             self.registrations[Int(fd)] = reg
         }
@@ -262,7 +262,7 @@ internal class Selector<R: Registration>  {
             try self.deregister0(selectable: selectable,
                                  fd: Int(fd),
                                  oldInterested: reg.interested,
-                                 sequenceIdentifier: reg.sequenceIdentifier)
+                                 registrationID: reg.registrationID)
         }
     }
 
@@ -344,14 +344,14 @@ extension Selector where R == NIORegistration {
                 return chan.closeFuture
             }
 
-            switch reg {
-            case .serverSocketChannel(let chan, _, _):
+            switch reg.channel {
+            case .serverSocketChannel(let chan):
                 return closeChannel(chan)
-            case .socketChannel(let chan, _, _):
+            case .socketChannel(let chan):
                 return closeChannel(chan)
-            case .datagramChannel(let chan, _, _):
+            case .datagramChannel(let chan):
                 return closeChannel(chan)
-            case .pipeChannel(let chan, _, _, _):
+            case .pipeChannel(let chan, _):
                 return closeChannel(chan)
             }
         }.map { future in
@@ -382,4 +382,40 @@ enum SelectorStrategy {
 
     /// Try to select all ready IO at this point in time without blocking at all.
     case now
+}
+
+/// A Registration on a `Selector`, which is interested in an `SelectorEventSet`.
+/// `registrationID` is used by the event notification backends (kqueue, epoll, ...)
+/// to mark events to allow for filtering of received return values to not be delivered to a
+/// new `Registration` instance that receives the same file descriptor. Ok if it wraps.
+/// Needed for i.e. testWeDoNotDeliverEventsForPreviouslyClosedChannels to succeed.
+@usableFromInline struct SelectorRegistrationID: Hashable {
+    @usableFromInline var _rawValue: UInt32
+
+    @inlinable var rawValue: UInt32 {
+        return self._rawValue
+    }
+
+    @inlinable static var initialRegistrationID: SelectorRegistrationID {
+        return SelectorRegistrationID(rawValue: .max)
+    }
+
+    @inlinable mutating func nextRegistrationID() -> SelectorRegistrationID {
+        let current = self
+        // Overflow is okay here, this is just for very short-term disambiguation
+        self._rawValue = self._rawValue &+ 1
+        return current
+    }
+
+    @inlinable init(rawValue: UInt32) {
+        self._rawValue = rawValue
+    }
+
+    @inlinable static func ==(_ lhs: SelectorRegistrationID, _ rhs: SelectorRegistrationID) -> Bool {
+        return lhs._rawValue == rhs._rawValue
+    }
+
+    @inlinable func hash(into hasher: inout Hasher) {
+        hasher.combine(self._rawValue)
+    }
 }
