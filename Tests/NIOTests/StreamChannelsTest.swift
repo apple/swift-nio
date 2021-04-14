@@ -369,9 +369,9 @@ class StreamChannelTest: XCTestCase {
             for _ in 0..<10 {
                 // We just spin here for a little while to check that there are no bogus events available on the
                 // selector.
-                XCTAssertNoThrow(try (receiver.eventLoop as! SelectableEventLoop)
-                    ._selector.testsOnly_withUnsafeSelectorFD { fd in
-                        try assertNoSelectorChanges(fd: fd)
+                let eventLoop = (receiver.eventLoop as! SelectableEventLoop)
+                XCTAssertNoThrow(try eventLoop._selector.testsOnly_withUnsafeSelectorFD { fd in
+                        try assertNoSelectorChanges(fd: fd, selector:eventLoop._selector)
                     }, "after \(sends.load()) sends, we got an unexpected selector event for \(receiver)")
                 usleep(10000)
             }
@@ -889,7 +889,7 @@ final class AccumulateAllReads: ChannelInboundHandler {
     }
 }
 
-private func assertNoSelectorChanges(fd: CInt, file: StaticString = #file, line: UInt = #line) throws {
+private func assertNoSelectorChanges(fd: CInt, selector: NIO.Selector<NIORegistration>, file: StaticString = #file, line: UInt = #line) throws {
     struct UnexpectedSelectorChanges: Error, CustomStringConvertible {
         let description: String
     }
@@ -902,11 +902,22 @@ private func assertNoSelectorChanges(fd: CInt, file: StaticString = #file, line:
         throw UnexpectedSelectorChanges(description: "\(ev)")
     }
     #elseif os(Linux) || os(Android)
+    #if !SWIFTNIO_USE_IO_URING
     var ev = Epoll.epoll_event()
     let numberOfEvents = try Epoll.epoll_wait(epfd: fd, events: &ev, maxevents: 1, timeout: 0)
     guard numberOfEvents == 0 else {
         throw UnexpectedSelectorChanges(description: "\(ev)")
     }
+    #else
+    let events: UnsafeMutablePointer<UringEvent> = UnsafeMutablePointer.allocate(capacity: 1)
+    events.initialize(to: UringEvent())
+    let numberOfEvents = try selector.ring.io_uring_wait_cqe_timeout(events: events, maxevents: 1, timeout: TimeAmount.seconds(0))
+    events.deinitialize(count: 1)
+    events.deallocate()
+    guard numberOfEvents == 0 else {
+        throw UnexpectedSelectorChanges(description: "\(selector)")
+    }
+    #endif
     #else
     #warning("assertNoSelectorChanges unsupported on this OS.")
     #endif

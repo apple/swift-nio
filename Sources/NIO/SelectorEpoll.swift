@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !SWIFTNIO_USE_IO_URING
+
 #if os(Linux) || os(Android)
 
 /// Represents the `epoll` filters/events we might use:
@@ -247,5 +249,7 @@ extension Selector: _SelectorBackendProtocol {
         }
     }
 }
+
+#endif
 
 #endif

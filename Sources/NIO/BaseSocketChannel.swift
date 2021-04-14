@@ -1095,7 +1095,9 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
             return readStreamState
         }
+        #if !SWIFTNIO_USE_IO_URING
         assert(readResult == .some)
+        #endif
         if self.lifecycleManager.isActive {
             self.pipeline.fireChannelReadComplete0()
         }
