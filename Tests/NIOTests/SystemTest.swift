@@ -36,10 +36,9 @@ class SystemTest: XCTestCase {
                 }
                 XCTFail("success even though the call was invalid")
             } catch let e as IOError {
-                XCTAssertEqual(ENOTSOCK, e.errnoCode)
+                XCTAssert([ENOTSOCK /* almost everything */, ENOPROTOOPT /* in Qemu */].contains(e.errnoCode))
                 XCTAssert(e.description.contains("setsockopt"))
-                XCTAssert(e.description.contains("\(ENOTSOCK)"))
-                XCTAssert(e.localizedDescription.contains("\(ENOTSOCK)"), "\(e.localizedDescription)")
+                XCTAssert(e.description.contains("\(ENOTSOCK)") || e.description.contains("\(ENOPROTOOPT)"))
             } catch let e {
                 XCTFail("wrong error thrown: \(e)")
             }
