@@ -36,8 +36,8 @@ struct _ByteBufferSlice {
         return Int(self.upperBound - self.lowerBound)
     }
     init() {
-        self._begin = .init(integerLiteral: 0)
-        self.upperBound = .init(integerLiteral: 0)
+        self._begin = .init(0)
+        self.upperBound = .init(0)
     }
     static var maxSupportedLowerBound: ByteBuffer._Index {
         return ByteBuffer._Index(_UInt24.max)
