@@ -59,7 +59,11 @@ internal enum EventFd {
     @inline(never)
     internal static func eventfd(initval: UInt32, flags: Int32) throws -> Int32 {
         return try syscall(blocking: false) {
-            CNIOLinux.eventfd(initval, flags)
+            // Note: Please do _not_ remove the `numericCast`, this is to allow compilation in Ubuntu 14.04 and
+            // other Linux distros which ship a glibc from before this commit:
+            // https://sourceware.org/git/?p=glibc.git;a=commitdiff;h=69eb9a183c19e8739065e430758e4d3a2c5e4f1a
+            // which changes the first argument from `CInt` to `CUnsignedInt` (from Sat, 20 Sep 2014).
+            CNIOLinux.eventfd(numericCast(initval), flags)
         }.result
     }
 }
