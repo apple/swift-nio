@@ -53,12 +53,14 @@ function allow_slack() {
     done
 }
 
-grep -e "total number of mallocs" -e ".total_allocations" | \
-    sed -e "s/: total number of mallocs/.total_allocations/g" \
-        -e "s/info: /test_/g"| \
-    grep -Eo 'test_.*\.total_allocations: [0-9]+' | sort | uniq | while read test allocs; do
-    test_name=$(echo "$test" | sed "s/test_//g" | cut -d. -f1 )
-    allocs=$(allow_slack "$(echo "$allocs" | cut -d: -f2 | sed "s/ //g")")
+grep -e "total number of mallocs" -e ".total_allocations" -e "export MAX_ALLOCS_ALLOWED_" | \
+    sed -e "s/: total number of mallocs: /=/g" \
+        -e "s/.total_allocations: /=/g" \
+        -e "s/info: /test_/g" \
+        -e "s/export MAX_ALLOCS_ALLOWED_/test_/g" | \
+    grep -Eo 'test_[a-zA-Z0-9_-]+=[0-9]+' | sort | uniq | while read info; do
+    test_name=$(echo "$info" | sed "s/test_//g" | cut -d= -f1 )
+    allocs=$(allow_slack "$(echo "$info" | cut -d= -f2 | sed "s/ //g")")
     case "$mode" in
         docker)
             echo "      - MAX_ALLOCS_ALLOWED_$test_name=$allocs"
