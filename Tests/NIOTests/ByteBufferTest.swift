@@ -1704,6 +1704,41 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0xcc, slice.getInteger(at: 0, as: UInt8.self))
         XCTAssertEqual(0xdd, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
     }
+    
+    func testSliceOnSliceAfterHitting16MBMark() {
+        // This test ensures that a slice will get a new backing storage if its start is more than
+        // 16MiB after the originating backing storage.
+        
+        // create a buffer with 16MiB + 1 byte
+        let inputBufferLength = 16 * 1024 * 1024 + 1
+        var inputBuffer = ByteBuffer.Allocator().buffer(capacity: inputBufferLength)
+        inputBuffer.writeRepeatingByte(1, count: 8)
+        inputBuffer.writeRepeatingByte(2, count: inputBufferLength - 9)
+        inputBuffer.writeRepeatingByte(3, count: 1)
+        // read a small slice from the inputBuffer, to create an offset of eight bytes
+        XCTAssertEqual(inputBuffer.readInteger(as: UInt64.self), 0x0101010101010101)
+        
+        // read the remaining bytes into a new slice (this will have a length of 16MiB - 7Bbytes)
+        let remainingSliceLength = inputBufferLength - 8
+        XCTAssertEqual(inputBuffer.readableBytes, remainingSliceLength)
+        var remainingSlice = inputBuffer.readSlice(length: remainingSliceLength)!
+        
+        let finalSliceLength = 1
+        // let's create a new buffer that uses all but one byte
+        XCTAssertEqual(remainingSlice.readBytes(length: remainingSliceLength - finalSliceLength), [UInt8](repeating: 2, count: remainingSliceLength - finalSliceLength))
+        
+        // there should only be one byte left.
+        XCTAssertEqual(remainingSlice.readableBytes, finalSliceLength)
+        
+        // with just one byte left, the last byte is exactly one byte above the 16MiB threshold.
+        // For this reason a slice of the last byte, will need to get a new backing storage.
+        let finalSlice = remainingSlice.readSlice(length: finalSliceLength)
+        XCTAssertNotEqual(finalSlice?.storagePointerIntegerValue(), remainingSlice.storagePointerIntegerValue())
+        XCTAssertEqual(finalSlice?.storageCapacity, 1)
+        XCTAssertEqual(finalSlice, ByteBuffer(integer: 3, as: UInt8.self))
+        
+        XCTAssertEqual(remainingSlice.readableBytes, 0)
+    }
 
     func testDiscardReadBytesOnConsumedBuffer() {
         var buffer = self.allocator.buffer(capacity: 8)
