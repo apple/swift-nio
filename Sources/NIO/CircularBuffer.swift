@@ -672,6 +672,16 @@ extension CircularBuffer: RangeReplaceableCollection {
 
         return element
     }
+
+    /// The first `Element` of the `CircularBuffer` (or `nil` if empty).
+    @inlinable
+    public var first: Element? {
+        // We implement this here to work around https://bugs.swift.org/browse/SR-14516
+        guard !self.isEmpty else {
+            return nil
+        }
+        return self[self.startIndex]
+    }
 }
 
 extension CircularBuffer {
