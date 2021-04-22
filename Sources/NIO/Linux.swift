@@ -23,14 +23,14 @@ internal enum TimerFd {
     internal static let TFD_NONBLOCK = CNIOLinux.TFD_NONBLOCK
 
     @inline(never)
-    internal static func timerfd_settime(fd: Int32, flags: Int32, newValue: UnsafePointer<itimerspec>, oldValue: UnsafeMutablePointer<itimerspec>?) throws  {
+    internal static func timerfd_settime(fd: CInt, flags: CInt, newValue: UnsafePointer<itimerspec>, oldValue: UnsafeMutablePointer<itimerspec>?) throws  {
         _ = try syscall(blocking: false) {
             CNIOLinux.timerfd_settime(fd, flags, newValue, oldValue)
         }
     }
 
     @inline(never)
-    internal static func timerfd_create(clockId: Int32, flags: Int32) throws -> Int32 {
+    internal static func timerfd_create(clockId: CInt, flags: CInt) throws -> CInt {
         return try syscall(blocking: false) {
             CNIOLinux.timerfd_create(clockId, flags)
         }.result
@@ -43,21 +43,21 @@ internal enum EventFd {
     internal typealias eventfd_t = CNIOLinux.eventfd_t
 
     @inline(never)
-    internal static func eventfd_write(fd: Int32, value: UInt64) throws -> Int32 {
+    internal static func eventfd_write(fd: CInt, value: UInt64) throws -> CInt {
         return try syscall(blocking: false) {
             CNIOLinux.eventfd_write(fd, value)
         }.result
     }
 
     @inline(never)
-    internal static func eventfd_read(fd: Int32, value: UnsafeMutablePointer<UInt64>) throws -> Int32 {
+    internal static func eventfd_read(fd: CInt, value: UnsafeMutablePointer<UInt64>) throws -> CInt {
         return try syscall(blocking: false) {
             CNIOLinux.eventfd_read(fd, value)
         }.result
     }
 
     @inline(never)
-    internal static func eventfd(initval: UInt32, flags: Int32) throws -> Int32 {
+    internal static func eventfd(initval: CUnsignedInt, flags: CInt) throws -> CInt {
         return try syscall(blocking: false) {
             // Note: Please do _not_ remove the `numericCast`, this is to allow compilation in Ubuntu 14.04 and
             // other Linux distros which ship a glibc from before this commit:
@@ -95,7 +95,7 @@ internal enum Epoll {
 
 
     @inline(never)
-    internal static func epoll_create(size: Int32) throws -> Int32 {
+    internal static func epoll_create(size: CInt) throws -> CInt {
         return try syscall(blocking: false) {
             CNIOLinux.epoll_create(size)
         }.result
@@ -103,14 +103,14 @@ internal enum Epoll {
 
     @inline(never)
     @discardableResult
-    internal static func epoll_ctl(epfd: Int32, op: Int32, fd: Int32, event: UnsafeMutablePointer<epoll_event>) throws -> Int32 {
+    internal static func epoll_ctl(epfd: CInt, op: CInt, fd: CInt, event: UnsafeMutablePointer<epoll_event>) throws -> CInt {
         return try syscall(blocking: false) {
             CNIOLinux.epoll_ctl(epfd, op, fd, event)
         }.result
     }
 
     @inline(never)
-    internal static func epoll_wait(epfd: Int32, events: UnsafeMutablePointer<epoll_event>, maxevents: Int32, timeout: Int32) throws -> Int32 {
+    internal static func epoll_wait(epfd: CInt, events: UnsafeMutablePointer<epoll_event>, maxevents: CInt, timeout: CInt) throws -> CInt {
         return try syscall(blocking: false) {
             CNIOLinux.epoll_wait(epfd, events, maxevents, timeout)
         }.result
