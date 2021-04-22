@@ -1725,7 +1725,8 @@ class ByteBufferTest: XCTestCase {
         
         let finalSliceLength = 1
         // let's create a new buffer that uses all but one byte
-        XCTAssertEqual(remainingSlice.readBytes(length: remainingSliceLength - finalSliceLength), [UInt8](repeating: 2, count: remainingSliceLength - finalSliceLength))
+        XCTAssertEqual(remainingSlice.readBytes(length: remainingSliceLength - finalSliceLength),
+                       Array<UInt8>(repeating: 2, count: remainingSliceLength - finalSliceLength))
         
         // there should only be one byte left.
         XCTAssertEqual(remainingSlice.readableBytes, finalSliceLength)
