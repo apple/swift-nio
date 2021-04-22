@@ -1711,7 +1711,7 @@ class ByteBufferTest: XCTestCase {
         
         // create a buffer with 16MiB + 1 byte
         let inputBufferLength = 16 * 1024 * 1024 + 1
-        var inputBuffer = ByteBuffer.Allocator().buffer(capacity: inputBufferLength)
+        var inputBuffer = ByteBufferAllocator().buffer(capacity: inputBufferLength)
         inputBuffer.writeRepeatingByte(1, count: 8)
         inputBuffer.writeRepeatingByte(2, count: inputBufferLength - 9)
         inputBuffer.writeRepeatingByte(3, count: 1)
