@@ -640,8 +640,8 @@ public struct ByteBuffer {
             // the slice's begin is past the maximum supported slice begin value (16 MiB) so the only option we have
             // is copy the slice into a fresh buffer. The slice begin will then be at index 0.
             var new = self
-            new._moveWriterIndex(to: sliceStartIndex + length)
-            new._moveReaderIndex(to: sliceStartIndex)
+            new._moveWriterIndex(to: index + length)
+            new._moveReaderIndex(to: index)
             new._copyStorageAndRebase(capacity: length, resetIndices: true)
             return new
         }
