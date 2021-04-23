@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -eu
+set -o pipefail
+
+here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+tmpdir=$(mktemp -d /tmp/.last-build_XXXXXX)
+
+for f in 50 51 52 53 54 -nightly; do
+    echo "swift$f"
+    url="https://ci.swiftserver.group/job/swift-nio2-swift$f-prb/lastCompletedBuild/consoleFull"
+    echo "$url"
+    curl -s "$url" | "$here/alloc-limits-from-test-output" > "$tmpdir/limits$f"
+
+    if [[ "$(wc -l < "$tmpdir/limits$f")" -lt 20 ]]; then
+        echo >&2 "ERROR: fewer than 20 limits found, something's not right"
+        exit 1
+    fi
+
+    docker_file=$(if [[ "$f" == "-nightly" ]]; then f=main; fi && ls "$here/../docker/docker-compose."*"$f"*".yaml")
+
+    echo "$docker_file"
+    cat "$tmpdir/limits$f"
+    cat "$docker_file" | grep -v MAX_ALLOCS_ALLOWED | grep -B10000 "^    environment:" > "$tmpdir/pre$f"
+    cat "$docker_file" | grep -v MAX_ALLOCS_ALLOWED | grep -A10000 "^    environment:" | sed 1d > "$tmpdir/post$f"
+    cat "$tmpdir/pre$f" "$tmpdir/limits$f" "$tmpdir/post$f" > "$docker_file"
+done
+
+rm -rf "$tmpdir"
