@@ -406,14 +406,14 @@ internal final class SelectableEventLoop: EventLoop {
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
                 try self._selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
-                    switch ev.registration {
-                    case .serverSocketChannel(let chan, _, _):
+                    switch ev.registration.channel {
+                    case .serverSocketChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
-                    case .socketChannel(let chan, _, _):
+                    case .socketChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
-                    case .datagramChannel(let chan, _, _):
+                    case .datagramChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
-                    case .pipeChannel(let chan, let direction, _, _):
+                    case .pipeChannel(let chan, let direction):
                         var ev = ev
                         if ev.io.contains(.reset) {
                             // .reset needs special treatment here because we're dealing with two separate pipes instead

@@ -88,8 +88,10 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         }
     }
 
-    func registrationFor(interested: SelectorEventSet) -> NIORegistration {
-        return .socketChannel(self, interested, 0)
+    func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
+        return NIORegistration(channel: .socketChannel(self),
+                               interested: interested,
+                               registrationID: registrationID)
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
@@ -119,7 +121,9 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
 
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.socket, interested: interested, makeRegistration: self.registrationFor(interested:))
+        try selector.register(selectable: self.socket,
+                              interested: interested,
+                              makeRegistration: self.registrationFor)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
@@ -162,8 +166,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         try self.socket.listen(backlog: backlog)
     }
 
-    func registrationFor(interested: SelectorEventSet) -> NIORegistration {
-        return .serverSocketChannel(self, interested, 0)
+    func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
+        return NIORegistration(channel: .serverSocketChannel(self),
+                               interested: interested,
+                               registrationID: registrationID)
     }
 
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
@@ -320,7 +326,9 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.socket, interested: interested, makeRegistration: self.registrationFor(interested:))
+        try selector.register(selectable: self.socket,
+                              interested: interested,
+                              makeRegistration: self.registrationFor)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
@@ -479,8 +487,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    func registrationFor(interested: SelectorEventSet) -> NIORegistration {
-        return .datagramChannel(self, interested, 0)
+    func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
+        return NIORegistration(channel: .datagramChannel(self),
+                               interested: interested,
+                               registrationID: registrationID)
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
@@ -699,7 +709,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.socket, interested: interested, makeRegistration: self.registrationFor(interested:))
+        try selector.register(selectable: self.socket,
+                              interested: interested,
+                              makeRegistration: self.registrationFor)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {

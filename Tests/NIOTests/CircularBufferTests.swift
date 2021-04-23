@@ -984,4 +984,25 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(someInts.count, 7)
         XCTAssert(zip(someInts, someIntsArray).allSatisfy(==))
     }
+
+    func testFirstWorks() {
+        var buffer = CircularBuffer<Int>(initialCapacity: 4)
+        XCTAssertNil(buffer.first)
+
+        buffer.append(1)
+        XCTAssertEqual(1, buffer.first)
+        XCTAssertEqual(1, buffer.removeFirst())
+
+        XCTAssertNil(buffer.first)
+
+        for n in 0..<10 {
+            buffer.append(contentsOf: 0...n)
+
+            for i in 0...n {
+                XCTAssertEqual(i, buffer.first)
+                XCTAssertEqual(i, buffer.removeFirst())
+            }
+            XCTAssertNil(buffer.first)
+        }
+    }
 }

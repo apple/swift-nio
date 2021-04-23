@@ -17,6 +17,7 @@ import NIOHTTP1
 
 #if compiler(>=5.5) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
 #if compiler(>=5.5) && $AsyncAwait
+@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
 struct AsyncChannelIO<Request, Response> {
     let channel: Channel
 

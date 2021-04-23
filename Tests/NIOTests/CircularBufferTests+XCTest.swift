@@ -77,6 +77,7 @@ extension CircularBufferTests {
                 ("testEquality", testEquality),
                 ("testHash", testHash),
                 ("testArrayLiteralInit", testArrayLiteralInit),
+                ("testFirstWorks", testFirstWorks),
            ]
    }
 }

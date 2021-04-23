@@ -57,16 +57,10 @@ import struct WinSDK.socklen_t
 import CNIOWindows
 #endif
 
-/// A Registration on a `Selector`, which is interested in an `SelectorEventSet`.
-/// `sequenceIdentifier` is used by the event notification backends (kqueue, epoll, ...)
-/// to mark events to allow for filtering of received return values to not be delivered to a
-/// new `Registration` instance that receives the same file descriptor. Ok if it wraps.
-/// Needed for i.e. testWeDoNotDeliverEventsForPreviouslyClosedChannels to succeed.
-typealias RegistrationSequenceIdentifier = UInt32
 protocol Registration {
     /// The `SelectorEventSet` in which the `Registration` is interested.
     var interested: SelectorEventSet { get set }
-    var sequenceIdentifier: RegistrationSequenceIdentifier { get set }
+    var registrationID: SelectorRegistrationID { get set }
 }
 
 protocol SockAddrProtocol {
