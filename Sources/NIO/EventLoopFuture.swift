@@ -506,13 +506,21 @@ extension EventLoopFuture {
     public func flatMapThrowing<NewValue>(file: StaticString = #file,
                                 line: UInt = #line,
                                 _ callback: @escaping (Value) throws -> NewValue) -> EventLoopFuture<NewValue> {
-        return self.flatMap(file: file, line: line) { (value: Value) -> EventLoopFuture<NewValue> in
-            do {
-                return EventLoopFuture<NewValue>(eventLoop: self.eventLoop, value: try callback(value), file: file, line: line)
-            } catch {
-                return EventLoopFuture<NewValue>(eventLoop: self.eventLoop, error: error, file: file, line: line)
+        let next = EventLoopPromise<NewValue>(eventLoop: eventLoop, file: file, line: line)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let t):
+                do {
+                    let r = try callback(t)
+                    return next._setValue(value: .success(r))
+                } catch {
+                    return next._setValue(value: .failure(error))
+                }
+            case .failure(let e):
+                return next._setValue(value: .failure(e))
             }
         }
+        return next.futureResult
     }
 
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
@@ -531,13 +539,21 @@ extension EventLoopFuture {
     /// - returns: A future that will receive the eventual value or a rethrown error.
     @inlinable
     public func flatMapErrorThrowing(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) throws -> Value) -> EventLoopFuture<Value> {
-        return self.flatMapError(file: file, line: line) { value in
-            do {
-                return EventLoopFuture(eventLoop: self.eventLoop, value: try callback(value), file: file, line: line)
-            } catch {
-                return EventLoopFuture(eventLoop: self.eventLoop, error: error, file: file, line: line)
+        let next = EventLoopPromise<Value>(eventLoop: eventLoop, file: file, line: line)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let t):
+                return next._setValue(value: .success(t))
+            case .failure(let e):
+                do {
+                    let r = try callback(e)
+                    return next._setValue(value: .success(r))
+                } catch {
+                    return next._setValue(value: .failure(error))
+                }
             }
         }
+        return next.futureResult
     }
 
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
