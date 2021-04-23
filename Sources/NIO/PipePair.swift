@@ -103,7 +103,7 @@ final class PipePair: SocketProtocol {
         throw ChannelError.operationUnsupported
     }
 
-    func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int> {
+    func sendFile(fd: CInt, offset: Int, count: Int) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
     }
 

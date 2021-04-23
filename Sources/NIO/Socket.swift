@@ -281,7 +281,7 @@ typealias IOVector = iovec
     ///     - count: The number of bytes to send.
     /// - returns: The `IOResult` which indicates how much data could be send and if the operation returned before all could be send (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
-    func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int> {
+    func sendFile(fd: CInt, offset: Int, count: Int) throws -> IOResult<Int> {
         return try withUnsafeHandle {
             try NIOBSDSocket.sendfile(socket: $0, fd: fd, offset: off_t(offset),
                                       len: off_t(count))

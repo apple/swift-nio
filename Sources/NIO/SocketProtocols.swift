@@ -57,7 +57,7 @@ protocol SocketProtocol: BaseSocketProtocol {
                  destinationSize: socklen_t,
                  controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
 
-    func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int>
+    func sendFile(fd: CInt, offset: Int, count: Int) throws -> IOResult<Int>
 
     func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>
 
