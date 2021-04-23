@@ -17,11 +17,8 @@
 
 import CNIOLinux
 
-// we stuff the event type into the user data for the sqe together with
-// the fd and sequenceIdentifier to match the events without needing any
-// memory allocations or references.
-
-internal enum CQEEventType : Int {
+@usableFromInline
+enum CQEEventType : UInt8 {
     case poll = 1, pollModify, pollDelete // start with 1 to not get zero bit patterns for stdin
 }
 
@@ -40,28 +37,69 @@ internal extension TimeAmount {
     }
 }
 
+// URingUserData supports (un)packing into an `UInt64` as io_uring has a user_data 64-bit payload which is set in the SQE
+// and returned in the CQE. We're using 56 of those 64 bits, 32 for the file descriptor, 16 for a "registration ID" and 8
+// for the type of event issued (poll/modify/delete).
+@usableFromInline struct URingUserData {
+    @usableFromInline var fileDescriptor: CInt
+    @usableFromInline var registrationID: UInt16 // SelectorRegistrationID truncated, only have room for bottom 16 bits (could be expanded to 24 if required)
+    @usableFromInline var eventType: CQEEventType
+    @usableFromInline var padding: Int8 // reserved for future use
+
+    @inlinable init(registrationID: SelectorRegistrationID, fileDescriptor: CInt, eventType: CQEEventType) {
+        assert(MemoryLayout<UInt64>.size == MemoryLayout<URingUserData>.size)
+        self.registrationID = UInt16(truncatingIfNeeded: registrationID.rawValue)
+        self.fileDescriptor = fileDescriptor
+        self.eventType = eventType
+        self.padding = 0
+    }
+
+    @inlinable init(rawValue: UInt64) {
+        let unpacked = IntegerBitPacking.unpackUInt32UInt16UInt8(rawValue)
+        self = .init(registrationID: SelectorRegistrationID(rawValue: UInt32(unpacked.1)),
+                     fileDescriptor: CInt(unpacked.0),
+                     eventType: CQEEventType(rawValue:unpacked.2)!)
+    }
+}
+
+extension UInt64 {
+    init(_ uringUserData: URingUserData) {
+        let fd = uringUserData.fileDescriptor
+        let eventType = uringUserData.eventType.rawValue
+        assert(fd >= 0, "\(fd) is not a valid file descriptor")
+        assert(eventType >= 0, "\(eventType) is not a valid eventType")
+
+        self = IntegerBitPacking.packUInt32UInt16UInt8(UInt32(fd),
+                                                       uringUserData.registrationID,
+                                                       eventType)
+    }
+}
+
+// These are the events returned up to the selector
 internal struct UringEvent {
-    var fd : Int32
+    var fd : CInt
     var pollMask : UInt32
-    var sequenceIdentifier : UInt32
+    var registrationID : UInt16 // we just have the truncated lower 16 bits of the registrationID
     var pollCancelled : Bool
     init () {
         self.fd = -1
         self.pollMask = 0
-        self.sequenceIdentifier = 0
+        self.registrationID = 0
         self.pollCancelled = false
     }
 }
 
+// This is the key we use for merging events in our internal hashtable
 struct fdEventKey: Hashable {
-    var fileDescriptor : Int32
-    var sequenceIdentifier : UInt32
+    var fileDescriptor : CInt
+    var registrationID : UInt16 // we just have the truncated lower 16 bits of the registrationID
 
-    init(_ f: Int32, _ s : UInt32) {
+    init(_ f: CInt, _ s : UInt16) {
         self.fileDescriptor = f
-        self.sequenceIdentifier = s
+        self.registrationID = s
     }
 }
+
 
 final internal class Uring {
     internal static let POLLIN: CUnsignedInt = numericCast(CNIOLinux.POLLIN)
@@ -97,15 +135,10 @@ final internal class Uring {
         for i in 0..<count {
             let c = cqes[i]!.pointee
 
-            let dp = io_uring_cqe_get_data(cqes[i])
-            let bitPattern : UInt = UInt(bitPattern:dp)
-            let fd = Int32(bitPattern & 0x00000000FFFFFFFF)
-            let sequenceNumber : UInt32 = UInt32((Int(bitPattern) >> 32) & 0x00FFFFFF)
-            let eventType = CQEEventType(rawValue:((Int(bitPattern) >> 32) & 0xFF000000) >> 24) // shift out the fd
+            let bitPattern = UInt(bitPattern:io_uring_cqe_get_data(cqes[i]))
+            let uringUserData = URingUserData(rawValue: UInt64(bitPattern))
 
-            let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: bitPattern)
-
-            _debugPrintCQE("\(i) = fd[\(fd)] eventType[\(String(describing:eventType))] sequenceNumber[\(sequenceNumber)] res [\(c.res)] flags [\(c.flags)]  bitpattern[\(String(describing:bitpatternAsPointer))]")
+            _debugPrintCQE("\(i) = fd[\(uringUserData.fileDescriptor)] eventType[\(String(describing:uringUserData.eventType))] registrationID[\(uringUserData.registrationID)] res [\(c.res)] flags [\(c.flags)]")
         }
         #endif
     }
@@ -217,15 +250,14 @@ final internal class Uring {
     }
 
     // we stuff event type into the upper byte, the next 3 bytes gives us the sequence number (16M before wrap) and final 4 bytes are fd.
-    internal func io_uring_prep_poll_add(fd: Int32, pollMask: UInt32, sequenceIdentifier: UInt32, submitNow: Bool = true, multishot: Bool = true) -> () {
-        let upperQuad : Int = Int(CQEEventType.poll.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
-        let bitPattern : Int = upperQuad << 32 + Int(fd)
-        let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: bitPattern)
+    internal func io_uring_prep_poll_add(fileDescriptor: CInt, pollMask: UInt32, registrationID: SelectorRegistrationID, submitNow: Bool = true, multishot: Bool = true) -> () {
+        let bitPattern = UInt64(URingUserData(registrationID: registrationID, fileDescriptor: fileDescriptor, eventType:CQEEventType.poll))
+        let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(bitPattern))
 
-        _debugPrint("io_uring_prep_poll_add fd[\(fd)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] submitNow[\(submitNow)] multishot[\(multishot)]")
+        _debugPrint("io_uring_prep_poll_add fileDescriptor[\(fileDescriptor)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] submitNow[\(submitNow)] multishot[\(multishot)]")
 
         self.withSQE { sqe in
-            CNIOLinux.io_uring_prep_poll_add(sqe, fd, pollMask)
+            CNIOLinux.io_uring_prep_poll_add(sqe, fileDescriptor, pollMask)
             CNIOLinux.io_uring_sqe_set_data(sqe, bitpatternAsPointer) // must be done after prep_poll_add, otherwise zeroed out.
 
             if multishot {
@@ -238,15 +270,17 @@ final internal class Uring {
         }
     }
 
-    internal func io_uring_prep_poll_remove(fd: Int32, pollMask: UInt32, sequenceIdentifier: UInt32, submitNow: Bool = true, link: Bool = false) -> () {
-        let upperQuad : Int = Int(CQEEventType.poll.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
-        let bitPattern : Int = upperQuad << 32 + Int(fd)
-        let upperQuadDelete : Int = Int(CQEEventType.pollDelete.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
-        let userbitPattern : Int = upperQuadDelete << 32 + Int(fd)
-        let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: bitPattern)
-        let userBitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: userbitPattern)
+    internal func io_uring_prep_poll_remove(fileDescriptor: CInt, pollMask: UInt32, registrationID: SelectorRegistrationID, submitNow: Bool = true, link: Bool = false) -> () {
+        let bitPattern = UInt64(URingUserData(registrationID: registrationID,
+                                              fileDescriptor: fileDescriptor,
+                                              eventType:CQEEventType.poll))
+        let userbitPattern = UInt64(URingUserData(registrationID: registrationID,
+                                                  fileDescriptor: fileDescriptor,
+                                                  eventType:CQEEventType.pollDelete))
+        let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(bitPattern))
+        let userBitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(userbitPattern))
 
-        _debugPrint("io_uring_prep_poll_remove fd[\(fd)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))] submitNow[\(submitNow)] link[\(link)]")
+        _debugPrint("io_uring_prep_poll_remove fileDescriptor[\(fileDescriptor)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))] submitNow[\(submitNow)] link[\(link)]")
 
         self.withSQE { sqe in
             CNIOLinux.io_uring_prep_poll_remove(sqe, bitpatternAsPointer)
@@ -261,30 +295,31 @@ final internal class Uring {
             self.io_uring_flush()
         }
     }
+    
     // the update/multishot polls are
-    internal func io_uring_poll_update(fd: Int32, newPollmask: UInt32, oldPollmask: UInt32, sequenceIdentifier: UInt32, submitNow: Bool = true, multishot : Bool = true) -> () {
-        let upperQuad : Int = Int(CQEEventType.poll.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
-        let upperQuadModify : Int = Int(CQEEventType.pollModify.rawValue) << 24 + (Int(sequenceIdentifier) & 0x00FFFFFF)
-        let oldBitpattern : Int = upperQuad << 32 + Int(fd)
-        let newBitpattern : Int = upperQuad << 32 + Int(fd)
-        let userbitPattern : Int = upperQuadModify << 32 + Int(fd)
-        let userBitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: userbitPattern)
+    internal func io_uring_poll_update(fileDescriptor: CInt, newPollmask: UInt32, oldPollmask: UInt32, registrationID: SelectorRegistrationID, submitNow: Bool = true, multishot : Bool = true) -> () {
+        
+        let bitpattern = UInt64(URingUserData(registrationID: registrationID,
+                                              fileDescriptor: fileDescriptor,
+                                              eventType:CQEEventType.poll))
+        let userbitPattern = UInt64(URingUserData(registrationID: registrationID,
+                                              fileDescriptor: fileDescriptor,
+                                              eventType:CQEEventType.pollModify))
+        let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(bitpattern))
+        let userBitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(userbitPattern))
 
-        _debugPrint("io_uring_poll_update fd[\(fd)] oldPollmask[\(oldPollmask)] newPollmask[\(newPollmask)]  userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))]")
+        _debugPrint("io_uring_poll_update fileDescriptor[\(fileDescriptor)] oldPollmask[\(oldPollmask)] newPollmask[\(newPollmask)]  userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))]")
 
         self.withSQE { sqe in
             // "Documentation" for multishot polls and updates here:
             // https://git.kernel.dk/cgit/linux-block/commit/?h=poll-multiple&id=33021a19e324fb747c2038416753e63fd7cd9266
-            CNIOLinux.io_uring_prep_poll_add(sqe, fd, 0)
-            CNIOLinux.io_uring_sqe_set_data(sqe, userBitpatternAsPointer)
+            var flags = IORING_POLL_UPDATE_EVENTS | IORING_POLL_UPDATE_USER_DATA
             if multishot {
-                sqe!.pointee.len |= IORING_POLL_ADD_MULTI       // ask for multiple updates
+                flags |= IORING_POLL_ADD_MULTI       // ask for multiple updates
             }
-            sqe!.pointee.len |= IORING_POLL_UPDATE_EVENTS   // update existing mask
-            sqe!.pointee.len |= IORING_POLL_UPDATE_USER_DATA // and update user data
-            sqe!.pointee.addr = UInt64(oldBitpattern) // old user_data
-            sqe!.pointee.off = UInt64(newBitpattern) // new user_data
-            sqe!.pointee.poll_events = UInt16(newPollmask) // new poll mask
+
+            CNIOLinux.io_uring_prep_poll_update(sqe, bitpatternAsPointer, bitpatternAsPointer, newPollmask, flags)
+            CNIOLinux.io_uring_sqe_set_data(sqe, userBitpatternAsPointer)
         }
         
         if submitNow {
@@ -299,31 +334,29 @@ final internal class Uring {
         #endif
     }
 
-    // We merge results into fdEvents on (fd, sequenceIdentifier) for the given CQE
+    // We merge results into fdEvents on (fd, registrationID) for the given CQE
     // this minimizes amount of events propagating up and allows Selector to discard
     // events with an old sequence identifier.
     internal func _process_cqe(events: UnsafeMutablePointer<UringEvent>, cqeIndex: Int, multishot: Bool) {
-        let bitPattern : UInt = UInt(bitPattern:io_uring_cqe_get_data(cqes[cqeIndex]))
-        let fd = Int32(bitPattern & 0x00000000FFFFFFFF)
-        let sequenceNumber : UInt32 = UInt32((Int(bitPattern) >> 32) & 0x00FFFFFF)
-        let eventType = CQEEventType(rawValue:((Int(bitPattern) >> 32) & 0xFF000000) >> 24) // shift out the fd
+        let bitPattern = UInt(bitPattern:io_uring_cqe_get_data(cqes[cqeIndex]))
+        let uringUserData = URingUserData(rawValue: UInt64(bitPattern))
         let result = cqes[cqeIndex]!.pointee.res
 
-        switch eventType {
-        case .poll?:
+        switch uringUserData.eventType {
+        case .poll:
             switch result {
             case -ECANCELED:
                 var pollError : UInt32 = 0
-                assert(fd >= 0, "fd must be zero or greater")
+                assert(uringUserData.fileDescriptor >= 0, "fd must be zero or greater")
                 if multishot { // -ECANCELED for streaming polls, should signal error
                     pollError = Uring.POLLERR | Uring.POLLHUP
                 } else {       // this just signals that Selector just should resubmit a new fresh poll
                     pollError = Uring.POLLCANCEL
                 }
-                if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
-                    fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
+                if let current = fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
+                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
                 } else {
-                    fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
+                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
                 }
                 break
             case -EINVAL:
@@ -338,25 +371,25 @@ final internal class Uring {
             case 0: // successfull chained add for singleshots, not an event
                 break
             default: // positive success
-                assert(fd >= 0, "fd must be zero or greater")
+                assert(uringUserData.fileDescriptor >= 0, "fd must be zero or greater")
                 let uresult = UInt32(result)
 
-                if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
-                    fdEvents[fdEventKey(fd, sequenceNumber)] =  current | uresult
+                if let current = fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
+                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] =  current | uresult
                 } else {
-                    fdEvents[fdEventKey(fd, sequenceNumber)] = uresult
+                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = uresult
                 }
             }
-        case .pollModify?: // we only get this for multishot modifications
+        case .pollModify: // we only get this for multishot modifications
             switch result {
             case -ECANCELED: // -ECANCELED for streaming polls, should signal error
-                assert(fd >= 0, "fd must be zero or greater")
+                assert(uringUserData.fileDescriptor >= 0, "fd must be zero or greater")
 
                 let pollError = Uring.POLLERR // Uring.POLLERR // (Uring.POLLHUP | Uring.POLLERR)
-                if let current = fdEvents[fdEventKey(fd, sequenceNumber)] {
-                    fdEvents[fdEventKey(fd, sequenceNumber)] = current | pollError
+                if let current = fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
+                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
                 } else {
-                    fdEvents[fdEventKey(fd, sequenceNumber)] = pollError
+                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
                 }
                 break
             case -EALREADY:
@@ -380,10 +413,8 @@ final internal class Uring {
                 fatalError("pollModify returned > 0")
             }
             break
-        case .pollDelete?:
+        case .pollDelete:
             break
-        default:
-            assertionFailure("Unknown type")
         }
     }
 
@@ -425,7 +456,7 @@ final internal class Uring {
 
             events[eventCount].fd = eventKey.fileDescriptor
             events[eventCount].pollMask = pollMask
-            events[eventCount].sequenceIdentifier = eventKey.sequenceIdentifier
+            events[eventCount].registrationID = eventKey.registrationID
             if (pollMask & Uring.POLLCANCEL) != 0 {
                 events[eventCount].pollMask &= ~Uring.POLLCANCEL
                 events[eventCount].pollCancelled = true
@@ -467,7 +498,7 @@ final internal class Uring {
         if let firstEvent = fdEvents.first {
             events[0].fd = firstEvent.key.fileDescriptor
             events[0].pollMask = firstEvent.value
-            events[0].sequenceIdentifier = firstEvent.key.sequenceIdentifier
+            events[0].registrationID = firstEvent.key.registrationID
             eventCount = 1
         } else {
             _debugPrint("_io_uring_wait_cqe_shared if let firstEvent = fdEvents.first failed")
