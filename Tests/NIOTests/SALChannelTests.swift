@@ -134,8 +134,11 @@ final class SALChannelTest: XCTestCase, SALTest {
 
             // Before sending back the writable notification, we know that that'll trigger a Channel writability change
             XCTAssertTrue(writableNotificationStepExpectation.compareAndExchange(expected: 1, desired: 2))
-            try self.assertWaitingForNotification(result: .some(.init(io: [.write],
-                                                                      registration: .socketChannel(channel, [.write], 0))))
+            let writableEvent = SelectorEvent(io: [.write],
+                                              registration: NIORegistration(channel: .socketChannel(channel),
+                                                                            interested:  [.write],
+                                                                            registrationID: .initialRegistrationID))
+            try self.assertWaitingForNotification(result: writableEvent)
             try self.assertWrite(expectedFD: .max,
                                  expectedBytes: buffer.getSlice(at: 1, length: 1)!,
                                  return: .processed(1))
@@ -149,8 +152,7 @@ final class SALChannelTest: XCTestCase, SALTest {
             buffer.moveReaderIndex(forwardBy: 1)
 
             // Let's send them another 'writable' notification:
-            try self.assertWaitingForNotification(result: .some(.init(io: [.write],
-                                                                      registration: .socketChannel(channel, [.write], 0))))
+            try self.assertWaitingForNotification(result: writableEvent)
 
             // This time, we'll make the write write everything which should also lead to a final channelWritability
             // change.
@@ -226,8 +228,11 @@ final class SALChannelTest: XCTestCase, SALTest {
         g.enter()
 
         XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            try self.assertWaitingForNotification(result: .some(.init(io: [.read],
-                                                                      registration: .socketChannel(channel, [.read], 0))))
+            let readEvent = SelectorEvent(io: [.read],
+                                          registration: NIORegistration(channel: .socketChannel(channel),
+                                                                        interested: [.read],
+                                                                        registrationID: .initialRegistrationID))
+            try self.assertWaitingForNotification(result: readEvent)
             try self.assertRead(expectedFD: .max, expectedBufferSpace: 2048, return: buffer)
         }) {
             channel.pipeline.addHandler(SignalGroupOnRead(group: g))

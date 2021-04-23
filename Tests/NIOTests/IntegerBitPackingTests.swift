@@ -57,4 +57,25 @@ final class IntegerBitPackingTests: XCTestCase {
                     IntegerBitPacking.unpackUInt16UInt8(IntegerBitPacking.packUInt16UInt8(UInt16(1) << 15 | 1,
                                                                                           UInt8(1) << 7 | 1)))
     }
+
+    func testExtremesWorkForUInt32CInt() {
+        XCTAssert((.max, .max) == IntegerBitPacking.unpackUInt32CInt(IntegerBitPacking.packUInt32CInt(.max, .max)))
+
+        XCTAssert((0, 0) == IntegerBitPacking.unpackUInt32CInt(IntegerBitPacking.packUInt32CInt(0, 0)))
+
+        XCTAssert((.min, -1) == IntegerBitPacking.unpackUInt32CInt(IntegerBitPacking.packUInt32CInt(.min, -1)))
+
+        XCTAssert((.min, .min) == IntegerBitPacking.unpackUInt32CInt(IntegerBitPacking.packUInt32CInt(.min, .min)))
+
+        XCTAssert((UInt32(1) << 31 | 1, CInt(1) << 31) ==
+                    IntegerBitPacking.unpackUInt32CInt(IntegerBitPacking.packUInt32CInt(UInt32(1) << 31 | 1,
+                                                                                        CInt(1) << 31)))
+
+        let randomUInt32 = UInt32.random(in: .min ... .max)
+        let randomCInt = CInt.random(in: .min ... .max)
+        XCTAssert((randomUInt32, randomCInt) ==
+                    IntegerBitPacking.unpackUInt32CInt(IntegerBitPacking.packUInt32CInt(randomUInt32, randomCInt)),
+                  "\((randomUInt32, randomCInt)) didn't roundtrip")
+    }
+
 }

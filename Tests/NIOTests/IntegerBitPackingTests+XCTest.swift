@@ -30,6 +30,7 @@ extension IntegerBitPackingTests {
                 ("testAllUInt8PairsRoundtrip", testAllUInt8PairsRoundtrip),
                 ("testExtremesWorkForUInt32UInt16UInt8", testExtremesWorkForUInt32UInt16UInt8),
                 ("testExtremesWorkForUInt16UInt8", testExtremesWorkForUInt16UInt8),
+                ("testExtremesWorkForUInt32CInt", testExtremesWorkForUInt32CInt),
            ]
    }
 }

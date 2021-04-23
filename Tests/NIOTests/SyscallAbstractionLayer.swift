@@ -200,8 +200,9 @@ internal class HookedSelector: NIO.Selector<NIORegistration>, UserKernelInterfac
 
     override func register<S: Selectable>(selectable: S,
                                           interested: SelectorEventSet,
-                                          makeRegistration: (SelectorEventSet) -> NIORegistration) throws {
-        try self.userToKernel.waitForEmptyAndSet(.register(selectable, interested, makeRegistration(interested)))
+                                          makeRegistration: (SelectorEventSet, SelectorRegistrationID) -> NIORegistration) throws {
+        try self.userToKernel.waitForEmptyAndSet(.register(selectable, interested, makeRegistration(interested,
+                                                                                                    .initialRegistrationID)))
         let ret = try self.waitForKernelReturn()
         if case .returnVoid = ret {
             return
@@ -555,7 +556,9 @@ extension SALTest {
             try self.assertLocalAddress(address: localAddress)
             try self.assertRemoteAddress(address: remoteAddress)
             try self.assertRegister { selectable, eventSet, registration in
-                if case .socketChannel(let channel, let registrationEventSet, _) = registration {
+                if case (.socketChannel(let channel), let registrationEventSet) =
+                    (registration.channel, registration.interested) {
+
                     XCTAssertEqual(localAddress, channel.localAddress)
                     XCTAssertEqual(remoteAddress, channel.remoteAddress)
                     XCTAssertEqual(eventSet, registrationEventSet)

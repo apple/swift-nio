@@ -87,4 +87,15 @@ extension IntegerBitPacking {
     static func unpackUInt16UInt8(_ value: UInt32) -> (UInt16, UInt8) {
         return _IntegerBitPacking.unpackUU(value)
     }
+
+    @inlinable
+    static func packUInt32CInt(_ left: UInt32, _ right: CInt) -> UInt64 {
+        return _IntegerBitPacking.packUU(left, UInt32(truncatingIfNeeded: right))
+    }
+
+    @inlinable
+    static func unpackUInt32CInt(_ value: UInt64) -> (UInt32, CInt) {
+        let unpacked = _IntegerBitPacking.unpackUU(value, leftType: UInt32.self, rightType: UInt32.self)
+        return (unpacked.0, CInt(truncatingIfNeeded: unpacked.1))
+    }
 }
