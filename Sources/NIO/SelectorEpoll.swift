@@ -148,31 +148,31 @@ extension Selector: _SelectorBackendProtocol {
     }
 
     func register0<S: Selectable>(selectable: S,
-                                  fd: Int,
+                                  fileDescriptor: CInt,
                                   interested: SelectorEventSet,
                                   registrationID: SelectorRegistrationID) throws {
         var ev = Epoll.epoll_event()
         ev.events = interested.epollEventSet
-        ev.data.u64 = UInt64(EPollUserData(registrationID: registrationID, fileDescriptor: CInt(fd)))
+        ev.data.u64 = UInt64(EPollUserData(registrationID: registrationID, fileDescriptor: fileDescriptor))
 
-        try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: Int32(fd), event: &ev)
+        try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: fileDescriptor, event: &ev)
     }
 
     func reregister0<S: Selectable>(selectable: S,
-                                    fd: Int,
+                                    fileDescriptor: CInt,
                                     oldInterested: SelectorEventSet,
                                     newInterested: SelectorEventSet,
                                     registrationID: SelectorRegistrationID) throws {
         var ev = Epoll.epoll_event()
         ev.events = newInterested.epollEventSet
-        ev.data.u64 = UInt64(EPollUserData(registrationID: registrationID, fileDescriptor: CInt(fd)))
+        ev.data.u64 = UInt64(EPollUserData(registrationID: registrationID, fileDescriptor: fileDescriptor))
 
-        _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: Int32(fd), event: &ev)
+        _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: fileDescriptor, event: &ev)
     }
 
-    func deregister0<S: Selectable>(selectable: S, fd: Int, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
+    func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
         var ev = Epoll.epoll_event()
-        _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_DEL, fd: Int32(fd), event: &ev)
+        _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_DEL, fd: fileDescriptor, event: &ev)
     }
     
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
