@@ -322,22 +322,59 @@ extension CircularBuffer {
     }
 
     /// Double the capacity of the buffer and adjust the headIdx and tailIdx.
+    ///
+    /// Must only be called when buffer is full.
     @inlinable
     internal mutating func _doubleCapacity() {
+        // Double the storage. This can't use _resizeAndFlatten because the buffer is
+        // full at this stage. That's ok: we have some optimised code paths for this use-case.
+        let newCapacity = self.capacity << 1
+        assert(self.headBackingIndex == self.tailBackingIndex)
+
         var newBacking: ContiguousArray<Element?> = []
-        let newCapacity = self._buffer.count << 1 // Double the storage.
-        precondition(newCapacity > 0, "Can't double capacity of \(self._buffer.count)")
+        precondition(newCapacity > 0, "Can't change capacity to \(newCapacity)")
         assert(newCapacity % 2 == 0)
+        assert(newCapacity > self.capacity)
 
         newBacking.reserveCapacity(newCapacity)
-        newBacking.append(contentsOf: self._buffer[self.headBackingIndex..<self._buffer.count])
-        if self.headBackingIndex > 0 {
-            newBacking.append(contentsOf: self._buffer[0..<self.headBackingIndex])
-        }
-        let repeatitionCount = newCapacity &- newBacking.count
-        newBacking.append(contentsOf: repeatElement(nil, count: repeatitionCount))
+        newBacking.append(contentsOf: self._buffer[self.headBackingIndex...])
+        newBacking.append(contentsOf: self._buffer[..<self.tailBackingIndex])
+
+        let newTailIndex = newBacking.count
+        let paddingCount = newCapacity &- newTailIndex
+        newBacking.append(contentsOf: repeatElement(nil, count: paddingCount))
+
         self.headBackingIndex = 0
-        self.tailBackingIndex = newBacking.count &- repeatitionCount
+        self.tailBackingIndex = newTailIndex
+        self._buffer = newBacking
+        assert(self.verifyInvariants())
+    }
+
+    /// Resizes and flatten this buffer.
+    ///
+    /// Capacities are always powers of 2.
+    @inlinable
+    internal mutating func _resizeAndFlatten(newCapacity: Int) {
+        var newBacking: ContiguousArray<Element?> = []
+        precondition(newCapacity > 0, "Can't change capacity to \(newCapacity)")
+        assert(newCapacity % 2 == 0)
+        assert(newCapacity > self.capacity)
+
+        newBacking.reserveCapacity(newCapacity)
+
+        if self.tailBackingIndex >= self.headBackingIndex {
+            newBacking.append(contentsOf: self._buffer[self.headBackingIndex..<self.tailBackingIndex])
+        } else {
+            newBacking.append(contentsOf: self._buffer[self.headBackingIndex...])
+            newBacking.append(contentsOf: self._buffer[..<self.tailBackingIndex])
+        }
+
+        let newTailIndex = newBacking.count
+        let paddingCount = newCapacity &- newTailIndex
+        newBacking.append(contentsOf: repeatElement(nil, count: paddingCount))
+
+        self.headBackingIndex = 0
+        self.tailBackingIndex = newTailIndex
         self._buffer = newBacking
         assert(self.verifyInvariants())
     }
@@ -681,6 +718,20 @@ extension CircularBuffer: RangeReplaceableCollection {
             return nil
         }
         return self[self.startIndex]
+    }
+
+    /// Prepares the `CircularBuffer` to store the specified number of elements.
+    @inlinable
+    public mutating func reserveCapacity(_ minimumCapacity: Int) {
+        if self.capacity >= minimumCapacity {
+            // Already done, do nothing.
+            return
+        }
+
+        // We need to allocate a larger buffer. We take this opportunity to make ourselves contiguous
+        // again as needed.
+        let targetCapacity = minimumCapacity.nextPowerOf2()
+        self._resizeAndFlatten(newCapacity: targetCapacity)
     }
 }
 
