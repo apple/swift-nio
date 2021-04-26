@@ -108,7 +108,7 @@ protocol _SelectorBackendProtocol {
     /// - parameters:
     ///     - strategy: The `SelectorStrategy` to apply
     ///     - body: The function to execute for each `SelectorEvent` that was produced.
-    func whenReady0(strategy: SelectorStrategy, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void
+    func whenReady0(strategy: SelectorStrategy, onLoopBegin: () -> Void, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void
     func close0() throws
 }
 
@@ -270,9 +270,10 @@ internal class Selector<R: Registration>  {
     ///
     /// - parameters:
     ///     - strategy: The `SelectorStrategy` to apply
+    ///     - onLoopBegin: A function executed after the selector returns, just before the main loop begins..
     ///     - body: The function to execute for each `SelectorEvent` that was produced.
-    func whenReady(strategy: SelectorStrategy, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void {
-        try self.whenReady0(strategy: strategy, body)
+    func whenReady(strategy: SelectorStrategy, onLoopBegin loopStart: () -> Void, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void {
+        try self.whenReady0(strategy: strategy, onLoopBegin: loopStart, body)
     }
 
     /// Close the `Selector`.
