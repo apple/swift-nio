@@ -356,6 +356,15 @@ final internal class Uring {
                     fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
                 }
                 break
+            // We can validly receive an EBADF as a close() can race vis-a-vis pending SQE:s
+            // with polls / pollModifications - in that case, we should just discard the result.
+            // This is similar to the assert in BaseSocketChannel and is due to the lack
+            // of implicit synchronization with regard to registration changes for io_uring
+            // - we simply can't know when the kernel will process our SQE without
+            // heavy-handed synchronization which would dump performance.
+            // Discussion here:
+            // https://github.com/apple/swift-nio/pull/1804#discussion_r621304055
+            // including clarifications from @isilence (one of the io_uring developers)
             case -EBADF:
                 _debugPrint("Failed poll with -EBADF for cqeIndex[\(cqeIndex)]")
                 break
@@ -392,6 +401,7 @@ final internal class Uring {
             case -ENOENT:
                 _debugPrint("Failed pollModify with -ENOENT for cqeIndex [\(cqeIndex)]")
                 break
+            // See the description for EBADF handling above in the poll case for rationale of allowing EBADF.
             case -EBADF:
                 _debugPrint("Failed pollModify with -EBADF for cqeIndex[\(cqeIndex)]")
                 break
