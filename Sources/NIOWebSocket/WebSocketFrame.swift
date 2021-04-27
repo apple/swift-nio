@@ -54,6 +54,7 @@ public struct WebSocketMaskingKey {
     /// - parameters:
     ///     - integer: The encoded network representation of the
     ///         masking key.
+    @usableFromInline
     internal init(networkRepresentation integer: UInt32) {
         self._key = (UInt8((integer & 0xFF000000) >> 24),
                      UInt8((integer & 0x00FF0000) >> 16),
@@ -68,6 +69,15 @@ extension WebSocketMaskingKey: ExpressibleByArrayLiteral {
     public init(arrayLiteral elements: UInt8...) {
         precondition(elements.count == 4, "WebSocketMaskingKeys must be exactly 4 bytes long")
         self.init(elements)! // length precondition above
+    }
+}
+
+extension WebSocketMaskingKey {
+    @inlinable
+    public static func random<T>(
+        using generator: inout T
+    ) -> Self where T: RandomNumberGenerator {
+        WebSocketMaskingKey(networkRepresentation: .random(in: UInt32.min...UInt32.max, using: &generator))
     }
 }
 
