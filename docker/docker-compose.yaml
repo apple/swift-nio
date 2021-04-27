@@ -24,7 +24,7 @@ services:
 
   soundness:
     <<: *common
-    command: /bin/bash -xcl "./scripts/soundness.sh"
+    command: /bin/bash -xcl "swift -version && uname -a && ./scripts/soundness.sh"
 
   unit-tests:
     <<: *common
