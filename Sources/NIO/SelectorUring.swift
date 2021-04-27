@@ -103,10 +103,10 @@ extension Selector: _SelectorBackendProtocol {
 
     func initialiseState0() throws {
         try ring.io_uring_queue_init()
-        self.selectorFD = ring.fd()
+        self.selectorFD = ring.fd
 
         // eventfd are always singleshot and re-register each time around
-        // as certain use cases of nio seems to generate tons of wakeups
+        // as certain use cases of nio seems to generate superfluous wakeups.
         // (at least its tested for that in some of the performance tests
         // e.g. future_whenallsucceed_100k_deferred_off_loop, future_whenallcomplete_100k_deferred_off_loop
         // ) - if using normal ET multishots, we would get 100k events to handle basically.

@@ -90,7 +90,7 @@ internal struct UringEvent {
 }
 
 // This is the key we use for merging events in our internal hashtable
-struct fdEventKey: Hashable {
+struct FDEventKey: Hashable {
     var fileDescriptor : CInt
     var registrationID : UInt16 // we just have the truncated lower 16 bits of the registrationID
 
@@ -99,7 +99,6 @@ struct fdEventKey: Hashable {
         self.registrationID = s
     }
 }
-
 
 final internal class Uring {
     internal static let POLLIN: CUnsignedInt = numericCast(CNIOLinux.POLLIN)
@@ -114,11 +113,19 @@ final internal class Uring {
     private let cqeMaxCount : UInt32 = 8192 // this is the max chunk of CQE we take.
 
     var cqes : UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>
-    var fdEvents = [fdEventKey : UInt32]() // fd, sequence_identifier : merged event_poll_return
+    var fdEvents = [FDEventKey : UInt32]() // fd, sequence_identifier : merged event_poll_return
     var emptyCqe = io_uring_cqe()
 
-    internal func fd() -> Int32 {
-       return ring.ring_fd
+    var fd: CInt {
+        return ring.ring_fd
+    }
+
+    static var io_uring_use_multishot_poll: Bool {
+        #if SWIFTNIO_IO_URING_MULTISHOT
+        return true
+        #else
+        return false
+        #endif
     }
 
     func _dumpCqes(_ header:String, count: Int = 1) {
@@ -166,14 +173,6 @@ final internal class Uring {
         CNIOLinux.io_uring_queue_exit(&ring)
     }
 
-    static internal func io_uring_use_multishot_poll() -> Bool {
-        #if SWIFTNIO_IO_URING_MULTISHOT
-        return true
-        #else
-        return false
-        #endif
-    }
-
     // Adopting some retry code from queue.c from liburing with slight
     // modifications - we never want to have to handle retries of
     // SQE allocation in all places it could possibly occur.
@@ -215,8 +214,6 @@ final internal class Uring {
             submissionCount += 1
 
             switch retval {
-            case -EBUSY:
-                fallthrough
             // We can get -EAGAIN if the CQE queue is full and we get back pressure from
             // the kernel to start processing CQE:s. If we break here with unsubmitted
             // SQE:s, they will stay pending on the user-level side and be flushed
@@ -226,14 +223,14 @@ final internal class Uring {
             // lose any submissions. We could possibly still get stuck
             // trying to get new SQE if the actual SQE queue is full, but
             // that would be due to user error in usage IMHO and we should fatalError there.
-            case -EAGAIN:
+            case -EAGAIN, -EBUSY:
                 _debugPrint("io_uring_flush io_uring_submit -EBUSY/-EAGAIN waitingSubmissions[\(waitingSubmissions)] submissionCount[\(submissionCount)]. Breaking out and resubmitting later (whenReady() end).")
                 break loop
             // -ENOMEM when there is not enough memory to do internal allocations on the kernel side.
             // Right nog we just loop with a sleep trying to buy time, but could also possibly fatalError here.
             // See: https://github.com/axboe/liburing/issues/309
             case -ENOMEM:
-                usleep(1_000_000) // let's not busy loop to give the kernel some time to recover if possible
+                usleep(10_000) // let's not busy loop to give the kernel some time to recover if possible
                 _debugPrint("io_uring_flush io_uring_submit -ENOMEM \(submissionCount)")
             case 0:
                 _debugPrint("io_uring_flush io_uring_submit submitted 0, so far needed submissionCount[\(submissionCount)] waitingSubmissions[\(waitingSubmissions)] submitted [\(retval)] SQE:s this iteration")
@@ -353,20 +350,17 @@ final internal class Uring {
                 } else {       // this just signals that Selector just should resubmit a new fresh poll
                     pollError = Uring.POLLCANCEL
                 }
-                if let current = fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
-                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
+                if let current = fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
+                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
                 } else {
-                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
+                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
                 }
-                break
-            case -EINVAL:
-                _debugPrint("Failed poll with -EINVAL for cqeIndex[\(cqeIndex)]")
                 break
             case -EBADF:
                 _debugPrint("Failed poll with -EBADF for cqeIndex[\(cqeIndex)]")
                 break
             case ..<0: // other errors
-                _debugPrint("Failed poll with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
+                fatalError("Failed poll with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
                 break
             case 0: // successfull chained add for singleshots, not an event
                 break
@@ -374,10 +368,10 @@ final internal class Uring {
                 assert(uringUserData.fileDescriptor >= 0, "fd must be zero or greater")
                 let uresult = UInt32(result)
 
-                if let current = fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
-                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] =  current | uresult
+                if let current = fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
+                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] =  current | uresult
                 } else {
-                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = uresult
+                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = uresult
                 }
             }
         case .pollModify: // we only get this for multishot modifications
@@ -386,10 +380,10 @@ final internal class Uring {
                 assert(uringUserData.fileDescriptor >= 0, "fd must be zero or greater")
 
                 let pollError = Uring.POLLERR // Uring.POLLERR // (Uring.POLLHUP | Uring.POLLERR)
-                if let current = fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
-                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
+                if let current = fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
+                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
                 } else {
-                    fdEvents[fdEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
+                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
                 }
                 break
             case -EALREADY:
@@ -398,14 +392,11 @@ final internal class Uring {
             case -ENOENT:
                 _debugPrint("Failed pollModify with -ENOENT for cqeIndex [\(cqeIndex)]")
                 break
-            case -EINVAL:
-                _debugPrint("Failed pollModify with -EINVAL for cqeIndex[\(cqeIndex)]")
-                break
             case -EBADF:
                 _debugPrint("Failed pollModify with -EBADF for cqeIndex[\(cqeIndex)]")
                 break
             case ..<0: // other errors
-                _debugPrint("Failed pollModify with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
+                fatalError("Failed pollModify with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
                 break
             case 0: // successfull chained add, not an event
                 break
