@@ -1005,4 +1005,21 @@ class CircularBufferTests: XCTestCase {
             XCTAssertNil(buffer.first)
         }
     }
+
+    func testReserveCapacityActuallyDoesSomething() {
+        var buffer = CircularBuffer<Int>(initialCapacity: 4)
+        XCTAssertEqual(buffer.capacity, 4)
+
+        buffer.reserveCapacity(16)
+        XCTAssertEqual(buffer.capacity, 16)
+
+        buffer.reserveCapacity(8)
+        XCTAssertEqual(buffer.capacity, 16)
+
+        buffer.reserveCapacity(20)
+        XCTAssertEqual(buffer.capacity, 32)
+
+        buffer.reserveCapacity(0)
+        XCTAssertEqual(buffer.capacity, 32)
+    }
 }

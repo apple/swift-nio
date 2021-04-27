@@ -588,10 +588,13 @@ extension EventLoopFuture {
             self.whenSuccess(callback as! (Value) -> Void)
             return self as! EventLoopFuture<NewValue>
         } else {
-            return self.flatMap(file: file, line: line) { return EventLoopFuture<NewValue>(eventLoop: self.eventLoop, value: callback($0), file: file, line: line) }
+            let next = EventLoopPromise<NewValue>(eventLoop: eventLoop, file: file, line: line)
+            self._whenComplete {
+                return next._setValue(value: self._value!.map(callback))
+            }
+            return next.futureResult
         }
     }
-
 
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// may recover from the error by returning an `EventLoopFuture<NewValue>`. The callback is intended to potentially
@@ -643,14 +646,21 @@ extension EventLoopFuture {
     public func flatMapResult<NewValue, SomeError: Error>(file: StaticString = #file,
                                                           line: UInt = #line,
                                                           _ body: @escaping (Value) -> Result<NewValue, SomeError>) -> EventLoopFuture<NewValue> {
-        return self.flatMap(file: file, line: line) { value in
-            switch body(value) {
+        let next = EventLoopPromise<NewValue>(eventLoop: eventLoop, file: file, line: line)
+        self._whenComplete {
+            switch self._value! {
             case .success(let value):
-                return self.eventLoop.makeSucceededFuture(value, file: file, line: line)
-            case .failure(let error):
-                return self.eventLoop.makeFailedFuture(error, file: file, line: line)
+                switch body(value) {
+                case .success(let newValue):
+                    return next._setValue(value: .success(newValue))
+                case .failure(let error):
+                    return next._setValue(value: .failure(error))
+                }
+            case .failure(let e):
+                return next._setValue(value: .failure(e))
             }
         }
+        return next.futureResult
     }
 
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
@@ -667,9 +677,16 @@ extension EventLoopFuture {
     /// - returns: A future that will receive the recovered value.
     @inlinable
     public func recover(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> Value) -> EventLoopFuture<Value> {
-        return self.flatMapError(file: file, line: line) {
-            return EventLoopFuture<Value>(eventLoop: self.eventLoop, value: callback($0), file: file, line: line)
+        let next = EventLoopPromise<Value>(eventLoop: eventLoop, file: file, line: line)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let t):
+                return next._setValue(value: .success(t))
+            case .failure(let e):
+                return next._setValue(value: .success(callback(e)))
+            }
         }
+        return next.futureResult
     }
 
 
@@ -693,14 +710,6 @@ extension EventLoopFuture {
             self.eventLoop.execute {
                 self._addCallback(callback)._run()
             }
-        }
-    }
-
-    @inlinable
-    internal func _whenCompleteWithValue(_ callback: @escaping (Result<Value, Error>) -> Void) {
-        self._whenComplete {
-            callback(self._value!)
-            return CallbackList()
         }
     }
 
