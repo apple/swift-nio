@@ -69,7 +69,7 @@ extension UInt64 {
         assert(fd >= 0, "\(fd) is not a valid file descriptor")
         assert(eventType >= 0, "\(eventType) is not a valid eventType")
 
-        self = IntegerBitPacking.packUInt32UInt16UInt8(UInt32(fd),
+        self = IntegerBitPacking.packUInt32UInt16UInt8(UInt32(truncatingIfNeeded: fd),
                                                        uringUserData.registrationID,
                                                        eventType)
     }
