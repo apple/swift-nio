@@ -22,27 +22,27 @@
 ///  - `input` corresponds to `POLLIN`
 ///  - `output` corresponds to `POLLOUT`
 ///  - `error` corresponds to `POLLERR`
-private struct UringFilterSet: OptionSet, Equatable {
+private struct URingFilterSet: OptionSet, Equatable {
     typealias RawValue = UInt8
 
     let rawValue: RawValue
 
-    static let _none = UringFilterSet([])
-    static let hangup = UringFilterSet(rawValue: 1 << 0)
-    static let readHangup = UringFilterSet(rawValue: 1 << 1)
-    static let input = UringFilterSet(rawValue: 1 << 2)
-    static let output = UringFilterSet(rawValue: 1 << 3)
-    static let error = UringFilterSet(rawValue: 1 << 4)
+    static let _none = URingFilterSet([])
+    static let hangup = URingFilterSet(rawValue: 1 << 0)
+    static let readHangup = URingFilterSet(rawValue: 1 << 1)
+    static let input = URingFilterSet(rawValue: 1 << 2)
+    static let output = URingFilterSet(rawValue: 1 << 3)
+    static let error = URingFilterSet(rawValue: 1 << 4)
 
     init(rawValue: RawValue) {
         self.rawValue = rawValue
     }
 }
 
-extension UringFilterSet {
-    /// Convert NIO's `SelectorEventSet` set to a `UringFilterSet`
+extension URingFilterSet {
+    /// Convert NIO's `SelectorEventSet` set to a `URingFilterSet`
     init(selectorEventSet: SelectorEventSet) {
-        var thing: UringFilterSet = [.error, .hangup]
+        var thing: URingFilterSet = [.error, .hangup]
         if selectorEventSet.contains(.read) {
             thing.formUnion(.input)
         }
@@ -60,34 +60,34 @@ extension SelectorEventSet {
     var uringEventSet: UInt32 {
         assert(self != ._none)
         // POLLERR | POLLHUP is always set unconditionally anyway but it's easier to understand if we explicitly ask.
-        var filter: UInt32 = Uring.POLLERR | Uring.POLLHUP
-        let uringFilters = UringFilterSet(selectorEventSet: self)
+        var filter: UInt32 = URing.POLLERR | URing.POLLHUP
+        let uringFilters = URingFilterSet(selectorEventSet: self)
         if uringFilters.contains(.input) {
-            filter |= Uring.POLLIN
+            filter |= URing.POLLIN
         }
         if uringFilters.contains(.output) {
-            filter |= Uring.POLLOUT
+            filter |= URing.POLLOUT
         }
         if uringFilters.contains(.readHangup) {
-            filter |= Uring.POLLRDHUP
+            filter |= URing.POLLRDHUP
         }
-        assert(filter & Uring.POLLHUP != 0) // both of these are reported
-        assert(filter & Uring.POLLERR != 0) // always and can't be masked.
+        assert(filter & URing.POLLHUP != 0) // both of these are reported
+        assert(filter & URing.POLLERR != 0) // always and can't be masked.
         return filter
     }
 
     fileprivate init(uringEvent: UInt32) {
         var selectorEventSet: SelectorEventSet = ._none
-        if uringEvent & Uring.POLLIN != 0 {
+        if uringEvent & URing.POLLIN != 0 {
             selectorEventSet.formUnion(.read)
         }
-        if uringEvent & Uring.POLLOUT != 0 {
+        if uringEvent & URing.POLLOUT != 0 {
             selectorEventSet.formUnion(.write)
         }
-        if uringEvent & Uring.POLLRDHUP != 0 {
+        if uringEvent & URing.POLLRDHUP != 0 {
             selectorEventSet.formUnion(.readEOF)
         }
-        if uringEvent & Uring.POLLHUP != 0 || uringEvent & Uring.POLLERR != 0 {
+        if uringEvent & URing.POLLHUP != 0 || uringEvent & URing.POLLERR != 0 {
             selectorEventSet.formUnion(.reset)
         }
         self = selectorEventSet
@@ -95,7 +95,7 @@ extension SelectorEventSet {
 }
 
 extension Selector: _SelectorBackendProtocol {
-    internal func _debugPrint(_ s : @autoclosure () -> String) {
+    internal func _debugPrint(_ s: @autoclosure () -> String) {
         #if SWIFTNIO_IO_URING_DEBUG_SELECTOR
         print("S [\(NIOThread.current)] " + s())
         #endif
@@ -115,12 +115,12 @@ extension Selector: _SelectorBackendProtocol {
         self.eventFD = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
 
         ring.io_uring_prep_poll_add(fileDescriptor: self.eventFD,
-                                    pollMask: Uring.POLLIN,
+                                    pollMask: URing.POLLIN,
                                     registrationID:SelectorRegistrationID(rawValue: 0),
                                     multishot:false) // wakeups
 
         self.lifecycleState = .open
-        _debugPrint("UringSelector up and running fd [\(self.selectorFD)] wakeups on event_fd [\(self.eventFD)]")
+        _debugPrint("URingSelector up and running fd [\(self.selectorFD)] wakeups on event_fd [\(self.eventFD)]")
     }
 
     func deinitAssertions0() {
@@ -241,7 +241,7 @@ extension Selector: _SelectorBackendProtocol {
                     _debugPrint("wakeup successful for event.fd [\(event.fd)]")
                     var val = EventFd.eventfd_t()
                     ring.io_uring_prep_poll_add(fileDescriptor: self.eventFD,
-                                                pollMask: Uring.POLLIN,
+                                                pollMask: URing.POLLIN,
                                                 registrationID: SelectorRegistrationID(rawValue: 0),
                                                 submitNow: false,
                                                 multishot: false)

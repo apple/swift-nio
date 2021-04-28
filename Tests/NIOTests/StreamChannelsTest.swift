@@ -909,8 +909,8 @@ private func assertNoSelectorChanges(fd: CInt, selector: NIO.Selector<NIORegistr
         throw UnexpectedSelectorChanges(description: "\(ev) [userdata: \(EPollUserData(rawValue: ev.data.u64))]")
     }
     #else
-    let events: UnsafeMutablePointer<UringEvent> = UnsafeMutablePointer.allocate(capacity: 1)
-    events.initialize(to: UringEvent())
+    let events: UnsafeMutablePointer<URingEvent> = UnsafeMutablePointer.allocate(capacity: 1)
+    events.initialize(to: URingEvent())
     let numberOfEvents = try selector.ring.io_uring_wait_cqe_timeout(events: events, maxevents: 1, timeout: TimeAmount.seconds(0))
     events.deinitialize(count: 1)
     events.deallocate()
