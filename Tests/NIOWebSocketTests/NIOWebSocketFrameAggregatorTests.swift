@@ -17,53 +17,35 @@ import NIO
 import NIOWebSocket
 
 final class NIOWebSocketFrameAggregatorTests: XCTestCase {
-    var channel: EmbeddedChannel!
+    let channel = EmbeddedChannel(
+        handler: NIOWebSocketFrameAggregator(
+            minNonFinalFragmentSize: 1,
+            maxAccumulatedFrameCount: 4,
+            maxAccumulatedFrameSize: 32
+        )
+    )
     
     override func tearDown() {
-        XCTAssertEqual(try self.channel?.finish().isClean, true)
+        XCTAssertEqual(try self.channel.finish().isClean, true)
     }
     
     func testEmptyButFinalFrameIsForwardedEvenIfMinNonFinalFragmentSizeIsGreaterThanZero() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let frame = WebSocketFrame(fin: true, opcode: .binary, data: ByteBuffer())
         try channel.writeInbound(frame)
         XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), frame)
     }
     
     func testTooSmallAndNonFinalFrameThrows() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let frame = WebSocketFrame(fin: false, opcode: .binary, data: ByteBuffer())
         XCTAssertThrowsError(try channel.writeInbound(frame))
     }
     
     func testTooBigFrameThrows() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let frame = WebSocketFrame(fin: false, opcode: .binary, data: ByteBuffer(repeating: 2, count: 33))
         XCTAssertThrowsError(try channel.writeInbound(frame))
     }
     
     func testTooBigAccumulatedFrameThrows() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let frame1 = WebSocketFrame(fin: false, opcode: .binary, data: ByteBuffer(repeating: 2, count: 32))
         try channel.writeInbound(frame1)
         
@@ -72,12 +54,6 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     }
     
     func testTooManyFramesThrow() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let firstFrame = WebSocketFrame(fin: false, opcode: .binary, data: ByteBuffer(repeating: 2, count: 2))
         try channel.writeInbound(firstFrame)
         let fragment = WebSocketFrame(fin: false, opcode: .continuation, data: ByteBuffer(repeating: 2, count: 2))
@@ -86,12 +62,6 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
         XCTAssertThrowsError(try channel.writeInbound(fragment))
     }
     func testAlmostTooManyFramesDoNotThrow() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let firstFrame = WebSocketFrame(fin: false, opcode: .binary, data: ByteBuffer(repeating: 2, count: 2))
         try channel.writeInbound(firstFrame)
         let fragment = WebSocketFrame(fin: false, opcode: .continuation, data: ByteBuffer(repeating: 2, count: 2))
@@ -106,12 +76,6 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     }
     
     func testTextFrameIsStillATextFrameAfterAggregation() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let firstFrame = WebSocketFrame(fin: false, opcode: .text, data: ByteBuffer(repeating: 2, count: 2))
         try channel.writeInbound(firstFrame)
         let fragment = WebSocketFrame(fin: false, opcode: .continuation, data: ByteBuffer(repeating: 2, count: 2))
@@ -125,12 +89,6 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     }
     
     func testPingFrameIsForwarded() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let controlFrame = WebSocketFrame(fin: true, opcode: .ping, data: ByteBuffer())
         try channel.writeInbound(controlFrame)
         XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), controlFrame)
@@ -143,12 +101,6 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     }
     
     func testPongFrameIsForwarded() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let controlFrame = WebSocketFrame(fin: true, opcode: .pong, data: ByteBuffer())
         try channel.writeInbound(controlFrame)
         XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), controlFrame)
@@ -161,12 +113,6 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     }
     
     func testCloseConnectionFrameIsForwarded() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
-        
         let controlFrame = WebSocketFrame(fin: true, opcode: .connectionClose, data: ByteBuffer())
         try channel.writeInbound(controlFrame)
         XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), controlFrame)
@@ -179,11 +125,6 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     }
     
     func testFrameAggregationWithMask() throws {
-        channel = EmbeddedChannel(
-            handler: NIOWebSocketFrameAggregator(
-                minNonFinalFragmentSize: 1,
-                maxAccumulatedFrameCount: 4,
-                maxAccumulatedFrameSize: 32))
         var firstFrameData = ByteBuffer(repeating: 2, count: 2)
         let firsFrameMask: WebSocketMaskingKey = [1, 2, 3, 4]
         firstFrameData.webSocketMask(firsFrameMask)
