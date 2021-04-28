@@ -204,7 +204,7 @@ extension Selector: _SelectorBackendProtocol {
     /// - parameters:
     ///     - strategy: The `SelectorStrategy` to apply
     ///     - body: The function to execute for each `SelectorEvent` that was produced.
-    func whenReady0(strategy: SelectorStrategy, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void {
+    func whenReady0(strategy: SelectorStrategy, onLoopBegin loopStart: () -> Void, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void {
         assert(self.myThread == NIOThread.current)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
@@ -214,6 +214,8 @@ extension Selector: _SelectorBackendProtocol {
         let ready = try timespec.withUnsafeOptionalPointer { ts in
             Int(try KQueue.kevent(kq: self.selectorFD, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
         }
+
+        loopStart()
 
         for i in 0..<ready {
             let ev = events[i]

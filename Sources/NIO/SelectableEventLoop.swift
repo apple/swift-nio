@@ -57,6 +57,10 @@ internal final class SelectableEventLoop: EventLoop {
     /* private but tests */ internal let _selector: NIO.Selector<NIORegistration>
     private let thread: NIOThread
     @usableFromInline
+    // _pendingTaskPop is set to `true` if the event loop is about to pop tasks off the task queue.
+    // This may only be read/written while holding the _tasksLock.
+    internal var _pendingTaskPop = false
+    @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
     private var tasksCopy = ContiguousArray<() -> Void>()
     @usableFromInline
@@ -281,22 +285,38 @@ internal final class SelectableEventLoop: EventLoop {
                 self._scheduledTasks.push(task)
             }
         } else {
-            self.externalStateLock.withLockVoid {
+            let shouldWakeSelector: Bool = self.externalStateLock.withLock {
                 guard self.validExternalStateToScheduleTasks else {
                     print("ERROR: Cannot schedule tasks on an EventLoop that has already shut down. " +
                           "This will be upgraded to a forced crash in future SwiftNIO versions.")
-                    return
+                    return false
                 }
 
-                self._tasksLock.withLockVoid {
+                return self._tasksLock.withLock {
                     self._scheduledTasks.push(task)
+
+                    if self._pendingTaskPop == false {
+                        // Our job to wake the selector.
+                        self._pendingTaskPop = true
+                        return true
+                    } else {
+                        // There is already an event-loop-tick scheduled, we don't need to wake the selector.
+                        return false
+                    }
                 }
             }
 
             // We only need to wake up the selector if we're not in the EventLoop. If we're in the EventLoop already, we're
             // either doing IO tasks (which happens before checking the scheduled tasks) or we're running a scheduled task
-            // already which means that we'll check at least once more if there are other scheduled tasks runnable.
-            try self._wakeupSelector()
+            // already which means that we'll check at least once more if there are other scheduled tasks runnable. While we
+            // had the task lock we also checked whether the loop was _already_ going to be woken. This saves us a syscall on
+            // hot loops.
+            //
+            // In the future we'll use an MPSC queue here and that will complicate things, so we may get some spurious wakeups,
+            // but as long as we're using the big dumb lock we can make this optimization safely.
+            if shouldWakeSelector {
+                try self._wakeupSelector()
+            }
         }
     }
 
@@ -372,6 +392,9 @@ internal final class SelectableEventLoop: EventLoop {
                 scheduledTasksCopy.removeAll(keepingCapacity: true)
 
                 self._tasksLock.withLockVoid {
+                    // In this state we never want the selector to be woken again, so we pretend we're permanently running.
+                    self._pendingTaskPop = true
+
                     // reserve the correct capacity so we don't need to realloc later on.
                     scheduledTasksCopy.reserveCapacity(self._scheduledTasks.count)
                     while let sched = self._scheduledTasks.pop() {
@@ -405,7 +428,10 @@ internal final class SelectableEventLoop: EventLoop {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
-                try self._selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
+                try self._selector.whenReady(
+                    strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask),
+                    onLoopBegin: { self._tasksLock.withLockVoid { self._pendingTaskPop = true } }
+                ) { ev in
                     switch ev.registration.channel {
                     case .serverSocketChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
@@ -447,6 +473,11 @@ internal final class SelectableEventLoop: EventLoop {
                     } else {
                         // Reset nextReadyTask to nil which means we will do a blocking select.
                         nextReadyTask = nil
+                    }
+
+                    if self.tasksCopy.isEmpty {
+                        // We will not continue to loop here. We need to be woken if a new task is enqueued.
+                        self._pendingTaskPop = false
                     }
                 }
 
