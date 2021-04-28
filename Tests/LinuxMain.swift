@@ -108,6 +108,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(PipeChannelTest.allTests),
              testCase(PriorityQueueTest.allTests),
              testCase(SALChannelTest.allTests),
+             testCase(SALEventLoopTests.allTests),
              testCase(SNIHandlerTest.allTests),
              testCase(SelectorTest.allTests),
              testCase(SocketAddressTest.allTests),
