@@ -19,7 +19,7 @@ import NIOWebSocket
 final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     var channel: EmbeddedChannel!
     
-    override func tearDownWithError() throws {
+    override func tearDown() {
         XCTAssertEqual(try self.channel?.finish().isClean, true)
     }
     

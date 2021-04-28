@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2019 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -19,9 +19,9 @@ import NIO
 /// Frames which are not fragmented are just forwarded without any processing.
 /// Fragmented frames are unmasked, concatenated and forwarded as a new `WebSocketFrame` which is either a `.binary` or `.text` frame.
 /// `extensionData`, `rsv1`, `rsv2` and `rsv3` are lost if a frame is fragmented because they cannot be concatenated.
-/// - Note: `.ping`, `.pong`, `.closeConnection`frames are forwarded during frame aggregation
+/// - Note: `.ping`, `.pong`, `.closeConnection` frames are forwarded during frame aggregation
 public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
-    enum Error: Swift.Error {
+    public enum Error: Swift.Error {
         case nonFinalFragmentSizeIsTooSmall
         case tooManyFragments
         case accumulatedFrameSizeIsTooLarge
@@ -37,7 +37,7 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
     
     private var bufferedFrames: [WebSocketFrame] = []
     private var accumulatedFrameSize: Int {
-        bufferedFrames
+        self.bufferedFrames
             .map({ $0.length })
             .reduce(0, +)
     }
@@ -64,27 +64,27 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
         do {
             switch frame.opcode {
             case .continuation:
-                guard let firstFrameOpcode = bufferedFrames.first?.opcode else {
+                guard let firstFrameOpcode = self.bufferedFrames.first?.opcode else {
                     throw Error.didReceiveFragmentBeforeReceivingTextOrBinaryFrame
                 }
-                try bufferFrame(frame)
+                try self.bufferFrame(frame)
                 
                 guard frame.fin else { break }
                 // final frame received
                 
-                let aggregatedFrame = aggregateFrames(frames: bufferedFrames, opcode: firstFrameOpcode)
-                clearBuffer()
+                let aggregatedFrame = self.aggregateFrames(opcode: firstFrameOpcode)
+                self.clearBuffer()
                 
                 context.fireChannelRead(wrapInboundOut(aggregatedFrame))
             case .binary, .text:
                 if frame.fin {
-                    guard bufferedFrames.isEmpty else {
+                    guard self.bufferedFrames.isEmpty else {
                         throw Error.receivedNewFrameWithoutFinishingPrevious
                     }
                     // fast path: no need to check any constraints nor unmask and copy data
                     context.fireChannelRead(data)
                 } else {
-                    try bufferFrame(frame)
+                    try self.bufferFrame(frame)
                 }
             default:
                 // control frames can't be fragmented
@@ -92,39 +92,39 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
             }
         } catch {
             // free memory early
-            clearBuffer()
+            self.clearBuffer()
             context.fireErrorCaught(error)
         }
     }
     
     private func bufferFrame(_ frame: WebSocketFrame) throws {
-        guard bufferedFrames.isEmpty || frame.opcode == .continuation else {
+        guard self.bufferedFrames.isEmpty || frame.opcode == .continuation else {
             throw Error.receivedNewFrameWithoutFinishingPrevious
         }
-        guard frame.fin || frame.length >= minNonFinalFragmentSize else {
+        guard frame.fin || frame.length >= self.minNonFinalFragmentSize else {
             throw Error.nonFinalFragmentSizeIsTooSmall
         }
-        guard bufferedFrames.count < maxAccumulatedFrameCount else {
+        guard self.bufferedFrames.count < self.maxAccumulatedFrameCount else {
             throw Error.tooManyFragments
         }
         
         // if this is not a final frame, we will at least receive one more frame
-        guard frame.fin || (bufferedFrames.count + 1) < maxAccumulatedFrameCount else {
+        guard frame.fin || (self.bufferedFrames.count + 1) < self.maxAccumulatedFrameCount else {
             throw Error.tooManyFragments
         }
         
-        bufferedFrames.append(frame)
+        self.bufferedFrames.append(frame)
         
-        guard accumulatedFrameSize <= maxAccumulatedFrameSize else {
+        guard self.accumulatedFrameSize <= self.maxAccumulatedFrameSize else {
             throw Error.accumulatedFrameSizeIsTooLarge
         }
     }
     
-    private func aggregateFrames(frames: [WebSocketFrame], opcode: WebSocketOpcode) -> WebSocketFrame {
+    private func aggregateFrames(opcode: WebSocketOpcode) -> WebSocketFrame {
         var dataBuffer = ByteBuffer()
-        dataBuffer.reserveCapacity(minimumWritableBytes: accumulatedFrameSize)
+        dataBuffer.reserveCapacity(minimumWritableBytes: self.accumulatedFrameSize)
         
-        for frame in bufferedFrames {
+        for frame in self.bufferedFrames {
             var unmaskedData = frame.unmaskedData
             dataBuffer.writeBuffer(&unmaskedData)
         }
@@ -133,6 +133,6 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
     }
     
     private func clearBuffer() {
-        bufferedFrames = []
+        self.bufferedFrames.removeAll(keepingCapacity: true)
     }
 }
