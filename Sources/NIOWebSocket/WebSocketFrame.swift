@@ -80,14 +80,14 @@ extension WebSocketMaskingKey {
     @inlinable
     public static func random<T>(
         using generator: inout T
-    ) -> Self where T: RandomNumberGenerator {
+    ) -> WebSocketMaskingKey where T: RandomNumberGenerator {
         WebSocketMaskingKey(networkRepresentation: .random(in: UInt32.min...UInt32.max, using: &generator))
     }
     
     /// Returns a random masking key, using the `SystemRandomNumberGenerator` as a source for randomness.
     /// - Returns: A random masking key
     @inlinable
-    public static func random() -> Self {
+    public static func random() -> WebSocketMaskingKey {
         var generator = SystemRandomNumberGenerator()
         return .random(using: &generator)
     }
