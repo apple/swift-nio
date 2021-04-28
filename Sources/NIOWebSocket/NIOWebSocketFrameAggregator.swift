@@ -13,6 +13,13 @@
 //===----------------------------------------------------------------------===//
 import NIO
 
+
+/// `NIOWebSocketFrameAggregator` buffers inbound fragmented `WebSocketFrame`'s and aggregates them into a single `WebSocketFrame`.
+/// It guarantees that a `WebSocketFrame` with an `opcode` of `.continuation` is never forwarded.
+/// Frames which are not fragmented are just forwarded without any processing.
+/// Fragmented frames are unmasked, concatenated and forwarded as a new `WebSocketFrame` which is either a `.binary` or `.text` frame.
+/// `extensionData`, `rsv1`, `rsv2` and `rsv3` are lost if a frame is fragmented because they cannot be concatenated.
+/// - Note: `.ping`, `.pong`, `.closeConnection`frames are forwarded during frame aggregation
 public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
     enum Error: Swift.Error {
         case nonFinalFragmentSizeIsTooSmall
@@ -35,6 +42,12 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
             .reduce(0, +)
     }
     
+    
+    /// Configures a `NIOWebSocketFrameAggregator`.
+    /// - Parameters:
+    ///   - minNonFinalFragmentSize: Minimum size in bytes of a fragment which is not the last fragment of a complete frame. Used to defend agains many really small payloads.
+    ///   - maxAccumulatedFrameCount: Maximum number of fragments which are allowed to result in a complete frame.
+    ///   - maxAccumulatedFrameSize: Maximum accumulated size in bytes of buffered fragments. It is essentially the maximum allowed size of an incoming frame after all fragments are concatenated.
     public init(
         minNonFinalFragmentSize: Int,
         maxAccumulatedFrameCount: Int,
