@@ -37,7 +37,7 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
     
     private var bufferedFrames: [WebSocketFrame] = []
     private var accumulatedFrameSize: Int {
-        self.bufferedFrames
+        return self.bufferedFrames
             .map({ $0.length })
             .reduce(0, +)
     }
