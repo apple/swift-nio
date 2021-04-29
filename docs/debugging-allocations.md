@@ -414,11 +414,11 @@ swift_slowAlloc
       in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
     Swift.String.utf8CString.getter : Swift.ContiguousArray<Swift.Int8>
       in /home/ubuntu/bin/usr/lib/swift/linux/libswiftCore.so
-    NIO.Uring.getEnvironmentVar(Swift.String) -> Swift.String?
-      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxUring.swift:291
+    NIO.URing.getEnvironmentVar(Swift.String) -> Swift.String?
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxURing.swift:291
       in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
-    NIO.Uring._debugPrint(@autoclosure () -> Swift.String) -> ()
-      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxUring.swift:297
+    NIO.URing._debugPrint(@autoclosure () -> Swift.String) -> ()
+      at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxURing.swift:297
 ...
 22196 temporary allocations of 22276 allocations in total (99.64%) from:
 ```
@@ -426,10 +426,10 @@ swift_slowAlloc
 And here we could fairly quickly see that the transient extra allocations was due to extra debug printing and querying of environment variables:
 
 ```
-NIO.Uring.getEnvironmentVar(Swift.String) -> Swift.String?
-  at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxUring.swift:291
+NIO.URing.getEnvironmentVar(Swift.String) -> Swift.String?
+  at /home/ubuntu/swiftnio/swift-nio/Sources/NIO/LinuxURing.swift:291
   in /tmp/.nio_alloc_counter_tests_GRusAy/.build/x86_64-unknown-linux-gnu/release/test_1000_autoReadGetAndSet
-NIO.Uring._debugPrint(@autoclosure () -> Swift.String) -> ()
+NIO.URing._debugPrint(@autoclosure () -> Swift.String) -> ()
 ```
 
 And this code will be removed before final integration of the feature branch, so the diff will go away.
