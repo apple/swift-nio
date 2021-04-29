@@ -1095,7 +1095,24 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
             return readStreamState
         }
+        // This assert needs to be disabled for io_uring, as the io_uring backend does not have the implicit synchronisation between
+        // modifications to the poll mask and the actual returned events on the completion queue that kqueue and epoll has.
+        // For kqueue and epoll, there is an implicit synchronisation point such that after a modification of the poll mask has been
+        // issued, the next call to reap events will be sure to not include events which does not match the new poll mask.
+        // Specifically for this assert, it means that we will be guaranteed to never receive a POLLIN notification unless there are
+        // bytes available to read.
+
+        // For a fully asynchronous backend like io_uring, there are no such implicit synchronisation point, so after we have
+        // submitted the asynchronous event to change the poll mask, we may still reap pending asynchronous replies for the old
+        // poll mask, and thus receive a POLLIN even though we have modified the mask visavi the kernel.
+        // Which would trigger the assert.
+
+        // The only way to avoid that race, would be to use heavy handed synchronisation primitives like IOSQE_IO_DRAIN (basically
+        // flushing all pending requests and wait for a fake event result to sync up) which would be awful for performance,
+        // so better skip the assert() for io_uring instead.
+        #if !SWIFTNIO_USE_IO_URING
         assert(readResult == .some)
+        #endif
         if self.lifecycleManager.isActive {
             self.pipeline.fireChannelReadComplete0()
         }
