@@ -17,13 +17,17 @@ import NIO
 import NIOWebSocket
 
 final class NIOWebSocketFrameAggregatorTests: XCTestCase {
-    let channel = EmbeddedChannel(
-        handler: NIOWebSocketFrameAggregator(
-            minNonFinalFragmentSize: 1,
-            maxAccumulatedFrameCount: 4,
-            maxAccumulatedFrameSize: 32
+    var channel: EmbeddedChannel!
+    
+    override func setUp() {
+        channel = EmbeddedChannel(
+            handler: NIOWebSocketFrameAggregator(
+                minNonFinalFragmentSize: 1,
+                maxAccumulatedFrameCount: 4,
+                maxAccumulatedFrameSize: 32
+            )
         )
-    )
+    }
     
     override func tearDown() {
         XCTAssertEqual(try self.channel.finish().isClean, true)
