@@ -78,9 +78,9 @@ extension WebSocketMaskingKey {
     ///     new random masking key.
     /// - Returns: A random masking key
     @inlinable
-    public static func random<T>(
-        using generator: inout T
-    ) -> WebSocketMaskingKey where T: RandomNumberGenerator {
+    public static func random<Generator>(
+        using generator: inout Generator
+    ) -> WebSocketMaskingKey where Generator: RandomNumberGenerator {
         return WebSocketMaskingKey(networkRepresentation: .random(in: UInt32.min...UInt32.max, using: &generator))
     }
     
