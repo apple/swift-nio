@@ -234,6 +234,14 @@ public struct ByteBuffer {
         deinit {
             self.deallocate()
         }
+        
+        internal func relinquishStorage() -> UnsafeMutableRawBufferPointer {
+            let ptr = UnsafeMutableRawBufferPointer(start: self.bytes,
+                                                    count: Int(self.capacity))
+            self.bytes = .init(bitPattern: 0)! // gross hack, should store optional
+            self.capacity = 0
+            return ptr
+        }
 
         internal var fullSlice: _ByteBufferSlice {
             return _ByteBufferSlice(0..<self.capacity)
@@ -424,12 +432,18 @@ public struct ByteBuffer {
 
     // MARK: Public Core API
 
-    fileprivate init(allocator: ByteBufferAllocator, startingCapacity: Int) {
-        let startingCapacity = _toCapacity(startingCapacity)
+    fileprivate init(storage: _Storage, allocator: ByteBufferAllocator, startingCapacity: Int) {
         self._readerIndex = 0
         self._writerIndex = 0
-        self._storage = _Storage.reallocated(minimumCapacity: startingCapacity, allocator: allocator)
+        self._storage = storage
         self._slice = self._storage.fullSlice
+    }
+    
+    fileprivate init(allocator: ByteBufferAllocator, startingCapacity: Int) {
+        self = .init(storage: _Storage.reallocated(minimumCapacity: _toCapacity(startingCapacity),
+                                                   allocator: allocator),
+                     allocator: allocator,
+                     startingCapacity: startingCapacity)
     }
 
     /// The number of bytes writable until `ByteBuffer` will need to grow its underlying storage which will likely
@@ -981,5 +995,31 @@ extension ByteBuffer {
             return nil
         }
         return indexFromReaderIndex ..< (indexFromReaderIndex+length)
+    }
+}
+
+extension ByteBuffer {
+    public init(takingOwnershipOf storage: UnsafeMutableRawBufferPointer,
+                readableBytes: Int = 0,
+                allocator: ByteBufferAllocator = ByteBufferAllocator()) {
+        let capacity = storage.count
+        self = .init(storage: .init(bytesNoCopy: storage.baseAddress!,
+                                    capacity: _toCapacity(capacity),
+                                    allocator: allocator),
+                     allocator: allocator,
+                     startingCapacity: capacity)
+    }
+    
+    public mutating func tryReliquishingOwnershipOfStorage() -> UnsafeMutableRawBufferPointer? {
+        guard isKnownUniquelyReferenced(&self._storage) else {
+            return nil
+        }
+        
+        // TODO: assert allocator is default allocator
+        let storage = self._storage.relinquishStorage()
+        self = .init(storage: ByteBufferAllocator.zeroCapacityWithDefaultAllocator._storage,
+                     allocator: ByteBufferAllocator(),
+                     startingCapacity: 0)
+        return storage
     }
 }
