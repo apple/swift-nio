@@ -36,11 +36,7 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
     private let maxAccumulatedFrameSize: Int
     
     private var bufferedFrames: [WebSocketFrame] = []
-    private var accumulatedFrameSize: Int {
-        return self.bufferedFrames
-            .map({ $0.length })
-            .reduce(0, +)
-    }
+    private var accumulatedFrameSize: Int = 0
     
     
     /// Configures a `NIOWebSocketFrameAggregator`.
@@ -114,6 +110,7 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
         }
         
         self.bufferedFrames.append(frame)
+        self.accumulatedFrameSize += frame.length
         
         guard self.accumulatedFrameSize <= self.maxAccumulatedFrameSize else {
             throw Error.accumulatedFrameSizeIsTooLarge
@@ -134,5 +131,6 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
     
     private func clearBuffer() {
         self.bufferedFrames.removeAll(keepingCapacity: true)
+        self.accumulatedFrameSize = 0
     }
 }
