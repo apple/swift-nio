@@ -68,7 +68,10 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
                 guard frame.fin else { break }
                 // final frame received
                 
-                let aggregatedFrame = self.aggregateFrames(opcode: firstFrameOpcode)
+                let aggregatedFrame = self.aggregateFrames(
+                    opcode: firstFrameOpcode,
+                    allocator: context.channel.allocator
+                )
                 self.clearBuffer()
                 
                 context.fireChannelRead(wrapInboundOut(aggregatedFrame))
@@ -117,9 +120,8 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
         }
     }
     
-    private func aggregateFrames(opcode: WebSocketOpcode) -> WebSocketFrame {
-        var dataBuffer = ByteBuffer()
-        dataBuffer.reserveCapacity(minimumWritableBytes: self.accumulatedFrameSize)
+    private func aggregateFrames(opcode: WebSocketOpcode, allocator: ByteBufferAllocator) -> WebSocketFrame {
+        var dataBuffer = allocator.buffer(capacity: self.accumulatedFrameSize)
         
         for frame in self.bufferedFrames {
             var unmaskedData = frame.unmaskedData
