@@ -54,21 +54,22 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
         self.maxAccumulatedFrameSize = maxAccumulatedFrameSize
     }
     
-    
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let frame = unwrapInboundIn(data)
         do {
             switch frame.opcode {
             case .continuation:
-                guard let firstFrameOpcode = self.bufferedFrames.first?.opcode else {
+                guard let firstFrame = self.bufferedFrames.first else {
                     throw Error.didReceiveFragmentBeforeReceivingTextOrBinaryFrame
                 }
                 try self.bufferFrame(frame)
                 
                 guard frame.fin else { break }
                 // final frame received
-                
-                let aggregatedFrame = self.aggregateFrames(opcode: firstFrameOpcode)
+                let aggregatedFrame = firstFrame.aggregated(
+                    self.bufferedFrames.dropFirst(),
+                    accumulatedSize: self.accumulatedFrameSize
+                )
                 self.clearBuffer()
                 
                 context.fireChannelRead(wrapInboundOut(aggregatedFrame))
@@ -117,20 +118,25 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
         }
     }
     
-    private func aggregateFrames(opcode: WebSocketOpcode) -> WebSocketFrame {
-        var dataBuffer = ByteBuffer()
-        dataBuffer.reserveCapacity(minimumWritableBytes: self.accumulatedFrameSize)
-        
-        for frame in self.bufferedFrames {
-            var unmaskedData = frame.unmaskedData
-            dataBuffer.writeBuffer(&unmaskedData)
-        }
-        
-        return WebSocketFrame(fin: true, opcode: opcode, data: dataBuffer)
-    }
-    
     private func clearBuffer() {
         self.bufferedFrames.removeAll(keepingCapacity: true)
         self.accumulatedFrameSize = 0
+    }
+}
+
+
+extension WebSocketFrame {
+    func aggregated<Frames>(
+        _ others: Frames,
+        accumulatedSize: Int
+    ) -> WebSocketFrame where Frames: Sequence, Frames.Element == WebSocketFrame {
+        var dataBuffer = self.unmaskedData
+        dataBuffer.reserveCapacity(minimumWritableBytes: accumulatedSize - self.length)
+        
+        for frame in others {
+            var unmaskedData = frame.unmaskedData
+            dataBuffer.writeBuffer(&unmaskedData)
+        }
+        return WebSocketFrame(fin: true, opcode: self.opcode, data: dataBuffer)
     }
 }
