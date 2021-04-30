@@ -221,10 +221,11 @@ internal class HookedSelector: NIO.Selector<NIORegistration>, UserKernelInterfac
         }
     }
 
-    override func whenReady(strategy: SelectorStrategy, _ body: (SelectorEvent<NIORegistration>) throws -> Void) throws -> Void {
+    override func whenReady(strategy: SelectorStrategy, onLoopBegin loopStart: () -> Void,  _ body: (SelectorEvent<NIORegistration>) throws -> Void) throws -> Void {
         try self.userToKernel.waitForEmptyAndSet(.whenReady(strategy))
         let ret = try self.waitForKernelReturn()
         if case .returnSelectorEvent(let event) = ret {
+            loopStart()
             if let event = event {
                 try body(event)
             }
@@ -399,8 +400,13 @@ extension HookedSelector {
         }
     }
 
+    /// This function will wait for an event loop wakeup until it unblocks. If the event loop
+    /// is currently executing then it will not be woken: as a result, consider using
+    /// `assertParkedRightNow` before the event that you want to trigger the wakeup, and before calling
+    /// this code.
     func assertWakeup(file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
+        try self.wakeups.takeValue()
         try self.assertSyscallAndReturn(.returnSelectorEvent(nil), file: (file), line: line) { syscall in
             if case .whenReady(.block) = syscall {
                 return true
@@ -408,7 +414,6 @@ extension HookedSelector {
                 return false
             }
         }
-        try self.wakeups.takeValue()
     }
 
     func assertParkedRightNow(file: StaticString = #file, line: UInt = #line) throws {

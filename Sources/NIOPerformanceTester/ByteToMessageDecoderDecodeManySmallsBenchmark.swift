@@ -26,7 +26,7 @@ final class ByteToMessageDecoderDecodeManySmallsBenchmark: Benchmark {
     }
 
     func setUp() throws {
-        //try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait()
+        try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait()
     }
 
     func tearDown() {
@@ -34,11 +34,10 @@ final class ByteToMessageDecoderDecodeManySmallsBenchmark: Benchmark {
     }
 
     func run() -> Int {
-//        for _ in 1...self.iterations {
-//            try! self.channel.writeInbound(self.buffer)
-//        }
-//        return Int(self.buffer.readableBytes)
-        return 7
+        for _ in 1...self.iterations {
+            try! self.channel.writeInbound(self.buffer)
+        }
+        return Int(self.buffer.readableBytes)
     }
 
     struct Decoder: ByteToMessageDecoder {

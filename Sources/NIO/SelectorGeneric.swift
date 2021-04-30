@@ -108,7 +108,7 @@ protocol _SelectorBackendProtocol {
     /// - parameters:
     ///     - strategy: The `SelectorStrategy` to apply
     ///     - body: The function to execute for each `SelectorEvent` that was produced.
-    func whenReady0(strategy: SelectorStrategy, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void
+    func whenReady0(strategy: SelectorStrategy, onLoopBegin: () -> Void, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void
     func close0() throws
 }
 
@@ -135,10 +135,19 @@ internal class Selector<R: Registration>  {
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     typealias EventType = kevent
     #elseif os(Linux) || os(Android)
+    #if !SWIFTNIO_USE_IO_URING
     typealias EventType = Epoll.epoll_event
     var earliestTimer: NIODeadline = .distantFuture
     var eventFD: CInt = -1 // -1 == we're closed
     var timerFD: CInt = -1 // -1 == we're closed
+    #else
+    typealias EventType = URingEvent
+    var eventFD: CInt = -1 // -1 == we're closed
+    var ring = URing()
+    let multishot = URing.io_uring_use_multishot_poll // if true, we run with streaming multishot polls
+    let deferReregistrations = true // if true we only flush once at reentring whenReady() - saves syscalls
+    var deferredReregistrationsPending = false // true if flush needed when reentring whenReady()
+    #endif
     #else
     #error("Unsupported platform, no suitable selector backend (we need kqueue or epoll support)")
     #endif
@@ -270,9 +279,10 @@ internal class Selector<R: Registration>  {
     ///
     /// - parameters:
     ///     - strategy: The `SelectorStrategy` to apply
+    ///     - onLoopBegin: A function executed after the selector returns, just before the main loop begins..
     ///     - body: The function to execute for each `SelectorEvent` that was produced.
-    func whenReady(strategy: SelectorStrategy, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void {
-        try self.whenReady0(strategy: strategy, body)
+    func whenReady(strategy: SelectorStrategy, onLoopBegin loopStart: () -> Void, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void {
+        try self.whenReady0(strategy: strategy, onLoopBegin: loopStart, body)
     }
 
     /// Close the `Selector`.
