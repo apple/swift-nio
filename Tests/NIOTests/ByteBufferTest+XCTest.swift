@@ -210,6 +210,7 @@ extension ByteBufferTest {
                 ("testWithUnsafeMutableReadableBytesNoCoW", testWithUnsafeMutableReadableBytesNoCoW),
                 ("testWithUnsafeMutableReadableBytesCoWOfNonSlice", testWithUnsafeMutableReadableBytesCoWOfNonSlice),
                 ("testWithUnsafeMutableReadableBytesCoWOfSlice", testWithUnsafeMutableReadableBytesCoWOfSlice),
+                ("testWithUnsafeMutableReadableBytesAllThingsNonZero", testWithUnsafeMutableReadableBytesAllThingsNonZero),
                 ("testCreateArrayFromBuffer", testCreateArrayFromBuffer),
                 ("testCreateStringFromBuffer", testCreateStringFromBuffer),
                 ("testCreateDispatchDataFromBuffer", testCreateDispatchDataFromBuffer),
