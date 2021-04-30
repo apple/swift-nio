@@ -2903,6 +2903,53 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("hello", String(buffer: self.buf))
         XCTAssertEqual("foo", String(buffer: slice))
     }
+
+    func testWithUnsafeMutableReadableBytesAllThingsNonZero() {
+        var buf = self.allocator.buffer(capacity: 32)
+        let storageID = buf.storagePointerIntegerValue()
+
+        // We start with reader/writer/sliceBegin indices = 0
+        XCTAssertEqual(32, buf.capacity)
+        XCTAssertEqual(0, buf.readerIndex)
+        XCTAssertEqual(0, buf.writerIndex)
+
+        buf.writeString("0123456789abcdef")
+        XCTAssertEqual(32, buf.capacity)
+        XCTAssertEqual(0, buf.readerIndex)
+        XCTAssertEqual(16, buf.writerIndex)
+
+        XCTAssertEqual("012", buf.readString(length: 3))
+        XCTAssertEqual(32, buf.capacity)
+        XCTAssertEqual(3, buf.readerIndex)
+        XCTAssertEqual(16, buf.writerIndex)
+
+        buf.withUnsafeMutableReadableBytes { ptr in
+            ptr[ptr.endIndex - 1] = UInt8(ascii: "X")
+        }
+
+        var slice = buf.readSlice(length: 12) ?? ByteBuffer()
+        XCTAssertEqual("X", String(buffer: buf))
+
+        XCTAssertEqual(32, buf.capacity)
+        XCTAssertEqual(15, buf.readerIndex)
+        XCTAssertEqual(16, buf.writerIndex)
+
+        XCTAssertEqual(0, slice.readerIndex)
+        XCTAssertEqual(12, slice.writerIndex)
+        XCTAssertEqual("34567", slice.readString(length: 5))
+        XCTAssertEqual(5, slice.readerIndex)
+        XCTAssertEqual(12, slice.writerIndex)
+
+        buf = ByteBuffer() // make `slice` the owner of the storage
+        slice.withUnsafeMutableReadableBytes { ptr in
+            XCTAssertEqual("89abcde", String(decoding: ptr, as: UTF8.self))
+            XCTAssertEqual(7, ptr.count)
+            ptr.copyBytes(from: "7 bytes".utf8)
+        }
+
+        XCTAssertEqual(storageID, slice.storagePointerIntegerValue() - 3)
+        XCTAssertEqual("7 bytes", String(buffer: slice))
+    }
 }
 
 
