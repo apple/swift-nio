@@ -1542,50 +1542,37 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try readFuture.wait())
     }
 
-    func testNoChannelReadBeforeEOFIfNoAutoRead() throws {
+    func testNoChannelReadIfNoAutoRead() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        class VerifyNoReadBeforeEOFHandler: ChannelInboundHandler {
+        class NoChannelReadVerificationHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
-            var expectingData: Bool = false
-
             public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                if !self.expectingData {
-                    XCTFail("Received data before we expected it.")
-                } else {
-                    let data = self.unwrapInboundIn(data)
-                    XCTAssertEqual(data.getString(at: data.readerIndex, length: data.readableBytes), "test")
-                }
+                XCTFail("Should not be called as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
             }
         }
 
-        let handler = VerifyNoReadBeforeEOFHandler()
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+        let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
-                ch.pipeline.addHandler(handler)
+                ch.pipeline.addHandler(NoChannelReadVerificationHandler())
             }
-            .bind(host: "127.0.0.1", port: 0).wait())
+            .bind(host: "127.0.0.1", port: 0).wait()
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
         var buffer = clientChannel.allocator.buffer(capacity: 8)
         buffer.writeString("test")
         try clientChannel.writeAndFlush(buffer).wait()
+        try clientChannel.close().wait()
 
-        // Wait for 100 ms. No data should be delivered.
+        // Wait for 100 ms.
         usleep(100 * 1000);
-
-        // Now we send close. This should deliver data.
-        try clientChannel.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
-            handler.expectingData = true
-            return clientChannel.close()
-        }.wait()
         try serverChannel.close().wait()
     }
 
