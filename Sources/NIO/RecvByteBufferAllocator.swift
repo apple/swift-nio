@@ -48,37 +48,14 @@ public struct FixedSizeRecvByteBufferAllocator: RecvByteBufferAllocator {
 
 /// `RecvByteBufferAllocator` which will gracefully increment or decrement the buffer size on the feedback that was recorded.
 public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
-
-    private static let indexIncrement = 4
-    private static let indexDecrement = 1
-
-    private static let sizeTable: [Int] = {
-        var sizeTable: [Int] = []
-
-        var i: Int = 16
-        while i < 512 {
-            sizeTable.append(i)
-            i += 16
-        }
-
-        i = 512
-        while i < UInt32.max { // 1 << 32 max buffer size
-            sizeTable.append(i)
-            i <<= 1
-        }
-
-        return sizeTable
-    }()
-
-    private let minIndex: Int
-    private let maxIndex: Int
     public let minimum: Int
     public let maximum: Int
     public let initial: Int
 
-    private var index: Int
     private var nextReceiveBufferSize: Int
     private var decreaseNow: Bool
+
+    private static let maximumAllocationSize = 1 << 31
 
     public init() {
         self.init(minimum: 64, initial: 2048, maximum: 65536)
@@ -86,81 +63,53 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
 
     public init(minimum: Int, initial: Int, maximum: Int) {
         precondition(minimum >= 0, "minimum: \(minimum)")
-        precondition(initial > minimum, "initial: \(initial)")
-        precondition(maximum > initial, "maximum: \(maximum)")
+        precondition(initial >= minimum, "initial: \(initial)")
+        precondition(maximum >= initial, "maximum: \(maximum)")
 
-        let minIndex = AdaptiveRecvByteBufferAllocator.sizeTableIndex(minimum)
-        if AdaptiveRecvByteBufferAllocator.sizeTable[minIndex] < minimum {
-            self.minIndex = minIndex + 1
-        } else {
-            self.minIndex = minIndex
-        }
+        // We need to round all of these numbers to a power of 2. Initial will be rounded down,
+        // minimum down, and maximum up.
+        self.minimum = min(minimum, AdaptiveRecvByteBufferAllocator.maximumAllocationSize).previousPowerOf2()
+        self.initial = min(initial, AdaptiveRecvByteBufferAllocator.maximumAllocationSize).previousPowerOf2()
+        self.maximum = min(maximum, AdaptiveRecvByteBufferAllocator.maximumAllocationSize).nextPowerOf2()
 
-        let maxIndex = AdaptiveRecvByteBufferAllocator.sizeTableIndex(maximum)
-        if AdaptiveRecvByteBufferAllocator.sizeTable[maxIndex] > maximum {
-            self.maxIndex = maxIndex - 1
-        } else {
-            self.maxIndex = maxIndex
-        }
-
-        self.initial = initial
-        self.minimum = minimum
-        self.maximum = maximum
-
-        self.index = AdaptiveRecvByteBufferAllocator.sizeTableIndex(initial)
-        self.nextReceiveBufferSize = AdaptiveRecvByteBufferAllocator.sizeTable[index]
+        self.nextReceiveBufferSize = self.initial
         self.decreaseNow = false
     }
 
-    private static func sizeTableIndex(_ size: Int) -> Int {
-        var low: Int = 0
-        var high: Int = sizeTable.count - 1
-
-        repeat {
-            if high < low {
-                return low
-            }
-            if high == low {
-                return high
-            }
-
-            // It's important to put (...) around as >> is executed before + in Swift while in Java it's the other way around (doh!)
-            let mid = (low + high) >> 1
-
-            let a = sizeTable[mid]
-            let b = sizeTable[mid + 1]
-
-            if size > b {
-                low = mid + 1
-            } else if size < a {
-                high = mid - 1
-            } else if size == a {
-                return mid
-            } else {
-                return mid + 1
-            }
-        } while true
-    }
-
     public func buffer(allocator: ByteBufferAllocator) -> ByteBuffer {
-        return allocator.buffer(capacity: nextReceiveBufferSize)
+        return allocator.buffer(capacity: self.nextReceiveBufferSize)
     }
 
     public mutating func record(actualReadBytes: Int) -> Bool {
-        if actualReadBytes <= AdaptiveRecvByteBufferAllocator.sizeTable[max(0, index - AdaptiveRecvByteBufferAllocator.indexDecrement - 1)] {
-            if decreaseNow {
-                index = max(index - AdaptiveRecvByteBufferAllocator.indexDecrement, minIndex)
-                nextReceiveBufferSize = AdaptiveRecvByteBufferAllocator.sizeTable[index]
-                decreaseNow = false
-            } else {
-                decreaseNow = true
-            }
-        } else if actualReadBytes >= nextReceiveBufferSize {
-            index = min(index + AdaptiveRecvByteBufferAllocator.indexIncrement, maxIndex)
-            nextReceiveBufferSize = AdaptiveRecvByteBufferAllocator.sizeTable[index]
-            decreaseNow = false
+        precondition(self.nextReceiveBufferSize % 2 == 0)
+        precondition(self.nextReceiveBufferSize >= self.minimum)
+        precondition(self.nextReceiveBufferSize <= self.maximum)
 
+        var mayGrow = false
+
+        // This right shift is safe: nextReceiveBufferSize can never be negative, so this will stop at 0.
+        let lowerBound = self.nextReceiveBufferSize &>> 1
+
+        // Here we need to be careful with 32-bit systems: if maximum is too large then any shift or multiply will overflow, which
+        // we don't want. Instead we check, and clamp to this current value if we overflow.
+        let upperBoundCandidate = Int(truncatingIfNeeded: Int64(self.nextReceiveBufferSize) &<< 1)
+        let upperBound = upperBoundCandidate == 0 ? self.nextReceiveBufferSize : upperBoundCandidate
+
+        if actualReadBytes <= lowerBound && lowerBound >= self.minimum {
+            if self.decreaseNow {
+                self.nextReceiveBufferSize = lowerBound
+                self.decreaseNow = false
+            } else {
+                self.decreaseNow = true
+            }
+        } else if actualReadBytes >= self.nextReceiveBufferSize && upperBound <= self.maximum {
+            self.nextReceiveBufferSize = upperBound
+            self.decreaseNow = false
+            mayGrow = true
+        } else {
+            self.decreaseNow = false
         }
-        return actualReadBytes >= nextReceiveBufferSize
+
+        return mayGrow
     }
 }
