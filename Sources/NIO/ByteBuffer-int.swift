@@ -110,6 +110,16 @@ extension FixedWidthInteger {
         }
         return 1 << (Self.bitWidth - (self - 1).leadingZeroBitCount)
     }
+
+    /// Returns the previous power of 2, or self if it already is.
+    @inlinable
+    func previousPowerOf2() -> Self {
+        guard self != 0 else {
+            return 0
+        }
+
+        return 1 << ((Self.bitWidth - 1) - self.leadingZeroBitCount)
+    }
 }
 
 extension UInt32 {
