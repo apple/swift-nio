@@ -552,8 +552,9 @@ public final class EventLoopTest : XCTestCase {
 
     public func testEventLoopPinned() throws {
         #if os(Linux) || os(Android)
+            let target = NIOThread.current.affinity.cpuIds.first!
             let body: ThreadInitializer = { t in
-                let set = LinuxCPUSet(0)
+                let set = LinuxCPUSet(target)
                 t.affinity = set
                 XCTAssertEqual(set, t.affinity)
             }
@@ -567,13 +568,14 @@ public final class EventLoopTest : XCTestCase {
 
     public func testEventLoopPinnedCPUIdsConstructor() throws {
         #if os(Linux) || os(Android)
-            let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [0])
+            let target = NIOThread.current.affinity.cpuIds.first!
+            let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [target])
             let eventLoop = group.next()
             let set = try eventLoop.submit {
                 NIOThread.current.affinity
             }.wait()
 
-            XCTAssertEqual(LinuxCPUSet(0), set)
+            XCTAssertEqual(LinuxCPUSet(target), set)
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         #endif
     }
