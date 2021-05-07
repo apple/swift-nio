@@ -147,10 +147,18 @@ EOF
 
   (
     cd "$here/.."
-    find . \
-      \( \! -path './.build/*' -a \
-      \( "${matching_files[@]}" \) -a \
-      \( \! \( "${exceptions[@]}" \) \) \) | while read line; do
+    {
+        find . \
+            \( \! -path './.build/*' -a \
+            \( "${matching_files[@]}" \) -a \
+            \( \! \( "${exceptions[@]}" \) \) \)
+
+        if [[ "$language" = bash ]]; then
+            # add everything with a shell shebang too
+            git grep --full-name -l '#!/bin/bash'
+            git grep --full-name -l '#!/bin/sh'
+        fi
+    } | while read line; do
       if [[ "$(cat "$line" | replace_acceptable_years | head -n $expected_lines | shasum)" != "$expected_sha" ]]; then
         printf "\033[0;31mmissing headers in file '$line'!\033[0m\n"
         diff -u <(cat "$line" | replace_acceptable_years | head -n $expected_lines) "$tmp"
