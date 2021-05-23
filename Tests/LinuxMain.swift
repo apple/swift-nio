@@ -103,6 +103,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(NIOHTTPServerRequestAggregatorTest.allTests),
              testCase(NIOSingleStepByteToMessageDecoderTest.allTests),
              testCase(NIOThreadPoolTest.allTests),
+             testCase(NIOWebSocketFrameAggregatorTests.allTests),
              testCase(NonBlockingFileIOTest.allTests),
              testCase(PendingDatagramWritesManagerTests.allTests),
              testCase(PipeChannelTest.allTests),
