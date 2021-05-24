@@ -17,8 +17,17 @@ import NIO
 import NIOWebSocket
 
 final class WebSocketMaskingKeyTests: XCTestCase {
-    func testSystemRandomNumberGenerator() {
-        var generator = SystemRandomNumberGenerator()
-        let next = generator.next()
+    func testRandomMaskingKey() {
+        let key = WebSocketMaskingKey.random()
+        var buffer = ByteBuffer(bytes: [1, 2, 3, 4, 5, 6, 7, 8])
+        buffer.webSocketMask(key)
+        buffer.webSocketUnmask(key)
+        XCTAssertEqual(buffer, ByteBuffer(bytes: [1, 2, 3, 4, 5, 6, 7, 8]))
+    }
+    
+    func testRandomMaskingKeyIsNotAlwaysZero() {
+        XCTAssertTrue((0..<1000).contains { _ in
+            WebSocketMaskingKey.random() != [0, 0, 0, 0]
+        }, "at least 1 of 1000 random masking keys should not be all zeros")
     }
 }
