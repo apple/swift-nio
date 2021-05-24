@@ -34,8 +34,13 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
     private let upgradePipelineHandler: (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
-    
-    public init(requestKey: String,
+
+    /// - Parameters:
+    ///   - requestKey: sent to the server in the `Sec-WebSocket-Key` HTTP header. Default is random request key.
+    ///   - maxFrameSize: largest incoming `WebSocketFrame` size in bytes. Default is 16,384 bytes.
+    ///   - automaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
+    ///   - upgradePipelineHandler: called once the upgrade was successful
+    public init(requestKey: String = randomRequestKey(),
                 maxFrameSize: Int = 1 << 14,
                 automaticErrorHandling: Bool = true,
                 upgradePipelineHandler: @escaping (Channel, HTTPResponseHead) -> EventLoopFuture<Void>) {
@@ -90,5 +95,29 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
         return upgradeFuture.flatMap {
             self.upgradePipelineHandler(context.channel, upgradeResponse)
         }
+    }
+}
+
+extension NIOWebSocketClientUpgrader {
+    /// Generates a random WebSocket Request Key by generating 16 bytes randomly and encoding them as a base64 string as defined in RFC6455 https://tools.ietf.org/html/rfc6455#section-4.1
+    /// - Parameter generator: the `RandomNumberGenerator` used as a the source of randomness
+    /// - Returns: base64 encoded request key
+    @inlinable
+    public static func randomRequestKey<Generator>(
+        using generator: inout Generator
+    ) -> String where Generator: RandomNumberGenerator{
+        var buffer = ByteBuffer()
+        buffer.reserveCapacity(minimumWritableBytes: 16)
+        /// we may want to use `randomBytes(count:)` once the proposal is accepted: https://forums.swift.org/t/pitch-requesting-larger-amounts-of-randomness-from-systemrandomnumbergenerator/27226
+        buffer.writeInteger(UInt64.random(in: UInt64.min...UInt64.max, using: &generator))
+        buffer.writeInteger(UInt64.random(in: UInt64.min...UInt64.max, using: &generator))
+        return String(base64Encoding: buffer.readableBytesView)
+    }
+    /// Generates a random WebSocket Request Key by generating 16 bytes randomly using the `SystemRandomNumberGenerator` and encoding them as a base64 string as defined in RFC6455 https://tools.ietf.org/html/rfc6455#section-4.1.
+    /// - Returns: base64 encoded request key
+    @inlinable
+    public static func randomRequestKey() -> String {
+        var generator = SystemRandomNumberGenerator()
+        return NIOWebSocketClientUpgrader.randomRequestKey(using: &generator)
     }
 }
