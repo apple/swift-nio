@@ -36,4 +36,7 @@ final class NIOWebSocketClientUpgraderTests: XCTestCase {
         let requestKey = NIOWebSocketClientUpgrader.randomRequestKey(using: &generator)
         XCTAssertEqual(requestKey, "AAAAAAAAAAoAAAAAAAAACw==")
     }
+    func testRandomRequestKeyWithSystemRandomNumberGenerator() {
+        XCTAssertEqual(NIOWebSocketClientUpgrader.randomRequestKey().count, 24, "request key must be exactly 16 bytes long and this corresponds to 24 characters in base64")
+    }
 }
