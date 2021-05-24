@@ -102,6 +102,7 @@ extension NIOWebSocketClientUpgrader {
     /// Generates a random WebSocket Request Key by generating 16 bytes randomly and encoding them as a base64 string as defined in RFC6455 https://tools.ietf.org/html/rfc6455#section-4.1
     /// - Parameter generator: the `RandomNumberGenerator` used as a the source of randomness
     /// - Returns: base64 encoded request key
+    @inlinable
     public static func randomRequestKey<Generator>(
         using generator: inout Generator
     ) -> String where Generator: RandomNumberGenerator{
@@ -114,6 +115,7 @@ extension NIOWebSocketClientUpgrader {
     }
     /// Generates a random WebSocket Request Key by generating 16 bytes randomly using the `SystemRandomNumberGenerator` and encoding them as a base64 string as defined in RFC6455 https://tools.ietf.org/html/rfc6455#section-4.1.
     /// - Returns: base64 encoded request key
+    @inlinable
     public static func randomRequestKey() -> String {
         var generator = SystemRandomNumberGenerator()
         return NIOWebSocketClientUpgrader.randomRequestKey(using: &generator)

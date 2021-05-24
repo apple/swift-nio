@@ -18,6 +18,7 @@
 extension String {
 
   /// Base64 encode a collection of UInt8 to a string, without the use of Foundation.
+  @usableFromInline
   init<Buffer: Collection>(base64Encoding bytes: Buffer)
     where Buffer.Element == UInt8
   {
