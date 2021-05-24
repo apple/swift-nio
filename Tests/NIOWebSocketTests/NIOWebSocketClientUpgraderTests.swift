@@ -19,7 +19,11 @@ import NIOWebSocket
 /// a mock random number generator which will return the given `numbers` in order
 fileprivate struct TestRandomNumberGenerator: RandomNumberGenerator {
     var numbers: [UInt64]
-    var nextRandomNumberIndex = 0
+    var nextRandomNumberIndex: Int
+    init(numbers: [UInt64], nextRandomNumberIndex: Int = 0) {
+        self.numbers = numbers
+        self.nextRandomNumberIndex = nextRandomNumberIndex
+    }
     mutating func next() -> UInt64 {
         defer { nextRandomNumberIndex += 1 }
         return numbers[nextRandomNumberIndex % numbers.count]
