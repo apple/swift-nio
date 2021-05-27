@@ -4,7 +4,7 @@ This migration guide is our recommendation to migrate from NIO 1 to NIO 2. None 
 
 This repository also contains a fairly complete list of public [API changes](https://github.com/apple/swift-nio/blob/main/docs/public-api-changes-NIO1-to-NIO2.md) from NIO 1 to NIO 2.
 
-### Note: As of NIO 2.30.0 the minimum version of Swift required is 5.3.
+### Note: As of NIO 2.30.0 the minimum version of Swift required is 5.2.
 
 ## Step 1: A warning-free compile on NIO 1 with Swift 5
 
