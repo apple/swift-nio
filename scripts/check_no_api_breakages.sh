@@ -101,6 +101,9 @@ for old_tag in "$@"; do
             --input-paths "$tmpdir/api-old/$f" -input-paths "$tmpdir/api-new/$f" 2>&1 \
             > "$report" 2>&1
 
+        # the shasum here is for an empty report, i.e. no changes
+        # if the shasum of the new report is different, then there's
+        # obviously an API change
         if ! shasum "$report" | grep -q cefc4ee5bb7bcdb7cb5a7747efa178dab3c794d5; then
             echo ERROR
             echo >&2 "=============================="
