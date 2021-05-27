@@ -63,16 +63,16 @@ We require that your commit messages match our template. The easiest way to do t
 
     git config commit.template dev/git.commit.template
 
-The default policy for taking contributions is “Squash and Merge” - because of this the commit message format rule above applies to the PR rather than every commit contained within it. 
+The default policy for taking contributions is “Squash and Merge” - because of this the commit message format rule above applies to the PR rather than every commit contained within it.
 
 ### Make sure Tests work on Linux
 
-SwiftNIO uses XCTest to run tests on both macOS and Linux. While the macOS version of XCTest is able to use the Objective-C runtime to discover tests at execution time, the Linux version is not (prior to swift 5.1). 
+SwiftNIO uses XCTest to run tests on both macOS and Linux. While the macOS version of XCTest is able to use the Objective-C runtime to discover tests at execution time, the Linux version is not (prior to swift 5.1).
 For this reason, whenever you add new tests **you have to run a script** that generates the hooks needed to run those tests on Linux, or our CI will complain that the tests are not all present on Linux. To do this, merely execute `ruby ./scripts/generate_linux_tests.rb` at the root of the package and check the changes it made.
 
 ### Make sure your patch works for all supported versions of swift
 
-The CI will do this for you.  You can use the docker-compose files included if you wish to check locally.  Currently all versions of swift >= 5.0 are supported.  For example usage of docker compose see the main [README](./README.md#an-alternative-using-docker-compose)
+The CI will do this for you.  You can use the docker-compose files included if you wish to check locally.  Currently all versions of swift >= 5.2 are supported.  For example usage of docker compose see the main [README](./README.md#an-alternative-using-docker-compose)
 
 ### Make sure your code is performant
 
