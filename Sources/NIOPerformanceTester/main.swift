@@ -16,6 +16,7 @@ import NIO
 import NIOHTTP1
 import NIOFoundationCompat
 import Dispatch
+import NIOWebSocket
 
 // MARK: Test Harness
 
@@ -770,3 +771,8 @@ try measureAndPrint(desc: "byte_buffer_view_iterator_1mb", benchmark: ByteBuffer
 
 try measureAndPrint(desc: "byte_to_message_decoder_decode_many_small",
                     benchmark: ByteToMessageDecoderDecodeManySmallsBenchmark(iterations: 1_000, bufferSize: 16384))
+
+measureAndPrint(desc: "generate_10k_random_request_keys") {
+    let keys = (0 ..< 10_000).map { _ in NIOWebSocketClientUpgrader.randomRequestKey() }
+    return keys.count
+}
