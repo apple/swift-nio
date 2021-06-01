@@ -21,6 +21,20 @@ import WinSDK
 import Glibc
 #endif
 
+#if !os(Windows)
+
+// top level pthread init function
+fileprivate func initialise_pthread_mutex(_ pointer: UnsafeMutablePointer<pthread_mutex_t>) {
+    var attr = pthread_mutexattr_t()
+    pthread_mutexattr_init(&attr)
+    pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
+
+    let err = pthread_mutex_init(pointer, &attr)
+    precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+}
+
+#endif
+
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///
 /// This object provides a lock on top of a single `pthread_mutex_t`. This kind
@@ -31,7 +45,7 @@ public final class Lock {
 #if os(Windows)
     private let mutex: UnsafeMutablePointer<SRWLOCK> =
         UnsafeMutablePointer.allocate(capacity: 1)
-#elseif canImport(Darwin)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     private let mutex: os_unfair_lock_t = os_unfair_lock_t.allocate(capacity: 1)
 #else
     private let mutex: UnsafeMutablePointer<pthread_mutex_t> =
@@ -42,22 +56,18 @@ public final class Lock {
     public init() {
 #if os(Windows)
         InitializeSRWLock(self.mutex)
-#elseif canImport(Darwin)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        // Swift equivalent of OS_UNFAIR_LOCK_INIT
         self.mutex.pointee = .init()
 #else
-        var attr = pthread_mutexattr_t()
-        pthread_mutexattr_init(&attr)
-        pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
-
-        let err = pthread_mutex_init(self.mutex, &attr)
-        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+        initialise_pthread_mutex(self.mutex)
 #endif
     }
 
     deinit {
 #if os(Windows)
         // SRWLOCK does not need to be free'd
-#elseif canImport(Darwin)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
         // nothing to do
 #else
         let err = pthread_mutex_destroy(self.mutex)
@@ -73,8 +83,7 @@ public final class Lock {
     public func lock() {
 #if os(Windows)
         AcquireSRWLockExclusive(self.mutex)
-
-#elseif canImport(Darwin)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
         os_unfair_lock_lock(self.mutex)
 #else
         let err = pthread_mutex_lock(self.mutex)
@@ -89,7 +98,7 @@ public final class Lock {
     public func unlock() {
 #if os(Windows)
         ReleaseSRWLockExclusive(self.mutex)
-#elseif canImport(Darwin)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
         os_unfair_lock_assert_owner(self.mutex)
         os_unfair_lock_unlock(self.mutex)
 #else
@@ -149,16 +158,11 @@ public final class ConditionLock<T: Equatable> {
     public init(value: T) {
         self._value = value
 #if os(Windows)
-InitializeSRWLock(self.mutex)
+        InitializeSRWLock(self.mutex)
         InitializeConditionVariable(self.cond)
 #else
-        var attr = pthread_mutexattr_t()
-        pthread_mutexattr_init(&attr)
-        pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
-
-        var err = pthread_mutex_init(self.mutex, &attr)
-        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-        err = pthread_cond_init(self.cond, nil)
+        initialise_pthread_mutex(self.mutex)
+        let err = pthread_cond_init(self.cond, nil)
         precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
 #endif
     }
