@@ -41,6 +41,7 @@ services:
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer_with_space=3
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer=3050
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_space=3050
+      - MAX_ALLOCS_ALLOWED_future_erase_result=4050
       - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=60050
       - MAX_ALLOCS_ALLOWED_modifying_1000_circular_buffer_elements=0
       - MAX_ALLOCS_ALLOWED_modifying_byte_buffer_view=2050

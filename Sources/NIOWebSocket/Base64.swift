@@ -18,6 +18,7 @@
 extension String {
 
   /// Base64 encode a collection of UInt8 to a string, without the use of Foundation.
+  @inlinable
   init<Buffer: Collection>(base64Encoding bytes: Buffer)
     where Buffer.Element == UInt8
   {
@@ -25,9 +26,10 @@ extension String {
   }
 }
 
+@usableFromInline
+internal struct Base64 {
 
-fileprivate struct Base64 {
-  
+  @inlinable
   static func encode<Buffer: Collection>(bytes: Buffer)
     -> String where Buffer.Element == UInt8
   {
@@ -66,6 +68,7 @@ fileprivate struct Base64 {
   // MARK: Internal
   
   // The base64 unicode table.
+  @usableFromInline
   static let encodeBase64: [UInt8] = [
     UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"),
     UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"),
@@ -86,12 +89,14 @@ fileprivate struct Base64 {
   ]
   
   static let encodePaddingCharacter: UInt8 = UInt8(ascii: "=")
-  
+
+  @usableFromInline
   static func encode(alphabet: [UInt8], firstByte: UInt8) -> UInt8 {
     let index = firstByte >> 2
     return alphabet[Int(index)]
   }
 
+  @usableFromInline
   static func encode(alphabet: [UInt8], firstByte: UInt8, secondByte: UInt8?) -> UInt8 {
     var index = (firstByte & 0b00000011) << 4
     if let secondByte = secondByte {
@@ -100,6 +105,7 @@ fileprivate struct Base64 {
     return alphabet[Int(index)]
   }
 
+  @usableFromInline
   static func encode(alphabet: [UInt8], secondByte: UInt8?, thirdByte: UInt8?) -> UInt8 {
     guard let secondByte = secondByte else {
       // No second byte means we are just emitting padding.
@@ -112,6 +118,7 @@ fileprivate struct Base64 {
     return alphabet[Int(index)]
   }
 
+  @usableFromInline
   static func encode(alphabet: [UInt8], thirdByte: UInt8?) -> UInt8 {
     guard let thirdByte = thirdByte else {
       // No third byte means just padding.

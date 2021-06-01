@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <netinet/ip.h>
+#include "liburing_nio.h"
 
 // Some explanation is required here.
 //
