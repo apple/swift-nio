@@ -66,7 +66,7 @@ func main() async {
 let dg = DispatchGroup()
 dg.enter()
 if #available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *) {
-    Task.detached {
+    Task {
         await main()
         dg.leave()
     }
