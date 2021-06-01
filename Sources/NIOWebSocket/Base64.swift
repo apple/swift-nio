@@ -163,6 +163,7 @@ extension String {
 }
 #else
 extension String {
+  @inlinable
   init(customUnsafeUninitializedCapacity capacity: Int,
      initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows {
     try self.init(backportUnsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
