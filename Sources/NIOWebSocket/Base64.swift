@@ -33,7 +33,7 @@ internal struct Base64 {
   static func encode<Buffer: Collection>(bytes: Buffer)
     -> String where Buffer.Element == UInt8
   {
-    guard bytes.isEmpty == false else {
+    guard !bytes.isEmpty else {
         return ""
     }
     // In Base64, 3 bytes become 4 output characters, and we pad to the
@@ -138,7 +138,7 @@ extension String {
     let initializedCount = try initializer(buffer)
     precondition(initializedCount <= capacity, "Overran buffer in initializer!")
     // add zero termination
-    buffer[capacity] = 0
+    buffer[initializedCount] = 0
 
     self = String(cString: buffer.baseAddress!)
   }
