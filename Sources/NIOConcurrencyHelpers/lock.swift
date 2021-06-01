@@ -31,6 +31,8 @@ public final class Lock {
 #if os(Windows)
     fileprivate let mutex: UnsafeMutablePointer<SRWLOCK> =
         UnsafeMutablePointer.allocate(capacity: 1)
+#elseif canImport(Darwin)
+    fileprivate let mutex: os_unfair_lock_t = os_unfair_lock_t.allocate(capacity: 1)
 #else
     fileprivate let mutex: UnsafeMutablePointer<pthread_mutex_t> =
         UnsafeMutablePointer.allocate(capacity: 1)
@@ -40,6 +42,8 @@ public final class Lock {
     public init() {
 #if os(Windows)
         InitializeSRWLock(self.mutex)
+#elseif canImport(Darwin)
+        self.mutex.pointee = .init()
 #else
         var attr = pthread_mutexattr_t()
         pthread_mutexattr_init(&attr)
@@ -53,6 +57,8 @@ public final class Lock {
     deinit {
 #if os(Windows)
         // SRWLOCK does not need to be free'd
+#elseif canImport(Darwin)
+        self.mutex.deallocate()
 #else
         let err = pthread_mutex_destroy(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
@@ -67,6 +73,9 @@ public final class Lock {
     public func lock() {
 #if os(Windows)
         AcquireSRWLockExclusive(self.mutex)
+
+#elseif canImport(Darwin)
+        os_unfair_lock_lock(self.mutex)
 #else
         let err = pthread_mutex_lock(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
@@ -80,6 +89,9 @@ public final class Lock {
     public func unlock() {
 #if os(Windows)
         ReleaseSRWLockExclusive(self.mutex)
+#elseif canImport(Darwin)
+        os_unfair_lock_assert_owner(self.mutex)
+        os_unfair_lock_unlock(self.mutex)
 #else
         let err = pthread_mutex_unlock(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
