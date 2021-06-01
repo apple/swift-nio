@@ -773,6 +773,5 @@ try measureAndPrint(desc: "byte_to_message_decoder_decode_many_small",
                     benchmark: ByteToMessageDecoderDecodeManySmallsBenchmark(iterations: 1_000, bufferSize: 16384))
 
 measureAndPrint(desc: "generate_10k_random_request_keys") {
-    let keys = (0 ..< 10_000).map { _ in NIOWebSocketClientUpgrader.randomRequestKey() }
-    return keys.count
+    return (0 ..< 10_000).reduce(into: 0, { result, _ in result &+= NIOWebSocketClientUpgrader.randomRequestKey().count })
 }
