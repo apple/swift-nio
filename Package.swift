@@ -87,6 +87,7 @@ var targets: [PackageDescription.Target] = [
 
 let package = Package(
     name: "swift-nio",
+    platforms: [.iOS(.v10), .macOS(.v10_12), .tvOS(.v10), .watchOS(.v3)],
     products: [
         .library(name: "NIO", targets: ["NIO"]),
         .library(name: "_NIO1APIShims", targets: ["_NIO1APIShims"]),
