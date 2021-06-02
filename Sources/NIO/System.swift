@@ -58,6 +58,12 @@ let S_IFBLK = UInt32(SwiftGlibc.S_IFBLK)
 #endif
 #endif
 
+// Work around SO_TIMESTAMP/SO_RCVTIMEO being awkwardly defined in glibc.
+#if os(Linux)
+let SO_TIMESTAMP = CNIOLinux_SO_TIMESTAMP
+let SO_RCVTIMEO = CNIOLinux_SO_RCVTIMEO
+#endif
+
 // Declare aliases to share more code and not need to repeat #if #else blocks
 #if !os(Windows)
 private let sysClose = close
