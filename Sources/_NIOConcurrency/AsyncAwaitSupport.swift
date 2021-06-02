@@ -47,7 +47,7 @@ extension EventLoopPromise {
     /// - parameters:
     ///   - body: The `async` function to run.
     public func completeWithAsync(_ body: @escaping () async throws -> Value) {
-        Task.detached {
+        Task {
             do {
                 let value = try await body()
                 self.succeed(value)
