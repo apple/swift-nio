@@ -143,4 +143,7 @@ size_t CNIOLinux_CMSG_LEN(size_t payloadSizeBytes) {
 size_t CNIOLinux_CMSG_SPACE(size_t payloadSizeBytes) {
     return CMSG_SPACE(payloadSizeBytes);
 }
+
+int CNIOLinux_SO_TIMESTAMP = SO_TIMESTAMP;
+int CNIOLinux_SO_RCVTIMEO = SO_RCVTIMEO;
 #endif
