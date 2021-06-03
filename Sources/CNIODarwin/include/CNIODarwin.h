@@ -31,11 +31,11 @@ typedef struct {
     unsigned int msg_len;
 } CNIODarwin_mmsghdr;
 
-extern int CNIODarwin_IPTOS_ECN_NOTECT;
-extern int CNIODarwin_IPTOS_ECN_MASK;
-extern int CNIODarwin_IPTOS_ECN_ECT0;
-extern int CNIODarwin_IPTOS_ECN_ECT1;
-extern int CNIODarwin_IPTOS_ECN_CE;
+extern const int CNIODarwin_IPTOS_ECN_NOTECT;
+extern const int CNIODarwin_IPTOS_ECN_MASK;
+extern const int CNIODarwin_IPTOS_ECN_ECT0;
+extern const int CNIODarwin_IPTOS_ECN_ECT1;
+extern const int CNIODarwin_IPTOS_ECN_CE;
 
 int CNIODarwin_sendmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vlen, int flags);
 int CNIODarwin_recvmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vlen, int flags, struct timespec *timeout);

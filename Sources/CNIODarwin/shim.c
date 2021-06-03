@@ -81,10 +81,10 @@ size_t CNIODarwin_CMSG_SPACE(size_t payloadSizeBytes) {
     return CMSG_SPACE(payloadSizeBytes);
 }
 
-int CNIODarwin_IPTOS_ECN_NOTECT = IPTOS_ECN_NOTECT;
-int CNIODarwin_IPTOS_ECN_MASK = IPTOS_ECN_MASK;
-int CNIODarwin_IPTOS_ECN_ECT0 = IPTOS_ECN_ECT0;
-int CNIODarwin_IPTOS_ECN_ECT1 = IPTOS_ECN_ECT1;
-int CNIODarwin_IPTOS_ECN_CE = IPTOS_ECN_CE;
+const int CNIODarwin_IPTOS_ECN_NOTECT = IPTOS_ECN_NOTECT;
+const int CNIODarwin_IPTOS_ECN_MASK = IPTOS_ECN_MASK;
+const int CNIODarwin_IPTOS_ECN_ECT0 = IPTOS_ECN_ECT0;
+const int CNIODarwin_IPTOS_ECN_ECT1 = IPTOS_ECN_ECT1;
+const int CNIODarwin_IPTOS_ECN_CE = IPTOS_ECN_CE;
 
 #endif  // __APPLE__
