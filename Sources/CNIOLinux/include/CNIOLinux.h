@@ -74,7 +74,7 @@ size_t CNIOLinux_CMSG_LEN(size_t);
 size_t CNIOLinux_CMSG_SPACE(size_t);
 
 // awkward time_T pain
-extern int CNIOLinux_SO_TIMESTAMP;
-extern int CNIOLinux_SO_RCVTIMEO;
+extern const int CNIOLinux_SO_TIMESTAMP;
+extern const int CNIOLinux_SO_RCVTIMEO;
 #endif
 #endif
