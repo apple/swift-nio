@@ -60,7 +60,7 @@ extension ByteToMessageDecoderError {
 ///
 /// ### Implementing ByteToMessageDecoder
 ///
-/// A type that implements `ByteToMessageDecoder` may implement two methods: decode and decodeLast.Implementations
+/// A type that implements `ByteToMessageDecoder` may implement two methods: decode and decodeLast. Implementations
 /// must implement decode: if they do not implement decodeLast, a default implementation will be used that 
 /// simply calls decode.
 ///
