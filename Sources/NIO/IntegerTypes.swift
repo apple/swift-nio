@@ -75,7 +75,8 @@ struct _UInt56 {
 
     static let bitWidth: Int = 56
 
-    static let max: _UInt56 = .init((1 << 56) - 1)
+    private static let initializeUInt64 : UInt64 = (1 << 56) - 1
+    static let max: _UInt56 = .init(initializeUInt64)
     static let min: _UInt56 = .init(0)
 }
 
