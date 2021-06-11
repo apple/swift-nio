@@ -55,7 +55,7 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
     private var nextReceiveBufferSize: Int
     private var decreaseNow: Bool
 
-    private static let maximumAllocationSize = 1 << 31
+    private static let maximumAllocationSize = 1 << 30
 
     public init() {
         self.init(minimum: 64, initial: 2048, maximum: 65536)
@@ -93,7 +93,7 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
         // Here we need to be careful with 32-bit systems: if maximum is too large then any shift or multiply will overflow, which
         // we don't want. Instead we check, and clamp to this current value if we overflow.
         let upperBoundCandidate = Int(truncatingIfNeeded: Int64(self.nextReceiveBufferSize) &<< 1)
-        let upperBound = upperBoundCandidate == 0 ? self.nextReceiveBufferSize : upperBoundCandidate
+        let upperBound = upperBoundCandidate <= 0 ? self.nextReceiveBufferSize : upperBoundCandidate
 
         if actualReadBytes <= lowerBound && lowerBound >= self.minimum {
             if self.decreaseNow {
@@ -102,7 +102,8 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
             } else {
                 self.decreaseNow = true
             }
-        } else if actualReadBytes >= self.nextReceiveBufferSize && upperBound <= self.maximum {
+        } else if actualReadBytes >= self.nextReceiveBufferSize && upperBound <= self.maximum &&
+                  self.nextReceiveBufferSize != upperBound {
             self.nextReceiveBufferSize = upperBound
             self.decreaseNow = false
             mayGrow = true

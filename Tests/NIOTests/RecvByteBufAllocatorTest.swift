@@ -117,8 +117,8 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
         }
 
         let buffer = self.adaptive.buffer(allocator: self.allocator)
-        XCTAssertEqual(buffer.capacity, 1 << 31)
-        XCTAssertEqual(self.adaptive.maximum, 1 << 31)
+        XCTAssertEqual(buffer.capacity, 1 << 30)
+        XCTAssertEqual(self.adaptive.maximum, 1 << 30)
         XCTAssertEqual(self.adaptive.minimum, 0)
     }
 
@@ -136,8 +136,8 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
         }
 
         let adaptive = AdaptiveRecvByteBufferAllocator(minimum: targetValue, initial: targetValue + 1, maximum: targetValue + 2)
-        XCTAssertEqual(adaptive.minimum, 1 << 31)
-        XCTAssertEqual(adaptive.maximum, 1 << 31)
-        XCTAssertEqual(adaptive.initial, 1 << 31)
+        XCTAssertEqual(adaptive.minimum, 1 << 30)
+        XCTAssertEqual(adaptive.maximum, 1 << 30)
+        XCTAssertEqual(adaptive.initial, 1 << 30)
     }
 }
