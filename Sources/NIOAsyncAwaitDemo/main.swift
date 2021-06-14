@@ -57,6 +57,9 @@ func main() async {
         print(", response:", String(buffer: response2.body ?? ByteBuffer()))
 
         try await channel.close()
+
+        try await group.shutdownGracefully()
+
         print("all, done")
     } catch {
         print("ERROR: \(error)")
