@@ -22,13 +22,8 @@ import Dispatch
 
 import _Concurrency
 
-let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-defer {
-    try! group.syncShutdownGracefully()
-}
-
 @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
-func makeHTTPChannel(host: String, port: Int) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
+func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
     let channel = try await ClientBootstrap(group: group).connect(host: host, port: port).get()
     try await channel.pipeline.addHTTPClientHandlers().get()
     try await channel.pipeline.addHandler(NIOHTTPClientResponseAggregator(maxContentLength: 1_000_000))
@@ -38,8 +33,9 @@ func makeHTTPChannel(host: String, port: Int) async throws -> AsyncChannelIO<HTT
 
 @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
 func main() async {
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     do {
-        let channel = try await makeHTTPChannel(host: "httpbin.org", port: 80)
+        let channel = try await makeHTTPChannel(host: "httpbin.org", port: 80, group: group)
         print("OK, connected to \(channel)")
 
         print("Sending request 1", terminator: "")
@@ -57,9 +53,19 @@ func main() async {
         print(", response:", String(buffer: response2.body ?? ByteBuffer()))
 
         try await channel.close()
+
+        print("Shutting down event loop group...")
+        try await group.shutdownGracefully()
+
         print("all, done")
     } catch {
         print("ERROR: \(error)")
+        print("Shutting down event loop group (possibly for a second time)...")
+        do {
+            try await group.shutdownGracefully()
+        } catch {
+            print("Error shutting down event loop group: \(error)")
+        }
     }
 }
 

@@ -38,6 +38,23 @@ extension EventLoopFuture {
     }
 }
 
+extension EventLoopGroup {
+    /// Shuts down the event loop gracefully.
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    @inlinable
+    public func shutdownGracefully() async throws {
+        return try await withCheckedThrowingContinuation { cont in
+            self.shutdownGracefully { error in
+                if let error = error {
+                    cont.resume(throwing: error)
+                } else {
+                    cont.resume()
+                }
+            }
+        }
+    }
+}
+
 extension EventLoopPromise {
     /// Complete a future with the result (or error) of the `async` function `body`.
     ///
