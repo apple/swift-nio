@@ -22,13 +22,8 @@ import Dispatch
 
 import _Concurrency
 
-let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-defer {
-    try! group.syncShutdownGracefully()
-}
-
 @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
-func makeHTTPChannel(host: String, port: Int) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
+func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
     let channel = try await ClientBootstrap(group: group).connect(host: host, port: port).get()
     try await channel.pipeline.addHTTPClientHandlers().get()
     try await channel.pipeline.addHandler(NIOHTTPClientResponseAggregator(maxContentLength: 1_000_000))
@@ -39,7 +34,9 @@ func makeHTTPChannel(host: String, port: Int) async throws -> AsyncChannelIO<HTT
 @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
 func main() async {
     do {
-        let channel = try await makeHTTPChannel(host: "httpbin.org", port: 80)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+
+        let channel = try await makeHTTPChannel(host: "httpbin.org", port: 80, group: group)
         print("OK, connected to \(channel)")
 
         print("Sending request 1", terminator: "")
