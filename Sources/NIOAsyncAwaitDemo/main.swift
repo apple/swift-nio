@@ -33,9 +33,8 @@ func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throw
 
 @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
 func main() async {
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     do {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-
         let channel = try await makeHTTPChannel(host: "httpbin.org", port: 80, group: group)
         print("OK, connected to \(channel)")
 
@@ -55,11 +54,18 @@ func main() async {
 
         try await channel.close()
 
+        print("Shutting down event loop group...")
         try await group.shutdownGracefully()
 
         print("all, done")
     } catch {
         print("ERROR: \(error)")
+        print("Shutting down event loop group (possibly for a second time)...")
+        do {
+            try await group.shutdownGracefully()
+        } catch {
+            print("Error shutting down event loop group: \(error)")
+        }
     }
 }
 
