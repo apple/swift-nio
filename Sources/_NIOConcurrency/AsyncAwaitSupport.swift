@@ -47,8 +47,9 @@ extension EventLoopGroup {
             self.shutdownGracefully { error in
                 if let error = error {
                     cont.resume(throwing: error)
+                } else {
+                    cont.resume()
                 }
-                cont.resume()
             }
         }
     }
