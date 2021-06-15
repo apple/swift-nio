@@ -3052,3 +3052,14 @@ extension ByteBufferTest {
     }
     
 }
+
+// MARK: - ExpressibleByArrayLiteral init
+extension ByteBufferTest {
+    
+    func testCreateBufferFromArray() {
+        let bufferView: ByteBufferView = [0x00, 0x01, 0x02]
+        let buffer = ByteBuffer(ByteBufferView(bufferView))
+        
+        XCTAssert(buffer.readableBytesView == [0x00, 0x01, 0x02])
+    }
+}

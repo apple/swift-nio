@@ -187,3 +187,17 @@ extension ByteBuffer {
         self = view._buffer.getSlice(at: view.startIndex, length: view.count)!
     }
 }
+
+extension ByteBufferView: Equatable {
+    /// required by `Equatable`
+    public static func == (lhs: ByteBufferView, rhs: ByteBufferView) -> Bool {
+        lhs._buffer == rhs._buffer
+    }
+}
+
+extension ByteBufferView: ExpressibleByArrayLiteral {
+    /// required by `ExpressibleByArrayLiteral`
+    public init(arrayLiteral elements: Element...) {
+        self.init(elements)
+    }
+}
