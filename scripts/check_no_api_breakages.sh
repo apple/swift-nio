@@ -47,7 +47,7 @@ function build_and_do() {
 function usage() {
     echo >&2 "Usage: $0 REPO-GITHUB-URL NEW-VERSION OLD-VERSIONS..."
     echo >&2
-    echo >&2 "This script requires a Swift 5.1+ toolchain."
+    echo >&2 "This script requires a Swift 5.2+ toolchain."
     echo >&2
     echo >&2 "Examples:"
     echo >&2
@@ -101,7 +101,10 @@ for old_tag in "$@"; do
             --input-paths "$tmpdir/api-old/$f" -input-paths "$tmpdir/api-new/$f" 2>&1 \
             > "$report" 2>&1
 
-        if ! shasum "$report" | grep -q cefc4ee5bb7bcdb7cb5a7747efa178dab3c794d5; then
+        # the shasum here is for an empty report, i.e. no changes
+        # if the shasum of the new report is different, then there's
+        # obviously an API change
+        if ! shasum "$report" | grep -q afd2a1b542b33273920d65821deddc653063c700; then
             echo ERROR
             echo >&2 "=============================="
             echo >&2 "ERROR: public API change in $f"
