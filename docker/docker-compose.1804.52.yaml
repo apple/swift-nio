@@ -3,20 +3,20 @@ version: "3"
 services:
 
   runtime-setup:
-    image: swift-nio:16.04-5.2
+    image: swift-nio:18.04-5.2
     build:
       args:
-        ubuntu_version: "xenial"
+        ubuntu_version: "bionic"
         swift_version: "5.2"
 
   unit-tests:
-    image: swift-nio:16.04-5.2
+    image: swift-nio:18.04-5.2
 
   integration-tests:
-    image: swift-nio:16.04-5.2
+    image: swift-nio:18.04-5.2
 
   test:
-    image: swift-nio:16.04-5.2
+    image: swift-nio:18.04-5.2
     environment:
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
@@ -55,13 +55,13 @@ services:
       - INTEGRATION_TESTS_ARG=-f tests_0[013-9]
 
   performance-test:
-    image: swift-nio:16.04-5.2
+    image: swift-nio:18.04-5.2
 
   shell:
-    image: swift-nio:16.04-5.2
+    image: swift-nio:18.04-5.2
 
   echo:
-    image: swift-nio:16.04-5.2
+    image: swift-nio:18.04-5.2
 
   http:
-    image: swift-nio:16.04-5.2
+    image: swift-nio:18.04-5.2
