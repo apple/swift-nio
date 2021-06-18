@@ -104,7 +104,7 @@ for old_tag in "$@"; do
         # the shasum here is for an empty report, i.e. no changes
         # if the shasum of the new report is different, then there's
         # obviously an API change
-        if ! shasum "$report" | grep -q cefc4ee5bb7bcdb7cb5a7747efa178dab3c794d5; then
+        if ! shasum "$report" | grep -q afd2a1b542b33273920d65821deddc653063c700; then
             echo ERROR
             echo >&2 "=============================="
             echo >&2 "ERROR: public API change in $f"
