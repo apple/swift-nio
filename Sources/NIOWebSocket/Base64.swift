@@ -33,36 +33,29 @@ internal struct Base64 {
   static func encode<Buffer: Collection>(bytes: Buffer)
     -> String where Buffer.Element == UInt8
   {
+    guard !bytes.isEmpty else {
+        return ""
+    }
     // In Base64, 3 bytes become 4 output characters, and we pad to the
     // nearest multiple of four.
-    let newCapacity = ((bytes.count + 2) / 3) * 4
+    let base64StringLength = ((bytes.count + 2) / 3) * 4
     let alphabet = Base64.encodeBase64
     
-    // NOTE: Once SE-263 lands we should replace this implementation with one
-    //       that makes use of the non copy initializer. For more information
-    //       please see:
-    //       https://github.com/apple/swift-evolution/blob/master/proposals/0263-string-uninitialized-initializer.md
-    var outputBytes = [UInt8]()
-    outputBytes.reserveCapacity(newCapacity)
-    
-    var input = bytes.makeIterator()
-  
-    while let firstByte = input.next() {
-      let secondByte = input.next()
-      let thirdByte = input.next()
-      
-      let firstChar  = Base64.encode(alphabet: alphabet, firstByte: firstByte)
-      let secondChar = Base64.encode(alphabet: alphabet, firstByte: firstByte, secondByte: secondByte)
-      let thirdChar  = Base64.encode(alphabet: alphabet, secondByte: secondByte, thirdByte: thirdByte)
-      let forthChar  = Base64.encode(alphabet: alphabet, thirdByte: thirdByte)
-      
-      outputBytes.append(firstChar)
-      outputBytes.append(secondChar)
-      outputBytes.append(thirdChar)
-      outputBytes.append(forthChar)
+    return String(customUnsafeUninitializedCapacity: base64StringLength) { backingStorage in
+      var input = bytes.makeIterator()
+      var offset = 0
+      while let firstByte = input.next() {
+        let secondByte = input.next()
+        let thirdByte = input.next()
+        
+        backingStorage[offset] = Base64.encode(alphabet: alphabet, firstByte: firstByte)
+        backingStorage[offset + 1] = Base64.encode(alphabet: alphabet, firstByte: firstByte, secondByte: secondByte)
+        backingStorage[offset + 2] = Base64.encode(alphabet: alphabet, secondByte: secondByte, thirdByte: thirdByte)
+        backingStorage[offset + 3] = Base64.encode(alphabet: alphabet, thirdByte: thirdByte)
+        offset += 4
+      }
+      return offset
     }
-
-    return String(decoding: outputBytes, as: Unicode.UTF8.self)
   }
   
   // MARK: Internal
@@ -128,3 +121,52 @@ internal struct Base64 {
     return alphabet[Int(index)]
   }
 }
+
+extension String {
+  /// This is a backport of a proposed String initializer that will allow writing directly into an uninitialized String's backing memory.
+  ///
+  /// As this API does not exist prior to 5.3 on Linux, or on older Apple platforms, we fake it out with a pointer and accept the extra copy.
+  @inlinable
+  init(backportUnsafeUninitializedCapacity capacity: Int,
+       initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows {
+    // The buffer will store zero terminated C string
+    let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: capacity + 1)
+    defer {
+        buffer.deallocate()
+    }
+
+    let initializedCount = try initializer(buffer)
+    precondition(initializedCount <= capacity, "Overran buffer in initializer!")
+    // add zero termination
+    buffer[initializedCount] = 0
+
+    self = String(cString: buffer.baseAddress!)
+  }
+}
+
+// Frustratingly, Swift 5.3 shipped before the macOS 11 SDK did, so we cannot gate the availability of
+// this declaration on having the 5.3 compiler. This has caused a number of build issues. While updating
+// to newer Xcodes does work, we can save ourselves some hassle and just wait until 5.4 to get this
+// enhancement on Apple platforms.
+#if (compiler(>=5.3) && !(os(macOS) || os(iOS) || os(tvOS) || os(watchOS))) || compiler(>=5.4)
+extension String {
+    
+  @inlinable
+  init(customUnsafeUninitializedCapacity capacity: Int,
+     initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows {
+    if #available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *) {
+        try self.init(unsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
+    } else {
+        try self.init(backportUnsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
+    }
+  }
+}
+#else
+extension String {
+  @inlinable
+  init(customUnsafeUninitializedCapacity capacity: Int,
+     initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows {
+    try self.init(backportUnsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
+  }
+}
+#endif

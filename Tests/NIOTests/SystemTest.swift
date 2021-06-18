@@ -62,6 +62,21 @@ class SystemTest: XCTestCase {
     private static let cmsghdr_secondDataCount = 1
     private static let cmsghdr_firstType = IP_RECVDSTADDR
     private static let cmsghdr_secondType = IP_RECVTOS
+    #elseif os(Android) && arch(arm)
+    private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
+                                                  0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
+                                                  0x08, 0x00, 0x00, 0x00, // IP_PKTINFO
+                                                  0x7F, 0x00, 0x00, 0x01, // 127.0.0.1
+                                                  0x0D, 0x00, 0x00, 0x00, // Length 13 including header
+                                                  0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
+                                                  0x01, 0x00, 0x00, 0x00, // IP_TOS
+                                                  0x01, 0x00, 0x00, 0x00] // ECT-1 (1 byte)
+    private static let cmsghdr_secondStartPosition = 16
+    private static let cmsghdr_firstDataStart = 12
+    private static let cmsghdr_firstDataCount = 4
+    private static let cmsghdr_secondDataCount = 1
+    private static let cmsghdr_firstType = IP_PKTINFO
+    private static let cmsghdr_secondType = IP_TOS
     #elseif os(Linux) || os(Android)
     // Example twin data options captured on Linux
     private static let cmsghdrExample: [UInt8] = [
