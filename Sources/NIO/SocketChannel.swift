@@ -834,7 +834,7 @@ extension DatagramChannel: MulticastChannel {
             return
         }
 
-        /// Check if the device supports multicast
+        // Check if the device supports multicast
         if let device = device {
             guard device.multicastSupported else {
                 promise?.fail(NIOMulticastNotSupportedError(device: device))

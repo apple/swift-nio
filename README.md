@@ -11,7 +11,7 @@ It's like [Netty](https://netty.io), but written for Swift.
 
 The SwiftNIO project is split across multiple repositories:
 
-Repository | NIO 2 (Swift 5+) | NIO 1 (Swift 4+)
+Repository | NIO 2 (Swift 5.2+) | NIO 1 (Swift 4+)
 --- | --- | ---
 [https://github.com/apple/swift-nio][repo-nio] <br> SwiftNIO core | `from: "2.0.0"` | `from: "1.0.0"`
 [https://github.com/apple/swift-nio-ssl][repo-nio-ssl] <br> TLS (SSL) support | `from: "2.0.0"` | `from: "1.0.0"`
@@ -19,6 +19,8 @@ Repository | NIO 2 (Swift 5+) | NIO 1 (Swift 4+)
 [https://github.com/apple/swift-nio-extras][repo-nio-extras] <br>useful additions around SwiftNIO | `from: "1.0.0"` | `from: "0.1.0"`
 [https://github.com/apple/swift-nio-transport-services][repo-nio-transport-services] <br> first-class support for macOS, iOS, tvOS, and watchOS | `from: "1.0.0"` | `from: "0.1.0"`
 [https://github.com/apple/swift-nio-ssh][repo-nio-ssh] <br> SSH support | `.upToNextMinor(from: "0.2.0")` | _n/a_
+
+NIO 2.29.0 and older support Swift 5.0+.
 
 ### Protocol Implementations
 
@@ -64,7 +66,7 @@ The latest released SwiftNIO 1 version supports Swift 4.0, 4.1, 4.2, and 5.0.
 
 #### SwiftNIO 2
 
-The latest released SwiftNIO 2 version supports Swift 5.0, 5.1, 5.2, 5.3, and 5.4. If you have a SwiftNIO 1 application or library that you would like to migrate to SwiftNIO 2, please check out the [migration guide](docs/migration-guide-NIO1-to-NIO2.md) we prepared for you.
+The latest released SwiftNIO 2 version supports Swift 5.2, 5.3, and 5.4. If you have a SwiftNIO 1 application or library that you would like to migrate to SwiftNIO 2, please check out the [migration guide](docs/migration-guide-NIO1-to-NIO2.md) we prepared for you.
 
 ### Compatibility
 
@@ -309,11 +311,11 @@ have a few prerequisites installed on your system.
 
 #### macOS
 
-- Xcode 10.2 or newer, Xcode 11 recommended.
+- Xcode 11.4 or newer, Xcode 12 recommended.
 
 ### Linux
 
-- Swift 5.0, 5.1, 5.2, 5.3, or 5.4 from [swift.org/download](https://swift.org/download/#releases). We always recommend to use the latest released version.
+- Swift 5.2, 5.3, or 5.4 from [swift.org/download](https://swift.org/download/#releases). We always recommend to use the latest released version.
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
@@ -355,7 +357,7 @@ dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 [repo-nio-ssh]: https://github.com/apple/swift-nio-ssh
 
 ### Speeding up testing
-It's possible to run the test suite in parallel, it can save significant time if you have a larger multi-core machine, just add `--parallel` when running the tests. This can speed up the run time of the test suite with 30x or more.
+It's possible to run the test suite in parallel, it can save significant time if you have a larger multi-core machine, just add `--parallel` when running the tests. This can speed up the run time of the test suite by 30x or more.
 
 ```
 swift test --parallel
