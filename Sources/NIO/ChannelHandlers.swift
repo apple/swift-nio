@@ -98,7 +98,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     }
 
     private func doRead(_ context: ChannelHandlerContext) {
-        /// Reset the backoff time and read.
+        // Reset the backoff time and read.
         self.nextReadDeadlineNS = nil
         self.scheduledRead = nil
         context.read()
