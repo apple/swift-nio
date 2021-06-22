@@ -3052,3 +3052,77 @@ extension ByteBufferTest {
     }
     
 }
+
+
+
+// MARK: - Buffer building
+extension ByteBufferTest {
+    
+    // These tests need individual compiler directives as the XCTest file is auto-generated
+    // and is expected to work for every swift version.
+    
+    func testCreateBufferEmpty() {
+        #if compiler(>=5.4)
+        let buffer = ByteBuffer { }
+        XCTAssertEqual(buffer.readableBytes, 0)
+        #endif
+    }
+    
+    func testCreateBufferSingle() {
+        #if compiler(>=5.4)
+        var buffer = ByteBuffer { "hello" }
+        XCTAssertEqual(buffer.readString(length: 5), "hello")
+        XCTAssertEqual(buffer.readableBytes, 0)
+        #endif
+    }
+    
+    func testCreateBufferMultiple() {
+        #if compiler(>=5.4)
+        var buffer = ByteBuffer {
+            "hello"
+            "world"
+        }
+        XCTAssertEqual(buffer.readString(length: 5), "hello")
+        XCTAssertEqual(buffer.readString(length: 5), "world")
+        XCTAssertEqual(buffer.readableBytes, 0)
+        #endif
+    }
+    
+    func testWriteEmpty() {
+        #if compiler(>=5.4)
+        var buffer = ByteBuffer()
+        XCTAssertEqual(buffer.readableBytes, 0)
+        XCTAssertEqual(buffer.write {}, 0)
+        XCTAssertEqual(buffer.readableBytes, 0)
+        #endif
+    }
+    
+    func testWriteSingle() {
+        #if compiler(>=5.4)
+        var buffer = ByteBuffer()
+        XCTAssertEqual(buffer.readableBytes, 0)
+        XCTAssertEqual(buffer.write { "hello" }, 5)
+        XCTAssertEqual(buffer.readableBytes, 5)
+        
+        XCTAssertEqual(buffer.readString(length: 5), "hello")
+        XCTAssertEqual(buffer.readableBytes, 0)
+        #endif
+    }
+    
+    func testWriteMultiple() {
+        #if compiler(>=5.4)
+        var buffer = ByteBuffer()
+        XCTAssertEqual(buffer.readableBytes, 0)
+        XCTAssertEqual(buffer.write {
+            "hello"
+            "world"
+        }, 10)
+        XCTAssertEqual(buffer.readableBytes, 10)
+        
+        XCTAssertEqual(buffer.readString(length: 5), "hello")
+        XCTAssertEqual(buffer.readString(length: 5), "world")
+        XCTAssertEqual(buffer.readableBytes, 0)
+        #endif
+    }
+    
+}
