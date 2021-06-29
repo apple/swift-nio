@@ -196,8 +196,10 @@ extension ByteBufferView: Equatable {
             return false 
         }
 
-        let leftBufferSlice = lhs._buffer.getSlice(at: lhs._range.startIndex, length: lhs._range.count)
-        let rightBufferSlice = rhs._buffer.getSlice(at: rhs._range.startIndex, length: rhs._range.count)
+        // A well-formed ByteBufferView can never have a range that is out-of-bounds of the backing ByteBuffer.
+        // As a result, these getSlice calls can never fail, and we'd like to know it if they do.
+        let leftBufferSlice = lhs._buffer.getSlice(at: lhs._range.startIndex, length: lhs._range.count)!
+        let rightBufferSlice = rhs._buffer.getSlice(at: rhs._range.startIndex, length: rhs._range.count)!
         
         return leftBufferSlice == rightBufferSlice
     }
@@ -206,7 +208,9 @@ extension ByteBufferView: Equatable {
 extension ByteBufferView: Hashable {
     /// required by `Hashable`
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(_buffer.getSlice(at: _range.startIndex, length: _range.count))
+        // A well-formed ByteBufferView can never have a range that is out-of-bounds of the backing ByteBuffer.
+        // As a result, this getSlice call can never fail, and we'd like to know it if they do.
+        hasher.combine(self._buffer.getSlice(at: self._range.startIndex, length: self._range.count)!)
     }
 }
 
