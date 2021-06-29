@@ -3062,4 +3062,35 @@ extension ByteBufferTest {
         
         XCTAssert(buffer.readableBytesView == [0x00, 0x01, 0x02])
     }
+
+    func testByteBufferViewEqualityWithRange() {
+        var buffer = self.allocator.buffer(capacity: 8)
+        buffer.writeString("AAAABBBB")
+        
+        let view = ByteBufferView(buffer: buffer, range: 2..<6) // 
+        let comparisonBuffer: ByteBufferView = [0x41, 0x41, 0x42, 0x42]
+
+        XCTAssert(view == comparisonBuffer)
+    }
+
+    func testInvalidBufferEqualityWithDifferentRange() {
+        var buffer = self.allocator.buffer(capacity: 4)
+        buffer.writeString("AAAA")
+        
+        let view = ByteBufferView(buffer: buffer, range: 0..<2)
+        let comparisonBuffer: ByteBufferView = [0x41, 0x41, 0x41, 0x41]
+
+        XCTAssertFalse(view == comparisonBuffer)
+    }
+
+    func testInvalidBufferEqualityWithDifferentContent() {
+        var buffer = self.allocator.buffer(capacity: 4)
+        buffer.writeString("AAAA")
+        
+        let view = ByteBufferView(buffer: buffer, range: 0..<4)
+        let comparisonBuffer: ByteBufferView = [0x41, 0x41, 0x00, 0x00]
+
+        XCTAssertFalse(view == comparisonBuffer)
+    }
+
 }

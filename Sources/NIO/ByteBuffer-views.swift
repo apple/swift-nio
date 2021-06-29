@@ -191,7 +191,17 @@ extension ByteBuffer {
 extension ByteBufferView: Equatable {
     /// required by `Equatable`
     public static func == (lhs: ByteBufferView, rhs: ByteBufferView) -> Bool {
-        lhs._buffer == rhs._buffer
+
+        guard lhs._range.count == rhs._range.count else {
+            return false 
+        }
+
+        let leftBufferSlice = lhs._buffer.getSlice(at: lhs._range.startIndex, length: lhs._range.count)
+        let rightBufferSlice = rhs._buffer.getSlice(at: rhs._range.startIndex, length: rhs._range.count)
+        
+        return leftBufferSlice == rightBufferSlice
+    }
+}
     }
 }
 
