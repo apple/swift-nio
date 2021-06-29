@@ -3060,17 +3060,22 @@ extension ByteBufferTest {
         let bufferView: ByteBufferView = [0x00, 0x01, 0x02]
         let buffer = ByteBuffer(ByteBufferView(bufferView))
         
-        XCTAssert(buffer.readableBytesView == [0x00, 0x01, 0x02])
+        XCTAssertEqual(buffer.readableBytesView, [0x00, 0x01, 0x02])
     }
+
+}
+
+// MARK: - Equatable
+extension ByteBufferTest {
 
     func testByteBufferViewEqualityWithRange() {
         var buffer = self.allocator.buffer(capacity: 8)
         buffer.writeString("AAAABBBB")
         
-        let view = ByteBufferView(buffer: buffer, range: 2..<6) // 
+        let view = ByteBufferView(buffer: buffer, range: 2..<6)
         let comparisonBuffer: ByteBufferView = [0x41, 0x41, 0x42, 0x42]
 
-        XCTAssert(view == comparisonBuffer)
+        XCTAssertEqual(view, comparisonBuffer)
     }
 
     func testInvalidBufferEqualityWithDifferentRange() {
@@ -3080,7 +3085,7 @@ extension ByteBufferTest {
         let view = ByteBufferView(buffer: buffer, range: 0..<2)
         let comparisonBuffer: ByteBufferView = [0x41, 0x41, 0x41, 0x41]
 
-        XCTAssertFalse(view == comparisonBuffer)
+        XCTAssertNotEqual(view, comparisonBuffer)
     }
 
     func testInvalidBufferEqualityWithDifferentContent() {
@@ -3090,7 +3095,10 @@ extension ByteBufferTest {
         let view = ByteBufferView(buffer: buffer, range: 0..<4)
         let comparisonBuffer: ByteBufferView = [0x41, 0x41, 0x00, 0x00]
 
-        XCTAssertFalse(view == comparisonBuffer)
+        XCTAssertNotEqual(view, comparisonBuffer)
+    }
+
+}
 
 // MARK: - Hashable
 extension ByteBufferTest {
@@ -3099,7 +3107,7 @@ extension ByteBufferTest {
         let bufferView: ByteBufferView = [0x00, 0x01, 0x02]
         let comparisonBufferView: ByteBufferView = [0x00, 0x01, 0x02]
 
-        XCTAssert(bufferView.hashValue == comparisonBufferView.hashValue)
+        XCTAssertEqual(bufferView.hashValue, comparisonBufferView.hashValue)
     }
 
 
@@ -3107,7 +3115,7 @@ extension ByteBufferTest {
         let bufferView: ByteBufferView = [0x00, 0x00, 0x00]
         let comparisonBufferView: ByteBufferView = [0x00, 0x01, 0x02]
 
-        XCTAssert(bufferView.hashValue != comparisonBufferView.hashValue)
+        XCTAssertNotEqual(bufferView.hashValue, comparisonBufferView.hashValue)
     }
 
     func testValidHashFromSlice() {
@@ -3117,7 +3125,7 @@ extension ByteBufferTest {
         let bufferView = ByteBufferView(buffer: buffer, range: 0..<2)
         let comparisonBufferView = ByteBufferView(buffer: buffer, range: 2..<4)
 
-        XCTAssert(bufferView.hashValue == comparisonBufferView.hashValue)
+        XCTAssertEqual(bufferView.hashValue, comparisonBufferView.hashValue)
     }
 
 }
