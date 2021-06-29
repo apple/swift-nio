@@ -209,7 +209,7 @@ extension ByteBufferView: Hashable {
     /// required by `Hashable`
     public func hash(into hasher: inout Hasher) {
         // A well-formed ByteBufferView can never have a range that is out-of-bounds of the backing ByteBuffer.
-        // As a result, this getSlice call can never fail, and we'd like to know it if they do.
+        // As a result, this getSlice call can never fail, and we'd like to know it if it does.
         hasher.combine(self._buffer.getSlice(at: self._range.startIndex, length: self._range.count)!)
     }
 }
