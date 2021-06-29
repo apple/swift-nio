@@ -218,6 +218,9 @@ extension ByteBufferTest {
                 ("testByteBufferViewEqualityWithRange", testByteBufferViewEqualityWithRange),
                 ("testInvalidBufferEqualityWithDifferentRange", testInvalidBufferEqualityWithDifferentRange),
                 ("testInvalidBufferEqualityWithDifferentContent", testInvalidBufferEqualityWithDifferentContent),
+                ("testHashableConformance", testHashableConformance),
+                ("testInvalidHash", testInvalidHash),
+                ("testValidHashFromSlice", testValidHashFromSlice),
            ]
    }
 }
