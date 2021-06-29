@@ -215,6 +215,9 @@ extension ByteBufferTest {
                 ("testCreateStringFromBuffer", testCreateStringFromBuffer),
                 ("testCreateDispatchDataFromBuffer", testCreateDispatchDataFromBuffer),
                 ("testCreateBufferFromArray", testCreateBufferFromArray),
+                ("testByteBufferViewEqualityWithRange", testByteBufferViewEqualityWithRange),
+                ("testInvalidBufferEqualityWithDifferentRange", testInvalidBufferEqualityWithDifferentRange),
+                ("testInvalidBufferEqualityWithDifferentContent", testInvalidBufferEqualityWithDifferentContent),
            ]
    }
 }
