@@ -202,6 +202,11 @@ extension ByteBufferView: Equatable {
         return leftBufferSlice == rightBufferSlice
     }
 }
+
+extension ByteBufferView: Hashable {
+    /// required by `Hashable`
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(_buffer.getSlice(at: _range.startIndex, length: _range.count))
     }
 }
 
