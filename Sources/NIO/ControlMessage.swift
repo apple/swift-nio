@@ -172,14 +172,26 @@ struct ControlMessageParser {
     }
     
     mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
-        if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageParser.ipv4TosType {
+        if controlMessage.level == IPPROTO_IP {
+            receiveIPv4Message(controlMessage)
+        } else if controlMessage.level == IPPROTO_IPV6 {
+            receiveIPv6Message(controlMessage)
+        }
+    }
+
+    mutating func receiveIPv4Message(_ controlMessage: UnsafeControlMessage) {
+        if controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
                 assert(data.count == 1)
                 precondition(data.count >= 1)
                 let readValue = CInt(data[0])
                 self.ecnValue = .init(receivedValue: readValue)
             }
-        } else if controlMessage.level == IPPROTO_IPV6 && controlMessage.type == IPV6_TCLASS {
+        }
+    }
+
+    mutating func receiveIPv6Message(_ controlMessage: UnsafeControlMessage) {
+        if controlMessage.type == IPV6_TCLASS {
             if let data = controlMessage.data {
                 let readValue = ControlMessageParser._readCInt(data: data)
                 self.ecnValue = .init(receivedValue: readValue)
