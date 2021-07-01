@@ -308,6 +308,9 @@ extension NIOBSDSocket.Option {
     /// IPv4 and IPv6.
     static let ip_recv_tos: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_RECVTOS)
+
+    static let ip_recv_pktinfo: NIOBSDSocket.Option =
+            NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
 }
 
 // IPv6 Options
@@ -345,6 +348,9 @@ extension NIOBSDSocket.Option {
     /// IPv4 and IPv6.
     static let ipv6_recv_tclass: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
+
+    static let ipv6_recv_pktinfo: NIOBSDSocket.Option =
+        NIOBSDSocket.Option(rawValue: Posix.IPV6_RECVPKTINFO)
 }
 
 // TCP Options

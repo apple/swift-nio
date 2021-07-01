@@ -791,4 +791,29 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(try handler.becameUnwritable.futureResult.wait())
         XCTAssertNoThrow(try handler.becameWritable.futureResult.wait())
     }
+
+    func testSetGetPktInfoOption() {
+        XCTAssertNoThrow(try {
+            // IPv4
+            try self.firstChannel.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
+            XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.receivePacketInfo).wait())
+
+            try self.secondChannel.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
+            XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.receivePacketInfo).wait())
+
+            // IPv6
+            guard self.supportsIPv6 else {
+                // Skip on non-IPv6 systems
+                return
+            }
+
+            let channel1 = try buildChannel(group: self.group, host: "::1")
+            try channel1.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
+            XCTAssertTrue(try channel1.getOption(ChannelOptions.receivePacketInfo).wait())
+
+            let channel2 = try buildChannel(group: self.group, host: "::1")
+            try channel2.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
+            XCTAssertFalse(try channel2.getOption(ChannelOptions.receivePacketInfo).wait())
+        } ())
+    }
 }
