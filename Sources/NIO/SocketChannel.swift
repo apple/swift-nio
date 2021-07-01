@@ -550,7 +550,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         // These control bytes must not escape the current call stack
         let controlBytesBuffer: UnsafeMutableRawBufferPointer
-        if self.reportExplicitCongestionNotifications {
+        if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
             controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
         } else {
             controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
@@ -578,7 +578,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                if self.reportExplicitCongestionNotifications,
+                if self.reportExplicitCongestionNotifications || self.receivePacketInfo,
                    let controlMessagesReceived = controlBytes.receivedControlMessages {
                     metadata = .init(from: controlMessagesReceived)
                 } else {
@@ -622,7 +622,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let result = try vectorReadManager.readFromSocket(
                 socket: self.socket,
                 buffer: &buffer,
-                reportExplicitCongestionNotifications: self.reportExplicitCongestionNotifications)
+                parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo)
             switch result {
             case .some(let results, let totalRead):
                 assert(self.isOpen)
