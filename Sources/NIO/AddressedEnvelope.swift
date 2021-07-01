@@ -38,9 +38,11 @@ public struct AddressedEnvelope<DataType> {
     public struct Metadata: Hashable {
         /// Details of any congestion state.
         public var ecnState: NIOExplicitCongestionNotificationState
+        public let packetInfo: NIOPacketInfo?
         
-        public init(ecnState: NIOExplicitCongestionNotificationState) {
+        public init(ecnState: NIOExplicitCongestionNotificationState, packetInfo: NIOPacketInfo? = nil) {
             self.ecnState = ecnState
+            self.packetInfo = packetInfo
         }
     }
 }
@@ -61,4 +63,9 @@ public enum NIOExplicitCongestionNotificationState: Hashable {
     case transportCapableFlag1
     /// Congestion Experienced.
     case congestionExperienced
+}
+
+public struct NIOPacketInfo: Hashable {
+    public let destinationAddress: SocketAddress
+    public let interfaceIndex: Int
 }
