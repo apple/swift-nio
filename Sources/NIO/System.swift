@@ -26,6 +26,7 @@ internal typealias MMsgHdr = CNIODarwin_mmsghdr
 @_exported import Glibc
 import CNIOLinux
 internal typealias MMsgHdr = CNIOLinux_mmsghdr
+internal typealias in6_pktinfo = CNIOLinux_in6_pktinfo
 #elseif os(Windows)
 import CNIOWindows
 internal typealias sockaddr = WinSDK.SOCKADDR
@@ -223,6 +224,10 @@ internal enum Posix {
     static let IPTOS_ECN_ECT0: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT0)
     static let IPTOS_ECN_ECT1: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT1)
     static let IPTOS_ECN_CE: CInt = CInt(CNIOLinux.IPTOS_ECN_CE)
+    static let IP_RECVPKTINFO: CInt = CInt(CNIOLinux.IP_PKTINFO)
+    static let IP_PKTINFO: CInt = CInt(CNIOLinux.IP_PKTINFO)
+    static let IPV6_RECVPKTINFO: CInt = CInt(CNIOLinux.IPV6_RECVPKTINFO)
+    static let IPV6_PKTINFO: CInt = CInt(CNIOLinux.IPV6_PKTINFO)
 #else
     static var UIO_MAXIOV: Int {
         fatalError("unsupported OS")
