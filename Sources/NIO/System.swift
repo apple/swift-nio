@@ -204,6 +204,10 @@ internal enum Posix {
     static let IPTOS_ECN_ECT0: CInt = CNIODarwin_IPTOS_ECN_ECT0
     static let IPTOS_ECN_ECT1: CInt = CNIODarwin_IPTOS_ECN_ECT1
     static let IPTOS_ECN_CE: CInt = CNIODarwin_IPTOS_ECN_CE
+    static let IP_RECVPKTINFO: CInt = CNIODarwin.IP_RECVPKTINFO
+    static let IP_PKTINFO: CInt = CNIODarwin.IP_PKTINFO
+    static let IPV6_RECVPKTINFO: CInt = CNIODarwin_IPV6_RECVPKTINFO
+    static let IPV6_PKTINFO: CInt = CNIODarwin_IPV6_PKTINFO
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)

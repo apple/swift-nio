@@ -29,7 +29,7 @@ var targets: [PackageDescription.Target] = [
     .target(name: "CNIOAtomics", dependencies: []),
     .target(name: "CNIOSHA1", dependencies: []),
     .target(name: "CNIOLinux", dependencies: []),
-    .target(name: "CNIODarwin", dependencies: []),
+    .target(name: "CNIODarwin", dependencies: [], cSettings: [.define("__APPLE_USE_RFC_3542")]),
     .target(name: "CNIOWindows", dependencies: []),
     .target(name: "NIOConcurrencyHelpers",
             dependencies: ["CNIOAtomics"]),
