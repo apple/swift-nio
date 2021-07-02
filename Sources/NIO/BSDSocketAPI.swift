@@ -309,6 +309,12 @@ extension NIOBSDSocket.Option {
     static let ip_recv_tos: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_RECVTOS)
 
+    /// Request that we are passed destination address and the receiving interface index when
+    /// receiving datagrams.
+    ///
+    /// This option is not public as the way to request this is to use
+    /// `ChannelOptions.receivePacketInfo` which works for both
+    /// IPv4 and IPv6.
     static let ip_recv_pktinfo: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
 }
@@ -349,6 +355,12 @@ extension NIOBSDSocket.Option {
     static let ipv6_recv_tclass: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
 
+    /// Request that we are passed destination address and the receiving interface index when
+    /// receiving datagrams.
+    ///
+    /// This option is not public as the way to request this is to use
+    /// `ChannelOptions.receivePacketInfo` which works for both
+    /// IPv4 and IPv6.
     static let ipv6_recv_pktinfo: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: Posix.IPV6_RECVPKTINFO)
 }
