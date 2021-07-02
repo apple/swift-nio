@@ -436,7 +436,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             break
             #endif
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
-            let valueAsInt: Int32 = value as! Bool ? 1 : 0
+            let valueAsInt: CInt = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
                 self.reportExplicitCongestionNotifications = true
@@ -453,7 +453,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 throw ChannelError.operationUnsupported
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
-            let valueAsInt: Int32 = value as! Bool ? 1 : 0
+            let valueAsInt: CInt = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
                 self.receivePacketInfo = true

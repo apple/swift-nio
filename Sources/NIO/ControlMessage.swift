@@ -172,15 +172,15 @@ struct ControlMessageParser {
         return readValue
     }
     
-    mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
+    private mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
         if controlMessage.level == IPPROTO_IP {
-            receiveIPv4Message(controlMessage)
+            self.receiveIPv4Message(controlMessage)
         } else if controlMessage.level == IPPROTO_IPV6 {
-            receiveIPv6Message(controlMessage)
+            self.receiveIPv6Message(controlMessage)
         }
     }
 
-    mutating func receiveIPv4Message(_ controlMessage: UnsafeControlMessage) {
+    private mutating func receiveIPv4Message(_ controlMessage: UnsafeControlMessage) {
         if controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
                 assert(data.count == 1)
@@ -190,21 +190,19 @@ struct ControlMessageParser {
             }
         } else if controlMessage.type == Posix.IP_PKTINFO {
             if let data = controlMessage.data {
-                guard let info = data.bindMemory(to: in_pktinfo.self).baseAddress else {
-                    return
-                }
-
+                let info = data.load(as: in_pktinfo.self)
                 var addr = sockaddr_in()
                 addr.sin_family = sa_family_t(NIOBSDSocket.AddressFamily.inet.rawValue)
-                addr.sin_port = in_port_t(0).bigEndian
-                addr.sin_addr = info.pointee.ipi_addr
-                self.packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""), interfaceIndex: Int(info.pointee.ipi_ifindex))
+                addr.sin_port = in_port_t(0)
+                addr.sin_addr = info.ipi_addr
+                self.packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""),
+                                                interfaceIndex: Int(info.ipi_ifindex))
             }
 
         }
     }
 
-    mutating func receiveIPv6Message(_ controlMessage: UnsafeControlMessage) {
+    private mutating func receiveIPv6Message(_ controlMessage: UnsafeControlMessage) {
         if controlMessage.type == IPV6_TCLASS {
             if let data = controlMessage.data {
                 let readValue = ControlMessageParser._readCInt(data: data)
@@ -212,17 +210,15 @@ struct ControlMessageParser {
             }
         } else if controlMessage.type == Posix.IPV6_PKTINFO {
             if let data = controlMessage.data {
-                guard let info = data.bindMemory(to: in6_pktinfo.self).baseAddress else {
-                    return
-                }
-
+                let info = data.load(as: in6_pktinfo.self)
                 var addr = sockaddr_in6()
                 addr.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
-                addr.sin6_port = in_port_t(0).bigEndian
+                addr.sin6_port = in_port_t(0)
                 addr.sin6_flowinfo = 0
-                addr.sin6_addr = info.pointee.ipi6_addr
+                addr.sin6_addr = info.ipi6_addr
                 addr.sin6_scope_id = 0
-                self.packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""), interfaceIndex: Int(info.pointee.ipi6_ifindex))
+                self.packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""),
+                                                interfaceIndex: Int(info.ipi6_ifindex))
             }
         }
     }
