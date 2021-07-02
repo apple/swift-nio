@@ -667,8 +667,13 @@ final class DatagramChannelTests: XCTestCase {
         } ())
     }
     
-    private func testEcnReceive(address: String, vectorRead: Bool, vectorSend: Bool) {
+    private func testEcnReceive(address: String, vectorRead: Bool, vectorSend: Bool, receivePacketInfo: Bool = false) {
         XCTAssertNoThrow(try {
+            // Fake sending packet to self on the loopback interface if requested
+            let fakeDestinationAddress = try SocketAddress(ipAddress: address, port: 0)
+            let fakeIngressIfaceIndex = 1
+            let expectedPacketInfo = receivePacketInfo ? NIOPacketInfo(destinationAddress: fakeDestinationAddress,
+                                                                       interfaceIndex: fakeIngressIfaceIndex) : nil
             let receiveBootstrap: DatagramBootstrap
             if vectorRead {
                 receiveBootstrap = DatagramBootstrap(group: group)
@@ -679,6 +684,7 @@ final class DatagramChannelTests: XCTestCase {
                 
             let receiveChannel = try receiveBootstrap
                 .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
+                .channelOption(ChannelOptions.receivePacketInfo, value: receivePacketInfo)
                 .channelInitializer { channel in
                     channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
                 }
@@ -703,7 +709,7 @@ final class DatagramChannelTests: XCTestCase {
             for ecnState in ecnStates {
                 let writeData = AddressedEnvelope(remoteAddress: receiveChannel.localAddress!,
                                                   data: buffer,
-                                                  metadata: .init(ecnState: ecnState))
+                                                  metadata: .init(ecnState: ecnState, packetInfo: expectedPacketInfo))
                 // Sending extra data without flushing should trigger a vector send.
                 if (vectorSend) {
                     sendChannel.write(writeData, promise: nil)
@@ -717,6 +723,7 @@ final class DatagramChannelTests: XCTestCase {
             for readNumber in 0..<reads.count {
                 let read = reads[readNumber]
                 XCTAssertEqual(read.metadata?.ecnState, ecnStates[readNumber / (vectorSend ? 2 : 1)])
+                XCTAssertEqual(read.metadata?.packetInfo, expectedPacketInfo)
             }
         } ())
     }
@@ -815,5 +822,88 @@ final class DatagramChannelTests: XCTestCase {
             try channel2.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
             XCTAssertFalse(try channel2.getOption(ChannelOptions.receivePacketInfo).wait())
         } ())
+    }
+
+    private func testSimpleReceivePacketInfo(address: String) throws {
+        // Fake sending packet to self on the loopback interface
+        let fakeDestinationAddress = try SocketAddress(ipAddress: address, port: 0)
+        let fakeIngressIfaceIndex = 1
+        let expectedPacketInfo = NIOPacketInfo(destinationAddress: fakeDestinationAddress,
+                                               interfaceIndex: fakeIngressIfaceIndex)
+
+        let receiveChannel = try DatagramBootstrap(group: group)
+            .channelOption(ChannelOptions.receivePacketInfo, value: true)
+            .channelInitializer { channel in
+                channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
+            }
+            .bind(host: address, port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try receiveChannel.close().wait())
+        }
+        let sendChannel = try DatagramBootstrap(group: group)
+            .bind(host: address, port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try sendChannel.close().wait())
+        }
+
+        var buffer = sendChannel.allocator.buffer(capacity: 1)
+        buffer.writeRepeatingByte(0, count: 1)
+
+        let writeData = AddressedEnvelope(remoteAddress: receiveChannel.localAddress!,
+                                          data: buffer,
+                                          metadata: .init(ecnState: .transportNotCapable,
+                                                          packetInfo: expectedPacketInfo))
+        try sendChannel.writeAndFlush(writeData).wait()
+
+        let expectedReads = 1
+        let reads = try receiveChannel.waitForDatagrams(count: 1)
+        XCTAssertEqual(reads.count, expectedReads)
+        XCTAssertEqual(reads[0].metadata?.packetInfo, expectedPacketInfo)
+    }
+
+    func testSimpleReceivePacketInfoIPV4() throws {
+        try testSimpleReceivePacketInfo(address: "127.0.0.1")
+    }
+
+    func testSimpleReceivePacketInfoIPV6() throws {
+        guard System.supportsIPv6 else {
+            return // need to skip IPv6 tests if we don't support it.
+        }
+        try testSimpleReceivePacketInfo(address: "::1")
+    }
+
+    func testReceiveEcnAndPacketInfoIPV4() {
+        testEcnReceive(address: "127.0.0.1", vectorRead: false, vectorSend: false, receivePacketInfo: true)
+    }
+
+    func testReceiveEcnAndPacketInfoIPV6() {
+        guard System.supportsIPv6 else {
+            return // need to skip IPv6 tests if we don't support it.
+        }
+        testEcnReceive(address: "::1", vectorRead: false, vectorSend: false, receivePacketInfo: true)
+    }
+
+    func testReceiveEcnAndPacketInfoIPV4VectorRead() {
+        testEcnReceive(address: "127.0.0.1", vectorRead: true, vectorSend: false, receivePacketInfo: true)
+    }
+
+    func testReceiveEcnAndPacketInfoIPV6VectorRead() {
+        guard System.supportsIPv6 else {
+            return // need to skip IPv6 tests if we don't support it.
+        }
+        testEcnReceive(address: "::1", vectorRead: true, vectorSend: false, receivePacketInfo: true)
+    }
+
+    func testReceiveEcnAndPacketInfoIPV4VectorReadVectorWrite() {
+        testEcnReceive(address: "127.0.0.1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
+    }
+
+    func testReceiveEcnAndPacketInfoIPV6VectorReadVectorWrite() {
+        guard System.supportsIPv6 else {
+            return // need to skip IPv6 tests if we don't support it.
+        }
+        testEcnReceive(address: "::1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
     }
 }
