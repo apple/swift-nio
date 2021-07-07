@@ -28,7 +28,7 @@ extension ByteBuffer {
     public func getJSONDecodable<T: Decodable>(_ type: T.Type,
                                                decoder: JSONDecoder = JSONDecoder(),
                                                at index: Int, length: Int) throws -> T? {
-        guard let data = self.getData(at: index, length: length) else {
+        guard let data = self.getData(at: index, length: length, byteTransferStrategy: .noCopy) else {
             return nil
         }
         return try decoder.decode(T.self, from: data)
