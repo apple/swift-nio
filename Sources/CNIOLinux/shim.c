@@ -30,6 +30,9 @@ void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug(void) {}
 _Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr),
                "sizes of CNIOLinux_mmsghdr and struct mmsghdr differ");
 
+_Static_assert(sizeof(CNIOLinux_in6_pktinfo) == sizeof(struct in6_pktinfo),
+               "sizes of CNIOLinux_in6_pktinfo and struct in6_pktinfo differ");
+
 int CNIOLinux_sendmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen, int flags) {
     // This is technically undefined behaviour, but it's basically fine because these types are the same size, and we
     // don't think the compiler is inclined to blow anything up here.
