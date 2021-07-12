@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+@testable import NIOCore
 @testable import NIO
 import XCTest
 

@@ -16,11 +16,14 @@
 import PackageDescription
 
 var targets: [PackageDescription.Target] = [
+    .target(name: "NIOCore",
+            dependencies: ["NIOConcurrencyHelpers"]),
     .target(name: "NIO",
             dependencies: ["CNIOLinux",
                            "CNIODarwin",
                            "CNIOWindows",
-                           "NIOConcurrencyHelpers"]),
+                           "NIOConcurrencyHelpers",
+                           "NIOCore"]),
     .target(name: "_NIOConcurrency",
             dependencies: ["NIO"]),
     .target(name: "NIOFoundationCompat", dependencies: ["NIO"]),
@@ -86,6 +89,7 @@ var targets: [PackageDescription.Target] = [
 let package = Package(
     name: "swift-nio",
     products: [
+        .library(name: "NIOCore", targets: ["NIOCore"]),
         .library(name: "NIO", targets: ["NIO"]),
         .library(name: "_NIOConcurrency", targets: ["_NIOConcurrency"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-//
 import XCTest
+@testable import NIOCore
 @testable import NIO
 
 private var testDecoderIsNotQuadratic_mallocs = 0
