@@ -16,8 +16,6 @@
 import PackageDescription
 
 var targets: [PackageDescription.Target] = [
-    .target(name: "_NIO1APIShims",
-            dependencies: ["NIO", "NIOHTTP1", "NIOTLS", "NIOFoundationCompat", "NIOWebSocket"]),
     .target(name: "NIO",
             dependencies: ["CNIOLinux",
                            "CNIODarwin",
@@ -89,7 +87,6 @@ let package = Package(
     name: "swift-nio",
     products: [
         .library(name: "NIO", targets: ["NIO"]),
-        .library(name: "_NIO1APIShims", targets: ["_NIO1APIShims"]),
         .library(name: "_NIOConcurrency", targets: ["_NIOConcurrency"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
