@@ -283,6 +283,30 @@ public protocol EventLoop: EventLoopGroup {
     /// This method should not be called by users directly, it should only be implemented by `EventLoop` implementers that
     /// need to customise the behaviour.
     func _preconditionSafeToWait(file: StaticString, line: UInt)
+
+    /// Debug hook: track a promise creation and its location.
+    ///
+    /// This debug hook is called by EventLoopFutures and EventLoopPromises when they are created, and tracks the location
+    /// of their creation. It combines with `_promiseCompleted` to provide high-fidelity diagnostics for debugging leaked
+    /// promises.
+    ///
+    /// In release mode, this function will never be called.
+    ///
+    /// It is valid for an `EventLoop` not to implement any of the two `_promise` functions. If either of them are implemented,
+    /// however, both of them should be implemented.
+    func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt)
+
+    /// Debug hook: complete a specific promise and return its creation location.
+    ///
+    /// This debug hook is called by EventLoopFutures and EventLoopPromises when they are deinited, and removes the data from
+    /// the promise tracking map and, if available, provides that data as its return value. It combines with `_promiseCreated`
+    /// to provide high-fidelity diagnostics for debugging leaked promises.
+    ///
+    /// In release mode, this function will never be called.
+    ///
+    /// It is valid for an `EventLoop` not to implement any of the two `_promise` functions. If either of them are implemented,
+    /// however, both of them should be implemented.
+    func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
 }
 
 extension EventLoop {
@@ -293,6 +317,16 @@ extension EventLoop {
 
     public func _preconditionSafeToWait(file: StaticString, line: UInt) {
         self.preconditionNotInEventLoop(file: file, line: line)
+    }
+
+    /// Default implementation of `_promiseCreated`: does nothing.
+    public func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
+        return
+    }
+
+    /// Default implementation of `_promiseCompleted`: does nothing.
+    public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
+        return nil
     }
 }
 
