@@ -279,6 +279,9 @@ public protocol EventLoop: EventLoopGroup {
     /// This method is a debugging hook that can be used to override the behaviour of `EventLoopFuture.wait()` when called.
     /// By default this simply becomes `preconditionNotInEventLoop`, but some `EventLoop`s are capable of more exhaustive
     /// checking and can validate that the wait is not occuring on an entire `EventLoopGroup`, or even more broadly.
+    ///
+    /// This method should not be called by users directly, it should only be implemented by `EventLoop` implementers that
+    /// need to customise the behaviour.
     func _preconditionSafeToWait(file: StaticString, line: UInt)
 }
 
