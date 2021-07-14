@@ -188,6 +188,12 @@ public final class EmbeddedEventLoop: EventLoop {
         }
     }
 
+    public func _preconditionSafeToWait(file: StaticString, line: UInt) {
+        // EmbeddedEventLoop always allows a wait, as waiting will essentially always block
+        // wait()
+        return
+    }
+
     deinit {
         precondition(scheduledTasks.isEmpty, "Embedded event loop freed with unexecuted scheduled tasks!")
     }

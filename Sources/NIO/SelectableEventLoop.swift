@@ -120,6 +120,23 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     @usableFromInline
+    internal func _preconditionSafeToWait(file: StaticString, line: UInt) {
+        let explainer: () -> String = { """
+BUG DETECTED: wait() must not be called when on an EventLoop.
+Calling wait() on any EventLoop can lead to
+- deadlocks
+- stalling processing of other connections (Channels) that are handled on the EventLoop that wait was called on
+
+Further information:
+- current eventLoop: \(MultiThreadedEventLoopGroup.currentEventLoop.debugDescription)
+- event loop associated to future: \(self)
+"""
+        }
+        precondition(!self.inEventLoop, explainer(), file: file, line: line)
+        precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil, explainer(), file: file, line: line)
+    }
+
+    @usableFromInline
     internal var _validInternalStateToScheduleTasks: Bool {
         switch self.internalState {
         case .exitingThread:
