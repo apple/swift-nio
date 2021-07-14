@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import NIO
+@testable import NIOCore
 
 class CircularBufferTests: XCTestCase {
     func testTrivial() {
