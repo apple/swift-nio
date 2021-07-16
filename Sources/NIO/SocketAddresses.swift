@@ -365,6 +365,8 @@ public enum SocketAddress: CustomStringConvertible {
 
     /// Creates a new `SocketAddress` for the given host (which will be resolved) and port.
     ///
+    /// - warning: This is a blocking call, so please avoid calling this from an `EventLoop`.
+    ///
     /// - parameters:
     ///     - host: the hostname which should be resolved.
     ///     - port: the port itself
