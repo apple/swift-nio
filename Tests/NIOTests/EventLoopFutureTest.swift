@@ -14,7 +14,8 @@
 
 import XCTest
 import Dispatch
-@testable import NIO
+@testable import NIOCore
+import NIO
 
 enum EventLoopFutureTestError : Error {
     case example
