@@ -205,9 +205,9 @@ class NonBlockingFileIOTest: XCTestCase {
                 return self.eventLoop.makeSucceededFuture(())
             }.wait()) { error in
             #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-                XCTAssertEqual(ENOTCONN, (error as? IOError)?.errnoCode)
+            XCTAssertEqual(ENOTCONN, (error as? IOError)?.errnoCode)
             #else
-                XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
+            XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
             #endif
         }
     }

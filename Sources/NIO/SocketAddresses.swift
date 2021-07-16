@@ -14,21 +14,21 @@
 
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 #if os(Linux) || os(FreeBSD) || os(Android)
-    import CNIOLinux
+import CNIOLinux
 #endif
 
 #if os(Windows)
-    import let WinSDK.AF_INET
-    import let WinSDK.AF_INET6
+import let WinSDK.AF_INET
+import let WinSDK.AF_INET6
 
-    import func WinSDK.FreeAddrInfoW
-    import func WinSDK.GetAddrInfoW
+import func WinSDK.FreeAddrInfoW
+import func WinSDK.GetAddrInfoW
 
-    import struct WinSDK.ADDRESS_FAMILY
-    import struct WinSDK.ADDRINFOW
-    import struct WinSDK.in_addr_t
+import struct WinSDK.ADDRESS_FAMILY
+import struct WinSDK.ADDRINFOW
+import struct WinSDK.in_addr_t
 
-    import typealias WinSDK.u_short
+import typealias WinSDK.u_short
 #endif
 
 public enum SocketAddressError: Error {
@@ -371,67 +371,67 @@ public enum SocketAddress: CustomStringConvertible {
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
         #if os(Windows)
-            return try host.withCString(encodedAs: UTF16.self) { wszHost in
-                try String(port).withCString(encodedAs: UTF16.self) { wszPort in
-                    var pResult: UnsafeMutablePointer<ADDRINFOW>?
+        return try host.withCString(encodedAs: UTF16.self) { wszHost in
+            try String(port).withCString(encodedAs: UTF16.self) { wszPort in
+                var pResult: UnsafeMutablePointer<ADDRINFOW>?
 
-                    guard GetAddrInfoW(wszHost, wszPort, nil, &pResult) == 0 else {
-                        throw SocketAddressError.unknown(host: host, port: port)
-                    }
+                guard GetAddrInfoW(wszHost, wszPort, nil, &pResult) == 0 else {
+                    throw SocketAddressError.unknown(host: host, port: port)
+                }
 
-                    defer {
-                        FreeAddrInfoW(pResult)
-                    }
+                defer {
+                    FreeAddrInfoW(pResult)
+                }
 
-                    if let pResult = pResult {
-                        switch pResult.pointee.ai_family {
-                        case AF_INET:
-                            return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                                .v4(IPv4Address(address: $0.pointee, host: host))
-                            }
-                        case AF_INET6:
-                            return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self) {
-                                .v6(IPv6Address(address: $0.pointee, host: host))
-                            }
-                        default:
-                            break
+                if let pResult = pResult {
+                    switch pResult.pointee.ai_family {
+                    case AF_INET:
+                        return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                            .v4(IPv4Address(address: $0.pointee, host: host))
                         }
+                    case AF_INET6:
+                        return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self) {
+                            .v6(IPv6Address(address: $0.pointee, host: host))
+                        }
+                    default:
+                        break
                     }
-
-                    throw SocketAddressErro.unsupported
                 }
+
+                throw SocketAddressErro.unsupported
             }
+        }
         #else
-            var info: UnsafeMutablePointer<addrinfo>?
+        var info: UnsafeMutablePointer<addrinfo>?
 
-            /* FIXME: this is blocking! */
-            if getaddrinfo(host, String(port), nil, &info) != 0 {
-                throw SocketAddressError.unknown(host: host, port: port)
+        /* FIXME: this is blocking! */
+        if getaddrinfo(host, String(port), nil, &info) != 0 {
+            throw SocketAddressError.unknown(host: host, port: port)
+        }
+
+        defer {
+            if info != nil {
+                freeaddrinfo(info)
             }
+        }
 
-            defer {
-                if info != nil {
-                    freeaddrinfo(info)
+        if let info = info {
+            switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
+            case .inet:
+                return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { ptr in
+                    .v4(.init(address: ptr.pointee, host: host))
                 }
-            }
-
-            if let info = info {
-                switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
-                case .inet:
-                    return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { ptr in
-                        .v4(.init(address: ptr.pointee, host: host))
-                    }
-                case .inet6:
-                    return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { ptr in
-                        .v6(.init(address: ptr.pointee, host: host))
-                    }
-                default:
-                    throw SocketAddressError.unsupported
+            case .inet6:
+                return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { ptr in
+                    .v6(.init(address: ptr.pointee, host: host))
                 }
-            } else {
-                /* this is odd, getaddrinfo returned NULL */
+            default:
                 throw SocketAddressError.unsupported
             }
+        } else {
+            /* this is odd, getaddrinfo returned NULL */
+            throw SocketAddressError.unsupported
+        }
         #endif
     }
 }

@@ -19,9 +19,9 @@ private final class ChatHandler: ChannelInboundHandler {
 
     private func printByte(_ byte: UInt8) {
         #if os(Android)
-            print(Character(UnicodeScalar(byte)), terminator: "")
+        print(Character(UnicodeScalar(byte)), terminator: "")
         #else
-            fputc(Int32(byte), stdout)
+        fputc(Int32(byte), stdout)
         #endif
     }
 

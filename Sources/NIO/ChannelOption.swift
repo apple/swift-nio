@@ -20,11 +20,11 @@ public protocol ChannelOption: Equatable {
 
 public typealias SocketOptionName = Int32
 #if os(Linux) || os(Android)
-    public typealias SocketOptionLevel = Int
-    public typealias SocketOptionValue = Int
+public typealias SocketOptionLevel = Int
+public typealias SocketOptionValue = Int
 #else
-    public typealias SocketOptionLevel = CInt
-    public typealias SocketOptionValue = CInt
+public typealias SocketOptionLevel = CInt
+public typealias SocketOptionValue = CInt
 #endif
 
 @available(*, deprecated, renamed: "ChannelOptions.Types.SocketOption")
@@ -93,15 +93,15 @@ public extension ChannelOptions {
             }
 
             #if !os(Windows)
-                /// Create a new `SocketOption`.
-                ///
-                /// - parameters:
-                ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
-                ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
-                public init(level: SocketOptionLevel, name: SocketOptionName) {
-                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
-                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
-                }
+            /// Create a new `SocketOption`.
+            ///
+            /// - parameters:
+            ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+            ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
+            public init(level: SocketOptionLevel, name: SocketOptionName) {
+                self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
+                self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
+            }
             #endif
 
             /// Create a new `SocketOption`.
@@ -267,9 +267,9 @@ public extension ChannelOptions {
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public enum ChannelOptions {
     #if !os(Windows)
-        public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
-            .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
-        }
+    public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
+        .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
+    }
     #endif
 
     /// - seealso: `SocketOption`.

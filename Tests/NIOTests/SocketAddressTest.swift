@@ -78,7 +78,7 @@ class SocketAddressTest: XCTestCase {
         var address = sockaddr_in6()
         #if os(Linux) || os(Android) // no sin6_len on Linux/Android
         #else
-            address.sin6_len = UInt8(MemoryLayout<sockaddr_in6>.size)
+        address.sin6_len = UInt8(MemoryLayout<sockaddr_in6>.size)
         #endif
         address.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
         address.sin6_addr = sampleIn6Addr.withUnsafeBytes {

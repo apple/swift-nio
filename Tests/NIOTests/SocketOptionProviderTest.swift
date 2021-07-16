@@ -271,24 +271,24 @@ final class SocketOptionProviderTest: XCTestCase {
     func testTCPInfo() throws {
         // This test only runs on Linux, FreeBSD, and Android.
         #if os(Linux) || os(FreeBSD) || os(Android)
-            let channel = self.clientChannel! as! SocketOptionProvider
-            let tcpInfo = try assertNoThrowWithValue(channel.getTCPInfo().wait())
+        let channel = self.clientChannel! as! SocketOptionProvider
+        let tcpInfo = try assertNoThrowWithValue(channel.getTCPInfo().wait())
 
-            // We just need to soundness check something here to ensure that the data is vaguely reasonable.
-            XCTAssertEqual(tcpInfo.tcpi_state, UInt8(TCP_ESTABLISHED))
+        // We just need to soundness check something here to ensure that the data is vaguely reasonable.
+        XCTAssertEqual(tcpInfo.tcpi_state, UInt8(TCP_ESTABLISHED))
         #endif
     }
 
     func testTCPConnectionInfo() throws {
         // This test only runs on Darwin.
         #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-            let channel = self.clientChannel! as! SocketOptionProvider
-            let tcpConnectionInfo = try assertNoThrowWithValue(channel.getTCPConnectionInfo().wait())
+        let channel = self.clientChannel! as! SocketOptionProvider
+        let tcpConnectionInfo = try assertNoThrowWithValue(channel.getTCPConnectionInfo().wait())
 
-            #if os(macOS) // deliberately only on macOS
-                // We just need to soundness check something here to ensure that the data is vaguely reasonable.
-                XCTAssertEqual(tcpConnectionInfo.tcpi_state, UInt8(TSI_S_ESTABLISHED))
-            #endif
+        #if os(macOS) // deliberately only on macOS
+        // We just need to soundness check something here to ensure that the data is vaguely reasonable.
+        XCTAssertEqual(tcpConnectionInfo.tcpi_state, UInt8(TSI_S_ESTABLISHED))
+        #endif
         #endif
     }
 }

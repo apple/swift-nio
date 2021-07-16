@@ -44,10 +44,10 @@ typealias IOVector = iovec
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if could not change the socket into non-blocking
     #if !os(Windows)
-        @available(*, deprecated, renamed: "init(socket:setNonBlocking:)")
-        convenience init(descriptor: CInt, setNonBlocking: Bool) throws {
-            try self.init(socket: descriptor, setNonBlocking: setNonBlocking)
-        }
+    @available(*, deprecated, renamed: "init(socket:setNonBlocking:)")
+    convenience init(descriptor: CInt, setNonBlocking: Bool) throws {
+        try self.init(socket: descriptor, setNonBlocking: setNonBlocking)
+    }
     #endif
 
     /// Create a new instance out of an already established socket.
@@ -71,10 +71,10 @@ typealias IOVector = iovec
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
     #if !os(Windows)
-        @available(*, deprecated, renamed: "init(socket:)")
-        convenience init(descriptor: CInt) throws {
-            try self.init(socket: descriptor)
-        }
+    @available(*, deprecated, renamed: "init(socket:)")
+    convenience init(descriptor: CInt) throws {
+        try self.init(socket: descriptor)
+    }
     #endif
 
     /// Create a new instance.
@@ -176,25 +176,25 @@ typealias IOVector = iovec
         return try withUnsafeHandle { handle in
             try withUnsafeMutablePointer(to: &vec) { vecPtr in
                 #if os(Windows)
-                    var messageHeader =
-                        WSAMSG(name: notConstCorrectDestinationPtr
-                            .assumingMemoryBound(to: sockaddr.self),
-                            namelen: destinationSize,
-                            lpBuffers: vecPtr,
-                            dwBufferCount: 1,
-                            Control: WSABUF(len: ULONG(controlBytes.count),
-                                            buf: controlBytes.baseAddress?
-                                                .bindMemory(to: CHAR.self,
-                                                            capacity: controlBytes.count)),
-                            dwFlags: 0)
+                var messageHeader =
+                    WSAMSG(name: notConstCorrectDestinationPtr
+                        .assumingMemoryBound(to: sockaddr.self),
+                        namelen: destinationSize,
+                        lpBuffers: vecPtr,
+                        dwBufferCount: 1,
+                        Control: WSABUF(len: ULONG(controlBytes.count),
+                                        buf: controlBytes.baseAddress?
+                                            .bindMemory(to: CHAR.self,
+                                                        capacity: controlBytes.count)),
+                        dwFlags: 0)
                 #else
-                    var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
-                                               msg_namelen: destinationSize,
-                                               msg_iov: vecPtr,
-                                               msg_iovlen: 1,
-                                               msg_control: controlBytes.baseAddress,
-                                               msg_controllen: .init(controlBytes.count),
-                                               msg_flags: 0)
+                var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
+                                           msg_namelen: destinationSize,
+                                           msg_iov: vecPtr,
+                                           msg_iovlen: 1,
+                                           msg_control: controlBytes.baseAddress,
+                                           msg_controllen: .init(controlBytes.count),
+                                           msg_flags: 0)
                 #endif
                 return try NIOBSDSocket.sendmsg(socket: handle, msgHdr: &messageHeader, flags: 0)
             }
@@ -233,30 +233,30 @@ typealias IOVector = iovec
         return try withUnsafeMutablePointer(to: &vec) { vecPtr in
             try storage.withMutableSockAddr { sockaddrPtr, _ in
                 #if os(Windows)
-                    var messageHeader =
-                        WSAMSG(name: sockaddrPtr, namelen: storageLen,
-                               lpBuffers: vecPtr, dwBufferCount: 1,
-                               Control: WSABUF(len: ULONG(controlBytes.controlBytesBuffer.count),
-                                               buf: controlBytes.controlBytesBuffer.baseAddress?
-                                                   .bindMemory(to: CHAR.self,
-                                                               capacity: controlBytes.controlBytesBuffer.count)),
-                               dwFlags: 0)
-                    defer {
-                        // We need to write back the length of the message.
-                        storageLen = messageHeader.namelen
-                    }
+                var messageHeader =
+                    WSAMSG(name: sockaddrPtr, namelen: storageLen,
+                           lpBuffers: vecPtr, dwBufferCount: 1,
+                           Control: WSABUF(len: ULONG(controlBytes.controlBytesBuffer.count),
+                                           buf: controlBytes.controlBytesBuffer.baseAddress?
+                                               .bindMemory(to: CHAR.self,
+                                                           capacity: controlBytes.controlBytesBuffer.count)),
+                           dwFlags: 0)
+                defer {
+                    // We need to write back the length of the message.
+                    storageLen = messageHeader.namelen
+                }
                 #else
-                    var messageHeader = msghdr(msg_name: sockaddrPtr,
-                                               msg_namelen: storageLen,
-                                               msg_iov: vecPtr,
-                                               msg_iovlen: 1,
-                                               msg_control: controlBytes.controlBytesBuffer.baseAddress,
-                                               msg_controllen: .init(controlBytes.controlBytesBuffer.count),
-                                               msg_flags: 0)
-                    defer {
-                        // We need to write back the length of the message.
-                        storageLen = messageHeader.msg_namelen
-                    }
+                var messageHeader = msghdr(msg_name: sockaddrPtr,
+                                           msg_namelen: storageLen,
+                                           msg_iov: vecPtr,
+                                           msg_iovlen: 1,
+                                           msg_control: controlBytes.controlBytesBuffer.baseAddress,
+                                           msg_controllen: .init(controlBytes.controlBytesBuffer.count),
+                                           msg_flags: 0)
+                defer {
+                    // We need to write back the length of the message.
+                    storageLen = messageHeader.msg_namelen
+                }
                 #endif
 
                 let result = try withUnsafeMutablePointer(to: &messageHeader) { messageHeader in

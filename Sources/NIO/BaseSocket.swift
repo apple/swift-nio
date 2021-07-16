@@ -15,46 +15,46 @@
 import NIOConcurrencyHelpers
 
 #if os(Windows)
-    import let WinSDK.EAFNOSUPPORT
-    import let WinSDK.EBADF
-    import let WinSDK.ENOENT
+import let WinSDK.EAFNOSUPPORT
+import let WinSDK.EBADF
+import let WinSDK.ENOENT
 
-    import let WinSDK.FILE_ATTRIBUTE_REPARSE_POINT
-    import let WinSDK.FILE_FLAG_BACKUP_SEMANTICS
-    import let WinSDK.FILE_FLAG_OPEN_REPARSE_POINT
-    import let WinSDK.FILE_SHARE_DELETE
-    import let WinSDK.FILE_SHARE_READ
-    import let WinSDK.FILE_SHARE_WRITE
-    import let WinSDK.FileDispositionInfoEx
+import let WinSDK.FILE_ATTRIBUTE_REPARSE_POINT
+import let WinSDK.FILE_FLAG_BACKUP_SEMANTICS
+import let WinSDK.FILE_FLAG_OPEN_REPARSE_POINT
+import let WinSDK.FILE_SHARE_DELETE
+import let WinSDK.FILE_SHARE_READ
+import let WinSDK.FILE_SHARE_WRITE
+import let WinSDK.FileDispositionInfoEx
 
-    import let WinSDK.GENERIC_READ
+import let WinSDK.GENERIC_READ
 
-    import let WinSDK.INET6_ADDRSTRLEN
-    import let WinSDK.INET_ADDRSTRLEN
+import let WinSDK.INET6_ADDRSTRLEN
+import let WinSDK.INET_ADDRSTRLEN
 
-    import let WinSDK.INVALID_HANDLE_VALUE
-    import let WinSDK.INVALID_SOCKET
+import let WinSDK.INVALID_HANDLE_VALUE
+import let WinSDK.INVALID_SOCKET
 
-    import let WinSDK.IO_REPARSE_TAG_AF_UNIX
+import let WinSDK.IO_REPARSE_TAG_AF_UNIX
 
-    import let WinSDK.NO_ERROR
+import let WinSDK.NO_ERROR
 
-    import let WinSDK.OPEN_EXISTING
+import let WinSDK.OPEN_EXISTING
 
-    import func WinSDK.CloseHandle
-    import func WinSDK.CreateFileW
-    import func WinSDK.DeviceIoControl
-    import func WinSDK.GetFileInformationByHandle
-    import func WinSDK.GetFileType
-    import func WinSDK.GetLastError
-    import func WinSDK.SetFileInformationByHandle
+import func WinSDK.CloseHandle
+import func WinSDK.CreateFileW
+import func WinSDK.DeviceIoControl
+import func WinSDK.GetFileInformationByHandle
+import func WinSDK.GetFileType
+import func WinSDK.GetLastError
+import func WinSDK.SetFileInformationByHandle
 
-    import struct WinSDK.BY_HANDLE_FILE_INFORMATION
-    import struct WinSDK.DWORD
-    import struct WinSDK.FILE_DISPOSITION_INFO
-    import struct WinSDK.socklen_t
+import struct WinSDK.BY_HANDLE_FILE_INFORMATION
+import struct WinSDK.DWORD
+import struct WinSDK.FILE_DISPOSITION_INFO
+import struct WinSDK.socklen_t
 
-    import CNIOWindows
+import CNIOWindows
 #endif
 
 protocol Registration {
@@ -254,9 +254,9 @@ class BaseSocket: BaseSocketProtocol {
     private var descriptor: NIOBSDSocket.Handle
     public var isOpen: Bool {
         #if os(Windows)
-            return descriptor != NIOBSDSocket.invalidHandle
+        return descriptor != NIOBSDSocket.invalidHandle
         #else
-            return descriptor >= 0
+        return descriptor >= 0
         #endif
     }
 
@@ -305,23 +305,23 @@ class BaseSocket: BaseSocketProtocol {
     static func makeSocket(protocolFamily: NIOBSDSocket.ProtocolFamily, type: NIOBSDSocket.SocketType, setNonBlocking: Bool = false) throws -> NIOBSDSocket.Handle {
         var sockType: CInt = type.rawValue
         #if os(Linux)
-            if setNonBlocking {
-                sockType = type.rawValue | Linux.SOCK_NONBLOCK
-            }
+        if setNonBlocking {
+            sockType = type.rawValue | Linux.SOCK_NONBLOCK
+        }
         #endif
         let sock = try NIOBSDSocket.socket(domain: protocolFamily,
                                            type: NIOBSDSocket.SocketType(rawValue: sockType),
                                            protocol: 0)
         #if !os(Linux)
-            if setNonBlocking {
-                do {
-                    try NIOBSDSocket.setNonBlocking(socket: sock)
-                } catch {
-                    // best effort close
-                    try? NIOBSDSocket.close(socket: sock)
-                    throw error
-                }
+        if setNonBlocking {
+            do {
+                try NIOBSDSocket.setNonBlocking(socket: sock)
+            } catch {
+                // best effort close
+                try? NIOBSDSocket.close(socket: sock)
+                throw error
             }
+        }
         #endif
         if protocolFamily == .inet6 {
             var zero: Int32 = 0
@@ -361,9 +361,9 @@ class BaseSocket: BaseSocketProtocol {
     ///     - descriptor: The file descriptor to wrap.
     init(socket descriptor: NIOBSDSocket.Handle) throws {
         #if os(Windows)
-            precondition(descriptor != NIOBSDSocket.invalidHandle, "invalid socket")
+        precondition(descriptor != NIOBSDSocket.invalidHandle, "invalid socket")
         #else
-            precondition(descriptor >= 0, "invalid socket")
+        precondition(descriptor >= 0, "invalid socket")
         #endif
         self.descriptor = descriptor
         do {

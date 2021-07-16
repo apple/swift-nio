@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    import CNIODarwin
+import CNIODarwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
-    import CNIOLinux
+import CNIOLinux
 #endif
 
 /// Memory for use as `cmsghdr` and associated data.
@@ -157,9 +157,9 @@ struct ControlMessageParser {
     }
 
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-        private static let ipv4TosType = IP_RECVTOS
+    private static let ipv4TosType = IP_RECVTOS
     #else
-        private static let ipv4TosType = IP_TOS // Linux
+    private static let ipv4TosType = IP_TOS // Linux
     #endif
 
     static func _readCInt(data: UnsafeRawBufferPointer) -> CInt {

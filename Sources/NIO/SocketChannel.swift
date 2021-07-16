@@ -13,12 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
-    import let WinSDK.ECONNABORTED
-    import let WinSDK.ECONNREFUSED
-    import let WinSDK.EMFILE
-    import let WinSDK.ENFILE
-    import let WinSDK.ENOBUFS
-    import let WinSDK.ENOMEM
+import let WinSDK.ECONNABORTED
+import let WinSDK.ECONNREFUSED
+import let WinSDK.EMFILE
+import let WinSDK.ENFILE
+import let WinSDK.ENOBUFS
+import let WinSDK.ENOMEM
 #endif
 
 extension ByteBuffer {
@@ -428,9 +428,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
             // We only support vector reads on these OSes. Let us know if there's another OS with this syscall!
             #if os(Linux) || os(FreeBSD) || os(Android)
-                self.vectorReadManager.updateMessageCount(value as! Int)
+            self.vectorReadManager.updateMessageCount(value as! Int)
             #else
-                break
+            break
             #endif
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
             let valueAsInt: CInt = value as! Bool ? 1 : 0
@@ -601,51 +601,51 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     private func vectorReadFromSocket() throws -> ReadResult {
         #if os(Linux) || os(FreeBSD) || os(Android)
-            var buffer = recvAllocator.buffer(allocator: allocator)
-            var readResult = ReadResult.none
+        var buffer = recvAllocator.buffer(allocator: allocator)
+        var readResult = ReadResult.none
 
-            readLoop: for i in 1 ... maxMessagesPerRead {
-                guard self.isOpen else {
-                    throw ChannelError.eof
-                }
-                guard let vectorReadManager = self.vectorReadManager else {
-                    // The vector read manager went away. This happens if users unset the vector read manager
-                    // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
-                    break readLoop
-                }
-                buffer.clear()
-
-                // This force-unwrap is safe, as we checked whether this is nil in the caller.
-                let result = try vectorReadManager.readFromSocket(
-                    socket: socket,
-                    buffer: &buffer,
-                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
-                )
-                switch result {
-                case let .some(results, totalRead):
-                    assert(self.isOpen)
-                    assert(isActive)
-
-                    let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
-                    readPending = false
-
-                    var messageIterator = results.makeIterator()
-                    while isActive, let message = messageIterator.next() {
-                        pipeline.fireChannelRead(NIOAny(message))
-                    }
-
-                    if mayGrow, i < maxMessagesPerRead {
-                        buffer = recvAllocator.buffer(allocator: allocator)
-                    }
-                    readResult = .some
-                case .none:
-                    break readLoop
-                }
+        readLoop: for i in 1 ... maxMessagesPerRead {
+            guard self.isOpen else {
+                throw ChannelError.eof
             }
+            guard let vectorReadManager = self.vectorReadManager else {
+                // The vector read manager went away. This happens if users unset the vector read manager
+                // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
+                break readLoop
+            }
+            buffer.clear()
 
-            return readResult
+            // This force-unwrap is safe, as we checked whether this is nil in the caller.
+            let result = try vectorReadManager.readFromSocket(
+                socket: socket,
+                buffer: &buffer,
+                parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
+            )
+            switch result {
+            case let .some(results, totalRead):
+                assert(self.isOpen)
+                assert(isActive)
+
+                let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
+                readPending = false
+
+                var messageIterator = results.makeIterator()
+                while isActive, let message = messageIterator.next() {
+                    pipeline.fireChannelRead(NIOAny(message))
+                }
+
+                if mayGrow, i < maxMessagesPerRead {
+                    buffer = recvAllocator.buffer(allocator: allocator)
+                }
+                readResult = .some
+            case .none:
+                break readLoop
+            }
+        }
+
+        return readResult
         #else
-            fatalError("Cannot perform vector reads on this operating system")
+        fatalError("Cannot perform vector reads on this operating system")
         #endif
     }
 
@@ -806,27 +806,27 @@ extension DatagramChannel: MulticastChannel {
     }
 
     #if !os(Windows)
-        @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
-        func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
-            if eventLoop.inEventLoop {
+    @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
+    func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
+        } else {
+            eventLoop.execute {
                 self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
-            } else {
-                eventLoop.execute {
-                    self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
-                }
             }
         }
+    }
 
-        @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
-        func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
-            if eventLoop.inEventLoop {
+    @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
+    func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+        } else {
+            eventLoop.execute {
                 self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
-            } else {
-                eventLoop.execute {
-                    self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
-                }
             }
         }
+    }
     #endif
 
     func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {

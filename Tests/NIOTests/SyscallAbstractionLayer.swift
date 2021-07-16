@@ -336,11 +336,11 @@ class HookedSocket: Socket, UserKernelInterface {
         try withUnsafeHandle { fd in
             let buffers = iovecs.map { iovec -> ByteBuffer in
                 #if os(Android)
-                    var buffer = ByteBufferAllocator().buffer(capacity: Int(iovec.iov_len))
-                    buffer.writeBytes(UnsafeRawBufferPointer(start: iovec.iov_base, count: Int(iovec.iov_len)))
+                var buffer = ByteBufferAllocator().buffer(capacity: Int(iovec.iov_len))
+                buffer.writeBytes(UnsafeRawBufferPointer(start: iovec.iov_base, count: Int(iovec.iov_len)))
                 #else
-                    var buffer = ByteBufferAllocator().buffer(capacity: iovec.iov_len)
-                    buffer.writeBytes(UnsafeRawBufferPointer(start: iovec.iov_base, count: iovec.iov_len))
+                var buffer = ByteBufferAllocator().buffer(capacity: iovec.iov_len)
+                buffer.writeBytes(UnsafeRawBufferPointer(start: iovec.iov_base, count: iovec.iov_len))
                 #endif
                 return buffer
             }

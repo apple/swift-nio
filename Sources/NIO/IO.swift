@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
-    import typealias WinSDK.DWORD
+import typealias WinSDK.DWORD
 #endif
 
 /// An `Error` for an IO operation.
@@ -34,8 +34,8 @@ public struct IOError: Swift.Error {
 
     private enum Error {
         #if os(Windows)
-            case windows(DWORD)
-            case winsock(CInt)
+        case windows(DWORD)
+        case winsock(CInt)
         #endif
         case errno(CInt)
     }
@@ -48,22 +48,22 @@ public struct IOError: Swift.Error {
         case let .errno(code):
             return code
         #if os(Windows)
-            default:
-                fatalError("IOError domain is not `errno`")
+        default:
+            fatalError("IOError domain is not `errno`")
         #endif
         }
     }
 
     #if os(Windows)
-        public init(windows code: DWORD, reason: String) {
-            self.error = .windows(code)
-            self.failureDescription = reason
-        }
+    public init(windows code: DWORD, reason: String) {
+        self.error = .windows(code)
+        self.failureDescription = reason
+    }
 
-        public init(winsock code: CInt, reason: String) {
-            self.error = .winsock(code)
-            self.failureDescription = reason
-        }
+    public init(winsock code: CInt, reason: String) {
+        self.error = .winsock(code)
+        self.failureDescription = reason
+    }
     #endif
 
     /// Creates a new `IOError``

@@ -14,7 +14,7 @@
 
 import Foundation
 #if !RUNNING_INTEGRATION_TESTS
-    @testable import NIO
+@testable import NIO
 #endif
 
 public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {

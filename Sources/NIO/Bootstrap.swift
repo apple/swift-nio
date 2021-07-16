@@ -241,14 +241,14 @@ public final class ServerBootstrap {
     }
 
     #if !os(Windows)
-        /// Use the existing bound socket file descriptor.
-        ///
-        /// - parameters:
-        ///     - descriptor: The _Unix file descriptor_ representing the bound stream socket.
-        @available(*, deprecated, renamed: "withBoundSocket(_:)")
-        public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
-            self.withBoundSocket(descriptor)
-        }
+    /// Use the existing bound socket file descriptor.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the bound stream socket.
+    @available(*, deprecated, renamed: "withBoundSocket(_:)")
+    public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+        self.withBoundSocket(descriptor)
+    }
     #endif
 
     /// Use the existing bound socket file descriptor.
@@ -643,15 +643,15 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     }
 
     #if !os(Windows)
-        /// Use the existing connected socket file descriptor.
-        ///
-        /// - parameters:
-        ///     - descriptor: The _Unix file descriptor_ representing the connected stream socket.
-        /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-        @available(*, deprecated, renamed: "withConnectedSocket(_:)")
-        public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
-            self.withConnectedSocket(descriptor)
-        }
+    /// Use the existing connected socket file descriptor.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the connected stream socket.
+    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
+    @available(*, deprecated, renamed: "withConnectedSocket(_:)")
+    public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+        self.withConnectedSocket(descriptor)
+    }
     #endif
 
     /// Use the existing connected socket file descriptor.
@@ -826,14 +826,14 @@ public final class DatagramBootstrap {
     }
 
     #if !os(Windows)
-        /// Use the existing bound socket file descriptor.
-        ///
-        /// - parameters:
-        ///     - descriptor: The _Unix file descriptor_ representing the bound datagram socket.
-        @available(*, deprecated, renamed: "withBoundSocket(_:)")
-        public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
-            self.withBoundSocket(descriptor)
-        }
+    /// Use the existing bound socket file descriptor.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the bound datagram socket.
+    @available(*, deprecated, renamed: "withBoundSocket(_:)")
+    public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+        self.withBoundSocket(descriptor)
+    }
     #endif
 
     /// Use the existing bound socket file descriptor.

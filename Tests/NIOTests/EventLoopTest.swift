@@ -551,31 +551,31 @@ public final class EventLoopTest: XCTestCase {
 
     public func testEventLoopPinned() throws {
         #if os(Linux) || os(Android)
-            let target = NIOThread.current.affinity.cpuIds.first!
-            let body: ThreadInitializer = { t in
-                let set = LinuxCPUSet(target)
-                t.affinity = set
-                XCTAssertEqual(set, t.affinity)
-            }
-            let threads: [ThreadInitializer] = [body, body]
+        let target = NIOThread.current.affinity.cpuIds.first!
+        let body: ThreadInitializer = { t in
+            let set = LinuxCPUSet(target)
+            t.affinity = set
+            XCTAssertEqual(set, t.affinity)
+        }
+        let threads: [ThreadInitializer] = [body, body]
 
-            let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
+        let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
 
-            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
         #endif
     }
 
     public func testEventLoopPinnedCPUIdsConstructor() throws {
         #if os(Linux) || os(Android)
-            let target = NIOThread.current.affinity.cpuIds.first!
-            let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [target])
-            let eventLoop = group.next()
-            let set = try eventLoop.submit {
-                NIOThread.current.affinity
-            }.wait()
+        let target = NIOThread.current.affinity.cpuIds.first!
+        let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [target])
+        let eventLoop = group.next()
+        let set = try eventLoop.submit {
+            NIOThread.current.affinity
+        }.wait()
 
-            XCTAssertEqual(LinuxCPUSet(target), set)
-            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        XCTAssertEqual(LinuxCPUSet(target), set)
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
         #endif
     }
 

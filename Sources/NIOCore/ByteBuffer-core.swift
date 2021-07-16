@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
-    import ucrt
+import ucrt
 #elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
+import Darwin
 #else
-    import Glibc
+import Glibc
 #endif
 
 let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc

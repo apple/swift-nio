@@ -148,25 +148,25 @@ extension String {
 // to newer Xcodes does work, we can save ourselves some hassle and just wait until 5.4 to get this
 // enhancement on Apple platforms.
 #if (compiler(>=5.3) && !(os(macOS) || os(iOS) || os(tvOS) || os(watchOS))) || compiler(>=5.4)
-    extension String {
-        @inlinable
-        init(customUnsafeUninitializedCapacity capacity: Int,
-             initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows
-        {
-            if #available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *) {
-                try self.init(unsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
-            } else {
-                try self.init(backportUnsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
-            }
-        }
-    }
-#else
-    extension String {
-        @inlinable
-        init(customUnsafeUninitializedCapacity capacity: Int,
-             initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows
-        {
+extension String {
+    @inlinable
+    init(customUnsafeUninitializedCapacity capacity: Int,
+         initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows
+    {
+        if #available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *) {
+            try self.init(unsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
+        } else {
             try self.init(backportUnsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
         }
     }
+}
+#else
+extension String {
+    @inlinable
+    init(customUnsafeUninitializedCapacity capacity: Int,
+         initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows
+    {
+        try self.init(backportUnsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
+    }
+}
 #endif

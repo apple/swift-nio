@@ -19,11 +19,11 @@ import NIOConcurrencyHelpers
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
     #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
-        return try autoreleasepool {
-            try execute()
-        }
+    return try autoreleasepool {
+        try execute()
+    }
     #else
-        return try execute()
+    return try execute()
     #endif
 }
 

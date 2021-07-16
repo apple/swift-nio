@@ -539,60 +539,60 @@ public final class SocketChannelTest: XCTestCase {
 
     func testInstantTCPConnectionResetThrowsError() throws {
         #if !os(Linux) && !os(Android)
-            // This test checks that we correctly fail with an error rather than
-            // asserting or silently ignoring if a client aborts the connection
-            // early with a RST during or immediately after accept().
-            let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-            defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+        // This test checks that we correctly fail with an error rather than
+        // asserting or silently ignoring if a client aborts the connection
+        // early with a RST during or immediately after accept().
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-            // Handler that checks for the expected error.
-            final class ErrorHandler: ChannelInboundHandler {
-                typealias InboundIn = Channel
-                typealias InboundOut = Channel
+        // Handler that checks for the expected error.
+        final class ErrorHandler: ChannelInboundHandler {
+            typealias InboundIn = Channel
+            typealias InboundOut = Channel
 
-                private let promise: EventLoopPromise<IOError>
+            private let promise: EventLoopPromise<IOError>
 
-                init(_ promise: EventLoopPromise<IOError>) {
-                    self.promise = promise
-                }
-
-                func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
-                    XCTFail("Should not accept a Channel but got \(unwrapInboundIn(data))")
-                    self.promise.fail(ChannelError.inappropriateOperationForState) // any old error will do
-                }
-
-                func errorCaught(context _: ChannelHandlerContext, error: Error) {
-                    if let ioError = error as? IOError, ioError.errnoCode == EINVAL {
-                        self.promise.succeed(ioError)
-                    } else {
-                        self.promise.fail(error)
-                    }
-                }
+            init(_ promise: EventLoopPromise<IOError>) {
+                self.promise = promise
             }
 
-            // Build server channel; after this point the server called listen()
-            let serverPromise = group.next().makePromise(of: IOError.self)
-            let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .serverChannelOption(ChannelOptions.backlog, value: 256)
-                .serverChannelOption(ChannelOptions.autoRead, value: false)
-                .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
-                .bind(host: "127.0.0.1", port: 0)
-                .wait())
-
-            // Make a client socket to mess with the server. Setting SO_LINGER forces RST instead of FIN.
-            let clientSocket = try assertNoThrowWithValue(Socket(protocolFamily: .inet, type: .stream))
-            XCTAssertNoThrow(try clientSocket.setOption(level: .socket, name: .so_linger, value: linger(l_onoff: 1, l_linger: 0)))
-            XCTAssertNoThrow(try clientSocket.connect(to: serverChannel.localAddress!))
-            XCTAssertNoThrow(try clientSocket.close())
-
-            // Trigger accept() in the server
-            serverChannel.read()
-
-            // Wait for the server to have something
-            XCTAssertThrowsError(try serverPromise.futureResult.wait()) { error in
-                XCTAssert(error is NIOFcntlFailedError)
+            func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
+                XCTFail("Should not accept a Channel but got \(unwrapInboundIn(data))")
+                self.promise.fail(ChannelError.inappropriateOperationForState) // any old error will do
             }
+
+            func errorCaught(context _: ChannelHandlerContext, error: Error) {
+                if let ioError = error as? IOError, ioError.errnoCode == EINVAL {
+                    self.promise.succeed(ioError)
+                } else {
+                    self.promise.fail(error)
+                }
+            }
+        }
+
+        // Build server channel; after this point the server called listen()
+        let serverPromise = group.next().makePromise(of: IOError.self)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .serverChannelOption(ChannelOptions.backlog, value: 256)
+            .serverChannelOption(ChannelOptions.autoRead, value: false)
+            .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+
+        // Make a client socket to mess with the server. Setting SO_LINGER forces RST instead of FIN.
+        let clientSocket = try assertNoThrowWithValue(Socket(protocolFamily: .inet, type: .stream))
+        XCTAssertNoThrow(try clientSocket.setOption(level: .socket, name: .so_linger, value: linger(l_onoff: 1, l_linger: 0)))
+        XCTAssertNoThrow(try clientSocket.connect(to: serverChannel.localAddress!))
+        XCTAssertNoThrow(try clientSocket.close())
+
+        // Trigger accept() in the server
+        serverChannel.read()
+
+        // Wait for the server to have something
+        XCTAssertThrowsError(try serverPromise.futureResult.wait()) { error in
+            XCTAssert(error is NIOFcntlFailedError)
+        }
         #endif
     }
 
@@ -730,9 +730,9 @@ public final class SocketChannelTest: XCTestCase {
     func testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide() throws {
         guard isEarlyEOFDeliveryWorkingOnThisOS else {
             #if os(Linux) || os(Android)
-                preconditionFailure("this should only ever be entered on Darwin.")
+            preconditionFailure("this should only ever be entered on Darwin.")
             #else
-                return
+            return
             #endif
         }
         // This test makes sure that we notice EOFs early, even if we never register for read (by dropping all the reads
@@ -786,9 +786,9 @@ public final class SocketChannelTest: XCTestCase {
     func testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide() throws {
         guard isEarlyEOFDeliveryWorkingOnThisOS else {
             #if os(Linux) || os(Android)
-                preconditionFailure("this should only ever be entered on Darwin.")
+            preconditionFailure("this should only ever be entered on Darwin.")
             #else
-                return
+            return
             #endif
         }
         // This test makes sure that we notice EOFs early, even if we never register for read (by dropping all the reads

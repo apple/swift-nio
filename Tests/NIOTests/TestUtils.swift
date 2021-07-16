@@ -124,19 +124,19 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.NIOFileHandle, St
 
 var temporaryDirectory: String {
     #if targetEnvironment(simulator)
-        // Simulator temp directories are so long (and contain the user name) that they're not usable
-        // for UNIX Domain Socket paths (which are limited to 103 bytes).
-        return "/tmp"
+    // Simulator temp directories are so long (and contain the user name) that they're not usable
+    // for UNIX Domain Socket paths (which are limited to 103 bytes).
+    return "/tmp"
     #else
-        #if os(Linux)
-            return "/tmp"
-        #else
-            if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {
-                return FileManager.default.temporaryDirectory.path
-            } else {
-                return "/tmp"
-            }
-        #endif // os
+    #if os(Linux)
+    return "/tmp"
+    #else
+    if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {
+        return FileManager.default.temporaryDirectory.path
+    } else {
+        return "/tmp"
+    }
+    #endif // os
     #endif // targetEnvironment
 }
 

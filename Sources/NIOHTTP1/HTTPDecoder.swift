@@ -14,9 +14,9 @@
 
 import NIO
 #if compiler(>=5.1)
-    @_implementationOnly import CNIOHTTPParser
+@_implementationOnly import CNIOHTTPParser
 #else
-    import CNIOHTTPParser
+import CNIOHTTPParser
 #endif
 
 private extension UnsafeMutablePointer where Pointee == http_parser {
