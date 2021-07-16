@@ -31,6 +31,8 @@ extension HTTPServerPipelineHandlerTest {
                 ("testReadCallsAreSuppressedWhenPipelining", testReadCallsAreSuppressedWhenPipelining),
                 ("testReadCallsAreSuppressedWhenUnbufferingIfThereIsStillBufferedData", testReadCallsAreSuppressedWhenUnbufferingIfThereIsStillBufferedData),
                 ("testServerCanRespondEarly", testServerCanRespondEarly),
+                ("testServerCanRepondContinueMultipleTimes", testServerCanRepondContinueMultipleTimes),
+                ("testServerCanRepondProcessingMultipleTimes", testServerCanRepondProcessingMultipleTimes),
                 ("testPipelineHandlerWillBufferHalfClose", testPipelineHandlerWillBufferHalfClose),
                 ("testPipelineHandlerWillDeliverHalfCloseEarly", testPipelineHandlerWillDeliverHalfCloseEarly),
                 ("testAReadIsNotIssuedWhenUnbufferingAHalfCloseAfterRequestComplete", testAReadIsNotIssuedWhenUnbufferingAHalfCloseAfterRequestComplete),

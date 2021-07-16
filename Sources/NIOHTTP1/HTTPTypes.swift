@@ -1133,6 +1133,11 @@ public enum HTTPResponseStatus {
             return true
         }
     }
+    
+    /// Whether responses with this status code are of the informational type (1xx).
+    public var isInformational: Bool {
+        return self.code / 100 == 1
+    }
 
     /// Initialize a `HTTPResponseStatus` from a given status and reason.
     ///

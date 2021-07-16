@@ -48,7 +48,8 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.receiveds.append(self.unwrapInboundIn(data))
+        let part = self.unwrapInboundIn(data)
+        self.receiveds.append(part)
     }
 
     public func channelUnregistered(context: ChannelHandlerContext) {
@@ -249,6 +250,21 @@ class HTTPServerClientTest : XCTestCase {
                         }.whenComplete { (_: Result<Void, Error>) in
                             self.sentEnd = true
                             self.maybeClose(context: context)
+                    }
+                case "/long-task":
+                    let head = HTTPResponseHead(version: req.version, status: .processing)
+                    let r = HTTPServerResponsePart.head(head)
+                    context.writeAndFlush(self.wrapOutboundOut(r), promise: nil)
+                    context.eventLoop.scheduleTask(in: .milliseconds(100)) {
+                        let head = HTTPResponseHead(version: req.version, status: .ok)
+                        let r = HTTPServerResponsePart.head(head)
+                        context.writeAndFlush(self.wrapOutboundOut(r), promise: nil)
+                        context.writeAndFlush(self.wrapOutboundOut(.end(nil))).recover { error in
+                            XCTFail("unexpected error \(error)")
+                            }.whenComplete { (_: Result<Void, Error>) -> () in
+                                self.sentEnd = true
+                                self.maybeClose(context: context)
+                            }
                     }
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
@@ -632,5 +648,85 @@ class HTTPServerClientTest : XCTestCase {
                                                 httpVersion: .http1_0,
                                                 uri: "/no-headers",
                                                 expectedHeaders: [:]))
+    }
+    
+    func testProcessingResponse() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let expectedHeaders = HTTPHeaders()
+        let expectedSecondHeaders = { () -> HTTPHeaders in
+            var headers = HTTPHeaders()
+            headers.add(name: "transfer-encoding", value: "chunked")
+            return headers
+        }()
+
+        let accumulation = ArrayAccumulationHandler<HTTPClientResponsePart> { (parts) in
+            guard parts.count == 4 else {
+                XCTFail("wrong number of parts: \(parts.count)")
+                return
+            }
+            
+            if case .head(let h) = parts[0] {
+                XCTAssertEqual(HTTPVersion(major: 1, minor: 1), h.version)
+                XCTAssertEqual(HTTPResponseStatus.processing, h.status)
+                XCTAssertEqual(expectedHeaders, h.headers)
+            } else {
+                XCTFail("unexpected type on index 0 \(parts[0])")
+            }
+            
+            if case .end(let trailers) = parts[1] {
+                XCTAssertNil(trailers)
+            } else {
+                XCTFail("unexpected type on index 1 \(parts[1])")
+            }
+            
+            if case .head(let h) = parts[2] {
+                XCTAssertEqual(HTTPVersion(major: 1, minor: 1), h.version)
+                XCTAssertEqual(HTTPResponseStatus.ok, h.status)
+                XCTAssertEqual(expectedSecondHeaders, h.headers)
+            } else {
+                XCTFail("unexpected type on index 0 \(parts[0])")
+            }
+            
+            if case .end(let trailers) = parts[3] {
+                XCTAssertEqual(nil, trailers)
+            } else {
+                XCTFail("unexpected type on index \(parts.count - 1) \(parts[parts.count - 1])")
+            }
+        }
+
+        let httpHandler = SimpleHTTPServer(.byteBuffer)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { channel in
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
+                    channel.pipeline.addHandler(httpHandler)
+                }
+        }.bind(host: "127.0.0.1", port: 0).wait())
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                    channel.pipeline.addHTTPClientHandlers()
+                .flatMap {
+                    channel.pipeline.addHandler(accumulation)
+                }
+            }
+            .connect(to: serverChannel.localAddress!)
+            .wait())
+        defer {
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        let head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .POST, uri: "/long-task")
+        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
+
+        accumulation.syncWaitForCompletion()
     }
 }

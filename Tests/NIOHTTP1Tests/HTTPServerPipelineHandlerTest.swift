@@ -267,6 +267,69 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.channel.read()
         XCTAssertEqual(self.readCounter.readCount, 3)
     }
+    
+    func testServerCanRepondContinueMultipleTimes() throws {
+        // Send in the first part of a request.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        
+        var continueReponse = self.responseHead
+        continueReponse!.status = .continue
+        
+        // Now the server sends a continue reponse.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(continueReponse!)).wait())
+        
+        // The client response completes.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        
+        // Now the server sends the final response.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
+    }
+    
+    func testServerCanRepondProcessingMultipleTimes() throws {
+        // Send in a request.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        
+        // We haven't completed our response, so no more reading
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        
+        var processResponse: HTTPResponseHead = self.responseHead!
+        processResponse.status = .processing
+        
+        // Now the server sends multiple processing reponses.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
+        
+        // We haven't completed our response, so no more reading
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        
+        // Now the server sends multiple processing reponses.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
+        
+        // We haven't completed our response, so no more reading
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        
+        // Now the server sends multiple processing reponses.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
+        
+        // We haven't completed our response, so no more reading
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        
+        // Now the server sends the final response.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
+        
+        // This should have triggered a read
+        XCTAssertEqual(self.readCounter.readCount, 1)
+    }
 
     func testPipelineHandlerWillBufferHalfClose() throws {
         // Send in 2 requests at once.

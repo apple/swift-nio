@@ -38,6 +38,7 @@ extension HTTPServerClientTest {
                 ("testHead", testHead),
                 ("test204", test204),
                 ("testNoResponseHeaders", testNoResponseHeaders),
+                ("testProcessingResponse", testProcessingResponse),
            ]
    }
 }
