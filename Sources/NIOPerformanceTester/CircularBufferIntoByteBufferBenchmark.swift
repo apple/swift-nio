@@ -24,23 +24,23 @@ final class CircularBufferIntoByteBufferBenchmark: Benchmark {
     init(iterations: Int, bufferSize: Int) {
         self.iterations = iterations
         self.bufferSize = bufferSize
-        circularBuffer = CircularBuffer<UInt8>(initialCapacity: self.bufferSize)
-        buffer = ByteBufferAllocator().buffer(capacity: self.bufferSize)
+        self.circularBuffer = CircularBuffer<UInt8>(initialCapacity: self.bufferSize)
+        self.buffer = ByteBufferAllocator().buffer(capacity: self.bufferSize)
     }
 
     func setUp() throws {
-        for i in 0 ..< bufferSize {
-            circularBuffer.append(UInt8(i % 256))
+        for i in 0 ..< self.bufferSize {
+            self.circularBuffer.append(UInt8(i % 256))
         }
     }
 
     func tearDown() {}
 
     func run() -> Int {
-        for _ in 1 ... iterations {
-            buffer.writeBytes(circularBuffer)
-            buffer.setBytes(circularBuffer, at: 0)
-            buffer.clear()
+        for _ in 1 ... self.iterations {
+            self.buffer.writeBytes(self.circularBuffer)
+            self.buffer.setBytes(self.circularBuffer, at: 0)
+            self.buffer.clear()
         }
         return 1
     }

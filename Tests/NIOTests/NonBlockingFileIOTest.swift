@@ -25,22 +25,22 @@ class NonBlockingFileIOTest: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        allocator = ByteBufferAllocator()
-        group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        threadPool = NIOThreadPool(numberOfThreads: 6)
-        threadPool.start()
-        fileIO = NonBlockingFileIO(threadPool: threadPool)
-        eventLoop = group.next()
+        self.allocator = ByteBufferAllocator()
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        self.threadPool = NIOThreadPool(numberOfThreads: 6)
+        self.threadPool.start()
+        self.fileIO = NonBlockingFileIO(threadPool: self.threadPool)
+        self.eventLoop = self.group.next()
     }
 
     override func tearDown() {
-        XCTAssertNoThrow(try group?.syncShutdownGracefully())
-        XCTAssertNoThrow(try threadPool?.syncShutdownGracefully())
-        group = nil
-        eventLoop = nil
-        allocator = nil
-        threadPool = nil
-        fileIO = nil
+        XCTAssertNoThrow(try self.group?.syncShutdownGracefully())
+        XCTAssertNoThrow(try self.threadPool?.syncShutdownGracefully())
+        self.group = nil
+        self.eventLoop = nil
+        self.allocator = nil
+        self.threadPool = nil
+        self.fileIO = nil
         super.tearDown()
     }
 
@@ -129,7 +129,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testGettingErrorWhenEventLoopGroupIsShutdown() throws {
-        threadPool.shutdownGracefully(queue: .global()) { err in
+        self.threadPool.shutdownGracefully(queue: .global()) { err in
             XCTAssertNil(err)
         }
 
@@ -196,11 +196,11 @@ class NonBlockingFileIOTest: XCTestCase {
         defer {
             XCTAssertNoThrow(try unconnectedSockFH.close())
         }
-        XCTAssertThrowsError(try fileIO.readChunked(fileHandle: unconnectedSockFH,
-                                                    byteCount: 5,
-                                                    chunkSize: 1,
-                                                    allocator: allocator,
-                                                    eventLoop: eventLoop) { _ in
+        XCTAssertThrowsError(try self.fileIO.readChunked(fileHandle: unconnectedSockFH,
+                                                         byteCount: 5,
+                                                         chunkSize: 1,
+                                                         allocator: self.allocator,
+                                                         eventLoop: self.eventLoop) { _ in
                 XCTFail("shouldn't have been called")
                 return self.eventLoop.makeSucceededFuture(())
             }.wait()) { error in
@@ -474,7 +474,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testWriting() throws {
-        var buffer = allocator.buffer(capacity: 3)
+        var buffer = self.allocator.buffer(capacity: 3)
         buffer.writeStaticString("123")
 
         try withTemporaryFile(content: "") { fileHandle, _ in
@@ -495,7 +495,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testWriteMultipleTimes() throws {
-        var buffer = allocator.buffer(capacity: 3)
+        var buffer = self.allocator.buffer(capacity: 3)
         buffer.writeStaticString("xxx")
 
         try withTemporaryFile(content: "AAA") { fileHandle, _ in
@@ -520,7 +520,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testWritingWithOffset() throws {
-        var buffer = allocator.buffer(capacity: 3)
+        var buffer = self.allocator.buffer(capacity: 3)
         buffer.writeStaticString("123")
 
         try withTemporaryFile(content: "hello") { fileHandle, _ -> Void in
@@ -546,7 +546,7 @@ class NonBlockingFileIOTest: XCTestCase {
     // results on other platforms. Please add #if:s according
     // to platform requirements.
     func testWritingBeyondEOF() throws {
-        var buffer = allocator.buffer(capacity: 3)
+        var buffer = self.allocator.buffer(capacity: 3)
         buffer.writeStaticString("123")
 
         try withTemporaryFile(content: "hello") { fileHandle, _ -> Void in
@@ -596,7 +596,7 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testFileOpenFails() throws {
         do {
-            _ = try fileIO.openFile(path: "/dev/null/this/does/not/exist", eventLoop: eventLoop).wait()
+            _ = try self.fileIO.openFile(path: "/dev/null/this/does/not/exist", eventLoop: self.eventLoop).wait()
             XCTFail("should've thrown")
         } catch let e as IOError where e.errnoCode == ENOTDIR {
             // OK

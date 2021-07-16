@@ -34,9 +34,9 @@
         let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: .stream, setNonBlocking: setNonBlocking)
         switch protocolFamily {
         case .unix:
-            cleanupOnClose = true
+            self.cleanupOnClose = true
         default:
-            cleanupOnClose = false
+            self.cleanupOnClose = false
         }
         try super.init(socket: sock)
     }
@@ -61,7 +61,7 @@
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if socket is invalid.
     init(socket: NIOBSDSocket.Handle, setNonBlocking: Bool = false) throws {
-        cleanupOnClose = false // socket already bound, owner must clean up
+        self.cleanupOnClose = false // socket already bound, owner must clean up
         try super.init(socket: socket)
         if setNonBlocking {
             try self.setNonBlocking()
@@ -124,7 +124,7 @@
     ///
     /// - throws: An `IOError` if the operation failed.
     override func close() throws {
-        let maybePathname = cleanupOnClose ? (try? localAddress().pathname) : nil
+        let maybePathname = self.cleanupOnClose ? (try? localAddress().pathname) : nil
         try super.close()
         if let socketPath = maybePathname {
             try BaseSocket.cleanupSocket(unixDomainSocketPath: socketPath)

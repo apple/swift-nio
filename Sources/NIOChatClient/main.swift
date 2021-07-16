@@ -28,7 +28,7 @@ private final class ChatHandler: ChannelInboundHandler {
     public func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
         var buffer = unwrapInboundIn(data)
         while let byte: UInt8 = buffer.readInteger() {
-            printByte(byte)
+            self.printByte(byte)
         }
     }
 

@@ -49,7 +49,7 @@ public struct HTTPRequestHead: Equatable {
         }
 
         func copy() -> _Storage {
-            .init(method: method, uri: uri, version: version)
+            .init(method: self.method, uri: self.uri, version: self.version)
         }
     }
 
@@ -62,33 +62,33 @@ public struct HTTPRequestHead: Equatable {
     /// The HTTP method for this request.
     public var method: HTTPMethod {
         get {
-            _storage.method
+            self._storage.method
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
-            _storage.method = newValue
+            self.copyStorageIfNotUniquelyReferenced()
+            self._storage.method = newValue
         }
     }
 
     // This request's URI.
     public var uri: String {
         get {
-            _storage.uri
+            self._storage.uri
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
-            _storage.uri = newValue
+            self.copyStorageIfNotUniquelyReferenced()
+            self._storage.uri = newValue
         }
     }
 
     /// The version for this HTTP request.
     public var version: HTTPVersion {
         get {
-            _storage.version
+            self._storage.version
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
-            _storage.version = newValue
+            self.copyStorageIfNotUniquelyReferenced()
+            self._storage.version = newValue
         }
     }
 
@@ -100,7 +100,7 @@ public struct HTTPRequestHead: Equatable {
     ///     - uri: The URI used on this request.
     ///     - headers: This request's HTTP headers.
     public init(version: HTTPVersion, method: HTTPMethod, uri: String, headers: HTTPHeaders) {
-        _storage = .init(method: method, uri: uri, version: version)
+        self._storage = .init(method: method, uri: uri, version: version)
         self.headers = headers
     }
 
@@ -118,8 +118,8 @@ public struct HTTPRequestHead: Equatable {
     }
 
     private mutating func copyStorageIfNotUniquelyReferenced() {
-        if !isKnownUniquelyReferenced(&_storage) {
-            _storage = _storage.copy()
+        if !isKnownUniquelyReferenced(&self._storage) {
+            self._storage = self._storage.copy()
         }
     }
 }
@@ -154,7 +154,7 @@ public extension HTTPRequestHead {
     /// Whether this HTTP request is a keep-alive request: that is, whether the
     /// connection should remain open after the request is complete.
     var isKeepAlive: Bool {
-        headers.isKeepAlive(version: version)
+        self.headers.isKeepAlive(version: self.version)
     }
 }
 
@@ -177,7 +177,7 @@ public struct HTTPResponseHead: Equatable {
         }
 
         func copy() -> _Storage {
-            .init(status: status, version: version)
+            .init(status: self.status, version: self.version)
         }
     }
 
@@ -190,22 +190,22 @@ public struct HTTPResponseHead: Equatable {
     /// The HTTP response status.
     public var status: HTTPResponseStatus {
         get {
-            _storage.status
+            self._storage.status
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
-            _storage.status = newValue
+            self.copyStorageIfNotUniquelyReferenced()
+            self._storage.status = newValue
         }
     }
 
     /// The HTTP version that corresponds to this response.
     public var version: HTTPVersion {
         get {
-            _storage.version
+            self._storage.version
         }
         set {
-            copyStorageIfNotUniquelyReferenced()
-            _storage.version = newValue
+            self.copyStorageIfNotUniquelyReferenced()
+            self._storage.version = newValue
         }
     }
 
@@ -216,7 +216,7 @@ public struct HTTPResponseHead: Equatable {
     /// - Parameter headers: The headers for this HTTP response.
     public init(version: HTTPVersion, status: HTTPResponseStatus, headers: HTTPHeaders = HTTPHeaders()) {
         self.headers = headers
-        _storage = _Storage(status: status, version: version)
+        self._storage = _Storage(status: status, version: version)
     }
 
     public static func == (lhs: HTTPResponseHead, rhs: HTTPResponseHead) -> Bool {
@@ -224,8 +224,8 @@ public struct HTTPResponseHead: Equatable {
     }
 
     private mutating func copyStorageIfNotUniquelyReferenced() {
-        if !isKnownUniquelyReferenced(&_storage) {
-            _storage = _storage.copy()
+        if !isKnownUniquelyReferenced(&self._storage) {
+            self._storage = self._storage.copy()
         }
     }
 }
@@ -286,11 +286,11 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     internal var keepAliveState: KeepAliveState = .unknown
 
     public var description: String {
-        headers.description
+        self.headers.description
     }
 
     internal var names: [String] {
-        headers.map(\.0)
+        self.headers.map(\.0)
     }
 
     internal init(_ headers: [(String, String)], keepAliveState: KeepAliveState) {
@@ -332,9 +332,9 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// - Parameter value: The header field value to add for the given name.
     public mutating func add(name: String, value: String) {
         precondition(!name.utf8.contains(where: { !$0.isASCII }), "name must be ASCII")
-        headers.append((name, value))
-        if isConnectionHeader(name) {
-            keepAliveState = .unknown
+        self.headers.append((name, value))
+        if self.isConnectionHeader(name) {
+            self.keepAliveState = .unknown
         }
     }
 
@@ -348,9 +348,9 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     ///     names are strongly recommended.
     @inlinable
     public mutating func add<S: Sequence>(contentsOf other: S) where S.Element == (String, String) {
-        headers.reserveCapacity(headers.count + other.underestimatedCount)
+        self.headers.reserveCapacity(self.headers.count + other.underestimatedCount)
         for (name, value) in other {
-            add(name: name, value: value)
+            self.add(name: name, value: value)
         }
     }
 
@@ -358,9 +358,9 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     ///
     /// - Parameter contentsOf: The block of headers to add to these headers.
     public mutating func add(contentsOf other: HTTPHeaders) {
-        headers.append(contentsOf: other.headers)
+        self.headers.append(contentsOf: other.headers)
         if other.keepAliveState == .unknown {
-            keepAliveState = .unknown
+            self.keepAliveState = .unknown
         }
     }
 
@@ -378,11 +378,11 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     //      recommended.
     /// - Parameter value: The header field value to add for the given name.
     public mutating func replaceOrAdd(name: String, value: String) {
-        if isConnectionHeader(name) {
-            keepAliveState = .unknown
+        if self.isConnectionHeader(name) {
+            self.keepAliveState = .unknown
         }
-        remove(name: name)
-        add(name: name, value: value)
+        self.remove(name: name)
+        self.add(name: name, value: value)
     }
 
     /// Remove all values for a given header name from the block.
@@ -391,10 +391,10 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     ///
     /// - Parameter name: The name of the header field to remove from the block.
     public mutating func remove(name nameToRemove: String) {
-        if isConnectionHeader(nameToRemove) {
-            keepAliveState = .unknown
+        if self.isConnectionHeader(nameToRemove) {
+            self.keepAliveState = .unknown
         }
-        headers.removeAll { name, _ in
+        self.headers.removeAll { name, _ in
             if nameToRemove.utf8.count != name.utf8.count {
                 return false
             }
@@ -415,7 +415,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// - Parameter name: The header field name whose values are to be retrieved.
     /// - Returns: A list of the values for that header field name.
     public subscript(name: String) -> [String] {
-        headers.reduce(into: []) { target, lr in
+        self.headers.reduce(into: []) { target, lr in
             let (key, value) = lr
             if key.utf8.compareCaseInsensitiveASCIIBytes(to: name.utf8) {
                 target.append(value)
@@ -435,11 +435,11 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// - Parameter name: The header field name whose first value should be retrieved.
     /// - Returns: The first value for the header field name.
     public func first(name: String) -> String? {
-        guard !headers.isEmpty else {
+        guard !self.headers.isEmpty else {
             return nil
         }
 
-        return headers.first { header in header.0.isEqualCaseInsensitiveASCIIBytes(to: name) }?.1
+        return self.headers.first { header in header.0.isEqualCaseInsensitiveASCIIBytes(to: name) }?.1
     }
 
     /// Checks if a header is present
@@ -448,7 +448,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     ///     - name: The name of the header
     //  - returns: `true` if a header with the name (and value) exists, `false` otherwise.
     public func contains(name: String) -> Bool {
-        for kv in headers {
+        for kv in self.headers {
             if kv.0.utf8.compareCaseInsensitiveASCIIBytes(to: name.utf8) {
                 return true
             }
@@ -489,7 +489,7 @@ public extension HTTPHeaders {
     ///
     /// - Parameter minimumCapacity: The requested number of headers to store.
     mutating func reserveCapacity(_ minimumCapacity: Int) {
-        headers.reserveCapacity(minimumCapacity)
+        self.headers.reserveCapacity(minimumCapacity)
     }
 }
 
@@ -520,23 +520,23 @@ extension HTTPHeaders: RandomAccessCollection {
     }
 
     public var startIndex: HTTPHeaders.Index {
-        .init(base: headers.startIndex)
+        .init(base: self.headers.startIndex)
     }
 
     public var endIndex: HTTPHeaders.Index {
-        .init(base: headers.endIndex)
+        .init(base: self.headers.endIndex)
     }
 
     public func index(before i: HTTPHeaders.Index) -> HTTPHeaders.Index {
-        .init(base: headers.index(before: i.base))
+        .init(base: self.headers.index(before: i.base))
     }
 
     public func index(after i: HTTPHeaders.Index) -> HTTPHeaders.Index {
-        .init(base: headers.index(after: i.base))
+        .init(base: self.headers.index(after: i.base))
     }
 
     public subscript(position: HTTPHeaders.Index) -> Element {
-        headers[position.base]
+        self.headers[position.base]
     }
 }
 
@@ -651,8 +651,8 @@ public struct HTTPVersion: Equatable {
     /// - Parameter major: The major version number.
     /// - Parameter minor: The minor version number.
     public init(major: Int, minor: Int) {
-        _major = UInt16(major)
-        _minor = UInt16(minor)
+        self._major = UInt16(major)
+        self._minor = UInt16(minor)
     }
 
     private var _minor: UInt16
@@ -661,20 +661,20 @@ public struct HTTPVersion: Equatable {
     /// The major version number.
     public var major: Int {
         get {
-            Int(_major)
+            Int(self._major)
         }
         set {
-            _major = UInt16(newValue)
+            self._major = UInt16(newValue)
         }
     }
 
     /// The minor version number.
     public var minor: Int {
         get {
-            Int(_minor)
+            Int(self._minor)
         }
         set {
-            _minor = UInt16(newValue)
+            self._minor = UInt16(newValue)
         }
     }
 
@@ -1122,7 +1122,7 @@ public enum HTTPResponseStatus {
              .switchingProtocols,
              .processing,
              .noContent,
-             .custom where (code < 200) && (code >= 100):
+             .custom where (self.code < 200) && (self.code >= 100):
             return false
         default:
             return true
@@ -1277,19 +1277,19 @@ extension HTTPResponseStatus: Equatable {
 
 extension HTTPRequestHead: CustomStringConvertible {
     public var description: String {
-        "HTTPRequestHead { method: \(method), uri: \"\(uri)\", version: \(version), headers: \(headers) }"
+        "HTTPRequestHead { method: \(self.method), uri: \"\(self.uri)\", version: \(self.version), headers: \(self.headers) }"
     }
 }
 
 extension HTTPResponseHead: CustomStringConvertible {
     public var description: String {
-        "HTTPResponseHead { version: \(version), status: \(status), headers: \(headers) }"
+        "HTTPResponseHead { version: \(self.version), status: \(self.status), headers: \(self.headers) }"
     }
 }
 
 extension HTTPVersion: CustomStringConvertible {
     public var description: String {
-        "HTTP/\(major).\(minor)"
+        "HTTP/\(self.major).\(self.minor)"
     }
 }
 
@@ -1447,18 +1447,18 @@ extension HTTPMethod: RawRepresentable {
 
 extension HTTPResponseHead {
     var contentLength: Int? {
-        headers.contentLength
+        self.headers.contentLength
     }
 }
 
 extension HTTPRequestHead {
     var contentLength: Int? {
-        headers.contentLength
+        self.headers.contentLength
     }
 }
 
 extension HTTPHeaders {
     var contentLength: Int? {
-        first(name: "content-length").flatMap { Int($0) }
+        self.first(name: "content-length").flatMap { Int($0) }
     }
 }

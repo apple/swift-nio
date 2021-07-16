@@ -41,7 +41,7 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
 
         // We are connected. It's time to send the message to the server to initialize the upgrade dance.
         var headers = HTTPHeaders()
-        if case let .ip(host: host, port: port) = target {
+        if case let .ip(host: host, port: port) = self.target {
             headers.add(name: "Host", value: "\(host):\(port)")
         }
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
@@ -103,7 +103,7 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
     // This is being hit, channel active won't be called as it is already added.
     public func handlerAdded(context: ChannelHandlerContext) {
         print("WebSocket handler added.")
-        pingTestFrameData(context: context)
+        self.pingTestFrameData(context: context)
     }
 
     public func handlerRemoved(context _: ChannelHandlerContext) {
@@ -115,19 +115,19 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
 
         switch frame.opcode {
         case .pong:
-            pong(context: context, frame: frame)
+            self.pong(context: context, frame: frame)
         case .text:
             var data = frame.unmaskedData
             let text = data.readString(length: data.readableBytes) ?? ""
             print("Websocket: Received \(text)")
         case .connectionClose:
-            receivedClose(context: context, frame: frame)
+            self.receivedClose(context: context, frame: frame)
         case .binary, .continuation, .ping:
             // We ignore these frames.
             break
         default:
             // Unknown frames are errors.
-            closeOnError(context: context)
+            self.closeOnError(context: context)
         }
     }
 
@@ -142,7 +142,7 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
     }
 
     private func pingTestFrameData(context: ChannelHandlerContext) {
-        let buffer = context.channel.allocator.buffer(string: testFrameData)
+        let buffer = context.channel.allocator.buffer(string: self.testFrameData)
         let frame = WebSocketFrame(fin: true, opcode: .ping, data: buffer)
         context.write(wrapOutboundOut(frame), promise: nil)
     }

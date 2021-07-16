@@ -48,54 +48,54 @@ class HTTPResponseEncoderTests: XCTestCase {
     }
 
     func testNoAutoHeadersFor101() throws {
-        let writtenData = sendResponse(withStatus: .switchingProtocols, andHeaders: HTTPHeaders())
+        let writtenData = self.sendResponse(withStatus: .switchingProtocols, andHeaders: HTTPHeaders())
         writtenData.assertContainsOnly("HTTP/1.1 101 Switching Protocols\r\n\r\n")
     }
 
     func testNoAutoHeadersForCustom1XX() throws {
         let headers = HTTPHeaders([("Link", "</styles.css>; rel=preload; as=style")])
-        let writtenData = sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers)
+        let writtenData = self.sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers)
         writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\n\r\n")
     }
 
     func testNoAutoHeadersFor204() throws {
-        let writtenData = sendResponse(withStatus: .noContent, andHeaders: HTTPHeaders())
+        let writtenData = self.sendResponse(withStatus: .noContent, andHeaders: HTTPHeaders())
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\n\r\n")
     }
 
     func testNoContentLengthHeadersFor101() throws {
         let headers = HTTPHeaders([("content-length", "0")])
-        let writtenData = sendResponse(withStatus: .switchingProtocols, andHeaders: headers)
+        let writtenData = self.sendResponse(withStatus: .switchingProtocols, andHeaders: headers)
         writtenData.assertContainsOnly("HTTP/1.1 101 Switching Protocols\r\n\r\n")
     }
 
     func testNoContentLengthHeadersForCustom1XX() throws {
         let headers = HTTPHeaders([("Link", "</styles.css>; rel=preload; as=style"), ("content-length", "0")])
-        let writtenData = sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers)
+        let writtenData = self.sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers)
         writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\n\r\n")
     }
 
     func testNoContentLengthHeadersFor204() throws {
         let headers = HTTPHeaders([("content-length", "0")])
-        let writtenData = sendResponse(withStatus: .noContent, andHeaders: headers)
+        let writtenData = self.sendResponse(withStatus: .noContent, andHeaders: headers)
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\n\r\n")
     }
 
     func testNoTransferEncodingHeadersFor101() throws {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
-        let writtenData = sendResponse(withStatus: .switchingProtocols, andHeaders: headers)
+        let writtenData = self.sendResponse(withStatus: .switchingProtocols, andHeaders: headers)
         writtenData.assertContainsOnly("HTTP/1.1 101 Switching Protocols\r\n\r\n")
     }
 
     func testNoTransferEncodingHeadersForCustom1XX() throws {
         let headers = HTTPHeaders([("Link", "</styles.css>; rel=preload; as=style"), ("transfer-encoding", "chunked")])
-        let writtenData = sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers)
+        let writtenData = self.sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers)
         writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\n\r\n")
     }
 
     func testNoTransferEncodingHeadersFor204() throws {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
-        let writtenData = sendResponse(withStatus: .noContent, andHeaders: headers)
+        let writtenData = self.sendResponse(withStatus: .noContent, andHeaders: headers)
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\n\r\n")
     }
 

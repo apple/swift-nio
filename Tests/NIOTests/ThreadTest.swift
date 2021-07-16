@@ -84,7 +84,7 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { s = sem }
+            init(sem: DispatchSemaphore) { self.s = sem }
             deinit {
                 s.signal()
             }
@@ -105,7 +105,7 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { s = sem }
+            init(sem: DispatchSemaphore) { self.s = sem }
             deinit {
                 s.signal()
             }
@@ -129,7 +129,7 @@ class ThreadTest: XCTestCase {
         let s3 = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { s = sem }
+            init(sem: DispatchSemaphore) { self.s = sem }
             deinit {
                 s.signal()
             }
@@ -165,7 +165,7 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { s = sem }
+            init(sem: DispatchSemaphore) { self.s = sem }
             deinit {
                 s.signal()
             }
@@ -195,7 +195,7 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { s = sem }
+            init(sem: DispatchSemaphore) { self.s = sem }
             deinit {
                 s.signal()
             }
@@ -223,7 +223,7 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { s = sem }
+            init(sem: DispatchSemaphore) { self.s = sem }
             deinit {
                 s.signal()
             }
@@ -254,7 +254,7 @@ class ThreadTest: XCTestCase {
         let t2Sem = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { s = sem }
+            init(sem: DispatchSemaphore) { self.s = sem }
             deinit {
                 s.signal()
             }

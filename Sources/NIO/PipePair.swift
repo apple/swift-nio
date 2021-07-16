@@ -16,7 +16,7 @@ struct SelectableFileHandle {
     var handle: NIOFileHandle
 
     var isOpen: Bool {
-        handle.isOpen
+        self.handle.isOpen
     }
 
     init(_ handle: NIOFileHandle) {
@@ -24,13 +24,13 @@ struct SelectableFileHandle {
     }
 
     func close() throws {
-        try handle.close()
+        try self.handle.close()
     }
 }
 
 extension SelectableFileHandle: Selectable {
     func withUnsafeHandle<T>(_ body: (CInt) throws -> T) throws -> T {
-        try handle.withUnsafeFileDescriptor(body)
+        try self.handle.withUnsafeFileDescriptor(body)
     }
 }
 
@@ -43,7 +43,7 @@ final class PipePair: SocketProtocol {
     init(inputFD: NIOFileHandle, outputFD: NIOFileHandle) throws {
         self.inputFD = SelectableFileHandle(inputFD)
         self.outputFD = SelectableFileHandle(outputFD)
-        try ignoreSIGPIPE()
+        try self.ignoreSIGPIPE()
         for fileHandle in [inputFD, outputFD] {
             try fileHandle.withUnsafeFileDescriptor {
                 try NIOFileHandle.setNonBlocking(fileDescriptor: $0)
@@ -52,7 +52,7 @@ final class PipePair: SocketProtocol {
     }
 
     func ignoreSIGPIPE() throws {
-        for fileHandle in [inputFD, outputFD] {
+        for fileHandle in [self.inputFD, self.outputFD] {
             try fileHandle.withUnsafeHandle {
                 try PipePair.ignoreSIGPIPE(descriptor: $0)
             }
@@ -60,7 +60,7 @@ final class PipePair: SocketProtocol {
     }
 
     var description: String {
-        "PipePair { in=\(inputFD), out=\(outputFD) }"
+        "PipePair { in=\(self.inputFD), out=\(self.outputFD) }"
     }
 
     func connect(to _: SocketAddress) throws -> Bool {
@@ -72,19 +72,19 @@ final class PipePair: SocketProtocol {
     }
 
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
-        try outputFD.withUnsafeHandle {
+        try self.outputFD.withUnsafeHandle {
             try Posix.write(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
 
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
-        try outputFD.withUnsafeHandle {
+        try self.outputFD.withUnsafeHandle {
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
     }
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        try inputFD.withUnsafeHandle {
+        try self.inputFD.withUnsafeHandle {
             try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
@@ -120,20 +120,20 @@ final class PipePair: SocketProtocol {
     func shutdown(how: Shutdown) throws {
         switch how {
         case .RD:
-            try inputFD.close()
+            try self.inputFD.close()
         case .WR:
-            try outputFD.close()
+            try self.outputFD.close()
         case .RDWR:
-            try close()
+            try self.close()
         }
     }
 
     var isOpen: Bool {
-        inputFD.isOpen || outputFD.isOpen
+        self.inputFD.isOpen || self.outputFD.isOpen
     }
 
     func close() throws {
-        guard inputFD.isOpen || outputFD.isOpen else {
+        guard self.inputFD.isOpen || self.outputFD.isOpen else {
             throw ChannelError.alreadyClosed
         }
         let r1 = Result {

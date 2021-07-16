@@ -22,18 +22,18 @@ private final class CountReadsHandler: ChannelInboundHandler {
     private let completed: EventLoopPromise<Void>
 
     var completionFuture: EventLoopFuture<Void> {
-        completed.futureResult
+        self.completed.futureResult
     }
 
     init(numberOfReadsExpected: Int, completionPromise: EventLoopPromise<Void>) {
-        readsRemaining = numberOfReadsExpected
-        completed = completionPromise
+        self.readsRemaining = numberOfReadsExpected
+        self.completed = completionPromise
     }
 
     func channelRead(context _: ChannelHandlerContext, data _: NIOAny) {
-        readsRemaining -= 1
-        if readsRemaining <= 0 {
-            completed.succeed(())
+        self.readsRemaining -= 1
+        if self.readsRemaining <= 0 {
+            self.completed.succeed(())
         }
     }
 }

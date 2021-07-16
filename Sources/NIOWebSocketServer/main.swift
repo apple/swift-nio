@@ -47,11 +47,11 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
     private var responseBody: ByteBuffer!
 
     func handlerAdded(context: ChannelHandlerContext) {
-        responseBody = context.channel.allocator.buffer(string: websocketResponse)
+        self.responseBody = context.channel.allocator.buffer(string: websocketResponse)
     }
 
     func handlerRemoved(context _: ChannelHandlerContext) {
-        responseBody = nil
+        self.responseBody = nil
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -65,19 +65,19 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
 
         // GETs only.
         guard case .GET = head.method else {
-            respond405(context: context)
+            self.respond405(context: context)
             return
         }
 
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/html")
-        headers.add(name: "Content-Length", value: String(responseBody.readableBytes))
+        headers.add(name: "Content-Length", value: String(self.responseBody.readableBytes))
         headers.add(name: "Connection", value: "close")
         let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1),
                                             status: .ok,
                                             headers: headers)
         context.write(wrapOutboundOut(.head(responseHead)), promise: nil)
-        context.write(wrapOutboundOut(.body(.byteBuffer(responseBody))), promise: nil)
+        context.write(wrapOutboundOut(.body(.byteBuffer(self.responseBody))), promise: nil)
         context.write(wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
             context.close(promise: nil)
         }
@@ -106,7 +106,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
     private var awaitingClose: Bool = false
 
     public func handlerAdded(context: ChannelHandlerContext) {
-        sendTime(context: context)
+        self.sendTime(context: context)
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -114,9 +114,9 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
 
         switch frame.opcode {
         case .connectionClose:
-            receivedClose(context: context, frame: frame)
+            self.receivedClose(context: context, frame: frame)
         case .ping:
-            pong(context: context, frame: frame)
+            self.pong(context: context, frame: frame)
         case .text:
             var data = frame.unmaskedData
             let text = data.readString(length: data.readableBytes) ?? ""
@@ -126,7 +126,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
             break
         default:
             // Unknown frames are errors.
-            closeOnError(context: context)
+            self.closeOnError(context: context)
         }
     }
 
@@ -138,7 +138,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         guard context.channel.isActive else { return }
 
         // We can't send if we sent a close message.
-        guard !awaitingClose else { return }
+        guard !self.awaitingClose else { return }
 
         // We can't really check for error here, but it's also not the purpose of the
         // example so let's not worry about it.
@@ -157,7 +157,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
     private func receivedClose(context: ChannelHandlerContext, frame: WebSocketFrame) {
         // Handle a received close frame. In websockets, we're just going to send the close
         // frame and then close, unless we already sent our own close frame.
-        if awaitingClose {
+        if self.awaitingClose {
             // Cool, we started the close and were waiting for the user. We're done.
             context.close(promise: nil)
         } else {
@@ -194,7 +194,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         context.write(wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
             context.close(mode: .output, promise: nil)
         }
-        awaitingClose = true
+        self.awaitingClose = true
     }
 }
 

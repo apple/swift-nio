@@ -175,7 +175,7 @@
                 let cpuset = try? firstLineOfFile(path: cpusetPath).split(separator: ","),
                 !cpuset.isEmpty
             else { return nil }
-            return cpuset.map(countCoreIds).reduce(0, +)
+            return cpuset.map(self.countCoreIds).reduce(0, +)
         }
 
         static func coreCount(quota quotaPath: String, period periodPath: String) -> Int? {

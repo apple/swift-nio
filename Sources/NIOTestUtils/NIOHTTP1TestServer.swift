@@ -23,26 +23,26 @@ private final class BlockingQueue<Element> {
     public struct TimeoutError: Error {}
 
     internal func append(_ element: Result<Element, Error>) {
-        condition.lock()
-        buffer.append(element)
-        condition.unlock(withValue: true)
+        self.condition.lock()
+        self.buffer.append(element)
+        self.condition.unlock(withValue: true)
     }
 
     internal var isEmpty: Bool {
-        condition.lock()
+        self.condition.lock()
         defer { self.condition.unlock() }
-        return buffer.isEmpty
+        return self.buffer.isEmpty
     }
 
     internal func popFirst(deadline: NIODeadline) throws -> Element {
         let secondsUntilDeath = deadline - NIODeadline.now()
-        guard condition.lock(whenValue: true,
-                             timeoutSeconds: .init(secondsUntilDeath.nanoseconds / 1_000_000_000))
+        guard self.condition.lock(whenValue: true,
+                                  timeoutSeconds: .init(secondsUntilDeath.nanoseconds / 1_000_000_000))
         else {
             throw TimeoutError()
         }
-        let first = buffer.removeFirst()
-        condition.unlock(withValue: !buffer.isEmpty)
+        let first = self.buffer.removeFirst()
+        self.condition.unlock(withValue: !self.buffer.isEmpty)
         return try first.get()
     }
 }
@@ -59,12 +59,12 @@ private final class WebServerHandler: ChannelDuplexHandler {
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
-        webServer.pushError(error)
+        self.webServer.pushError(error)
         context.close(promise: nil)
     }
 
     func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
-        webServer.pushChannelRead(unwrapInboundIn(data))
+        self.webServer.pushChannelRead(unwrapInboundIn(data))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
@@ -94,7 +94,7 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
         case .head:
             context.fireChannelRead(data)
         case var .body(buffer):
-            receivedSoFar.setOrWriteBuffer(&buffer)
+            self.receivedSoFar.setOrWriteBuffer(&buffer)
         case .end:
             if let receivedSoFar = self.receivedSoFar {
                 context.fireChannelRead(wrapInboundOut(.body(receivedSoFar)))
@@ -180,32 +180,32 @@ public final class NIOHTTP1TestServer {
     private var state: State = .idle
 
     func handleChannels() {
-        eventLoop.assertInEventLoop()
+        self.eventLoop.assertInEventLoop()
 
         let channel: Channel
-        switch state {
+        switch self.state {
         case var .channelsAvailable(channels):
             channel = channels.removeFirst()
             if channels.isEmpty {
-                state = .idle
+                self.state = .idle
             } else {
-                state = .channelsAvailable(channels)
+                self.state = .channelsAvailable(channels)
             }
         case .idle:
-            let promise = eventLoop.makePromise(of: Void.self)
+            let promise = self.eventLoop.makePromise(of: Void.self)
             promise.futureResult.whenSuccess {
                 self.handleChannels()
             }
-            state = .waitingForChannel(promise)
+            self.state = .waitingForChannel(promise)
             return
         case .waitingForChannel:
-            preconditionFailure("illegal state \(state)")
+            preconditionFailure("illegal state \(self.state)")
         case .stopped:
             return
         }
 
-        assert(currentClientChannel == nil)
-        currentClientChannel = channel
+        assert(self.currentClientChannel == nil)
+        self.currentClientChannel = channel
         channel.closeFuture.whenSuccess {
             self.currentClientChannel = nil
             self.handleChannels()
@@ -220,9 +220,9 @@ public final class NIOHTTP1TestServer {
     }
 
     public init(group: EventLoopGroup) {
-        eventLoop = group.next()
+        self.eventLoop = group.next()
 
-        serverChannel = try! ServerBootstrap(group: eventLoop)
+        self.serverChannel = try! ServerBootstrap(group: self.eventLoop)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { channel in
                 switch self.state {
@@ -254,8 +254,8 @@ public extension NIOHTTP1TestServer {
     internal struct NonEmptyInboundBufferOnStop: Error {}
 
     func stop() throws {
-        assert(!eventLoop.inEventLoop)
-        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
+        assert(!self.eventLoop.inEventLoop)
+        try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             switch self.state {
             case let .channelsAvailable(channels):
                 self.state = .stopped
@@ -282,15 +282,15 @@ public extension NIOHTTP1TestServer {
     }
 
     func readInbound(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPServerRequestPart {
-        eventLoop.assertNotInEventLoop()
-        return try eventLoop.submit { () -> BlockingQueue<HTTPServerRequestPart> in
+        self.eventLoop.assertNotInEventLoop()
+        return try self.eventLoop.submit { () -> BlockingQueue<HTTPServerRequestPart> in
             self.inboundBuffer
         }.wait().popFirst(deadline: deadline)
     }
 
     func writeOutbound(_ data: HTTPServerResponsePart) throws {
-        eventLoop.assertNotInEventLoop()
-        try eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
+        self.eventLoop.assertNotInEventLoop()
+        try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             if let channel = self.currentClientChannel {
                 return channel.writeAndFlush(data)
             } else {
@@ -300,8 +300,8 @@ public extension NIOHTTP1TestServer {
     }
 
     var serverPort: Int {
-        eventLoop.assertNotInEventLoop()
-        return serverChannel!.localAddress!.port!
+        self.eventLoop.assertNotInEventLoop()
+        return self.serverChannel!.localAddress!.port!
     }
 }
 
@@ -309,13 +309,13 @@ public extension NIOHTTP1TestServer {
 
 private extension NIOHTTP1TestServer {
     func pushChannelRead(_ state: HTTPServerRequestPart) {
-        eventLoop.assertInEventLoop()
-        inboundBuffer.append(.success(state))
+        self.eventLoop.assertInEventLoop()
+        self.inboundBuffer.append(.success(state))
     }
 
     func pushError(_ error: Error) {
-        eventLoop.assertInEventLoop()
-        inboundBuffer.append(.failure(error))
+        self.eventLoop.assertInEventLoop()
+        self.inboundBuffer.append(.failure(error))
     }
 }
 
@@ -347,7 +347,7 @@ public extension NIOHTTP1TestServer {
     func receiveHeadAndVerify(deadline: NIODeadline = .now() + .seconds(10),
                               _ verify: (HTTPRequestHead) throws -> Void = { _ in }) throws
     {
-        try verify(receiveHead(deadline: deadline))
+        try verify(self.receiveHead(deadline: deadline))
     }
 
     /// Waits for a message part to be received and checks that it was a `.body` before returning
@@ -377,7 +377,7 @@ public extension NIOHTTP1TestServer {
     func receiveBodyAndVerify(deadline: NIODeadline = .now() + .seconds(10),
                               _ verify: (ByteBuffer) throws -> Void = { _ in }) throws
     {
-        try verify(receiveBody(deadline: deadline))
+        try verify(self.receiveBody(deadline: deadline))
     }
 
     /// Waits for a message part to be received and checks that it was a `.end` before returning
@@ -407,7 +407,7 @@ public extension NIOHTTP1TestServer {
     func receiveEndAndVerify(deadline _: NIODeadline = .now() + .seconds(10),
                              _ verify: (HTTPHeaders?) throws -> Void = { _ in }) throws
     {
-        try verify(receiveEnd())
+        try verify(self.receiveEnd())
     }
 }
 
@@ -419,6 +419,6 @@ public struct NIOHTTP1TestServerError: Error, Hashable, CustomStringConvertible 
     }
 
     public var description: String {
-        reason
+        self.reason
     }
 }

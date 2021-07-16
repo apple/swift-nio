@@ -36,22 +36,22 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     ///     - backoffProvider: returns a `TimeAmount` which will be the amount of time to wait before attempting another `read`.
     public init(backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider) {
         self.backoffProvider = backoffProvider
-        nextReadDeadlineNS = nil
-        scheduledRead = nil
+        self.nextReadDeadlineNS = nil
+        self.scheduledRead = nil
     }
 
     public func read(context: ChannelHandlerContext) {
         // If we already have a read scheduled there is no need to schedule another one.
-        guard scheduledRead == nil else { return }
+        guard self.scheduledRead == nil else { return }
 
         if let deadline = nextReadDeadlineNS {
             let now = NIODeadline.now()
             if now >= deadline {
                 // The backoff already expired, just do a read.
-                doRead(context)
+                self.doRead(context)
             } else {
                 // Schedule the read to be executed after the backoff time elapsed.
-                scheduleRead(at: deadline, context: context)
+                self.scheduleRead(at: deadline, context: context)
             }
         } else {
             context.read()
@@ -61,10 +61,10 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         if let ioError = error as? IOError {
             if let amount = backoffProvider(ioError) {
-                nextReadDeadlineNS = .now() + amount
+                self.nextReadDeadlineNS = .now() + amount
                 if let scheduled = scheduledRead {
                     scheduled.cancel()
-                    scheduleRead(at: nextReadDeadlineNS!, context: context)
+                    self.scheduleRead(at: self.nextReadDeadlineNS!, context: context)
                 }
             }
         }
@@ -74,9 +74,9 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     public func channelInactive(context: ChannelHandlerContext) {
         if let scheduled = scheduledRead {
             scheduled.cancel()
-            scheduledRead = nil
+            self.scheduledRead = nil
         }
-        nextReadDeadlineNS = nil
+        self.nextReadDeadlineNS = nil
         context.fireChannelInactive()
     }
 
@@ -84,22 +84,22 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
         if let scheduled = scheduledRead {
             // Cancel the previous scheduled read and trigger a read directly. This is needed as otherwise we may never read again.
             scheduled.cancel()
-            scheduledRead = nil
+            self.scheduledRead = nil
             context.read()
         }
-        nextReadDeadlineNS = nil
+        self.nextReadDeadlineNS = nil
     }
 
     private func scheduleRead(at: NIODeadline, context: ChannelHandlerContext) {
-        scheduledRead = context.eventLoop.scheduleTask(deadline: at) {
+        self.scheduledRead = context.eventLoop.scheduleTask(deadline: at) {
             self.doRead(context)
         }
     }
 
     private func doRead(_ context: ChannelHandlerContext) {
         // Reset the backoff time and read.
-        nextReadDeadlineNS = nil
-        scheduledRead = nil
+        self.nextReadDeadlineNS = nil
+        self.scheduledRead = nil
         context.read()
     }
 }
@@ -120,17 +120,17 @@ public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHa
     public init() {}
 
     public func read(context: ChannelHandlerContext) {
-        if writable {
+        if self.writable {
             context.read()
         } else {
-            pendingRead = true
+            self.pendingRead = true
         }
     }
 
     public func channelWritabilityChanged(context: ChannelHandlerContext) {
-        writable = context.channel.isWritable
-        if writable {
-            mayRead(context: context)
+        self.writable = context.channel.isWritable
+        if self.writable {
+            self.mayRead(context: context)
         } else {
             context.flush()
         }
@@ -140,12 +140,12 @@ public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHa
     }
 
     public func handlerRemoved(context: ChannelHandlerContext) {
-        mayRead(context: context)
+        self.mayRead(context: context)
     }
 
     private func mayRead(context: ChannelHandlerContext) {
-        if pendingRead {
-            pendingRead = false
+        if self.pendingRead {
+            self.pendingRead = false
             context.read()
         }
     }
@@ -183,43 +183,43 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
         self.readTimeout = readTimeout
         self.writeTimeout = writeTimeout
         self.allTimeout = allTimeout
-        scheduledAllTask = nil
-        scheduledReaderTask = nil
-        scheduledWriterTask = nil
+        self.scheduledAllTask = nil
+        self.scheduledReaderTask = nil
+        self.scheduledWriterTask = nil
     }
 
     public func handlerAdded(context: ChannelHandlerContext) {
         if context.channel.isActive {
-            initIdleTasks(context)
+            self.initIdleTasks(context)
         }
     }
 
     public func handlerRemoved(context: ChannelHandlerContext) {
-        cancelIdleTasks(context)
+        self.cancelIdleTasks(context)
     }
 
     public func channelActive(context: ChannelHandlerContext) {
-        initIdleTasks(context)
+        self.initIdleTasks(context)
         context.fireChannelActive()
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        if readTimeout != nil || allTimeout != nil {
-            reading = true
+        if self.readTimeout != nil || self.allTimeout != nil {
+            self.reading = true
         }
         context.fireChannelRead(data)
     }
 
     public func channelReadComplete(context: ChannelHandlerContext) {
-        if readTimeout != nil || allTimeout != nil, reading {
-            lastReadTime = .now()
-            reading = false
+        if self.readTimeout != nil || self.allTimeout != nil, self.reading {
+            self.lastReadTime = .now()
+            self.reading = false
         }
         context.fireChannelReadComplete()
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        if writeTimeout == nil, allTimeout == nil {
+        if self.writeTimeout == nil, self.allTimeout == nil {
             context.write(data, promise: promise)
             return
         }
@@ -319,19 +319,19 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
 
     private func initIdleTasks(_ context: ChannelHandlerContext) {
         let now = NIODeadline.now()
-        lastReadTime = now
-        lastWriteCompleteTime = now
-        scheduledReaderTask = schedule(context, readTimeout, makeReadTimeoutTask)
-        scheduledWriterTask = schedule(context, writeTimeout, makeWriteTimeoutTask)
-        scheduledAllTask = schedule(context, allTimeout, makeAllTimeoutTask)
+        self.lastReadTime = now
+        self.lastWriteCompleteTime = now
+        self.scheduledReaderTask = self.schedule(context, self.readTimeout, self.makeReadTimeoutTask)
+        self.scheduledWriterTask = self.schedule(context, self.writeTimeout, self.makeWriteTimeoutTask)
+        self.scheduledAllTask = self.schedule(context, self.allTimeout, self.makeAllTimeoutTask)
     }
 
     private func cancelIdleTasks(_: ChannelHandlerContext) {
-        scheduledReaderTask?.cancel()
-        scheduledWriterTask?.cancel()
-        scheduledAllTask?.cancel()
-        scheduledReaderTask = nil
-        scheduledWriterTask = nil
-        scheduledAllTask = nil
+        self.scheduledReaderTask?.cancel()
+        self.scheduledWriterTask?.cancel()
+        self.scheduledAllTask?.cancel()
+        self.scheduledReaderTask = nil
+        self.scheduledWriterTask = nil
+        self.scheduledAllTask = nil
     }
 }

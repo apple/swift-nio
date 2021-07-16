@@ -21,22 +21,22 @@ class EventCounterHandlerTest: XCTestCase {
     private var handler: EventCounterHandler!
 
     override func setUp() {
-        handler = EventCounterHandler()
-        channel = EmbeddedChannel(handler: handler)
+        self.handler = EventCounterHandler()
+        self.channel = EmbeddedChannel(handler: self.handler)
     }
 
     override func tearDown() {
-        handler = nil
-        XCTAssertNoThrow(try channel?.finish())
-        channel = nil
+        self.handler = nil
+        XCTAssertNoThrow(try self.channel?.finish())
+        self.channel = nil
     }
 
     func testNothingButEmbeddedChannelInit() {
         // EmbeddedChannel calls register
-        XCTAssertEqual(["channelRegistered", "register"], handler.allTriggeredEvents())
-        XCTAssertNoThrow(try handler.checkValidity())
-        XCTAssertEqual(1, handler.channelRegisteredCalls)
-        XCTAssertEqual(1, handler.registerCalls)
+        XCTAssertEqual(["channelRegistered", "register"], self.handler.allTriggeredEvents())
+        XCTAssertNoThrow(try self.handler.checkValidity())
+        XCTAssertEqual(1, self.handler.channelRegisteredCalls)
+        XCTAssertEqual(1, self.handler.registerCalls)
     }
 
     func testNothing() {
@@ -47,76 +47,76 @@ class EventCounterHandlerTest: XCTestCase {
     }
 
     func testInboundWrite() {
-        XCTAssertNoThrow(try channel.writeInbound(()))
+        XCTAssertNoThrow(try self.channel.writeInbound(()))
         XCTAssertEqual(["channelRegistered", "register", "channelRead", "channelReadComplete"],
-                       handler.allTriggeredEvents())
-        XCTAssertNoThrow(try handler.checkValidity())
-        XCTAssertEqual(1, handler.channelRegisteredCalls)
-        XCTAssertEqual(1, handler.registerCalls)
-        XCTAssertEqual(1, handler.channelReadCalls)
-        XCTAssertEqual(1, handler.channelReadCompleteCalls)
+                       self.handler.allTriggeredEvents())
+        XCTAssertNoThrow(try self.handler.checkValidity())
+        XCTAssertEqual(1, self.handler.channelRegisteredCalls)
+        XCTAssertEqual(1, self.handler.registerCalls)
+        XCTAssertEqual(1, self.handler.channelReadCalls)
+        XCTAssertEqual(1, self.handler.channelReadCompleteCalls)
     }
 
     func testOutboundWrite() {
-        XCTAssertNoThrow(try channel.writeOutbound(()))
+        XCTAssertNoThrow(try self.channel.writeOutbound(()))
         XCTAssertEqual(["channelRegistered", "register", "write", "flush"],
-                       handler.allTriggeredEvents())
-        XCTAssertNoThrow(try handler.checkValidity())
-        XCTAssertEqual(1, handler.channelRegisteredCalls)
-        XCTAssertEqual(1, handler.registerCalls)
-        XCTAssertEqual(1, handler.writeCalls)
-        XCTAssertEqual(1, handler.flushCalls)
+                       self.handler.allTriggeredEvents())
+        XCTAssertNoThrow(try self.handler.checkValidity())
+        XCTAssertEqual(1, self.handler.channelRegisteredCalls)
+        XCTAssertEqual(1, self.handler.registerCalls)
+        XCTAssertEqual(1, self.handler.writeCalls)
+        XCTAssertEqual(1, self.handler.flushCalls)
     }
 
     func testConnectChannel() {
-        XCTAssertNoThrow(try channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5678)).wait())
         XCTAssertEqual(["channelRegistered", "register", "connect", "channelActive"],
-                       handler.allTriggeredEvents())
-        XCTAssertNoThrow(try handler.checkValidity())
-        XCTAssertEqual(1, handler.channelRegisteredCalls)
-        XCTAssertEqual(1, handler.registerCalls)
-        XCTAssertEqual(1, handler.connectCalls)
-        XCTAssertEqual(1, handler.channelActiveCalls)
+                       self.handler.allTriggeredEvents())
+        XCTAssertNoThrow(try self.handler.checkValidity())
+        XCTAssertEqual(1, self.handler.channelRegisteredCalls)
+        XCTAssertEqual(1, self.handler.registerCalls)
+        XCTAssertEqual(1, self.handler.connectCalls)
+        XCTAssertEqual(1, self.handler.channelActiveCalls)
     }
 
     func testBindChannel() {
-        XCTAssertNoThrow(try channel.bind(to: .init(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try self.channel.bind(to: .init(ipAddress: "1.2.3.4", port: 5678)).wait())
         XCTAssertEqual(["channelRegistered", "register", "bind"],
-                       handler.allTriggeredEvents())
-        XCTAssertNoThrow(try handler.checkValidity())
-        XCTAssertEqual(1, handler.channelRegisteredCalls)
-        XCTAssertEqual(1, handler.registerCalls)
-        XCTAssertEqual(1, handler.bindCalls)
+                       self.handler.allTriggeredEvents())
+        XCTAssertNoThrow(try self.handler.checkValidity())
+        XCTAssertEqual(1, self.handler.channelRegisteredCalls)
+        XCTAssertEqual(1, self.handler.registerCalls)
+        XCTAssertEqual(1, self.handler.bindCalls)
     }
 
     func testConnectAndCloseChannel() {
-        XCTAssertNoThrow(try channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5678)).wait())
-        XCTAssertNoThrow(try channel.close().wait())
+        XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try self.channel.close().wait())
         XCTAssertEqual(["channelRegistered", "register", "connect", "channelActive", "close", "channelInactive",
                         "channelUnregistered"],
-                       handler.allTriggeredEvents())
-        XCTAssertNoThrow(try handler.checkValidity())
-        XCTAssertEqual(1, handler.channelRegisteredCalls)
-        XCTAssertEqual(1, handler.registerCalls)
-        XCTAssertEqual(1, handler.connectCalls)
-        XCTAssertEqual(1, handler.channelActiveCalls)
-        XCTAssertEqual(1, handler.channelInactiveCalls)
-        XCTAssertEqual(1, handler.closeCalls)
-        XCTAssertEqual(1, handler.channelUnregisteredCalls)
+                       self.handler.allTriggeredEvents())
+        XCTAssertNoThrow(try self.handler.checkValidity())
+        XCTAssertEqual(1, self.handler.channelRegisteredCalls)
+        XCTAssertEqual(1, self.handler.registerCalls)
+        XCTAssertEqual(1, self.handler.connectCalls)
+        XCTAssertEqual(1, self.handler.channelActiveCalls)
+        XCTAssertEqual(1, self.handler.channelInactiveCalls)
+        XCTAssertEqual(1, self.handler.closeCalls)
+        XCTAssertEqual(1, self.handler.channelUnregisteredCalls)
 
-        channel = nil // don't let tearDown close it
+        self.channel = nil // don't let tearDown close it
     }
 
     func testError() {
         struct Dummy: Error {}
-        channel.pipeline.fireErrorCaught(Dummy())
+        self.channel.pipeline.fireErrorCaught(Dummy())
 
         XCTAssertEqual(["channelRegistered", "register", "errorCaught"],
-                       handler.allTriggeredEvents())
-        XCTAssertNoThrow(try handler.checkValidity())
-        XCTAssertEqual(1, handler.errorCaughtCalls)
+                       self.handler.allTriggeredEvents())
+        XCTAssertNoThrow(try self.handler.checkValidity())
+        XCTAssertEqual(1, self.handler.errorCaughtCalls)
 
-        XCTAssertThrowsError(try channel.throwIfErrorCaught())
+        XCTAssertThrowsError(try self.channel.throwIfErrorCaught())
     }
 
     func testEventsWithoutArguments() {
@@ -146,20 +146,20 @@ class EventCounterHandlerTest: XCTestCase {
     }
 
     func testInboundUserEvent() {
-        channel.pipeline.fireUserInboundEventTriggered(())
+        self.channel.pipeline.fireUserInboundEventTriggered(())
 
         XCTAssertEqual(["channelRegistered", "register", "userInboundEventTriggered"],
-                       handler.allTriggeredEvents())
-        XCTAssertNoThrow(try handler.checkValidity())
-        XCTAssertEqual(1, handler.userInboundEventTriggeredCalls)
+                       self.handler.allTriggeredEvents())
+        XCTAssertNoThrow(try self.handler.checkValidity())
+        XCTAssertEqual(1, self.handler.userInboundEventTriggeredCalls)
     }
 
     func testOutboundUserEvent() {
-        channel.pipeline.triggerUserOutboundEvent((), promise: nil)
+        self.channel.pipeline.triggerUserOutboundEvent((), promise: nil)
 
         XCTAssertEqual(["channelRegistered", "register", "triggerUserOutboundEvent"],
-                       handler.allTriggeredEvents())
-        XCTAssertNoThrow(try handler.checkValidity())
-        XCTAssertEqual(1, handler.triggerUserOutboundEventCalls)
+                       self.handler.allTriggeredEvents())
+        XCTAssertNoThrow(try self.handler.checkValidity())
+        XCTAssertEqual(1, self.handler.triggerUserOutboundEventCalls)
     }
 }

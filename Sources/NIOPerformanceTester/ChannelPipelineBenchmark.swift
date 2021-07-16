@@ -30,23 +30,23 @@ final class ChannelPipelineBenchmark: Benchmark {
     private var handlers: [RemovableChannelHandler] = []
 
     init() {
-        channel = EmbeddedChannel()
+        self.channel = EmbeddedChannel()
     }
 
     func setUp() throws {
-        for _ in 0 ..< extraHandlers {
+        for _ in 0 ..< self.extraHandlers {
             let handler = NoOpHandler()
             handlers.append(handler)
-            try channel.pipeline.addHandler(handler).wait()
+            try self.channel.pipeline.addHandler(handler).wait()
         }
         let handler = ConsumingHandler()
         handlers.append(handler)
-        try channel.pipeline.addHandler(handler).wait()
+        try self.channel.pipeline.addHandler(handler).wait()
     }
 
     func tearDown() {
-        let handlersToRemove = handlers
-        handlers.removeAll()
+        let handlersToRemove = self.handlers
+        self.handlers.removeAll()
         try! handlersToRemove.forEach {
             try self.channel.pipeline.removeHandler($0).wait()
         }
@@ -54,7 +54,7 @@ final class ChannelPipelineBenchmark: Benchmark {
 
     func run() -> Int {
         for _ in 0 ..< 1_000_000 {
-            channel.pipeline.fireChannelReadComplete()
+            self.channel.pipeline.fireChannelReadComplete()
         }
         return 1
     }

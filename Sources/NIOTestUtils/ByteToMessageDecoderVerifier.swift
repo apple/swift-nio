@@ -161,20 +161,20 @@ extension ByteToMessageDecoderVerifier {
         }
 
         func readInbound<T>(as _: T.Type = T.self) throws -> T? {
-            try actualChannel.readInbound()
+            try self.actualChannel.readInbound()
         }
 
         @discardableResult public func writeInbound(_ data: ByteBuffer) throws -> EmbeddedChannel.BufferState {
-            inboundWrites.append(data)
-            return try actualChannel.writeInbound(data)
+            self.inboundWrites.append(data)
+            return try self.actualChannel.writeInbound(data)
         }
 
         var allocator: ByteBufferAllocator {
-            actualChannel.allocator
+            self.actualChannel.allocator
         }
 
         func finish() throws -> EmbeddedChannel.LeftOverState {
-            try actualChannel.finish()
+            try self.actualChannel.finish()
         }
     }
 }

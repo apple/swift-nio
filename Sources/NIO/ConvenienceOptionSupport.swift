@@ -124,7 +124,7 @@ public extension ChannelOptions {
         @inlinable
         public init(arrayLiteral elements: TCPConvenienceOption...) {
             for element in elements {
-                add(element)
+                self.add(element)
             }
         }
 
@@ -132,11 +132,11 @@ public extension ChannelOptions {
         mutating func add(_ element: TCPConvenienceOption) {
             switch element.data {
             case .allowLocalEndpointReuse:
-                allowLocalEndpointReuse = true
+                self.allowLocalEndpointReuse = true
             case .allowRemoteHalfClosure:
-                allowRemoteHalfClosure = true
+                self.allowRemoteHalfClosure = true
             case .disableAutoRead:
-                disableAutoRead = true
+                self.disableAutoRead = true
             }
         }
 
@@ -147,7 +147,7 @@ public extension ChannelOptions {
             defer {
                 self.allowLocalEndpointReuse = false
             }
-            return Types.ConvenienceOptionValue<Void>(flag: allowLocalEndpointReuse)
+            return Types.ConvenienceOptionValue<Void>(flag: self.allowLocalEndpointReuse)
         }
 
         /// Caller is consuming the knowledge that disableAutoRead was set or not.
@@ -157,7 +157,7 @@ public extension ChannelOptions {
             defer {
                 self.disableAutoRead = false
             }
-            return Types.ConvenienceOptionValue<Void>(flag: disableAutoRead)
+            return Types.ConvenienceOptionValue<Void>(flag: self.disableAutoRead)
         }
 
         /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
@@ -167,18 +167,18 @@ public extension ChannelOptions {
             defer {
                 self.allowRemoteHalfClosure = false
             }
-            return Types.ConvenienceOptionValue<Void>(flag: allowRemoteHalfClosure)
+            return Types.ConvenienceOptionValue<Void>(flag: self.allowRemoteHalfClosure)
         }
 
         mutating func applyFallbackMapping(_ universalBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
             var result = universalBootstrap
-            if consumeAllowLocalEndpointReuse().isSet {
+            if self.consumeAllowLocalEndpointReuse().isSet {
                 result = result.channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             }
-            if consumeAllowRemoteHalfClosure().isSet {
+            if self.consumeAllowRemoteHalfClosure().isSet {
                 result = result.channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             }
-            if consumeDisableAutoRead().isSet {
+            if self.consumeDisableAutoRead().isSet {
                 result = result.channelOption(ChannelOptions.autoRead, value: false)
             }
             return result

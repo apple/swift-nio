@@ -304,7 +304,7 @@ class EmbeddedChannelTest: XCTestCase {
         public var inactiveNotifications = 0
 
         public func channelInactive(context: ChannelHandlerContext) {
-            inactiveNotifications += 1
+            self.inactiveNotifications += 1
             context.close(promise: nil)
         }
     }

@@ -70,9 +70,9 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
     /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
     ///   negotiation has completed.
     public init(alpnCompleteHandler: @escaping (ALPNResult, Channel) -> EventLoopFuture<Void>) {
-        completionHandler = alpnCompleteHandler
-        waitingForUser = false
-        eventBuffer = []
+        self.completionHandler = alpnCompleteHandler
+        self.waitingForUser = false
+        self.eventBuffer = []
     }
 
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
@@ -100,15 +100,15 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        if waitingForUser {
-            eventBuffer.append(data)
+        if self.waitingForUser {
+            self.eventBuffer.append(data)
         } else {
             context.fireChannelRead(data)
         }
     }
 
     private func handshakeCompleted(context: ChannelHandlerContext, negotiatedProtocol: String?) {
-        waitingForUser = true
+        self.waitingForUser = true
 
         let result: ALPNResult
         if let negotiatedProtocol = negotiatedProtocol {
@@ -117,7 +117,7 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
             result = .fallback
         }
 
-        let switchFuture = completionHandler(result, context.channel)
+        let switchFuture = self.completionHandler(result, context.channel)
         switchFuture.whenComplete { (_: Result<Void, Error>) in
             self.unbuffer(context: context)
             context.pipeline.removeHandler(self, promise: nil)
@@ -125,12 +125,12 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
     }
 
     private func unbuffer(context: ChannelHandlerContext) {
-        for datum in eventBuffer {
+        for datum in self.eventBuffer {
             context.fireChannelRead(datum)
         }
-        let buffer = eventBuffer
-        eventBuffer = []
-        waitingForUser = false
+        let buffer = self.eventBuffer
+        self.eventBuffer = []
+        self.waitingForUser = false
         if buffer.count > 0 {
             context.fireChannelReadComplete()
         }

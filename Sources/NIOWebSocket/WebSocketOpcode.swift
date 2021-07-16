@@ -33,20 +33,20 @@ public struct WebSocketOpcode {
             return nil
         }
 
-        networkRepresentation = encoded
+        self.networkRepresentation = encoded
     }
 
     /// Create an opcode directly with no validation.
     ///
     /// Used only to create the static lets on this structure.
     private init(rawValue: UInt8) {
-        networkRepresentation = rawValue
+        self.networkRepresentation = rawValue
     }
 
     /// Whether the opcode is in the control range: that is, if the
     /// high bit of the opcode nibble is `1`.
     public var isControlOpcode: Bool {
-        networkRepresentation & 0x8 == 0x8
+        self.networkRepresentation & 0x8 == 0x8
     }
 }
 

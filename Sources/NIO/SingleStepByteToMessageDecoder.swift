@@ -205,11 +205,11 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     }
 
     private func append(_ buffer: ByteBuffer) {
-        if _buffer == nil || _buffer!.readableBytes == 0 {
-            _buffer = buffer
+        if self._buffer == nil || self._buffer!.readableBytes == 0 {
+            self._buffer = buffer
         } else {
             var buffer = buffer
-            _buffer!.writeBuffer(&buffer)
+            self._buffer!.writeBuffer(&buffer)
         }
     }
 
@@ -222,16 +222,16 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
             return nil
         }
 
-        _buffer = nil // To avoid CoW
+        self._buffer = nil // To avoid CoW
         let result = try body(&buffer)
-        _buffer = buffer
+        self._buffer = buffer
         return result
     }
 
     private func decodeLoop(decodeMode: DecodeMode, seenEOF: Bool = false, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
         // we want to call decodeLast once with an empty buffer if we have nothing
-        if decodeMode == .last, _buffer == nil || _buffer!.readableBytes == 0 {
-            var emptyBuffer = _buffer == nil ? ByteBuffer() : _buffer!
+        if decodeMode == .last, self._buffer == nil || self._buffer!.readableBytes == 0 {
+            var emptyBuffer = self._buffer == nil ? ByteBuffer() : self._buffer!
             if let message = try decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF) {
                 try messageReceiver(message)
             }
@@ -239,7 +239,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         }
 
         // buffer can only be nil if we're called from finishProcessing which is handled above
-        assert(_buffer != nil)
+        assert(self._buffer != nil)
 
         func decodeOnce(buffer: inout ByteBuffer) throws -> Decoder.InboundOut? {
             defer {
@@ -250,9 +250,9 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
                 }
             }
             if decodeMode == .normal {
-                return try decoder.decode(buffer: &buffer)
+                return try self.decoder.decode(buffer: &buffer)
             } else {
-                return try decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
+                return try self.decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
             }
         }
 
@@ -265,8 +265,8 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         }
 
         // force unwrapping is safe because nil case is handled already and asserted above
-        if _buffer!.readableBytes == 0 {
-            _buffer!.discardReadBytes()
+        if self._buffer!.readableBytes == 0 {
+            self._buffer!.discardReadBytes()
         }
     }
 }
@@ -280,8 +280,8 @@ public extension NIOSingleStepByteToMessageProcessor {
     ///     - buffer: The `ByteBuffer` containing the next data in the stream
     ///     - messageReceiver: A closure called for each message produced by the `Decoder`
     func process(buffer: ByteBuffer, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
-        append(buffer)
-        try decodeLoop(decodeMode: .normal, messageReceiver)
+        self.append(buffer)
+        try self.decodeLoop(decodeMode: .normal, messageReceiver)
     }
 
     /// Call when there is no data left in the stream. Calls `Decoder`.`decodeLast` one or more times. If there is no data left
@@ -291,6 +291,6 @@ public extension NIOSingleStepByteToMessageProcessor {
     ///     - seenEOF: Whether an EOF was seen on the stream.
     ///     - messageReceiver: A closure called for each message produced by the `Decoder`.
     func finishProcessing(seenEOF: Bool, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
-        try decodeLoop(decodeMode: .last, seenEOF: seenEOF, messageReceiver)
+        try self.decodeLoop(decodeMode: .last, seenEOF: seenEOF, messageReceiver)
     }
 }

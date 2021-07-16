@@ -610,7 +610,9 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testFutureInVariousScenarios() throws {
-        enum DummyError: Error { case dummy0; case dummy1 }
+        enum DummyError: Error { case dummy0
+            case dummy1
+        }
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         let el1 = elg.next()
         let el2 = elg.next()
@@ -1040,11 +1042,11 @@ class EventLoopFutureTest: XCTestCase {
         }
 
         func runQuery() -> EventLoopFuture<[String]> {
-            query()
+            self.query()
         }
 
         mutating func close() {
-            closed = true
+            self.closed = true
         }
     }
 

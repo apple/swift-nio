@@ -36,7 +36,7 @@ private final class EchoHandler: ChannelInboundHandler {
 
             // Set the transmission data.
             let buffer = context.channel.allocator.buffer(string: line)
-            numBytes = buffer.readableBytes
+            self.numBytes = buffer.readableBytes
 
             // Forward the data.
             let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
@@ -52,9 +52,9 @@ private final class EchoHandler: ChannelInboundHandler {
         let envelope = unwrapInboundIn(data)
         let byteBuffer = envelope.data
 
-        numBytes -= byteBuffer.readableBytes
+        self.numBytes -= byteBuffer.readableBytes
 
-        if numBytes <= 0 {
+        if self.numBytes <= 0 {
             let string = String(buffer: byteBuffer)
             print("Received: '\(string)' back from the server, closing channel.")
             context.close(promise: nil)

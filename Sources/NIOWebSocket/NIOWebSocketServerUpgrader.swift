@@ -145,7 +145,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
             return channel.eventLoop.makeFailedFuture(NIOWebSocketUpgradeError.invalidUpgradeHeader)
         }
 
-        return shouldUpgrade(channel, upgradeRequest).flatMapThrowing { extraHeaders in
+        return self.shouldUpgrade(channel, upgradeRequest).flatMapThrowing { extraHeaders in
             guard let extraHeaders = extraHeaders else {
                 throw NIOWebSocketUpgradeError.unsupportedWebSocketTarget
             }
@@ -178,7 +178,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
             context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
         }
 
-        if automaticErrorHandling {
+        if self.automaticErrorHandling {
             upgradeFuture = upgradeFuture.flatMap {
                 context.pipeline.addHandler(WebSocketProtocolErrorHandler())
             }

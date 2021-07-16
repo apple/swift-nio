@@ -33,16 +33,16 @@ public struct FileRegion {
     /// The current reader index of this `FileRegion`
     public private(set) var readerIndex: Int {
         get {
-            Int(_readerIndex)
+            Int(self._readerIndex)
         }
         set {
-            _readerIndex = _UInt56(newValue)
+            self._readerIndex = _UInt56(newValue)
         }
     }
 
     /// The end index of this `FileRegion`.
     public var endIndex: Int {
-        Int(_endIndex)
+        Int(self._endIndex)
     }
 
     /// Create a new `FileRegion` from an open `NIOFileHandle`.
@@ -55,20 +55,20 @@ public struct FileRegion {
         precondition(readerIndex <= endIndex, "readerIndex(\(readerIndex) must be <= endIndex(\(endIndex).")
 
         self.fileHandle = fileHandle
-        _readerIndex = _UInt56(readerIndex)
-        _endIndex = UInt64(endIndex)
+        self._readerIndex = _UInt56(readerIndex)
+        self._endIndex = UInt64(endIndex)
     }
 
     /// The number of readable bytes within this FileRegion (taking the `readerIndex` and `endIndex` into account).
     public var readableBytes: Int {
-        endIndex - readerIndex
+        self.endIndex - self.readerIndex
     }
 
     /// Move the readerIndex forward by `offset`.
     public mutating func moveReaderIndex(forwardBy offset: Int) {
-        let newIndex = readerIndex + offset
-        assert(offset >= 0 && newIndex <= endIndex, "new readerIndex: \(newIndex), expected: range(0, \(endIndex))")
-        readerIndex = newIndex
+        let newIndex = self.readerIndex + offset
+        assert(offset >= 0 && newIndex <= self.endIndex, "new readerIndex: \(newIndex), expected: range(0, \(self.endIndex))")
+        self.readerIndex = newIndex
     }
 }
 
@@ -95,6 +95,6 @@ extension FileRegion: Equatable {
 
 extension FileRegion: CustomStringConvertible {
     public var description: String {
-        "FileRegion { handle: \(fileHandle), readerIndex: \(readerIndex), endIndex: \(endIndex) }"
+        "FileRegion { handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex) }"
     }
 }

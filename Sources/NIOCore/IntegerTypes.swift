@@ -24,7 +24,7 @@ struct _UInt24 {
     @inlinable
     init(_ value: UInt32) {
         assert(value & 0xFF00_0000 == 0, "value \(value) too large for _UInt24")
-        _backing = IntegerBitPacking.unpackUInt16UInt8(value)
+        self._backing = IntegerBitPacking.unpackUInt16UInt8(value)
     }
 
     static let bitWidth: Int = 24
@@ -71,7 +71,7 @@ struct _UInt56 {
     @usableFromInline var _backing: (UInt32, UInt16, UInt8)
 
     @inlinable init(_ value: UInt64) {
-        _backing = IntegerBitPacking.unpackUInt32UInt16UInt8(value)
+        self._backing = IntegerBitPacking.unpackUInt32UInt16UInt8(value)
     }
 
     static let bitWidth: Int = 56

@@ -32,28 +32,28 @@ class NIOCloseOnErrorHandlerTest: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        eventLoop = EmbeddedEventLoop()
-        channel = EmbeddedChannel(loop: eventLoop)
+        self.eventLoop = EmbeddedEventLoop()
+        self.channel = EmbeddedChannel(loop: self.eventLoop)
     }
 
     override func tearDown() {
-        eventLoop = nil
-        if channel.isActive {
-            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+        self.eventLoop = nil
+        if self.channel.isActive {
+            XCTAssertNoThrow(XCTAssertTrue(try self.channel.finish().isClean))
         }
 
         super.tearDown()
     }
 
     func testChannelCloseOnError() throws {
-        XCTAssertNoThrow(channel.pipeline.addHandlers([
+        XCTAssertNoThrow(self.channel.pipeline.addHandlers([
             DummyFailingHandler1(),
             NIOCloseOnErrorHandler(),
         ]))
 
-        XCTAssertNoThrow(try channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait())
-        XCTAssertTrue(channel.isActive)
-        XCTAssertThrowsError(try channel.writeInbound("Hello World")) { XCTAssertTrue($0 is DummyFailingHandler1.DummyError1) }
-        XCTAssertFalse(channel.isActive)
+        XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait())
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertThrowsError(try self.channel.writeInbound("Hello World")) { XCTAssertTrue($0 is DummyFailingHandler1.DummyError1) }
+        XCTAssertFalse(self.channel.isActive)
     }
 }

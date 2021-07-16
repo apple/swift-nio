@@ -32,7 +32,7 @@ public extension Array where Array.Element == ByteBuffer {
     }
 
     func allAsString() -> String? {
-        String(decoding: allAsBytes(), as: Unicode.UTF8.self)
+        String(decoding: self.allAsBytes(), as: Unicode.UTF8.self)
     }
 }
 
@@ -42,21 +42,21 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
     private var allDoneBlock: DispatchWorkItem!
 
     public init(completion: @escaping ([T]) -> Void) {
-        allDoneBlock = DispatchWorkItem { [unowned self] () -> Void in
+        self.allDoneBlock = DispatchWorkItem { [unowned self] () -> Void in
             completion(self.receiveds)
         }
     }
 
     public func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
-        receiveds.append(unwrapInboundIn(data))
+        self.receiveds.append(unwrapInboundIn(data))
     }
 
     public func channelUnregistered(context _: ChannelHandlerContext) {
-        allDoneBlock.perform()
+        self.allDoneBlock.perform()
     }
 
     public func syncWaitForCompletion() {
-        allDoneBlock.wait()
+        self.allDoneBlock.wait()
     }
 }
 
@@ -87,12 +87,12 @@ class HTTPServerClientTest: XCTestCase {
         }
 
         private func outboundBody(_ buffer: ByteBuffer) -> (body: HTTPServerResponsePart, destructor: () -> Void) {
-            switch mode {
+            switch self.mode {
             case .byteBuffer:
                 return (.body(.byteBuffer(buffer)), { () in })
             case .fileRegion:
                 let filePath: String = "\(temporaryDirectory)/\(UUID().uuidString)"
-                files.append(filePath)
+                self.files.append(filePath)
 
                 let content = buffer.getData(at: 0, length: buffer.readableBytes)!
                 XCTAssertNoThrow(try content.write(to: URL(fileURLWithPath: filePath)))
@@ -118,7 +118,7 @@ class HTTPServerClientTest: XCTestCase {
                     var b = context.channel.allocator.buffer(capacity: replyString.count)
                     b.writeString(replyString)
 
-                    let outbound = outboundBody(b)
+                    let outbound = self.outboundBody(b)
                     context.write(wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
@@ -140,7 +140,7 @@ class HTTPServerClientTest: XCTestCase {
                         b.clear()
                         b.writeString("\(i)")
 
-                        let outbound = outboundBody(b)
+                        let outbound = self.outboundBody(b)
                         context.write(wrapOutboundOut(outbound.body)).recover { error in
                             XCTFail("unexpected error \(error)")
                         }.whenComplete { (_: Result<Void, Error>) in
@@ -166,7 +166,7 @@ class HTTPServerClientTest: XCTestCase {
                         b.clear()
                         b.writeString("\(i)")
 
-                        let outbound = outboundBody(b)
+                        let outbound = self.outboundBody(b)
                         context.write(wrapOutboundOut(outbound.body)).recover { error in
                             XCTFail("unexpected error \(error)")
                         }.whenComplete { (_: Result<Void, Error>) in
@@ -195,7 +195,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    let outbound = outboundBody(buf)
+                    let outbound = self.outboundBody(buf)
                     context.writeAndFlush(wrapOutboundOut(outbound.body)).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
@@ -240,7 +240,7 @@ class HTTPServerClientTest: XCTestCase {
                     var b = context.channel.allocator.buffer(capacity: replyString.count)
                     b.writeString(replyString)
 
-                    let outbound = outboundBody(b)
+                    let outbound = self.outboundBody(b)
                     context.write(wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
@@ -255,7 +255,7 @@ class HTTPServerClientTest: XCTestCase {
                 }
             case let .end(trailers):
                 XCTAssertNil(trailers)
-                seenEnd = true
+                self.seenEnd = true
             default:
                 XCTFail("wrong")
             }
@@ -268,8 +268,8 @@ class HTTPServerClientTest: XCTestCase {
         // We should only close the connection when the remote peer has sent the entire request
         // and we have sent our entire response.
         private func maybeClose(context: ChannelHandlerContext) {
-            if sentEnd, seenEnd, isOpen {
-                isOpen = false
+            if self.sentEnd, self.seenEnd, self.isOpen {
+                self.isOpen = false
                 context.close().whenFailure { error in
                     XCTFail("unexpected error \(error)")
                 }
@@ -278,11 +278,11 @@ class HTTPServerClientTest: XCTestCase {
     }
 
     func testSimpleGetByteBuffer() throws {
-        try testSimpleGet(.byteBuffer)
+        try self.testSimpleGet(.byteBuffer)
     }
 
     func testSimpleGetFileRegion() throws {
-        try testSimpleGet(.fileRegion)
+        try self.testSimpleGet(.fileRegion)
     }
 
     private class HTTPClientResponsePartAssertHandler: ArrayAccumulationHandler<HTTPClientResponsePart> {
@@ -375,11 +375,11 @@ class HTTPServerClientTest: XCTestCase {
     }
 
     func testSimpleGetChunkedEncodingByteBuffer() throws {
-        try testSimpleGetChunkedEncoding(.byteBuffer)
+        try self.testSimpleGetChunkedEncoding(.byteBuffer)
     }
 
     func testSimpleGetChunkedEncodingFileRegion() throws {
-        try testSimpleGetChunkedEncoding(.fileRegion)
+        try self.testSimpleGetChunkedEncoding(.fileRegion)
     }
 
     private func testSimpleGetChunkedEncoding(_ mode: SendMode) throws {
@@ -431,11 +431,11 @@ class HTTPServerClientTest: XCTestCase {
     }
 
     func testSimpleGetTrailersByteBuffer() throws {
-        try testSimpleGetTrailers(.byteBuffer)
+        try self.testSimpleGetTrailers(.byteBuffer)
     }
 
     func testSimpleGetTrailersFileRegion() throws {
-        try testSimpleGetTrailers(.fileRegion)
+        try self.testSimpleGetTrailers(.fileRegion)
     }
 
     private func testSimpleGetTrailers(_ mode: SendMode) throws {
@@ -488,11 +488,11 @@ class HTTPServerClientTest: XCTestCase {
     }
 
     func testMassiveResponseByteBuffer() throws {
-        try testMassiveResponse(.byteBuffer)
+        try self.testMassiveResponse(.byteBuffer)
     }
 
     func testMassiveResponseFileRegion() throws {
-        try testMassiveResponse(.fileRegion)
+        try self.testMassiveResponse(.fileRegion)
     }
 
     func testMassiveResponse(_ mode: SendMode) throws {
@@ -629,9 +629,9 @@ class HTTPServerClientTest: XCTestCase {
     }
 
     func testNoResponseHeaders() {
-        XCTAssertNoThrow(try testSimpleGet(.byteBuffer,
-                                           httpVersion: .http1_0,
-                                           uri: "/no-headers",
-                                           expectedHeaders: [:]))
+        XCTAssertNoThrow(try self.testSimpleGet(.byteBuffer,
+                                                httpVersion: .http1_0,
+                                                uri: "/no-headers",
+                                                expectedHeaders: [:]))
     }
 }

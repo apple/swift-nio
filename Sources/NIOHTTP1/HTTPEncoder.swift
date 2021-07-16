@@ -145,8 +145,8 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             assert(!(request.headers.contains(name: "content-length") &&
                        request.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
             "illegal HTTP sent: \(request) contains both a content-length and transfer-encoding:chunked")
-            isChunked = correctlyFrameTransportHeaders(hasBody: request.method.hasRequestBody,
-                                                       headers: &request.headers, version: request.version) == .chunked
+            self.isChunked = correctlyFrameTransportHeaders(hasBody: request.method.hasRequestBody,
+                                                            headers: &request.headers, version: request.version) == .chunked
 
             writeHead(wrapOutboundOut: wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(request: request)
@@ -158,9 +158,9 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
                 return
             }
 
-            writeChunk(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: isChunked, chunk: bodyPart, promise: promise)
+            writeChunk(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
         case let .end(trailers):
-            writeTrailers(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: isChunked, trailers: trailers, promise: promise)
+            writeTrailers(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
         }
     }
 }
@@ -183,16 +183,16 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             assert(!(response.headers.contains(name: "content-length") &&
                        response.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
             "illegal HTTP sent: \(response) contains both a content-length and transfer-encoding:chunked")
-            isChunked = correctlyFrameTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no,
-                                                       headers: &response.headers, version: response.version) == .chunked
+            self.isChunked = correctlyFrameTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no,
+                                                            headers: &response.headers, version: response.version) == .chunked
 
             writeHead(wrapOutboundOut: wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(response: response)
             }, context: context, headers: response.headers, promise: promise)
         case let .body(bodyPart):
-            writeChunk(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: isChunked, chunk: bodyPart, promise: promise)
+            writeChunk(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
         case let .end(trailers):
-            writeTrailers(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: isChunked, trailers: trailers, promise: promise)
+            writeTrailers(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
         }
     }
 }
@@ -200,7 +200,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
 private extension ByteBuffer {
     private mutating func write(status: HTTPResponseStatus) {
         writeString(String(status.code))
-        writeWhitespace()
+        self.writeWhitespace()
         writeString(status.reasonPhrase)
     }
 
@@ -209,7 +209,7 @@ private extension ByteBuffer {
         // Optimization for HTTP/1.0
         case (1, 0, .custom(_, _)):
             writeStaticString("HTTP/1.0 ")
-            write(status: response.status)
+            self.write(status: response.status)
             writeStaticString("\r\n")
         case (1, 0, .continue):
             writeStaticString("HTTP/1.0 100 Continue\r\n")
@@ -333,7 +333,7 @@ private extension ByteBuffer {
         // Optimization for HTTP/1.1
         case (1, 1, .custom(_, _)):
             writeStaticString("HTTP/1.1 ")
-            write(status: response.status)
+            self.write(status: response.status)
             writeStaticString("\r\n")
         case (1, 1, .continue):
             writeStaticString("HTTP/1.1 100 Continue\r\n")
@@ -456,9 +456,9 @@ private extension ByteBuffer {
 
         // Fallback for non-known HTTP version
         default:
-            write(version: response.version)
-            writeWhitespace()
-            write(status: response.status)
+            self.write(version: response.version)
+            self.writeWhitespace()
+            self.write(status: response.status)
             writeStaticString("\r\n")
         }
     }
@@ -478,11 +478,11 @@ private extension ByteBuffer {
     }
 
     mutating func write(request: HTTPRequestHead) {
-        write(method: request.method)
-        writeWhitespace()
+        self.write(method: request.method)
+        self.writeWhitespace()
         writeString(request.uri)
-        writeWhitespace()
-        write(version: request.version)
+        self.writeWhitespace()
+        self.write(version: request.version)
         writeStaticString("\r\n")
     }
 

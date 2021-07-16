@@ -64,16 +64,16 @@ final class NIOThread {
     ///     - body: The closure that will accept the `pthread_t`.
     /// - returns: The value returned by `body`.
     internal func withUnsafeThreadHandle<T>(_ body: (ThreadOpsSystem.ThreadHandle) throws -> T) rethrows -> T {
-        try body(handle)
+        try body(self.handle)
     }
 
     /// Get current name of the `NIOThread` or `nil` if not set.
     var currentName: String? {
-        ThreadOpsSystem.threadName(handle)
+        ThreadOpsSystem.threadName(self.handle)
     }
 
     func join() {
-        ThreadOpsSystem.joinThread(handle)
+        ThreadOpsSystem.joinThread(self.handle)
     }
 
     /// Spawns and runs some task in a `NIOThread`.
@@ -97,7 +97,7 @@ final class NIOThread {
 
     /// Returns `true` if the calling thread is the same as this one.
     var isCurrent: Bool {
-        ThreadOpsSystem.isCurrentThread(handle)
+        ThreadOpsSystem.isCurrentThread(self.handle)
     }
 
     /// Returns the current running `NIOThread`.
@@ -110,7 +110,7 @@ final class NIOThread {
 extension NIOThread: CustomStringConvertible {
     var description: String {
         let desiredName = self.desiredName
-        let actualName = currentName
+        let actualName = self.currentName
 
         switch (desiredName, actualName) {
         case (.some(let desiredName), .some(desiredName)):
@@ -149,7 +149,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         private var underlyingKey: ThreadOpsSystem.ThreadSpecificKey
 
         internal init(destructor: @escaping ThreadOpsSystem.ThreadSpecificKeyDestructor) {
-            underlyingKey = ThreadOpsSystem.allocateThreadSpecificValue(destructor: destructor)
+            self.underlyingKey = ThreadOpsSystem.allocateThreadSpecificValue(destructor: destructor)
         }
 
         deinit {
@@ -157,11 +157,11 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         }
 
         public func get() -> UnsafeMutableRawPointer? {
-            ThreadOpsSystem.getThreadSpecificValue(underlyingKey)
+            ThreadOpsSystem.getThreadSpecificValue(self.underlyingKey)
         }
 
         public func set(value: UnsafeMutableRawPointer?) {
-            ThreadOpsSystem.setThreadSpecificValue(key: underlyingKey, value: value)
+            ThreadOpsSystem.setThreadSpecificValue(key: self.underlyingKey, value: value)
         }
     }
 
@@ -169,7 +169,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
 
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).
     public init() {
-        key = Key(destructor: {
+        self.key = Key(destructor: {
             Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
         })
     }
@@ -181,7 +181,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     ///   - value: The value to set for the calling thread.
     public convenience init(value: Value) {
         self.init()
-        currentValue = value
+        self.currentValue = value
     }
 
     /// The value for the current thread.
@@ -201,7 +201,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
             if let raw = key.get() {
                 Unmanaged<BoxedType>.fromOpaque(raw).release()
             }
-            key.set(value: newValue.map { Unmanaged.passRetained(Box((self, $0))).toOpaque() })
+            self.key.set(value: newValue.map { Unmanaged.passRetained(Box((self, $0))).toOpaque() })
         }
     }
 }

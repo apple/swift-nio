@@ -78,12 +78,12 @@ internal final class DeadChannel: Channel {
     let pipeline: ChannelPipeline
 
     public var closeFuture: EventLoopFuture<Void> {
-        eventLoop.makeSucceededFuture(())
+        self.eventLoop.makeSucceededFuture(())
     }
 
     internal init(pipeline: ChannelPipeline) {
         self.pipeline = pipeline
-        eventLoop = pipeline.eventLoop
+        self.eventLoop = pipeline.eventLoop
     }
 
     // This is `Channel` API so must be thread-safe.
@@ -102,11 +102,11 @@ internal final class DeadChannel: Channel {
     let parent: Channel? = nil
 
     func setOption<Option: ChannelOption>(_: Option, value _: Option.Value) -> EventLoopFuture<Void> {
-        EventLoopFuture(eventLoop: pipeline.eventLoop, error: ChannelError.ioOnClosedChannel, file: #file, line: #line)
+        EventLoopFuture(eventLoop: self.pipeline.eventLoop, error: ChannelError.ioOnClosedChannel, file: #file, line: #line)
     }
 
     func getOption<Option: ChannelOption>(_: Option) -> EventLoopFuture<Option.Value> {
-        eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
+        self.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
     }
 
     let isWritable = false

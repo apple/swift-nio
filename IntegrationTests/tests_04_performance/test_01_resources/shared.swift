@@ -33,20 +33,20 @@ final class RepeatedRequests: ChannelInboundHandler {
     }
 
     init(numberOfRequests: Int, eventLoop: EventLoop) {
-        remainingNumberOfRequests = numberOfRequests
+        self.remainingNumberOfRequests = numberOfRequests
         self.numberOfRequests = numberOfRequests
-        isDonePromise = eventLoop.makePromise()
+        self.isDonePromise = eventLoop.makePromise()
     }
 
     func wait() throws -> Int {
         let reqs = try isDonePromise.futureResult.wait()
-        precondition(reqs == numberOfRequests)
+        precondition(reqs == self.numberOfRequests)
         return reqs
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         context.channel.close(promise: nil)
-        isDonePromise.fail(error)
+        self.isDonePromise.fail(error)
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -72,16 +72,16 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
 
     private var responseHead: HTTPResponseHead {
         var head = HTTPResponseHead(version: .http1_1, status: .ok)
-        head.headers.add(name: "Content-Length", value: "\(bodyLength)")
-        for i in 0 ..< numberOfAdditionalHeaders {
+        head.headers.add(name: "Content-Length", value: "\(self.bodyLength)")
+        for i in 0 ..< self.numberOfAdditionalHeaders {
             head.headers.add(name: "X-Random-Extra-Header", value: "\(i)")
         }
         return head
     }
 
     private func responseBody(allocator: ByteBufferAllocator) -> ByteBuffer {
-        var buffer = allocator.buffer(capacity: bodyLength)
-        for i in 0 ..< bodyLength {
+        var buffer = allocator.buffer(capacity: self.bodyLength)
+        for i in 0 ..< self.bodyLength {
             buffer.writeInteger(UInt8(i % Int(UInt8.max)))
         }
         return buffer
@@ -177,17 +177,17 @@ enum UDPShared {
 
         init(remoteAddress: SocketAddress, numberOfRepetitions: Int) {
             self.remoteAddress = remoteAddress
-            repetitionsRemaining = numberOfRepetitions
+            self.repetitionsRemaining = numberOfRepetitions
         }
 
         public func channelActive(context: ChannelHandlerContext) {
             // Channel is available. It's time to send the message to the server to initialize the ping-pong sequence.
-            sendSomeDataIfDesiredOrClose(context: context)
+            self.sendSomeDataIfDesiredOrClose(context: context)
         }
 
         private func sendSomeDataIfDesiredOrClose(context: ChannelHandlerContext) {
-            if repetitionsRemaining > 0 {
-                repetitionsRemaining -= 1
+            if self.repetitionsRemaining > 0 {
+                self.repetitionsRemaining -= 1
 
                 // Set the transmission data.
                 let line = "Something to send there and back again."
@@ -205,7 +205,7 @@ enum UDPShared {
 
         public func channelRead(context: ChannelHandlerContext, data _: NIOAny) {
             // Got back a response - maybe send some more.
-            sendSomeDataIfDesiredOrClose(context: context)
+            self.sendSomeDataIfDesiredOrClose(context: context)
         }
 
         public func errorCaught(context _: ChannelHandlerContext, error _: Error) {

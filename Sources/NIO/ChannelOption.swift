@@ -76,19 +76,19 @@ public extension ChannelOptions {
 
             public var level: SocketOptionLevel {
                 get {
-                    SocketOptionLevel(optionLevel.rawValue)
+                    SocketOptionLevel(self.optionLevel.rawValue)
                 }
                 set {
-                    optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(newValue))
+                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(newValue))
                 }
             }
 
             public var name: SocketOptionName {
                 get {
-                    SocketOptionName(optionName.rawValue)
+                    SocketOptionName(self.optionName.rawValue)
                 }
                 set {
-                    optionName = NIOBSDSocket.Option(rawValue: CInt(newValue))
+                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(newValue))
                 }
             }
 
@@ -99,8 +99,8 @@ public extension ChannelOptions {
                 ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
                 ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
                 public init(level: SocketOptionLevel, name: SocketOptionName) {
-                    optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
-                    optionName = NIOBSDSocket.Option(rawValue: CInt(name))
+                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
+                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
                 }
             #endif
 
@@ -110,8 +110,8 @@ public extension ChannelOptions {
             ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
             ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
             public init(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) {
-                optionLevel = level
-                optionName = name
+                self.optionLevel = level
+                self.optionName = name
             }
         }
 
@@ -327,8 +327,8 @@ public extension ChannelOptions {
         internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))]
 
         public init() {
-            _storage = []
-            _storage.reserveCapacity(2)
+            self._storage = []
+            self._storage.reserveCapacity(2)
         }
 
         /// Add `Options`, a `ChannelOption` to the `ChannelOptions.Storage`.
@@ -344,7 +344,7 @@ public extension ChannelOptions {
                 }
             }
             var hasSet = false
-            _storage = _storage.map { currentKeyAndValue in
+            self._storage = self._storage.map { currentKeyAndValue in
                 let (currentKey, _) = currentKeyAndValue
                 if let currentKey = currentKey as? Option, currentKey == newKey {
                     hasSet = true
@@ -354,7 +354,7 @@ public extension ChannelOptions {
                 }
             }
             if !hasSet {
-                _storage.append((newKey, (newValue, applier)))
+                self._storage.append((newKey, (newValue, applier)))
             }
         }
 
@@ -366,7 +366,7 @@ public extension ChannelOptions {
         ///    - An `EventLoopFuture` that is fulfilled when all `ChannelOption`s have been applied to the `Channel`.
         public func applyAllChannelOptions(to channel: Channel) -> EventLoopFuture<Void> {
             let applyPromise = channel.eventLoop.makePromise(of: Void.self)
-            var it = _storage.makeIterator()
+            var it = self._storage.makeIterator()
 
             func applyNext() {
                 guard let (key, (value, applier)) = it.next() else {

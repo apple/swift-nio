@@ -40,9 +40,9 @@ public extension ChannelPipeline {
     func addHTTPClientHandlers(position: Position = .last,
                                leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void>
     {
-        addHTTPClientHandlers(position: position,
-                              leftOverBytesStrategy: leftOverBytesStrategy,
-                              withClientUpgrade: nil)
+        self.addHTTPClientHandlers(position: position,
+                                   leftOverBytesStrategy: leftOverBytesStrategy,
+                                   withClientUpgrade: nil)
     }
 
     /// Configure a `ChannelPipeline` for use as a HTTP client with a client upgrader configuration.
@@ -154,12 +154,12 @@ extension ChannelPipeline.SynchronousOperations {
         // an upgrade handler -- i.e. just an array literal -- the compiler is able to promote the array to the stack
         // which saves an allocation. That's not the case when the upgrade handler is present.
         if let upgrade = upgrade {
-            try _addHTTPClientHandlers(position: position,
-                                       leftOverBytesStrategy: leftOverBytesStrategy,
-                                       withClientUpgrade: upgrade)
+            try self._addHTTPClientHandlers(position: position,
+                                            leftOverBytesStrategy: leftOverBytesStrategy,
+                                            withClientUpgrade: upgrade)
         } else {
-            try _addHTTPClientHandlers(position: position,
-                                       leftOverBytesStrategy: leftOverBytesStrategy)
+            try self._addHTTPClientHandlers(position: position,
+                                            leftOverBytesStrategy: leftOverBytesStrategy)
         }
     }
 

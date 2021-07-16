@@ -127,18 +127,18 @@ class CircularBufferTests: XCTestCase {
         ring.append(1)
         XCTAssertEqual(ring.count, 1)
         XCTAssertEqual(ring[ring.startIndex], 1)
-        XCTAssertEqual(collectAllIndices(ring: ring),
-                       collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
-                                                                                           offsetBy: 1)))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 1)))
         XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(2)
         XCTAssertEqual(ring.count, 2)
         XCTAssertEqual(ring[ring.startIndex], 1)
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 2)
-        XCTAssertEqual(collectAllIndices(ring: ring),
-                       collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
-                                                                                           offsetBy: 2)))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 2)))
         XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(3)
@@ -146,35 +146,35 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring[ring.startIndex], 1)
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 2)
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 2)], 3)
-        XCTAssertEqual(collectAllIndices(ring: ring),
-                       collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
-                                                                                           offsetBy: 3)))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 3)))
         XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         XCTAssertEqual(1, ring.removeFirst())
         XCTAssertEqual(ring.count, 2)
         XCTAssertEqual(ring[ring.startIndex], 2)
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 3)
-        XCTAssertEqual(collectAllIndices(ring: ring),
-                       collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
-                                                                                           offsetBy: 2)))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 2)))
         XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         XCTAssertEqual(2, ring.removeFirst())
         XCTAssertEqual(ring.count, 1)
         XCTAssertEqual(ring[ring.startIndex], 3)
-        XCTAssertEqual(collectAllIndices(ring: ring),
-                       collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
-                                                                                           offsetBy: 1)))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 1)))
         XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(5)
         XCTAssertEqual(ring.count, 2)
         XCTAssertEqual(ring[ring.startIndex], 3)
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 5)
-        XCTAssertEqual(collectAllIndices(ring: ring),
-                       collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
-                                                                                           offsetBy: 2)))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 2)))
         XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(6)
@@ -182,9 +182,9 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring[ring.startIndex], 3)
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 5)
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 2)], 6)
-        XCTAssertEqual(collectAllIndices(ring: ring),
-                       collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
-                                                                                           offsetBy: 3)))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 3)))
         XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(7)
@@ -193,9 +193,9 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 5)
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 2)], 6)
         XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 3)], 7)
-        XCTAssertEqual(collectAllIndices(ring: ring),
-                       collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
-                                                                                           offsetBy: 4)))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 4)))
         XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
     }
 
@@ -214,9 +214,9 @@ class CircularBufferTests: XCTestCase {
         XCTAssertFalse(ring.isEmpty)
         XCTAssertEqual(5, ring.count)
 
-        XCTAssertEqual(collectAllIndices(ring: ring),
-                       collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
-                                                                                           offsetBy: 5)))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 5)))
         XCTAssertEqual(ring.startIndex, ring.startIndex)
         XCTAssertEqual(ring.endIndex, ring.index(ring.startIndex, offsetBy: 5))
 

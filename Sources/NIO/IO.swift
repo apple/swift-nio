@@ -29,7 +29,7 @@ public struct IOError: Swift.Error {
 
     @available(*, deprecated, message: "NIO no longer uses FailureDescription, use IOError.description for a human-readable error description")
     public var reason: FailureDescription {
-        .reason(failureDescription)
+        .reason(self.failureDescription)
     }
 
     private enum Error {
@@ -44,7 +44,7 @@ public struct IOError: Swift.Error {
 
     /// The `errno` that was set for the operation.
     public var errnoCode: CInt {
-        switch error {
+        switch self.error {
         case let .errno(code):
             return code
         #if os(Windows)
@@ -56,13 +56,13 @@ public struct IOError: Swift.Error {
 
     #if os(Windows)
         public init(windows code: DWORD, reason: String) {
-            error = .windows(code)
-            failureDescription = reason
+            self.error = .windows(code)
+            self.failureDescription = reason
         }
 
         public init(winsock code: CInt, reason: String) {
-            error = .winsock(code)
-            failureDescription = reason
+            self.error = .winsock(code)
+            self.failureDescription = reason
         }
     #endif
 
@@ -72,8 +72,8 @@ public struct IOError: Swift.Error {
     ///     - errorCode: the `errno` that was set for the operation.
     ///     - reason: the actual reason (in an human-readable form).
     public init(errnoCode code: CInt, reason: String) {
-        error = .errno(code)
-        failureDescription = reason
+        self.error = .errno(code)
+        self.failureDescription = reason
     }
 
     /// Creates a new `IOError``
@@ -83,8 +83,8 @@ public struct IOError: Swift.Error {
     ///     - function: The function the error happened in, the human readable description will be generated automatically when needed.
     @available(*, deprecated, renamed: "init(errnoCode:reason:)")
     public init(errnoCode code: CInt, function: StaticString) {
-        error = .errno(code)
-        failureDescription = "\(function)"
+        self.error = .errno(code)
+        self.failureDescription = "\(function)"
     }
 }
 
@@ -115,11 +115,11 @@ internal extension IOResult where T: FixedWidthInteger {
 
 extension IOError: CustomStringConvertible {
     public var description: String {
-        localizedDescription
+        self.localizedDescription
     }
 
     public var localizedDescription: String {
-        reasonForError(errnoCode: errnoCode, reason: failureDescription)
+        reasonForError(errnoCode: self.errnoCode, reason: self.failureDescription)
     }
 }
 

@@ -232,7 +232,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
         var buffer = alloc.buffer(capacity: 12)
 
-        try withPendingDatagramWritesManager { pwm in
+        try self.withPendingDatagramWritesManager { pwm in
             buffer.clear()
             let ps: [EventLoopPromise<Void>] = (0 ..< 2).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
@@ -288,7 +288,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let emptyBuffer = buffer
         _ = buffer.writeString("1234")
 
-        try withPendingDatagramWritesManager { pwm in
+        try self.withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: firstAddress, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: secondAddress, data: buffer), promise: ps[1])
@@ -324,7 +324,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeString("1234")
 
-        try withPendingDatagramWritesManager { pwm in
+        try self.withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 4).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: firstAddress, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: secondAddress, data: buffer), promise: ps[1])
@@ -371,7 +371,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeBytes([UInt8](repeating: 0xFF, count: 12))
 
-        try withPendingDatagramWritesManager { pwm in
+        try self.withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ... pwm.writeSpinCount + 1).map { (_: UInt) in el.makePromise() }
             ps.forEach { _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: $0) }
             let maxVectorWritabilities = ps.map { (_: EventLoopPromise<Void>) in (buffer.readableBytes, address) }
@@ -410,7 +410,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeString("1234")
 
-        try withPendingDatagramWritesManager { pwm in
+        try self.withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
@@ -481,7 +481,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         buffer.moveReaderIndex(to: 0)
         buffer.moveWriterIndex(to: biggerThanWriteV)
 
-        try withPendingDatagramWritesManager { pwm in
+        try self.withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
@@ -559,7 +559,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeString("1234")
 
-        try withPendingDatagramWritesManager { pwm in
+        try self.withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
@@ -590,7 +590,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeString("1234")
 
-        try withPendingDatagramWritesManager { pwm in
+        try self.withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ... Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
             ps.forEach { p in
                 _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: p)

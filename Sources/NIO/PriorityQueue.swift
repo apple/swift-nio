@@ -18,38 +18,38 @@ internal struct PriorityQueue<Element: Comparable> {
     internal var _heap: Heap<Element>
 
     internal init() {
-        _heap = Heap()
+        self._heap = Heap()
     }
 
     @inlinable
     internal mutating func remove(_ key: Element) {
-        _heap.remove(value: key)
+        self._heap.remove(value: key)
     }
 
     @inlinable
     internal mutating func push(_ key: Element) {
-        _heap.append(key)
+        self._heap.append(key)
     }
 
     @inlinable
     internal func peek() -> Element? {
-        _heap.storage.first
+        self._heap.storage.first
     }
 
     @inlinable
     internal var isEmpty: Bool {
-        _heap.storage.isEmpty
+        self._heap.storage.isEmpty
     }
 
     @inlinable
     @discardableResult
     internal mutating func pop() -> Element? {
-        _heap.removeRoot()
+        self._heap.removeRoot()
     }
 
     @inlinable
     internal mutating func clear() {
-        _heap = Heap()
+        self._heap = Heap()
     }
 }
 
@@ -69,7 +69,7 @@ extension PriorityQueue: Sequence {
         }
 
         public mutating func next() -> Element? {
-            queue.pop()
+            self.queue.pop()
         }
     }
 
@@ -81,13 +81,13 @@ extension PriorityQueue: Sequence {
 
 extension PriorityQueue {
     var count: Int {
-        _heap.count
+        self._heap.count
     }
 }
 
 extension PriorityQueue: CustomStringConvertible {
     @usableFromInline
     var description: String {
-        "PriorityQueue(count: \(count)): \(Array(self))"
+        "PriorityQueue(count: \(self.count)): \(Array(self))"
     }
 }

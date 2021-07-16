@@ -22,12 +22,12 @@ class NIOHTTP1TestServerTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
 
     override func setUp() {
-        group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     }
 
     override func tearDown() {
-        XCTAssertNoThrow(try group.syncShutdownGracefully())
-        group = nil
+        XCTAssertNoThrow(try self.group.syncShutdownGracefully())
+        self.group = nil
     }
 
     func connect(serverPort: Int, responsePromise: EventLoopPromise<String>) throws -> EventLoopFuture<Channel> {
@@ -45,7 +45,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
     }
 
     private func sendRequest(channel: Channel, uri: String, message: String) {
-        let requestBuffer = allocator.buffer(string: message)
+        let requestBuffer = self.allocator.buffer(string: message)
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(requestBuffer.readableBytes)")
@@ -61,9 +61,9 @@ class NIOHTTP1TestServerTest: XCTestCase {
     }
 
     private func sendRequestTo(_ url: URL, body: String) throws -> EventLoopFuture<String> {
-        let responsePromise = group.next().makePromise(of: String.self)
+        let responsePromise = self.group.next().makePromise(of: String.self)
         let channel = try connect(serverPort: url.port!, responsePromise: responsePromise).wait()
-        sendRequest(channel: channel, uri: url.path, message: body)
+        self.sendRequest(channel: channel, uri: url.path, message: body)
         return responsePromise.futureResult
     }
 
@@ -80,7 +80,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         // Use your library to send a request to the server.
         let requestBody = "ping"
         var requestComplete: EventLoopFuture<String>!
-        XCTAssertNoThrow(requestComplete = try sendRequestTo(
+        XCTAssertNoThrow(requestComplete = try self.sendRequestTo(
             URL(string: "http://127.0.0.1:\(testServer.serverPort)/some-route")!,
             body: requestBody
         ))
@@ -125,12 +125,12 @@ class NIOHTTP1TestServerTest: XCTestCase {
         }
 
         // Establish the connection and send the request
-        let responsePromise = group.next().makePromise(of: String.self)
+        let responsePromise = self.group.next().makePromise(of: String.self)
         var channel: Channel!
-        XCTAssertNoThrow(channel = try connect(serverPort: testServer.serverPort, responsePromise: responsePromise).wait())
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort, responsePromise: responsePromise).wait())
 
         // Send a request to the server
-        sendRequest(channel: channel, uri: uri, message: requestMessage)
+        self.sendRequest(channel: channel, uri: uri, message: requestMessage)
         let response = responsePromise.futureResult
 
         // Assert we received the expected request
@@ -139,7 +139,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         XCTAssertNoThrow(try testServer.readInbound().assertEnd())
 
         // Send the response to the client
-        let responseBuffer = allocator.buffer(string: responseMessage)
+        let responseBuffer = self.allocator.buffer(string: responseMessage)
         XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(responseBuffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
@@ -157,22 +157,22 @@ class NIOHTTP1TestServerTest: XCTestCase {
         // Establish two "concurrent" requests
         let request1URI = "/request1"
         let request1Message = "Request #1"
-        let response1Promise = group.next().makePromise(of: String.self)
+        let response1Promise = self.group.next().makePromise(of: String.self)
         var channel1: Channel!
-        XCTAssertNoThrow(channel1 = try connect(serverPort: testServer.serverPort, responsePromise: response1Promise).wait())
+        XCTAssertNoThrow(channel1 = try self.connect(serverPort: testServer.serverPort, responsePromise: response1Promise).wait())
 
         let request2URI = "/request2"
         let request2Message = "Request #2"
-        let response2Promise = group.next().makePromise(of: String.self)
+        let response2Promise = self.group.next().makePromise(of: String.self)
         var channel2: Channel!
-        XCTAssertNoThrow(channel2 = try connect(serverPort: testServer.serverPort, responsePromise: response2Promise).wait())
+        XCTAssertNoThrow(channel2 = try self.connect(serverPort: testServer.serverPort, responsePromise: response2Promise).wait())
 
         // Both channels are connected to the server. Request on `channel1`
         // connected connection first so `testServer` will handle it completely
         // before moving on to the request on `channel2`.
 
         // Send a request to the server using the second channel (Accepted but the server is not handling it)
-        sendRequest(channel: channel2, uri: request2URI, message: request2Message)
+        self.sendRequest(channel: channel2, uri: request2URI, message: request2Message)
 
         // Check that nothing happened. The server is blocked waiting for the first
         // request to complete so it times out and throws when we try to read from it
@@ -180,7 +180,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         XCTAssertThrowsError(try testServer.readInbound(deadline: .now() + .milliseconds(5)))
 
         // Send a request to the server using the second channel (Currently handled by the server)
-        sendRequest(channel: channel1, uri: request1URI, message: request1Message)
+        self.sendRequest(channel: channel1, uri: request1URI, message: request1Message)
 
         // Assert we received the expected request from client1
         XCTAssertNoThrow(try testServer.readInbound().assertHead(expectedURI: request1URI))
@@ -189,7 +189,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
 
         // Send the response to client1
         let response1Message = "Response #1"
-        let response1Buffer = allocator.buffer(string: response1Message)
+        let response1Buffer = self.allocator.buffer(string: response1Message)
         XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response1Buffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
@@ -201,7 +201,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
 
         // Send the response to client2
         let response2Message = "Response #2"
-        let response2Buffer = allocator.buffer(string: response2Message)
+        let response2Buffer = self.allocator.buffer(string: response2Message)
         XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response2Buffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
@@ -225,11 +225,11 @@ class NIOHTTP1TestServerTest: XCTestCase {
     func testStopClosesAcceptedChannel() {
         let testServer = NIOHTTP1TestServer(group: group)
 
-        let responsePromise = group.next().makePromise(of: String.self)
+        let responsePromise = self.group.next().makePromise(of: String.self)
         var channel: Channel!
-        XCTAssertNoThrow(channel = try connect(serverPort: testServer.serverPort,
-                                               responsePromise: responsePromise).wait())
-        sendRequest(channel: channel, uri: "/uri", message: "hello")
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort,
+                                                    responsePromise: responsePromise).wait())
+        self.sendRequest(channel: channel, uri: "/uri", message: "hello")
 
         XCTAssertNoThrow(try testServer.readInbound().assertHead(expectedURI: "/uri"))
         XCTAssertNoThrow(try testServer.readInbound().assertBody(expectedMessage: "hello"))
@@ -243,11 +243,11 @@ class NIOHTTP1TestServerTest: XCTestCase {
     func testReceiveAndVerify() {
         let testServer = NIOHTTP1TestServer(group: group)
 
-        let responsePromise = group.next().makePromise(of: String.self)
+        let responsePromise = self.group.next().makePromise(of: String.self)
         var channel: Channel!
-        XCTAssertNoThrow(channel = try connect(serverPort: testServer.serverPort,
-                                               responsePromise: responsePromise).wait())
-        sendRequest(channel: channel, uri: "/uri", message: "hello")
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort,
+                                                    responsePromise: responsePromise).wait())
+        self.sendRequest(channel: channel, uri: "/uri", message: "hello")
 
         XCTAssertNoThrow(try testServer.receiveHeadAndVerify { head in
             XCTAssertEqual(head.uri, "/uri")
@@ -269,11 +269,11 @@ class NIOHTTP1TestServerTest: XCTestCase {
     func testReceive() throws {
         let testServer = NIOHTTP1TestServer(group: group)
 
-        let responsePromise = group.next().makePromise(of: String.self)
+        let responsePromise = self.group.next().makePromise(of: String.self)
         var channel: Channel!
-        XCTAssertNoThrow(channel = try connect(serverPort: testServer.serverPort,
-                                               responsePromise: responsePromise).wait())
-        sendRequest(channel: channel, uri: "/uri", message: "hello")
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort,
+                                                    responsePromise: responsePromise).wait())
+        self.sendRequest(channel: channel, uri: "/uri", message: "hello")
 
         let head = try assertNoThrowWithValue(try testServer.receiveHead())
         XCTAssertEqual(head.uri, "/uri")
@@ -292,11 +292,11 @@ class NIOHTTP1TestServerTest: XCTestCase {
     func testReceiveAndVerifyWrongPart() {
         let testServer = NIOHTTP1TestServer(group: group)
 
-        let responsePromise = group.next().makePromise(of: String.self)
+        let responsePromise = self.group.next().makePromise(of: String.self)
         var channel: Channel!
-        XCTAssertNoThrow(channel = try connect(serverPort: testServer.serverPort,
-                                               responsePromise: responsePromise).wait())
-        sendRequest(channel: channel, uri: "/uri", message: "hello")
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort,
+                                                    responsePromise: responsePromise).wait())
+        self.sendRequest(channel: channel, uri: "/uri", message: "hello")
 
         XCTAssertThrowsError(try testServer.receiveEndAndVerify()) { error in
             XCTAssert(error is NIOHTTP1TestServerError)
@@ -328,14 +328,14 @@ private final class TestHTTPHandler: ChannelInboundHandler {
 
     public func handlerRemoved(context _: ChannelHandlerContext) {
         struct HandlerRemovedBeforeReceivingFullRequestError: Error {}
-        responsePromise.fail(HandlerRemovedBeforeReceivingFullRequestError())
+        self.responsePromise.fail(HandlerRemovedBeforeReceivingFullRequestError())
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch unwrapInboundIn(data) {
         case let .head(responseHead):
             guard case .ok = responseHead.status else {
-                responsePromise.fail(ResponseError.badStatus)
+                self.responsePromise.fail(ResponseError.badStatus)
                 return
             }
         case let .body(byteBuffer):
@@ -348,7 +348,7 @@ private final class TestHTTPHandler: ChannelInboundHandler {
     }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        responsePromise.fail(error)
+        self.responsePromise.fail(error)
         context.close(promise: nil)
     }
 }
@@ -397,7 +397,7 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
         case .head:
             context.fireChannelRead(data)
         case var .body(buffer):
-            receivedSoFar.setOrWriteBuffer(&buffer)
+            self.receivedSoFar.setOrWriteBuffer(&buffer)
         case .end:
             if let receivedSoFar = self.receivedSoFar {
                 context.fireChannelRead(wrapInboundOut(.body(receivedSoFar)))

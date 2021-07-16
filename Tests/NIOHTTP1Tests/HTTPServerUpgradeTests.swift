@@ -19,7 +19,7 @@ import XCTest
 
 extension ChannelPipeline {
     fileprivate func assertDoesNotContainUpgrader() throws {
-        try assertDoesNotContain(handlerType: HTTPServerUpgradeHandler.self)
+        try self.assertDoesNotContain(handlerType: HTTPServerUpgradeHandler.self)
     }
 
     func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
@@ -35,7 +35,7 @@ extension ChannelPipeline {
     }
 
     fileprivate func assertContainsUpgrader() throws {
-        try assertContains(handlerType: HTTPServerUpgradeHandler.self)
+        try self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
     }
 
     func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
@@ -109,14 +109,14 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
     private let allDoneBlock: ([InboundIn]) -> Void
 
     public init(completion: @escaping ([InboundIn]) -> Void) {
-        allDoneBlock = completion
+        self.allDoneBlock = completion
     }
 
     public func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
         let buffer = unwrapInboundIn(data)
         receiveds.append(buffer)
         if let finalBytes = buffer.getBytes(at: buffer.writerIndex - 4, length: 4), finalBytes == [0x0D, 0x0A, 0x0D, 0x0A] {
-            allDoneBlock(receiveds)
+            self.allDoneBlock(self.receiveds)
         }
     }
 }
@@ -183,8 +183,8 @@ private class ExplodingUpgrader: HTTPServerProtocolUpgrader {
     }
 
     public init(forProtocol protocol: String, requiringHeaders: [String] = []) {
-        supportedProtocol = `protocol`
-        requiredUpgradeHeaders = requiringHeaders
+        self.supportedProtocol = `protocol`
+        self.requiredUpgradeHeaders = requiringHeaders
     }
 
     public func buildUpgradeResponse(channel: Channel, upgradeRequest _: HTTPRequestHead, initialResponseHeaders _: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
@@ -207,7 +207,7 @@ private class UpgraderSaysNo: HTTPServerProtocolUpgrader {
     }
 
     public init(forProtocol protocol: String) {
-        supportedProtocol = `protocol`
+        self.supportedProtocol = `protocol`
     }
 
     public func buildUpgradeResponse(channel: Channel, upgradeRequest _: HTTPRequestHead, initialResponseHeaders _: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
@@ -231,8 +231,8 @@ private class SuccessfulUpgrader: HTTPServerProtocolUpgrader {
                 buildUpgradeResponseFuture: @escaping (Channel, HTTPHeaders) -> EventLoopFuture<HTTPHeaders>,
                 onUpgradeComplete: @escaping (HTTPRequestHead) -> Void)
     {
-        supportedProtocol = `protocol`
-        requiredUpgradeHeaders = headers
+        self.supportedProtocol = `protocol`
+        self.requiredUpgradeHeaders = headers
         self.onUpgradeComplete = onUpgradeComplete
         self.buildUpgradeResponseFuture = buildUpgradeResponseFuture
     }
@@ -250,11 +250,11 @@ private class SuccessfulUpgrader: HTTPServerProtocolUpgrader {
     public func buildUpgradeResponse(channel: Channel, upgradeRequest _: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         var headers = initialResponseHeaders
         headers.add(name: "X-Upgrade-Complete", value: "true")
-        return buildUpgradeResponseFuture(channel, headers)
+        return self.buildUpgradeResponseFuture(channel, headers)
     }
 
     public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
-        onUpgradeComplete(upgradeRequest)
+        self.onUpgradeComplete(upgradeRequest)
         return context.eventLoop.makeSucceededFuture(())
     }
 }
@@ -266,7 +266,7 @@ private class UpgradeDelayer: HTTPServerProtocolUpgrader {
     private var upgradePromise: EventLoopPromise<Void>?
 
     public init(forProtocol protocol: String) {
-        supportedProtocol = `protocol`
+        self.supportedProtocol = `protocol`
     }
 
     public func buildUpgradeResponse(channel: Channel, upgradeRequest _: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
@@ -276,12 +276,12 @@ private class UpgradeDelayer: HTTPServerProtocolUpgrader {
     }
 
     public func upgrade(context: ChannelHandlerContext, upgradeRequest _: HTTPRequestHead) -> EventLoopFuture<Void> {
-        upgradePromise = context.eventLoop.makePromise()
-        return upgradePromise!.futureResult
+        self.upgradePromise = context.eventLoop.makePromise()
+        return self.upgradePromise!.futureResult
     }
 
     public func unblockUpgrade() {
-        upgradePromise!.succeed(())
+        self.upgradePromise!.succeed(())
     }
 }
 
@@ -293,12 +293,12 @@ private class UpgradeResponseDelayer: HTTPServerProtocolUpgrader {
     private let buildUpgradeResponseHandler: () -> EventLoopFuture<Void>
 
     public init(forProtocol protocol: String, buildUpgradeResponseHandler: @escaping () -> EventLoopFuture<Void>) {
-        supportedProtocol = `protocol`
+        self.supportedProtocol = `protocol`
         self.buildUpgradeResponseHandler = buildUpgradeResponseHandler
     }
 
     public func buildUpgradeResponse(channel _: Channel, upgradeRequest _: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
-        buildUpgradeResponseHandler().map {
+        self.buildUpgradeResponseHandler().map {
             var headers = initialResponseHeaders
             headers.add(name: "X-Upgrade-Complete", value: "true")
             return headers
@@ -315,7 +315,7 @@ private class UserEventSaver<EventType>: ChannelInboundHandler {
     public var events: [EventType] = []
 
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
-        events.append(event as! EventType)
+        self.events.append(event as! EventType)
         context.fireUserInboundEventTriggered(event)
     }
 }
@@ -326,7 +326,7 @@ private class ErrorSaver: ChannelInboundHandler {
     public var errors: [Error] = []
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        errors.append(error)
+        self.errors.append(error)
         context.fireErrorCaught(error)
     }
 }
@@ -342,7 +342,7 @@ private class DataRecorder<T>: ChannelInboundHandler {
 
     // Must be called from inside the event loop on pain of death!
     public func receivedData() -> [T] {
-        data
+        self.data
     }
 }
 
@@ -354,8 +354,8 @@ private class ReentrantReadOnChannelReadCompleteHandler: ChannelInboundHandler {
 
     func channelReadComplete(context: ChannelHandlerContext) {
         // Make sure we only do this once.
-        if !didRead {
-            didRead = true
+        if !self.didRead {
+            self.didRead = true
             let data = context.channel.allocator.buffer(string: "re-entrant read from channelReadComplete!")
 
             // Please never do this.
@@ -1123,43 +1123,43 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             }
 
             func handlerAdded(context _: ChannelHandlerContext) {
-                XCTAssertEqual(.fresh, state)
-                state = .added
+                XCTAssertEqual(.fresh, self.state)
+                self.state = .added
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 var buf = unwrapInboundIn(data)
                 XCTAssertEqual(1, buf.readableBytes)
                 let stringRead = buf.readString(length: buf.readableBytes)
-                switch state {
+                switch self.state {
                 case .added:
                     XCTAssertEqual("A", stringRead)
-                    state = .inlineDataRead
+                    self.state = .inlineDataRead
                     if stringRead == .some("A") {
-                        firstByteDonePromise.succeed(())
+                        self.firstByteDonePromise.succeed(())
                     } else {
-                        firstByteDonePromise.fail(ReceivedTheWrongThingError.error)
+                        self.firstByteDonePromise.fail(ReceivedTheWrongThingError.error)
                     }
                 case .inlineDataRead:
                     XCTAssertEqual("B", stringRead)
-                    state = .extraDataRead
+                    self.state = .extraDataRead
                     context.channel.close(promise: nil)
                     if stringRead == .some("B") {
-                        secondByteDonePromise.succeed(())
+                        self.secondByteDonePromise.succeed(())
                     } else {
-                        secondByteDonePromise.fail(ReceivedTheWrongThingError.error)
+                        self.secondByteDonePromise.fail(ReceivedTheWrongThingError.error)
                     }
                 default:
-                    XCTFail("channel read in wrong state \(state)")
+                    XCTFail("channel read in wrong state \(self.state)")
                 }
             }
 
             func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-                XCTAssertEqual(.extraDataRead, state)
-                state = .closed
+                XCTAssertEqual(.extraDataRead, self.state)
+                self.state = .closed
                 context.close(mode: mode, promise: promise)
 
-                allDonePromise.succeed(())
+                self.allDonePromise.succeed(())
             }
         }
 

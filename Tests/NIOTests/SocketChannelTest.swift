@@ -99,27 +99,27 @@ public final class SocketChannelTest: XCTestCase {
     }
 
     public func testAcceptFailsWithECONNABORTED() throws {
-        try assertAcceptFails(error: ECONNABORTED, active: true)
+        try self.assertAcceptFails(error: ECONNABORTED, active: true)
     }
 
     public func testAcceptFailsWithEMFILE() throws {
-        try assertAcceptFails(error: EMFILE, active: true)
+        try self.assertAcceptFails(error: EMFILE, active: true)
     }
 
     public func testAcceptFailsWithENFILE() throws {
-        try assertAcceptFails(error: ENFILE, active: true)
+        try self.assertAcceptFails(error: ENFILE, active: true)
     }
 
     public func testAcceptFailsWithENOBUFS() throws {
-        try assertAcceptFails(error: ENOBUFS, active: true)
+        try self.assertAcceptFails(error: ENOBUFS, active: true)
     }
 
     public func testAcceptFailsWithENOMEM() throws {
-        try assertAcceptFails(error: ENOMEM, active: true)
+        try self.assertAcceptFails(error: ENOMEM, active: true)
     }
 
     public func testAcceptFailsWithEFAULT() throws {
-        try assertAcceptFails(error: EFAULT, active: false)
+        try self.assertAcceptFails(error: EFAULT, active: false)
     }
 
     private func assertAcceptFails(error: Int32, active: Bool) throws {
@@ -139,7 +139,7 @@ public final class SocketChannelTest: XCTestCase {
 
             func errorCaught(context _: ChannelHandlerContext, error: Error) {
                 if let ioError = error as? IOError {
-                    promise.succeed(ioError)
+                    self.promise.succeed(ioError)
                 }
             }
         }
@@ -207,7 +207,7 @@ public final class SocketChannelTest: XCTestCase {
             }
 
             func channelActive(context _: ChannelHandlerContext) {
-                promise.succeed(())
+                self.promise.succeed(())
             }
         }
 
@@ -224,7 +224,7 @@ public final class SocketChannelTest: XCTestCase {
             }
 
             override func connect(to _: SocketAddress) throws -> Bool {
-                promise.succeed(())
+                self.promise.succeed(())
                 return true
             }
         }
@@ -381,13 +381,13 @@ public final class SocketChannelTest: XCTestCase {
             }
 
             public func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-                XCTAssertNil(connectPromise)
-                connectPromise = promise
+                XCTAssertNil(self.connectPromise)
+                self.connectPromise = promise
                 context.connect(to: address, promise: promise)
             }
 
             func handlerAdded(context _: ChannelHandlerContext) {
-                XCTAssertNil(connectPromise)
+                XCTAssertNil(self.connectPromise)
             }
 
             func handlerRemoved(context _: ChannelHandlerContext) {
@@ -420,7 +420,7 @@ public final class SocketChannelTest: XCTestCase {
             override func connect(to address: SocketAddress) throws -> Bool {
                 // We want to return false here to have a pending connect.
                 _ = try super.connect(to: address)
-                promise.succeed(())
+                self.promise.succeed(())
                 return false
             }
         }
@@ -480,15 +480,15 @@ public final class SocketChannelTest: XCTestCase {
             func channelInactive(context: ChannelHandlerContext) {
                 XCTAssertNotNil(context.localAddress)
                 XCTAssertNotNil(context.remoteAddress)
-                XCTAssertEqual(.created, state)
-                state = .inactive
+                XCTAssertEqual(.created, self.state)
+                self.state = .inactive
             }
 
             func handlerRemoved(context: ChannelHandlerContext) {
                 XCTAssertNotNil(context.localAddress)
                 XCTAssertNotNil(context.remoteAddress)
-                XCTAssertEqual(.inactive, state)
-                state = .removed
+                XCTAssertEqual(.inactive, self.state)
+                self.state = .removed
 
                 context.channel.closeFuture.whenComplete { (_: Result<Void, Error>) in
                     XCTAssertNil(context.localAddress)
@@ -558,14 +558,14 @@ public final class SocketChannelTest: XCTestCase {
 
                 func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                     XCTFail("Should not accept a Channel but got \(unwrapInboundIn(data))")
-                    promise.fail(ChannelError.inappropriateOperationForState) // any old error will do
+                    self.promise.fail(ChannelError.inappropriateOperationForState) // any old error will do
                 }
 
                 func errorCaught(context _: ChannelHandlerContext, error: Error) {
                     if let ioError = error as? IOError, ioError.errnoCode == EINVAL {
-                        promise.succeed(ioError)
+                        self.promise.succeed(ioError)
                     } else {
-                        promise.fail(error)
+                        self.promise.fail(error)
                     }
                 }
             }
@@ -668,7 +668,7 @@ public final class SocketChannelTest: XCTestCase {
             let shouldAcceptsFail: NIOAtomic<Bool> = .makeAtomic(value: true)
             override func accept(setNonBlocking: Bool = false) throws -> Socket? {
                 XCTAssertTrue(setNonBlocking)
-                if shouldAcceptsFail.load() {
+                if self.shouldAcceptsFail.load() {
                     throw NIOFcntlFailedError()
                 } else {
                     return try Socket(protocolFamily: .inet,
@@ -870,7 +870,7 @@ public final class SocketChannelTest: XCTestCase {
             }
 
             func channelInactive(context: ChannelHandlerContext) {
-                channelInactivePromise.succeed(())
+                self.channelInactivePromise.succeed(())
                 context.fireChannelInactive()
             }
         }
@@ -932,13 +932,13 @@ class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler {
     }
 
     func channelActive(context _: ChannelHandlerContext) {
-        channelActivePromise?.succeed(())
+        self.channelActivePromise?.succeed(())
     }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         if let event = event as? ChannelEvent, event == .inputClosed {
-            XCTAssertEqual(.halfClosureEnabled, mode)
-            channelHalfClosedPromise.succeed(())
+            XCTAssertEqual(.halfClosureEnabled, self.mode)
+            self.channelHalfClosedPromise.succeed(())
             var buffer = context.channel.allocator.buffer(capacity: 1_000_000)
             buffer.writeBytes(Array(repeating: UInt8(ascii: "x"),
                                     count: 1_000_000))
@@ -959,7 +959,7 @@ class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler {
     }
 
     func channelInactive(context: ChannelHandlerContext) {
-        channelInactivePromise.succeed(())
+        self.channelInactivePromise.succeed(())
         context.fireChannelInactive()
     }
 

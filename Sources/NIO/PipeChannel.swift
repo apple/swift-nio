@@ -24,8 +24,8 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
          inputPipe: NIOFileHandle,
          outputPipe: NIOFileHandle) throws
     {
-        pipePair = try PipePair(inputFD: inputPipe, outputFD: outputPipe)
-        try super.init(socket: pipePair,
+        self.pipePair = try PipePair(inputFD: inputPipe, outputFD: outputPipe)
+        try super.init(socket: self.pipePair,
                        parent: nil,
                        eventLoop: eventLoop,
                        recvAllocator: AdaptiveRecvByteBufferAllocator())
@@ -52,49 +52,49 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: pipePair.inputFD,
+        try selector.register(selectable: self.pipePair.inputFD,
                               interested: interested.intersection([.read, .reset]),
-                              makeRegistration: registrationForInput)
-        try selector.register(selectable: pipePair.outputFD,
+                              makeRegistration: self.registrationForInput)
+        try selector.register(selectable: self.pipePair.outputFD,
                               interested: interested.intersection([.write, .reset]),
-                              makeRegistration: registrationForOutput)
+                              makeRegistration: self.registrationForOutput)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
-        if mode == .all || mode == .input, pipePair.inputFD.isOpen {
-            try selector.deregister(selectable: pipePair.inputFD)
+        if mode == .all || mode == .input, self.pipePair.inputFD.isOpen {
+            try selector.deregister(selectable: self.pipePair.inputFD)
         }
-        if mode == .all || mode == .output, pipePair.outputFD.isOpen {
-            try selector.deregister(selectable: pipePair.outputFD)
+        if mode == .all || mode == .output, self.pipePair.outputFD.isOpen {
+            try selector.deregister(selectable: self.pipePair.outputFD)
         }
     }
 
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        if pipePair.inputFD.isOpen {
-            try selector.reregister(selectable: pipePair.inputFD,
+        if self.pipePair.inputFD.isOpen {
+            try selector.reregister(selectable: self.pipePair.inputFD,
                                     interested: interested.intersection([.read, .reset]))
         }
-        if pipePair.outputFD.isOpen {
-            try selector.reregister(selectable: pipePair.outputFD,
+        if self.pipePair.outputFD.isOpen {
+            try selector.reregister(selectable: self.pipePair.outputFD,
                                     interested: interested.intersection([.write, .reset]))
         }
     }
 
     override func readEOF() {
         super.readEOF()
-        guard pipePair.inputFD.isOpen else {
+        guard self.pipePair.inputFD.isOpen else {
             return
         }
         try! selectableEventLoop.deregister(channel: self, mode: .input)
-        try! pipePair.inputFD.close()
+        try! self.pipePair.inputFD.close()
     }
 
     override func writeEOF() {
-        guard pipePair.outputFD.isOpen else {
+        guard self.pipePair.outputFD.isOpen else {
             return
         }
         try! selectableEventLoop.deregister(channel: self, mode: .output)
-        try! pipePair.outputFD.close()
+        try! self.pipePair.outputFD.close()
     }
 
     override func shutdownSocket(mode: CloseMode) throws {

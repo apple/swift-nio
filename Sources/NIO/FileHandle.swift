@@ -30,7 +30,7 @@ public final class NIOFileHandle: FileDescriptor {
     /// this object can be safely released.
     public init(descriptor: CInt) {
         self.descriptor = descriptor
-        isOpen = true
+        self.isOpen = true
     }
 
     deinit {
@@ -44,7 +44,7 @@ public final class NIOFileHandle: FileDescriptor {
     ///
     /// - returns: A new `NIOFileHandle` with a fresh underlying file descriptor but shared seek pointer.
     public func duplicate() throws -> NIOFileHandle {
-        try withUnsafeFileDescriptor { fd in
+        try self.withUnsafeFileDescriptor { fd in
             NIOFileHandle(descriptor: try Posix.dup(descriptor: fd))
         }
     }
@@ -56,27 +56,27 @@ public final class NIOFileHandle: FileDescriptor {
     ///
     /// - returns: The underlying file descriptor, now owned by the caller.
     public func takeDescriptorOwnership() throws -> CInt {
-        guard isOpen else {
+        guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
         }
 
-        isOpen = false
-        return descriptor
+        self.isOpen = false
+        return self.descriptor
     }
 
     public func close() throws {
-        try withUnsafeFileDescriptor { fd in
+        try self.withUnsafeFileDescriptor { fd in
             try Posix.close(descriptor: fd)
         }
 
-        isOpen = false
+        self.isOpen = false
     }
 
     public func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
-        guard isOpen else {
+        guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
         }
-        return try body(descriptor)
+        return try body(self.descriptor)
     }
 }
 
@@ -158,6 +158,6 @@ public extension NIOFileHandle {
 
 extension NIOFileHandle: CustomStringConvertible {
     public var description: String {
-        "FileHandle { descriptor: \(descriptor) }"
+        "FileHandle { descriptor: \(self.descriptor) }"
     }
 }

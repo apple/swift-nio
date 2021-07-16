@@ -23,7 +23,7 @@ final class WebSocketFrameDecoderBenchmark {
     private var data: ByteBuffer!
 
     init(dataSize: Int, runCount: Int, maskingKey: WebSocketMaskingKey? = nil) {
-        channel = EmbeddedChannel()
+        self.channel = EmbeddedChannel()
         self.dataSize = dataSize
         self.maskingKey = maskingKey
         self.runCount = runCount
@@ -32,17 +32,17 @@ final class WebSocketFrameDecoderBenchmark {
 
 extension WebSocketFrameDecoderBenchmark: Benchmark {
     func setUp() throws {
-        data = ByteBufferAllocator().webSocketFrame(size: dataSize, maskingKey: maskingKey)
-        try channel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: dataSize))).wait()
+        self.data = ByteBufferAllocator().webSocketFrame(size: self.dataSize, maskingKey: self.maskingKey)
+        try self.channel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.dataSize))).wait()
     }
 
     func tearDown() {
-        _ = try! channel.finish()
+        _ = try! self.channel.finish()
     }
 
     func run() throws -> Int {
-        for _ in 0 ..< runCount {
-            try channel.writeInbound(data)
+        for _ in 0 ..< self.runCount {
+            try self.channel.writeInbound(self.data)
             let _: WebSocketFrame? = try channel.readInbound()
         }
         return 1

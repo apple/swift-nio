@@ -87,8 +87,8 @@ class OptionsCollectingChannel: Channel {
     var parent: Channel? { fatalError() }
 
     func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        allOptions.append((option, value))
-        return eventLoop.makeSucceededFuture(())
+        self.allOptions.append((option, value))
+        return self.eventLoop.makeSucceededFuture(())
     }
 
     func getOption<Option: ChannelOption>(_: Option) -> EventLoopFuture<Option.Value> {

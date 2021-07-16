@@ -63,7 +63,7 @@ private class ConnectRecorder: ChannelOutboundHandler {
     var state: State = .idle
 
     public func connect(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        targetHost = to.toString()
+        self.targetHost = to.toString()
         let connectPromise = promise ?? context.eventLoop.makePromise()
         connectPromise.futureResult.whenSuccess {
             self.state = .connected
@@ -87,7 +87,7 @@ private class ConnectionDelayer: ChannelOutboundHandler {
     public var connectPromise: EventLoopPromise<Void>?
 
     public func connect(context _: ChannelHandlerContext, to _: SocketAddress, promise: EventLoopPromise<Void>?) {
-        connectPromise = promise
+        self.connectPromise = promise
     }
 }
 
@@ -196,22 +196,22 @@ private class DummyResolver: Resolver {
     var events: [Event] = []
 
     init(loop: EventLoop) {
-        v4Promise = loop.makePromise()
-        v6Promise = loop.makePromise()
+        self.v4Promise = loop.makePromise()
+        self.v6Promise = loop.makePromise()
     }
 
     func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
-        events.append(.a(host: host, port: port))
-        return v4Promise.futureResult
+        self.events.append(.a(host: host, port: port))
+        return self.v4Promise.futureResult
     }
 
     func initiateAAAAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
-        events.append(.aaaa(host: host, port: port))
-        return v6Promise.futureResult
+        self.events.append(.aaaa(host: host, port: port))
+        return self.v6Promise.futureResult
     }
 
     func cancelQueries() {
-        events.append(.cancel)
+        self.events.append(.cancel)
     }
 }
 

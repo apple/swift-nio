@@ -106,7 +106,7 @@ extension BaseSocketProtocol {
         #if os(Windows)
         // Deliberately empty: SIGPIPE just ain't a thing on Windows
         #else
-            try ignoreSIGPIPE(descriptor: handle)
+            try self.ignoreSIGPIPE(descriptor: handle)
         #endif
     }
 }

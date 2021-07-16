@@ -28,7 +28,7 @@ extension ByteBufferView {
     }
 
     func trimSpaces() -> ByteBufferView {
-        trim(limitingElements: defaultWhitespaces)
+        self.trim(limitingElements: defaultWhitespaces)
     }
 }
 

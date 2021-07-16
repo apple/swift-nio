@@ -31,7 +31,7 @@ public extension ByteBuffer {
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
     @inlinable
     mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big, as _: T.Type = T.self) -> T? {
-        getInteger(at: readerIndex, endianness: endianness, as: T.self).map {
+        self.getInteger(at: readerIndex, endianness: endianness, as: T.self).map {
             self._moveReaderIndex(forwardBy: MemoryLayout<T>.size)
             return $0
         }
@@ -80,7 +80,7 @@ public extension ByteBuffer {
                                                      endianness: Endianness = .big,
                                                      as _: T.Type = T.self) -> Int
     {
-        let bytesWritten = setInteger(integer, at: writerIndex, endianness: endianness)
+        let bytesWritten = self.setInteger(integer, at: writerIndex, endianness: endianness)
         _moveWriterIndex(forwardBy: bytesWritten)
         return Int(bytesWritten)
     }
@@ -95,7 +95,7 @@ public extension ByteBuffer {
     @discardableResult
     @inlinable
     mutating func setInteger<T: FixedWidthInteger>(_ integer: T, at index: Int, endianness: Endianness = .big, as _: T.Type = T.self) -> Int {
-        var value = _toEndianness(value: integer, endianness: endianness)
+        var value = self._toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in
             self.setBytes(ptr, at: index)
         }

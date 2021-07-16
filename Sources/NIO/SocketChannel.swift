@@ -67,7 +67,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
 
         switch option {
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
-            connectTimeout = value as? TimeAmount
+            self.connectTimeout = value as? TimeAmount
         default:
             try super.setOption0(option, value: value)
         }
@@ -82,7 +82,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
 
         switch option {
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
-            return connectTimeout as! Option.Value
+            return self.connectTimeout as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -122,7 +122,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.register(selectable: socket,
                               interested: interested,
-                              makeRegistration: registrationFor)
+                              makeRegistration: self.registrationFor)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
@@ -161,7 +161,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     convenience init(socket: NIOBSDSocket.Handle, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
         let sock = try ServerSocket(socket: socket, setNonBlocking: true)
         try self.init(serverSocket: sock, eventLoop: eventLoop, group: group)
-        try self.socket.listen(backlog: backlog)
+        try self.socket.listen(backlog: self.backlog)
     }
 
     func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
@@ -179,7 +179,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
         switch option {
         case _ as ChannelOptions.Types.BacklogOption:
-            backlog = value as! Int32
+            self.backlog = value as! Int32
         default:
             try super.setOption0(option, value: value)
         }
@@ -194,7 +194,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
         switch option {
         case _ as ChannelOptions.Types.BacklogOption:
-            return backlog as! Option.Value
+            return self.backlog as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -325,7 +325,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.register(selectable: socket,
                               interested: interested,
-                              makeRegistration: registrationFor)
+                              makeRegistration: self.registrationFor)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
@@ -379,7 +379,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
-        vectorReadManager = nil
+        self.vectorReadManager = nil
         let socket = try Socket(protocolFamily: protocolFamily, type: .datagram)
         do {
             try socket.setNonBlocking()
@@ -401,13 +401,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
-        vectorReadManager = nil
+        self.vectorReadManager = nil
         try socket.setNonBlocking()
-        pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
-                                                     iovecs: eventLoop.iovecs,
-                                                     addresses: eventLoop.addresses,
-                                                     storageRefs: eventLoop.storageRefs,
-                                                     controlMessageStorage: eventLoop.controlMessageStorage)
+        self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
+                                                          iovecs: eventLoop.iovecs,
+                                                          addresses: eventLoop.addresses,
+                                                          storageRefs: eventLoop.storageRefs,
+                                                          controlMessageStorage: eventLoop.controlMessageStorage)
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
@@ -416,19 +416,19 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
         eventLoop.assertInEventLoop()
 
-        guard isOpen else {
+        guard self.isOpen else {
             throw ChannelError.ioOnClosedChannel
         }
 
         switch option {
         case _ as ChannelOptions.Types.WriteSpinOption:
-            pendingWrites.writeSpinCount = value as! UInt
+            self.pendingWrites.writeSpinCount = value as! UInt
         case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
-            pendingWrites.waterMark = value as! ChannelOptions.Types.WriteBufferWaterMark
+            self.pendingWrites.waterMark = value as! ChannelOptions.Types.WriteBufferWaterMark
         case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
             // We only support vector reads on these OSes. Let us know if there's another OS with this syscall!
             #if os(Linux) || os(FreeBSD) || os(Android)
-                vectorReadManager.updateMessageCount(value as! Int)
+                self.vectorReadManager.updateMessageCount(value as! Int)
             #else
                 break
             #endif
@@ -436,12 +436,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let valueAsInt: CInt = value as! Bool ? 1 : 0
             switch localAddress?.protocol {
             case .some(.inet):
-                reportExplicitCongestionNotifications = true
+                self.reportExplicitCongestionNotifications = true
                 try socket.setOption(level: .ip,
                                      name: .ip_recv_tos,
                                      value: valueAsInt)
             case .some(.inet6):
-                reportExplicitCongestionNotifications = true
+                self.reportExplicitCongestionNotifications = true
                 try socket.setOption(level: .ipv6,
                                      name: .ipv6_recv_tclass,
                                      value: valueAsInt)
@@ -453,12 +453,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let valueAsInt: CInt = value as! Bool ? 1 : 0
             switch localAddress?.protocol {
             case .some(.inet):
-                receivePacketInfo = true
+                self.receivePacketInfo = true
                 try socket.setOption(level: .ip,
                                      name: .ip_recv_pktinfo,
                                      value: valueAsInt)
             case .some(.inet6):
-                receivePacketInfo = true
+                self.receivePacketInfo = true
                 try socket.setOption(level: .ipv6,
                                      name: .ipv6_recv_pktinfo,
                                      value: valueAsInt)
@@ -474,17 +474,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
         eventLoop.assertInEventLoop()
 
-        guard isOpen else {
+        guard self.isOpen else {
             throw ChannelError.ioOnClosedChannel
         }
 
         switch option {
         case _ as ChannelOptions.Types.WriteSpinOption:
-            return pendingWrites.writeSpinCount as! Option.Value
+            return self.pendingWrites.writeSpinCount as! Option.Value
         case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
-            return pendingWrites.waterMark as! Option.Value
+            return self.pendingWrites.waterMark as! Option.Value
         case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
-            return (vectorReadManager?.messageCount ?? 0) as! Option.Value
+            return (self.vectorReadManager?.messageCount ?? 0) as! Option.Value
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
             switch localAddress?.protocol {
             case .some(.inet):
@@ -531,10 +531,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func readFromSocket() throws -> ReadResult {
-        if vectorReadManager != nil {
-            return try vectorReadFromSocket()
+        if self.vectorReadManager != nil {
+            return try self.vectorReadFromSocket()
         } else {
-            return try singleReadFromSocket()
+            return try self.singleReadFromSocket()
         }
     }
 
@@ -546,14 +546,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         // These control bytes must not escape the current call stack
         let controlBytesBuffer: UnsafeMutableRawBufferPointer
-        if reportExplicitCongestionNotifications || receivePacketInfo {
+        if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
             controlBytesBuffer = selectableEventLoop.controlMessageStorage[0]
         } else {
             controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
 
         for i in 1 ... maxMessagesPerRead {
-            guard isOpen else {
+            guard self.isOpen else {
                 throw ChannelError.eof
             }
             buffer.clear()
@@ -569,12 +569,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             switch result {
             case let .processed(bytesRead):
                 assert(bytesRead > 0)
-                assert(isOpen)
+                assert(self.isOpen)
                 let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                if reportExplicitCongestionNotifications || receivePacketInfo,
+                if self.reportExplicitCongestionNotifications || self.receivePacketInfo,
                    let controlMessagesReceived = controlBytes.receivedControlMessages
                 {
                     metadata = .init(from: controlMessagesReceived)
@@ -605,7 +605,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             var readResult = ReadResult.none
 
             readLoop: for i in 1 ... maxMessagesPerRead {
-                guard isOpen else {
+                guard self.isOpen else {
                     throw ChannelError.eof
                 }
                 guard let vectorReadManager = self.vectorReadManager else {
@@ -619,11 +619,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 let result = try vectorReadManager.readFromSocket(
                     socket: socket,
                     buffer: &buffer,
-                    parseControlMessages: reportExplicitCongestionNotifications || receivePacketInfo
+                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
                 )
                 switch result {
                 case let .some(results, totalRead):
-                    assert(isOpen)
+                    assert(self.isOpen)
                     assert(isActive)
 
                     let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
@@ -670,14 +670,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         let data = data.forceAsByteEnvelope()
 
-        if !pendingWrites.add(envelope: data, promise: promise) {
+        if !self.pendingWrites.add(envelope: data, promise: promise) {
             assert(isActive)
             pipeline.fireChannelWritabilityChanged0()
         }
     }
 
     override final func hasFlushedPendingWrites() -> Bool {
-        pendingWrites.isFlushPending
+        self.pendingWrites.isFlushPending
     }
 
     /// Mark a flush point. This is called when flush is received, and instructs
@@ -685,13 +685,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
-        pendingWrites.markFlushCheckpoint()
+        self.pendingWrites.markFlushCheckpoint()
     }
 
     /// Called when closing, to instruct the specific implementation to discard all pending
     /// writes.
     override func cancelWritesOnClose(error: Error) {
-        pendingWrites.failAll(error: error, close: true)
+        self.pendingWrites.failAll(error: error, close: true)
     }
 
     override func writeToSocket() throws -> OverallWriteResult {
@@ -740,7 +740,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.register(selectable: socket,
                               interested: interested,
-                              makeRegistration: registrationFor)
+                              makeRegistration: self.registrationFor)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
@@ -809,7 +809,7 @@ extension DatagramChannel: MulticastChannel {
         @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
         func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
             if eventLoop.inEventLoop {
-                performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
+                self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
             } else {
                 eventLoop.execute {
                     self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
@@ -820,7 +820,7 @@ extension DatagramChannel: MulticastChannel {
         @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
         func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
             if eventLoop.inEventLoop {
-                performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+                self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
             } else {
                 eventLoop.execute {
                     self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
@@ -831,7 +831,7 @@ extension DatagramChannel: MulticastChannel {
 
     func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            performGroupOperation0(group, device: device, promise: promise, operation: .join)
+            self.performGroupOperation0(group, device: device, promise: promise, operation: .join)
         } else {
             eventLoop.execute {
                 self.performGroupOperation0(group, device: device, promise: promise, operation: .join)
@@ -841,7 +841,7 @@ extension DatagramChannel: MulticastChannel {
 
     func leaveGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            performGroupOperation0(group, device: device, promise: promise, operation: .leave)
+            self.performGroupOperation0(group, device: device, promise: promise, operation: .leave)
         } else {
             eventLoop.execute {
                 self.performGroupOperation0(group, device: device, promise: promise, operation: .leave)

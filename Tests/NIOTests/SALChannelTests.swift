@@ -82,11 +82,11 @@ final class SALChannelTest: XCTestCase, SALTest {
             }
 
             func channelWritabilityChanged(context: ChannelHandlerContext) {
-                numberOfCalls += 1
+                self.numberOfCalls += 1
 
-                XCTAssertEqual(writableNotificationStepExpectation.load(),
-                               numberOfCalls)
-                switch numberOfCalls {
+                XCTAssertEqual(self.writableNotificationStepExpectation.load(),
+                               self.numberOfCalls)
+                switch self.numberOfCalls {
                 case 1:
                     // First, we should see a `false` here because 2 bytes is above the high watermark.
                     XCTAssertFalse(context.channel.isWritable)
@@ -99,7 +99,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                     buffer.writeString("ABC")
 
                     // We expect another channelWritabilityChanged notification
-                    XCTAssertTrue(writableNotificationStepExpectation.compareAndExchange(expected: 2, desired: 3))
+                    XCTAssertTrue(self.writableNotificationStepExpectation.compareAndExchange(expected: 2, desired: 3))
                     context.writeAndFlush(wrapOutboundOut(buffer), promise: nil)
                 case 3:
                     // Next, we should go to false because we never send all the bytes.
@@ -108,7 +108,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                     // And finally, back to `true` because eventually, we'll write enough.
                     XCTAssertTrue(context.channel.isWritable)
                 default:
-                    XCTFail("call \(numberOfCalls) unexpected (\(context.channel.isWritable))")
+                    XCTFail("call \(self.numberOfCalls) unexpected (\(context.channel.isWritable))")
                 }
             }
         }
@@ -205,11 +205,11 @@ final class SALChannelTest: XCTestCase, SALTest {
             }
 
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
-                numberOfCalls += 1
+                self.numberOfCalls += 1
                 XCTAssertEqual("hello",
                                String(decoding: unwrapInboundIn(data).readableBytesView, as: Unicode.UTF8.self))
-                if numberOfCalls == 1 {
-                    group.leave()
+                if self.numberOfCalls == 1 {
+                    self.group.leave()
                 }
             }
         }

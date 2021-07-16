@@ -26,7 +26,7 @@ private final class EchoHandler: ChannelInboundHandler {
 
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
         let buffer = context.channel.allocator.buffer(string: line)
-        numBytes = buffer.readableBytes
+        self.numBytes = buffer.readableBytes
         context.writeAndFlush(wrapOutboundOut(buffer), promise: nil)
     }
 
@@ -34,7 +34,7 @@ private final class EchoHandler: ChannelInboundHandler {
         let byteBuffer = unwrapInboundIn(data)
         numBytes -= byteBuffer.readableBytes
 
-        if numBytes == 0 {
+        if self.numBytes == 0 {
             let string = String(buffer: byteBuffer)
             print("Received: '\(string)' back from the server, closing channel.")
             context.close(promise: nil)

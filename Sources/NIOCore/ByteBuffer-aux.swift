@@ -44,7 +44,7 @@ public extension ByteBuffer {
     ///     - length: The number of bytes to be read from this `ByteBuffer`.
     /// - returns: A `[UInt8]` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     mutating func readBytes(length: Int) -> [UInt8]? {
-        getBytes(at: readerIndex, length: length).map {
+        self.getBytes(at: readerIndex, length: length).map {
             self._moveReaderIndex(forwardBy: length)
             return $0
         }
@@ -59,7 +59,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     mutating func writeStaticString(_ string: StaticString) -> Int {
-        let written = setStaticString(string, at: writerIndex)
+        let written = self.setStaticString(string, at: writerIndex)
         _moveWriterIndex(forwardBy: written)
         return written
     }
@@ -85,7 +85,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     mutating func writeString(_ string: String) -> Int {
-        let written = setString(string, at: writerIndex)
+        let written = self.setString(string, at: writerIndex)
         _moveWriterIndex(forwardBy: written)
         return written
     }
@@ -121,7 +121,7 @@ public extension ByteBuffer {
             // fast path, directly available
             return written
         } else {
-            return _setStringSlowpath(string, at: index)
+            return self._setStringSlowpath(string, at: index)
         }
     }
 
@@ -149,7 +149,7 @@ public extension ByteBuffer {
     ///     - length: The number of bytes making up the string.
     /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     mutating func readString(length: Int) -> String? {
-        getString(at: readerIndex, length: length).map {
+        self.getString(at: readerIndex, length: length).map {
             self._moveReaderIndex(forwardBy: length)
             return $0
         }
@@ -164,7 +164,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     mutating func writeSubstring(_ substring: Substring) -> Int {
-        let written = setSubstring(substring, at: writerIndex)
+        let written = self.setSubstring(substring, at: writerIndex)
         _moveWriterIndex(forwardBy: written)
         return written
     }
@@ -182,7 +182,7 @@ public extension ByteBuffer {
         // withContiguousStorageIfAvailable and therefore has no fast access
         // to the backing storage. For now, convert to a String and call
         // setString instead.
-        setString(String(substring), at: index)
+        self.setString(String(substring), at: index)
     }
 
     // MARK: DispatchData APIs
@@ -194,7 +194,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     mutating func writeDispatchData(_ dispatchData: DispatchData) -> Int {
-        let written = setDispatchData(dispatchData, at: writerIndex)
+        let written = self.setDispatchData(dispatchData, at: writerIndex)
         _moveWriterIndex(forwardBy: written)
         return written
     }
@@ -240,7 +240,7 @@ public extension ByteBuffer {
     ///     - length: The number of bytes.
     /// - returns: A `DispatchData` value containing the bytes from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     mutating func readDispatchData(length: Int) -> DispatchData? {
-        getDispatchData(at: readerIndex, length: length).map {
+        self.getDispatchData(at: readerIndex, length: length).map {
             self._moveReaderIndex(forwardBy: length)
             return $0
         }
@@ -319,7 +319,7 @@ public extension ByteBuffer {
     @discardableResult
     @available(*, deprecated, renamed: "setBuffer(_:at:)")
     mutating func set(buffer: ByteBuffer, at index: Int) -> Int {
-        setBuffer(buffer, at: index)
+        self.setBuffer(buffer, at: index)
     }
 
     /// Copy `buffer`'s readable bytes into this `ByteBuffer` starting at `index`. Does not move any of the reader or writer indices.
@@ -343,7 +343,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written to this `ByteBuffer` which is equal to the number of bytes read from `buffer`.
     @discardableResult
     mutating func writeBuffer(_ buffer: inout ByteBuffer) -> Int {
-        let written = setBuffer(buffer, at: writerIndex)
+        let written = self.setBuffer(buffer, at: writerIndex)
         _moveWriterIndex(forwardBy: written)
         buffer._moveReaderIndex(forwardBy: written)
         return written
@@ -382,7 +382,7 @@ public extension ByteBuffer {
     /// - returns: How many bytes were written.
     @discardableResult
     mutating func writeRepeatingByte(_ byte: UInt8, count: Int) -> Int {
-        let written = setRepeatingByte(byte, count: count, at: writerIndex)
+        let written = self.setRepeatingByte(byte, count: count, at: writerIndex)
         _moveWriterIndex(forwardBy: written)
         return written
     }
@@ -436,7 +436,7 @@ public extension ByteBuffer {
     @discardableResult
     mutating func writeImmutableBuffer(_ buffer: ByteBuffer) -> Int {
         var mutable = buffer
-        return writeBuffer(&mutable)
+        return self.writeBuffer(&mutable)
     }
 }
 
@@ -688,7 +688,7 @@ public extension Optional where Wrapped == ByteBuffer {
     @discardableResult
     mutating func setOrWriteImmutableBuffer(_ buffer: ByteBuffer) -> Int {
         var mutable = buffer
-        return setOrWriteBuffer(&mutable)
+        return self.setOrWriteBuffer(&mutable)
     }
 
     /// If `nil`, replace `self` with `.some(buffer)`. If non-`nil`, write `buffer`'s readable bytes into the

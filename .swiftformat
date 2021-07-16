@@ -1,0 +1,13 @@
+--enable blankLinesAtEndOfScope
+--enable blankLinesAtStartOfScope
+--enable consecutiveBlankLines
+--enable duplicateImports
+--enable emptyBraces
+
+--self insert
+
+--redundanttype inferred
+
+--semicolons never
+
+--operatorfunc spaced

@@ -51,11 +51,11 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     public init() {}
 
     public func handlerAdded(context: ChannelHandlerContext) {
-        headerBuffer = context.channel.allocator.buffer(capacity: WebSocketFrameEncoder.maximumFrameHeaderLength)
+        self.headerBuffer = context.channel.allocator.buffer(capacity: WebSocketFrameEncoder.maximumFrameHeaderLength)
     }
 
     public func handlerRemoved(context _: ChannelHandlerContext) {
-        headerBuffer = nil
+        self.headerBuffer = nil
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
@@ -63,7 +63,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
 
         // First, we explode the frame structure and apply the mask.
         let frameHeader = FrameHeader(frame: data)
-        var (extensionData, applicationData) = mask(key: frameHeader.maskKey, extensionData: data.extensionData, applicationData: data.data)
+        var (extensionData, applicationData) = self.mask(key: frameHeader.maskKey, extensionData: data.extensionData, applicationData: data.data)
 
         // Now we attempt to prepend the frame header to the first buffer. If we can't, we'll write to the header buffer. If we have
         // an extension data buffer, that's the first buffer, and we'll also write it here.
@@ -71,11 +71,11 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
             extensionData = nil // Again, forcibly nil to drop the reference.
 
             if !unwrappedExtensionData.prependFrameHeaderIfPossible(frameHeader) {
-                writeSeparateHeaderBuffer(frameHeader, context: context)
+                self.writeSeparateHeaderBuffer(frameHeader, context: context)
             }
             context.write(wrapOutboundOut(unwrappedExtensionData), promise: nil)
         } else if !applicationData.prependFrameHeaderIfPossible(frameHeader) {
-            writeSeparateHeaderBuffer(frameHeader, context: context)
+            self.writeSeparateHeaderBuffer(frameHeader, context: context)
         }
 
         // Ok, now we need to write the application data buffer.
@@ -103,14 +103,14 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
         guard var buffer = headerBuffer else {
             fatalError("Channel handler lifecycle violated: did not allocate header buffer")
         }
-        headerBuffer = nil
+        self.headerBuffer = nil
 
         // We couldn't prepend the frame header, write it to the header buffer.
         buffer.clear()
         buffer.writeFrameHeader(frameHeader)
 
         // Ok, frame header away! Before we send it we save it back onto ourselves in case we get recursively called.
-        headerBuffer = buffer
+        self.headerBuffer = buffer
         context.write(wrapOutboundOut(buffer), promise: nil)
     }
 }
@@ -140,7 +140,7 @@ private extension ByteBuffer {
 
     @discardableResult
     mutating func writeFrameHeader(_ frameHeader: FrameHeader) -> Int {
-        let written = setFrameHeader(frameHeader, at: writerIndex)
+        let written = self.setFrameHeader(frameHeader, at: writerIndex)
         moveWriterIndex(forwardBy: written)
         return written
     }
@@ -185,15 +185,15 @@ private struct FrameHeader {
     var firstByte: UInt8 = 0
 
     init(frame: WebSocketFrame) {
-        maskKey = frame.maskKey
-        firstByte = frame.firstByte
-        length = frame.length
+        self.maskKey = frame.maskKey
+        self.firstByte = frame.firstByte
+        self.length = frame.length
     }
 
     var requiredBytes: Int {
         var size = 2 // First byte and initial length byte
 
-        switch length {
+        switch self.length {
         case 0 ... maxOneByteSize:
             // Only requires the initial length byte
             break
@@ -206,7 +206,7 @@ private struct FrameHeader {
             fatalError("NIO cannot serialize frames longer than \(maxNIOFrameSize)")
         }
 
-        if maskKey != nil {
+        if self.maskKey != nil {
             size += 4 // Masking key
         }
 

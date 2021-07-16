@@ -63,25 +63,25 @@ private final class SuccessfulClientUpgrader: NIOHTTPClientProtocolUpgrader {
     private(set) var upgradeContextResponseCallCount = 0
 
     fileprivate init(forProtocol protocol: String, requiredUpgradeHeaders: [String] = [], upgradeHeaders: [(String, String)] = []) {
-        supportedProtocol = `protocol`
+        self.supportedProtocol = `protocol`
         self.requiredUpgradeHeaders = requiredUpgradeHeaders
         self.upgradeHeaders = upgradeHeaders
     }
 
     fileprivate func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
-        addCustomUpgradeRequestHeadersCallCount += 1
-        for (name, value) in upgradeHeaders {
+        self.addCustomUpgradeRequestHeadersCallCount += 1
+        for (name, value) in self.upgradeHeaders {
             upgradeRequestHeaders.replaceOrAdd(name: name, value: value)
         }
     }
 
     fileprivate func shouldAllowUpgrade(upgradeResponse _: HTTPResponseHead) -> Bool {
-        shouldAllowUpgradeCallCount += 1
+        self.shouldAllowUpgradeCallCount += 1
         return true
     }
 
     fileprivate func upgrade(context: ChannelHandlerContext, upgradeResponse _: HTTPResponseHead) -> EventLoopFuture<Void> {
-        upgradeContextResponseCallCount += 1
+        self.upgradeContextResponseCallCount += 1
         return context.channel.eventLoop.makeSucceededFuture(())
     }
 }
@@ -95,13 +95,13 @@ private final class ExplodingClientUpgrader: NIOHTTPClientProtocolUpgrader {
                      requiredUpgradeHeaders: [String] = [],
                      upgradeHeaders: [(String, String)] = [])
     {
-        supportedProtocol = `protocol`
+        self.supportedProtocol = `protocol`
         self.requiredUpgradeHeaders = requiredUpgradeHeaders
         self.upgradeHeaders = upgradeHeaders
     }
 
     fileprivate func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
-        for (name, value) in upgradeHeaders {
+        for (name, value) in self.upgradeHeaders {
             upgradeRequestHeaders.replaceOrAdd(name: name, value: value)
         }
     }
@@ -128,14 +128,14 @@ private final class DenyingClientUpgrader: NIOHTTPClientProtocolUpgrader {
                      requiredUpgradeHeaders: [String] = [],
                      upgradeHeaders: [(String, String)] = [])
     {
-        supportedProtocol = `protocol`
+        self.supportedProtocol = `protocol`
         self.requiredUpgradeHeaders = requiredUpgradeHeaders
         self.upgradeHeaders = upgradeHeaders
     }
 
     fileprivate func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
-        addCustomUpgradeRequestHeadersCallCount += 1
-        for (name, value) in upgradeHeaders {
+        self.addCustomUpgradeRequestHeadersCallCount += 1
+        for (name, value) in self.upgradeHeaders {
             upgradeRequestHeaders.replaceOrAdd(name: name, value: value)
         }
     }
@@ -163,13 +163,13 @@ private final class UpgradeDelayClientUpgrader: NIOHTTPClientProtocolUpgrader {
                      requiredUpgradeHeaders: [String] = [],
                      upgradeHeaders: [(String, String)] = [])
     {
-        supportedProtocol = `protocol`
+        self.supportedProtocol = `protocol`
         self.requiredUpgradeHeaders = requiredUpgradeHeaders
         self.upgradeHeaders = upgradeHeaders
     }
 
     fileprivate func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
-        for (name, value) in upgradeHeaders {
+        for (name, value) in self.upgradeHeaders {
             upgradeRequestHeaders.replaceOrAdd(name: name, value: value)
         }
     }
@@ -179,14 +179,14 @@ private final class UpgradeDelayClientUpgrader: NIOHTTPClientProtocolUpgrader {
     }
 
     fileprivate func upgrade(context: ChannelHandlerContext, upgradeResponse _: HTTPResponseHead) -> EventLoopFuture<Void> {
-        upgradePromise = context.eventLoop.makePromise()
-        return upgradePromise!.futureResult.flatMap {
+        self.upgradePromise = context.eventLoop.makePromise()
+        return self.upgradePromise!.futureResult.flatMap {
             context.pipeline.addHandler(self.upgradedHandler)
         }
     }
 
     fileprivate func unblockUpgrade() {
-        upgradePromise!.succeed(())
+        self.upgradePromise!.succeed(())
     }
 }
 
@@ -198,11 +198,11 @@ private final class SimpleUpgradedHandler: ChannelInboundHandler {
     fileprivate var channelReadContextDataCallCount = 0
 
     fileprivate func handlerAdded(context _: ChannelHandlerContext) {
-        handlerAddedContextCallCount += 1
+        self.handlerAddedContextCallCount += 1
     }
 
     fileprivate func channelRead(context _: ChannelHandlerContext, data _: NIOAny) {
-        channelReadContextDataCallCount += 1
+        self.channelReadContextDataCallCount += 1
     }
 }
 
@@ -263,12 +263,12 @@ private final class RecordingHTTPHandler: ChannelInboundHandler, RemovableChanne
     }
 
     fileprivate func channelRead(context _: ChannelHandlerContext, data _: NIOAny) {
-        channelReadChannelHandlerContextDataCallCount += 1
+        self.channelReadChannelHandlerContextDataCallCount += 1
     }
 
     fileprivate func errorCaught(context _: ChannelHandlerContext, error: Error) {
-        errorCaughtChannelHandlerContextCallCount += 1
-        errorCaughtChannelHandlerLatestError = error
+        self.errorCaughtChannelHandlerContextCallCount += 1
+        self.errorCaughtChannelHandlerLatestError = error
     }
 }
 
@@ -440,7 +440,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
             var messagesReceived = 0
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                messagesReceived += 1
+                self.messagesReceived += 1
                 context.writeAndFlush(data, promise: nil)
             }
         }
@@ -451,7 +451,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
             fileprivate let handler: T
 
             fileprivate init(forProtocol protocol: String, addingHandler handler: T) {
-                supportedProtocol = `protocol`
+                self.supportedProtocol = `protocol`
                 self.handler = handler
             }
 
@@ -462,7 +462,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
             }
 
             func upgrade(context: ChannelHandlerContext, upgradeResponse _: HTTPResponseHead) -> EventLoopFuture<Void> {
-                context.pipeline.addHandler(handler)
+                context.pipeline.addHandler(self.handler)
             }
         }
 

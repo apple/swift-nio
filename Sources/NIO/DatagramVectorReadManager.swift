@@ -28,19 +28,19 @@ struct DatagramVectorReadManager {
     /// The number of messages that will be read in each syscall.
     var messageCount: Int {
         get {
-            messageVector.count
+            self.messageVector.count
         }
         set {
             precondition(newValue >= 0)
-            messageVector.deinitializeAndDeallocate()
-            ioVector.deinitializeAndDeallocate()
-            sockaddrVector.deinitializeAndDeallocate()
-            controlMessageStorage.deallocate()
+            self.messageVector.deinitializeAndDeallocate()
+            self.ioVector.deinitializeAndDeallocate()
+            self.sockaddrVector.deinitializeAndDeallocate()
+            self.controlMessageStorage.deallocate()
 
-            messageVector = .allocateAndInitialize(repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0), count: newValue)
-            ioVector = .allocateAndInitialize(repeating: IOVector(), count: newValue)
-            sockaddrVector = .allocateAndInitialize(repeating: sockaddr_storage(), count: newValue)
-            controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: newValue)
+            self.messageVector = .allocateAndInitialize(repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0), count: newValue)
+            self.ioVector = .allocateAndInitialize(repeating: IOVector(), count: newValue)
+            self.sockaddrVector = .allocateAndInitialize(repeating: sockaddr_storage(), count: newValue)
+            self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: newValue)
         }
     }
 
@@ -95,7 +95,7 @@ struct DatagramVectorReadManager {
     {
         assert(buffer.readerIndex == 0, "Buffer was not cleared between calls to readFromSocket!")
 
-        let messageSize = buffer.capacity / messageCount
+        let messageSize = buffer.capacity / self.messageCount
 
         let result = try buffer.withVeryUnsafeMutableBytes { bufferPointer -> IOResult<Int> in
             for i in 0 ..< self.messageCount {
@@ -136,19 +136,19 @@ struct DatagramVectorReadManager {
             return .none
         case let .processed(messagesProcessed):
             buffer.moveWriterIndex(to: messageSize * messagesProcessed)
-            return buildMessages(messageCount: messagesProcessed,
-                                 sliceSize: messageSize,
-                                 buffer: &buffer,
-                                 parseControlMessages: parseControlMessages)
+            return self.buildMessages(messageCount: messagesProcessed,
+                                      sliceSize: messageSize,
+                                      buffer: &buffer,
+                                      parseControlMessages: parseControlMessages)
         }
     }
 
     /// Destroys this vector read manager, rendering it impossible to re-use. Use of the vector read manager after this is called is not possible.
     mutating func deallocate() {
-        messageVector.deinitializeAndDeallocate()
-        ioVector.deinitializeAndDeallocate()
-        sockaddrVector.deinitializeAndDeallocate()
-        controlMessageStorage.deallocate()
+        self.messageVector.deinitializeAndDeallocate()
+        self.ioVector.deinitializeAndDeallocate()
+        self.sockaddrVector.deinitializeAndDeallocate()
+        self.controlMessageStorage.deallocate()
     }
 
     private func buildMessages(messageCount: Int,
@@ -174,8 +174,8 @@ struct DatagramVectorReadManager {
             totalReadSize += readBytes
 
             // Next we extract the remote peer address.
-            precondition(messageVector[i].msg_hdr.msg_namelen != 0, "Unexpected zero length peer name")
-            let address: SocketAddress = sockaddrVector[i].convert()
+            precondition(self.messageVector[i].msg_hdr.msg_namelen != 0, "Unexpected zero length peer name")
+            let address: SocketAddress = self.sockaddrVector[i].convert()
 
             // Extract congestion information if requested.
             let metadata: AddressedEnvelope<ByteBuffer>.Metadata?

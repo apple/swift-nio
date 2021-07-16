@@ -112,7 +112,7 @@ private struct PendingStreamWritesState {
     public private(set) var bytes: Int64 = 0
 
     public var flushedChunks: Int {
-        pendingWrites.markedElementIndex.map {
+        self.pendingWrites.markedElementIndex.map {
             self.pendingWrites.distance(from: self.pendingWrites.startIndex, to: $0) + 1
         } ?? 0
     }
@@ -128,8 +128,8 @@ private struct PendingStreamWritesState {
     /// - returns: The `EventLoopPromise` of the write or `nil` if none was provided. The promise needs to be fulfilled by the caller.
     ///
     private mutating func fullyWrittenFirst() -> EventLoopPromise<Void>? {
-        let first = pendingWrites.removeFirst()
-        subtractOutstanding(bytes: first.data.readableBytes)
+        let first = self.pendingWrites.removeFirst()
+        self.subtractOutstanding(bytes: first.data.readableBytes)
         return first.promise
     }
 
@@ -138,8 +138,8 @@ private struct PendingStreamWritesState {
     /// - parameters:
     ///     - bytes: How many bytes of the item were written.
     private mutating func partiallyWrittenFirst(bytes: Int) {
-        pendingWrites[pendingWrites.startIndex].data.moveReaderIndex(forwardBy: bytes)
-        subtractOutstanding(bytes: bytes)
+        self.pendingWrites[self.pendingWrites.startIndex].data.moveReaderIndex(forwardBy: bytes)
+        self.subtractOutstanding(bytes: bytes)
     }
 
     /// Initialise a new, empty `PendingWritesState`.
@@ -147,37 +147,37 @@ private struct PendingStreamWritesState {
 
     /// Check if there are no outstanding writes.
     public var isEmpty: Bool {
-        if pendingWrites.isEmpty {
-            assert(bytes == 0)
-            assert(!pendingWrites.hasMark)
+        if self.pendingWrites.isEmpty {
+            assert(self.bytes == 0)
+            assert(!self.pendingWrites.hasMark)
             return true
         } else {
-            assert(bytes >= 0)
+            assert(self.bytes >= 0)
             return false
         }
     }
 
     /// Add a new write and optionally the corresponding promise to the list of outstanding writes.
     public mutating func append(_ chunk: PendingStreamWrite) {
-        pendingWrites.append(chunk)
+        self.pendingWrites.append(chunk)
         switch chunk.data {
         case let .byteBuffer(buffer):
-            bytes += numericCast(buffer.readableBytes)
+            self.bytes += numericCast(buffer.readableBytes)
         case let .fileRegion(fileRegion):
-            bytes += numericCast(fileRegion.readableBytes)
+            self.bytes += numericCast(fileRegion.readableBytes)
         }
     }
 
     /// Get the outstanding write at `index`.
     public subscript(index: Int) -> PendingStreamWrite {
-        pendingWrites[pendingWrites.index(pendingWrites.startIndex, offsetBy: index)]
+        self.pendingWrites[self.pendingWrites.index(self.pendingWrites.startIndex, offsetBy: index)]
     }
 
     /// Mark the flush checkpoint.
     ///
     /// All writes before this checkpoint will eventually be written to the socket.
     public mutating func markFlushCheckpoint() {
-        pendingWrites.mark()
+        self.pendingWrites.mark()
     }
 
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `writev`).
@@ -198,7 +198,7 @@ private struct PendingStreamWritesState {
             assert(written >= 0, "allegedly written a negative amount of bytes: \(written)")
             var unaccountedWrites = written
             for _ in 0 ..< itemCount {
-                let headItemReadableBytes = pendingWrites.first!.data.readableBytes
+                let headItemReadableBytes = self.pendingWrites.first!.data.readableBytes
                 if unaccountedWrites >= headItemReadableBytes {
                     unaccountedWrites -= headItemReadableBytes
                     /* we wrote at least the whole head item, so drop it and succeed the promise */
@@ -211,7 +211,7 @@ private struct PendingStreamWritesState {
                     }
                 } else {
                     /* we could only write a part of the head item, so don't drop it but remember what we wrote */
-                    partiallyWrittenFirst(bytes: unaccountedWrites)
+                    self.partiallyWrittenFirst(bytes: unaccountedWrites)
 
                     // may try again depending on the writeSpinCount
                     return (promise0, .writtenPartially)
@@ -224,7 +224,7 @@ private struct PendingStreamWritesState {
 
     /// Is there a pending flush?
     public var isFlushPending: Bool {
-        pendingWrites.hasMark
+        self.pendingWrites.hasMark
     }
 
     /// Remove all pending writes and return a `EventLoopPromise` which will cascade notifications to all.
@@ -235,7 +235,7 @@ private struct PendingStreamWritesState {
     public mutating func removeAll() -> EventLoopPromise<Void>? {
         var promise0: EventLoopPromise<Void>?
 
-        while !pendingWrites.isEmpty {
+        while !self.pendingWrites.isEmpty {
             if let p = fullyWrittenFirst() {
                 if let promise = promise0 {
                     promise.futureResult.cascade(to: p)
@@ -249,20 +249,20 @@ private struct PendingStreamWritesState {
 
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
-        switch flushedChunks {
+        switch self.flushedChunks {
         case 0:
             return .nothingToBeWritten
         case 1:
-            switch pendingWrites.first!.data {
+            switch self.pendingWrites.first!.data {
             case .byteBuffer:
                 return .scalarBufferWrite
             case .fileRegion:
                 return .scalarFileWrite
             }
         default:
-            let startIndex = pendingWrites.startIndex
-            switch (pendingWrites[startIndex].data,
-                    pendingWrites[pendingWrites.index(after: startIndex)].data)
+            let startIndex = self.pendingWrites.startIndex
+            switch (self.pendingWrites[startIndex].data,
+                    self.pendingWrites[self.pendingWrites.index(after: startIndex)].data)
             {
             case (.byteBuffer, .byteBuffer):
                 return .vectorBufferWrite
@@ -293,17 +293,17 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     /// Mark the flush checkpoint.
     func markFlushCheckpoint() {
-        state.markFlushCheckpoint()
+        self.state.markFlushCheckpoint()
     }
 
     /// Is there a flush pending?
     var isFlushPending: Bool {
-        state.isFlushPending
+        self.state.isFlushPending
     }
 
     /// Are there any outstanding writes currently?
     var isEmpty: Bool {
-        state.isEmpty
+        self.state.isEmpty
     }
 
     /// Add a pending write alongside its promise.
@@ -313,12 +313,12 @@ final class PendingStreamWritesManager: PendingWritesManager {
     ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
     /// - result: If the `Channel` is still writable after adding the write of `data`.
     func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
-        assert(isOpen)
-        state.append(.init(data: data, promise: promise))
+        assert(self.isOpen)
+        self.state.append(.init(data: data, promise: promise))
 
-        if state.bytes > waterMark.high, channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
+        if self.state.bytes > self.waterMark.high, self.channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
             // Returns false to signal the Channel became non-writable and we need to notify the user.
-            publishedWritability = false
+            self.publishedWritability = false
             return false
         }
         return true
@@ -326,7 +326,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
-        state.currentBestWriteMechanism
+        self.state.currentBestWriteMechanism
     }
 
     /// Triggers the appropriate write operation. This is a fancy way of saying trigger either `write`, `writev` or
@@ -363,10 +363,10 @@ final class PendingStreamWritesManager: PendingWritesManager {
     ///     - itemCount: The number of items we tried to write.
     ///     - result: The result of the write operation.
     private func didWrite(itemCount: Int, result: IOResult<Int>) -> OneWriteOperationResult {
-        let (promise, result) = state.didWrite(itemCount: itemCount, result: result)
+        let (promise, result) = self.state.didWrite(itemCount: itemCount, result: result)
 
-        if state.bytes < waterMark.low {
-            channelWritabilityFlag.store(true)
+        if self.state.bytes < self.waterMark.low {
+            self.channelWritabilityFlag.store(true)
         }
 
         promise?.succeed(())
@@ -378,12 +378,12 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - operation: An operation that writes a single, contiguous array of bytes (usually `write`).
     private func triggerScalarBufferWrite(_ operation: (UnsafeRawBufferPointer) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
-        assert(state.isFlushPending && !state.isEmpty && isOpen,
-               "single write called in illegal state: flush pending: \(state.isFlushPending), empty: \(state.isEmpty), isOpen: \(isOpen)")
+        assert(self.state.isFlushPending && !self.state.isEmpty && self.isOpen,
+               "single write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
 
-        switch state[0].data {
+        switch self.state[0].data {
         case let .byteBuffer(buffer):
-            return didWrite(itemCount: 1, result: try buffer.withUnsafeReadableBytes { try operation($0) })
+            return self.didWrite(itemCount: 1, result: try buffer.withUnsafeReadableBytes { try operation($0) })
         case .fileRegion:
             preconditionFailure("called \(#function) but first item to write was a FileRegion")
         }
@@ -394,10 +394,10 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - operation: An operation that writes a region of a file descriptor.
     private func triggerScalarFileWrite(_ operation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
-        assert(state.isFlushPending && !state.isEmpty && isOpen,
-               "single write called in illegal state: flush pending: \(state.isFlushPending), empty: \(state.isEmpty), isOpen: \(isOpen)")
+        assert(self.state.isFlushPending && !self.state.isEmpty && self.isOpen,
+               "single write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
 
-        switch state[0].data {
+        switch self.state[0].data {
         case let .fileRegion(file):
             let readerIndex = file.readerIndex
             let endIndex = file.endIndex
@@ -414,24 +414,24 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - operation: The vector write operation to use. Usually `writev`.
     private func triggerVectorBufferWrite(_ operation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
-        assert(state.isFlushPending && !state.isEmpty && isOpen,
-               "vector write called in illegal state: flush pending: \(state.isFlushPending), empty: \(state.isEmpty), isOpen: \(isOpen)")
+        assert(self.state.isFlushPending && !self.state.isEmpty && self.isOpen,
+               "vector write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
         let result = try doPendingWriteVectorOperation(pending: state,
                                                        iovecs: iovecs,
                                                        storageRefs: storageRefs) { try operation($0) }
-        return didWrite(itemCount: result.itemCount, result: result.writeResult)
+        return self.didWrite(itemCount: result.itemCount, result: result.writeResult)
     }
 
     /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
     func failAll(error: Error, close: Bool) {
         if close {
-            assert(isOpen)
-            isOpen = false
+            assert(self.isOpen)
+            self.isOpen = false
         }
 
-        state.removeAll()?.fail(error)
+        self.state.removeAll()?.fail(error)
 
-        assert(state.isEmpty)
+        assert(self.state.isEmpty)
     }
 
     /// Initialize with a pre-allocated array of IO vectors and storage references. We pass in these pre-allocated
@@ -505,7 +505,7 @@ extension PendingWritesManager {
         if !publishedWritability {
             // When we last published a writability change the `Channel` wasn't writable, signal back to the caller
             // whether we should emit a writability change.
-            result.writabilityChange = isWritable
+            result.writabilityChange = self.isWritable
             publishedWritability = result.writabilityChange
         }
         return result
@@ -514,7 +514,7 @@ extension PendingWritesManager {
 
 extension PendingStreamWritesManager: CustomStringConvertible {
     var description: String {
-        "PendingStreamWritesManager { isFlushPending: \(isFlushPending), " +
-            /*  */ "writabilityFlag: \(channelWritabilityFlag.load())), state: \(state) }"
+        "PendingStreamWritesManager { isFlushPending: \(self.isFlushPending), " +
+            /*  */ "writabilityFlag: \(self.channelWritabilityFlag.load())), state: \(self.state) }"
     }
 }

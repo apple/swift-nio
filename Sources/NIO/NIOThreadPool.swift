@@ -70,7 +70,7 @@ public final class NIOThreadPool {
     ///     - callback: The function to be executed once the shutdown is complete.
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         let g = DispatchGroup()
-        let threadsToJoin = lock.withLock { () -> [NIOThread] in
+        let threadsToJoin = self.lock.withLock { () -> [NIOThread] in
             switch self.state {
             case let .running(items):
                 queue.async {
@@ -106,7 +106,7 @@ public final class NIOThreadPool {
     /// - parameters:
     ///     - body: The `WorkItem` to process by the `NIOThreadPool`.
     public func submit(_ body: @escaping WorkItem) {
-        let item = lock.withLock { () -> WorkItem? in
+        let item = self.lock.withLock { () -> WorkItem? in
             switch self.state {
             case var .running(items):
                 items.append(body)
@@ -134,9 +134,9 @@ public final class NIOThreadPool {
         repeat {
             /* wait until work has become available */
             item = nil // ensure previous work item is not retained for duration of semaphore wait
-            semaphore.wait()
+            self.semaphore.wait()
 
-            item = lock.withLock { () -> (WorkItem)? in
+            item = self.lock.withLock { () -> (WorkItem)? in
                 switch self.state {
                 case var .running(items):
                     let item = items.removeFirst()
@@ -158,7 +158,7 @@ public final class NIOThreadPool {
 
     /// Start the `NIOThreadPool` if not already started.
     public func start() {
-        let alreadyRunning: Bool = lock.withLock {
+        let alreadyRunning: Bool = self.lock.withLock {
             switch self.state {
             case .running:
                 return true
@@ -183,7 +183,7 @@ public final class NIOThreadPool {
             self.threads?.reserveCapacity(self.numberOfThreads)
         }
 
-        for id in 0 ..< numberOfThreads {
+        for id in 0 ..< self.numberOfThreads {
             group.enter()
             // We should keep thread names under 16 characters because Linux doesn't allow more.
             NIOThread.spawnAndRun(name: "TP-#\(id)", detachThread: false) { thread in
@@ -197,7 +197,7 @@ public final class NIOThreadPool {
         }
 
         group.wait()
-        assert(lock.withLock { self.threads?.count ?? -1 } == numberOfThreads)
+        assert(self.lock.withLock { self.threads?.count ?? -1 } == self.numberOfThreads)
     }
 
     deinit {
@@ -220,7 +220,7 @@ public extension NIOThreadPool {
     /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
     func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
-        submit { shouldRun in
+        self.submit { shouldRun in
             guard case shouldRun = NIOThreadPool.WorkItemState.active else {
                 promise.fail(NIOThreadPoolError.ThreadPoolInactive())
                 return
@@ -237,7 +237,7 @@ public extension NIOThreadPool {
 
 public extension NIOThreadPool {
     func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
-        shutdownGracefully(queue: .global(), callback)
+        self.shutdownGracefully(queue: .global(), callback)
     }
 
     func syncShutdownGracefully() throws {

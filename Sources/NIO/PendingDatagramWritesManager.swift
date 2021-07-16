@@ -28,7 +28,7 @@ private struct PendingDatagramWrite {
     /// it will screw any other values pointing to that box. That would be a pretty bad scene. And
     /// in most cases we're not copying large values here: only for UDS does this become a problem.
     func copySocketAddress(_ target: UnsafeMutablePointer<sockaddr_storage>) -> socklen_t {
-        switch address {
+        switch self.address {
         case let .v4(innerAddress):
             return target.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
                 $0.pointee = innerAddress.address
@@ -144,7 +144,7 @@ private struct PendingDatagramWritesState {
     public private(set) var bytes: Int64 = 0
 
     public var nextWrite: PendingDatagramWrite? {
-        pendingWrites.first
+        self.pendingWrites.first
     }
 
     /// Subtract `bytes` from the number of outstanding bytes to write.
@@ -157,9 +157,9 @@ private struct PendingDatagramWritesState {
     ///
     /// - returns: The promise that the caller must fire, along with an error to fire it with if it needs one.
     private mutating func wroteFirst(error: Error? = nil) -> DatagramWritePromiseFiller? {
-        let first = pendingWrites.removeFirst()
-        chunks -= 1
-        subtractOutstanding(bytes: first.data.readableBytes)
+        let first = self.pendingWrites.removeFirst()
+        self.chunks -= 1
+        self.subtractOutstanding(bytes: first.data.readableBytes)
         if let promise = first.promise {
             return (promise, error)
         }
@@ -171,29 +171,29 @@ private struct PendingDatagramWritesState {
 
     /// Check if there are no outstanding writes.
     public var isEmpty: Bool {
-        if pendingWrites.isEmpty {
-            assert(chunks == 0)
-            assert(bytes == 0)
-            assert(!pendingWrites.hasMark)
+        if self.pendingWrites.isEmpty {
+            assert(self.chunks == 0)
+            assert(self.bytes == 0)
+            assert(!self.pendingWrites.hasMark)
             return true
         } else {
-            assert(chunks > 0 && bytes >= 0)
+            assert(self.chunks > 0 && self.bytes >= 0)
             return false
         }
     }
 
     /// Add a new write and optionally the corresponding promise to the list of outstanding writes.
     public mutating func append(_ chunk: PendingDatagramWrite) {
-        pendingWrites.append(chunk)
-        chunks += 1
-        bytes += numericCast(chunk.data.readableBytes)
+        self.pendingWrites.append(chunk)
+        self.chunks += 1
+        self.bytes += numericCast(chunk.data.readableBytes)
     }
 
     /// Mark the flush checkpoint.
     ///
     /// All writes before this checkpoint will eventually be written to the socket.
     public mutating func markFlushCheckpoint() {
-        pendingWrites.mark()
+        self.pendingWrites.mark()
     }
 
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `sendmmsg`).
@@ -208,9 +208,9 @@ private struct PendingDatagramWritesState {
         switch data {
         case let .processed(written):
             if let messages = messages {
-                return didVectorWrite(written: written, messages: messages)
+                return self.didVectorWrite(written: written, messages: messages)
             } else {
-                return didScalarWrite(written: written)
+                return self.didScalarWrite(written: written)
             }
         case .wouldBlock:
             return (nil, .wouldBlock)
@@ -220,8 +220,8 @@ private struct PendingDatagramWritesState {
     public mutating func recoverableError(_ error: Error) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
         // When we've hit an error we treat it like fully writing the first datagram. We aren't going to try to
         // send it again.
-        let promiseFiller = wroteFirst(error: error)
-        let result: OneWriteOperationResult = pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
+        let promiseFiller = self.wroteFirst(error: error)
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
 
         return (promiseFiller, result)
     }
@@ -243,7 +243,7 @@ private struct PendingDatagramWritesState {
 
         for write in writes {
             let written = write.msg_len
-            let thisWriteFiller = didScalarWrite(written: Int(written)).0
+            let thisWriteFiller = self.didScalarWrite(written: Int(written)).0
             assert(thisWriteFiller?.1 == nil, "didVectorWrite called with errors on single writes!")
 
             switch (promiseFiller, thisWriteFiller) {
@@ -258,7 +258,7 @@ private struct PendingDatagramWritesState {
         }
 
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult = pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
         return (promiseFiller, result)
     }
 
@@ -269,17 +269,17 @@ private struct PendingDatagramWritesState {
     /// - returns: All the promises that must be fired, and a `WriteResult` that indicates if we could write
     ///     everything or not.
     private mutating func didScalarWrite(written: Int) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
-        precondition(written <= pendingWrites.first!.data.readableBytes,
-                     "Appeared to write more bytes (\(written)) than the datagram contained (\(pendingWrites.first!.data.readableBytes))")
-        let writeFiller = wroteFirst()
+        precondition(written <= self.pendingWrites.first!.data.readableBytes,
+                     "Appeared to write more bytes (\(written)) than the datagram contained (\(self.pendingWrites.first!.data.readableBytes))")
+        let writeFiller = self.wroteFirst()
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult = pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
         return (writeFiller, result)
     }
 
     /// Is there a pending flush?
     public var isFlushPending: Bool {
-        pendingWrites.hasMark
+        self.pendingWrites.hasMark
     }
 
     /// Fail all the outstanding writes.
@@ -289,12 +289,12 @@ private struct PendingDatagramWritesState {
     /// - returns: Nothing
     public mutating func failAll(error: Error) {
         var promises: [EventLoopPromise<Void>] = []
-        promises.reserveCapacity(pendingWrites.count)
+        promises.reserveCapacity(self.pendingWrites.count)
 
-        while !pendingWrites.isEmpty {
-            let w = pendingWrites.removeFirst()
-            chunks -= 1
-            bytes -= numericCast(w.data.readableBytes)
+        while !self.pendingWrites.isEmpty {
+            let w = self.pendingWrites.removeFirst()
+            self.chunks -= 1
+            self.bytes -= numericCast(w.data.readableBytes)
             w.promise.map { promises.append($0) }
         }
 
@@ -303,12 +303,12 @@ private struct PendingDatagramWritesState {
 
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
-        switch pendingWrites.markedElementIndex {
-        case let .some(e) where pendingWrites.distance(from: pendingWrites.startIndex, to: e) > 0:
+        switch self.pendingWrites.markedElementIndex {
+        case let .some(e) where self.pendingWrites.distance(from: self.pendingWrites.startIndex, to: e) > 0:
             return .vectorBufferWrite
         case let .some(e):
             // The compiler can't prove this, but it must be so.
-            assert(pendingWrites.distance(from: e, to: pendingWrites.startIndex) == 0)
+            assert(self.pendingWrites.distance(from: e, to: self.pendingWrites.startIndex) == 0)
             return .scalarBufferWrite
         default:
             return .nothingToBeWritten
@@ -325,16 +325,16 @@ extension PendingDatagramWritesState {
 
         init(_ pendingWrites: PendingDatagramWritesState) {
             self.pendingWrites = pendingWrites
-            index = pendingWrites.pendingWrites.startIndex
-            markedIndex = pendingWrites.pendingWrites.markedElementIndex
+            self.index = pendingWrites.pendingWrites.startIndex
+            self.markedIndex = pendingWrites.pendingWrites.markedElementIndex
         }
 
         mutating func next() -> PendingDatagramWrite? {
             while let markedIndex = self.markedIndex, self.pendingWrites.pendingWrites.distance(from: index,
                                                                                                 to: markedIndex) >= 0
             {
-                let element = pendingWrites.pendingWrites[index]
-                index = pendingWrites.pendingWrites.index(after: index)
+                let element = self.pendingWrites.pendingWrites[self.index]
+                self.index = self.pendingWrites.pendingWrites.index(after: self.index)
                 return element
             }
 
@@ -403,17 +403,17 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     /// Mark the flush checkpoint.
     func markFlushCheckpoint() {
-        state.markFlushCheckpoint()
+        self.state.markFlushCheckpoint()
     }
 
     /// Is there a flush pending?
     var isFlushPending: Bool {
-        state.isFlushPending
+        self.state.isFlushPending
     }
 
     /// Are there any outstanding writes currently?
     var isEmpty: Bool {
-        state.isEmpty
+        self.state.isEmpty
     }
 
     /// Add a pending write.
@@ -423,15 +423,15 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
     /// - result: If the `Channel` is still writable after adding the write of `data`.
     func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
-        assert(isOpen)
-        state.append(.init(data: envelope.data,
-                           promise: promise,
-                           address: envelope.remoteAddress,
-                           metadata: envelope.metadata))
+        assert(self.isOpen)
+        self.state.append(.init(data: envelope.data,
+                                promise: promise,
+                                address: envelope.remoteAddress,
+                                metadata: envelope.metadata))
 
-        if state.bytes > waterMark.high, channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
+        if self.state.bytes > self.waterMark.high, self.channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
             // Returns false to signal the Channel became non-writable and we need to notify the user.
-            publishedWritability = false
+            self.publishedWritability = false
             return false
         }
         return true
@@ -439,7 +439,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
-        state.currentBestWriteMechanism
+        self.state.currentBestWriteMechanism
     }
 
     /// Triggers the appropriate write operation. This is a fancy way of saying trigger either `sendto` or `sendmmsg`.
@@ -483,13 +483,13 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - data: The result of the write operation.
     private func didWrite(_ data: IOResult<Int>, messages: UnsafeMutableBufferPointer<MMsgHdr>?) -> OneWriteOperationResult {
-        let (promise, result) = state.didWrite(data, messages: messages)
+        let (promise, result) = self.state.didWrite(data, messages: messages)
 
-        if state.bytes < waterMark.low {
-            channelWritabilityFlag.store(true)
+        if self.state.bytes < self.waterMark.low {
+            self.channelWritabilityFlag.store(true)
         }
 
-        fulfillPromise(promise)
+        self.fulfillPromise(promise)
         return result
     }
 
@@ -504,12 +504,12 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private func handleError(_ error: Error) throws -> OneWriteOperationResult {
         switch error {
         case let e as IOError where e.errnoCode == EMSGSIZE:
-            let (promise, result) = state.recoverableError(ChannelError.writeMessageTooLarge)
-            fulfillPromise(promise)
+            let (promise, result) = self.state.recoverableError(ChannelError.writeMessageTooLarge)
+            self.fulfillPromise(promise)
             return result
         case let e as IOError where e.errnoCode == EHOSTUNREACH:
-            let (promise, result) = state.recoverableError(ChannelError.writeHostUnreachable)
-            fulfillPromise(promise)
+            let (promise, result) = self.state.recoverableError(ChannelError.writeHostUnreachable)
+            self.fulfillPromise(promise)
             return result
         default:
             throw error
@@ -521,18 +521,18 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
     private func triggerScalarBufferWrite(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?) throws -> IOResult<Int>) rethrows -> OneWriteOperationResult {
-        assert(state.isFlushPending && isOpen && !state.isEmpty,
-               "illegal state for scalar datagram write operation: flushPending: \(state.isFlushPending), isOpen: \(isOpen), empty: \(state.isEmpty)")
-        let pending = state.nextWrite!
+        assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
+               "illegal state for scalar datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
+        let pending = self.state.nextWrite!
         do {
             let writeResult = try pending.address.withSockAddr { addrPtr, addrSize in
                 try pending.data.withUnsafeReadableBytes {
                     try scalarWriteOperation($0, addrPtr, socklen_t(addrSize), pending.metadata)
                 }
             }
-            return didWrite(writeResult, messages: nil)
+            return self.didWrite(writeResult, messages: nil)
         } catch {
-            return try handleError(error)
+            return try self.handleError(error)
         }
     }
 
@@ -541,15 +541,15 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - vectorWriteOperation: The vector write operation to use. Usually `sendmmsg`.
     private func triggerVectorBufferWrite(vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
-        assert(state.isFlushPending && isOpen && !state.isEmpty,
-               "illegal state for vector datagram write operation: flushPending: \(state.isFlushPending), isOpen: \(isOpen), empty: \(state.isEmpty)")
-        return didWrite(try doPendingDatagramWriteVectorOperation(pending: state,
-                                                                  iovecs: iovecs,
-                                                                  msgs: msgs,
-                                                                  addresses: addresses,
-                                                                  storageRefs: storageRefs,
-                                                                  controlMessageStorage: controlMessageStorage) { try vectorWriteOperation($0) },
-                        messages: msgs)
+        assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
+               "illegal state for vector datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
+        return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
+                                                                       iovecs: self.iovecs,
+                                                                       msgs: self.msgs,
+                                                                       addresses: self.addresses,
+                                                                       storageRefs: self.storageRefs,
+                                                                       controlMessageStorage: self.controlMessageStorage) { try vectorWriteOperation($0) },
+                             messages: self.msgs)
     }
 
     private func fulfillPromise(_ promise: PendingDatagramWritesState.DatagramWritePromiseFiller?) {
@@ -563,12 +563,12 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
     func failAll(error: Error, close: Bool) {
         if close {
-            assert(isOpen)
-            isOpen = false
+            assert(self.isOpen)
+            self.isOpen = false
         }
 
-        state.failAll(error: error)
+        self.state.failAll(error: error)
 
-        assert(state.isEmpty)
+        assert(self.state.isEmpty)
     }
 }

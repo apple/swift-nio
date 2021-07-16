@@ -46,11 +46,11 @@ private final class ClientHandler: ChannelInboundHandler {
 
     public func channelRead(context: ChannelHandlerContext, data _: NIOAny) {
         // If we still have iterations to do send some more data.
-        if iterationsOutstanding > 0 {
-            iterationsOutstanding -= 1
-            sendBytes(clientChannel: context.channel)
+        if self.iterationsOutstanding > 0 {
+            self.iterationsOutstanding -= 1
+            self.sendBytes(clientChannel: context.channel)
         } else {
-            whenDone!.succeed(())
+            self.whenDone!.succeed(())
         }
     }
 
@@ -79,12 +79,12 @@ private final class ClientHandler: ChannelInboundHandler {
         let numberOfIterations = 1000
 
         // Setup for iteration.
-        iterationsOutstanding = numberOfIterations
-        whenDone = clientChannel.eventLoop.makePromise()
+        self.iterationsOutstanding = numberOfIterations
+        self.whenDone = clientChannel.eventLoop.makePromise()
         // Kick start
-        sendBytes(clientChannel: clientChannel)
+        self.sendBytes(clientChannel: clientChannel)
         // Wait for completion.
-        try! whenDone!.futureResult.wait()
+        try! self.whenDone!.futureResult.wait()
         return numberOfIterations
     }
 }

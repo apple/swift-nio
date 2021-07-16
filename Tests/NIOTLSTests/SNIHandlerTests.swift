@@ -237,11 +237,11 @@ extension ChannelPipeline {
     }
 
     func assertDoesNotContain(handler: ChannelHandler) throws {
-        XCTAssertFalse(try contains(handler: handler))
+        XCTAssertFalse(try self.contains(handler: handler))
     }
 
     func assertContains(handler: ChannelHandler) throws {
-        XCTAssertTrue(try contains(handler: handler))
+        XCTAssertTrue(try self.contains(handler: handler))
     }
 }
 
@@ -259,7 +259,7 @@ class SNIHandlerTest: XCTestCase {
     /// the pipeline or emit its buffered data until the future fires.
     func dripFeedHello(clientHello: String, expectedResult: SNIResult) throws {
         var called = false
-        var buffer = bufferForBase64String(string: clientHello)
+        var buffer = self.bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
         let continuePromise = loop.makePromise(of: Void.self)
@@ -310,7 +310,7 @@ class SNIHandlerTest: XCTestCase {
     /// that the drip feed doesn't hit: it just helps to find more gross logic bugs.
     func blastHello(clientHello: String, expectedResult: SNIResult) throws {
         var called = false
-        let buffer = bufferForBase64String(string: clientHello)
+        let buffer = self.bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
         let continuePromise = loop.makePromise(of: Void.self)
@@ -352,7 +352,7 @@ class SNIHandlerTest: XCTestCase {
     }
 
     func assertIncompleteInput(clientHello: String) throws {
-        let buffer = bufferForBase64String(string: clientHello)
+        let buffer = self.bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
 
@@ -376,118 +376,118 @@ class SNIHandlerTest: XCTestCase {
     }
 
     func testLibre227NoSNIDripFeed() throws {
-        try dripFeedHello(clientHello: libressl227HelloNoSNI, expectedResult: .fallback)
+        try self.dripFeedHello(clientHello: libressl227HelloNoSNI, expectedResult: .fallback)
     }
 
     func testLibre227WithSNIDripFeed() throws {
-        try dripFeedHello(clientHello: libressl227HelloWithSNI, expectedResult: .hostname("httpbin.org"))
+        try self.dripFeedHello(clientHello: libressl227HelloWithSNI, expectedResult: .hostname("httpbin.org"))
     }
 
     func testOpenSSL102NoSNIDripFeed() throws {
-        try dripFeedHello(clientHello: openssl102HelloNoSNI, expectedResult: .fallback)
+        try self.dripFeedHello(clientHello: openssl102HelloNoSNI, expectedResult: .fallback)
     }
 
     func testOpenSSL102WithSNIDripFeed() throws {
-        try dripFeedHello(clientHello: openssl102HelloWithSNI, expectedResult: .hostname("httpbin.org"))
+        try self.dripFeedHello(clientHello: openssl102HelloWithSNI, expectedResult: .hostname("httpbin.org"))
     }
 
     func testCurlSecureTransportDripFeed() throws {
-        try dripFeedHello(clientHello: curlWithSecureTransport, expectedResult: .hostname("httpbin.org"))
+        try self.dripFeedHello(clientHello: curlWithSecureTransport, expectedResult: .hostname("httpbin.org"))
     }
 
     func testSafariDripFeed() throws {
-        try dripFeedHello(clientHello: safariWithSecureTransport, expectedResult: .hostname("httpbin.org"))
+        try self.dripFeedHello(clientHello: safariWithSecureTransport, expectedResult: .hostname("httpbin.org"))
     }
 
     func testChromeDripFeed() throws {
-        try dripFeedHello(clientHello: chromeWithBoringSSL, expectedResult: .hostname("httpbin.org"))
+        try self.dripFeedHello(clientHello: chromeWithBoringSSL, expectedResult: .hostname("httpbin.org"))
     }
 
     func testFirefoxDripFeed() throws {
-        try dripFeedHello(clientHello: firefoxWithNSS, expectedResult: .hostname("httpbin.org"))
+        try self.dripFeedHello(clientHello: firefoxWithNSS, expectedResult: .hostname("httpbin.org"))
     }
 
     func testLibre227NoSNIBlast() throws {
-        try blastHello(clientHello: libressl227HelloNoSNI, expectedResult: .fallback)
+        try self.blastHello(clientHello: libressl227HelloNoSNI, expectedResult: .fallback)
     }
 
     func testLibre227WithSNIBlast() throws {
-        try blastHello(clientHello: libressl227HelloWithSNI, expectedResult: .hostname("httpbin.org"))
+        try self.blastHello(clientHello: libressl227HelloWithSNI, expectedResult: .hostname("httpbin.org"))
     }
 
     func testOpenSSL102NoSNIBlast() throws {
-        try blastHello(clientHello: openssl102HelloNoSNI, expectedResult: .fallback)
+        try self.blastHello(clientHello: openssl102HelloNoSNI, expectedResult: .fallback)
     }
 
     func testOpenSSL102WithSNIBlast() throws {
-        try blastHello(clientHello: openssl102HelloWithSNI, expectedResult: .hostname("httpbin.org"))
+        try self.blastHello(clientHello: openssl102HelloWithSNI, expectedResult: .hostname("httpbin.org"))
     }
 
     func testCurlSecureTransportBlast() throws {
-        try blastHello(clientHello: curlWithSecureTransport, expectedResult: .hostname("httpbin.org"))
+        try self.blastHello(clientHello: curlWithSecureTransport, expectedResult: .hostname("httpbin.org"))
     }
 
     func testSafariBlast() throws {
-        try blastHello(clientHello: safariWithSecureTransport, expectedResult: .hostname("httpbin.org"))
+        try self.blastHello(clientHello: safariWithSecureTransport, expectedResult: .hostname("httpbin.org"))
     }
 
     func testChromeBlast() throws {
-        try blastHello(clientHello: chromeWithBoringSSL, expectedResult: .hostname("httpbin.org"))
+        try self.blastHello(clientHello: chromeWithBoringSSL, expectedResult: .hostname("httpbin.org"))
     }
 
     func testFirefoxBlast() throws {
-        try blastHello(clientHello: firefoxWithNSS, expectedResult: .hostname("httpbin.org"))
+        try self.blastHello(clientHello: firefoxWithNSS, expectedResult: .hostname("httpbin.org"))
     }
 
     func testIgnoresUnknownRecordTypes() throws {
-        try blastHello(clientHello: alertFatalInternalError, expectedResult: .fallback)
+        try self.blastHello(clientHello: alertFatalInternalError, expectedResult: .fallback)
     }
 
     func testIgnoresUnknownTlsVersions() throws {
-        try blastHello(clientHello: invalidTlsVersion, expectedResult: .fallback)
+        try self.blastHello(clientHello: invalidTlsVersion, expectedResult: .fallback)
     }
 
     func testIgnoresNonClientHelloHandshakeMessages() throws {
-        try blastHello(clientHello: clientKeyExchange, expectedResult: .fallback)
+        try self.blastHello(clientHello: clientKeyExchange, expectedResult: .fallback)
     }
 
     func testIgnoresInvalidHandshakeLength() throws {
-        try blastHello(clientHello: invalidHandshakeLength, expectedResult: .fallback)
+        try self.blastHello(clientHello: invalidHandshakeLength, expectedResult: .fallback)
     }
 
     func testIgnoresInvalidCipherSuiteLength() throws {
-        try blastHello(clientHello: invalidCipherSuitesLength, expectedResult: .fallback)
+        try self.blastHello(clientHello: invalidCipherSuitesLength, expectedResult: .fallback)
     }
 
     func testIgnoresInvalidCompressionLength() throws {
-        try blastHello(clientHello: invalidCompressionLength, expectedResult: .fallback)
+        try self.blastHello(clientHello: invalidCompressionLength, expectedResult: .fallback)
     }
 
     func testIgnoresInvalidExtensionLength() throws {
-        try blastHello(clientHello: invalidExtensionLength, expectedResult: .fallback)
+        try self.blastHello(clientHello: invalidExtensionLength, expectedResult: .fallback)
     }
 
     func testIgnoresInvalidIndividualExtensionLength() throws {
-        try blastHello(clientHello: invalidIndividualExtensionLength, expectedResult: .fallback)
+        try self.blastHello(clientHello: invalidIndividualExtensionLength, expectedResult: .fallback)
     }
 
     func testIgnoresUnknownNameType() throws {
-        try blastHello(clientHello: unknownNameType, expectedResult: .fallback)
+        try self.blastHello(clientHello: unknownNameType, expectedResult: .fallback)
     }
 
     func testIgnoresInvalidNameLength() throws {
-        try blastHello(clientHello: invalidNameLength, expectedResult: .fallback)
+        try self.blastHello(clientHello: invalidNameLength, expectedResult: .fallback)
     }
 
     func testIgnoresInvalidNameExtensionLength() throws {
-        try blastHello(clientHello: invalidNameExtensionLength, expectedResult: .fallback)
+        try self.blastHello(clientHello: invalidNameExtensionLength, expectedResult: .fallback)
     }
 
     func testLudicrouslyTruncatedPacket() throws {
-        try blastHello(clientHello: ludicrouslyTruncatedPacket, expectedResult: .fallback)
+        try self.blastHello(clientHello: ludicrouslyTruncatedPacket, expectedResult: .fallback)
     }
 
     func testFuzzingInputOne() throws {
-        try assertIncompleteInput(clientHello: fuzzingInputOne)
+        try self.assertIncompleteInput(clientHello: fuzzingInputOne)
     }
 }

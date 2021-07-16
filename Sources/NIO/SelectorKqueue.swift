@@ -187,15 +187,15 @@
         func deinitAssertions0() {}
 
         func register0<S: Selectable>(selectable: S, fileDescriptor _: CInt, interested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-            try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil, registrationID: registrationID)
+            try self.kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil, registrationID: registrationID)
         }
 
         func reregister0<S: Selectable>(selectable: S, fileDescriptor _: CInt, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-            try kqueueUpdateEventNotifications(selectable: selectable, interested: newInterested, oldInterested: oldInterested, registrationID: registrationID)
+            try self.kqueueUpdateEventNotifications(selectable: selectable, interested: newInterested, oldInterested: oldInterested, registrationID: registrationID)
         }
 
         func deregister0<S: Selectable>(selectable: S, fileDescriptor _: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-            try kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: oldInterested, registrationID: registrationID)
+            try self.kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: oldInterested, registrationID: registrationID)
         }
 
         /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).

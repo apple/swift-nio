@@ -26,18 +26,18 @@ import NIOHTTP1
             }
 
             func start() async throws -> AsyncChannelIO<Request, Response> {
-                try await channel.pipeline.addHandler(RequestResponseHandler<HTTPRequestHead, NIOHTTPClientResponseFull>()).get()
+                try await self.channel.pipeline.addHandler(RequestResponseHandler<HTTPRequestHead, NIOHTTPClientResponseFull>()).get()
                 return self
             }
 
             func sendRequest(_ request: Request) async throws -> Response {
-                let responsePromise: EventLoopPromise<Response> = channel.eventLoop.makePromise()
-                try await channel.writeAndFlush((request, responsePromise)).get()
+                let responsePromise: EventLoopPromise<Response> = self.channel.eventLoop.makePromise()
+                try await self.channel.writeAndFlush((request, responsePromise)).get()
                 return try await responsePromise.futureResult.get()
             }
 
             func close() async throws {
-                try await channel.close()
+                try await self.channel.close()
             }
         }
     #endif

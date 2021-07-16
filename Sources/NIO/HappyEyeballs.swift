@@ -31,7 +31,7 @@ private extension Array where Element == EventLoopFuture<Channel> {
             return
         }
 
-        remove(at: channelIndex)
+        self.remove(at: channelIndex)
     }
 }
 
@@ -86,35 +86,35 @@ private struct TargetIterator: IteratorProtocol {
     private var aaaaQueryResults: [SocketAddress] = []
 
     mutating func aResultsAvailable(_ results: [SocketAddress]) {
-        aQueryResults.append(contentsOf: results)
+        self.aQueryResults.append(contentsOf: results)
     }
 
     mutating func aaaaResultsAvailable(_ results: [SocketAddress]) {
-        aaaaQueryResults.append(contentsOf: results)
+        self.aaaaQueryResults.append(contentsOf: results)
     }
 
     mutating func next() -> Element? {
-        switch previousAddressFamily {
+        switch self.previousAddressFamily {
         case .v4:
-            return popAAAA() ?? popA()
+            return self.popAAAA() ?? self.popA()
         case .v6:
-            return popA() ?? popAAAA()
+            return self.popA() ?? self.popAAAA()
         }
     }
 
     private mutating func popA() -> SocketAddress? {
-        if aQueryResults.count > 0 {
-            previousAddressFamily = .v4
-            return aQueryResults.removeFirst()
+        if self.aQueryResults.count > 0 {
+            self.previousAddressFamily = .v4
+            return self.aQueryResults.removeFirst()
         }
 
         return nil
     }
 
     private mutating func popAAAA() -> SocketAddress? {
-        if aaaaQueryResults.count > 0 {
-            previousAddressFamily = .v6
-            return aaaaQueryResults.removeFirst()
+        if self.aaaaQueryResults.count > 0 {
+            self.previousAddressFamily = .v6
+            return self.aaaaQueryResults.removeFirst()
         }
 
         return nil
@@ -287,13 +287,13 @@ internal class HappyEyeballsConnector {
         self.port = port
         self.connectTimeout = connectTimeout
         self.channelBuilderCallback = channelBuilderCallback
-        resolutionTask = nil
-        connectionTask = nil
-        timeoutTask = nil
+        self.resolutionTask = nil
+        self.connectionTask = nil
+        self.timeoutTask = nil
 
-        state = .idle
-        resolutionPromise = self.loop.makePromise()
-        error = NIOConnectionError(host: host, port: port)
+        self.state = .idle
+        self.resolutionPromise = self.loop.makePromise()
+        self.error = NIOConnectionError(host: host, port: port)
 
         precondition(resolutionDelay.nanoseconds > 0, "Resolution delay must be greater than zero, got \(resolutionDelay).")
         self.resolutionDelay = resolutionDelay
@@ -307,11 +307,11 @@ internal class HappyEyeballsConnector {
     /// returns: An `EventLoopFuture` that fires with a connected `Channel`.
     public func resolveAndConnect() -> EventLoopFuture<Channel> {
         // We dispatch ourselves onto the event loop, rather than do all the rest of our processing from outside it.
-        loop.execute {
+        self.loop.execute {
             self.timeoutTask = self.loop.scheduleTask(in: self.connectTimeout) { self.processInput(.connectTimeoutElapsed) }
             self.processInput(.resolve)
         }
-        return resolutionPromise.futureResult
+        return self.resolutionPromise.futureResult
     }
 
     /// Spin the state machine.
@@ -319,52 +319,52 @@ internal class HappyEyeballsConnector {
     /// - parameters:
     ///     - input: The input to the state machine.
     private func processInput(_ input: ConnectorInput) {
-        switch (state, input) {
+        switch (self.state, input) {
         // Only one valid transition from idle: to start resolving.
         case (.idle, .resolve):
-            state = .resolving
-            beginDNSResolution()
+            self.state = .resolving
+            self.beginDNSResolution()
 
         // In the resolving state, we can exit three ways: either the A query returns,
         // the AAAA does, or the overall connect timeout fires.
         case (.resolving, .resolverACompleted):
-            state = .aResolvedWaiting
-            beginResolutionDelay()
+            self.state = .aResolvedWaiting
+            self.beginResolutionDelay()
         case (.resolving, .resolverAAAACompleted):
-            state = .aaaaResolved
-            beginConnecting()
+            self.state = .aaaaResolved
+            self.beginConnecting()
         case (.resolving, .connectTimeoutElapsed):
-            state = .complete
-            timedOut()
+            self.state = .complete
+            self.timedOut()
 
         // In the aResolvedWaiting state, we can exit three ways: the AAAA query returns,
         // the resolution delay elapses, or the overall connect timeout fires.
         case (.aResolvedWaiting, .resolverAAAACompleted):
-            state = .allResolved
-            beginConnecting()
+            self.state = .allResolved
+            self.beginConnecting()
         case (.aResolvedWaiting, .resolutionDelayElapsed):
-            state = .aResolvedConnecting
-            beginConnecting()
+            self.state = .aResolvedConnecting
+            self.beginConnecting()
         case (.aResolvedWaiting, .connectTimeoutElapsed):
-            state = .complete
-            timedOut()
+            self.state = .complete
+            self.timedOut()
 
         // In the aResolvedConnecting state, a number of inputs are valid: the AAAA result can
         // return, the connectionDelay can elapse, the overall connection timeout can fire,
         // a connection can succeed, a connection can fail, and we can run out of targets.
         case (.aResolvedConnecting, .resolverAAAACompleted):
-            state = .allResolved
-            connectToNewTargets()
+            self.state = .allResolved
+            self.connectToNewTargets()
         case (.aResolvedConnecting, .connectDelayElapsed):
-            connectionDelayElapsed()
+            self.connectionDelayElapsed()
         case (.aResolvedConnecting, .connectTimeoutElapsed):
-            state = .complete
-            timedOut()
+            self.state = .complete
+            self.timedOut()
         case (.aResolvedConnecting, .connectSuccess):
-            state = .complete
-            connectSuccess()
+            self.state = .complete
+            self.connectSuccess()
         case (.aResolvedConnecting, .connectFailed):
-            connectFailed()
+            self.connectFailed()
         case (.aResolvedConnecting, .noTargetsRemaining):
             // We are still waiting for the AAAA query, so we
             // do nothing.
@@ -374,18 +374,18 @@ internal class HappyEyeballsConnector {
         // the connectionDelay can elapse, the overall connection timeout can fire, a connection
         // can succeed, a connection can fail, and we can run out of targets.
         case (.aaaaResolved, .resolverACompleted):
-            state = .allResolved
-            connectToNewTargets()
+            self.state = .allResolved
+            self.connectToNewTargets()
         case (.aaaaResolved, .connectDelayElapsed):
-            connectionDelayElapsed()
+            self.connectionDelayElapsed()
         case (.aaaaResolved, .connectTimeoutElapsed):
-            state = .complete
-            timedOut()
+            self.state = .complete
+            self.timedOut()
         case (.aaaaResolved, .connectSuccess):
-            state = .complete
-            connectSuccess()
+            self.state = .complete
+            self.connectSuccess()
         case (.aaaaResolved, .connectFailed):
-            connectFailed()
+            self.connectFailed()
         case (.aaaaResolved, .noTargetsRemaining):
             // We are still waiting for the A query, so we
             // do nothing.
@@ -395,18 +395,18 @@ internal class HappyEyeballsConnector {
         // the overall connection timeout can fire, a connection can succeed, a connection can fail,
         // and possibly we can run out of targets.
         case (.allResolved, .connectDelayElapsed):
-            connectionDelayElapsed()
+            self.connectionDelayElapsed()
         case (.allResolved, .connectTimeoutElapsed):
-            state = .complete
-            timedOut()
+            self.state = .complete
+            self.timedOut()
         case (.allResolved, .connectSuccess):
-            state = .complete
-            connectSuccess()
+            self.state = .complete
+            self.connectSuccess()
         case (.allResolved, .connectFailed):
-            connectFailed()
+            self.connectFailed()
         case (.allResolved, .noTargetsRemaining):
-            state = .complete
-            failed()
+            self.state = .complete
+            self.failed()
 
         // Once we've completed, it's not impossible that we'll get state machine events for
         // some amounts of work. For example, we could get late DNS results and late connection
@@ -422,7 +422,7 @@ internal class HappyEyeballsConnector {
              (.complete, .resolutionDelayElapsed):
             break
         default:
-            fatalError("Invalid FSM transition attempt: state \(state), input \(input)")
+            fatalError("Invalid FSM transition attempt: state \(self.state), input \(input)")
         }
     }
 
@@ -432,8 +432,8 @@ internal class HappyEyeballsConnector {
         // The two queries SHOULD be made as soon after one another as possible,
         // with the AAAA query made first and immediately followed by the A
         // query.
-        whenAAAALookupComplete(future: resolver.initiateAAAAQuery(host: host, port: port))
-        whenALookupComplete(future: resolver.initiateAQuery(host: host, port: port))
+        self.whenAAAALookupComplete(future: self.resolver.initiateAAAAQuery(host: self.host, port: self.port))
+        self.whenALookupComplete(future: self.resolver.initiateAQuery(host: self.host, port: self.port))
     }
 
     /// Called when the A query has completed before the AAAA query.
@@ -444,23 +444,23 @@ internal class HappyEyeballsConnector {
     ///
     /// This method sets off a scheduled task for the resolution delay.
     private func beginResolutionDelay() {
-        resolutionTask = loop.scheduleTask(in: resolutionDelay, resolutionDelayComplete)
+        self.resolutionTask = self.loop.scheduleTask(in: self.resolutionDelay, self.resolutionDelayComplete)
     }
 
     /// Called when we're ready to start connecting to targets.
     ///
     /// This function sets off the first connection attempt, and also sets the connect delay task.
     private func beginConnecting() {
-        precondition(connectionTask == nil, "beginConnecting called while connection attempts outstanding")
+        precondition(self.connectionTask == nil, "beginConnecting called while connection attempts outstanding")
         guard let target = targets.next() else {
-            if pendingConnections.isEmpty {
-                processInput(.noTargetsRemaining)
+            if self.pendingConnections.isEmpty {
+                self.processInput(.noTargetsRemaining)
             }
             return
         }
 
-        connectionTask = loop.scheduleTask(in: connectionDelay) { self.processInput(.connectDelayElapsed) }
-        connectToTarget(target)
+        self.connectionTask = self.loop.scheduleTask(in: self.connectionDelay) { self.processInput(.connectDelayElapsed) }
+        self.connectToTarget(target)
     }
 
     /// Called when the state machine wants us to connect to new targets, but we may already
@@ -469,13 +469,13 @@ internal class HappyEyeballsConnector {
     /// This method takes into account the possibility that we may still be connecting to
     /// other targets.
     private func connectToNewTargets() {
-        guard connectionTask == nil else {
+        guard self.connectionTask == nil else {
             // Already connecting, no need to do anything here.
             return
         }
 
         // We're not in the middle of connecting, so we can start connecting!
-        beginConnecting()
+        self.beginConnecting()
     }
 
     /// Called when the connection delay timer has elapsed.
@@ -483,8 +483,8 @@ internal class HappyEyeballsConnector {
     /// When the connection delay elapses we are going to initiate another connection
     /// attempt.
     private func connectionDelayElapsed() {
-        connectionTask = nil
-        beginConnecting()
+        self.connectionTask = nil
+        self.beginConnecting()
     }
 
     /// Called when an outstanding connection attempt fails.
@@ -492,10 +492,10 @@ internal class HappyEyeballsConnector {
     /// This method checks that we don't have any connection attempts outstanding. If
     /// we discover we don't, it automatically triggers the next connection attempt.
     private func connectFailed() {
-        if pendingConnections.isEmpty {
-            connectionTask?.cancel()
-            connectionTask = nil
-            beginConnecting()
+        if self.pendingConnections.isEmpty {
+            self.connectionTask?.cancel()
+            self.connectionTask = nil
+            self.beginConnecting()
         }
     }
 
@@ -503,15 +503,15 @@ internal class HappyEyeballsConnector {
     ///
     /// Cleans up internal state.
     private func connectSuccess() {
-        cleanUp()
+        self.cleanUp()
     }
 
     /// Called when the overall connection timeout fires.
     ///
     /// Cleans up internal state and fails the connection promise.
     private func timedOut() {
-        cleanUp()
-        resolutionPromise.fail(ChannelError.connectTimeout(connectTimeout))
+        self.cleanUp()
+        self.resolutionPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
     }
 
     /// Called when we've attempted to connect to all our resolved targets,
@@ -520,9 +520,9 @@ internal class HappyEyeballsConnector {
     /// Asserts that there is nothing left on the internal state, and then fails the connection
     /// promise.
     private func failed() {
-        precondition(pendingConnections.isEmpty, "failed with pending connections")
-        cleanUp()
-        resolutionPromise.fail(error)
+        precondition(self.pendingConnections.isEmpty, "failed with pending connections")
+        self.cleanUp()
+        self.resolutionPromise.fail(self.error)
     }
 
     /// Called to connect to a given target.
@@ -530,8 +530,8 @@ internal class HappyEyeballsConnector {
     /// - parameters:
     ///     - target: The address to connect to.
     private func connectToTarget(_ target: SocketAddress) {
-        let channelFuture = channelBuilderCallback(loop, target.protocol)
-        pendingConnections.append(channelFuture)
+        let channelFuture = self.channelBuilderCallback(self.loop, target.protocol)
+        self.pendingConnections.append(channelFuture)
 
         channelFuture.whenSuccess { channel in
             // If we are in the complete state then we want to abandon this channel. Otherwise, begin
@@ -576,10 +576,10 @@ internal class HappyEyeballsConnector {
     // Cleans up all internal state, ensuring that there are no reference cycles and allowing
     // everything to eventually be deallocated.
     private func cleanUp() {
-        assert(state == .complete, "Clean up in invalid state \(state)")
+        assert(self.state == .complete, "Clean up in invalid state \(self.state)")
 
-        if dnsResolutions < 2 {
-            resolver.cancelQueries()
+        if self.dnsResolutions < 2 {
+            self.resolver.cancelQueries()
         }
 
         if let resolutionTask = self.resolutionTask {
@@ -597,8 +597,8 @@ internal class HappyEyeballsConnector {
             self.timeoutTask = nil
         }
 
-        let connections = pendingConnections
-        pendingConnections = []
+        let connections = self.pendingConnections
+        self.pendingConnections = []
         for connection in connections {
             connection.whenSuccess { channel in channel.close(promise: nil) }
         }
@@ -636,7 +636,7 @@ internal class HappyEyeballsConnector {
 
     /// A future callback that fires when the resolution delay completes.
     private func resolutionDelayComplete() {
-        resolutionTask = nil
-        processInput(.resolutionDelayElapsed)
+        self.resolutionTask = nil
+        self.processInput(.resolutionDelayElapsed)
     }
 }

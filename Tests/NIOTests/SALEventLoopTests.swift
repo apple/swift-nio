@@ -32,7 +32,7 @@ final class SALEventLoopTests: XCTestCase, SALTest {
     }
 
     func testSchedulingTaskOnSleepingLoopWakesUpOnce() throws {
-        let thisLoop = group.next()
+        let thisLoop = self.group.next()
 
         try thisLoop.runSAL(syscallAssertions: {
             try self.assertParkedRightNow()

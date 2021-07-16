@@ -23,7 +23,7 @@ internal enum SAL {
     fileprivate static let defaultTimeout: Double = 5
     private static let debugTests: Bool = false
     fileprivate static func printIfDebug(_ item: Any) {
-        if debugTests {
+        if self.debugTests {
             print(item)
         }
     }
@@ -44,7 +44,7 @@ final class LockedBox<T> {
     private let didSet: (T?) -> Void
     private var _value: T? {
         didSet {
-            didSet(_value)
+            self.didSet(self._value)
         }
     }
 
@@ -54,64 +54,64 @@ final class LockedBox<T> {
          line: UInt = #line,
          didSet: @escaping (T?) -> Void = { _ in })
     {
-        _value = value
+        self._value = value
         self.didSet = didSet
         self.description = description ?? "\(file):\(line)"
     }
 
     internal var value: T? {
         get {
-            condition.lock()
+            self.condition.lock()
             defer {
                 self.condition.unlock()
             }
-            return _value
+            return self._value
         }
 
         set {
-            condition.lock()
+            self.condition.lock()
             if let value = newValue {
-                _value = value
-                condition.unlock(withValue: 1)
+                self._value = value
+                self.condition.unlock(withValue: 1)
             } else {
-                _value = nil
-                condition.unlock(withValue: 0)
+                self._value = nil
+                self.condition.unlock(withValue: 0)
             }
         }
     }
 
     func waitForEmptyAndSet(_ value: T) throws {
-        if condition.lock(whenValue: 0, timeoutSeconds: SAL.defaultTimeout) {
+        if self.condition.lock(whenValue: 0, timeoutSeconds: SAL.defaultTimeout) {
             defer {
                 self.condition.unlock(withValue: 1)
             }
-            _value = value
+            self._value = value
         } else {
-            throw TimeoutError(description)
+            throw TimeoutError(self.description)
         }
     }
 
     func takeValue() throws -> T {
-        if condition.lock(whenValue: 1, timeoutSeconds: SAL.defaultTimeout) {
+        if self.condition.lock(whenValue: 1, timeoutSeconds: SAL.defaultTimeout) {
             defer {
                 self.condition.unlock(withValue: 0)
             }
-            let value = _value!
-            _value = nil
+            let value = self._value!
+            self._value = nil
             return value
         } else {
-            throw TimeoutError(description)
+            throw TimeoutError(self.description)
         }
     }
 
     func waitForValue() throws -> T {
-        if condition.lock(whenValue: 1, timeoutSeconds: SAL.defaultTimeout) {
+        if self.condition.lock(whenValue: 1, timeoutSeconds: SAL.defaultTimeout) {
             defer {
                 self.condition.unlock(withValue: 1)
             }
-            return _value!
+            return self._value!
         } else {
-            throw TimeoutError(description)
+            throw TimeoutError(self.description)
         }
     }
 }
@@ -204,8 +204,8 @@ internal class HookedSelector: NIO.Selector<NIORegistration>, UserKernelInterfac
                                           interested: SelectorEventSet,
                                           makeRegistration: (SelectorEventSet, SelectorRegistrationID) -> NIORegistration) throws
     {
-        try userToKernel.waitForEmptyAndSet(.register(selectable, interested, makeRegistration(interested,
-                                                                                               .initialRegistrationID)))
+        try self.userToKernel.waitForEmptyAndSet(.register(selectable, interested, makeRegistration(interested,
+                                                                                                    .initialRegistrationID)))
         let ret = try waitForKernelReturn()
         if case .returnVoid = ret {
             return
@@ -215,7 +215,7 @@ internal class HookedSelector: NIO.Selector<NIORegistration>, UserKernelInterfac
     }
 
     override func reregister<S: Selectable>(selectable: S, interested: SelectorEventSet) throws {
-        try userToKernel.waitForEmptyAndSet(.reregister(selectable, interested))
+        try self.userToKernel.waitForEmptyAndSet(.reregister(selectable, interested))
         let ret = try waitForKernelReturn()
         if case .returnVoid = ret {
             return
@@ -225,7 +225,7 @@ internal class HookedSelector: NIO.Selector<NIORegistration>, UserKernelInterfac
     }
 
     override func whenReady(strategy: SelectorStrategy, onLoopBegin loopStart: () -> Void, _ body: (SelectorEvent<NIORegistration>) throws -> Void) throws {
-        try userToKernel.waitForEmptyAndSet(.whenReady(strategy))
+        try self.userToKernel.waitForEmptyAndSet(.whenReady(strategy))
         let ret = try waitForKernelReturn()
         if case let .returnSelectorEvent(event) = ret {
             loopStart()
@@ -239,7 +239,7 @@ internal class HookedSelector: NIO.Selector<NIORegistration>, UserKernelInterfac
     }
 
     override func deregister<S: Selectable>(selectable: S) throws {
-        try userToKernel.waitForEmptyAndSet(.deregister(selectable))
+        try self.userToKernel.waitForEmptyAndSet(.deregister(selectable))
         let ret = try waitForKernelReturn()
         if case .returnVoid = ret {
             return
@@ -250,7 +250,7 @@ internal class HookedSelector: NIO.Selector<NIORegistration>, UserKernelInterfac
 
     override func wakeup() throws {
         SAL.printIfDebug("WAKEUP")
-        try wakeups.waitForEmptyAndSet(())
+        try self.wakeups.waitForEmptyAndSet(())
     }
 }
 
@@ -277,7 +277,7 @@ class HookedSocket: Socket, UserKernelInterface {
     }
 
     override func localAddress() throws -> SocketAddress {
-        try userToKernel.waitForEmptyAndSet(.localAddress)
+        try self.userToKernel.waitForEmptyAndSet(.localAddress)
         let ret = try waitForKernelReturn()
         if case let .returnSocketAddress(address) = ret {
             return address
@@ -287,7 +287,7 @@ class HookedSocket: Socket, UserKernelInterface {
     }
 
     override func remoteAddress() throws -> SocketAddress {
-        try userToKernel.waitForEmptyAndSet(.remoteAddress)
+        try self.userToKernel.waitForEmptyAndSet(.remoteAddress)
         let ret = try waitForKernelReturn()
         if case let .returnSocketAddress(address) = ret {
             return address
@@ -297,7 +297,7 @@ class HookedSocket: Socket, UserKernelInterface {
     }
 
     override func connect(to address: SocketAddress) throws -> Bool {
-        try userToKernel.waitForEmptyAndSet(.connect(address))
+        try self.userToKernel.waitForEmptyAndSet(.connect(address))
         let ret = try waitForKernelReturn()
         if case let .returnBool(success) = ret {
             return success
@@ -307,7 +307,7 @@ class HookedSocket: Socket, UserKernelInterface {
     }
 
     override func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        try userToKernel.waitForEmptyAndSet(.read(pointer.count))
+        try self.userToKernel.waitForEmptyAndSet(.read(pointer.count))
         let ret = try waitForKernelReturn()
         if case let .returnBytes(buffer) = ret {
             assert(buffer.readableBytes <= pointer.count)
@@ -368,7 +368,7 @@ class HookedSocket: Socket, UserKernelInterface {
     }
 
     override func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
-        try userToKernel.waitForEmptyAndSet(.setOption(level, name, value))
+        try self.userToKernel.waitForEmptyAndSet(.setOption(level, name, value))
         let ret = try waitForKernelReturn()
         if case .returnVoid = ret {
             return
@@ -378,7 +378,7 @@ class HookedSocket: Socket, UserKernelInterface {
     }
 
     override func bind(to address: SocketAddress) throws {
-        try userToKernel.waitForEmptyAndSet(.bind(address))
+        try self.userToKernel.waitForEmptyAndSet(.bind(address))
         let ret = try waitForKernelReturn()
         if case .returnVoid = ret {
             return
@@ -396,7 +396,7 @@ extension HookedSelector {
     {
         let syscall = try userToKernel.takeValue()
         if try matcher(syscall) {
-            try kernelToUser.waitForEmptyAndSet(result)
+            try self.kernelToUser.waitForEmptyAndSet(result)
         } else {
             XCTFail("unexpected syscall \(syscall)", file: file, line: line)
             throw UnexpectedSyscall(syscall)
@@ -409,8 +409,8 @@ extension HookedSelector {
     /// this code.
     func assertWakeup(file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
-        try wakeups.takeValue()
-        try assertSyscallAndReturn(.returnSelectorEvent(nil), file: file, line: line) { syscall in
+        try self.wakeups.takeValue()
+        try self.assertSyscallAndReturn(.returnSelectorEvent(nil), file: file, line: line) { syscall in
             if case .whenReady(.block) = syscall {
                 return true
             } else {
@@ -420,7 +420,7 @@ extension HookedSelector {
     }
 
     func assertParkedRightNow(file: StaticString = #file, line: UInt = #line) throws {
-        try userToKernel.assertParkedRightNow(file: file, line: line)
+        try self.userToKernel.assertParkedRightNow(file: file, line: line)
     }
 }
 
@@ -482,7 +482,7 @@ protocol SALTest: AnyObject {
 extension SALTest {
     private var selector: HookedSelector {
         precondition(Array(group.makeIterator()).count == 1)
-        return loop._selector as! HookedSelector
+        return self.loop._selector as! HookedSelector
     }
 
     private var loop: SelectableEventLoop {
@@ -526,7 +526,7 @@ extension SALTest {
                                                    socket: .max),
                               eventLoop: eventLoop)
         }
-        try assertParkedRightNow()
+        try self.assertParkedRightNow()
         return channel
     }
 
@@ -548,12 +548,12 @@ extension SALTest {
                                                    socket: .max),
                               eventLoop: self.loop)
         }
-        try assertParkedRightNow()
+        try self.assertParkedRightNow()
         return channel
     }
 
     func makeSocketChannel(file: StaticString = #file, line: UInt = #line) throws -> SocketChannel {
-        try makeSocketChannel(eventLoop: loop, file: file, line: line)
+        try self.makeSocketChannel(eventLoop: self.loop, file: file, line: line)
     }
 
     func makeConnectedSocketChannel(localAddress: SocketAddress?,
@@ -630,8 +630,8 @@ extension SALTest {
                                       file: StaticString = #file, line: UInt = #line) throws
     {
         SAL.printIfDebug("\(#function)(result: \(result.debugDescription))")
-        try selector.assertSyscallAndReturn(.returnSelectorEvent(result),
-                                            file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnSelectorEvent(result),
+                                                 file: file, line: line) { syscall in
             if case .whenReady = syscall {
                 return true
             } else {
@@ -641,7 +641,7 @@ extension SALTest {
     }
 
     func assertWakeup(file: StaticString = #file, line: UInt = #line) throws {
-        try selector.assertWakeup(file: file, line: line)
+        try self.selector.assertWakeup(file: file, line: line)
     }
 
     func assertdisableSIGPIPE(expectedFD: CInt,
@@ -656,7 +656,7 @@ extension SALTest {
         case let .failure(error):
             ret = .error(error)
         }
-        try selector.assertSyscallAndReturn(ret, file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(ret, file: file, line: line) { syscall in
             if case .disableSIGPIPE(expectedFD) = syscall {
                 return true
             } else {
@@ -667,7 +667,7 @@ extension SALTest {
 
     func assertLocalAddress(address: SocketAddress?, file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(address.map {
+        try self.selector.assertSyscallAndReturn(address.map {
             .returnSocketAddress($0)
         /*                                */ } ?? .error(.init(errnoCode: EOPNOTSUPP, reason: "nil passed")),
         file: file, line: line) { syscall in
@@ -681,7 +681,7 @@ extension SALTest {
 
     func assertRemoteAddress(address: SocketAddress?, file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(address.map { .returnSocketAddress($0) } ??
+        try self.selector.assertSyscallAndReturn(address.map { .returnSocketAddress($0) } ??
             /*                                */ .error(.init(errnoCode: EOPNOTSUPP, reason: "nil passed")),
             file: file, line: line) { syscall in
                 if case .remoteAddress = syscall {
@@ -694,7 +694,7 @@ extension SALTest {
 
     func assertConnect(expectedAddress: SocketAddress, result: Bool, file: StaticString = #file, line: UInt = #line, _: (SocketAddress) -> Bool = { _ in true }) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnBool(result), file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnBool(result), file: file, line: line) { syscall in
             if case let .connect(address) = syscall {
                 return address == expectedAddress
             } else {
@@ -705,7 +705,7 @@ extension SALTest {
 
     func assertBind(expectedAddress: SocketAddress, file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
             if case let .bind(address) = syscall {
                 return address == expectedAddress
             } else {
@@ -716,7 +716,7 @@ extension SALTest {
 
     func assertClose(expectedFD: CInt, file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
             if case let .close(fd) = syscall {
                 XCTAssertEqual(expectedFD, fd, file: file, line: line)
                 return true
@@ -732,7 +732,7 @@ extension SALTest {
                          _ valueMatcher: (Any) -> Bool = { _ in true }) throws
     {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
             if case .setOption(expectedLevel, expectedOption, let value) = syscall {
                 return valueMatcher(value)
             } else {
@@ -743,7 +743,7 @@ extension SALTest {
 
     func assertRegister(file: StaticString = #file, line: UInt = #line, _ matcher: (Selectable, SelectorEventSet, NIORegistration) throws -> Bool) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
             if case let .register(selectable, eventSet, registration) = syscall {
                 return try matcher(selectable, eventSet, registration)
             } else {
@@ -754,7 +754,7 @@ extension SALTest {
 
     func assertReregister(file: StaticString = #file, line: UInt = #line, _ matcher: (Selectable, SelectorEventSet) throws -> Bool) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
             if case let .reregister(selectable, eventSet) = syscall {
                 return try matcher(selectable, eventSet)
             } else {
@@ -765,7 +765,7 @@ extension SALTest {
 
     func assertDeregister(file: StaticString = #file, line: UInt = #line, _ matcher: (Selectable) throws -> Bool) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnVoid, file: file, line: line) { syscall in
             if case let .deregister(selectable) = syscall {
                 return try matcher(selectable)
             } else {
@@ -776,7 +776,7 @@ extension SALTest {
 
     func assertWrite(expectedFD: CInt, expectedBytes: ByteBuffer, return: IOResult<Int>, file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnIOResultInt(`return`), file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnIOResultInt(`return`), file: file, line: line) { syscall in
             if case let .write(actualFD, actualBytes) = syscall {
                 return expectedFD == actualFD && expectedBytes == actualBytes
             } else {
@@ -787,7 +787,7 @@ extension SALTest {
 
     func assertWritev(expectedFD: CInt, expectedBytes: [ByteBuffer], return: IOResult<Int>, file: StaticString = #file, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnIOResultInt(`return`), file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnIOResultInt(`return`), file: file, line: line) { syscall in
             if case let .writev(actualFD, actualBytes) = syscall {
                 return expectedFD == actualFD && expectedBytes == actualBytes
             } else {
@@ -800,8 +800,8 @@ extension SALTest {
                     file: StaticString = #file, line: UInt = #line) throws
     {
         SAL.printIfDebug("\(#function)")
-        try selector.assertSyscallAndReturn(.returnBytes(`return`),
-                                            file: file, line: line) { syscall in
+        try self.selector.assertSyscallAndReturn(.returnBytes(`return`),
+                                                 file: file, line: line) { syscall in
             if case let .read(amount) = syscall {
                 XCTAssertEqual(expectedBufferSpace, amount, file: file, line: line)
                 return true

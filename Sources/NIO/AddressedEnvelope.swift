@@ -42,7 +42,7 @@ public struct AddressedEnvelope<DataType> {
 
         public init(ecnState: NIOExplicitCongestionNotificationState) {
             self.ecnState = ecnState
-            packetInfo = nil
+            self.packetInfo = nil
         }
 
         public init(ecnState: NIOExplicitCongestionNotificationState, packetInfo: NIOPacketInfo?) {
@@ -54,7 +54,7 @@ public struct AddressedEnvelope<DataType> {
 
 extension AddressedEnvelope: CustomStringConvertible {
     public var description: String {
-        "AddressedEnvelope { remoteAddress: \(remoteAddress), data: \(data) }"
+        "AddressedEnvelope { remoteAddress: \(self.remoteAddress), data: \(self.data) }"
     }
 }
 

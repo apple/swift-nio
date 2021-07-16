@@ -145,6 +145,6 @@ struct SomePartiallyOrderedDataType: Comparable, CustomStringConvertible {
     }
 
     public var description: String {
-        "(w: \(width), h: \(height))"
+        "(w: \(self.width), h: \(self.height))"
     }
 }

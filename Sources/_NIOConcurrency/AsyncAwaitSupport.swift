@@ -86,21 +86,21 @@ import NIO
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         @inlinable
         func writeAndFlush<T>(_ any: T) async throws {
-            try await writeAndFlush(any).get()
+            try await self.writeAndFlush(any).get()
         }
 
         /// Set `option` to `value` on this `Channel`.
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         @inlinable
         func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) async throws {
-            try await setOption(option, value: value).get()
+            try await self.setOption(option, value: value).get()
         }
 
         /// Get the value of `option` for this `Channel`.
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         @inlinable
         func getOption<Option: ChannelOption>(_ option: Option) async throws -> Option.Value {
-            try await getOption(option).get()
+            try await self.getOption(option).get()
         }
     }
 
@@ -110,7 +110,7 @@ import NIO
         /// - returns: the future which will be notified once the operation completes.
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func register(file: StaticString = #file, line: UInt = #line) async throws {
-            try await register(file: file, line: line).get()
+            try await self.register(file: file, line: line).get()
         }
 
         /// Bind to a `SocketAddress`.
@@ -119,7 +119,7 @@ import NIO
         /// - returns: the future which will be notified once the operation completes.
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func bind(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) async throws {
-            try await bind(to: address, file: file, line: line).get()
+            try await self.bind(to: address, file: file, line: line).get()
         }
 
         /// Connect to a `SocketAddress`.
@@ -128,7 +128,7 @@ import NIO
         /// - returns: the future which will be notified once the operation completes.
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func connect(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) async throws {
-            try await connect(to: address, file: file, line: line).get()
+            try await self.connect(to: address, file: file, line: line).get()
         }
 
         /// Shortcut for calling `write` and `flush`.
@@ -138,7 +138,7 @@ import NIO
         /// - returns: the future which will be notified once the `write` operation completes.
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func writeAndFlush(_ data: NIOAny, file: StaticString = #file, line: UInt = #line) async throws {
-            try await writeAndFlush(data, file: file, line: line).get()
+            try await self.writeAndFlush(data, file: file, line: line).get()
         }
 
         /// Close the `Channel` and so the connection if one exists.
@@ -148,7 +148,7 @@ import NIO
         /// - returns: the future which will be notified once the operation completes.
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func close(mode: CloseMode = .all, file: StaticString = #file, line: UInt = #line) async throws {
-            try await close(mode: mode, file: file, line: line).get()
+            try await self.close(mode: mode, file: file, line: line).get()
         }
 
         /// Trigger a custom user outbound event which will flow through the `ChannelPipeline`.
@@ -158,7 +158,7 @@ import NIO
         /// - returns: the future which will be notified once the operation completes.
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func triggerUserOutboundEvent(_ event: Any, file: StaticString = #file, line: UInt = #line) async throws {
-            try await triggerUserOutboundEvent(event, file: file, line: line).get()
+            try await self.triggerUserOutboundEvent(event, file: file, line: line).get()
         }
     }
 
@@ -168,52 +168,52 @@ import NIO
                         name: String? = nil,
                         position: ChannelPipeline.Position = .last) async throws
         {
-            try await addHandler(handler, name: name, position: position).get()
+            try await self.addHandler(handler, name: name, position: position).get()
         }
 
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func removeHandler(_ handler: RemovableChannelHandler) async throws {
-            try await removeHandler(handler).get()
+            try await self.removeHandler(handler).get()
         }
 
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func removeHandler(name: String) async throws {
-            try await removeHandler(name: name).get()
+            try await self.removeHandler(name: name).get()
         }
 
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func removeHandler(context: ChannelHandlerContext) async throws {
-            try await removeHandler(context: context).get()
+            try await self.removeHandler(context: context).get()
         }
 
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func context(handler: ChannelHandler) async throws -> ChannelHandlerContext {
-            try await context(handler: handler).get()
+            try await self.context(handler: handler).get()
         }
 
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func context(name: String) async throws -> ChannelHandlerContext {
-            try await context(name: name).get()
+            try await self.context(name: name).get()
         }
 
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         @inlinable
         func context<Handler: ChannelHandler>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
-            try await context(handlerType: handlerType).get()
+            try await self.context(handlerType: handlerType).get()
         }
 
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func addHandlers(_ handlers: [ChannelHandler],
                          position: ChannelPipeline.Position = .last) async throws
         {
-            try await addHandlers(handlers, position: position).get()
+            try await self.addHandlers(handlers, position: position).get()
         }
 
         @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
         func addHandlers(_ handlers: ChannelHandler...,
                          position: ChannelPipeline.Position = .last) async throws
         {
-            try await addHandlers(handlers, position: position)
+            try await self.addHandlers(handlers, position: position)
         }
     }
 #endif

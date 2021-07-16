@@ -45,19 +45,19 @@ struct UnsafeControlMessageStorage: Collection {
     }
 
     mutating func deallocate() {
-        buffer.deallocate()
-        buffer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer(bitPattern: 0x7EAD_BEEF), count: 0)
+        self.buffer.deallocate()
+        self.buffer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer(bitPattern: 0x7EAD_BEEF), count: 0)
     }
 
     /// Get the part of the buffer for use with a message.
     public subscript(position: Int) -> UnsafeMutableRawBufferPointer {
         UnsafeMutableRawBufferPointer(
-            fastRebase: buffer[(position * bytesPerMessage) ..< ((position + 1) * bytesPerMessage)])
+            fastRebase: self.buffer[(position * self.bytesPerMessage) ..< ((position + 1) * self.bytesPerMessage)])
     }
 
     var startIndex: Int { 0 }
 
-    var endIndex: Int { buffer.count / bytesPerMessage }
+    var endIndex: Int { self.buffer.count / self.bytesPerMessage }
 
     func index(after: Int) -> Int {
         after + 1
@@ -119,7 +119,7 @@ extension UnsafeControlMessageCollection: Collection {
     var endIndex: Index { Index(cmsgPointer: nil) }
 
     func index(after: Index) -> Index {
-        var msgHdr = messageHeader
+        var msgHdr = self.messageHeader
         return withUnsafeMutablePointer(to: &msgHdr) { messageHeaderPtr in
             Index(cmsgPointer: NIOBSDSocketControlMessage.nextHeader(inside: messageHeaderPtr,
                                                                      after: after.cmsgPointer!))
@@ -152,7 +152,7 @@ struct ControlMessageParser {
 
     init(parsing controlMessagesReceived: UnsafeControlMessageCollection) {
         for controlMessage in controlMessagesReceived {
-            receiveMessage(controlMessage)
+            self.receiveMessage(controlMessage)
         }
     }
 
@@ -174,9 +174,9 @@ struct ControlMessageParser {
 
     private mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
         if controlMessage.level == IPPROTO_IP {
-            receiveIPv4Message(controlMessage)
+            self.receiveIPv4Message(controlMessage)
         } else if controlMessage.level == IPPROTO_IPV6 {
-            receiveIPv6Message(controlMessage)
+            self.receiveIPv6Message(controlMessage)
         }
     }
 
@@ -195,8 +195,8 @@ struct ControlMessageParser {
                 addr.sin_family = sa_family_t(NIOBSDSocket.AddressFamily.inet.rawValue)
                 addr.sin_port = in_port_t(0)
                 addr.sin_addr = info.ipi_addr
-                packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""),
-                                           interfaceIndex: Int(info.ipi_ifindex))
+                self.packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""),
+                                                interfaceIndex: Int(info.ipi_ifindex))
             }
         }
     }
@@ -205,7 +205,7 @@ struct ControlMessageParser {
         if controlMessage.type == IPV6_TCLASS {
             if let data = controlMessage.data {
                 let readValue = ControlMessageParser._readCInt(data: data)
-                ecnValue = .init(receivedValue: readValue)
+                self.ecnValue = .init(receivedValue: readValue)
             }
         } else if controlMessage.type == Posix.IPV6_PKTINFO {
             if let data = controlMessage.data {
@@ -216,8 +216,8 @@ struct ControlMessageParser {
                 addr.sin6_flowinfo = 0
                 addr.sin6_addr = info.ipi6_addr
                 addr.sin6_scope_id = 0
-                packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""),
-                                           interfaceIndex: Int(info.ipi6_ifindex))
+                self.packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""),
+                                                interfaceIndex: Int(info.ipi6_ifindex))
             }
         }
     }
@@ -262,11 +262,11 @@ struct UnsafeOutboundControlBytes {
     /// This structure must not outlive `controlBytes`
     init(controlBytes: UnsafeMutableRawBufferPointer) {
         self.controlBytes = controlBytes
-        writePosition = controlBytes.startIndex
+        self.writePosition = controlBytes.startIndex
     }
 
     mutating func appendControlMessage(level: CInt, type: CInt, payload: CInt) {
-        appendGenericControlMessage(level: level, type: type, payload: payload)
+        self.appendGenericControlMessage(level: level, type: type, payload: payload)
     }
 
     /// Appends a control message.
@@ -291,15 +291,15 @@ struct UnsafeOutboundControlBytes {
         precondition(dataPointer.count >= MemoryLayout<PayloadType>.stride)
         dataPointer.storeBytes(of: payload, as: PayloadType.self)
 
-        writePosition += requiredSize
+        self.writePosition += requiredSize
     }
 
     /// The result is only valid while this is valid.
     var validControlBytes: UnsafeMutableRawBufferPointer {
-        if writePosition == 0 {
+        if self.writePosition == 0 {
             return UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
-        return UnsafeMutableRawBufferPointer(fastRebase: controlBytes[0 ..< writePosition])
+        return UnsafeMutableRawBufferPointer(fastRebase: self.controlBytes[0 ..< self.writePosition])
     }
 }
 
@@ -315,13 +315,13 @@ extension UnsafeOutboundControlBytes {
 
         switch protocolFamily {
         case .some(.inet):
-            appendControlMessage(level: .init(IPPROTO_IP),
-                                 type: IP_TOS,
-                                 payload: CInt(ecnValue: metadata.ecnState))
+            self.appendControlMessage(level: .init(IPPROTO_IP),
+                                      type: IP_TOS,
+                                      payload: CInt(ecnValue: metadata.ecnState))
         case .some(.inet6):
-            appendControlMessage(level: .init(IPPROTO_IPV6),
-                                 type: IPV6_TCLASS,
-                                 payload: CInt(ecnValue: metadata.ecnState))
+            self.appendControlMessage(level: .init(IPPROTO_IPV6),
+                                      type: IPV6_TCLASS,
+                                      payload: CInt(ecnValue: metadata.ecnState))
         default:
             // Nothing to do - if we get here the user is probably making a mistake.
             break

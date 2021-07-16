@@ -20,7 +20,7 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     var channel: EmbeddedChannel!
 
     override func setUp() {
-        channel = EmbeddedChannel(
+        self.channel = EmbeddedChannel(
             handler: NIOWebSocketFrameAggregator(
                 minNonFinalFragmentSize: 1,
                 maxAccumulatedFrameCount: 4,
@@ -30,13 +30,13 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     }
 
     override func tearDown() {
-        XCTAssertEqual(try channel.finish().isClean, true)
+        XCTAssertEqual(try self.channel.finish().isClean, true)
     }
 
     func testEmptyButFinalFrameIsForwardedEvenIfMinNonFinalFragmentSizeIsGreaterThanZero() {
         let frame = WebSocketFrame(fin: true, opcode: .binary, data: ByteBuffer())
         XCTAssertNoThrow(try channel.writeInbound(frame))
-        XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), frame)
+        XCTAssertEqual(try self.channel.readInbound(as: WebSocketFrame.self), frame)
     }
 
     func testTooSmallAndNonFinalFrameThrows() {
@@ -62,8 +62,8 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(firstFrame))
         let fragment = WebSocketFrame(fin: false, opcode: .continuation, data: ByteBuffer(repeating: 2, count: 2))
         XCTAssertNoThrow(try channel.writeInbound(fragment))
-        XCTAssertNoThrow(try channel.writeInbound(fragment))
-        XCTAssertThrowsError(try channel.writeInbound(fragment))
+        XCTAssertNoThrow(try self.channel.writeInbound(fragment))
+        XCTAssertThrowsError(try self.channel.writeInbound(fragment))
     }
 
     func testAlmostTooManyFramesDoNotThrow() {
@@ -71,7 +71,7 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(firstFrame))
         let fragment = WebSocketFrame(fin: false, opcode: .continuation, data: ByteBuffer(repeating: 2, count: 2))
         XCTAssertNoThrow(try channel.writeInbound(fragment))
-        XCTAssertNoThrow(try channel.writeInbound(fragment))
+        XCTAssertNoThrow(try self.channel.writeInbound(fragment))
         let lastFrame = WebSocketFrame(fin: true, opcode: .continuation, data: ByteBuffer(repeating: 2, count: 2))
         XCTAssertNoThrow(try channel.writeInbound(lastFrame))
 
@@ -85,7 +85,7 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(firstFrame))
         let fragment = WebSocketFrame(fin: false, opcode: .continuation, data: ByteBuffer(repeating: 2, count: 2))
         XCTAssertNoThrow(try channel.writeInbound(fragment))
-        XCTAssertNoThrow(try channel.writeInbound(fragment))
+        XCTAssertNoThrow(try self.channel.writeInbound(fragment))
         let lastFrame = WebSocketFrame(fin: true, opcode: .continuation, data: ByteBuffer(repeating: 2, count: 2))
         XCTAssertNoThrow(try channel.writeInbound(lastFrame))
 
@@ -96,37 +96,37 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
     func testPingFrameIsForwarded() {
         let controlFrame = WebSocketFrame(fin: true, opcode: .ping, data: ByteBuffer())
         XCTAssertNoThrow(try channel.writeInbound(controlFrame))
-        XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), controlFrame)
+        XCTAssertEqual(try self.channel.readInbound(as: WebSocketFrame.self), controlFrame)
 
         let fragment = WebSocketFrame(fin: false, opcode: .text, data: ByteBuffer(repeating: 2, count: 2))
         XCTAssertNoThrow(try channel.writeInbound(fragment))
 
-        XCTAssertNoThrow(try channel.writeInbound(controlFrame))
-        XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), controlFrame, "should forward control frames during buffering")
+        XCTAssertNoThrow(try self.channel.writeInbound(controlFrame))
+        XCTAssertEqual(try self.channel.readInbound(as: WebSocketFrame.self), controlFrame, "should forward control frames during buffering")
     }
 
     func testPongFrameIsForwarded() {
         let controlFrame = WebSocketFrame(fin: true, opcode: .pong, data: ByteBuffer())
         XCTAssertNoThrow(try channel.writeInbound(controlFrame))
-        XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), controlFrame)
+        XCTAssertEqual(try self.channel.readInbound(as: WebSocketFrame.self), controlFrame)
 
         let fragment = WebSocketFrame(fin: false, opcode: .text, data: ByteBuffer(repeating: 2, count: 2))
         XCTAssertNoThrow(try channel.writeInbound(fragment))
 
-        XCTAssertNoThrow(try channel.writeInbound(controlFrame))
-        XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), controlFrame, "should forward control frames during buffering")
+        XCTAssertNoThrow(try self.channel.writeInbound(controlFrame))
+        XCTAssertEqual(try self.channel.readInbound(as: WebSocketFrame.self), controlFrame, "should forward control frames during buffering")
     }
 
     func testCloseConnectionFrameIsForwarded() {
         let controlFrame = WebSocketFrame(fin: true, opcode: .connectionClose, data: ByteBuffer())
         XCTAssertNoThrow(try channel.writeInbound(controlFrame))
-        XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), controlFrame)
+        XCTAssertEqual(try self.channel.readInbound(as: WebSocketFrame.self), controlFrame)
 
         let fragment = WebSocketFrame(fin: false, opcode: .text, data: ByteBuffer(repeating: 2, count: 2))
         XCTAssertNoThrow(try channel.writeInbound(fragment))
 
-        XCTAssertNoThrow(try channel.writeInbound(controlFrame))
-        XCTAssertEqual(try channel.readInbound(as: WebSocketFrame.self), controlFrame, "should forward control frames during buffering")
+        XCTAssertNoThrow(try self.channel.writeInbound(controlFrame))
+        XCTAssertEqual(try self.channel.readInbound(as: WebSocketFrame.self), controlFrame, "should forward control frames during buffering")
     }
 
     func testFrameAggregationWithMask() {
@@ -141,7 +141,7 @@ final class NIOWebSocketFrameAggregatorTests: XCTestCase {
         fragmentData.webSocketMask(fragmentMaskKey)
         let fragment = WebSocketFrame(fin: false, opcode: .continuation, maskKey: fragmentMaskKey, data: fragmentData)
         XCTAssertNoThrow(try channel.writeInbound(fragment))
-        XCTAssertNoThrow(try channel.writeInbound(fragment))
+        XCTAssertNoThrow(try self.channel.writeInbound(fragment))
 
         var lastFrameData = ByteBuffer(repeating: 4, count: 2)
         let lastFrameMaskKey: WebSocketMaskingKey = [9, 10, 11, 12]

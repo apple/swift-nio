@@ -277,16 +277,16 @@ class EchoServerClientTest: XCTestCase {
         private var promise: EventLoopPromise<Void>!
 
         func handlerAdded(context: ChannelHandlerContext) {
-            promise = context.channel.eventLoop.makePromise()
+            self.promise = context.channel.eventLoop.makePromise()
         }
 
         func channelActive(context: ChannelHandlerContext) {
-            promise.succeed(())
+            self.promise.succeed(())
             context.fireChannelActive()
         }
 
         func assertChannelActiveFired() throws {
-            try promise.futureResult.wait()
+            try self.promise.futureResult.wait()
         }
     }
 
@@ -313,17 +313,17 @@ class EchoServerClientTest: XCTestCase {
         private let calloutQ = DispatchQueue(label: "EchoAndEchoAgainAfterSomeTimeServer callback queue")
 
         public init(time: TimeAmount, secondWriteDoneHandler: @escaping () -> Void) {
-            timeAmount = time
-            group.enter()
-            group.notify(queue: calloutQ) {
+            self.timeAmount = time
+            self.group.enter()
+            self.group.notify(queue: self.calloutQ) {
                 secondWriteDoneHandler()
             }
         }
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-            numberOfReads += 1
-            precondition(numberOfReads == 1, "\(self) is only ever allowed to read once")
-            _ = context.eventLoop.scheduleTask(in: timeAmount) {
+            self.numberOfReads += 1
+            precondition(self.numberOfReads == 1, "\(self) is only ever allowed to read once")
+            _ = context.eventLoop.scheduleTask(in: self.timeAmount) {
                 context.writeAndFlush(data, promise: nil)
                 self.group.leave()
             }.futureResult.recover { e in
@@ -370,8 +370,8 @@ class EchoServerClientTest: XCTestCase {
         }
 
         public func channelInactive(context: ChannelHandlerContext) {
-            if alreadyClosedInChannelInactive.compareAndExchange(expected: false, desired: true) {
-                XCTAssertFalse(channelUnregisteredPromise.futureResult.isFulfilled,
+            if self.alreadyClosedInChannelInactive.compareAndExchange(expected: false, desired: true) {
+                XCTAssertFalse(self.channelUnregisteredPromise.futureResult.isFulfilled,
                                "channelInactive should fire before channelUnregistered")
                 context.close().map {
                     XCTFail("unexpected success")
@@ -390,8 +390,8 @@ class EchoServerClientTest: XCTestCase {
         }
 
         public func channelUnregistered(context: ChannelHandlerContext) {
-            if alreadyClosedInChannelUnregistered.compareAndExchange(expected: false, desired: true) {
-                XCTAssertTrue(channelInactivePromise.futureResult.isFulfilled,
+            if self.alreadyClosedInChannelUnregistered.compareAndExchange(expected: false, desired: true) {
+                XCTAssertTrue(self.channelInactivePromise.futureResult.isFulfilled,
                               "when channelUnregister fires, channelInactive should already have fired")
                 context.close().map {
                     XCTFail("unexpected success")
@@ -421,7 +421,7 @@ class EchoServerClientTest: XCTestCase {
         }
 
         func channelActive(context: ChannelHandlerContext) {
-            let dataToWrite = context.channel.allocator.buffer(string: toWrite)
+            let dataToWrite = context.channel.allocator.buffer(string: self.toWrite)
             context.writeAndFlush(NIOAny(dataToWrite), promise: nil)
             context.fireChannelActive()
         }
@@ -632,7 +632,7 @@ class EchoServerClientTest: XCTestCase {
             func channelActive(context: ChannelHandlerContext) {
                 var buffer = context.channel.allocator.buffer(capacity: 4)
                 buffer.writeString("test")
-                writeUntilFailed(context, buffer)
+                self.writeUntilFailed(context, buffer)
             }
 
             private func writeUntilFailed(_ context: ChannelHandlerContext, _ buffer: ByteBuffer) {
@@ -656,7 +656,7 @@ class EchoServerClientTest: XCTestCase {
 
             func channelActive(context: ChannelHandlerContext) {
                 context.fireChannelActive()
-                let buffer = context.channel.allocator.buffer(string: str)
+                let buffer = context.channel.allocator.buffer(string: self.str)
 
                 // write it four times and then close the connect.
                 context.writeAndFlush(NIOAny(buffer)).flatMap {
@@ -722,7 +722,7 @@ class EchoServerClientTest: XCTestCase {
             }
 
             public func channelInactive(context _: ChannelHandlerContext) {
-                promise.succeed(())
+                self.promise.succeed(())
             }
         }
 

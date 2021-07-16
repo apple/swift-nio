@@ -251,28 +251,28 @@ public extension Channel {
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
     func write<T>(_ any: T) -> EventLoopFuture<Void> {
-        write(NIOAny(any))
+        self.write(NIOAny(any))
     }
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
     func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
-        write(NIOAny(any), promise: promise)
+        self.write(NIOAny(any), promise: promise)
     }
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
     func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
-        writeAndFlush(NIOAny(any))
+        self.writeAndFlush(NIOAny(any))
     }
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
     func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
-        writeAndFlush(NIOAny(any), promise: promise)
+        self.writeAndFlush(NIOAny(any), promise: promise)
     }
 }
 

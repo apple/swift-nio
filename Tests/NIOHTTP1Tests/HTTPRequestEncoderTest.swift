@@ -56,7 +56,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         writtenData.assertContainsOnly("GET /uri HTTP/1.1\r\ncontent-length: 17\r\n\r\n")
 
         headers = HTTPHeaders([("transfer-encoding", "chunked")])
-        writtenData = try sendRequest(withMethod: .GET, andHeaders: headers)
+        writtenData = try self.sendRequest(withMethod: .GET, andHeaders: headers)
         writtenData.assertContainsOnly("GET /uri HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
     }
 
@@ -117,9 +117,9 @@ class HTTPRequestEncoderTests: XCTestCase {
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.body(.byteBuffer(buf))))
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
 
-        assertOutboundContainsOnly(channel, "POST /uri HTTP/1.1\r\ncontent-length: 4\r\n\r\n")
-        assertOutboundContainsOnly(channel, "test")
-        assertOutboundContainsOnly(channel, "")
+        self.assertOutboundContainsOnly(channel, "POST /uri HTTP/1.1\r\ncontent-length: 4\r\n\r\n")
+        self.assertOutboundContainsOnly(channel, "test")
+        self.assertOutboundContainsOnly(channel, "")
     }
 
     func testCONNECT() throws {
@@ -136,8 +136,8 @@ class HTTPRequestEncoderTests: XCTestCase {
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
 
-        assertOutboundContainsOnly(channel, "CONNECT \(uri) HTTP/1.1\r\nHost: \(uri)\r\n\r\n")
-        assertOutboundContainsOnly(channel, "")
+        self.assertOutboundContainsOnly(channel, "CONNECT \(uri) HTTP/1.1\r\nHost: \(uri)\r\n\r\n")
+        self.assertOutboundContainsOnly(channel, "")
     }
 
     func testChunkedEncodingIsTheDefault() {

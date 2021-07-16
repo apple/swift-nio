@@ -20,23 +20,23 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
     private let acceptHandlerName = "AcceptBackoffHandler"
 
     public func testECONNABORTED() throws {
-        try assertBackoffRead(error: ECONNABORTED)
+        try self.assertBackoffRead(error: ECONNABORTED)
     }
 
     public func testEMFILE() throws {
-        try assertBackoffRead(error: EMFILE)
+        try self.assertBackoffRead(error: EMFILE)
     }
 
     public func testENFILE() throws {
-        try assertBackoffRead(error: ENFILE)
+        try self.assertBackoffRead(error: ENFILE)
     }
 
     public func testENOBUFS() throws {
-        try assertBackoffRead(error: ENOBUFS)
+        try self.assertBackoffRead(error: ENOBUFS)
     }
 
     public func testENOMEM() throws {
-        try assertBackoffRead(error: ENOMEM)
+        try self.assertBackoffRead(error: ENOMEM)
     }
 
     private func assertBackoffRead(error: Int32) throws {
@@ -71,11 +71,11 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     public func testRemovalTriggerReadWhenPreviousReadScheduled() throws {
-        try assertRemoval(read: true)
+        try self.assertRemoval(read: true)
     }
 
     public func testRemovalTriggerNoReadWhenPreviousNoReadScheduled() throws {
-        try assertRemoval(read: false)
+        try self.assertRemoval(read: false)
     }
 
     private func assertRemoval(read: Bool) throws {
@@ -96,7 +96,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
             return readCountHandler.readCount
         }.wait())
 
-        XCTAssertNoThrow(try serverChannel.pipeline.removeHandler(name: acceptHandlerName).wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.removeHandler(name: self.acceptHandlerName).wait())
 
         if read {
             // Removal should have triggered a read.
@@ -160,11 +160,11 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
             }
 
             public func channelInactive(context _: ChannelHandlerContext) {
-                promise.succeed(())
+                self.promise.succeed(())
             }
 
             func waitForInactive() throws {
-                try promise.futureResult.wait()
+                try self.promise.futureResult.wait()
             }
         }
 
@@ -240,7 +240,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         var readCount = 0
 
         func read(context: ChannelHandlerContext) {
-            readCount += 1
+            self.readCount += 1
             context.read()
         }
     }

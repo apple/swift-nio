@@ -33,9 +33,9 @@ class ControlMessageTests: XCTestCase {
     var encoder: UnsafeOutboundControlBytes!
 
     override func setUp() {
-        encoderBytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1000,
-                                                              alignment: MemoryLayout<Int>.alignment)
-        encoder = UnsafeOutboundControlBytes(controlBytes: encoderBytes!)
+        self.encoderBytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1000,
+                                                                   alignment: MemoryLayout<Int>.alignment)
+        self.encoder = UnsafeOutboundControlBytes(controlBytes: self.encoderBytes!)
     }
 
     override func tearDown() {
@@ -46,7 +46,7 @@ class ControlMessageTests: XCTestCase {
     }
 
     func testEmptyEncode() {
-        XCTAssertEqual(encoder.validControlBytes.count, 0)
+        XCTAssertEqual(self.encoder.validControlBytes.count, 0)
     }
 
     struct DecodedMessage: Equatable {
@@ -56,9 +56,9 @@ class ControlMessageTests: XCTestCase {
     }
 
     func testEncodeDecode1() {
-        encoder.appendControlMessage(level: 1, type: 2, payload: 3)
+        self.encoder.appendControlMessage(level: 1, type: 2, payload: 3)
         let expected = [DecodedMessage(level: 1, type: 2, payload: 3)]
-        let encodedBytes = encoder.validControlBytes
+        let encodedBytes = self.encoder.validControlBytes
 
         let decoder = UnsafeControlMessageCollection(controlBytes: encodedBytes)
         XCTAssertEqual(decoder.count, 1)
@@ -72,13 +72,13 @@ class ControlMessageTests: XCTestCase {
     }
 
     func testEncodeDecode2() {
-        encoder.appendControlMessage(level: 1, type: 2, payload: 3)
-        encoder.appendControlMessage(level: 4, type: 5, payload: 6)
+        self.encoder.appendControlMessage(level: 1, type: 2, payload: 3)
+        self.encoder.appendControlMessage(level: 4, type: 5, payload: 6)
         let expected = [
             DecodedMessage(level: 1, type: 2, payload: 3),
             DecodedMessage(level: 4, type: 5, payload: 6),
         ]
-        let encodedBytes = encoder.validControlBytes
+        let encodedBytes = self.encoder.validControlBytes
 
         let decoder = UnsafeControlMessageCollection(controlBytes: encodedBytes)
         XCTAssertEqual(decoder.count, 2)
@@ -110,9 +110,9 @@ class ControlMessageTests: XCTestCase {
         // Check size
         XCTAssertEqual(storage.count, 3)
         // Buffers issued should not overlap.
-        assertBuffersNonOverlapping(storage[0], storage[1])
-        assertBuffersNonOverlapping(storage[0], storage[2])
-        assertBuffersNonOverlapping(storage[1], storage[2])
+        self.assertBuffersNonOverlapping(storage[0], storage[1])
+        self.assertBuffersNonOverlapping(storage[0], storage[2])
+        self.assertBuffersNonOverlapping(storage[1], storage[2])
         // Buffers should have a suitable size.
         XCTAssertGreaterThan(storage[0].count, MemoryLayout<cmsghdr>.stride)
         XCTAssertGreaterThan(storage[1].count, MemoryLayout<cmsghdr>.stride)

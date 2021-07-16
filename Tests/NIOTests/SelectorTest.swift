@@ -18,11 +18,11 @@ import XCTest
 
 class SelectorTest: XCTestCase {
     func testDeregisterWhileProcessingEvents() throws {
-        try assertDeregisterWhileProcessingEvents(closeAfterDeregister: false)
+        try self.assertDeregisterWhileProcessingEvents(closeAfterDeregister: false)
     }
 
     func testDeregisterAndCloseWhileProcessingEvents() throws {
-        try assertDeregisterWhileProcessingEvents(closeAfterDeregister: true)
+        try self.assertDeregisterWhileProcessingEvents(closeAfterDeregister: true)
     }
 
     private func assertDeregisterWhileProcessingEvents(closeAfterDeregister: Bool) throws {
@@ -106,18 +106,18 @@ class SelectorTest: XCTestCase {
         /// on the event loop `el`.
         class Box<T> {
             init(_ value: T) {
-                _value = value
+                self._value = value
             }
 
             private var _value: T
             var value: T {
                 get {
                     XCTAssertNotNil(MultiThreadedEventLoopGroup.currentEventLoop)
-                    return _value
+                    return self._value
                 }
                 set {
                     XCTAssertNotNil(MultiThreadedEventLoopGroup.currentEventLoop)
-                    _value = newValue
+                    self._value = newValue
                 }
             }
         }
@@ -149,15 +149,15 @@ class SelectorTest: XCTestCase {
 
             func channelActive(context _: ChannelHandlerContext) {
                 // we expect these channels to be connected within the re-connect event loop tick
-                XCTAssertFalse(hasReConnectEventLoopTickFinished.value)
+                XCTAssertFalse(self.hasReConnectEventLoopTickFinished.value)
             }
 
             func channelInactive(context: ChannelHandlerContext) {
                 // we expect these channels to be close a while after the re-connect event loop tick
-                XCTAssertTrue(hasReConnectEventLoopTickFinished.value)
-                XCTAssertTrue(didRead)
-                if !didRead {
-                    didReadPromise.fail(DidNotReadError.didNotReadGotInactive)
+                XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
+                XCTAssertTrue(self.didRead)
+                if !self.didRead {
+                    self.didReadPromise.fail(DidNotReadError.didNotReadGotInactive)
                     context.close(promise: nil)
                 }
             }
@@ -165,23 +165,23 @@ class SelectorTest: XCTestCase {
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                 // we expect these channels to get data only a while after the re-connect event loop tick as it's
                 // impossible to get a read notification in the very same event loop tick that you got registered
-                XCTAssertTrue(hasReConnectEventLoopTickFinished.value)
+                XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
 
-                XCTAssertFalse(didRead)
+                XCTAssertFalse(self.didRead)
                 var buf = unwrapInboundIn(data)
                 XCTAssertEqual(1, buf.readableBytes)
                 XCTAssertEqual("H", buf.readString(length: 1)!)
-                didRead = true
-                didReadPromise.succeed(())
+                self.didRead = true
+                self.didReadPromise.succeed(())
             }
 
             func channelReadComplete(context: ChannelHandlerContext) {
                 // we expect these channels to get data only a while after the re-connect event loop tick as it's
                 // impossible to get a read notification in the very same event loop tick that you got registered
-                XCTAssertTrue(hasReConnectEventLoopTickFinished.value)
-                XCTAssertTrue(didRead)
-                if !didRead {
-                    didReadPromise.fail(DidNotReadError.didNotReadGotReadComplete)
+                XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
+                XCTAssertTrue(self.didRead)
+                if !self.didRead {
+                    self.didReadPromise.fail(DidNotReadError.didNotReadGotReadComplete)
                     context.close(promise: nil)
                 }
             }
@@ -218,13 +218,13 @@ class SelectorTest: XCTestCase {
                     precondition(halfClosureAllowed,
                                  "the test configuration is bogus: half-closure is dis-allowed which breaks the setup of this test")
                 }
-                allChannels.value.append(context.channel)
+                self.allChannels.value.append(context.channel)
             }
 
             func userInboundEventTriggered(context: ChannelHandlerContext, event _: Any) {
                 // this is the `.readEOF` that is triggered by the `ServerHandler`'s `close` calls because our channel
                 // supports half-closure
-                guard allChannels.value.count == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse else {
+                guard self.allChannels.value.count == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse else {
                     return
                 }
                 // all channels are up, so let's construct the situation we want to be in:
@@ -238,14 +238,14 @@ class SelectorTest: XCTestCase {
                     XCTAssertFalse(self.hasReConnectEventLoopTickFinished.value)
                     self.hasReConnectEventLoopTickFinished.value = true
                 }
-                XCTAssertFalse(hasReConnectEventLoopTickFinished.value)
+                XCTAssertFalse(self.hasReConnectEventLoopTickFinished.value)
 
                 let everyOtherIndex = stride(from: 0, to: SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse, by: 2)
                 for f in everyOtherIndex {
-                    XCTAssertTrue(allChannels.value[f].isActive)
+                    XCTAssertTrue(self.allChannels.value[f].isActive)
                     // close will succeed synchronously as we're on the right event loop.
-                    allChannels.value[f].close(promise: nil)
-                    XCTAssertFalse(allChannels.value[f].isActive)
+                    self.allChannels.value[f].close(promise: nil)
+                    XCTAssertFalse(self.allChannels.value[f].isActive)
                 }
 
                 // now we have completed stage 1: we freed up a bunch of file descriptor numbers, so let's open
@@ -262,7 +262,7 @@ class SelectorTest: XCTestCase {
                                 hasBeenAdded = true
                             }
                         }
-                        .connect(to: serverAddress)
+                        .connect(to: self.serverAddress)
                         .map { (_: Channel) -> Void in
                             XCTAssertFalse(self.hasReConnectEventLoopTickFinished.value,
                                            """
@@ -288,9 +288,9 @@ class SelectorTest: XCTestCase {
 
                 // if all the new re-connected channels have read, then we're happy here.
                 EventLoopFuture.andAllSucceed(reconnectedChannelsHaveRead, on: context.eventLoop)
-                    .cascade(to: everythingWasReadPromise)
+                    .cascade(to: self.everythingWasReadPromise)
                 // let's also remove all the channels so this code will not be triggered again.
-                allChannels.value.removeAll()
+                self.allChannels.value.removeAll()
             }
         }
 
@@ -320,12 +320,12 @@ class SelectorTest: XCTestCase {
                 var buf = context.channel.allocator.buffer(capacity: 1)
                 buf.writeString("H")
                 context.channel.writeAndFlush(buf, promise: nil)
-                number += 1
-                allServerChannels.value.append(context.channel)
-                if allServerChannels.value.count == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse {
+                self.number += 1
+                self.allServerChannels.value.append(context.channel)
+                if self.allServerChannels.value.count == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse {
                     // just to be sure all of the client channels have connected
-                    XCTAssertEqual(SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse, numberOfConnectedChannels.value)
-                    allServerChannels.value.forEach { c in
+                    XCTAssertEqual(SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse, self.numberOfConnectedChannels.value)
+                    self.allServerChannels.value.forEach { c in
                         c.close(promise: nil)
                     }
                 }
@@ -383,7 +383,7 @@ class SelectorTest: XCTestCase {
             }
 
             override func close() throws {
-                hasBeenClosedPromise.succeed(())
+                self.hasBeenClosedPromise.succeed(())
                 try super.close()
             }
         }

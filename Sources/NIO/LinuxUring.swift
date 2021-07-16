@@ -51,7 +51,7 @@
                 self.registrationID = UInt16(truncatingIfNeeded: registrationID.rawValue)
                 self.fileDescriptor = fileDescriptor
                 self.eventType = eventType
-                padding = 0
+                self.padding = 0
             }
 
             @inlinable init(rawValue: UInt64) {
@@ -82,10 +82,10 @@
             var registrationID: UInt16 // we just have the truncated lower 16 bits of the registrationID
             var pollCancelled: Bool
             init() {
-                fd = -1
-                pollMask = 0
-                registrationID = 0
-                pollCancelled = false
+                self.fd = -1
+                self.pollMask = 0
+                self.registrationID = 0
+                self.pollCancelled = false
             }
         }
 
@@ -95,8 +95,8 @@
             var registrationID: UInt16 // we just have the truncated lower 16 bits of the registrationID
 
             init(_ f: CInt, _ s: UInt16) {
-                fileDescriptor = f
-                registrationID = s
+                self.fileDescriptor = f
+                self.registrationID = s
             }
         }
 
@@ -117,7 +117,7 @@
             var emptyCqe = io_uring_cqe()
 
             var fd: CInt {
-                ring.ring_fd
+                self.ring.ring_fd
             }
 
             static var io_uring_use_multishot_poll: Bool {
@@ -138,9 +138,9 @@
                         return
                     }
 
-                    _debugPrintCQE(header + " CQE:s [\(cqes)] - ring flags are [\(ring.flags)]")
+                    _debugPrintCQE(header + " CQE:s [\(self.cqes)] - ring flags are [\(self.ring.flags)]")
                     for i in 0 ..< count {
-                        let c = cqes[i]!.pointee
+                        let c = self.cqes[i]!.pointee
 
                         let bitPattern = UInt(bitPattern: io_uring_cqe_get_data(cqes[i]))
                         let uringUserData = URingUserData(rawValue: UInt64(bitPattern))
@@ -151,8 +151,8 @@
             }
 
             init() {
-                cqes = UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>.allocate(capacity: Int(cqeMaxCount))
-                cqes.initialize(repeating: &emptyCqe, count: Int(cqeMaxCount))
+                self.cqes = UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>.allocate(capacity: Int(self.cqeMaxCount))
+                self.cqes.initialize(repeating: &self.emptyCqe, count: Int(self.cqeMaxCount))
             }
 
             deinit {
@@ -160,16 +160,16 @@
             }
 
             internal func io_uring_queue_init() throws {
-                if CNIOLinux.io_uring_queue_init(ringEntries, &ring, 0) != 0 {
+                if CNIOLinux.io_uring_queue_init(self.ringEntries, &self.ring, 0) != 0 {
                     throw URingError.uringSetupFailure
                 }
 
-                _debugPrint("io_uring_queue_init \(ring.ring_fd)")
+                self._debugPrint("io_uring_queue_init \(self.ring.ring_fd)")
             }
 
             internal func io_uring_queue_exit() {
-                _debugPrint("io_uring_queue_exit \(ring.ring_fd)")
-                CNIOLinux.io_uring_queue_exit(&ring)
+                self._debugPrint("io_uring_queue_exit \(self.ring.ring_fd)")
+                CNIOLinux.io_uring_queue_exit(&self.ring)
             }
 
             // Adopting some retry code from queue.c from liburing with slight
@@ -190,7 +190,7 @@
                     if let sqe = CNIOLinux.io_uring_get_sqe(&ring) {
                         return try body(sqe)
                     }
-                    io_uring_flush()
+                    self.io_uring_flush()
                 }
             }
 
@@ -204,10 +204,10 @@
                 var submissionCount = 0
                 var retval: CInt
 
-                waitingSubmissions = CNIOLinux.io_uring_sq_ready(&ring)
+                waitingSubmissions = CNIOLinux.io_uring_sq_ready(&self.ring)
 
                 loop: while waitingSubmissions > 0 {
-                    retval = CNIOLinux.io_uring_submit(&ring)
+                    retval = CNIOLinux.io_uring_submit(&self.ring)
                     submissionCount += 1
 
                     switch retval {
@@ -221,23 +221,23 @@
                     // trying to get new SQE if the actual SQE queue is full, but
                     // that would be due to user error in usage IMHO and we should fatalError there.
                     case -EAGAIN, -EBUSY:
-                        _debugPrint("io_uring_flush io_uring_submit -EBUSY/-EAGAIN waitingSubmissions[\(waitingSubmissions)] submissionCount[\(submissionCount)]. Breaking out and resubmitting later (whenReady() end).")
+                        self._debugPrint("io_uring_flush io_uring_submit -EBUSY/-EAGAIN waitingSubmissions[\(waitingSubmissions)] submissionCount[\(submissionCount)]. Breaking out and resubmitting later (whenReady() end).")
                         break loop
                     // -ENOMEM when there is not enough memory to do internal allocations on the kernel side.
                     // Right nog we just loop with a sleep trying to buy time, but could also possibly fatalError here.
                     // See: https://github.com/axboe/liburing/issues/309
                     case -ENOMEM:
                         usleep(10000) // let's not busy loop to give the kernel some time to recover if possible
-                        _debugPrint("io_uring_flush io_uring_submit -ENOMEM \(submissionCount)")
+                        self._debugPrint("io_uring_flush io_uring_submit -ENOMEM \(submissionCount)")
                     case 0:
-                        _debugPrint("io_uring_flush io_uring_submit submitted 0, so far needed submissionCount[\(submissionCount)] waitingSubmissions[\(waitingSubmissions)] submitted [\(retval)] SQE:s this iteration")
+                        self._debugPrint("io_uring_flush io_uring_submit submitted 0, so far needed submissionCount[\(submissionCount)] waitingSubmissions[\(waitingSubmissions)] submitted [\(retval)] SQE:s this iteration")
                     case 1...:
-                        _debugPrint("io_uring_flush io_uring_submit needed [\(submissionCount)] submission(s), submitted [\(retval)] SQE:s out of [\(waitingSubmissions)] possible")
+                        self._debugPrint("io_uring_flush io_uring_submit needed [\(submissionCount)] submission(s), submitted [\(retval)] SQE:s out of [\(waitingSubmissions)] possible")
                     default: // other errors
                         fatalError("Unexpected error [\(retval)] from io_uring_submit ")
                     }
 
-                    waitingSubmissions = CNIOLinux.io_uring_sq_ready(&ring)
+                    waitingSubmissions = CNIOLinux.io_uring_sq_ready(&self.ring)
                 }
             }
 
@@ -258,7 +258,7 @@
                 }
 
                 if submitNow {
-                    io_uring_flush()
+                    self.io_uring_flush()
                 }
             }
 
@@ -284,7 +284,7 @@
                 }
 
                 if submitNow {
-                    io_uring_flush()
+                    self.io_uring_flush()
                 }
             }
 
@@ -314,7 +314,7 @@
                 }
 
                 if submitNow {
-                    io_uring_flush()
+                    self.io_uring_flush()
                 }
             }
 
@@ -330,7 +330,7 @@
             internal func _process_cqe(events _: UnsafeMutablePointer<URingEvent>, cqeIndex: Int, multishot: Bool) {
                 let bitPattern = UInt(bitPattern: io_uring_cqe_get_data(cqes[cqeIndex]))
                 let uringUserData = URingUserData(rawValue: UInt64(bitPattern))
-                let result = cqes[cqeIndex]!.pointee.res
+                let result = self.cqes[cqeIndex]!.pointee.res
 
                 switch uringUserData.eventType {
                 case .poll:
@@ -344,9 +344,9 @@
                             pollError = URing.POLLCANCEL
                         }
                         if let current = fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
-                            fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
+                            self.fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
                         } else {
-                            fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
+                            self.fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
                         }
                     // We can validly receive an EBADF as a close() can race vis-a-vis pending SQE:s
                     // with polls / pollModifications - in that case, we should just discard the result.
@@ -358,7 +358,7 @@
                     // https://github.com/apple/swift-nio/pull/1804#discussion_r621304055
                     // including clarifications from @isilence (one of the io_uring developers)
                     case -EBADF:
-                        _debugPrint("Failed poll with -EBADF for cqeIndex[\(cqeIndex)]")
+                        self._debugPrint("Failed poll with -EBADF for cqeIndex[\(cqeIndex)]")
                     case ..<0: // other errors
                         fatalError("Failed poll with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
                     case 0: // successfull chained add for singleshots, not an event
@@ -368,9 +368,9 @@
                         let uresult = UInt32(result)
 
                         if let current = fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
-                            fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | uresult
+                            self.fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | uresult
                         } else {
-                            fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = uresult
+                            self.fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = uresult
                         }
                     }
                 case .pollModify: // we only get this for multishot modifications
@@ -380,17 +380,17 @@
 
                         let pollError = URing.POLLERR // URing.POLLERR // (URing.POLLHUP | URing.POLLERR)
                         if let current = fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
-                            fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
+                            self.fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
                         } else {
-                            fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
+                            self.fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
                         }
                     case -EALREADY:
-                        _debugPrint("Failed pollModify with -EALREADY for cqeIndex[\(cqeIndex)]")
+                        self._debugPrint("Failed pollModify with -EALREADY for cqeIndex[\(cqeIndex)]")
                     case -ENOENT:
-                        _debugPrint("Failed pollModify with -ENOENT for cqeIndex [\(cqeIndex)]")
+                        self._debugPrint("Failed pollModify with -ENOENT for cqeIndex [\(cqeIndex)]")
                     // See the description for EBADF handling above in the poll case for rationale of allowing EBADF.
                     case -EBADF:
-                        _debugPrint("Failed pollModify with -EBADF for cqeIndex[\(cqeIndex)]")
+                        self._debugPrint("Failed pollModify with -EBADF for cqeIndex[\(cqeIndex)]")
                     case ..<0: // other errors
                         fatalError("Failed pollModify with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
                     case 0: // successfull chained add, not an event
@@ -405,36 +405,36 @@
 
             internal func io_uring_peek_batch_cqe(events: UnsafeMutablePointer<URingEvent>, maxevents: UInt32, multishot: Bool = true) -> Int {
                 var eventCount = 0
-                var currentCqeCount = CNIOLinux.io_uring_peek_batch_cqe(&ring, cqes, cqeMaxCount)
+                var currentCqeCount = CNIOLinux.io_uring_peek_batch_cqe(&self.ring, self.cqes, self.cqeMaxCount)
 
                 if currentCqeCount == 0 {
-                    _debugPrint("io_uring_peek_batch_cqe found zero events, breaking out")
+                    self._debugPrint("io_uring_peek_batch_cqe found zero events, breaking out")
                     return 0
                 }
 
-                _debugPrint("io_uring_peek_batch_cqe found [\(currentCqeCount)] events")
+                self._debugPrint("io_uring_peek_batch_cqe found [\(currentCqeCount)] events")
 
-                _dumpCqes("io_uring_peek_batch_cqe", count: Int(currentCqeCount))
+                self._dumpCqes("io_uring_peek_batch_cqe", count: Int(currentCqeCount))
 
                 assert(currentCqeCount >= 0, "currentCqeCount should never be negative")
                 assert(maxevents > 0, "maxevents should be a positive number")
 
                 for cqeIndex in 0 ..< currentCqeCount {
-                    _process_cqe(events: events, cqeIndex: Int(cqeIndex), multishot: multishot)
+                    self._process_cqe(events: events, cqeIndex: Int(cqeIndex), multishot: multishot)
 
-                    if fdEvents.count == maxevents // ensure we don't generate more events than maxevents
+                    if self.fdEvents.count == maxevents // ensure we don't generate more events than maxevents
                     {
-                        _debugPrint("io_uring_peek_batch_cqe breaking loop early, currentCqeCount [\(currentCqeCount)] maxevents [\(maxevents)]")
+                        self._debugPrint("io_uring_peek_batch_cqe breaking loop early, currentCqeCount [\(currentCqeCount)] maxevents [\(maxevents)]")
                         currentCqeCount = maxevents // to make sure we only cq_advance the correct amount
                         break
                     }
                 }
 
-                io_uring_cq_advance(&ring, currentCqeCount) // bulk variant of io_uring_cqe_seen(&ring, dataPointer)
+                io_uring_cq_advance(&self.ring, currentCqeCount) // bulk variant of io_uring_cqe_seen(&ring, dataPointer)
 
                 //  we just return single event per fd, sequencenumber pair
                 eventCount = 0
-                for (eventKey, pollMask) in fdEvents {
+                for (eventKey, pollMask) in self.fdEvents {
                     assert(eventCount < maxevents)
                     assert(eventKey.fileDescriptor >= 0)
 
@@ -448,9 +448,9 @@
                     eventCount += 1
                 }
 
-                fdEvents.removeAll(keepingCapacity: true) // reused for next batch
+                self.fdEvents.removeAll(keepingCapacity: true) // reused for next batch
 
-                _debugPrint("io_uring_peek_batch_cqe returning [\(eventCount)] events, fdEvents.count [\(fdEvents.count)]")
+                self._debugPrint("io_uring_peek_batch_cqe returning [\(eventCount)] events, fdEvents.count [\(self.fdEvents.count)]")
 
                 return eventCount
             }
@@ -462,22 +462,22 @@
                 case 0:
                     break
                 case -CNIOLinux.EINTR:
-                    _debugPrint("_io_uring_wait_cqe_shared got CNIOLinux.EINTR")
+                    self._debugPrint("_io_uring_wait_cqe_shared got CNIOLinux.EINTR")
                     return eventCount
                 case -CNIOLinux.ETIME:
-                    _debugPrint("_io_uring_wait_cqe_shared timed out with -CNIOLinux.ETIME")
-                    CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
+                    self._debugPrint("_io_uring_wait_cqe_shared timed out with -CNIOLinux.ETIME")
+                    CNIOLinux.io_uring_cqe_seen(&self.ring, self.cqes[0])
                     return eventCount
                 default:
-                    _debugPrint("URingError.uringWaitCqeFailure \(error)")
+                    self._debugPrint("URingError.uringWaitCqeFailure \(error)")
                     throw URingError.uringWaitCqeFailure
                 }
 
-                _dumpCqes("_io_uring_wait_cqe_shared")
+                self._dumpCqes("_io_uring_wait_cqe_shared")
 
-                _process_cqe(events: events, cqeIndex: 0, multishot: multishot)
+                self._process_cqe(events: events, cqeIndex: 0, multishot: multishot)
 
-                CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
+                CNIOLinux.io_uring_cqe_seen(&self.ring, self.cqes[0])
 
                 if let firstEvent = fdEvents.first {
                     events[0].fd = firstEvent.key.fileDescriptor
@@ -485,30 +485,30 @@
                     events[0].registrationID = firstEvent.key.registrationID
                     eventCount = 1
                 } else {
-                    _debugPrint("_io_uring_wait_cqe_shared if let firstEvent = fdEvents.first failed")
+                    self._debugPrint("_io_uring_wait_cqe_shared if let firstEvent = fdEvents.first failed")
                 }
 
-                fdEvents.removeAll(keepingCapacity: true) // reused for next batch
+                self.fdEvents.removeAll(keepingCapacity: true) // reused for next batch
 
                 return eventCount
             }
 
             internal func io_uring_wait_cqe(events: UnsafeMutablePointer<URingEvent>, maxevents _: UInt32, multishot: Bool = true) throws -> Int {
-                _debugPrint("io_uring_wait_cqe")
+                self._debugPrint("io_uring_wait_cqe")
 
-                let error = CNIOLinux.io_uring_wait_cqe(&ring, cqes)
+                let error = CNIOLinux.io_uring_wait_cqe(&self.ring, self.cqes)
 
-                return try _io_uring_wait_cqe_shared(events: events, error: error, multishot: multishot)
+                return try self._io_uring_wait_cqe_shared(events: events, error: error, multishot: multishot)
             }
 
             internal func io_uring_wait_cqe_timeout(events: UnsafeMutablePointer<URingEvent>, maxevents _: UInt32, timeout: TimeAmount, multishot: Bool = true) throws -> Int {
                 var ts = timeout.kernelTimespec()
 
-                _debugPrint("io_uring_wait_cqe_timeout.ETIME milliseconds \(ts)")
+                self._debugPrint("io_uring_wait_cqe_timeout.ETIME milliseconds \(ts)")
 
-                let error = CNIOLinux.io_uring_wait_cqe_timeout(&ring, cqes, &ts)
+                let error = CNIOLinux.io_uring_wait_cqe_timeout(&self.ring, self.cqes, &ts)
 
-                return try _io_uring_wait_cqe_shared(events: events, error: error, multishot: multishot)
+                return try self._io_uring_wait_cqe_shared(events: events, error: error, multishot: multishot)
             }
         }
 

@@ -36,8 +36,8 @@ internal struct SHA1 {
 
     /// Create a brand-new hash context.
     init() {
-        sha1Ctx = SHA1_CTX()
-        c_nio_sha1_init(&sha1Ctx)
+        self.sha1Ctx = SHA1_CTX()
+        c_nio_sha1_init(&self.sha1Ctx)
     }
 
     /// Feed the given string into the hash context as a sequence of UTF-8 bytes.
@@ -63,7 +63,7 @@ internal struct SHA1 {
     /// - parameters:
     ///     - bytes: The bytes to feed into the hash context.
     mutating func update(_ bytes: UnsafeBufferPointer<UInt8>) {
-        c_nio_sha1_loop(&sha1Ctx, bytes.baseAddress!, bytes.count)
+        c_nio_sha1_loop(&self.sha1Ctx, bytes.baseAddress!, bytes.count)
     }
 
     /// Complete the hashing.

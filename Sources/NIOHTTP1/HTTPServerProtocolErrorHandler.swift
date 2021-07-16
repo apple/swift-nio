@@ -44,7 +44,7 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
         //
         // A side note here: we cannot block or do any delayed work. ByteToMessageDecoder is going
         // to come along and close the channel right after we return from this function.
-        if !hasUnterminatedResponse {
+        if !self.hasUnterminatedResponse {
             let headers = HTTPHeaders([("Connection", "close"), ("Content-Length", "0")])
             let head = HTTPResponseHead(version: .http1_1, status: .badRequest, headers: headers)
             context.write(wrapOutboundOut(.head(head)), promise: nil)
@@ -59,13 +59,13 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
         let res = unwrapOutboundIn(data)
         switch res {
         case .head:
-            precondition(!hasUnterminatedResponse)
-            hasUnterminatedResponse = true
+            precondition(!self.hasUnterminatedResponse)
+            self.hasUnterminatedResponse = true
         case .body:
-            precondition(hasUnterminatedResponse)
+            precondition(self.hasUnterminatedResponse)
         case .end:
-            precondition(hasUnterminatedResponse)
-            hasUnterminatedResponse = false
+            precondition(self.hasUnterminatedResponse)
+            self.hasUnterminatedResponse = false
         }
         context.write(data, promise: promise)
     }

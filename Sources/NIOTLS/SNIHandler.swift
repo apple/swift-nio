@@ -103,9 +103,9 @@ public final class SNIHandler: ByteToMessageDecoder {
     private var waitingForUser: Bool
 
     public init(sniCompleteHandler: @escaping (SNIResult) -> EventLoopFuture<Void>) {
-        cumulationBuffer = nil
-        completionHandler = sniCompleteHandler
-        waitingForUser = false
+        self.cumulationBuffer = nil
+        self.completionHandler = sniCompleteHandler
+        self.waitingForUser = false
     }
 
     public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
@@ -117,27 +117,27 @@ public final class SNIHandler: ByteToMessageDecoder {
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
         // If we've asked the user to mutate the pipeline already, we're not interested in
         // this data. Keep waiting.
-        if waitingForUser {
+        if self.waitingForUser {
             return .needMoreData
         }
 
         let serverName: String?
         do {
-            serverName = try parseTLSDataForServerName(buffer: buffer)
+            serverName = try self.parseTLSDataForServerName(buffer: buffer)
         } catch InternalSNIErrors.recordIncomplete {
             // Nothing bad here, we just don't have enough data.
             return .needMoreData
         } catch {
             // Some error occurred. Fall back and let the TLS stack
             // handle it.
-            sniComplete(result: .fallback, context: context)
+            self.sniComplete(result: .fallback, context: context)
             return .needMoreData
         }
 
         if let serverName = serverName {
-            sniComplete(result: .hostname(serverName), context: context)
+            self.sniComplete(result: .hostname(serverName), context: context)
         } else {
-            sniComplete(result: .fallback, context: context)
+            self.sniComplete(result: .fallback, context: context)
         }
         return .needMoreData
     }
@@ -181,7 +181,7 @@ public final class SNIHandler: ByteToMessageDecoder {
             throw InternalSNIErrors.invalidLengthInRecord
         }
 
-        return try parseExtensionsForServerName(buffer: &tempBuffer)
+        return try self.parseExtensionsForServerName(buffer: &tempBuffer)
     }
 
     /// Parses the TLS Record Header, ensuring that this is a handshake record and that
@@ -334,7 +334,7 @@ public final class SNIHandler: ByteToMessageDecoder {
             // deputy attack by giving us contradictory lengths, so we again want to trim the bytebuffer down
             // so that we never read past the advertised length of this extension.
             buffer = buffer.getSlice(at: buffer.readerIndex, length: Int(extensionLength))!
-            return try parseServerNameExtension(buffer: &buffer)
+            return try self.parseServerNameExtension(buffer: &buffer)
         }
         return nil
     }
@@ -420,8 +420,8 @@ public final class SNIHandler: ByteToMessageDecoder {
     ///    ByteToMessageDecoder to automatically deliver the buffered bytes to the next handler
     ///    in the pipeline, which is now responsible for the work.
     private func sniComplete(result: SNIResult, context: ChannelHandlerContext) {
-        waitingForUser = true
-        completionHandler(result).whenSuccess {
+        self.waitingForUser = true
+        self.completionHandler(result).whenSuccess {
             context.pipeline.removeHandler(context: context, promise: nil)
         }
     }

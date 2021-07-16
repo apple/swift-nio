@@ -54,7 +54,7 @@ final class ChatHandler: ChannelInboundHandler {
     public func channelActive(context: ChannelHandlerContext) {
         let remoteAddress = context.remoteAddress!
         let channel = context.channel
-        channelsSyncQueue.async {
+        self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that just became active.
             self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - New client connected with address: \(remoteAddress)\n")
 
@@ -68,7 +68,7 @@ final class ChatHandler: ChannelInboundHandler {
 
     public func channelInactive(context: ChannelHandlerContext) {
         let channel = context.channel
-        channelsSyncQueue.async {
+        self.channelsSyncQueue.async {
             if self.channels.removeValue(forKey: ObjectIdentifier(channel)) != nil {
                 // Broadcast the message to all the connected clients except the one that just was disconnected.
                 self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - Client disconnected\n")
@@ -84,7 +84,7 @@ final class ChatHandler: ChannelInboundHandler {
         var buffer = context.channel.allocator.buffer(capacity: read.readableBytes + 64)
         buffer.writeString("(\(context.remoteAddress!)) - ")
         buffer.writeBuffer(&read)
-        channelsSyncQueue.async {
+        self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that wrote it.
             self.writeToAll(channels: self.channels.filter { id != $0.key }, buffer: buffer)
         }
@@ -100,7 +100,7 @@ final class ChatHandler: ChannelInboundHandler {
 
     private func writeToAll(channels: [ObjectIdentifier: Channel], allocator: ByteBufferAllocator, message: String) {
         let buffer = allocator.buffer(string: message)
-        writeToAll(channels: channels, buffer: buffer)
+        self.writeToAll(channels: channels, buffer: buffer)
     }
 
     private func writeToAll(channels: [ObjectIdentifier: Channel], buffer: ByteBuffer) {

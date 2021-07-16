@@ -33,40 +33,40 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
     public var stateHistory: [ChannelState]
 
     public init() {
-        currentState = .unregistered
-        stateHistory = [.unregistered]
+        self.currentState = .unregistered
+        self.stateHistory = [.unregistered]
     }
 
     private func updateState(_ state: ChannelState) {
-        currentState = state
-        stateHistory.append(state)
+        self.currentState = state
+        self.stateHistory.append(state)
     }
 
     public func channelRegistered(context: ChannelHandlerContext) {
-        XCTAssertEqual(currentState, .unregistered)
+        XCTAssertEqual(self.currentState, .unregistered)
         XCTAssertFalse(context.channel.isActive)
-        updateState(.registered)
+        self.updateState(.registered)
         context.fireChannelRegistered()
     }
 
     public func channelActive(context: ChannelHandlerContext) {
-        XCTAssertEqual(currentState, .registered)
+        XCTAssertEqual(self.currentState, .registered)
         XCTAssertTrue(context.channel.isActive)
-        updateState(.active)
+        self.updateState(.active)
         context.fireChannelActive()
     }
 
     public func channelInactive(context: ChannelHandlerContext) {
-        XCTAssertEqual(currentState, .active)
+        XCTAssertEqual(self.currentState, .active)
         XCTAssertFalse(context.channel.isActive)
-        updateState(.inactive)
+        self.updateState(.inactive)
         context.fireChannelInactive()
     }
 
     public func channelUnregistered(context: ChannelHandlerContext) {
-        XCTAssertEqual(currentState, .inactive)
+        XCTAssertEqual(self.currentState, .inactive)
         XCTAssertFalse(context.channel.isActive)
-        updateState(.unregistered)
+        self.updateState(.unregistered)
         context.fireChannelUnregistered()
     }
 }
@@ -371,7 +371,7 @@ public final class ChannelTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             buffer.clear()
             let ps: [EventLoopPromise<Void>] = (0 ..< 2).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
@@ -428,7 +428,7 @@ public final class ChannelTests: XCTestCase {
         let emptyBuffer = buffer
         _ = buffer.writeString("1234")
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -464,7 +464,7 @@ public final class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
         _ = buffer.writeString("1234")
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 4).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -507,7 +507,7 @@ public final class ChannelTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */ )
             buffer.clear()
             buffer.writeBytes([UInt8](repeating: 0xFF, count: numberOfBytes))
@@ -545,7 +545,7 @@ public final class ChannelTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */ )
             buffer.clear()
             buffer.writeBytes([0xFF] as [UInt8])
@@ -600,7 +600,7 @@ public final class ChannelTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let numberOfWrites = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */ )
             buffer.clear()
             buffer.writeBytes([UInt8](repeating: 0xFF, count: 1))
@@ -641,7 +641,7 @@ public final class ChannelTests: XCTestCase {
         let emptyBuffer = buffer
         _ = buffer.writeString("1234")
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -676,7 +676,7 @@ public final class ChannelTests: XCTestCase {
         buffer.moveReaderIndex(to: 0)
         buffer.moveWriterIndex(to: halfTheWriteVLimit)
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
@@ -712,7 +712,7 @@ public final class ChannelTests: XCTestCase {
         buffer.moveReaderIndex(to: 0)
         buffer.moveWriterIndex(to: biggerThanWriteV)
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
@@ -823,7 +823,7 @@ public final class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
         _ = buffer.writeString("1234")
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 5).map { (_: Int) in el.makePromise() }
 
             let fh1 = NIOFileHandle(descriptor: -1)
@@ -879,7 +879,7 @@ public final class ChannelTests: XCTestCase {
         let emptyBuffer = buffer
         _ = buffer.writeString("1234")
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
 
             pwm.markFlushCheckpoint()
@@ -928,7 +928,7 @@ public final class ChannelTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let emptyBuffer = alloc.buffer(capacity: 12)
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[1])
@@ -963,7 +963,7 @@ public final class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeString("1234")
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -994,7 +994,7 @@ public final class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeString("1234")
 
-        try withPendingStreamWritesManager { pwm in
+        try self.withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ... Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
             ps.forEach { p in
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
@@ -1280,18 +1280,18 @@ public final class ChannelTests: XCTestCase {
             case let ev as ChannelEvent:
                 switch ev {
                 case .inputClosed:
-                    XCTAssertFalse(inputShutdownEventReceived)
-                    inputShutdownEventReceived = true
+                    XCTAssertFalse(self.inputShutdownEventReceived)
+                    self.inputShutdownEventReceived = true
 
-                    if shutdownEvent == .input {
-                        promise.succeed(())
+                    if self.shutdownEvent == .input {
+                        self.promise.succeed(())
                     }
                 case .outputClosed:
-                    XCTAssertFalse(outputShutdownEventReceived)
-                    outputShutdownEventReceived = true
+                    XCTAssertFalse(self.outputShutdownEventReceived)
+                    self.outputShutdownEventReceived = true
 
-                    if shutdownEvent == .output {
-                        promise.succeed(())
+                    if self.shutdownEvent == .output {
+                        self.promise.succeed(())
                     }
                 }
 
@@ -1303,20 +1303,20 @@ public final class ChannelTests: XCTestCase {
 
         public func waitForEvent() {
             // We always notify it with a success so just force it with !
-            try! promise.futureResult.wait()
+            try! self.promise.futureResult.wait()
         }
 
         public func channelInactive(context _: ChannelHandlerContext) {
-            switch shutdownEvent {
+            switch self.shutdownEvent {
             case .input:
-                XCTAssertTrue(inputShutdownEventReceived)
-                XCTAssertFalse(outputShutdownEventReceived)
+                XCTAssertTrue(self.inputShutdownEventReceived)
+                XCTAssertFalse(self.outputShutdownEventReceived)
             case .output:
-                XCTAssertFalse(inputShutdownEventReceived)
-                XCTAssertTrue(outputShutdownEventReceived)
+                XCTAssertFalse(self.inputShutdownEventReceived)
+                XCTAssertTrue(self.outputShutdownEventReceived)
             }
 
-            promise.succeed(())
+            self.promise.succeed(())
         }
     }
 
@@ -1331,7 +1331,7 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelRegistered(context: ChannelHandlerContext) {
-                promise.succeed(context.channel.pipeline)
+                self.promise.succeed(context.channel.pipeline)
             }
         }
         weak var weakClientChannel: Channel?
@@ -1469,7 +1469,7 @@ public final class ChannelTests: XCTestCase {
 
             func handlerAdded(context: ChannelHandlerContext) {
                 self.context = context
-                readCountPromise = context.eventLoop.makePromise()
+                self.readCountPromise = context.eventLoop.makePromise()
             }
 
             public func expectRead(loop: EventLoop) -> EventLoopFuture<Void> {
@@ -1481,21 +1481,21 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelReadComplete(context _: ChannelHandlerContext) {
-                waitingForReadPromise?.succeed(())
-                waitingForReadPromise = nil
+                self.waitingForReadPromise?.succeed(())
+                self.waitingForReadPromise = nil
             }
 
             func read(context _: ChannelHandlerContext) {
-                reads += 1
+                self.reads += 1
 
                 // Allow the first read through.
-                if reads == 1 {
-                    context.read()
+                if self.reads == 1 {
+                    self.context.read()
                 }
             }
 
             public func issueDelayedRead() {
-                context.read()
+                self.context.read()
             }
         }
 
@@ -1551,7 +1551,7 @@ public final class ChannelTests: XCTestCase {
             var expectingData: Bool = false
 
             public func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
-                if !expectingData {
+                if !self.expectingData {
                     XCTFail("Received data before we expected it.")
                 } else {
                     let data = unwrapInboundIn(data)
@@ -1606,13 +1606,13 @@ public final class ChannelTests: XCTestCase {
             }
 
             public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                if seenEOF {
+                if self.seenEOF {
                     XCTFail("Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(unwrapInboundIn(data))")
                 }
-                numberOfChannelReads += 1
+                self.numberOfChannelReads += 1
                 let buffer = unwrapInboundIn(data)
                 XCTAssertLessThanOrEqual(buffer.readableBytes, 8)
-                XCTAssertEqual(1, numberOfChannelReads)
+                XCTAssertEqual(1, self.numberOfChannelReads)
                 context.close(mode: .all, promise: nil)
             }
         }
@@ -1664,12 +1664,12 @@ public final class ChannelTests: XCTestCase {
             }
 
             public func channelRead(context: ChannelHandlerContext, data _: NIOAny) {
-                if !didRead {
-                    didRead = true
+                if !self.didRead {
+                    self.didRead = true
                     // closing this here causes an interesting situation:
                     // in readFromSocket we will spin one more iteration until we see the EOF but when we then return
                     // to `BaseSocketChannel.readable0`, we deliver EOF with the channel already deactivated.
-                    context.close(mode: .all, promise: allDone)
+                    context.close(mode: .all, promise: self.allDone)
                 }
             }
         }
@@ -1728,7 +1728,7 @@ public final class ChannelTests: XCTestCase {
             }
 
             public func channelInactive(context _: ChannelHandlerContext) {
-                promise.succeed(())
+                self.promise.succeed(())
             }
         }
 
@@ -1762,21 +1762,21 @@ public final class ChannelTests: XCTestCase {
             }
 
             func add(_ channel: Channel) {
-                q.sync {
+                self.q.sync {
                     assert(self.channels[ObjectIdentifier(channel)] == nil)
                     channels[ObjectIdentifier(channel)] = channel
                 }
             }
 
             func remove(_ channel: Channel) {
-                let removed: Channel? = q.sync {
+                let removed: Channel? = self.q.sync {
                     self.channels.removeValue(forKey: ObjectIdentifier(channel))
                 }
                 XCTAssertTrue(removed != nil)
             }
 
             func closeAll() -> [EventLoopFuture<Void>] {
-                q.sync { self.channels.values }.map { channel in
+                self.q.sync { self.channels.values }.map { channel in
                     channel.close()
                 }
             }
@@ -1798,16 +1798,16 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelActive(context: ChannelHandlerContext) {
-                XCTAssertFalse(isActive)
-                isActive = true
-                channelCollector.add(context.channel)
+                XCTAssertFalse(self.isActive)
+                self.isActive = true
+                self.channelCollector.add(context.channel)
                 context.fireChannelActive()
             }
 
             func channelInactive(context: ChannelHandlerContext) {
-                XCTAssertTrue(isActive)
-                isActive = false
-                channelCollector.remove(context.channel)
+                XCTAssertTrue(self.isActive)
+                self.isActive = false
+                self.channelCollector.remove(context.channel)
                 context.fireChannelInactive()
             }
         }
@@ -1880,24 +1880,24 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelRead(context _: ChannelHandlerContext, data _: NIOAny) {
-                XCTAssertEqual(.active, state)
-                state = .read
-                hasReadPromise.succeed(())
+                XCTAssertEqual(.active, self.state)
+                self.state = .read
+                self.hasReadPromise.succeed(())
             }
 
             func channelActive(context _: ChannelHandlerContext) {
-                XCTAssertEqual(.registered, state)
-                state = .active
+                XCTAssertEqual(.registered, self.state)
+                self.state = .active
             }
 
             func channelRegistered(context _: ChannelHandlerContext) {
-                XCTAssertEqual(.start, state)
-                state = .registered
-                hasRegisteredPromise.succeed(())
+                XCTAssertEqual(.start, self.state)
+                self.state = .registered
+                self.hasRegisteredPromise.succeed(())
             }
 
             func channelUnregistered(context _: ChannelHandlerContext) {
-                hasUnregisteredPromise.succeed(())
+                self.hasUnregisteredPromise.succeed(())
             }
         }
 
@@ -1923,7 +1923,7 @@ public final class ChannelTests: XCTestCase {
             func channelActive(context: ChannelHandlerContext) {
                 var buffer = context.channel.allocator.buffer(capacity: 4)
                 buffer.writeString("foo")
-                context.writeAndFlush(NIOAny(buffer), promise: writeDonePromise)
+                context.writeAndFlush(NIOAny(buffer), promise: self.writeDonePromise)
             }
         }
 
@@ -2036,7 +2036,7 @@ public final class ChannelTests: XCTestCase {
                     self.firstReadHappened = true
                 }
                 XCTAssertGreaterThan(pointer.count, 0)
-                if firstReadHappened {
+                if self.firstReadHappened {
                     // this is a copy of the exact error that'd come out of the real Socket.read
                     throw IOError(errnoCode: ECONNRESET, reason: "read(descriptor:pointer:size:)")
                 } else {
@@ -2064,33 +2064,33 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelActive(context _: ChannelHandlerContext) {
-                XCTAssertEqual(.fresh, state)
-                state = .active
+                XCTAssertEqual(.fresh, self.state)
+                self.state = .active
             }
 
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
-                XCTAssertEqual(.active, state)
-                state = .read
+                XCTAssertEqual(.active, self.state)
+                self.state = .read
                 var buffer = unwrapInboundIn(data)
                 XCTAssertEqual(1, buffer.readableBytes)
                 XCTAssertEqual([0xFF], buffer.readBytes(length: 1)!)
             }
 
             func channelReadComplete(context _: ChannelHandlerContext) {
-                XCTAssertEqual(.read, state)
-                state = .readComplete
+                XCTAssertEqual(.read, self.state)
+                self.state = .readComplete
             }
 
             func errorCaught(context: ChannelHandlerContext, error _: Error) {
-                XCTAssertEqual(.readComplete, state)
-                state = .error
+                XCTAssertEqual(.readComplete, self.state)
+                self.state = .error
                 context.close(promise: nil)
             }
 
             func channelInactive(context _: ChannelHandlerContext) {
-                XCTAssertEqual(.error, state)
-                state = .inactive
-                allDone.succeed(())
+                XCTAssertEqual(.error, self.state)
+                self.state = .inactive
+                self.allDone.succeed(())
             }
         }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
@@ -2439,7 +2439,7 @@ public final class ChannelTests: XCTestCase {
             func channelActive(context: ChannelHandlerContext) {
                 var buffer = context.channel.allocator.buffer(capacity: 1)
                 buffer.writeStaticString("X")
-                context.channel.writeAndFlush(wrapOutboundOut(buffer)).map { context.channel }.cascade(to: channelAvailablePromise)
+                context.channel.writeAndFlush(wrapOutboundOut(buffer)).map { context.channel }.cascade(to: self.channelAvailablePromise)
             }
         }
 
@@ -2485,8 +2485,8 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelActive(context: ChannelHandlerContext) {
-                XCTAssert(serverChannel.eventLoop === context.eventLoop)
-                serverChannel.whenSuccess { serverChannel in
+                XCTAssert(self.serverChannel.eventLoop === context.eventLoop)
+                self.serverChannel.whenSuccess { serverChannel in
                     // all of the following futures need to complete synchronously for this test to test the correct
                     // thing. Therefore we keep track if we're still on the same stack frame.
                     var inSameStackFrame = true
@@ -2670,8 +2670,8 @@ public final class ChannelTests: XCTestCase {
             var closes = 0
 
             func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-                closes += 1
-                if closes == 1 {
+                self.closes += 1
+                if self.closes == 1 {
                     promise?.fail(DummyError())
                 } else {
                     context.close(mode: mode, promise: promise)
@@ -2866,15 +2866,15 @@ private class VerifyConnectionFailureHandler: ChannelInboundHandler {
     func errorCaught(context _: ChannelHandlerContext, error _: Error) { XCTFail("pipeline shouldn't be told about connect error") }
 
     func channelRegistered(context: ChannelHandlerContext) {
-        XCTAssertEqual(.fresh, state)
-        state = .registered
+        XCTAssertEqual(.fresh, self.state)
+        self.state = .registered
         context.fireChannelRegistered()
     }
 
     func channelUnregistered(context: ChannelHandlerContext) {
-        XCTAssertEqual(.registered, state)
-        state = .unregistered
-        allDone.succeed(())
+        XCTAssertEqual(.registered, self.state)
+        self.state = .unregistered
+        self.allDone.succeed(())
         context.fireChannelUnregistered()
     }
 }
@@ -2927,11 +2927,11 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
 
     func channelWritabilityChanged(context: ChannelHandlerContext) {
         if context.channel.isWritable {
-            isWritableCount += 1
-            becameWritable.succeed(())
+            self.isWritableCount += 1
+            self.becameWritable.succeed(())
         } else {
-            isNotWritableCount += 1
-            becameUnwritable.succeed(())
+            self.isNotWritableCount += 1
+            self.becameUnwritable.succeed(())
         }
     }
 }

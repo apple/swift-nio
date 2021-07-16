@@ -64,8 +64,8 @@ class UniversalBootstrapSupportTest: XCTestCase {
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let channel = unwrapInboundIn(data)
                 acceptedChannels.append(channel)
-                if acceptedChannels.count == 1 {
-                    firstArrived.succeed(())
+                if self.acceptedChannels.count == 1 {
+                    self.firstArrived.succeed(())
                 }
                 context.fireChannelRead(data)
             }
@@ -147,14 +147,14 @@ class UniversalBootstrapSupportTest: XCTestCase {
 
             var regularOptionsSeen = false
             func channelOption<Option>(_: Option, value _: Option.Value) -> Self where Option: ChannelOption {
-                regularOptionsSeen = true
+                self.regularOptionsSeen = true
                 return self
             }
 
             var convenienceOptionConsumed = false
             func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.TCPConvenienceOptions) -> FakeBootstrap {
                 if options.consumeAllowLocalEndpointReuse().isSet {
-                    convenienceOptionConsumed = true
+                    self.convenienceOptionConsumed = true
                 }
                 return self
             }

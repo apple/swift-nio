@@ -137,7 +137,7 @@ private class WebSocketRecorderHandler: ChannelInboundHandler, ChannelOutboundHa
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
-        errors.append(error)
+        self.errors.append(error)
         context.fireErrorCaught(error)
     }
 }
@@ -167,7 +167,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
 
         // Read the server request.
         if let requestString = try clientChannel.readByteBufferOutputAsString() {
-            XCTAssertEqual(requestString, basicRequest() + "\r\nConnection: upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: \(requestKey)\r\nSec-WebSocket-Version: 13\r\n\r\n")
+            XCTAssertEqual(requestString, self.basicRequest() + "\r\nConnection: upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: \(requestKey)\r\nSec-WebSocket-Version: 13\r\n\r\n")
         } else {
             XCTFail()
         }

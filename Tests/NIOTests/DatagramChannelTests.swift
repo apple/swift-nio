@@ -64,40 +64,40 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
     var readCompleteCount = 0
 
     func channelRegistered(context: ChannelHandlerContext) {
-        XCTAssertEqual(.fresh, state)
-        state = .registered
-        loop = context.eventLoop
+        XCTAssertEqual(.fresh, self.state)
+        self.state = .registered
+        self.loop = context.eventLoop
     }
 
     func channelActive(context _: ChannelHandlerContext) {
-        XCTAssertEqual(.registered, state)
-        state = .active
+        XCTAssertEqual(.registered, self.state)
+        self.state = .active
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        XCTAssertEqual(.active, state)
+        XCTAssertEqual(.active, self.state)
         let data = unwrapInboundIn(data)
         reads.append(data)
 
         if let promise = readWaiters.removeValue(forKey: reads.count) {
-            promise.succeed(reads)
+            promise.succeed(self.reads)
         }
 
         context.fireChannelRead(wrapInboundOut(data))
     }
 
     func channelReadComplete(context: ChannelHandlerContext) {
-        readCompleteCount += 1
+        self.readCompleteCount += 1
         context.fireChannelReadComplete()
     }
 
     func notifyForDatagrams(_ count: Int) -> EventLoopFuture<[AddressedEnvelope<DataType>]> {
-        guard reads.count < count else {
-            return loop!.makeSucceededFuture(.init(reads.prefix(count)))
+        guard self.reads.count < count else {
+            return self.loop!.makeSucceededFuture(.init(self.reads.prefix(count)))
         }
 
-        readWaiters[count] = loop!.makePromise()
-        return readWaiters[count]!.futureResult
+        self.readWaiters[count] = self.loop!.makePromise()
+        return self.readWaiters[count]!.futureResult
     }
 }
 
@@ -127,39 +127,39 @@ final class DatagramChannelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        firstChannel = try! buildChannel(group: group)
-        secondChannel = try! buildChannel(group: group)
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        self.firstChannel = try! self.buildChannel(group: self.group)
+        self.secondChannel = try! self.buildChannel(group: self.group)
     }
 
     override func tearDown() {
-        XCTAssertNoThrow(try group.syncShutdownGracefully())
+        XCTAssertNoThrow(try self.group.syncShutdownGracefully())
         super.tearDown()
     }
 
     func testBasicChannelCommunication() throws {
-        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
         let writeData = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
-        XCTAssertNoThrow(try firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
 
         let reads = try secondChannel.waitForDatagrams(count: 1)
         XCTAssertEqual(reads.count, 1)
         let read = reads.first!
         XCTAssertEqual(read.data, buffer)
-        XCTAssertEqual(read.remoteAddress, firstChannel.localAddress!)
+        XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!)
     }
 
     func testManyWrites() throws {
-        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
         let writeData = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
         var writeFutures: [EventLoopFuture<Void>] = []
         for _ in 0 ..< 5 {
-            writeFutures.append(firstChannel.write(NIOAny(writeData)))
+            writeFutures.append(self.firstChannel.write(NIOAny(writeData)))
         }
-        firstChannel.flush()
-        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(writeFutures, on: firstChannel.eventLoop).wait())
+        self.firstChannel.flush()
+        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(writeFutures, on: self.firstChannel.eventLoop).wait())
 
         let reads = try secondChannel.waitForDatagrams(count: 5)
 
@@ -168,23 +168,23 @@ final class DatagramChannelTests: XCTestCase {
 
         for read in reads {
             XCTAssertEqual(read.data, buffer)
-            XCTAssertEqual(read.remoteAddress, firstChannel.localAddress!)
+            XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!)
         }
     }
 
     func testConnectionFails() throws {
-        XCTAssertThrowsError(try firstChannel.connect(to: secondChannel.localAddress!).wait()) { error in
+        XCTAssertThrowsError(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait()) { error in
             XCTAssertEqual(.operationUnsupported, error as? ChannelError)
         }
     }
 
     func testDatagramChannelHasWatermark() throws {
-        _ = try firstChannel.setOption(ChannelOptions.writeBufferWaterMark, value: ChannelOptions.Types.WriteBufferWaterMark(low: 1, high: 1024)).wait()
+        _ = try self.firstChannel.setOption(ChannelOptions.writeBufferWaterMark, value: ChannelOptions.Types.WriteBufferWaterMark(low: 1, high: 1024)).wait()
 
-        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeBytes([UInt8](repeating: 5, count: 256))
         let writeData = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
-        XCTAssertTrue(firstChannel.isWritable)
+        XCTAssertTrue(self.firstChannel.isWritable)
         for _ in 0 ..< 4 {
             // We submit to the loop here to make sure that we synchronously process the writes and checks
             // on writability.
@@ -195,7 +195,7 @@ final class DatagramChannelTests: XCTestCase {
             XCTAssertTrue(writable)
         }
 
-        let lastWritePromise = firstChannel.eventLoop.makePromise(of: Void.self)
+        let lastWritePromise = self.firstChannel.eventLoop.makePromise(of: Void.self)
         // The last write will push us over the edge.
         var writable: Bool = try firstChannel.eventLoop.submit {
             self.firstChannel.write(NIOAny(writeData), promise: lastWritePromise)
@@ -204,13 +204,13 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertFalse(writable)
 
         // Now we're going to flush, and check the writability immediately after.
-        firstChannel.flush()
+        self.firstChannel.flush()
         writable = try lastWritePromise.futureResult.map { _ in self.firstChannel.isWritable }.wait()
         XCTAssertTrue(writable)
     }
 
     func testWriteFuturesFailWhenChannelClosed() throws {
-        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
         let writeData = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
         let promises = (0 ..< 5).map { _ in self.firstChannel.write(NIOAny(writeData)) }
@@ -232,16 +232,16 @@ final class DatagramChannelTests: XCTestCase {
         // We're going to try to write loads, and loads, and loads of data. In this case, one more
         // write than the iovecs max.
 
-        var overall: EventLoopFuture<Void> = firstChannel.eventLoop.makeSucceededFuture(())
+        var overall: EventLoopFuture<Void> = self.firstChannel.eventLoop.makeSucceededFuture(())
         for _ in 0 ... Socket.writevLimitIOVectors {
-            let myPromise = firstChannel.eventLoop.makePromise(of: Void.self)
-            var buffer = firstChannel.allocator.buffer(capacity: 1)
+            let myPromise = self.firstChannel.eventLoop.makePromise(of: Void.self)
+            var buffer = self.firstChannel.allocator.buffer(capacity: 1)
             buffer.writeString("a")
             let envelope = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
-            firstChannel.write(NIOAny(envelope), promise: myPromise)
-            overall = EventLoopFuture.andAllSucceed([overall, myPromise.futureResult], on: firstChannel.eventLoop)
+            self.firstChannel.write(NIOAny(envelope), promise: myPromise)
+            overall = EventLoopFuture.andAllSucceed([overall, myPromise.futureResult], on: self.firstChannel.eventLoop)
         }
-        firstChannel.flush()
+        self.firstChannel.flush()
         XCTAssertNoThrow(try overall.wait())
         // We're not going to check that the datagrams arrive, because some kernels *will* drop them here.
     }
@@ -249,10 +249,10 @@ final class DatagramChannelTests: XCTestCase {
     func testSendmmsgLotsOfData() throws {
         var datagrams = 0
 
-        var overall = firstChannel.eventLoop.makeSucceededFuture(())
+        var overall = self.firstChannel.eventLoop.makeSucceededFuture(())
         // We defer this work to the background thread because otherwise it incurs an enormous number of context
         // switches.
-        try firstChannel.eventLoop.submit {
+        try self.firstChannel.eventLoop.submit {
             let myPromise = self.firstChannel.eventLoop.makePromise(of: Void.self)
             // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
@@ -270,7 +270,7 @@ final class DatagramChannelTests: XCTestCase {
                 datagrams += 1
             }
         }.wait()
-        firstChannel.flush()
+        self.firstChannel.flush()
 
         XCTAssertNoThrow(try overall.wait())
     }
@@ -278,12 +278,12 @@ final class DatagramChannelTests: XCTestCase {
     func testLargeWritesFail() throws {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
         let bufferSize = 1024 * 1024 * 10
-        var buffer = firstChannel.allocator.buffer(capacity: bufferSize)
+        var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
         buffer.writeRepeatingByte(4, count: bufferSize)
         let envelope = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
 
-        let writeFut = firstChannel.write(NIOAny(envelope))
-        firstChannel.flush()
+        let writeFut = self.firstChannel.write(NIOAny(envelope))
+        self.firstChannel.flush()
 
         XCTAssertThrowsError(try writeFut.wait()) { error in
             XCTAssertEqual(.writeMessageTooLarge, error as? ChannelError)
@@ -293,7 +293,7 @@ final class DatagramChannelTests: XCTestCase {
     func testOneLargeWriteDoesntPreventOthersWriting() throws {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
         let bufferSize = 1024 * 1024 * 10
-        var buffer = firstChannel.allocator.buffer(capacity: bufferSize)
+        var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
         buffer.writeRepeatingByte(4, count: bufferSize)
 
         // Now we want two envelopes. The first is small, the second is large.
@@ -301,9 +301,9 @@ final class DatagramChannelTests: XCTestCase {
         let secondEnvelope = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
 
         // Now, three writes. We're sandwiching the big write between two small ones.
-        let firstWrite = firstChannel.write(NIOAny(firstEnvelope))
-        let secondWrite = firstChannel.write(NIOAny(secondEnvelope))
-        let thirdWrite = firstChannel.writeAndFlush(NIOAny(firstEnvelope))
+        let firstWrite = self.firstChannel.write(NIOAny(firstEnvelope))
+        let secondWrite = self.firstChannel.write(NIOAny(secondEnvelope))
+        let thirdWrite = self.firstChannel.writeAndFlush(NIOAny(firstEnvelope))
 
         // The first and third writes should be fine.
         XCTAssertNoThrow(try firstWrite.wait())
@@ -318,7 +318,7 @@ final class DatagramChannelTests: XCTestCase {
     func testClosingBeforeFlushFailsAllWrites() throws {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
         let bufferSize = 1024 * 1024 * 10
-        var buffer = firstChannel.allocator.buffer(capacity: bufferSize)
+        var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
         buffer.writeRepeatingByte(4, count: bufferSize)
 
         // Now we want two envelopes. The first is small, the second is large.
@@ -326,9 +326,9 @@ final class DatagramChannelTests: XCTestCase {
         let secondEnvelope = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
 
         // Now, three writes. We're sandwiching the big write between two small ones.
-        let firstWrite = firstChannel.write(NIOAny(firstEnvelope))
-        let secondWrite = firstChannel.write(NIOAny(secondEnvelope))
-        let thirdWrite = firstChannel.writeAndFlush(NIOAny(firstEnvelope))
+        let firstWrite = self.firstChannel.write(NIOAny(firstEnvelope))
+        let secondWrite = self.firstChannel.write(NIOAny(secondEnvelope))
+        let thirdWrite = self.firstChannel.writeAndFlush(NIOAny(firstEnvelope))
 
         // The first and third writes should be fine.
         XCTAssertNoThrow(try firstWrite.wait())
@@ -341,15 +341,15 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     public func testRecvMsgFailsWithECONNREFUSED() throws {
-        try assertRecvMsgFails(error: ECONNREFUSED, active: true)
+        try self.assertRecvMsgFails(error: ECONNREFUSED, active: true)
     }
 
     public func testRecvMsgFailsWithENOMEM() throws {
-        try assertRecvMsgFails(error: ENOMEM, active: true)
+        try self.assertRecvMsgFails(error: ENOMEM, active: true)
     }
 
     public func testRecvMsgFailsWithEFAULT() throws {
-        try assertRecvMsgFails(error: EFAULT, active: false)
+        try self.assertRecvMsgFails(error: EFAULT, active: false)
     }
 
     private func assertRecvMsgFails(error: Int32, active: Bool) throws {
@@ -369,7 +369,7 @@ final class DatagramChannelTests: XCTestCase {
 
             func errorCaught(context _: ChannelHandlerContext, error: Error) {
                 if let ioError = error as? IOError {
-                    promise.succeed(ioError)
+                    self.promise.succeed(ioError)
                 }
             }
         }
@@ -393,7 +393,7 @@ final class DatagramChannelTests: XCTestCase {
                 throws -> IOResult<Int>
             {
                 if let err = error {
-                    error = nil
+                    self.error = nil
                     throw IOError(errnoCode: err, reason: "recvfrom")
                 }
                 return IOResult.wouldBlock(0)
@@ -419,15 +419,15 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     public func testRecvMmsgFailsWithECONNREFUSED() throws {
-        try assertRecvMmsgFails(error: ECONNREFUSED, active: true)
+        try self.assertRecvMmsgFails(error: ECONNREFUSED, active: true)
     }
 
     public func testRecvMmsgFailsWithENOMEM() throws {
-        try assertRecvMmsgFails(error: ENOMEM, active: true)
+        try self.assertRecvMmsgFails(error: ENOMEM, active: true)
     }
 
     public func testRecvMmsgFailsWithEFAULT() throws {
-        try assertRecvMmsgFails(error: EFAULT, active: false)
+        try self.assertRecvMmsgFails(error: EFAULT, active: false)
     }
 
     private func assertRecvMmsgFails(error: Int32, active: Bool) throws {
@@ -450,7 +450,7 @@ final class DatagramChannelTests: XCTestCase {
 
                 func errorCaught(context _: ChannelHandlerContext, error: Error) {
                     if let ioError = error as? IOError {
-                        promise.succeed(ioError)
+                        self.promise.succeed(ioError)
                     }
                 }
             }
@@ -469,7 +469,7 @@ final class DatagramChannelTests: XCTestCase {
 
                 override func recvmmsg(msgs _: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
                     if let err = error {
-                        error = nil
+                        self.error = nil
                         throw IOError(errnoCode: err, reason: "recvfrom")
                     }
                     return IOResult.wouldBlock(0)
@@ -497,17 +497,17 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     public func testSetGetOptionClosedDatagramChannel() throws {
-        try assertSetGetOptionOnOpenAndClosed(channel: firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
+        try assertSetGetOptionOnOpenAndClosed(channel: self.firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
     }
 
     func testWritesAreAccountedCorrectly() throws {
-        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
         let firstWrite = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer.getSlice(at: buffer.readerIndex, length: 5)!)
         let secondWrite = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
-        firstChannel.write(NIOAny(firstWrite), promise: nil)
-        firstChannel.write(NIOAny(secondWrite), promise: nil)
-        firstChannel.flush()
+        self.firstChannel.write(NIOAny(firstWrite), promise: nil)
+        self.firstChannel.write(NIOAny(secondWrite), promise: nil)
+        self.firstChannel.flush()
 
         let reads = try secondChannel.waitForDatagrams(count: 2)
 
@@ -515,9 +515,9 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertEqual(reads.count, 2)
 
         XCTAssertEqual(reads[0].data, buffer.getSlice(at: buffer.readerIndex, length: 5)!)
-        XCTAssertEqual(reads[0].remoteAddress, firstChannel.localAddress!)
+        XCTAssertEqual(reads[0].remoteAddress, self.firstChannel.localAddress!)
         XCTAssertEqual(reads[1].data, buffer)
-        XCTAssertEqual(reads[1].remoteAddress, firstChannel.localAddress!)
+        XCTAssertEqual(reads[1].remoteAddress, self.firstChannel.localAddress!)
     }
 
     func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
@@ -551,25 +551,25 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     func testBasicMultipleReads() throws {
-        XCTAssertNoThrow(try secondChannel.configureForRecvMmsg(messageCount: 10))
+        XCTAssertNoThrow(try self.secondChannel.configureForRecvMmsg(messageCount: 10))
 
         // This test should exercise recvmmsg.
-        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
         let writeData = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
 
         // We write this in three times.
-        firstChannel.write(NIOAny(writeData), promise: nil)
-        firstChannel.write(NIOAny(writeData), promise: nil)
-        firstChannel.write(NIOAny(writeData), promise: nil)
-        firstChannel.flush()
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.flush()
 
         let reads = try secondChannel.waitForDatagrams(count: 3)
         XCTAssertEqual(reads.count, 3)
 
         for (idx, read) in reads.enumerated() {
             XCTAssertEqual(read.data, buffer, "index: \(idx)")
-            XCTAssertEqual(read.remoteAddress, firstChannel.localAddress!, "index: \(idx)")
+            XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!, "index: \(idx)")
         }
     }
 
@@ -578,18 +578,18 @@ final class DatagramChannelTests: XCTestCase {
         // Right now we don't error on truncation, so this test looks for short receives.
         // Setting the recv allocator to 30 bytes forces 3 bytes per message.
         // Sadly, this test only truncates for the platforms with recvmmsg support: the rest don't truncate as 30 bytes is sufficient.
-        XCTAssertNoThrow(try secondChannel.configureForRecvMmsg(messageCount: 10))
-        XCTAssertNoThrow(try secondChannel.setOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 30)).wait())
+        XCTAssertNoThrow(try self.secondChannel.configureForRecvMmsg(messageCount: 10))
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 30)).wait())
 
-        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
         let writeData = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
 
         // We write this in three times.
-        firstChannel.write(NIOAny(writeData), promise: nil)
-        firstChannel.write(NIOAny(writeData), promise: nil)
-        firstChannel.write(NIOAny(writeData), promise: nil)
-        firstChannel.flush()
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.flush()
 
         let reads = try secondChannel.waitForDatagrams(count: 3)
         XCTAssertEqual(reads.count, 3)
@@ -600,7 +600,7 @@ final class DatagramChannelTests: XCTestCase {
             #else
                 XCTAssertEqual(read.data.readableBytes, 13, "index: \(idx)")
             #endif
-            XCTAssertEqual(read.remoteAddress, firstChannel.localAddress!, "index: \(idx)")
+            XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!, "index: \(idx)")
         }
     }
 
@@ -608,24 +608,24 @@ final class DatagramChannelTests: XCTestCase {
         // The goal of this test is to provide more datagrams than can be received in a single invocation of
         // recvmmsg, and to confirm that they all make it through.
         // This test is allowed to run on systems without recvmmsg: it just exercises the serial read path.
-        XCTAssertNoThrow(try secondChannel.configureForRecvMmsg(messageCount: 10))
+        XCTAssertNoThrow(try self.secondChannel.configureForRecvMmsg(messageCount: 10))
 
         // We now turn off autoread.
-        XCTAssertNoThrow(try secondChannel.setOption(ChannelOptions.autoRead, value: false).wait())
-        XCTAssertNoThrow(try secondChannel.setOption(ChannelOptions.maxMessagesPerRead, value: 3).wait())
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.autoRead, value: false).wait())
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.maxMessagesPerRead, value: 3).wait())
 
-        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("data")
         let writeData = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
 
         // Ok, now we're good. Let's queue up a bunch of datagrams. We've configured to receive 10 at a time, so we'll send 30.
         for _ in 0 ..< 29 {
-            firstChannel.write(NIOAny(writeData), promise: nil)
+            self.firstChannel.write(NIOAny(writeData), promise: nil)
         }
-        XCTAssertNoThrow(try firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
 
         // Now we read. Rather than issue many read() calls, we'll turn autoread back on.
-        XCTAssertNoThrow(try secondChannel.setOption(ChannelOptions.autoRead, value: true).wait())
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.autoRead, value: true).wait())
 
         // Wait for all 30 datagrams to come through. There should be no loss here, as this is small datagrams on loopback.
         let reads = try secondChannel.waitForDatagrams(count: 30)
@@ -635,10 +635,10 @@ final class DatagramChannelTests: XCTestCase {
         // (as max messages per read is 3). On platforms with recvmmsg, we would expect to see
         // substantially fewer than 10, and potentially as low as 1.
         #if os(Linux) || os(FreeBSD) || os(Android)
-            XCTAssertLessThan(try assertNoThrowWithValue(secondChannel.readCompleteCount()), 10)
-            XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(secondChannel.readCompleteCount()), 1)
+            XCTAssertLessThan(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
+            XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 1)
         #else
-            XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(secondChannel.readCompleteCount()), 10)
+            XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
         #endif
     }
 
@@ -738,36 +738,36 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     func testEcnSendReceiveIPV4() {
-        testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: false, vectorSend: false)
+        self.testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: false, vectorSend: false)
     }
 
     func testEcnSendReceiveIPV6() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        testEcnAndPacketInfoReceive(address: "::1", vectorRead: false, vectorSend: false)
+        self.testEcnAndPacketInfoReceive(address: "::1", vectorRead: false, vectorSend: false)
     }
 
     func testEcnSendReceiveIPV4VectorRead() {
-        testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: false)
+        self.testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: false)
     }
 
     func testEcnSendReceiveIPV6VectorRead() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: false)
+        self.testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: false)
     }
 
     func testEcnSendReceiveIPV4VectorReadVectorWrite() {
-        testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: true)
+        self.testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: true)
     }
 
     func testEcnSendReceiveIPV6VectorReadVectorWrite() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true)
+        self.testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true)
     }
 
     func testWritabilityChangeDuringReentrantFlushNow() throws {
@@ -781,7 +781,7 @@ final class DatagramChannelTests: XCTestCase {
             }
         }
 
-        let loop = group.next()
+        let loop = self.group.next()
         let handler = ReentrantWritabilityChangingHandler(becameUnwritable: loop.makePromise(),
                                                           becameWritable: loop.makePromise())
 
@@ -870,46 +870,46 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     func testSimpleReceivePacketInfoIPV4() throws {
-        try testSimpleReceivePacketInfo(address: "127.0.0.1")
+        try self.testSimpleReceivePacketInfo(address: "127.0.0.1")
     }
 
     func testSimpleReceivePacketInfoIPV6() throws {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        try testSimpleReceivePacketInfo(address: "::1")
+        try self.testSimpleReceivePacketInfo(address: "::1")
     }
 
     func testReceiveEcnAndPacketInfoIPV4() {
-        testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: false, vectorSend: false, receivePacketInfo: true)
+        self.testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: false, vectorSend: false, receivePacketInfo: true)
     }
 
     func testReceiveEcnAndPacketInfoIPV6() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        testEcnAndPacketInfoReceive(address: "::1", vectorRead: false, vectorSend: false, receivePacketInfo: true)
+        self.testEcnAndPacketInfoReceive(address: "::1", vectorRead: false, vectorSend: false, receivePacketInfo: true)
     }
 
     func testReceiveEcnAndPacketInfoIPV4VectorRead() {
-        testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: false, receivePacketInfo: true)
+        self.testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: false, receivePacketInfo: true)
     }
 
     func testReceiveEcnAndPacketInfoIPV6VectorRead() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: false, receivePacketInfo: true)
+        self.testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: false, receivePacketInfo: true)
     }
 
     func testReceiveEcnAndPacketInfoIPV4VectorReadVectorWrite() {
-        testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
+        self.testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
     }
 
     func testReceiveEcnAndPacketInfoIPV6VectorReadVectorWrite() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
-        testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
+        self.testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
     }
 }

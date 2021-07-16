@@ -19,7 +19,7 @@ import XCTest
 final class WebSocketMaskingKeyTests: XCTestCase {
     var generator = SystemRandomNumberGenerator()
     func testRandomMaskingKey() {
-        let key = WebSocketMaskingKey.random(using: &generator)
+        let key = WebSocketMaskingKey.random(using: &self.generator)
         var buffer = ByteBuffer(bytes: [1, 2, 3, 4, 5, 6, 7, 8])
         buffer.webSocketMask(key)
         buffer.webSocketUnmask(key)

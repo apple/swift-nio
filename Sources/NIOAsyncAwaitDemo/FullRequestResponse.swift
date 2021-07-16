@@ -70,15 +70,15 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
     ///          buffer. `initialBufferCapacity` is the initial capacity for this buffer. You usually do not need to set
     ///          this parameter unless you intend to pipeline very deeply and don't want the buffer to resize.
     public init(initialBufferCapacity: Int = 4) {
-        promiseBuffer = CircularBuffer(initialCapacity: initialBufferCapacity)
+        self.promiseBuffer = CircularBuffer(initialCapacity: initialBufferCapacity)
     }
 
     public func channelInactive(context: ChannelHandlerContext) {
-        switch state {
+        switch self.state {
         case .error:
             // We failed any outstanding promises when we entered the error state and will fail any
             // new promises in write.
-            assert(promiseBuffer.count == 0)
+            assert(self.promiseBuffer.count == 0)
         case .operational:
             let promiseBuffer = self.promiseBuffer
             self.promiseBuffer.removeAll()
@@ -90,24 +90,24 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
     }
 
     public func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
-        guard state.isOperational else {
+        guard self.state.isOperational else {
             // we're in an error state, ignore further responses
-            assert(promiseBuffer.count == 0)
+            assert(self.promiseBuffer.count == 0)
             return
         }
 
         let response = unwrapInboundIn(data)
-        let promise = promiseBuffer.removeFirst()
+        let promise = self.promiseBuffer.removeFirst()
 
         promise.succeed(response)
     }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        guard state.isOperational else {
+        guard self.state.isOperational else {
             assert(self.promiseBuffer.count == 0)
             return
         }
-        state = .error(error)
+        self.state = .error(error)
         let promiseBuffer = self.promiseBuffer
         self.promiseBuffer.removeAll()
         context.close(promise: nil)
@@ -118,13 +118,13 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let (request, responsePromise) = unwrapOutboundIn(data)
-        switch state {
+        switch self.state {
         case let .error(error):
-            assert(promiseBuffer.count == 0)
+            assert(self.promiseBuffer.count == 0)
             responsePromise.fail(error)
             promise?.fail(error)
         case .operational:
-            promiseBuffer.append(responsePromise)
+            self.promiseBuffer.append(responsePromise)
             context.write(wrapOutboundOut(request), promise: promise)
         }
     }

@@ -107,7 +107,7 @@ private class WebSocketRecorderHandler: ChannelInboundHandler {
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
-        errors.append(error)
+        self.errors.append(error)
         context.fireErrorCaught(error)
     }
 }
@@ -130,7 +130,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
     func testBasicUpgradeDance() throws {
         let basicUpgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { channel, _ in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                                        upgradePipelineHandler: { channel, _ in channel.eventLoop.makeSucceededFuture(()) })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -152,7 +152,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
     func testUpgradeWithProtocolName() throws {
         let basicUpgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { channel, _ in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                                        upgradePipelineHandler: { channel, _ in channel.eventLoop.makeSucceededFuture(()) })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -174,7 +174,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
                                                            XCTFail("Should not have called")
                                                            return channel.eventLoop.makeSucceededFuture(())
                                                        })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -207,7 +207,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
                                                            upgradeComplete = true
                                                            return channel.eventLoop.makeSucceededFuture(())
                                                        })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -240,7 +240,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
     func testRequiresVersion13() throws {
         let basicUpgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { channel, _ in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                                        upgradePipelineHandler: { channel, _ in channel.eventLoop.makeSucceededFuture(()) })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -262,7 +262,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
     func testRequiresVersionHeader() throws {
         let basicUpgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { channel, _ in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                                        upgradePipelineHandler: { channel, _ in channel.eventLoop.makeSucceededFuture(()) })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -284,7 +284,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
     func testRequiresKeyHeader() throws {
         let basicUpgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { channel, _ in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                                        upgradePipelineHandler: { channel, _ in channel.eventLoop.makeSucceededFuture(()) })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -310,7 +310,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
                                                       return channel.eventLoop.makeSucceededFuture(hdrs)
                                                   },
                                                   upgradePipelineHandler: { channel, _ in channel.eventLoop.makeSucceededFuture(()) })
-        let (loop, server, client) = createTestFixtures(upgraders: [upgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [upgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -340,7 +340,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
         let second = buildHandler(path: "second")
         let third = buildHandler(path: "third")
 
-        let (loop, server, client) = createTestFixtures(upgraders: [first, second, third])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [first, second, third])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -363,7 +363,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
                                                            channel.pipeline.addHandler(recorder)
 
                                                        })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -400,7 +400,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
                                                        upgradePipelineHandler: { channel, _ in
                                                            channel.eventLoop.makeSucceededFuture(())
                                                        })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finish())
@@ -426,7 +426,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
                                                            channel.pipeline.addHandler(recorder)
 
                                                        })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finishAcceptingAlreadyClosed())
@@ -465,7 +465,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
                                                            channel.pipeline.addHandler(recorder)
 
                                                        })
-        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
             XCTAssertNoThrow(try server.finishAcceptingAlreadyClosed())

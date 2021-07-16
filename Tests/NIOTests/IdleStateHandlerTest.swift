@@ -17,19 +17,19 @@ import XCTest
 
 class IdleStateHandlerTest: XCTestCase {
     func testIdleRead() throws {
-        try testIdle(IdleStateHandler(readTimeout: .seconds(1)), false) { $0 == IdleStateHandler.IdleStateEvent.read }
+        try self.testIdle(IdleStateHandler(readTimeout: .seconds(1)), false) { $0 == IdleStateHandler.IdleStateEvent.read }
     }
 
     func testIdleWrite() throws {
-        try testIdle(IdleStateHandler(writeTimeout: .seconds(1)), true) { $0 == IdleStateHandler.IdleStateEvent.write }
+        try self.testIdle(IdleStateHandler(writeTimeout: .seconds(1)), true) { $0 == IdleStateHandler.IdleStateEvent.write }
     }
 
     func testIdleAllWrite() throws {
-        try testIdle(IdleStateHandler(allTimeout: .seconds(1)), true) { $0 == IdleStateHandler.IdleStateEvent.all }
+        try self.testIdle(IdleStateHandler(allTimeout: .seconds(1)), true) { $0 == IdleStateHandler.IdleStateEvent.all }
     }
 
     func testIdleAllRead() throws {
-        try testIdle(IdleStateHandler(allTimeout: .seconds(1)), false) { $0 == IdleStateHandler.IdleStateEvent.all }
+        try self.testIdle(IdleStateHandler(allTimeout: .seconds(1)), false) { $0 == IdleStateHandler.IdleStateEvent.all }
     }
 
     private func testIdle(_ handler: IdleStateHandler, _ writeToChannel: Bool, _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool) throws {
@@ -52,20 +52,20 @@ class IdleStateHandlerTest: XCTestCase {
             }
 
             public func channelRead(context _: ChannelHandlerContext, data _: NIOAny) {
-                read = true
+                self.read = true
             }
 
             public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
-                if !writeToChannel {
-                    XCTAssertTrue(read)
+                if !self.writeToChannel {
+                    XCTAssertTrue(self.read)
                 }
 
-                XCTAssertTrue(assertEventFn(event as! IdleStateHandler.IdleStateEvent))
+                XCTAssertTrue(self.assertEventFn(event as! IdleStateHandler.IdleStateEvent))
                 context.close(promise: nil)
             }
 
             public func channelActive(context: ChannelHandlerContext) {
-                if writeToChannel {
+                if self.writeToChannel {
                     var buffer = context.channel.allocator.buffer(capacity: 4)
                     buffer.writeStaticString("test")
                     context.writeAndFlush(wrapOutboundOut(buffer), promise: nil)
@@ -111,51 +111,51 @@ class IdleStateHandlerTest: XCTestCase {
             var unregistered = false
 
             func channelActive(context _: ChannelHandlerContext) {
-                active = true
+                self.active = true
             }
 
             func channelInactive(context _: ChannelHandlerContext) {
-                inactive = true
+                self.inactive = true
             }
 
             func channelRead(context _: ChannelHandlerContext, data _: NIOAny) {
-                read = true
+                self.read = true
             }
 
             func channelReadComplete(context _: ChannelHandlerContext) {
-                readComplete = true
+                self.readComplete = true
             }
 
             func channelWritabilityChanged(context _: ChannelHandlerContext) {
-                writabilityChanged = true
+                self.writabilityChanged = true
             }
 
             func userInboundEventTriggered(context _: ChannelHandlerContext, event _: Any) {
-                eventTriggered = true
+                self.eventTriggered = true
             }
 
             func errorCaught(context _: ChannelHandlerContext, error _: Error) {
-                errorCaught = true
+                self.errorCaught = true
             }
 
             func channelRegistered(context _: ChannelHandlerContext) {
-                registered = true
+                self.registered = true
             }
 
             func channelUnregistered(context _: ChannelHandlerContext) {
-                unregistered = true
+                self.unregistered = true
             }
 
             func assertAllEventsReceived() {
-                XCTAssertTrue(active)
-                XCTAssertTrue(inactive)
-                XCTAssertTrue(read)
-                XCTAssertTrue(readComplete)
-                XCTAssertTrue(writabilityChanged)
-                XCTAssertTrue(eventTriggered)
-                XCTAssertTrue(errorCaught)
-                XCTAssertTrue(registered)
-                XCTAssertTrue(unregistered)
+                XCTAssertTrue(self.active)
+                XCTAssertTrue(self.inactive)
+                XCTAssertTrue(self.read)
+                XCTAssertTrue(self.readComplete)
+                XCTAssertTrue(self.writabilityChanged)
+                XCTAssertTrue(self.eventTriggered)
+                XCTAssertTrue(self.errorCaught)
+                XCTAssertTrue(self.registered)
+                XCTAssertTrue(self.unregistered)
             }
         }
         let eventHandler = EventHandler()

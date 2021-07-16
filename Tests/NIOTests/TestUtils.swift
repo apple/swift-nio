@@ -193,9 +193,9 @@ final class ByteCountingHandler: ChannelInboundHandler, RemovableChannelHandler 
     }
 
     func handlerAdded(context: ChannelHandlerContext) {
-        buffer = context.channel.allocator.buffer(capacity: numBytes)
-        if numBytes == 0 {
-            promise.succeed(buffer)
+        self.buffer = context.channel.allocator.buffer(capacity: self.numBytes)
+        if self.numBytes == 0 {
+            self.promise.succeed(self.buffer)
         }
     }
 
@@ -203,8 +203,8 @@ final class ByteCountingHandler: ChannelInboundHandler, RemovableChannelHandler 
         var currentBuffer = unwrapInboundIn(data)
         buffer.writeBuffer(&currentBuffer)
 
-        if buffer.readableBytes == numBytes {
-            promise.succeed(buffer)
+        if self.buffer.readableBytes == self.numBytes {
+            self.promise.succeed(self.buffer)
         }
     }
 
@@ -225,7 +225,7 @@ final class NonAcceptingServerSocket: ServerSocket {
 
     override func accept(setNonBlocking _: Bool) throws -> Socket? {
         if let err = errors.last {
-            _ = errors.removeLast()
+            _ = self.errors.removeLast()
             throw IOError(errnoCode: err, reason: "accept")
         }
         return nil
@@ -385,107 +385,107 @@ final class FulfillOnFirstEventHandler: ChannelDuplexHandler {
     }
 
     func handlerRemoved(context _: ChannelHandlerContext) {
-        channelRegisteredPromise?.fail(ExpectedEventMissing())
-        channelUnregisteredPromise?.fail(ExpectedEventMissing())
-        channelActivePromise?.fail(ExpectedEventMissing())
-        channelInactivePromise?.fail(ExpectedEventMissing())
-        channelReadPromise?.fail(ExpectedEventMissing())
-        channelReadCompletePromise?.fail(ExpectedEventMissing())
-        channelWritabilityChangedPromise?.fail(ExpectedEventMissing())
-        userInboundEventTriggeredPromise?.fail(ExpectedEventMissing())
-        errorCaughtPromise?.fail(ExpectedEventMissing())
-        registerPromise?.fail(ExpectedEventMissing())
-        bindPromise?.fail(ExpectedEventMissing())
-        connectPromise?.fail(ExpectedEventMissing())
-        writePromise?.fail(ExpectedEventMissing())
-        flushPromise?.fail(ExpectedEventMissing())
-        readPromise?.fail(ExpectedEventMissing())
-        closePromise?.fail(ExpectedEventMissing())
-        triggerUserOutboundEventPromise?.fail(ExpectedEventMissing())
+        self.channelRegisteredPromise?.fail(ExpectedEventMissing())
+        self.channelUnregisteredPromise?.fail(ExpectedEventMissing())
+        self.channelActivePromise?.fail(ExpectedEventMissing())
+        self.channelInactivePromise?.fail(ExpectedEventMissing())
+        self.channelReadPromise?.fail(ExpectedEventMissing())
+        self.channelReadCompletePromise?.fail(ExpectedEventMissing())
+        self.channelWritabilityChangedPromise?.fail(ExpectedEventMissing())
+        self.userInboundEventTriggeredPromise?.fail(ExpectedEventMissing())
+        self.errorCaughtPromise?.fail(ExpectedEventMissing())
+        self.registerPromise?.fail(ExpectedEventMissing())
+        self.bindPromise?.fail(ExpectedEventMissing())
+        self.connectPromise?.fail(ExpectedEventMissing())
+        self.writePromise?.fail(ExpectedEventMissing())
+        self.flushPromise?.fail(ExpectedEventMissing())
+        self.readPromise?.fail(ExpectedEventMissing())
+        self.closePromise?.fail(ExpectedEventMissing())
+        self.triggerUserOutboundEventPromise?.fail(ExpectedEventMissing())
     }
 
     func channelRegistered(context: ChannelHandlerContext) {
-        channelRegisteredPromise?.succeed(())
+        self.channelRegisteredPromise?.succeed(())
         context.fireChannelRegistered()
     }
 
     func channelUnregistered(context: ChannelHandlerContext) {
-        channelUnregisteredPromise?.succeed(())
+        self.channelUnregisteredPromise?.succeed(())
         context.fireChannelUnregistered()
     }
 
     func channelActive(context: ChannelHandlerContext) {
-        channelActivePromise?.succeed(())
+        self.channelActivePromise?.succeed(())
         context.fireChannelActive()
     }
 
     func channelInactive(context: ChannelHandlerContext) {
-        channelInactivePromise?.succeed(())
+        self.channelInactivePromise?.succeed(())
         context.fireChannelInactive()
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        channelReadPromise?.succeed(())
+        self.channelReadPromise?.succeed(())
         context.fireChannelRead(data)
     }
 
     func channelReadComplete(context: ChannelHandlerContext) {
-        channelReadCompletePromise?.succeed(())
+        self.channelReadCompletePromise?.succeed(())
         context.fireChannelReadComplete()
     }
 
     func channelWritabilityChanged(context: ChannelHandlerContext) {
-        channelWritabilityChangedPromise?.succeed(())
+        self.channelWritabilityChangedPromise?.succeed(())
         context.fireChannelWritabilityChanged()
     }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
-        userInboundEventTriggeredPromise?.succeed(())
+        self.userInboundEventTriggeredPromise?.succeed(())
         context.fireUserInboundEventTriggered(event)
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
-        errorCaughtPromise?.succeed(())
+        self.errorCaughtPromise?.succeed(())
         context.fireErrorCaught(error)
     }
 
     func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        registerPromise?.succeed(())
+        self.registerPromise?.succeed(())
         context.register(promise: promise)
     }
 
     func bind(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        bindPromise?.succeed(())
+        self.bindPromise?.succeed(())
         context.bind(to: to, promise: promise)
     }
 
     func connect(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        connectPromise?.succeed(())
+        self.connectPromise?.succeed(())
         context.connect(to: to, promise: promise)
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        writePromise?.succeed(())
+        self.writePromise?.succeed(())
         context.write(data, promise: promise)
     }
 
     func flush(context: ChannelHandlerContext) {
-        flushPromise?.succeed(())
+        self.flushPromise?.succeed(())
         context.flush()
     }
 
     func read(context: ChannelHandlerContext) {
-        readPromise?.succeed(())
+        self.readPromise?.succeed(())
         context.read()
     }
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        closePromise?.succeed(())
+        self.closePromise?.succeed(())
         context.close(mode: mode, promise: promise)
     }
 
     func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
-        triggerUserOutboundEventPromise?.succeed(())
+        self.triggerUserOutboundEventPromise?.succeed(())
         context.triggerUserOutboundEvent(event, promise: promise)
     }
 }

@@ -52,7 +52,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             go.signal()
         }
         g.wait()
-        XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
+        XCTAssertEqual(self.sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
     }
 
     @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
@@ -264,7 +264,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             go.signal()
         }
         g.wait()
-        XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
+        XCTAssertEqual(self.sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
     }
 
     func testCompareAndExchangeBoolNIOAtomic() {
@@ -1044,7 +1044,7 @@ private class IntHolderWithDeallocationTracking {
     let allDeallocations: NIOAtomic<Int>
 
     init(_ x: Int, allDeallocations: NIOAtomic<Int>) {
-        value = x
+        self.value = x
         self.allDeallocations = allDeallocations
     }
 

@@ -63,8 +63,8 @@ private class BetterHTTPParser {
 
     init(kind: HTTPDecoderKind) {
         self.kind = kind
-        c_nio_http_parser_settings_init(&settings)
-        withExclusiveHTTPParser { parserPtr in
+        c_nio_http_parser_settings_init(&self.settings)
+        self.withExclusiveHTTPParser { parserPtr in
             switch kind {
             case .request:
                 c_nio_http_parser_init(parserPtr, HTTP_REQUEST)
@@ -72,39 +72,39 @@ private class BetterHTTPParser {
                 c_nio_http_parser_init(parserPtr, HTTP_RESPONSE)
             }
         }
-        settings.on_body = { opaque, bytes, len in
+        self.settings.on_body = { opaque, bytes, len in
             BetterHTTPParser.fromOpaque(opaque).didReceiveBodyData(UnsafeRawBufferPointer(start: bytes, count: len))
             return 0
         }
-        settings.on_header_field = { opaque, bytes, len in
+        self.settings.on_header_field = { opaque, bytes, len in
             BetterHTTPParser.fromOpaque(opaque).didReceiveHeaderFieldData(UnsafeRawBufferPointer(start: bytes, count: len))
             return 0
         }
-        settings.on_header_value = { opaque, bytes, len in
+        self.settings.on_header_value = { opaque, bytes, len in
             BetterHTTPParser.fromOpaque(opaque).didReceiveHeaderValueData(UnsafeRawBufferPointer(start: bytes, count: len))
             return 0
         }
-        settings.on_status = { opaque, bytes, len in
+        self.settings.on_status = { opaque, bytes, len in
             BetterHTTPParser.fromOpaque(opaque).didReceiveStatusData(UnsafeRawBufferPointer(start: bytes, count: len))
             return 0
         }
-        settings.on_url = { opaque, bytes, len in
+        self.settings.on_url = { opaque, bytes, len in
             BetterHTTPParser.fromOpaque(opaque).didReceiveURLData(UnsafeRawBufferPointer(start: bytes, count: len))
             return 0
         }
-        settings.on_chunk_complete = { opaque in
+        self.settings.on_chunk_complete = { opaque in
             BetterHTTPParser.fromOpaque(opaque).didReceiveChunkCompleteNotification()
             return 0
         }
-        settings.on_chunk_header = { opaque in
+        self.settings.on_chunk_header = { opaque in
             BetterHTTPParser.fromOpaque(opaque).didReceiveChunkHeaderNotification()
             return 0
         }
-        settings.on_message_begin = { opaque in
+        self.settings.on_message_begin = { opaque in
             BetterHTTPParser.fromOpaque(opaque).didReceiveMessageBeginNotification()
             return 0
         }
-        settings.on_headers_complete = { opaque in
+        self.settings.on_headers_complete = { opaque in
             let parser = BetterHTTPParser.fromOpaque(opaque)
             switch parser.didReceiveHeadersCompleteNotification(versionMajor: Int(opaque!.pointee.http_major),
                                                                 versionMinor: Int(opaque!.pointee.http_minor),
@@ -122,81 +122,81 @@ private class BetterHTTPParser {
                 return -1 // error
             }
         }
-        settings.on_message_complete = { opaque in
+        self.settings.on_message_complete = { opaque in
             BetterHTTPParser.fromOpaque(opaque).didReceiveMessageCompleteNotification()
             return 0
         }
     }
 
     private func start(bytes: UnsafeRawBufferPointer, newState: HTTPDecodingState) {
-        assert(firstNonDiscardableOffset == nil)
-        firstNonDiscardableOffset = bytes.baseAddress! - rawBytesView.baseAddress!
-        decodingState = newState
+        assert(self.firstNonDiscardableOffset == nil)
+        self.firstNonDiscardableOffset = bytes.baseAddress! - self.rawBytesView.baseAddress!
+        self.decodingState = newState
     }
 
     private func finish(_ callout: (inout HTTPDecoderDelegate, UnsafeRawBufferPointer) -> Void) {
         var currentFieldByteLength = 0
         swap(&currentFieldByteLength, &self.currentFieldByteLength)
-        let start = rawBytesView.startIndex + firstNonDiscardableOffset!
+        let start = self.rawBytesView.startIndex + self.firstNonDiscardableOffset!
         let end = start + currentFieldByteLength
-        firstNonDiscardableOffset = nil
-        precondition(start >= rawBytesView.startIndex && end <= rawBytesView.endIndex)
-        callout(&delegate, .init(rebasing: rawBytesView[start ..< end]))
+        self.firstNonDiscardableOffset = nil
+        precondition(start >= self.rawBytesView.startIndex && end <= self.rawBytesView.endIndex)
+        callout(&self.delegate, .init(rebasing: self.rawBytesView[start ..< end]))
     }
 
     private func didReceiveBodyData(_ bytes: UnsafeRawBufferPointer) {
-        delegate.didReceiveBody(bytes)
+        self.delegate.didReceiveBody(bytes)
     }
 
     private func didReceiveHeaderFieldData(_ bytes: UnsafeRawBufferPointer) {
-        switch decodingState {
+        switch self.decodingState {
         case .headerName, .trailerName:
             ()
         case .headerValue:
-            finish { delegate, bytes in
+            self.finish { delegate, bytes in
                 delegate.didReceiveHeaderValue(bytes)
             }
-            start(bytes: bytes, newState: .headerName)
+            self.start(bytes: bytes, newState: .headerName)
         case .trailerValue:
-            finish { delegate, bytes in
+            self.finish { delegate, bytes in
                 delegate.didReceiveTrailerValue(bytes)
             }
-            start(bytes: bytes, newState: .trailerName)
+            self.start(bytes: bytes, newState: .trailerName)
         case .url:
-            finish { delegate, bytes in
+            self.finish { delegate, bytes in
                 delegate.didReceiveURL(bytes)
             }
-            start(bytes: bytes, newState: .headerName)
+            self.start(bytes: bytes, newState: .headerName)
         case .headersComplete:
             // these are trailers
-            start(bytes: bytes, newState: .trailerName)
+            self.start(bytes: bytes, newState: .trailerName)
         case .afterMessageBegin:
             // in case we're parsing responses
-            start(bytes: bytes, newState: .headerName)
+            self.start(bytes: bytes, newState: .headerName)
         case .beforeMessageBegin:
             preconditionFailure()
         }
-        currentFieldByteLength += bytes.count
+        self.currentFieldByteLength += bytes.count
     }
 
     private func didReceiveHeaderValueData(_ bytes: UnsafeRawBufferPointer) {
-        switch decodingState {
+        switch self.decodingState {
         case .headerValue, .trailerValue:
             ()
         case .headerName:
-            finish { delegate, bytes in
+            self.finish { delegate, bytes in
                 delegate.didReceiveHeaderName(bytes)
             }
-            start(bytes: bytes, newState: .headerValue)
+            self.start(bytes: bytes, newState: .headerValue)
         case .trailerName:
-            finish { delegate, bytes in
+            self.finish { delegate, bytes in
                 delegate.didReceiveTrailerName(bytes)
             }
-            start(bytes: bytes, newState: .trailerValue)
+            self.start(bytes: bytes, newState: .trailerValue)
         case .beforeMessageBegin, .afterMessageBegin, .headersComplete, .url:
             preconditionFailure()
         }
-        currentFieldByteLength += bytes.count
+        self.currentFieldByteLength += bytes.count
     }
 
     private func didReceiveStatusData(_: UnsafeRawBufferPointer) {
@@ -204,15 +204,15 @@ private class BetterHTTPParser {
     }
 
     private func didReceiveURLData(_ bytes: UnsafeRawBufferPointer) {
-        switch decodingState {
+        switch self.decodingState {
         case .url:
             ()
         case .afterMessageBegin:
-            start(bytes: bytes, newState: .url)
+            self.start(bytes: bytes, newState: .url)
         case .beforeMessageBegin, .headersComplete, .headerName, .headerValue, .trailerName, .trailerValue:
             preconditionFailure()
         }
-        currentFieldByteLength += bytes.count
+        self.currentFieldByteLength += bytes.count
     }
 
     private func didReceiveChunkCompleteNotification() {
@@ -224,27 +224,27 @@ private class BetterHTTPParser {
     }
 
     private func didReceiveMessageBeginNotification() {
-        switch decodingState {
+        switch self.decodingState {
         case .beforeMessageBegin:
-            decodingState = .afterMessageBegin
+            self.decodingState = .afterMessageBegin
         case .headersComplete, .headerName, .headerValue, .trailerName, .trailerValue, .afterMessageBegin, .url:
             preconditionFailure()
         }
     }
 
     private func didReceiveMessageCompleteNotification() {
-        switch decodingState {
+        switch self.decodingState {
         case .headersComplete:
             ()
         case .trailerValue:
-            finish { delegate, bytes in
+            self.finish { delegate, bytes in
                 delegate.didReceiveTrailerValue(bytes)
             }
         case .beforeMessageBegin, .headerName, .headerValue, .trailerName, .afterMessageBegin, .url:
             preconditionFailure()
         }
-        decodingState = .beforeMessageBegin
-        delegate.didFinishMessage()
+        self.decodingState = .beforeMessageBegin
+        self.delegate.didFinishMessage()
     }
 
     private func didReceiveHeadersCompleteNotification(versionMajor: Int,
@@ -254,27 +254,27 @@ private class BetterHTTPParser {
                                                        method: http_method,
                                                        keepAliveState: KeepAliveState) -> MessageContinuation
     {
-        switch decodingState {
+        switch self.decodingState {
         case .headerValue:
-            finish { delegate, bytes in
+            self.finish { delegate, bytes in
                 delegate.didReceiveHeaderValue(bytes)
             }
         case .url:
-            finish { delegate, bytes in
+            self.finish { delegate, bytes in
                 delegate.didReceiveURL(bytes)
             }
         case .afterMessageBegin:
             // we're okay here for responses (as they don't have URLs) but for requests we must have seen a URL/headers
-            precondition(kind == .response)
+            precondition(self.kind == .response)
         case .beforeMessageBegin, .headersComplete, .headerName, .trailerName, .trailerValue:
             preconditionFailure()
         }
-        assert(firstNonDiscardableOffset == nil)
-        decodingState = .headersComplete
+        assert(self.firstNonDiscardableOffset == nil)
+        self.decodingState = .headersComplete
 
         var skipBody = false
 
-        if kind == .response {
+        if self.kind == .response {
             // http_parser doesn't correctly handle responses to HEAD requests. We have to do something
             // annoyingly opaque here, and in those cases return 1 instead of 0. This forces http_parser
             // to not expect a request body.
@@ -296,7 +296,7 @@ private class BetterHTTPParser {
             // https://github.com/nodejs/http-parser/issues/251. As a result, we check for these status
             // codes and override http_parser's handling as well.
             guard let method = requestHeads.popFirst()?.method else {
-                richerError = NIOHTTPDecoderError.unsolicitedResponse
+                self.richerError = NIOHTTPDecoderError.unsolicitedResponse
                 return .error(HPE_UNKNOWN)
             }
 
@@ -309,12 +309,12 @@ private class BetterHTTPParser {
             }
         }
 
-        let success = delegate.didFinishHead(versionMajor: versionMajor,
-                                             versionMinor: versionMinor,
-                                             isUpgrade: isUpgrade,
-                                             method: method,
-                                             statusCode: statusCode,
-                                             keepAliveState: keepAliveState)
+        let success = self.delegate.didFinishHead(versionMajor: versionMajor,
+                                                  versionMinor: versionMinor,
+                                                  isUpgrade: isUpgrade,
+                                                  method: method,
+                                                  statusCode: statusCode,
+                                                  keepAliveState: keepAliveState)
         guard success else {
             return .error(HPE_INVALID_VERSION)
         }
@@ -323,13 +323,13 @@ private class BetterHTTPParser {
     }
 
     func start() {
-        withExclusiveHTTPParser { parserPtr in
+        self.withExclusiveHTTPParser { parserPtr in
             parserPtr.pointee.data = Unmanaged.passRetained(self).toOpaque()
         }
     }
 
     func stop() {
-        withExclusiveHTTPParser { parserPtr in
+        self.withExclusiveHTTPParser { parserPtr in
             let selfRef = parserPtr.pointee.data
             Unmanaged<BetterHTTPParser>.fromOpaque(selfRef!).release()
             parserPtr.pointee.data = UnsafeMutableRawPointer(bitPattern: 0xDEDBEEF)
@@ -350,7 +350,7 @@ private class BetterHTTPParser {
 
     func feedInput(_ bytes: UnsafeRawBufferPointer?) throws -> Int {
         var parserErrno: UInt32 = 0
-        let parserConsumed = withExclusiveHTTPParser { parserPtr -> Int in
+        let parserConsumed = self.withExclusiveHTTPParser { parserPtr -> Int in
             let parserResult: Int
             if let bytes = bytes {
                 self.rawBytesView = bytes
@@ -375,7 +375,7 @@ private class BetterHTTPParser {
             // self.parser must be non-nil here because we can't be re-entered here (ByteToMessageDecoder guarantee)
             // If we have a richer error than the errno code, and the errno is unknown, we'll use it. Otherwise, we use the
             // error from http_parser.
-            let err = httpErrno ?? http_errno(rawValue: parserErrno)
+            let err = self.httpErrno ?? http_errno(rawValue: parserErrno)
             if err == HPE_UNKNOWN, let richerError = self.richerError {
                 throw richerError
             } else {
@@ -383,7 +383,7 @@ private class BetterHTTPParser {
             }
         }
         if let firstNonDiscardableOffset = self.firstNonDiscardableOffset {
-            httpParserOffset += parserConsumed - firstNonDiscardableOffset
+            self.httpParserOffset += parserConsumed - firstNonDiscardableOffset
             self.firstNonDiscardableOffset = 0
             return firstNonDiscardableOffset
         } else {
@@ -393,8 +393,8 @@ private class BetterHTTPParser {
             //
             // Set the HTTP parser offset back to zero, and tell the parent that we consumed
             // the whole buffer.
-            let consumedBytes = httpParserOffset + parserConsumed
-            httpParserOffset = 0
+            let consumedBytes = self.httpParserOffset + parserConsumed
+            self.httpParserOffset = 0
             return consumedBytes
         }
     }
@@ -485,60 +485,60 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     ///     - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
     ///                              detected. Note that this does not affect what happens on EOF.
     public init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) {
-        headers.reserveCapacity(16)
+        self.headers.reserveCapacity(16)
         if In.self == HTTPServerRequestPart.self {
-            kind = .request
+            self.kind = .request
         } else if In.self == HTTPClientResponsePart.self {
-            kind = .response
+            self.kind = .response
         } else {
             preconditionFailure("unknown HTTP message type \(In.self)")
         }
-        parser = BetterHTTPParser(kind: kind)
+        self.parser = BetterHTTPParser(kind: self.kind)
         self.leftOverBytesStrategy = leftOverBytesStrategy
     }
 
     func didReceiveBody(_ bytes: UnsafeRawBufferPointer) {
-        let offset = buffer!.withUnsafeReadableBytes { allBytes -> Int in
+        let offset = self.buffer!.withUnsafeReadableBytes { allBytes -> Int in
             let offset = bytes.baseAddress! - allBytes.baseAddress!
             assert(offset >= 0)
             assert(offset + bytes.count <= allBytes.count)
             return offset
         }
-        buffer!.moveReaderIndex(forwardBy: offset)
-        switch kind {
+        self.buffer!.moveReaderIndex(forwardBy: offset)
+        switch self.kind {
         case .request:
-            context!.fireChannelRead(NIOAny(HTTPServerRequestPart.body(buffer!.readSlice(length: bytes.count)!)))
+            self.context!.fireChannelRead(NIOAny(HTTPServerRequestPart.body(self.buffer!.readSlice(length: bytes.count)!)))
         case .response:
-            context!.fireChannelRead(NIOAny(HTTPClientResponsePart.body(buffer!.readSlice(length: bytes.count)!)))
+            self.context!.fireChannelRead(NIOAny(HTTPClientResponsePart.body(self.buffer!.readSlice(length: bytes.count)!)))
         }
     }
 
     func didReceiveHeaderName(_ bytes: UnsafeRawBufferPointer) {
-        assert(currentHeaderName == nil)
-        currentHeaderName = String(decoding: bytes, as: Unicode.UTF8.self)
+        assert(self.currentHeaderName == nil)
+        self.currentHeaderName = String(decoding: bytes, as: Unicode.UTF8.self)
     }
 
     func didReceiveHeaderValue(_ bytes: UnsafeRawBufferPointer) {
-        headers.append((currentHeaderName!, String(decoding: bytes, as: Unicode.UTF8.self)))
-        currentHeaderName = nil
+        self.headers.append((self.currentHeaderName!, String(decoding: bytes, as: Unicode.UTF8.self)))
+        self.currentHeaderName = nil
     }
 
     func didReceiveTrailerName(_ bytes: UnsafeRawBufferPointer) {
-        assert(currentHeaderName == nil)
-        currentHeaderName = String(decoding: bytes, as: Unicode.UTF8.self)
+        assert(self.currentHeaderName == nil)
+        self.currentHeaderName = String(decoding: bytes, as: Unicode.UTF8.self)
     }
 
     func didReceiveTrailerValue(_ bytes: UnsafeRawBufferPointer) {
-        if trailers == nil {
-            trailers = []
+        if self.trailers == nil {
+            self.trailers = []
         }
-        trailers?.append((currentHeaderName!, String(decoding: bytes, as: Unicode.UTF8.self)))
-        currentHeaderName = nil
+        self.trailers?.append((self.currentHeaderName!, String(decoding: bytes, as: Unicode.UTF8.self)))
+        self.currentHeaderName = nil
     }
 
     func didReceiveURL(_ bytes: UnsafeRawBufferPointer) {
-        assert(url == nil)
-        url = String(decoding: bytes, as: Unicode.UTF8.self)
+        assert(self.url == nil)
+        self.url = String(decoding: bytes, as: Unicode.UTF8.self)
     }
 
     func didFinishHead(versionMajor: Int,
@@ -551,17 +551,17 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         let message: NIOAny
 
         guard versionMajor == 1 else {
-            stopParsing = true
-            context!.fireErrorCaught(HTTPParserError.invalidVersion)
+            self.stopParsing = true
+            self.context!.fireErrorCaught(HTTPParserError.invalidVersion)
             return false
         }
 
-        switch kind {
+        switch self.kind {
         case .request:
             let reqHead = HTTPRequestHead(version: .init(major: versionMajor, minor: versionMinor),
                                           method: HTTPMethod.from(httpParserMethod: method),
-                                          uri: url!,
-                                          headers: HTTPHeaders(headers,
+                                          uri: self.url!,
+                                          headers: HTTPHeaders(self.headers,
                                                                keepAliveState: keepAliveState))
             message = NIOAny(HTTPServerRequestPart.head(reqHead))
         case .response:
@@ -571,9 +571,9 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
                                                                 keepAliveState: keepAliveState))
             message = NIOAny(HTTPClientResponsePart.head(resHead))
         }
-        url = nil
-        headers.removeAll(keepingCapacity: true)
-        context!.fireChannelRead(message)
+        self.url = nil
+        self.headers.removeAll(keepingCapacity: true)
+        self.context!.fireChannelRead(message)
         self.isUpgrade = isUpgrade
         return true
     }
@@ -581,24 +581,24 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     func didFinishMessage() {
         var trailers: [(String, String)]?
         swap(&trailers, &self.trailers)
-        switch kind {
+        switch self.kind {
         case .request:
-            context!.fireChannelRead(NIOAny(HTTPServerRequestPart.end(trailers.map(HTTPHeaders.init))))
+            self.context!.fireChannelRead(NIOAny(HTTPServerRequestPart.end(trailers.map(HTTPHeaders.init))))
         case .response:
-            context!.fireChannelRead(NIOAny(HTTPClientResponsePart.end(trailers.map(HTTPHeaders.init))))
+            self.context!.fireChannelRead(NIOAny(HTTPClientResponsePart.end(trailers.map(HTTPHeaders.init))))
         }
-        stopParsing = isUpgrade!
-        isUpgrade = nil
+        self.stopParsing = self.isUpgrade!
+        self.isUpgrade = nil
     }
 
     public func decoderAdded(context _: ChannelHandlerContext) {
-        parser.delegate = self
-        parser.start()
+        self.parser.delegate = self
+        self.parser.start()
     }
 
     public func decoderRemoved(context _: ChannelHandlerContext) {
-        parser.stop()
-        parser.delegate = nil
+        self.parser.stop()
+        self.parser.delegate = nil
     }
 
     private func feedEOF(context: ChannelHandlerContext) throws {
@@ -607,7 +607,7 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
             self.context = nil
         }
         // we don't care how much http_parser consumed here because we just fed an EOF so there won't be any more data.
-        _ = try parser.feedInput(nil)
+        _ = try self.parser.feedInput(nil)
     }
 
     private func feedInput(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws {
@@ -624,23 +624,23 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     }
 
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        if !stopParsing {
-            try feedInput(context: context, buffer: &buffer)
+        if !self.stopParsing {
+            try self.feedInput(context: context, buffer: &buffer)
         }
         return .needMoreData
     }
 
     public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-        if !stopParsing {
-            while buffer.readableBytes > 0, case .continue = try decode(context: context, buffer: &buffer) {}
+        if !self.stopParsing {
+            while buffer.readableBytes > 0, case .continue = try self.decode(context: context, buffer: &buffer) {}
             if seenEOF {
-                try feedEOF(context: context)
+                try self.feedEOF(context: context)
             }
         }
         if buffer.readableBytes > 0, !seenEOF {
             // We only do this if we haven't seen EOF because the left-overs strategy must only be invoked when we're
             // sure that this is the completion of an upgrade.
-            switch leftOverBytesStrategy {
+            switch self.leftOverBytesStrategy {
             case .dropBytes:
                 ()
             case .fireError:
@@ -824,6 +824,6 @@ extension NIOHTTPDecoderError: Hashable {}
 
 extension NIOHTTPDecoderError: CustomDebugStringConvertible {
     public var debugDescription: String {
-        String(describing: baseError)
+        String(describing: self.baseError)
     }
 }

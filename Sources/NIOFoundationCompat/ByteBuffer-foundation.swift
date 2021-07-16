@@ -61,7 +61,7 @@ public extension ByteBuffer {
     ///     - length: The number of bytes to be read from this `ByteBuffer`.
     /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     mutating func readData(length: Int) -> Data? {
-        readData(length: length, byteTransferStrategy: .automatic)
+        self.readData(length: length, byteTransferStrategy: .automatic)
     }
 
     /// Read `length` bytes off this `ByteBuffer`, move the reader index forward by `length` bytes and return the result
@@ -73,7 +73,7 @@ public extension ByteBuffer {
     ///                             of the options.
     /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     mutating func readData(length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
-        getData(at: readerIndex, length: length, byteTransferStrategy: byteTransferStrategy).map {
+        self.getData(at: readerIndex, length: length, byteTransferStrategy: byteTransferStrategy).map {
             self.moveReaderIndex(forwardBy: length)
             return $0
         }
@@ -91,7 +91,7 @@ public extension ByteBuffer {
     ///     - length: The number of bytes of interest
     /// - returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
     func getData(at index: Int, length: Int) -> Data? {
-        getData(at: index, length: length, byteTransferStrategy: .automatic)
+        self.getData(at: index, length: length, byteTransferStrategy: .automatic)
     }
 
     /// Return `length` bytes starting at `index` and return the result as `Data`. This will not change the reader index.
@@ -210,7 +210,7 @@ public extension ByteBuffer {
     @inlinable
     @discardableResult
     mutating func writeContiguousBytes<Bytes: ContiguousBytes>(_ bytes: Bytes) -> Int {
-        let written = setContiguousBytes(bytes, at: writerIndex)
+        let written = self.setContiguousBytes(bytes, at: writerIndex)
         moveWriterIndex(forwardBy: written)
         return written
     }
@@ -237,7 +237,7 @@ public extension ByteBuffer {
     @inlinable
     @discardableResult
     mutating func writeData<D: DataProtocol>(_ data: D) -> Int {
-        let written = setData(data, at: writerIndex)
+        let written = self.setData(data, at: writerIndex)
         moveWriterIndex(forwardBy: written)
         return written
     }
@@ -258,7 +258,7 @@ public extension ByteBuffer {
 
         var written = 0
         for region in data.regions {
-            written += setContiguousBytes(region, at: index + written)
+            written += self.setContiguousBytes(region, at: index + written)
         }
         return written
     }

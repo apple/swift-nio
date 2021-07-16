@@ -76,18 +76,18 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
 
     init() {
         var head = HTTPResponseHead(version: .http1_1, status: .ok)
-        head.headers.add(name: "Content-Length", value: "\(bodyLength)")
-        for i in 0 ..< numberOfAdditionalHeaders {
+        head.headers.add(name: "Content-Length", value: "\(self.bodyLength)")
+        for i in 0 ..< self.numberOfAdditionalHeaders {
             head.headers.add(name: "X-Random-Extra-Header", value: "\(i)")
         }
-        cachedHead = head
+        self.cachedHead = head
 
         var body: [UInt8] = []
-        body.reserveCapacity(bodyLength)
-        for i in 0 ..< bodyLength {
+        body.reserveCapacity(self.bodyLength)
+        for i in 0 ..< self.bodyLength {
             body.append(UInt8(i % Int(UInt8.max)))
         }
-        cachedBody = body
+        self.cachedBody = body
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -146,20 +146,20 @@ final class RepeatedRequests: ChannelInboundHandler {
     private let isDonePromise: EventLoopPromise<Int>
 
     init(numberOfRequests: Int, eventLoop: EventLoop) {
-        remainingNumberOfRequests = numberOfRequests
+        self.remainingNumberOfRequests = numberOfRequests
         self.numberOfRequests = numberOfRequests
-        isDonePromise = eventLoop.makePromise()
+        self.isDonePromise = eventLoop.makePromise()
     }
 
     func wait() throws -> Int {
         let reqs = try isDonePromise.futureResult.wait()
-        precondition(reqs == numberOfRequests)
+        precondition(reqs == self.numberOfRequests)
         return reqs
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         context.channel.close(promise: nil)
-        isDonePromise.fail(error)
+        self.isDonePromise.fail(error)
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {

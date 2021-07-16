@@ -447,20 +447,20 @@ public final class EventLoopTest: XCTestCase {
             }
 
             func channelActive(context _: ChannelHandlerContext) {
-                channelActivePromise?.succeed(())
+                self.channelActivePromise?.succeed(())
             }
 
             func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-                guard closePromise == nil else {
+                guard self.closePromise == nil else {
                     XCTFail("Attempted to create duplicate close promise")
                     return
                 }
                 XCTAssertTrue(context.channel.isActive)
-                closePromise = context.eventLoop.makePromise()
-                closePromise!.futureResult.whenSuccess {
+                self.closePromise = context.eventLoop.makePromise()
+                self.closePromise!.futureResult.whenSuccess {
                     context.close(mode: mode, promise: promise)
                 }
-                promiseRegisterCallback(closePromise!)
+                self.promiseRegisterCallback(self.closePromise!)
             }
         }
 
@@ -638,8 +638,8 @@ public final class EventLoopTest: XCTestCase {
             let removed = NIOAtomic.makeAtomic(value: false)
 
             public func handlerRemoved(context _: ChannelHandlerContext) {
-                XCTAssertFalse(groupIsShutdown.load())
-                XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
+                XCTAssertFalse(self.groupIsShutdown.load())
+                XCTAssertTrue(self.removed.compareAndExchange(expected: false, desired: true))
             }
         }
 
@@ -772,8 +772,12 @@ public final class EventLoopTest: XCTestCase {
         let expectFail2 = XCTestExpectation(description: "Cancellation-specific promise was wrongly fulfilled")
         let expect1 = XCTestExpectation(description: "Initializer promise was fulfilled")
         let expect2 = XCTestExpectation(description: "Cancellation-specific promise was fulfilled")
-        promise1.futureResult.whenSuccess { expectFail1.fulfill(); expect1.fulfill() }
-        promise2.futureResult.whenSuccess { expectFail2.fulfill(); expect2.fulfill() }
+        promise1.futureResult.whenSuccess { expectFail1.fulfill()
+            expect1.fulfill()
+        }
+        promise2.futureResult.whenSuccess { expectFail2.fulfill()
+            expect2.fulfill()
+        }
         XCTAssertEqual(XCTWaiter.wait(for: [expectFail1, expectFail2], timeout: 0.5), .timedOut)
         semaphore.signal()
         XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 0.5), .completed)
@@ -1184,16 +1188,16 @@ public final class EventLoopTest: XCTestCase {
             var allDonePromise: EventLoopPromise<Void>?
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                readCalls += 1
-                XCTAssertEqual(1, readCalls)
+                self.readCalls += 1
+                XCTAssertEqual(1, self.readCalls)
 
                 var data = unwrapInboundIn(data)
                 XCTAssertEqual(1, data.readableBytes)
 
-                XCTAssertNil(received)
-                received = data.readInteger()
+                XCTAssertNil(self.received)
+                self.received = data.readInteger()
 
-                allDonePromise?.succeed(())
+                self.allDonePromise?.succeed(())
 
                 context.close(promise: nil)
             }
@@ -1431,18 +1435,18 @@ private class EventLoopWithPreSucceededFuture: EventLoop {
 
     var _succeededVoidFuture: EventLoopFuture<Void>?
     func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
-        guard inEventLoop, let voidFuture = _succeededVoidFuture else {
+        guard self.inEventLoop, let voidFuture = _succeededVoidFuture else {
             return makeSucceededFuture(())
         }
         return voidFuture
     }
 
     init() {
-        _succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+        self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
     }
 
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
-        _succeededVoidFuture = nil
+        self._succeededVoidFuture = nil
         queue.async {
             callback(nil)
         }

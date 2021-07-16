@@ -21,11 +21,11 @@ private class ReadCompletedHandler: ChannelInboundHandler {
     public var readCompleteCount: Int
 
     init() {
-        readCompleteCount = 0
+        self.readCompleteCount = 0
     }
 
     public func channelReadComplete(context _: ChannelHandlerContext) {
-        readCompleteCount += 1
+        self.readCompleteCount += 1
     }
 }
 
@@ -50,7 +50,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         }
 
         try emChannel.pipeline.addHandler(handler).wait()
-        emChannel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
+        emChannel.pipeline.fireUserInboundEventTriggered(self.negotiatedEvent)
         XCTAssertTrue(called)
     }
 
@@ -91,7 +91,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.addHandler(handler).wait()
 
         // Fire the handshake complete event.
-        channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
+        channel.pipeline.fireUserInboundEventTriggered(self.negotiatedEvent)
 
         // At this time the callback should have fired, but the handler should still be in
         // the pipeline.
@@ -108,11 +108,11 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     }
 
     func testCallbackReflectsNotificationResult() throws {
-        try negotiateTest(event: negotiatedEvent, expectedResult: negotiatedResult)
+        try self.negotiateTest(event: self.negotiatedEvent, expectedResult: self.negotiatedResult)
     }
 
     func testCallbackNotesFallbackForNoNegotiation() throws {
-        try negotiateTest(event: .handshakeCompleted(negotiatedProtocol: ""), expectedResult: .fallback)
+        try self.negotiateTest(event: .handshakeCompleted(negotiatedProtocol: ""), expectedResult: .fallback)
     }
 
     func testNoBufferingBeforeEventFires() throws {
@@ -145,7 +145,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.addHandler(handler).wait()
 
         // Fire in the event.
-        channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
+        channel.pipeline.fireUserInboundEventTriggered(self.negotiatedEvent)
 
         // At this point all writes should be buffered.
         try channel.writeInbound("writes")
@@ -178,7 +178,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
-        channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
+        channel.pipeline.fireUserInboundEventTriggered(self.negotiatedEvent)
 
         // At this time, readComplete hasn't fired.
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 0)
@@ -205,7 +205,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
-        channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
+        channel.pipeline.fireUserInboundEventTriggered(self.negotiatedEvent)
 
         // Send a write, which is buffered.
         try channel.writeInbound("a write")

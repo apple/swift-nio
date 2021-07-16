@@ -30,13 +30,13 @@ private final class IndexWritingHandler: ChannelDuplexHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var buf = unwrapInboundIn(data)
-        buf.writeInteger(UInt8(index))
+        buf.writeInteger(UInt8(self.index))
         context.fireChannelRead(wrapInboundOut(buf))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         var buf = unwrapOutboundIn(data)
-        buf.writeInteger(UInt8(index))
+        buf.writeInteger(UInt8(self.index))
         context.write(wrapOutboundOut(buf), promise: promise)
     }
 }
@@ -158,11 +158,11 @@ class ChannelPipelineTest: XCTestCase {
         let handlerRemovedCalled = NIOAtomic<Bool>.makeAtomic(value: false)
 
         public func handlerAdded(context _: ChannelHandlerContext) {
-            handlerAddedCalled.store(true)
+            self.handlerAddedCalled.store(true)
         }
 
         public func handlerRemoved(context _: ChannelHandlerContext) {
-            handlerRemovedCalled.store(true)
+            self.handlerRemovedCalled.store(true)
         }
     }
 
@@ -222,7 +222,7 @@ class ChannelPipelineTest: XCTestCase {
 
         public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             do {
-                context.write(wrapOutboundOut(try body(unwrapOutboundIn(data))), promise: promise)
+                context.write(wrapOutboundOut(try self.body(unwrapOutboundIn(data))), promise: promise)
             } catch let err {
                 promise!.fail(err)
             }
@@ -304,12 +304,12 @@ class ChannelPipelineTest: XCTestCase {
             private let no: Int
 
             init(number: Int) {
-                no = number
+                self.no = number
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let data = unwrapInboundIn(data)
-                context.fireChannelRead(wrapInboundOut(data + [no]))
+                context.fireChannelRead(wrapInboundOut(data + [self.no]))
             }
         }
 
@@ -321,12 +321,12 @@ class ChannelPipelineTest: XCTestCase {
             private let no: Int
 
             init(number: Int) {
-                no = number
+                self.no = number
             }
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
                 let data = unwrapOutboundIn(data)
-                context.write(wrapOutboundOut(data + [no]), promise: promise)
+                context.write(wrapOutboundOut(data + [self.no]), promise: promise)
             }
         }
 
@@ -413,7 +413,7 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func handlerAdded(context: ChannelHandlerContext) {
-                body(context)
+                self.body(context)
             }
         }
         try {
@@ -472,7 +472,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                 if data.tryAs(type: Int.self) != nil {
-                    intReadCount += 1
+                    self.intReadCount += 1
                 }
             }
         }
@@ -960,11 +960,11 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func handlerRemoved(context _: ChannelHandlerContext) {
-                handlerRemovedPromise.succeed(())
+                self.handlerRemovedPromise.succeed(())
             }
 
             func removeHandler(context _: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-                removalTokenPromise.succeed(removalToken)
+                self.removalTokenPromise.succeed(removalToken)
             }
         }
 
@@ -1004,8 +1004,8 @@ class ChannelPipelineTest: XCTestCase {
             var withinRemoveHandler = false
 
             func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-                removeHandlerCalled = true
-                withinRemoveHandler = true
+                self.removeHandlerCalled = true
+                self.withinRemoveHandler = true
                 defer {
                     self.withinRemoveHandler = false
                 }
@@ -1013,8 +1013,8 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func handlerRemoved(context _: ChannelHandlerContext) {
-                XCTAssertTrue(removeHandlerCalled)
-                XCTAssertTrue(withinRemoveHandler)
+                XCTAssertTrue(self.removeHandlerCalled)
+                XCTAssertTrue(self.withinRemoveHandler)
             }
         }
 
@@ -1174,10 +1174,10 @@ class ChannelPipelineTest: XCTestCase {
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let step = unwrapInboundIn(data)
                 state.next()
-                XCTAssertEqual(state, step)
+                XCTAssertEqual(self.state, step)
 
                 // just to communicate to the outside where we are in our state machine
-                context.fireChannelRead(wrapInboundOut(state))
+                context.fireChannelRead(wrapInboundOut(self.state))
 
                 switch step {
                 case .triggerEventRead:
@@ -1185,38 +1185,38 @@ class ChannelPipelineTest: XCTestCase {
                     context.pipeline.removeHandler(self).map {
                         // When the manual removal completes, we advance the state.
                         self.state.next()
-                    }.cascade(to: allDonePromise)
+                    }.cascade(to: self.allDonePromise)
                 default:
-                    XCTFail("channelRead called in state \(state)")
+                    XCTFail("channelRead called in state \(self.state)")
                 }
             }
 
             func removeHandler(context _: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-                state.next()
-                XCTAssertEqual(.manualRemovalStarted, state)
+                self.state.next()
+                XCTAssertEqual(.manualRemovalStarted, self.state)
 
                 // Step 2: Save the removal token that we got from kicking off the manual removal (in step 1)
                 self.removalToken = removalToken
             }
 
             func handlerRemoved(context: ChannelHandlerContext) {
-                state.next()
-                XCTAssertEqual(.pipelineTeardown, state)
+                self.state.next()
+                XCTAssertEqual(.pipelineTeardown, self.state)
 
                 // Step 3: We'll call our own channelRead which will advance the state.
-                completeTheManualRemoval(context: context)
+                self.completeTheManualRemoval(context: context)
             }
 
             func completeTheManualRemoval(context: ChannelHandlerContext) {
-                state.next()
-                XCTAssertEqual(.handlerRemovedCalled, state)
+                self.state.next()
+                XCTAssertEqual(.handlerRemovedCalled, self.state)
 
                 // just to communicate to the outside where we are in our state machine
-                context.fireChannelRead(wrapInboundOut(state))
+                context.fireChannelRead(wrapInboundOut(self.state))
 
                 // Step 4: This happens when the pipeline is being torn down, so let's now also finish the manual
                 // removal process.
-                removalToken.map(context.leavePipeline(removalToken:))
+                self.removalToken.map(context.leavePipeline(removalToken:))
             }
         }
 
@@ -1266,10 +1266,10 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-                removeHandlerCalls += 1
-                XCTAssertEqual(1, removeHandlerCalls)
-                removalTriggeredPromise.succeed(())
-                continueRemovalFuture.whenSuccess {
+                self.removeHandlerCalls += 1
+                XCTAssertEqual(1, self.removeHandlerCalls)
+                self.removalTriggeredPromise.succeed(())
+                self.continueRemovalFuture.whenSuccess {
                     context.leavePipeline(removalToken: removalToken)
                 }
             }

@@ -39,7 +39,7 @@ public final class Lock {
     /// Create a new lock.
     public init() {
         #if os(Windows)
-            InitializeSRWLock(mutex)
+            InitializeSRWLock(self.mutex)
         #else
             var attr = pthread_mutexattr_t()
             pthread_mutexattr_init(&attr)
@@ -66,7 +66,7 @@ public final class Lock {
     /// `unlock`, to simplify lock handling.
     public func lock() {
         #if os(Windows)
-            AcquireSRWLockExclusive(mutex)
+            AcquireSRWLockExclusive(self.mutex)
         #else
             let err = pthread_mutex_lock(mutex)
             precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
@@ -79,7 +79,7 @@ public final class Lock {
     /// `lock`, to simplify lock handling.
     public func unlock() {
         #if os(Windows)
-            ReleaseSRWLockExclusive(mutex)
+            ReleaseSRWLockExclusive(self.mutex)
         #else
             let err = pthread_mutex_unlock(mutex)
             precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
@@ -98,7 +98,7 @@ public extension Lock {
     /// - Returns: The value returned by the block.
     @inlinable
     func withLock<T>(_ body: () throws -> T) rethrows -> T {
-        lock()
+        self.lock()
         defer {
             self.unlock()
         }
@@ -108,7 +108,7 @@ public extension Lock {
     // specialise Void return (for performance)
     @inlinable
     func withLockVoid(_ body: () throws -> Void) rethrows {
-        try withLock(body)
+        try self.withLock(body)
     }
 }
 
@@ -131,10 +131,10 @@ public final class ConditionLock<T: Equatable> {
     ///
     /// - Parameter value: The initial value to give the state variable.
     public init(value: T) {
-        _value = value
-        mutex = Lock()
+        self._value = value
+        self.mutex = Lock()
         #if os(Windows)
-            InitializeConditionVariable(cond)
+            InitializeConditionVariable(self.cond)
         #else
             let err = pthread_cond_init(cond, nil)
             precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
@@ -153,12 +153,12 @@ public final class ConditionLock<T: Equatable> {
 
     /// Acquire the lock, regardless of the value of the state variable.
     public func lock() {
-        mutex.lock()
+        self.mutex.lock()
     }
 
     /// Release the lock, regardless of the value of the state variable.
     public func unlock() {
-        mutex.unlock()
+        self.mutex.unlock()
     }
 
     /// The value of the state variable.
@@ -167,11 +167,11 @@ public final class ConditionLock<T: Equatable> {
     /// This means that it is not safe to access this property while holding the
     /// lock: it is only safe to use it when not holding it.
     public var value: T {
-        lock()
+        self.lock()
         defer {
             self.unlock()
         }
-        return _value
+        return self._value
     }
 
     /// Acquire the lock when the state variable is equal to `wantedValue`.
@@ -179,9 +179,9 @@ public final class ConditionLock<T: Equatable> {
     /// - Parameter wantedValue: The value to wait for the state variable
     ///     to have before acquiring the lock.
     public func lock(whenValue wantedValue: T) {
-        lock()
+        self.lock()
         while true {
-            if _value == wantedValue {
+            if self._value == wantedValue {
                 break
             }
             #if os(Windows)
@@ -210,17 +210,17 @@ public final class ConditionLock<T: Equatable> {
 
             lock()
             while true {
-                if _value == wantedValue {
+                if self._value == wantedValue {
                     return true
                 }
 
                 let dwWaitStart = timeGetTime()
-                if !SleepConditionVariableSRW(cond, mutex.mutex,
+                if !SleepConditionVariableSRW(self.cond, self.mutex.mutex,
                                               dwMilliseconds, 0)
                 {
                     let dwError = GetLastError()
                     if dwError == ERROR_TIMEOUT {
-                        unlock()
+                        self.unlock()
                         return false
                     }
                     fatalError("SleepConditionVariableSRW: \(dwError)")
@@ -231,7 +231,7 @@ public final class ConditionLock<T: Equatable> {
             }
         #else
             let nsecPerSec: Int64 = 1_000_000_000
-            lock()
+            self.lock()
             /* the timeout as a (seconds, nano seconds) pair */
             let timeoutNS = Int64(timeoutSeconds * Double(nsecPerSec))
 
@@ -244,14 +244,14 @@ public final class ConditionLock<T: Equatable> {
             assert(timeoutAbs.tv_nsec >= 0 && timeoutAbs.tv_nsec < Int(nsecPerSec))
             assert(timeoutAbs.tv_sec >= curTime.tv_sec)
             while true {
-                if _value == wantedValue {
+                if self._value == wantedValue {
                     return true
                 }
-                switch pthread_cond_timedwait(cond, mutex.mutex, &timeoutAbs) {
+                switch pthread_cond_timedwait(self.cond, self.mutex.mutex, &timeoutAbs) {
                 case 0:
                     continue
                 case ETIMEDOUT:
-                    unlock()
+                    self.unlock()
                     return false
                 case let e:
                     fatalError("caught error \(e) when calling pthread_cond_timedwait")
@@ -265,10 +265,10 @@ public final class ConditionLock<T: Equatable> {
     /// - Parameter newValue: The value to give to the state variable when we
     ///     release the lock.
     public func unlock(withValue newValue: T) {
-        _value = newValue
-        unlock()
+        self._value = newValue
+        self.unlock()
         #if os(Windows)
-            WakeAllConditionVariable(cond)
+            WakeAllConditionVariable(self.cond)
         #else
             let err = pthread_cond_broadcast(cond)
             precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")

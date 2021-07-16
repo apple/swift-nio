@@ -26,7 +26,7 @@ private struct TestRandomNumberGenerator: RandomNumberGenerator {
 
     mutating func next() -> UInt64 {
         defer { nextRandomNumberIndex += 1 }
-        return numbers[nextRandomNumberIndex % numbers.count]
+        return self.numbers[self.nextRandomNumberIndex % self.numbers.count]
     }
 }
 

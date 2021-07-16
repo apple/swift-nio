@@ -17,12 +17,12 @@ import XCTest
 
 class NIOAnyDebugTest: XCTestCase {
     func testCustomStringConvertible() throws {
-        XCTAssertEqual(wrappedInNIOAnyBlock("string"), wrappedInNIOAnyBlock("string"))
-        XCTAssertEqual(wrappedInNIOAnyBlock(123), wrappedInNIOAnyBlock("123"))
+        XCTAssertEqual(self.wrappedInNIOAnyBlock("string"), self.wrappedInNIOAnyBlock("string"))
+        XCTAssertEqual(self.wrappedInNIOAnyBlock(123), self.wrappedInNIOAnyBlock("123"))
 
         let bb = ByteBuffer(string: "byte buffer string")
         XCTAssertTrue(wrappedInNIOAnyBlock(bb).contains("NIOAny { ByteBuffer { readerIndex: 0, writerIndex: 18, readableBytes: 18, capacity: 32, storageCapacity: 32, slice: _ByteBufferSlice { 0..<32 }, storage: "))
-        XCTAssertTrue(wrappedInNIOAnyBlock(bb).hasSuffix(" }"))
+        XCTAssertTrue(self.wrappedInNIOAnyBlock(bb).hasSuffix(" }"))
 
         let fileHandle = NIOFileHandle(descriptor: 1)
         defer {

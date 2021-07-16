@@ -54,7 +54,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
 
     /// Add additional headers that are needed for a WebSocket upgrade request.
     public func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
-        upgradeRequestHeaders.add(name: "Sec-WebSocket-Key", value: requestKey)
+        upgradeRequestHeaders.add(name: "Sec-WebSocket-Key", value: self.requestKey)
         upgradeRequestHeaders.add(name: "Sec-WebSocket-Version", value: "13")
     }
 
@@ -69,7 +69,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
 
         // Validate the response key in 'Sec-WebSocket-Accept'.
         var hasher = SHA1()
-        hasher.update(string: requestKey)
+        hasher.update(string: self.requestKey)
         hasher.update(string: magicWebSocketGUID)
         let expectedAcceptValue = String(base64Encoding: hasher.finish())
 
@@ -83,7 +83,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
             context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
         }
 
-        if automaticErrorHandling {
+        if self.automaticErrorHandling {
             upgradeFuture = upgradeFuture.flatMap {
                 context.pipeline.addHandler(WebSocketProtocolErrorHandler())
             }

@@ -154,8 +154,8 @@ internal class Selector<R: Registration> {
     var eventsCapacity = 64
 
     internal func testsOnly_withUnsafeSelectorFD<T>(_ body: (CInt) throws -> T) throws -> T {
-        assert(myThread != NIOThread.current)
-        return try externalSelectorFDLock.withLock {
+        assert(self.myThread != NIOThread.current)
+        return try self.externalSelectorFDLock.withLock {
             guard self.selectorFD != -1 else {
                 throw EventLoopError.shutdown
             }
@@ -164,9 +164,9 @@ internal class Selector<R: Registration> {
     }
 
     init() throws {
-        myThread = NIOThread.current
-        lifecycleState = .closed
-        events = Selector.allocateEventsArray(capacity: eventsCapacity)
+        self.myThread = NIOThread.current
+        self.lifecycleState = .closed
+        self.events = Selector.allocateEventsArray(capacity: self.eventsCapacity)
         try initialiseState0()
     }
 
@@ -190,15 +190,15 @@ internal class Selector<R: Registration> {
     }
 
     func growEventArrayIfNeeded(ready: Int) {
-        assert(myThread == NIOThread.current)
-        guard ready == eventsCapacity else {
+        assert(self.myThread == NIOThread.current)
+        guard ready == self.eventsCapacity else {
             return
         }
-        Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        Selector.deallocateEventsArray(events: self.events, capacity: self.eventsCapacity)
 
         // double capacity
-        eventsCapacity = ready << 1
-        events = Selector.allocateEventsArray(capacity: eventsCapacity)
+        self.eventsCapacity = ready << 1
+        self.events = Selector.allocateEventsArray(capacity: self.eventsCapacity)
     }
 
     /// Register `Selectable` on the `Selector`.
@@ -211,10 +211,10 @@ internal class Selector<R: Registration> {
                                  interested: SelectorEventSet,
                                  makeRegistration: (SelectorEventSet, SelectorRegistrationID) -> R) throws
     {
-        assert(myThread == NIOThread.current)
+        assert(self.myThread == NIOThread.current)
         assert(interested.contains(.reset))
-        guard lifecycleState == .open else {
-            throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(lifecycleState).")
+        guard self.lifecycleState == .open else {
+            throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
         }
 
         try selectable.withUnsafeHandle { fd in
@@ -234,9 +234,9 @@ internal class Selector<R: Registration> {
     ///     - selectable: The `Selectable` to re-register.
     ///     - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
     func reregister<S: Selectable>(selectable: S, interested: SelectorEventSet) throws {
-        assert(myThread == NIOThread.current)
-        guard lifecycleState == .open else {
-            throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(lifecycleState).")
+        assert(self.myThread == NIOThread.current)
+        guard self.lifecycleState == .open else {
+            throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
         assert(interested.contains(.reset), "must register for at least .reset but tried registering for \(interested)")
         try selectable.withUnsafeHandle { fd in
@@ -258,9 +258,9 @@ internal class Selector<R: Registration> {
     /// - parameters:
     ///     - selectable: The `Selectable` to deregister.
     func deregister<S: Selectable>(selectable: S) throws {
-        assert(myThread == NIOThread.current)
-        guard lifecycleState == .open else {
-            throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(lifecycleState).")
+        assert(self.myThread == NIOThread.current)
+        guard self.lifecycleState == .open else {
+            throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
 
         try selectable.withUnsafeHandle { fd in
@@ -288,13 +288,13 @@ internal class Selector<R: Registration> {
     ///
     /// After closing the `Selector` it's no longer possible to use it.
     public func close() throws {
-        assert(myThread == NIOThread.current)
-        guard lifecycleState == .open else {
-            throw IOError(errnoCode: EBADF, reason: "can't close selector as it's \(lifecycleState).")
+        assert(self.myThread == NIOThread.current)
+        guard self.lifecycleState == .open else {
+            throw IOError(errnoCode: EBADF, reason: "can't close selector as it's \(self.lifecycleState).")
         }
         try close0()
-        lifecycleState = .closed
-        registrations.removeAll()
+        self.lifecycleState = .closed
+        self.registrations.removeAll()
     }
 
     /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
@@ -306,13 +306,13 @@ internal class Selector<R: Registration> {
 extension Selector: CustomStringConvertible {
     var description: String {
         func makeDescription() -> String {
-            "Selector { descriptor = \(selectorFD) }"
+            "Selector { descriptor = \(self.selectorFD) }"
         }
 
-        if NIOThread.current == myThread {
+        if NIOThread.current == self.myThread {
             return makeDescription()
         } else {
-            return externalSelectorFDLock.withLock {
+            return self.externalSelectorFDLock.withLock {
                 makeDescription()
             }
         }
@@ -338,12 +338,12 @@ struct SelectorEvent<R> {
 extension Selector where R == NIORegistration {
     /// Gently close the `Selector` after all registered `Channel`s are closed.
     func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        assert(myThread == NIOThread.current)
-        guard lifecycleState == .open else {
-            return eventLoop.makeFailedFuture(IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(lifecycleState)."))
+        assert(self.myThread == NIOThread.current)
+        guard self.lifecycleState == .open else {
+            return eventLoop.makeFailedFuture(IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
         }
 
-        let futures: [EventLoopFuture<Void>] = registrations.map { (_, reg: NIORegistration) -> EventLoopFuture<Void> in
+        let futures: [EventLoopFuture<Void>] = self.registrations.map { (_, reg: NIORegistration) -> EventLoopFuture<Void> in
             // The futures will only be notified (of success) once also the closeFuture of each Channel is notified.
             // This only happens after all other actions on the Channel is complete and all events are propagated through the
             // ChannelPipeline. We do this to minimize the risk to left over any tasks / promises that are tied to the
@@ -402,7 +402,7 @@ enum SelectorStrategy {
     @usableFromInline var _rawValue: UInt32
 
     @inlinable var rawValue: UInt32 {
-        _rawValue
+        self._rawValue
     }
 
     @inlinable static var initialRegistrationID: SelectorRegistrationID {
@@ -412,12 +412,12 @@ enum SelectorStrategy {
     @inlinable mutating func nextRegistrationID() -> SelectorRegistrationID {
         let current = self
         // Overflow is okay here, this is just for very short-term disambiguation
-        _rawValue = _rawValue &+ 1
+        self._rawValue = self._rawValue &+ 1
         return current
     }
 
     @inlinable init(rawValue: UInt32) {
-        _rawValue = rawValue
+        self._rawValue = rawValue
     }
 
     @inlinable static func == (_ lhs: SelectorRegistrationID, _ rhs: SelectorRegistrationID) -> Bool {
@@ -425,6 +425,6 @@ enum SelectorStrategy {
     }
 
     @inlinable func hash(into hasher: inout Hasher) {
-        hasher.combine(_rawValue)
+        hasher.combine(self._rawValue)
     }
 }

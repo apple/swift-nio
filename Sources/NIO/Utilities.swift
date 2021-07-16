@@ -41,7 +41,8 @@
 /// https://forums.swift.org/t/support-debug-only-code/11037 for a discussion.
 @inlinable
 internal func debugOnly(_ body: () -> Void) {
-    assert({ body(); return true }())
+    assert({ body()
+        return true }())
 }
 
 /// Allows to "box" another value.

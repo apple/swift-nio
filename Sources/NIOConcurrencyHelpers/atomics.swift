@@ -79,7 +79,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     ///     match the current value and so no exchange occurred.
     @inlinable
     public func compareAndExchange(expected: T, desired: T) -> Bool {
-        T.atomic_compare_and_exchange(value, expected, desired)
+        T.atomic_compare_and_exchange(self.value, expected, desired)
     }
 
     /// Atomically adds `rhs` to this object.
@@ -92,7 +92,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     /// - Returns: The previous value of this object, before the addition occurred.
     @inlinable
     public func add(_ rhs: T) -> T {
-        T.atomic_add(value, rhs)
+        T.atomic_add(self.value, rhs)
     }
 
     /// Atomically subtracts `rhs` from this object.
@@ -105,7 +105,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     /// - Returns: The previous value of this object, before the subtraction occurred.
     @inlinable
     public func sub(_ rhs: T) -> T {
-        T.atomic_sub(value, rhs)
+        T.atomic_sub(self.value, rhs)
     }
 
     /// Atomically exchanges `value` for the current value of this object.
@@ -130,7 +130,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     /// - Returns: The value of this object
     @inlinable
     public func load() -> T {
-        T.atomic_load(value)
+        T.atomic_load(self.value)
     }
 
     /// Atomically replaces the value of this object with `value`.
@@ -150,7 +150,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     /// This method is the source of the unsafety of this structure. This *must* be called, or you will leak memory with each
     /// atomic.
     public func destroy() {
-        T.atomic_destroy(value)
+        T.atomic_destroy(self.value)
     }
 }
 
@@ -180,7 +180,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// Create an atomic object with `value`.
     @inlinable
     public init(value: T) {
-        embedded = UnsafeEmbeddedAtomic(value: value)
+        self.embedded = UnsafeEmbeddedAtomic(value: value)
     }
 
     /// Atomically compares the value against `expected` and, if they are equal,
@@ -200,7 +200,7 @@ public final class Atomic<T: AtomicPrimitive> {
     ///     match the current value and so no exchange occurred.
     @inlinable
     public func compareAndExchange(expected: T, desired: T) -> Bool {
-        embedded.compareAndExchange(expected: expected, desired: desired)
+        self.embedded.compareAndExchange(expected: expected, desired: desired)
     }
 
     /// Atomically adds `rhs` to this object.
@@ -213,7 +213,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// - Returns: The previous value of this object, before the addition occurred.
     @inlinable
     public func add(_ rhs: T) -> T {
-        embedded.add(rhs)
+        self.embedded.add(rhs)
     }
 
     /// Atomically subtracts `rhs` from this object.
@@ -226,7 +226,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// - Returns: The previous value of this object, before the subtraction occurred.
     @inlinable
     public func sub(_ rhs: T) -> T {
-        embedded.sub(rhs)
+        self.embedded.sub(rhs)
     }
 
     /// Atomically exchanges `value` for the current value of this object.
@@ -239,7 +239,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// - Returns: The value previously held by this object.
     @inlinable
     public func exchange(with value: T) -> T {
-        embedded.exchange(with: value)
+        self.embedded.exchange(with: value)
     }
 
     /// Atomically loads and returns the value of this object.
@@ -251,7 +251,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// - Returns: The value of this object
     @inlinable
     public func load() -> T {
-        embedded.load()
+        self.embedded.load()
     }
 
     /// Atomically replaces the value of this object with `value`.
@@ -263,7 +263,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// - Parameter value: The new value to set the object to.
     @inlinable
     public func store(_ value: T) {
-        embedded.store(value)
+        self.embedded.store(value)
     }
 
     deinit {
@@ -442,7 +442,7 @@ public final class AtomicBox<T: AnyObject> {
 
     public init(value: T) {
         let ptr = Unmanaged<T>.passRetained(value)
-        storage = NIOAtomic.makeAtomic(value: UInt(bitPattern: ptr.toOpaque()))
+        self.storage = NIOAtomic.makeAtomic(value: UInt(bitPattern: ptr.toOpaque()))
     }
 
     deinit {
@@ -515,12 +515,12 @@ public final class AtomicBox<T: AnyObject> {
         // step 1: We need to actually CAS loop here to swap out a non-0 value with the new one.
         var oldPtrBits: UInt = 0
         while true {
-            let speculativeVal = storage.load()
+            let speculativeVal = self.storage.load()
             guard speculativeVal != 0 else {
                 sys_sched_yield()
                 continue
             }
-            if storage.compareAndExchange(expected: speculativeVal, desired: newPtrBits) {
+            if self.storage.compareAndExchange(expected: speculativeVal, desired: newPtrBits) {
                 oldPtrBits = speculativeVal
                 break
             }
@@ -545,12 +545,12 @@ public final class AtomicBox<T: AnyObject> {
         // step 1: We need to gain ownership of the value by successfully swapping 0 (marker value) in.
         var ptrBits: UInt = 0
         while true {
-            let speculativeVal = storage.load()
+            let speculativeVal = self.storage.load()
             guard speculativeVal != 0 else {
                 sys_sched_yield()
                 continue
             }
-            if storage.compareAndExchange(expected: speculativeVal, desired: 0) {
+            if self.storage.compareAndExchange(expected: speculativeVal, desired: 0) {
                 ptrBits = speculativeVal
                 break
             }
@@ -561,7 +561,7 @@ public final class AtomicBox<T: AnyObject> {
         let value = ptr.takeUnretainedValue()
 
         // step 3: Now, let's exchange it back into the store
-        let casWorked = storage.compareAndExchange(expected: 0, desired: ptrBits)
+        let casWorked = self.storage.compareAndExchange(expected: 0, desired: ptrBits)
         precondition(casWorked) // this _has_ to work because `0` means we own it exclusively.
         return value
     }
@@ -577,6 +577,6 @@ public final class AtomicBox<T: AnyObject> {
     ///
     /// - Parameter value: The new value to set the object to.
     public func store(_ value: T) {
-        _ = exchange(with: value)
+        _ = self.exchange(with: value)
     }
 }

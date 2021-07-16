@@ -27,7 +27,7 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     ///     - initialCapacity: The initial capacity of the internal storage.
     @inlinable
     public init(initialCapacity: Int) {
-        _buffer = CircularBuffer(initialCapacity: initialCapacity)
+        self._buffer = CircularBuffer(initialCapacity: initialCapacity)
     }
 
     // MARK: Forwarding
@@ -35,49 +35,49 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     /// Appends an entry to the buffer, expanding it if needed.
     @inlinable
     public mutating func append(_ value: Element) {
-        _buffer.append(value)
+        self._buffer.append(value)
     }
 
     /// Removes the first element from the buffer.
     @inlinable
     public mutating func removeFirst() -> Element {
-        assert(_buffer.count > 0)
-        return popFirst()!
+        assert(self._buffer.count > 0)
+        return self.popFirst()!
     }
 
     @inlinable
     public mutating func popFirst() -> Element? {
         if let markedIndexOffset = _markedIndexOffset {
             if markedIndexOffset > 0 {
-                _markedIndexOffset = markedIndexOffset - 1
+                self._markedIndexOffset = markedIndexOffset - 1
             } else {
-                _markedIndexOffset = nil
+                self._markedIndexOffset = nil
             }
         }
-        return _buffer.popFirst()
+        return self._buffer.popFirst()
     }
 
     /// The first element in the buffer.
     @inlinable
     public var first: Element? {
-        _buffer.first
+        self._buffer.first
     }
 
     /// If the buffer is empty.
     @inlinable
     public var isEmpty: Bool {
-        _buffer.isEmpty
+        self._buffer.isEmpty
     }
 
     /// The number of elements in the buffer.
     @inlinable
     public var count: Int {
-        _buffer.count
+        self._buffer.count
     }
 
     @inlinable
     public var description: String {
-        _buffer.description
+        self._buffer.description
     }
 
     // MARK: Marking
@@ -85,11 +85,11 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     /// Marks the buffer at the current index, making the last index in the buffer marked.
     @inlinable
     public mutating func mark() {
-        let count = _buffer.count
+        let count = self._buffer.count
         if count > 0 {
-            _markedIndexOffset = count - 1
+            self._markedIndexOffset = count - 1
         } else {
-            assert(_markedIndexOffset == nil, "marked index is \(_markedIndexOffset.debugDescription)")
+            assert(self._markedIndexOffset == nil, "marked index is \(self._markedIndexOffset.debugDescription)")
         }
     }
 
@@ -97,7 +97,7 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     @inlinable
     public func isMarked(index: Index) -> Bool {
         assert(index >= startIndex, "index must not be negative")
-        precondition(index < endIndex, "index \(index) out of range (0..<\(_buffer.count))")
+        precondition(index < endIndex, "index \(index) out of range (0..<\(self._buffer.count))")
         if let markedIndexOffset = _markedIndexOffset {
             return self.index(startIndex, offsetBy: markedIndexOffset) == index
         } else {
@@ -119,13 +119,13 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     /// Returns the marked element.
     @inlinable
     public var markedElement: Element? {
-        markedElementIndex.map { self._buffer[$0] }
+        self.markedElementIndex.map { self._buffer[$0] }
     }
 
     /// Returns true if the buffer has been marked at all.
     @inlinable
     public var hasMark: Bool {
-        _markedIndexOffset != nil
+        self._markedIndexOffset != nil
     }
 }
 
@@ -136,45 +136,45 @@ extension MarkedCircularBuffer: Collection, MutableCollection {
 
     @inlinable
     public func index(after i: Index) -> Index {
-        _buffer.index(after: i)
+        self._buffer.index(after: i)
     }
 
     @inlinable
-    public var startIndex: Index { _buffer.startIndex }
+    public var startIndex: Index { self._buffer.startIndex }
 
     @inlinable
-    public var endIndex: Index { _buffer.endIndex }
+    public var endIndex: Index { self._buffer.endIndex }
 
     /// Retrieves the element at the given index from the buffer, without removing it.
     @inlinable
     public subscript(index: Index) -> Element {
         get {
-            _buffer[index]
+            self._buffer[index]
         }
         set {
-            _buffer[index] = newValue
+            self._buffer[index] = newValue
         }
     }
 
     @inlinable
     public subscript(bounds: Range<Index>) -> SubSequence {
-        _buffer[bounds]
+        self._buffer[bounds]
     }
 }
 
 extension MarkedCircularBuffer: RandomAccessCollection {
     @inlinable
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
-        _buffer.index(i, offsetBy: distance)
+        self._buffer.index(i, offsetBy: distance)
     }
 
     @inlinable
     public func distance(from start: Index, to end: Index) -> Int {
-        _buffer.distance(from: start, to: end)
+        self._buffer.distance(from: start, to: end)
     }
 
     @inlinable
     public func index(before i: Index) -> Index {
-        _buffer.index(before: i)
+        self._buffer.index(before: i)
     }
 }

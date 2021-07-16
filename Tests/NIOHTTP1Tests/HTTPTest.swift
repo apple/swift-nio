@@ -27,13 +27,13 @@ private final class TestChannelInboundHandler: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        context.fireChannelRead(wrapInboundOut(body(unwrapInboundIn(data))))
+        context.fireChannelRead(wrapInboundOut(self.body(unwrapInboundIn(data))))
     }
 }
 
 class HTTPTest: XCTestCase {
     func checkHTTPRequest(_ expected: HTTPRequestHead, body: String? = nil, trailers: HTTPHeaders? = nil) throws {
-        try checkHTTPRequests([expected], body: body, trailers: trailers)
+        try self.checkHTTPRequests([expected], body: body, trailers: trailers)
     }
 
     func checkHTTPRequests(_ expecteds: [HTTPRequestHead], body: String? = nil, trailers: HTTPHeaders? = nil) throws {
@@ -155,20 +155,20 @@ class HTTPTest: XCTestCase {
     }
 
     func testHTTPSimpleNoHeaders() throws {
-        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"))
+        try self.checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"))
     }
 
     func testHTTPSimple1Header() throws {
         var req = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/hello/world")
         req.headers.add(name: "foo", value: "bar")
-        try checkHTTPRequest(req)
+        try self.checkHTTPRequest(req)
     }
 
     func testHTTPSimpleSomeHeader() throws {
         var req = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/foo/bar/buz?qux=quux")
         req.headers.add(name: "foo", value: "bar")
         req.headers.add(name: "qux", value: "quuux")
-        try checkHTTPRequest(req)
+        try self.checkHTTPRequest(req)
     }
 
     func testHTTPPipelining() throws {
@@ -179,32 +179,32 @@ class HTTPTest: XCTestCase {
         req2.headers.add(name: "a", value: "b")
         req2.headers.add(name: "C", value: "D")
 
-        try checkHTTPRequests([req1, req2])
-        try checkHTTPRequests(Array(repeating: req1, count: 10))
+        try self.checkHTTPRequests([req1, req2])
+        try self.checkHTTPRequests(Array(repeating: req1, count: 10))
     }
 
     func testHTTPBody() throws {
-        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
-                             body: "hello world")
+        try self.checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
+                                  body: "hello world")
     }
 
     func test1ByteHTTPBody() throws {
-        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
-                             body: "1")
+        try self.checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
+                                  body: "1")
     }
 
     func testHTTPPipeliningWithBody() throws {
-        try checkHTTPRequests(Array(repeating: HTTPRequestHead(version: .http1_1,
-                                                               method: .GET, uri: "/"),
-                                    count: 20),
-                              body: "1")
+        try self.checkHTTPRequests(Array(repeating: HTTPRequestHead(version: .http1_1,
+                                                                    method: .GET, uri: "/"),
+                                         count: 20),
+                                   body: "1")
     }
 
     func testChunkedBody() throws {
         var trailers = HTTPHeaders()
         trailers.add(name: "X-Key", value: "X-Value")
         trailers.add(name: "Something", value: "Else")
-        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .POST, uri: "/"), body: "100", trailers: trailers)
+        try self.checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .POST, uri: "/"), body: "100", trailers: trailers)
     }
 
     func testHTTPRequestHeadCoWWorks() throws {

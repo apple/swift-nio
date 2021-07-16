@@ -29,7 +29,7 @@ final class PipeChannelTest: XCTestCase {
     }
 
     override func setUp() {
-        group = .init(numberOfThreads: 1)
+        self.group = .init(numberOfThreads: 1)
 
         XCTAssertNoThrow(try withPipe { pipe1Read, pipe1Write in
             try withPipe { pipe2Read, pipe2Write in
@@ -54,17 +54,17 @@ final class PipeChannelTest: XCTestCase {
             }
             return [] // we may leak the file handles because we take care of closing
         })
-        buffer = channel.allocator.buffer(capacity: 128)
+        self.buffer = self.channel.allocator.buffer(capacity: 128)
     }
 
     override func tearDown() {
-        buffer = nil
-        toChannel.closeFile()
-        fromChannel.closeFile()
-        toChannel = nil
-        fromChannel = nil
-        XCTAssertNoThrow(try channel.syncCloseAcceptingAlreadyClosed())
-        XCTAssertNoThrow(try group.syncShutdownGracefully())
+        self.buffer = nil
+        self.toChannel.closeFile()
+        self.fromChannel.closeFile()
+        self.toChannel = nil
+        self.fromChannel = nil
+        XCTAssertNoThrow(try self.channel.syncCloseAcceptingAlreadyClosed())
+        XCTAssertNoThrow(try self.group.syncShutdownGracefully())
     }
 
     func testBasicIO() throws {
@@ -78,32 +78,32 @@ final class PipeChannelTest: XCTestCase {
             }
         }
 
-        XCTAssertTrue(channel.isActive)
-        XCTAssertNoThrow(try channel.pipeline.addHandler(Handler()).wait())
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(Handler()).wait())
         let longArray = Array(repeating: UInt8(ascii: "x"), count: 200_000)
         for length in [1, 10000, 100_000, 200_000] {
             let fromChannel = self.fromChannel!
 
-            XCTAssertNoThrow(try toChannel.writeBytes(longArray[0 ..< length]))
+            XCTAssertNoThrow(try self.toChannel.writeBytes(longArray[0 ..< length]))
             let data = try? fromChannel.readBytes(ofExactLength: length)
             XCTAssertEqual(Array(longArray[0 ..< length]), data)
         }
-        XCTAssertNoThrow(try channel.close().wait())
+        XCTAssertNoThrow(try self.channel.close().wait())
     }
 
     func testWriteErrorsCloseChannel() {
-        XCTAssertNoThrow(try channel.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
-        fromChannel.closeFile()
-        var buffer = channel.allocator.buffer(capacity: 1)
+        XCTAssertNoThrow(try self.channel.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+        self.fromChannel.closeFile()
+        var buffer = self.channel.allocator.buffer(capacity: 1)
         buffer.writeString("X")
-        XCTAssertThrowsError(try channel.writeAndFlush(buffer).wait()) { error in
+        XCTAssertThrowsError(try self.channel.writeAndFlush(buffer).wait()) { error in
             if let error = error as? IOError {
                 XCTAssert([EPIPE, EBADF].contains(error.errnoCode), "unexpected errno: \(error)")
             } else {
                 XCTFail("unexpected error: \(error)")
             }
         }
-        XCTAssertNoThrow(try channel.closeFuture.wait())
+        XCTAssertNoThrow(try self.channel.closeFuture.wait())
     }
 
     func testWeDontAcceptRegularFiles() throws {
@@ -156,7 +156,7 @@ final class PipeChannelTest: XCTestCase {
         })
 
         var maybeChannel: Channel?
-        XCTAssertNoThrow(maybeChannel = try NIOPipeBootstrap(group: group)
+        XCTAssertNoThrow(maybeChannel = try NIOPipeBootstrap(group: self.group)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(EchoHandler())
             }
@@ -176,7 +176,7 @@ final class PipeChannelTest: XCTestCase {
 
 extension FileHandle {
     func writeBytes(_ bytes: ByteBuffer) throws {
-        try writeBytes(Array(bytes.readableBytesView))
+        try self.writeBytes(Array(bytes.readableBytesView))
     }
 
     func writeBytes(_ bytes: ArraySlice<UInt8>) throws {
@@ -186,7 +186,7 @@ extension FileHandle {
     }
 
     func writeBytes(_ bytes: [UInt8]) throws {
-        try writeBytes(bytes[...])
+        try self.writeBytes(bytes[...])
     }
 
     func readBytes(ofExactLength completeLength: Int) throws -> [UInt8] {
