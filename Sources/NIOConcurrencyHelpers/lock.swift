@@ -21,6 +21,20 @@ import WinSDK
 import Glibc
 #endif
 
+#if !os(Windows)
+
+// top level pthread init function
+fileprivate func initialise_pthread_mutex(_ pointer: UnsafeMutablePointer<pthread_mutex_t>) {
+    var attr = pthread_mutexattr_t()
+    pthread_mutexattr_init(&attr)
+    pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
+
+    let err = pthread_mutex_init(pointer, &attr)
+    precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+}
+
+#endif
+
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///
 /// This object provides a lock on top of a single `pthread_mutex_t`. This kind
@@ -29,10 +43,12 @@ import Glibc
 /// `SRWLOCK` type.
 public final class Lock {
 #if os(Windows)
-    fileprivate let mutex: UnsafeMutablePointer<SRWLOCK> =
+    private let mutex: UnsafeMutablePointer<SRWLOCK> =
         UnsafeMutablePointer.allocate(capacity: 1)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    private let mutex: os_unfair_lock_t = os_unfair_lock_t.allocate(capacity: 1)
 #else
-    fileprivate let mutex: UnsafeMutablePointer<pthread_mutex_t> =
+    private let mutex: UnsafeMutablePointer<pthread_mutex_t> =
         UnsafeMutablePointer.allocate(capacity: 1)
 #endif
 
@@ -40,24 +56,24 @@ public final class Lock {
     public init() {
 #if os(Windows)
         InitializeSRWLock(self.mutex)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        // Swift equivalent of OS_UNFAIR_LOCK_INIT
+        self.mutex.pointee = .init()
 #else
-        var attr = pthread_mutexattr_t()
-        pthread_mutexattr_init(&attr)
-        pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
-
-        let err = pthread_mutex_init(self.mutex, &attr)
-        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+        initialise_pthread_mutex(self.mutex)
 #endif
     }
 
     deinit {
 #if os(Windows)
         // SRWLOCK does not need to be free'd
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        // nothing to do
 #else
         let err = pthread_mutex_destroy(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
 #endif
-        mutex.deallocate()
+        self.mutex.deallocate()
     }
 
     /// Acquire the lock.
@@ -67,6 +83,8 @@ public final class Lock {
     public func lock() {
 #if os(Windows)
         AcquireSRWLockExclusive(self.mutex)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        os_unfair_lock_lock(self.mutex)
 #else
         let err = pthread_mutex_lock(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
@@ -80,6 +98,9 @@ public final class Lock {
     public func unlock() {
 #if os(Windows)
         ReleaseSRWLockExclusive(self.mutex)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        os_unfair_lock_assert_owner(self.mutex)
+        os_unfair_lock_unlock(self.mutex)
 #else
         let err = pthread_mutex_unlock(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
@@ -118,11 +139,15 @@ extension Lock {
 /// until the state variable is set to a specific value to acquire the lock.
 public final class ConditionLock<T: Equatable> {
     private var _value: T
-    private let mutex: Lock
+
 #if os(Windows)
+    private let mutex: UnsafeMutablePointer<SRWLOCK> =
+        UnsafeMutablePointer.allocate(capacity: 1)
     private let cond: UnsafeMutablePointer<CONDITION_VARIABLE> =
         UnsafeMutablePointer.allocate(capacity: 1)
 #else
+    private let mutex: UnsafeMutablePointer<pthread_mutex_t> =
+        UnsafeMutablePointer.allocate(capacity: 1)
     private let cond: UnsafeMutablePointer<pthread_cond_t> =
         UnsafeMutablePointer.allocate(capacity: 1)
 #endif
@@ -132,10 +157,11 @@ public final class ConditionLock<T: Equatable> {
     /// - Parameter value: The initial value to give the state variable.
     public init(value: T) {
         self._value = value
-        self.mutex = Lock()
 #if os(Windows)
+        InitializeSRWLock(self.mutex)
         InitializeConditionVariable(self.cond)
 #else
+        initialise_pthread_mutex(self.mutex)
         let err = pthread_cond_init(self.cond, nil)
         precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
 #endif
@@ -153,12 +179,22 @@ public final class ConditionLock<T: Equatable> {
 
     /// Acquire the lock, regardless of the value of the state variable.
     public func lock() {
-        self.mutex.lock()
+#if os(Windows)
+        AcquireSRWLockExclusive(self.mutex)
+#else
+        let err = pthread_mutex_lock(self.mutex)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+#endif
     }
 
     /// Release the lock, regardless of the value of the state variable.
     public func unlock() {
-        self.mutex.unlock()
+#if os(Windows)
+        ReleaseSRWLockExclusive(self.mutex)
+#else
+        let err = pthread_mutex_unlock(self.mutex)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+#endif
     }
 
     /// The value of the state variable.
@@ -188,7 +224,7 @@ public final class ConditionLock<T: Equatable> {
             let result = SleepConditionVariableSRW(self.cond, self.mutex.mutex, INFINITE, 0)
             precondition(result, "\(#function) failed in SleepConditionVariableSRW with error \(GetLastError())")
 #else
-            let err = pthread_cond_wait(self.cond, self.mutex.mutex)
+            let err = pthread_cond_wait(self.cond, self.mutex)
             precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
 #endif
         }
@@ -246,7 +282,7 @@ public final class ConditionLock<T: Equatable> {
             if self._value == wantedValue {
                 return true
             }
-            switch pthread_cond_timedwait(self.cond, self.mutex.mutex, &timeoutAbs) {
+            switch pthread_cond_timedwait(self.cond, self.mutex, &timeoutAbs) {
             case 0:
                 continue
             case ETIMEDOUT:
