@@ -22,7 +22,8 @@ final class SocketOptionProviderTest: XCTestCase {
     var ipv4DatagramChannel: Channel!
     var ipv6DatagramChannel: Channel?
 
-    struct CastError: Error {}
+    struct CastError: Error {
+    }
 
     private func convertedChannel(file: StaticString = #file, line: UInt = #line) throws -> SocketOptionProvider {
         guard let provider = clientChannel as? SocketOptionProvider else {

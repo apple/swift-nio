@@ -48,7 +48,8 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     /// for a mask key.
     private static let maximumFrameHeaderLength: Int = (2 + 4 + 8)
 
-    public init() {}
+    public init() {
+    }
 
     public func handlerAdded(context: ChannelHandlerContext) {
         self.headerBuffer = context.channel.allocator.buffer(capacity: WebSocketFrameEncoder.maximumFrameHeaderLength)

@@ -539,7 +539,8 @@ internal final class SelectableEventLoop: EventLoop {
                 self.assertInEventLoop()
                 assert(self.internalState == .runningButNotAcceptingNewRegistrations)
                 self.internalState = .noLongerRunning
-                self.execute {} // force a new event loop tick, so the event loop definitely stops looping very soon.
+                self.execute {
+                } // force a new event loop tick, so the event loop definitely stops looping very soon.
                 self.externalStateLock.withLock {
                     assert(self.externalState == .closing)
                     self.externalState = .closed

@@ -137,7 +137,8 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
 
     private var isChunked = false
 
-    public init() {}
+    public init() {
+    }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch unwrapOutboundIn(data) {
@@ -175,7 +176,8 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
 
     private var isChunked = false
 
-    public init() {}
+    public init() {
+    }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch unwrapOutboundIn(data) {

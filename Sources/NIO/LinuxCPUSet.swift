@@ -39,7 +39,8 @@
         }
     }
 
-    extension LinuxCPUSet: Equatable {}
+    extension LinuxCPUSet: Equatable {
+    }
 
     /// Linux specific extension to `NIOThread`.
     extension NIOThread {

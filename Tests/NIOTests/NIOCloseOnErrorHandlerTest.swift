@@ -18,7 +18,8 @@ import XCTest
 final class DummyFailingHandler1: ChannelInboundHandler {
     typealias InboundIn = NIOAny
 
-    struct DummyError1: Error {}
+    struct DummyError1: Error {
+    }
 
     func channelRead(context: ChannelHandlerContext, data _: NIOAny) {
         context.fireErrorCaught(DummyError1())

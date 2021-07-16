@@ -136,7 +136,8 @@ public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
     case end(HTTPHeaders?)
 }
 
-extension HTTPPart: Equatable {}
+extension HTTPPart: Equatable {
+}
 
 /// The components of a HTTP request from the view of a HTTP client.
 public typealias HTTPClientRequestPart = HTTPPart<HTTPRequestHead, IOData>

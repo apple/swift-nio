@@ -17,7 +17,8 @@ public final class NIOCloseOnErrorHandler: ChannelInboundHandler {
     public typealias InboundIn = NIOAny
 
     /// Initialize a `NIOCloseOnErrorHandler`
-    public init() {}
+    public init() {
+    }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         context.fireErrorCaught(error)

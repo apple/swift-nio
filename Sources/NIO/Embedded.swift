@@ -81,7 +81,8 @@ public final class EmbeddedEventLoop: EventLoop {
     }
 
     /// Initialize a new `EmbeddedEventLoop`.
-    public init() {}
+    public init() {
+    }
 
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
@@ -172,7 +173,8 @@ public final class EmbeddedEventLoop: EventLoop {
         // Just drop all the remaining scheduled tasks. Despite having run all the tasks that were
         // scheduled when we entered the method this may still contain tasks as running the tasks
         // may have enqueued more tasks.
-        while self.scheduledTasks.pop() != nil {}
+        while self.scheduledTasks.pop() != nil {
+        }
     }
 
     /// - see: `EventLoop.close`

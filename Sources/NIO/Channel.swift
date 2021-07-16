@@ -369,10 +369,12 @@ public enum ChannelError: Error {
     case unremovableHandler
 }
 
-extension ChannelError: Equatable {}
+extension ChannelError: Equatable {
+}
 
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
-public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
+public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {
+}
 
 /// Multicast is not supported on this interface.
 public struct NIOMulticastNotSupportedError: Error {
@@ -385,7 +387,8 @@ public struct NIOMulticastNotSupportedError: Error {
 
 /// Multicast has not been properly implemented on this channel.
 public struct NIOMulticastNotImplementedError: Error {
-    public init() {}
+    public init() {
+    }
 }
 
 /// An `Channel` related event that is passed through the `ChannelPipeline` to notify the user.
@@ -402,5 +405,6 @@ public enum ChannelEvent: Equatable {
 /// protocol supports a notion of requests and responses, it might make sense to stop accepting new requests but finish
 /// processing the request currently in flight.
 public struct ChannelShouldQuiesceEvent {
-    public init() {}
+    public init() {
+    }
 }

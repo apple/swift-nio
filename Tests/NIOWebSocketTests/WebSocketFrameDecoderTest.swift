@@ -62,7 +62,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
     public var encoderChannel: EmbeddedChannel!
     public var buffer: ByteBuffer!
 
-    override public func setUp() {
+    public override func setUp() {
         self.decoderChannel = EmbeddedChannel()
         self.encoderChannel = EmbeddedChannel()
         self.buffer = self.decoderChannel.allocator.buffer(capacity: 128)
@@ -70,7 +70,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.encoderChannel.pipeline.addHandler(WebSocketFrameEncoder()).wait())
     }
 
-    override public func tearDown() {
+    public override func tearDown() {
         XCTAssertNoThrow(try self.encoderChannel.finish())
         _ = try? self.decoderChannel.finish()
         self.encoderChannel = nil
@@ -539,7 +539,8 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         // larger than the frame max.
         self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
 
-        struct Dummy: Error {}
+        struct Dummy: Error {
+        }
 
         self.decoderChannel.pipeline.fireErrorCaught(Dummy())
         XCTAssertThrowsError(try self.decoderChannel.throwIfErrorCaught()) { error in

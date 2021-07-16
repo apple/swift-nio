@@ -81,7 +81,8 @@ class SelectorTest: XCTestCase {
         })
 
         var readyCount = 0
-        try selector.whenReady(strategy: .block, onLoopBegin: {}) { ev in
+        try selector.whenReady(strategy: .block, onLoopBegin: {
+        }) { ev in
             readyCount += 1
             if socket1 === ev.registration.socket {
                 try selector.deregister(selectable: socket2)

@@ -15,7 +15,8 @@
 @testable import NIO
 import XCTest
 
-private class EmbeddedTestError: Error {}
+private class EmbeddedTestError: Error {
+}
 
 public final class EmbeddedEventLoopTest: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() throws {
@@ -318,7 +319,8 @@ public final class EmbeddedEventLoopTest: XCTestCase {
             XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
         }
 
-        class Thing {}
+        class Thing {
+        }
 
         weak var weakThing: Thing?
 

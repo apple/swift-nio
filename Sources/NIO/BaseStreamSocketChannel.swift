@@ -91,17 +91,17 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     // MARK: BaseSocketChannel's must override API that cannot be further refined by subclasses
 
     // This is `Channel` API so must be thread-safe.
-    override public final var isWritable: Bool {
+    public final override var isWritable: Bool {
         self.pendingWrites.isWritable
     }
 
-    override final var isOpen: Bool {
+    final override var isOpen: Bool {
         self.eventLoop.assertInEventLoop()
         assert(super.isOpen == self.pendingWrites.isOpen)
         return super.isOpen
     }
 
-    override final func readFromSocket() throws -> ReadResult {
+    final override func readFromSocket() throws -> ReadResult {
         eventLoop.assertInEventLoop()
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
         var buffer = recvAllocator.buffer(allocator: allocator)
@@ -153,7 +153,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         return result
     }
 
-    override final func writeToSocket() throws -> OverallWriteResult {
+    final override func writeToSocket() throws -> OverallWriteResult {
         let result = try pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
             guard ptr.count > 0 else {
                 // No need to call write if the buffer is empty.
@@ -170,7 +170,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         return result
     }
 
-    override final func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+    final override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         do {
             switch mode {
             case .output:
@@ -214,36 +214,36 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }
     }
 
-    override final func hasFlushedPendingWrites() -> Bool {
+    final override func hasFlushedPendingWrites() -> Bool {
         self.pendingWrites.isFlushPending
     }
 
-    override final func markFlushPoint() {
+    final override func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
         self.pendingWrites.markFlushCheckpoint()
     }
 
-    override final func cancelWritesOnClose(error: Error) {
+    final override func cancelWritesOnClose(error: Error) {
         self.pendingWrites.failAll(error: error, close: true)
     }
 
     @discardableResult
-    override final func readIfNeeded0() -> Bool {
+    final override func readIfNeeded0() -> Bool {
         if self.inputShutdown {
             return false
         }
         return super.readIfNeeded0()
     }
 
-    override public final func read0() {
+    public final override func read0() {
         if self.inputShutdown {
             return
         }
         super.read0()
     }
 
-    override final func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+    final override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if self.outputShutdown {
             promise?.fail(ChannelError.outputClosed)
             return

@@ -216,10 +216,12 @@ public protocol _ChannelInboundHandler: ChannelHandler {
 //  Default implementations for the ChannelHandler protocol
 extension ChannelHandler {
     /// Do nothing by default.
-    public func handlerAdded(context _: ChannelHandlerContext) {}
+    public func handlerAdded(context _: ChannelHandlerContext) {
+    }
 
     /// Do nothing by default.
-    public func handlerRemoved(context _: ChannelHandlerContext) {}
+    public func handlerRemoved(context _: ChannelHandlerContext) {
+    }
 }
 
 /// Provides default implementations for all methods defined by `_ChannelOutboundHandler`.

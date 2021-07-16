@@ -28,7 +28,8 @@ public enum IOData {
 }
 
 /// `IOData` objects are comparable just like the values they wrap.
-extension IOData: Equatable {}
+extension IOData: Equatable {
+}
 
 /// `IOData` provide a number of readable bytes.
 extension IOData {

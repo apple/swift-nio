@@ -119,14 +119,16 @@ extension ChannelOptions {
         public struct AllocatorOption: ChannelOption {
             public typealias Value = ByteBufferAllocator
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// `RecvAllocatorOption` allows users to specify the `RecvByteBufferAllocator` to use.
         public struct RecvAllocatorOption: ChannelOption {
             public typealias Value = RecvByteBufferAllocator
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// `AutoReadOption` allows users to configure if a `Channel` should automatically call `Channel.read` again once all data was read from the transport or
@@ -134,7 +136,8 @@ extension ChannelOptions {
         public struct AutoReadOption: ChannelOption {
             public typealias Value = Bool
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// `WriteSpinOption` allows users to configure the number of repetitions of a only partially successful write call before considering the `Channel` not writable.
@@ -143,7 +146,8 @@ extension ChannelOptions {
         public struct WriteSpinOption: ChannelOption {
             public typealias Value = UInt
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// `MaxMessagesPerReadOption` allows users to configure the maximum number of read calls to the underlying transport are performed before wait again until
@@ -151,14 +155,16 @@ extension ChannelOptions {
         public struct MaxMessagesPerReadOption: ChannelOption {
             public typealias Value = UInt
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
         public struct BacklogOption: ChannelOption {
             public typealias Value = Int32
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// `DatagramVectorReadMessageCountOption` allows users to configure the number of messages to attempt to read in a single syscall on a
@@ -188,13 +194,15 @@ extension ChannelOptions {
         public struct DatagramVectorReadMessageCountOption: ChannelOption {
             public typealias Value = Int
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
         public struct ExplicitCongestionNotificationsOption: ChannelOption {
             public typealias Value = Bool
-            public init() {}
+            public init() {
+            }
         }
 
         /// The watermark used to detect when `Channel.isWritable` returns `true` or `false`.
@@ -234,7 +242,8 @@ extension ChannelOptions {
         public struct WriteBufferWaterMarkOption: ChannelOption {
             public typealias Value = WriteBufferWaterMark
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// `ConnectTimeoutOption` allows users to configure the `TimeAmount` after which a connect will fail if it was not established in the meantime. May be
@@ -242,7 +251,8 @@ extension ChannelOptions {
         public struct ConnectTimeoutOption: ChannelOption {
             public typealias Value = TimeAmount?
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// `AllowRemoteHalfClosureOption` allows users to configure whether the `Channel` will close itself when its remote
@@ -253,13 +263,15 @@ extension ChannelOptions {
         public struct AllowRemoteHalfClosureOption: ChannelOption {
             public typealias Value = Bool
 
-            public init() {}
+            public init() {
+            }
         }
 
         /// When set to true IP level Packet Info information will be reported through `AddressedEnvelope.Metadata` for UDP packets.
         public struct ReceivePacketInfo: ChannelOption {
             public typealias Value = Bool
-            public init() {}
+            public init() {
+            }
         }
     }
 }

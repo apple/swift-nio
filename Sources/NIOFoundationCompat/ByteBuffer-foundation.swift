@@ -278,7 +278,8 @@ extension ByteBufferAllocator {
 
 // MARK: - Conformances
 
-extension ByteBufferView: ContiguousBytes {}
+extension ByteBufferView: ContiguousBytes {
+}
 
 extension ByteBufferView: DataProtocol {
     public typealias Regions = CollectionOfOne<ByteBufferView>
@@ -288,7 +289,8 @@ extension ByteBufferView: DataProtocol {
     }
 }
 
-extension ByteBufferView: MutableDataProtocol {}
+extension ByteBufferView: MutableDataProtocol {
+}
 
 // MARK: - Data
 

@@ -327,7 +327,8 @@ private final class TestHTTPHandler: ChannelInboundHandler {
     }
 
     public func handlerRemoved(context _: ChannelHandlerContext) {
-        struct HandlerRemovedBeforeReceivingFullRequestError: Error {}
+        struct HandlerRemovedBeforeReceivingFullRequestError: Error {
+        }
         self.responsePromise.fail(HandlerRemovedBeforeReceivingFullRequestError())
     }
 

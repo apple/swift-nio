@@ -632,7 +632,8 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
 
     public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
         if !self.stopParsing {
-            while buffer.readableBytes > 0, case .continue = try self.decode(context: context, buffer: &buffer) {}
+            while buffer.readableBytes > 0, case .continue = try self.decode(context: context, buffer: &buffer) {
+            }
             if seenEOF {
                 try self.feedEOF(context: context)
             }
@@ -820,7 +821,8 @@ extension NIOHTTPDecoderError {
     public static let unsolicitedResponse: NIOHTTPDecoderError = .init(baseError: .unsolicitedResponse)
 }
 
-extension NIOHTTPDecoderError: Hashable {}
+extension NIOHTTPDecoderError: Hashable {
+}
 
 extension NIOHTTPDecoderError: CustomDebugStringConvertible {
     public var debugDescription: String {

@@ -395,7 +395,8 @@ class BootstrapTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        struct FoundHandlerThatWasNotSupposedToBeThereError: Error {}
+        struct FoundHandlerThatWasNotSupposedToBeThereError: Error {
+        }
 
         var maybeServer: Channel?
         XCTAssertNoThrow(maybeServer = try ServerBootstrap(group: group)

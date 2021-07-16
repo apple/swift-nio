@@ -22,7 +22,8 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
     public typealias InboundIn = Never
     public typealias OutboundOut = WebSocketFrame
 
-    public init() {}
+    public init() {
+    }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         if let error = error as? NIOWebSocketError {

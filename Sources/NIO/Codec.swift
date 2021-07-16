@@ -37,7 +37,8 @@ public enum ByteToMessageDecoderError: Error {
 extension ByteToMessageDecoderError {
     // TODO: For NIO 3, make this an enum case (or whatever best way for Errors we have come up with).
     /// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max specified.
-    public struct PayloadTooLargeError: Error {}
+    public struct PayloadTooLargeError: Error {
+    }
 }
 
 /// `ByteToMessageDecoder`s decode bytes in a stream-like fashion from `ByteBuffer` to another message type.
@@ -212,9 +213,11 @@ public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder {
 }
 
 extension ByteToMessageDecoder {
-    public mutating func decoderRemoved(context _: ChannelHandlerContext) {}
+    public mutating func decoderRemoved(context _: ChannelHandlerContext) {
+    }
 
-    public mutating func decoderAdded(context _: ChannelHandlerContext) {}
+    public mutating func decoderAdded(context _: ChannelHandlerContext) {
+    }
 
     /// Default implementation to detect once bytes should be reclaimed.
     public func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
@@ -234,7 +237,8 @@ extension ByteToMessageDecoder {
     }
 
     public mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
-        while try decode(context: context, buffer: &buffer) == .continue {}
+        while try decode(context: context, buffer: &buffer) == .continue {
+        }
         return .needMoreData
     }
 }

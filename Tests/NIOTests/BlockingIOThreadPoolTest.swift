@@ -127,8 +127,11 @@ class BlockingIOThreadPoolTest: XCTestCase {
     }
 
     class SomeClass {
-        init() {}
-        func dummy() {}
+        init() {
+        }
+
+        func dummy() {
+        }
     }
 
     func testClosureReferenceDroppedAfterSingleWorkItemExecution() throws {

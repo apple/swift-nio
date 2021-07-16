@@ -108,7 +108,8 @@ public struct ByteBufferView: RandomAccessCollection {
     }
 }
 
-extension ByteBufferView: MutableCollection {}
+extension ByteBufferView: MutableCollection {
+}
 
 extension ByteBufferView: RangeReplaceableCollection {
     // required by `RangeReplaceableCollection`

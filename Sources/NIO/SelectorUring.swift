@@ -250,7 +250,8 @@
                         do {
                             _ = try EventFd.eventfd_read(fd: eventFD, value: &val) // consume wakeup event
                             self._debugPrint("read val [\(val)] from event.fd [\(event.fd)]")
-                        } catch {}
+                        } catch {
+                        }
                     default:
                         if let registration = registrations[Int(event.fd)] {
                             self._debugPrint("We found a registration for event.fd [\(event.fd)]") // \(registration)

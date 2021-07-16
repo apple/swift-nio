@@ -28,7 +28,8 @@ public struct NIOHTTPServerRequestFull {
     }
 }
 
-extension NIOHTTPServerRequestFull: Equatable {}
+extension NIOHTTPServerRequestFull: Equatable {
+}
 
 /// The parts of a complete HTTP response from the view of the client.
 ///
@@ -44,7 +45,8 @@ public struct NIOHTTPClientResponseFull {
     }
 }
 
-extension NIOHTTPClientResponseFull: Equatable {}
+extension NIOHTTPClientResponseFull: Equatable {
+}
 
 public struct NIOHTTPObjectAggregatorError: Error, Equatable {
     private enum Base {

@@ -626,7 +626,8 @@ public final class EventLoopTest: XCTestCase {
     public func testShutdownWhileScheduledTasksNotReady() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let eventLoop = group.next()
-        _ = eventLoop.scheduleTask(in: .hours(1)) {}
+        _ = eventLoop.scheduleTask(in: .hours(1)) {
+        }
         try group.syncShutdownGracefully()
     }
 
@@ -789,7 +790,8 @@ public final class EventLoopTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        class Thing {}
+        class Thing {
+        }
 
         weak var weakThing: Thing?
 
@@ -1072,7 +1074,8 @@ public final class EventLoopTest: XCTestCase {
         }
 
         let el = elg.next()
-        let task = el.scheduleTask(in: .milliseconds(10)) {}
+        let task = el.scheduleTask(in: .milliseconds(10)) {
+        }
         task.cancel()
         // sleep for 10ms which should have the above scheduled (and cancelled) task have caused an unnecessary wakeup.
         Thread.sleep(forTimeInterval: 0.015 /* 15 ms */ )
@@ -1270,7 +1273,8 @@ public final class EventLoopTest: XCTestCase {
             XCTFail("didn't expect success")
         }.whenFailure { error in
             XCTAssertEqual(.shutdown, error as? EventLoopError)
-            group.next().execute {} // This previously blew up
+            group.next().execute {
+            } // This previously blew up
             group.next().scheduleTask(in: .hours(24)) {
                 XCTFail("Task was scheduled in 24 hours, yet it executed.")
             }.futureResult.map {
@@ -1381,7 +1385,8 @@ public final class EventLoopTest: XCTestCase {
 
         XCTAssertEqual(try eventLoop.makeCompletedFuture(.success("foo")).wait(), "foo")
 
-        struct DummyError: Error {}
+        struct DummyError: Error {
+        }
         let future = eventLoop.makeCompletedFuture(Result<String, Error>.failure(DummyError()))
         XCTAssertThrowsError(try future.wait()) { error in
             XCTAssertTrue(error is DummyError)

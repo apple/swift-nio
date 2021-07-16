@@ -16,7 +16,8 @@
     import CNIOLinux
 #endif
 
-enum LowLevelThreadOperations {}
+enum LowLevelThreadOperations {
+}
 
 protocol ThreadOps {
     associatedtype ThreadHandle

@@ -635,7 +635,8 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxDoesNotTriviallyLeak() throws {
-        class SomeClass {}
+        class SomeClass {
+        }
         weak var weakSomeInstance1: SomeClass?
         weak var weakSomeInstance2: SomeClass?
         ({
@@ -654,7 +655,8 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxCompareAndExchangeWorksIfEqual() throws {
-        class SomeClass {}
+        class SomeClass {
+        }
         weak var weakSomeInstance1: SomeClass?
         weak var weakSomeInstance2: SomeClass?
         weak var weakSomeInstance3: SomeClass?
@@ -687,7 +689,8 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxCompareAndExchangeWorksIfNotEqual() throws {
-        class SomeClass {}
+        class SomeClass {
+        }
         weak var weakSomeInstance1: SomeClass?
         weak var weakSomeInstance2: SomeClass?
         weak var weakSomeInstance3: SomeClass?
@@ -721,7 +724,8 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxStoreWorks() throws {
-        class SomeClass {}
+        class SomeClass {
+        }
         weak var weakSomeInstance1: SomeClass?
         weak var weakSomeInstance2: SomeClass?
         weak var weakSomeInstance3: SomeClass?
@@ -757,7 +761,8 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
         let sem2 = DispatchSemaphore(value: 0)
-        class SomeClass {}
+        class SomeClass {
+        }
         weak var weakInstance: SomeClass?
         ({
             let instance = SomeClass()
@@ -837,7 +842,8 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testAtomicBoxCompareAndExchangeOntoItself() {
-        class Foo {}
+        class Foo {
+        }
         weak var weakF: Foo?
         weak var weakG: Foo?
 

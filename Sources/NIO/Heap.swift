@@ -18,7 +18,8 @@ internal struct Heap<Element: Comparable> {
     internal private(set) var storage: ContiguousArray<Element> = []
 
     @usableFromInline
-    internal init() {}
+    internal init() {
+    }
 
     internal func comparator(_ lhs: Element, _ rhs: Element) -> Bool {
         // This heap is always a min-heap.

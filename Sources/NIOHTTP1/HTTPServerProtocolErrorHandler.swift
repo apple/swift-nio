@@ -29,7 +29,8 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
 
     private var hasUnterminatedResponse: Bool = false
 
-    public init() {}
+    public init() {
+    }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         guard error is HTTPParserError else {

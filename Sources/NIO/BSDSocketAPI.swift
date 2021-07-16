@@ -103,9 +103,11 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.SocketType: Equatable {}
+extension NIOBSDSocket.SocketType: Equatable {
+}
 
-extension NIOBSDSocket.SocketType: Hashable {}
+extension NIOBSDSocket.SocketType: Hashable {
+}
 
 extension NIOBSDSocket {
     /// Specifies the addressing scheme that the socket can use.
@@ -118,9 +120,11 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.AddressFamily: Equatable {}
+extension NIOBSDSocket.AddressFamily: Equatable {
+}
 
-extension NIOBSDSocket.AddressFamily: Hashable {}
+extension NIOBSDSocket.AddressFamily: Hashable {
+}
 
 extension NIOBSDSocket {
     /// Specifies the type of protocol that the socket can use.
@@ -133,9 +137,11 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.ProtocolFamily: Equatable {}
+extension NIOBSDSocket.ProtocolFamily: Equatable {
+}
 
-extension NIOBSDSocket.ProtocolFamily: Hashable {}
+extension NIOBSDSocket.ProtocolFamily: Hashable {
+}
 
 extension NIOBSDSocket {
     /// Defines socket option levels.
@@ -148,9 +154,11 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.OptionLevel: Equatable {}
+extension NIOBSDSocket.OptionLevel: Equatable {
+}
 
-extension NIOBSDSocket.OptionLevel: Hashable {}
+extension NIOBSDSocket.OptionLevel: Hashable {
+}
 
 extension NIOBSDSocket {
     /// Defines configuration option names.
@@ -163,9 +171,11 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.Option: Equatable {}
+extension NIOBSDSocket.Option: Equatable {
+}
 
-extension NIOBSDSocket.Option: Hashable {}
+extension NIOBSDSocket.Option: Hashable {
+}
 
 // Address Family
 extension NIOBSDSocket.AddressFamily {
@@ -414,7 +424,8 @@ extension NIOBSDSocket.Option {
 #endif
 
 /// The requested UDS path exists and has wrong type (not a socket).
-public struct UnixDomainSocketPathWrongType: Error {}
+public struct UnixDomainSocketPathWrongType: Error {
+}
 
 /// This protocol defines the methods that are expected to be found on
 /// `NIOBSDSocket`. While defined as a protocol there is no expectation that any
@@ -546,7 +557,8 @@ protocol _BSDSocketProtocol {
 
 /// If this extension is hitting a compile error, your platform is missing one
 /// of the functions defined above!
-extension NIOBSDSocket: _BSDSocketProtocol {}
+extension NIOBSDSocket: _BSDSocketProtocol {
+}
 
 /// This protocol defines the methods that are expected to be found on
 /// `NIOBSDControlMessage`. While defined as a protocol there is no expectation
@@ -574,4 +586,5 @@ protocol _BSDSocketControlMessageProtocol {
 
 /// If this extension is hitting a compile error, your platform is missing one
 /// of the functions defined above!
-enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol {}
+enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol {
+}

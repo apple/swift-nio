@@ -87,7 +87,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testFoldWithSuccessAndOneFailure() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let secondEventLoop = EmbeddedEventLoop()
         let f0: EventLoopFuture<Int> = eventLoop.makeSucceededFuture(0)
@@ -126,7 +127,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testFoldWithFailureAndEmptyFutureList() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let f0: EventLoopFuture<Int> = eventLoop.makeFailedFuture(E())
 
@@ -144,7 +146,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testFoldWithFailureAndAllSuccesses() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let secondEventLoop = EmbeddedEventLoop()
         let f0: EventLoopFuture<Int> = eventLoop.makeFailedFuture(E())
@@ -165,7 +168,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testFoldWithFailureAndAllUnfulfilled() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let secondEventLoop = EmbeddedEventLoop()
         let f0: EventLoopFuture<Int> = eventLoop.makeFailedFuture(E())
@@ -185,7 +189,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testFoldWithFailureAndAllFailures() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let secondEventLoop = EmbeddedEventLoop()
         let f0: EventLoopFuture<Int> = eventLoop.makeFailedFuture(E())
@@ -223,7 +228,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testAndAllWithAllFailures() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
         let futures = promises.map(\.futureResult)
@@ -236,7 +242,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testAndAllWithOneFailure() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         var promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
         _ = promises.map { $0.succeed(()) }
@@ -282,7 +289,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testReduceWithAllFailures() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
         let futures = promises.map(\.futureResult)
@@ -296,7 +304,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testReduceWithOneFailure() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
         _ = promises.map { $0.succeed(1) }
@@ -314,7 +323,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testReduceWhichDoesFailFast() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
 
@@ -368,7 +378,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testReduceIntoWithAllFailure() throws {
-        struct E: Error {}
+        struct E: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let futures: [EventLoopFuture<Int>] = [1, 2, 2, 3, 3, 3].map { (_: Int) in eventLoop.makeFailedFuture(E()) }
 
@@ -777,7 +788,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testFlatMapResultFailurePath() {
-        struct DummyError: Error {}
+        struct DummyError: Error {
+        }
         let el = EmbeddedEventLoop()
         defer {
             XCTAssertNoThrow(try el.syncShutdownGracefully())
@@ -1031,7 +1043,9 @@ class EventLoopFutureTest: XCTestCase {
         XCTAssertNoThrow(try doTest(promise: group.next().makePromise()))
     }
 
-    struct DatabaseError: Error {}
+    struct DatabaseError: Error {
+    }
+
     struct Database {
         let query: () -> EventLoopFuture<[String]>
 
@@ -1126,7 +1140,8 @@ class EventLoopFutureTest: XCTestCase {
 
     func testAndAllCompleteWithZeroFutures() {
         let eventLoop = EmbeddedEventLoop()
-        let done = DispatchWorkItem {}
+        let done = DispatchWorkItem {
+        }
         EventLoopFuture<Void>.andAllComplete([], on: eventLoop).whenComplete { (result: Result<Void, Error>) in
             _ = result.mapError { error -> Error in
                 XCTFail("unexpected error \(error)")
@@ -1139,7 +1154,8 @@ class EventLoopFutureTest: XCTestCase {
 
     func testAndAllSucceedWithZeroFutures() {
         let eventLoop = EmbeddedEventLoop()
-        let done = DispatchWorkItem {}
+        let done = DispatchWorkItem {
+        }
         EventLoopFuture<Void>.andAllSucceed([], on: eventLoop).whenComplete { result in
             _ = result.mapError { error -> Error in
                 XCTFail("unexpected error \(error)")
@@ -1161,7 +1177,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testAndAllCompleteWithPreFailedFutures() {
-        struct Dummy: Error {}
+        struct Dummy: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let failed: EventLoopFuture<Void> = eventLoop.makeFailedFuture(Dummy())
 
@@ -1172,7 +1189,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures() {
-        struct Dummy: Error {}
+        struct Dummy: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let succeeded = eventLoop.makeSucceededFuture(())
         let incompletes = [eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
@@ -1202,7 +1220,8 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures() {
-        struct Dummy: Error {}
+        struct Dummy: Error {
+        }
         let eventLoop = EmbeddedEventLoop()
         let succeeded = eventLoop.makeSucceededFuture(())
         let incompletes = [eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
@@ -1266,7 +1285,8 @@ class EventLoopFutureTest: XCTestCase {
         let exitPromise: EventLoopPromise<Void> = elg1.next().makePromise()
         var callNumber = 0
         _ = elg1.next().scheduleRepeatedAsyncTask(initialDelay: .nanoseconds(0), delay: .nanoseconds(0)) { task in
-            struct Dummy: Error {}
+            struct Dummy: Error {
+            }
 
             callNumber += 1
             switch callNumber {

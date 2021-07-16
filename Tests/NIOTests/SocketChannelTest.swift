@@ -54,12 +54,14 @@ public final class SocketChannelTest: XCTestCase {
         let condition = NIOAtomic<Int>.makeAtomic(value: 0)
         let futureA = channelA.eventLoop.submit {
             _ = condition.add(1)
-            while condition.load() < 2 {}
+            while condition.load() < 2 {
+            }
             _ = channelB.setOption(ChannelOptions.backlog, value: 1)
         }
         let futureB = channelB.eventLoop.submit {
             _ = condition.add(1)
-            while condition.load() < 2 {}
+            while condition.load() < 2 {
+            }
             _ = channelA.setOption(ChannelOptions.backlog, value: 1)
         }
         try futureA.wait()
@@ -963,5 +965,6 @@ class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler {
         context.fireChannelInactive()
     }
 
-    func read(context _: ChannelHandlerContext) {}
+    func read(context _: ChannelHandlerContext) {
+    }
 }

@@ -33,7 +33,8 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                             buffer: inout ByteBuffer,
                             seenEOF _: Bool) throws -> DecodingState
             {
-                while try self.decode(context: context, buffer: &buffer) == .continue {}
+                while try self.decode(context: context, buffer: &buffer) == .continue {
+                }
                 return .needMoreData
             }
         }
@@ -70,7 +71,8 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                             buffer: inout ByteBuffer,
                             seenEOF _: Bool) throws -> DecodingState
             {
-                while try self.decode(context: context, buffer: &buffer) == .continue {}
+                while try self.decode(context: context, buffer: &buffer) == .continue {
+                }
                 return .needMoreData
             }
         }
@@ -106,7 +108,8 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                             buffer: inout ByteBuffer,
                             seenEOF _: Bool) throws -> DecodingState
             {
-                while try self.decode(context: context, buffer: &buffer) == .continue {}
+                while try self.decode(context: context, buffer: &buffer) == .continue {
+                }
                 return .needMoreData
             }
         }
@@ -140,7 +143,8 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                             buffer: inout ByteBuffer,
                             seenEOF _: Bool) throws -> DecodingState
             {
-                while try self.decode(context: context, buffer: &buffer) == .continue {}
+                while try self.decode(context: context, buffer: &buffer) == .continue {
+                }
                 if buffer.readableBytes > 0 {
                     context.fireChannelRead(wrapInboundOut("leftover"))
                 }

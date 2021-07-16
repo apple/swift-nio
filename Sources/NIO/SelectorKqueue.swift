@@ -184,7 +184,8 @@
             }
         }
 
-        func deinitAssertions0() {}
+        func deinitAssertions0() {
+        }
 
         func register0<S: Selectable>(selectable: S, fileDescriptor _: CInt, interested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
             try self.kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil, registrationID: registrationID)

@@ -658,7 +658,8 @@ class CircularBufferTests: XCTestCase {
     }
 
     func testRemoveAllNilsOutTheContents() {
-        class Dummy {}
+        class Dummy {
+        }
 
         weak var dummy1: Dummy?
         weak var dummy2: Dummy?

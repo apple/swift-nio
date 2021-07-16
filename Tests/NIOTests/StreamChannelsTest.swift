@@ -107,7 +107,8 @@ class StreamChannelTest: XCTestCase {
                 fatalError()
             }
 
-            init() {}
+            init() {
+            }
         }
 
         let channel = TestChannel()

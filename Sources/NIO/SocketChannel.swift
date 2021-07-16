@@ -144,7 +144,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     /// The server socket channel is never writable.
     // This is `Channel` API so must be thread-safe.
-    override public var isWritable: Bool { false }
+    public override var isWritable: Bool { false }
 
     convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
         try self.init(serverSocket: try ServerSocket(protocolFamily: protocolFamily, setNonBlocking: true), eventLoop: eventLoop, group: group)
@@ -200,7 +200,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
     }
 
-    override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    public override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         eventLoop.assertInEventLoop()
 
         guard isOpen else {
@@ -290,7 +290,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         // No writes to cancel.
     }
 
-    override public func channelRead0(_ data: NIOAny) {
+    public override func channelRead0(_ data: NIOAny) {
         eventLoop.assertInEventLoop()
 
         let ch = data.forceAsOther() as SocketChannel
@@ -351,7 +351,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     /// Support for vector reads, if enabled.
     private var vectorReadManager: DatagramVectorReadManager?
     // This is `Channel` API so must be thread-safe.
-    override public var isWritable: Bool {
+    public override var isWritable: Bool {
         pendingWrites.isWritable
     }
 
@@ -676,7 +676,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    override final func hasFlushedPendingWrites() -> Bool {
+    final override func hasFlushedPendingWrites() -> Bool {
         self.pendingWrites.isFlushPending
     }
 

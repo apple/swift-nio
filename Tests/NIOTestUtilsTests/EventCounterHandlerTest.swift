@@ -108,7 +108,8 @@ class EventCounterHandlerTest: XCTestCase {
     }
 
     func testError() {
-        struct Dummy: Error {}
+        struct Dummy: Error {
+        }
         self.channel.pipeline.fireErrorCaught(Dummy())
 
         XCTAssertEqual(["channelRegistered", "register", "errorCaught"],

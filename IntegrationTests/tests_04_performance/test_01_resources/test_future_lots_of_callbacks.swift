@@ -16,7 +16,8 @@ import NIO
 
 func run(identifier: String) {
     measure(identifier: identifier) {
-        struct MyError: Error {}
+        struct MyError: Error {
+        }
         @inline(never)
         func doThenAndFriends(loop: EventLoop) {
             let p = loop.makePromise(of: Int.self)

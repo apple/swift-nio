@@ -215,7 +215,8 @@ private class DummyResolver: Resolver {
     }
 }
 
-extension DummyResolver.Event: Equatable {}
+extension DummyResolver.Event: Equatable {
+}
 
 private func defaultChannelBuilder(loop: EventLoop, family _: NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel> {
     let channel = EmbeddedChannel(loop: loop as! EmbeddedEventLoop)

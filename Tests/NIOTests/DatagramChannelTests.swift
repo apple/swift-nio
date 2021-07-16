@@ -727,7 +727,8 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     private func constructNIOPacketInfo(address: String) throws -> NIOPacketInfo {
-        struct InterfaceIndexNotFound: Error {}
+        struct InterfaceIndexNotFound: Error {
+        }
         let destinationAddress = try SocketAddress(ipAddress: address, port: 0)
         guard let ingressIfaceIndex = try System.enumerateDevices()
             .first(where: { $0.address == destinationAddress })?.interfaceIndex

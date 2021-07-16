@@ -117,7 +117,8 @@ public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHa
     private var pendingRead = false
     private var writable: Bool = true
 
-    public init() {}
+    public init() {
+    }
 
     public func read(context: ChannelHandlerContext) {
         if self.writable {

@@ -22,7 +22,8 @@ final class ChannelPipelineBenchmark: Benchmark {
     private final class ConsumingHandler: ChannelInboundHandler, RemovableChannelHandler {
         typealias InboundIn = Any
 
-        func channelReadComplete(context _: ChannelHandlerContext) {}
+        func channelReadComplete(context _: ChannelHandlerContext) {
+        }
     }
 
     private let channel: EmbeddedChannel

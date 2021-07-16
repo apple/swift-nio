@@ -803,7 +803,8 @@ extension EventLoopGroup {
         }
         let errorStorageLock = Lock()
         var errorStorage: Error?
-        let continuation = DispatchWorkItem {}
+        let continuation = DispatchWorkItem {
+        }
         shutdownGracefully { error in
             if let error = error {
                 errorStorageLock.withLock {

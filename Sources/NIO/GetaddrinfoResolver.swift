@@ -93,7 +93,8 @@ internal class GetaddrinfoResolver: Resolver {
     /// clean up their state.
     ///
     /// In the getaddrinfo case this is a no-op, as the resolver blocks.
-    func cancelQueries() {}
+    func cancelQueries() {
+    }
 
     /// Perform the DNS queries and record the result.
     ///

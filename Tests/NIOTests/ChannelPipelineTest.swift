@@ -718,7 +718,8 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error {}
+        class DummyError: Error {
+        }
 
         let channel = EmbeddedChannel()
         defer {
@@ -759,7 +760,8 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error {}
+        class DummyError: Error {
+        }
 
         let channel = EmbeddedChannel()
         defer {
@@ -788,7 +790,8 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error {}
+        class DummyError: Error {
+        }
 
         let channel = EmbeddedChannel()
         defer {
@@ -826,7 +829,8 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error {}
+        class DummyError: Error {
+        }
 
         let channel = EmbeddedChannel()
         defer {
@@ -855,7 +859,8 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error {}
+        class DummyError: Error {
+        }
 
         let channel = EmbeddedChannel()
         defer {
@@ -892,7 +897,8 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error {}
+        class DummyError: Error {
+        }
 
         let channel = EmbeddedChannel()
         defer {
@@ -1390,7 +1396,8 @@ final class TestAddMultipleHandlersHandlerWorkingAroundSR9956: ChannelDuplexHand
 
     static var allHandlers: [TestAddMultipleHandlersHandlerWorkingAroundSR9956] = []
 
-    init() {}
+    init() {
+    }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         TestAddMultipleHandlersHandlerWorkingAroundSR9956.allHandlers.append(self)

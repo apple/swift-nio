@@ -327,7 +327,8 @@ final class FulfillOnFirstEventHandler: ChannelDuplexHandler {
     typealias InboundIn = Any
     typealias OutboundIn = Any
 
-    struct ExpectedEventMissing: Error {}
+    struct ExpectedEventMissing: Error {
+    }
 
     private let channelRegisteredPromise: EventLoopPromise<Void>?
     private let channelUnregisteredPromise: EventLoopPromise<Void>?

@@ -42,7 +42,8 @@ public final class EventCounterHandler {
     private let _closeCalls = NIOAtomic<Int>.makeAtomic(value: 0)
     private let _triggerUserOutboundEventCalls = NIOAtomic<Int>.makeAtomic(value: 0)
 
-    public init() {}
+    public init() {
+    }
 }
 
 // MARK: Public API

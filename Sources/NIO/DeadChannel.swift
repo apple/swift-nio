@@ -44,9 +44,11 @@ private final class DeadChannelCore: ChannelCore {
         promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
-    func flush0() {}
+    func flush0() {
+    }
 
-    func read0() {}
+    func read0() {
+    }
 
     func close0(error _: Error, mode _: CloseMode, promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.alreadyClosed)

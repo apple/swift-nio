@@ -40,7 +40,8 @@ class ThreadTest: XCTestCase {
     }
 
     func testThreadSpecificsAreNilWhenNotPresent() throws {
-        class SomeClass {}
+        class SomeClass {
+        }
         let s = DispatchSemaphore(value: 0)
         NIOThread.spawnAndRun { (_: NIO.NIOThread) in
             let tsv: ThreadSpecificVariable<SomeClass> = ThreadSpecificVariable()
@@ -51,7 +52,8 @@ class ThreadTest: XCTestCase {
     }
 
     func testThreadSpecificsWorks() throws {
-        class SomeClass {}
+        class SomeClass {
+        }
         let s = DispatchSemaphore(value: 0)
         NIOThread.spawnAndRun { (_: NIO.NIOThread) in
             let tsv: ThreadSpecificVariable<SomeClass> = ThreadSpecificVariable()
@@ -65,7 +67,8 @@ class ThreadTest: XCTestCase {
     }
 
     func testThreadSpecificsAreNotAvailableOnADifferentThread() throws {
-        class SomeClass {}
+        class SomeClass {
+        }
         let s = DispatchSemaphore(value: 0)
         NIOThread.spawnAndRun { (_: NIO.NIOThread) in
             let tsv = ThreadSpecificVariable<SomeClass>()
@@ -186,7 +189,8 @@ class ThreadTest: XCTestCase {
     }
 
     func testThreadSpecificInitWithValueWorks() throws {
-        class SomeClass {}
+        class SomeClass {
+        }
         let tsv = ThreadSpecificVariable(value: SomeClass())
         XCTAssertNotNil(tsv.currentValue)
     }

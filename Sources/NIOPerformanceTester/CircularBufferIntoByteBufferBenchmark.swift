@@ -34,7 +34,8 @@ final class CircularBufferIntoByteBufferBenchmark: Benchmark {
         }
     }
 
-    func tearDown() {}
+    func tearDown() {
+    }
 
     func run() -> Int {
         for _ in 1...self.iterations {

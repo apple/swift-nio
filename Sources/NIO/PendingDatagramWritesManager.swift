@@ -167,7 +167,8 @@ private struct PendingDatagramWritesState {
     }
 
     /// Initialise a new, empty `PendingWritesState`.
-    public init() {}
+    public init() {
+    }
 
     /// Check if there are no outstanding writes.
     public var isEmpty: Bool {

@@ -31,7 +31,8 @@ final class ByteBufferViewIteratorBenchmark: Benchmark {
         self.buffer.writeInteger(UInt8(ascii: "B"))
     }
 
-    func tearDown() {}
+    func tearDown() {
+    }
 
     func run() -> Int {
         var which: UInt8 = 0

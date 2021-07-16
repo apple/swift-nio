@@ -116,7 +116,8 @@ internal struct CallbackList {
 @usableFromInline
 internal struct OperationPlaceholderError: Error {
     @usableFromInline
-    internal init() {}
+    internal init() {
+    }
 }
 
 /// A promise to provide a result later.

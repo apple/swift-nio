@@ -37,7 +37,8 @@ final class LockedBox<T> {
         }
     }
 
-    struct ExpectedEmptyBox: Error {}
+    struct ExpectedEmptyBox: Error {
+    }
 
     private let condition = ConditionLock(value: 0)
     private let description: String
@@ -425,11 +426,11 @@ extension HookedSelector {
 }
 
 extension EventLoop {
-    func runSAL<T>(syscallAssertions: () throws -> Void = {},
-                   file: StaticString = #file,
-                   line: UInt = #line,
-                   _ body: @escaping () throws -> T) throws -> T
-    {
+    func runSAL<T>(syscallAssertions: () throws -> Void = {
+    },
+    file: StaticString = #file,
+    line: UInt = #line,
+    _ body: @escaping () throws -> T) throws -> T {
         let hookedSelector = ((self as! SelectableEventLoop)._selector as! HookedSelector)
         let box = LockedBox<Result<T, Error>>()
 

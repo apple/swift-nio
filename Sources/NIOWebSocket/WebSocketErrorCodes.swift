@@ -123,7 +123,8 @@ public enum WebSocketErrorCode {
     }
 }
 
-extension WebSocketErrorCode: Equatable {}
+extension WebSocketErrorCode: Equatable {
+}
 
 extension ByteBuffer {
     /// Read a websocket error code from a byte buffer.

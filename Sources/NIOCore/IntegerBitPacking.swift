@@ -15,7 +15,8 @@
 // FIXME: Duplicated in NIO.
 
 @usableFromInline
-enum _IntegerBitPacking {}
+enum _IntegerBitPacking {
+}
 
 extension _IntegerBitPacking {
     @inlinable
@@ -54,7 +55,8 @@ extension _IntegerBitPacking {
 }
 
 @usableFromInline
-enum IntegerBitPacking {}
+enum IntegerBitPacking {
+}
 
 extension IntegerBitPacking {
     @inlinable

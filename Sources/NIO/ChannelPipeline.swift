@@ -1159,7 +1159,8 @@ extension ChannelPipeline {
     static let name = "head"
     static let sharedInstance = HeadChannelHandler()
 
-    private init() {}
+    private init() {
+    }
 
     func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         context.channel._channelCore.register0(promise: promise)
@@ -1213,7 +1214,8 @@ extension CloseMode {
     static let name = "tail"
     static let sharedInstance = TailChannelHandler()
 
-    private init() {}
+    private init() {
+    }
 
     func channelRegistered(context _: ChannelHandlerContext) {
         // Discard

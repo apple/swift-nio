@@ -16,9 +16,11 @@ import NIO
 import NIOConcurrencyHelpers
 import XCTest
 
-struct NotImplementedError: Error {}
+struct NotImplementedError: Error {
+}
 
-struct InvalidTypeError: Error {}
+struct InvalidTypeError: Error {
+}
 
 /// A basic ChannelCore that expects write0 to receive a NIOAny containing an Int.
 ///

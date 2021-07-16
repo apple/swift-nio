@@ -18,7 +18,8 @@ import NIOConcurrencyHelpers
 /// Errors that may be thrown when executing work on a `NIOThreadPool`
 public enum NIOThreadPoolError {
     /// The `NIOThreadPool` was not active.
-    public struct ThreadPoolInactive: Error {}
+    public struct ThreadPoolInactive: Error {
+    }
 }
 
 /// A thread pool that should be used if some (kernel thread) blocking work
@@ -243,7 +244,8 @@ extension NIOThreadPool {
     public func syncShutdownGracefully() throws {
         let errorStorageLock = Lock()
         var errorStorage: Swift.Error?
-        let continuation = DispatchWorkItem {}
+        let continuation = DispatchWorkItem {
+        }
         shutdownGracefully { error in
             if let error = error {
                 errorStorageLock.withLock {

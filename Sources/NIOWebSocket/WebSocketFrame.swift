@@ -320,7 +320,8 @@ public struct WebSocketFrame {
     }
 }
 
-extension WebSocketFrame: Equatable {}
+extension WebSocketFrame: Equatable {
+}
 
 extension WebSocketFrame {
     fileprivate class _Storage {

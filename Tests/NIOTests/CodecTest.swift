@@ -1004,7 +1004,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             }
 
             func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
-                while case .continue = try self.decode(context: context, buffer: &buffer) {}
+                while case .continue = try self.decode(context: context, buffer: &buffer) {
+                }
                 return .needMoreData
             }
         }
@@ -1057,7 +1058,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             }
 
             func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
-                while case .continue = try self.decode(context: context, buffer: &buffer) {}
+                while case .continue = try self.decode(context: context, buffer: &buffer) {
+                }
                 return .needMoreData
             }
         }
@@ -1118,7 +1120,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         class Decoder: ByteToMessageDecoder {
             typealias InboundOut = Never
 
-            struct DecodeError: Error {}
+            struct DecodeError: Error {
+            }
 
             private var errorThrownAlready = false
 
@@ -1163,7 +1166,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         class Decoder: ByteToMessageDecoder {
             typealias InboundOut = Never
 
-            struct DecodeError: Error {}
+            struct DecodeError: Error {
+            }
 
             private var errorThrownAlready = false
             private var decodeCalls = 0
@@ -1403,7 +1407,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
     }
 
     func testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode() {
-        struct DummyError: Error {}
+        struct DummyError: Error {
+        }
         struct Decoder: ByteToMessageDecoder {
             typealias InboundOut = Never
 
@@ -1721,7 +1726,8 @@ private class PairOfBytesDecoder: ByteToMessageDecoder {
 
 public final class MessageToByteHandlerTest: XCTestCase {
     private struct ThrowingMessageToByteEncoder: MessageToByteEncoder {
-        private struct HandlerError: Error {}
+        private struct HandlerError: Error {
+        }
 
         typealias OutboundIn = Int
 

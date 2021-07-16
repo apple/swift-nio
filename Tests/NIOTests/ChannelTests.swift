@@ -2472,7 +2472,8 @@ public final class ChannelTests: XCTestCase {
             }
 
             private func veryNasty_blockUntilReadBufferIsNonEmpty(channel: Channel) throws {
-                struct ThisIsNotASocketChannelError: Error {}
+                struct ThisIsNotASocketChannelError: Error {
+                }
                 guard let channel = channel as? SocketChannel else {
                     throw ThisIsNotASocketChannelError()
                 }
@@ -2663,7 +2664,8 @@ public final class ChannelTests: XCTestCase {
 
         let counter = EventCounterHandler()
 
-        struct DummyError: Error {}
+        struct DummyError: Error {
+        }
         class MakeFirstCloseFailAndDontActuallyCloseHandler: ChannelOutboundHandler {
             typealias OutboundIn = Any
 

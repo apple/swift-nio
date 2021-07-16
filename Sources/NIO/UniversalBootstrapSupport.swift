@@ -254,7 +254,8 @@ public protocol NIOClientTLSProvider {
 }
 
 public struct NIOInsecureNoTLS<Bootstrap: NIOClientTCPBootstrapProtocol>: NIOClientTLSProvider {
-    public init() {}
+    public init() {
+    }
 
     public func enableTLS(_: Bootstrap) -> Bootstrap {
         fatalError("NIOInsecureNoTLS cannot enable TLS.")

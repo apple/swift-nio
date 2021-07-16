@@ -98,7 +98,8 @@ func main() throws {
                          regex: String,
                          runResult: RunResult) throws -> InterpretedRunResult
     {
-        struct NoOutputFound: Error {}
+        struct NoOutputFound: Error {
+        }
 
         guard case .signal(Int(SIGILL)) = runResult else {
             return .unexpectedRunResult(runResult)

@@ -20,7 +20,8 @@ private final class BlockingQueue<Element> {
     private let condition = ConditionLock(value: false)
     private var buffer = CircularBuffer<Result<Element, Error>>()
 
-    public struct TimeoutError: Error {}
+    public struct TimeoutError: Error {
+    }
 
     internal func append(_ element: Result<Element, Error>) {
         self.condition.lock()
@@ -251,7 +252,8 @@ public final class NIOHTTP1TestServer {
 // MARK: - Public API for test driver
 
 extension NIOHTTP1TestServer {
-    internal struct NonEmptyInboundBufferOnStop: Error {}
+    internal struct NonEmptyInboundBufferOnStop: Error {
+    }
 
     public func stop() throws {
         assert(!self.eventLoop.inEventLoop)

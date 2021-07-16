@@ -2584,7 +2584,8 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testByteBufferModifyIfUniquelyOwnedMayThrow() {
-        struct MyError: Error {}
+        struct MyError: Error {
+        }
 
         func doAThrow(_: inout ByteBuffer) throws {
             throw MyError()

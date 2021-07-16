@@ -455,7 +455,8 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                 self.handler = handler
             }
 
-            func addCustom(upgradeRequestHeaders _: inout HTTPHeaders) {}
+            func addCustom(upgradeRequestHeaders _: inout HTTPHeaders) {
+            }
 
             func shouldAllowUpgrade(upgradeResponse _: HTTPResponseHead) -> Bool {
                 true

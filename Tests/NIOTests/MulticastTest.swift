@@ -41,11 +41,14 @@ final class MulticastTest: XCTestCase {
         XCTAssertNoThrow(try self.group.syncShutdownGracefully())
     }
 
-    struct NoSuchInterfaceError: Error {}
+    struct NoSuchInterfaceError: Error {
+    }
 
-    struct MulticastInterfaceMismatchError: Error {}
+    struct MulticastInterfaceMismatchError: Error {
+    }
 
-    struct ReceivedDatagramError: Error {}
+    struct ReceivedDatagramError: Error {
+    }
 
     @available(*, deprecated)
     private func interfaceForAddress(address: String) throws -> NIONetworkInterface {
