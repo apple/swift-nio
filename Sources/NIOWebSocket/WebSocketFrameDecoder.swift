@@ -123,7 +123,7 @@ struct WSParser {
 
             let masked = (lengthByte & 0x80) != 0
 
-            switch (lengthByte & 0x7F, masked) {
+            switch (lengthByte & 0x7f, masked) {
             case (126, _):
                 self.state = .waitingForLengthWord(firstByte: firstByte, masked: masked)
             case (127, _):

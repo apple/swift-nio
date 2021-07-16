@@ -31,7 +31,7 @@ func run(identifier: String) {
             view.replaceSubrange(0..<4, with: [0x0, 0x1, 0x2, 0x3])
 
             var modified = ByteBuffer(view)
-            modified.setBytes([0xA, 0xB, 0xC], at: modified.readerIndex)
+            modified.setBytes([0xa, 0xb, 0xc], at: modified.readerIndex)
             count &+= modified.readableBytes
         }
 

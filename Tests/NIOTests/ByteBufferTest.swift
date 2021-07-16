@@ -44,7 +44,7 @@ class ByteBufferTest: XCTestCase {
         super.setUp()
 
         self.buf = allocator.buffer(capacity: 1024)
-        self.buf.writeBytes(Array(repeating: UInt8(0xFF), count: 1024))
+        self.buf.writeBytes(Array(repeating: UInt8(0xff), count: 1024))
         self.buf = self.buf.getSlice(at: 256, length: 512)
         self.buf.clear()
     }
@@ -1018,11 +1018,11 @@ class ByteBufferTest: XCTestCase {
 
         let capacity = self.buf.capacity
         for i in 0..<self.buf.capacity {
-            self.buf.setBytes([0xFF], at: i)
+            self.buf.setBytes([0xff], at: i)
         }
         self.buf.moveWriterIndex(to: self.buf.capacity)
         XCTAssertEqual(capacity, buf.capacity, "buffer capacity needlessly changed from \(capacity) to \(buf.capacity)")
-        XCTAssertEqual(Array(repeating: 0xFF, count: capacity), self.buf.getBytes(at: 0, length: capacity))
+        XCTAssertEqual(Array(repeating: 0xff, count: capacity), self.buf.getBytes(at: 0, length: capacity))
     }
 
     func testGetBytesTooLong() throws {
@@ -1513,7 +1513,7 @@ class ByteBufferTest: XCTestCase {
             public subscript(_: Index) -> Element {
                 /* this is wrong but we need to check that we don't access this */
                 XCTFail("shouldn't have been called")
-                return 0xFF
+                return 0xff
             }
 
             public var startIndex: Index {
@@ -1596,10 +1596,10 @@ class ByteBufferTest: XCTestCase {
         self.buf.clear()
         self.buf.writeInteger(-1, endianness: .big, as: Int64.self)
         XCTAssertEqual(-1, self.buf.readInteger(endianness: .big, as: Int64.self))
-        self.buf.setInteger(0xDEAD_BEEF, at: 0, endianness: .little, as: UInt64.self)
+        self.buf.setInteger(0xdead_beef, at: 0, endianness: .little, as: UInt64.self)
         self.buf.moveWriterIndex(to: 8)
         self.buf.moveReaderIndex(to: 0)
-        XCTAssertEqual(0xDEAD_BEEF, self.buf.getInteger(at: 0, endianness: .little, as: UInt64.self))
+        XCTAssertEqual(0xdead_beef, self.buf.getInteger(at: 0, endianness: .little, as: UInt64.self))
     }
 
     func testByteBufferFitsInACoupleOfEnums() throws {
@@ -1637,7 +1637,7 @@ class ByteBufferTest: XCTestCase {
 
     func testLargeSliceBegin16MBIsOkayAndDoesNotCopy() throws {
         var fourMBBuf = self.allocator.buffer(capacity: 4 * 1024 * 1024)
-        fourMBBuf.writeBytes([UInt8](repeating: 0xFF, count: fourMBBuf.capacity))
+        fourMBBuf.writeBytes([UInt8](repeating: 0xff, count: fourMBBuf.capacity))
         let totalBufferSize = 5 * fourMBBuf.readableBytes
         XCTAssertEqual(4 * 1024 * 1024, fourMBBuf.readableBytes)
         var buf = self.allocator.buffer(capacity: totalBufferSize)
@@ -1649,10 +1649,10 @@ class ByteBufferTest: XCTestCase {
         let offset = Int(_UInt24.max)
 
         // mark some special bytes
-        buf.setInteger(0xAA, at: 0, as: UInt8.self)
-        buf.setInteger(0xBB, at: offset - 1, as: UInt8.self)
-        buf.setInteger(0xCC, at: offset, as: UInt8.self)
-        buf.setInteger(0xDD, at: buf.writerIndex - 1, as: UInt8.self)
+        buf.setInteger(0xaa, at: 0, as: UInt8.self)
+        buf.setInteger(0xbb, at: offset - 1, as: UInt8.self)
+        buf.setInteger(0xcc, at: offset, as: UInt8.self)
+        buf.setInteger(0xdd, at: buf.writerIndex - 1, as: UInt8.self)
 
         XCTAssertEqual(totalBufferSize, buf.readableBytes)
 
@@ -1668,13 +1668,13 @@ class ByteBufferTest: XCTestCase {
         }
         XCTAssertEqual(oldPtrVal, newPtrVal)
 
-        XCTAssertEqual(0xCC, slice.getInteger(at: 0, as: UInt8.self))
-        XCTAssertEqual(0xDD, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
+        XCTAssertEqual(0xcc, slice.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual(0xdd, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
     }
 
     func testLargeSliceBeginMoreThan16MBIsOkay() throws {
         var fourMBBuf = self.allocator.buffer(capacity: 4 * 1024 * 1024)
-        fourMBBuf.writeBytes([UInt8](repeating: 0xFF, count: fourMBBuf.capacity))
+        fourMBBuf.writeBytes([UInt8](repeating: 0xff, count: fourMBBuf.capacity))
         let totalBufferSize = 5 * fourMBBuf.readableBytes + 1
         XCTAssertEqual(4 * 1024 * 1024, fourMBBuf.readableBytes)
         var buf = self.allocator.buffer(capacity: totalBufferSize)
@@ -1686,10 +1686,10 @@ class ByteBufferTest: XCTestCase {
         let offset = Int(_UInt24.max) + 1
 
         // mark some special bytes
-        buf.setInteger(0xAA, at: 0, as: UInt8.self)
-        buf.setInteger(0xBB, at: offset - 1, as: UInt8.self)
-        buf.setInteger(0xCC, at: offset, as: UInt8.self)
-        buf.writeInteger(0xDD, as: UInt8.self) // write extra byte so the slice is the same length as above
+        buf.setInteger(0xaa, at: 0, as: UInt8.self)
+        buf.setInteger(0xbb, at: offset - 1, as: UInt8.self)
+        buf.setInteger(0xcc, at: offset, as: UInt8.self)
+        buf.writeInteger(0xdd, as: UInt8.self) // write extra byte so the slice is the same length as above
         XCTAssertEqual(totalBufferSize, buf.readableBytes)
 
         let expectedReadableBytes = totalBufferSize - offset
@@ -1699,8 +1699,8 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expectedReadableBytes, slice.writerIndex)
         XCTAssertEqual(Int(UInt32(expectedReadableBytes).nextPowerOf2()), slice.capacity)
 
-        XCTAssertEqual(0xCC, slice.getInteger(at: 0, as: UInt8.self))
-        XCTAssertEqual(0xDD, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
+        XCTAssertEqual(0xcc, slice.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual(0xdd, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
     }
 
     func testSliceOnSliceAfterHitting16MBMark() {
@@ -1741,9 +1741,9 @@ class ByteBufferTest: XCTestCase {
 
     func testDiscardReadBytesOnConsumedBuffer() {
         var buffer = self.allocator.buffer(capacity: 8)
-        buffer.writeInteger(0xAA, as: UInt8.self)
+        buffer.writeInteger(0xaa, as: UInt8.self)
         XCTAssertEqual(1, buffer.readableBytes)
-        XCTAssertEqual(0xAA, buffer.readInteger(as: UInt8.self))
+        XCTAssertEqual(0xaa, buffer.readInteger(as: UInt8.self))
         XCTAssertEqual(0, buffer.readableBytes)
 
         let buffer2 = buffer
@@ -1754,7 +1754,7 @@ class ByteBufferTest: XCTestCase {
         // So we should still be able to also read the old data.
         buffer.moveWriterIndex(to: 1)
         buffer.moveReaderIndex(to: 0)
-        XCTAssertEqual(0xAA, buffer.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual(0xaa, buffer.getInteger(at: 0, as: UInt8.self))
         XCTAssertEqual(0, buffer2.readableBytes)
     }
 
@@ -1836,35 +1836,35 @@ class ByteBufferTest: XCTestCase {
     func testBufferViewCoWs() throws {
         self.buf.writeBytes([0x0, 0x1, 0x2])
         var view = self.buf.readableBytesView
-        view.replaceSubrange(view.indices, with: [0xA, 0xB, 0xC])
+        view.replaceSubrange(view.indices, with: [0xa, 0xb, 0xc])
 
         XCTAssertEqual(self.buf.readBytes(length: 3), [0x0, 0x1, 0x2])
-        XCTAssertTrue(view.elementsEqual([0xA, 0xB, 0xC]))
+        XCTAssertTrue(view.elementsEqual([0xa, 0xb, 0xc]))
 
         self.buf.writeBytes([0x0, 0x1, 0x2])
         view = self.buf.readableBytesView
-        view.replaceSubrange(view.indices, with: [0xA, 0xB])
+        view.replaceSubrange(view.indices, with: [0xa, 0xb])
 
         XCTAssertEqual(self.buf.readBytes(length: 3), [0x0, 0x1, 0x2])
-        XCTAssertTrue(view.elementsEqual([0xA, 0xB]))
+        XCTAssertTrue(view.elementsEqual([0xa, 0xb]))
 
         self.buf.writeBytes([0x0, 0x1, 0x2])
         view = self.buf.readableBytesView
-        view.replaceSubrange(view.indices, with: [0xA, 0xB, 0xC, 0xD])
+        view.replaceSubrange(view.indices, with: [0xa, 0xb, 0xc, 0xd])
 
         XCTAssertEqual(self.buf.readBytes(length: 3), [0x0, 0x1, 0x2])
-        XCTAssertTrue(view.elementsEqual([0xA, 0xB, 0xC, 0xD]))
+        XCTAssertTrue(view.elementsEqual([0xa, 0xb, 0xc, 0xd]))
     }
 
     func testBufferViewMutationViaSubscriptIndex() throws {
         self.buf.writeBytes([0x0, 0x1, 0x2])
         var view = self.buf.readableBytesView
 
-        view[0] = 0xA
-        view[1] = 0xB
-        view[2] = 0xC
+        view[0] = 0xa
+        view[1] = 0xb
+        view[2] = 0xc
 
-        XCTAssertTrue(view.elementsEqual([0xA, 0xB, 0xC]))
+        XCTAssertTrue(view.elementsEqual([0xa, 0xb, 0xc]))
     }
 
     func testBufferViewReplaceBeyondEndOfRange() throws {
@@ -1916,24 +1916,24 @@ class ByteBufferTest: XCTestCase {
         var view = ByteBufferView(self.buf)
         XCTAssertEqual(view.count, self.buf.readableBytes)
 
-        view.replaceSubrange(view.indices.suffix(3), with: [0xD, 0xE, 0xF])
+        view.replaceSubrange(view.indices.suffix(3), with: [0xd, 0xe, 0xf])
 
         var modifiedBuf = ByteBuffer(view)
         XCTAssertEqual(self.buf.readerIndex, modifiedBuf.readerIndex)
         XCTAssertEqual(self.buf.writerIndex, modifiedBuf.writerIndex)
-        XCTAssertEqual([0x0, 0x1, 0xD, 0xE, 0xF], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
+        XCTAssertEqual([0x0, 0x1, 0xd, 0xe, 0xf], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
     }
 
     func testBufferViewReplaceSubrangeWithFewerBytes() throws {
         self.buf.writeBytes([0x0, 0x1, 0x2, 0x3, 0x4])
 
         var view = ByteBufferView(self.buf)
-        view.replaceSubrange(view.indices.suffix(3), with: [0xD])
+        view.replaceSubrange(view.indices.suffix(3), with: [0xd])
 
         var modifiedBuf = ByteBuffer(view)
         XCTAssertEqual(self.buf.readerIndex, modifiedBuf.readerIndex)
         XCTAssertEqual(self.buf.writerIndex - 2, modifiedBuf.writerIndex)
-        XCTAssertEqual([0x0, 0x1, 0xD], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
+        XCTAssertEqual([0x0, 0x1, 0xd], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
     }
 
     func testBufferViewReplaceSubrangeWithMoreBytes() throws {
@@ -1942,13 +1942,13 @@ class ByteBufferTest: XCTestCase {
         var view = ByteBufferView(self.buf)
         XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0x3]))
 
-        view.replaceSubrange(view.indices.suffix(1), with: [0xA, 0xB])
-        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0xA, 0xB]))
+        view.replaceSubrange(view.indices.suffix(1), with: [0xa, 0xb])
+        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0xa, 0xb]))
 
         var modifiedBuf = ByteBuffer(view)
         XCTAssertEqual(self.buf.readerIndex, modifiedBuf.readerIndex)
         XCTAssertEqual(self.buf.writerIndex + 1, modifiedBuf.writerIndex)
-        XCTAssertEqual([0x0, 0x1, 0x2, 0xA, 0xB], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
+        XCTAssertEqual([0x0, 0x1, 0x2, 0xa, 0xb], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
     }
 
     func testBufferViewEmpty() throws {
@@ -1977,30 +1977,30 @@ class ByteBufferTest: XCTestCase {
 
     func testBufferViewFirstIndex() {
         self.buf.clear()
-        self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
+        self.buf.writeBytes(Array(repeating: UInt8(0x4e), count: 1024))
         self.buf.setBytes([UInt8(0x59)], at: 1000)
         self.buf.setBytes([UInt8(0x59)], at: 1001)
         self.buf.setBytes([UInt8(0x59)], at: 1022)
         self.buf.setBytes([UInt8(0x59)], at: 3)
-        self.buf.setBytes([UInt8(0x3F)], at: 1023)
-        self.buf.setBytes([UInt8(0x3F)], at: 2)
+        self.buf.setBytes([UInt8(0x3f)], at: 1023)
+        self.buf.setBytes([UInt8(0x3f)], at: 2)
         let view = self.buf.viewBytes(at: 5, length: 1010)
         XCTAssertEqual(1000, view?.firstIndex(of: UInt8(0x59)))
-        XCTAssertNil(view?.firstIndex(of: UInt8(0x3F)))
+        XCTAssertNil(view?.firstIndex(of: UInt8(0x3f)))
     }
 
     func testBufferViewLastIndex() {
         self.buf.clear()
-        self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
+        self.buf.writeBytes(Array(repeating: UInt8(0x4e), count: 1024))
         self.buf.setBytes([UInt8(0x59)], at: 1000)
         self.buf.setBytes([UInt8(0x59)], at: 1001)
         self.buf.setBytes([UInt8(0x59)], at: 1022)
         self.buf.setBytes([UInt8(0x59)], at: 3)
-        self.buf.setBytes([UInt8(0x3F)], at: 1023)
-        self.buf.setBytes([UInt8(0x3F)], at: 2)
+        self.buf.setBytes([UInt8(0x3f)], at: 1023)
+        self.buf.setBytes([UInt8(0x3f)], at: 2)
         let view = self.buf.viewBytes(at: 5, length: 1010)
         XCTAssertEqual(1001, view?.lastIndex(of: UInt8(0x59)))
-        XCTAssertNil(view?.lastIndex(of: UInt8(0x3F)))
+        XCTAssertNil(view?.lastIndex(of: UInt8(0x3f)))
     }
 
     func testByteBuffersCanBeInitializedFromByteBufferViews() throws {
@@ -2205,7 +2205,7 @@ class ByteBufferTest: XCTestCase {
 
     func testPossiblyLazilyBridgedString() {
         // won't hit the String writing fast path
-        let utf16Bytes = Data([0xFE, 0xFF, 0x00, 0x61, 0x00, 0x62, 0x00, 0x63, 0x00, 0xE4, 0x00, 0xE4, 0x00, 0xE4, 0x00, 0x0A])
+        let utf16Bytes = Data([0xfe, 0xff, 0x00, 0x61, 0x00, 0x62, 0x00, 0x63, 0x00, 0xe4, 0x00, 0xe4, 0x00, 0xe4, 0x00, 0x0a])
         let slowString = String(data: utf16Bytes, encoding: .utf16)!
 
         self.buf.clear()
@@ -2455,8 +2455,8 @@ class ByteBufferTest: XCTestCase {
         let byteCount = 200_000 // this needs to be large because Data might also decide to copy.
         self.buf.clear()
         self.buf.writeString(String(repeating: "x", count: byteCount))
-        var byteBufferPointerValue: UInt = 0xBAD
-        var dataPointerValue: UInt = 0xDEAD
+        var byteBufferPointerValue: UInt = 0xbad
+        var dataPointerValue: UInt = 0xdead
         self.buf.withUnsafeReadableBytes { ptr in
             byteBufferPointerValue = UInt(bitPattern: ptr.baseAddress)
         }
@@ -2475,8 +2475,8 @@ class ByteBufferTest: XCTestCase {
         let byteCount = 200_000 // this needs to be large because Data might also decide to copy.
         self.buf.clear()
         self.buf.writeString(String(repeating: "x", count: byteCount))
-        var byteBufferPointerValue: UInt = 0xBAD
-        var dataPointerValue: UInt = 0xDEAD
+        var byteBufferPointerValue: UInt = 0xbad
+        var dataPointerValue: UInt = 0xdead
         self.buf.withUnsafeReadableBytes { ptr in
             byteBufferPointerValue = UInt(bitPattern: ptr.baseAddress)
         }
@@ -2495,8 +2495,8 @@ class ByteBufferTest: XCTestCase {
         let byteCount = 500_000 // this needs to be larger than ByteBuffer's heuristic's threshold.
         self.buf.clear()
         self.buf.writeString(String(repeating: "x", count: byteCount))
-        var byteBufferPointerValue: UInt = 0xBAD
-        var dataPointerValue: UInt = 0xDEAD
+        var byteBufferPointerValue: UInt = 0xbad
+        var dataPointerValue: UInt = 0xdead
         self.buf.withUnsafeReadableBytes { ptr in
             byteBufferPointerValue = UInt(bitPattern: ptr.baseAddress)
         }
@@ -2515,8 +2515,8 @@ class ByteBufferTest: XCTestCase {
         let byteCount = 200_000 // above Data's 'do not copy' but less than ByteBuffer's 'do not copy' threshold.
         self.buf.clear()
         self.buf.writeString(String(repeating: "x", count: byteCount))
-        var byteBufferPointerValue: UInt = 0xBAD
-        var dataPointerValue: UInt = 0xDEAD
+        var byteBufferPointerValue: UInt = 0xbad
+        var dataPointerValue: UInt = 0xdead
         self.buf.withUnsafeReadableBytes { ptr in
             byteBufferPointerValue = UInt(bitPattern: ptr.baseAddress)
         }

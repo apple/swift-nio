@@ -52,7 +52,7 @@ extension Sequence where Self.Element == UInt8 {
 
                 for idx in 0..<lhsBuffer.count {
                     // let's hope this gets vectorised ;)
-                    if lhsBuffer[idx] & 0xDF != rhsBuffer[idx] & 0xDF {
+                    if lhsBuffer[idx] & 0xdf != rhsBuffer[idx] & 0xdf {
                         return false
                     }
                 }
@@ -63,7 +63,7 @@ extension Sequence where Self.Element == UInt8 {
         if let maybeResult = maybeMaybeResult, let result = maybeResult {
             return result
         } else {
-            return elementsEqual(to, by: { ($0 & 0xDF) == ($1 & 0xDF) })
+            return elementsEqual(to, by: { ($0 & 0xdf) == ($1 & 0xdf) })
         }
     }
 }

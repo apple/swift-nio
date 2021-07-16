@@ -792,7 +792,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 XCTAssertLessThanOrEqual(self.callsToDecodeLast, 2)
                 context.fireChannelRead(wrapInboundOut(String(decoding: buffer.readBytes(length: 4) ??
                         [ /* "no bytes" */
-                            0x6E, 0x6F, 0x20,
+                            0x6e, 0x6f, 0x20,
                             0x62, 0x79, 0x74, 0x65, 0x73
                         ],
                     as: Unicode.UTF8.self) + "#\(self.callsToDecodeLast)"))

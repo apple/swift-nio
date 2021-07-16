@@ -47,7 +47,7 @@ private final class PingHandler: ChannelInboundHandler {
     private let numberOfRequests: Int
     private var remainingNumberOfRequests: Int
     private let allDone: EventLoopPromise<Void>
-    public static let pingCode: UInt8 = 0xBE
+    public static let pingCode: UInt8 = 0xbe
 
     public init(numberOfRequests: Int, eventLoop: EventLoop) {
         self.numberOfRequests = numberOfRequests
@@ -94,7 +94,7 @@ private final class PongHandler: ChannelInboundHandler {
     typealias OutboundOut = ByteBuffer
 
     private var pongBuffer: ByteBuffer!
-    public static let pongCode: UInt8 = 0xEF
+    public static let pongCode: UInt8 = 0xef
 
     public func handlerAdded(context: ChannelHandlerContext) {
         self.pongBuffer = context.channel.allocator.buffer(capacity: 1)

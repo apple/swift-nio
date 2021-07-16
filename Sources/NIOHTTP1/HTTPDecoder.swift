@@ -45,7 +45,7 @@ private class BetterHTTPParser {
     private var firstNonDiscardableOffset: Int?
     private var currentFieldByteLength = 0
     private var httpParserOffset = 0
-    private var rawBytesView: UnsafeRawBufferPointer = .init(start: UnsafeRawPointer(bitPattern: 0xCAFBABE), count: 0)
+    private var rawBytesView: UnsafeRawBufferPointer = .init(start: UnsafeRawPointer(bitPattern: 0xcafbabe), count: 0)
     private var httpErrno: http_errno?
     private var richerError: Error?
     private let kind: HTTPDecoderKind
@@ -332,7 +332,7 @@ private class BetterHTTPParser {
         self.withExclusiveHTTPParser { parserPtr in
             let selfRef = parserPtr.pointee.data
             Unmanaged<BetterHTTPParser>.fromOpaque(selfRef!).release()
-            parserPtr.pointee.data = UnsafeMutableRawPointer(bitPattern: 0xDEDBEEF)
+            parserPtr.pointee.data = UnsafeMutableRawPointer(bitPattern: 0xdedbeef)
         }
     }
 
@@ -355,7 +355,7 @@ private class BetterHTTPParser {
             if let bytes = bytes {
                 self.rawBytesView = bytes
                 defer {
-                    self.rawBytesView = .init(start: UnsafeRawPointer(bitPattern: 0xDAFBABE), count: 0)
+                    self.rawBytesView = .init(start: UnsafeRawPointer(bitPattern: 0xdafbabe), count: 0)
                 }
                 parserResult = c_nio_http_parser_execute_swift(parserPtr,
                                                                &self.settings,

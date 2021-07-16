@@ -106,7 +106,7 @@
             internal static let POLLERR: CUnsignedInt = numericCast(CNIOLinux.POLLERR)
             internal static let POLLRDHUP: CUnsignedInt = CNIOLinux_POLLRDHUP() // numericCast(CNIOLinux.POLLRDHUP)
             internal static let POLLHUP: CUnsignedInt = numericCast(CNIOLinux.POLLHUP)
-            internal static let POLLCANCEL: CUnsignedInt = 0xF000_0000 // Poll cancelled, need to reregister for singleshot polls
+            internal static let POLLCANCEL: CUnsignedInt = 0xf000_0000 // Poll cancelled, need to reregister for singleshot polls
 
             private var ring = io_uring()
             private let ringEntries: CUnsignedInt = 8192

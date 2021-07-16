@@ -115,7 +115,7 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
     public func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
         let buffer = unwrapInboundIn(data)
         receiveds.append(buffer)
-        if let finalBytes = buffer.getBytes(at: buffer.writerIndex - 4, length: 4), finalBytes == [0x0D, 0x0A, 0x0D, 0x0A] {
+        if let finalBytes = buffer.getBytes(at: buffer.writerIndex - 4, length: 4), finalBytes == [0x0d, 0x0a, 0x0d, 0x0a] {
             self.allDoneBlock(self.receiveds)
         }
     }

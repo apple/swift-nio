@@ -397,7 +397,7 @@ internal final class SelectableEventLoop: EventLoop {
         // 1. 0xbf15ca5d is randomly picked such that it fits into both 32 and 64 bit address spaces
         // 2. XOR with 0xbf15ca5d so that Memory Graph Debugger and other memory debugging tools
         // won't see it as a reference.
-        UInt(bitPattern: ObjectIdentifier(future)) ^ 0xBF15_CA5D
+        UInt(bitPattern: ObjectIdentifier(future)) ^ 0xbf15_ca5d
     }
 
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.

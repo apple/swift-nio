@@ -51,10 +51,10 @@ class SystemTest: XCTestCase {
         private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
                                                       0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
                                                       0x07, 0x00, 0x00, 0x00, // IP_RECVDSTADDR
-                                                      0x7F, 0x00, 0x00, 0x01, // 127.0.0.1
-                                                      0x0D, 0x00, 0x00, 0x00, // Length 13 including header
+                                                      0x7f, 0x00, 0x00, 0x01, // 127.0.0.1
+                                                      0x0d, 0x00, 0x00, 0x00, // Length 13 including header
                                                       0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
-                                                      0x1B, 0x00, 0x00, 0x00, // IP_RECVTOS
+                                                      0x1b, 0x00, 0x00, 0x00, // IP_RECVTOS
                                                       0x01, 0x00, 0x00, 0x00] // ECT-1 (1 byte)
         private static let cmsghdr_secondStartPosition = 16
         private static let cmsghdr_firstDataStart = 12
@@ -66,8 +66,8 @@ class SystemTest: XCTestCase {
         private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
                                                       0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
                                                       0x08, 0x00, 0x00, 0x00, // IP_PKTINFO
-                                                      0x7F, 0x00, 0x00, 0x01, // 127.0.0.1
-                                                      0x0D, 0x00, 0x00, 0x00, // Length 13 including header
+                                                      0x7f, 0x00, 0x00, 0x01, // 127.0.0.1
+                                                      0x0d, 0x00, 0x00, 0x00, // Length 13 including header
                                                       0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
                                                       0x01, 0x00, 0x00, 0x00, // IP_TOS
                                                       0x01, 0x00, 0x00, 0x00] // ECT-1 (1 byte)
@@ -80,10 +80,10 @@ class SystemTest: XCTestCase {
     #elseif os(Linux) || os(Android)
         // Example twin data options captured on Linux
         private static let cmsghdrExample: [UInt8] = [
-            0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 28 including header.
+            0x1c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 28 including header.
             0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_PKTINFO
-            0x01, 0x00, 0x00, 0x00, 0x7F, 0x00, 0x00, 0x01, // interface number, 127.0.0.1 (local)
-            0x7F, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // 127.0.0.1 (destination), 4 bytes to align length
+            0x01, 0x00, 0x00, 0x00, 0x7f, 0x00, 0x00, 0x01, // interface number, 127.0.0.1 (local)
+            0x7f, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // 127.0.0.1 (destination), 4 bytes to align length
             0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 17
             0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_TOS
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 // ECT-1 (1 byte)

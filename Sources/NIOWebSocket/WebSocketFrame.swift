@@ -56,10 +56,10 @@ public struct WebSocketMaskingKey {
     ///         masking key.
     @usableFromInline
     internal init(networkRepresentation integer: UInt32) {
-        self._key = (UInt8((integer & 0xFF00_0000) >> 24),
-                     UInt8((integer & 0x00FF_0000) >> 16),
-                     UInt8((integer & 0x0000_FF00) >> 8),
-                     UInt8(integer & 0x0000_00FF))
+        self._key = (UInt8((integer & 0xff00_0000) >> 24),
+                     UInt8((integer & 0x00ff_0000) >> 16),
+                     UInt8((integer & 0x0000_ff00) >> 8),
+                     UInt8(integer & 0x0000_00ff))
     }
 }
 
@@ -204,10 +204,10 @@ public struct WebSocketFrame {
         get {
             // this is a public initialiser which only fails if the opcode is invalid. But all opcodes in 0...0xF
             // space are valid so this can never fail.
-            WebSocketOpcode(encodedWebSocketOpcode: self.firstByte & 0x0F)!
+            WebSocketOpcode(encodedWebSocketOpcode: self.firstByte & 0x0f)!
         }
         set {
-            self.firstByte = (self.firstByte & 0xF0) + UInt8(webSocketOpcode: newValue)
+            self.firstByte = (self.firstByte & 0xf0) + UInt8(webSocketOpcode: newValue)
         }
     }
 

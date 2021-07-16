@@ -21,7 +21,7 @@ public struct WebSocketOpcode {
     public static let binary = WebSocketOpcode(rawValue: 0x2)
     public static let connectionClose = WebSocketOpcode(rawValue: 0x8)
     public static let ping = WebSocketOpcode(rawValue: 0x9)
-    public static let pong = WebSocketOpcode(rawValue: 0xA)
+    public static let pong = WebSocketOpcode(rawValue: 0xa)
 
     /// Create an opcode from the encoded representation.
     ///

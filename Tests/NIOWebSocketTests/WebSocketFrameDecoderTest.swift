@@ -245,14 +245,14 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xfe, 0x40, 0x01])
 
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
             XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xf1], try self.decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsFragmentedControlFrames() throws {
@@ -267,7 +267,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xea], try self.decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsMultibyteControlFrameLengths() throws {
@@ -275,14 +275,14 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
-        self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
+        self.buffer.writeBytes([0x89, 0x7e, 0x00, 0x7e])
 
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
             XCTAssertEqual(.multiByteControlFrameLength, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xea], try self.decoderChannel.readAllOutboundBytes()))
     }
 
     func testIgnoresFurtherDataAfterRejectedFrame() throws {
@@ -299,11 +299,11 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xea], try self.decoderChannel.readAllOutboundBytes()))
 
         // Now write another broken frame, this time an overlong frame.
         self.buffer.clear()
-        let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
+        let wrongFrame: [UInt8] = [0x81, 0xfe, 0x40, 0x01]
         buffer.writeBytes(wrongFrame)
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
             if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
@@ -355,7 +355,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xfe, 0x40, 0x01])
 
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
             XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
@@ -389,7 +389,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
-        self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
+        self.buffer.writeBytes([0x89, 0x7e, 0x00, 0x7e])
 
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
             XCTAssertEqual(.multiByteControlFrameLength, error as? NIOWebSocketError)
@@ -417,7 +417,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
 
         // Now write another broken frame, this time an overlong frame.
         self.buffer.clear()
-        let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
+        let wrongFrame: [UInt8] = [0x81, 0xfe, 0x40, 0x01]
         buffer.writeBytes(wrongFrame)
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
             if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
@@ -442,14 +442,14 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xfe, 0x40, 0x01])
 
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
             XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xf1], try self.decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsFragmentedControlFramesWithSeparateErrorHandling() throws {
@@ -467,7 +467,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xea], try self.decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsMultibyteControlFrameLengthsWithSeparateErrorHandling() throws {
@@ -478,14 +478,14 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
-        self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
+        self.buffer.writeBytes([0x89, 0x7e, 0x00, 0x7e])
 
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
             XCTAssertEqual(.multiByteControlFrameLength, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual(try self.decoderChannel.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xEA]))
+        XCTAssertNoThrow(XCTAssertEqual(try self.decoderChannel.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xea]))
     }
 
     func testIgnoresFurtherDataAfterRejectedFrameWithSeparateErrorHandling() {
@@ -505,11 +505,11 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual(try self.decoderChannel.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xEA]))
+        XCTAssertNoThrow(XCTAssertEqual(try self.decoderChannel.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xea]))
 
         // Now write another broken frame, this time an overlong frame.
         self.buffer.clear()
-        let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
+        let wrongFrame: [UInt8] = [0x81, 0xfe, 0x40, 0x01]
         buffer.writeBytes(wrongFrame)
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
             if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
@@ -537,7 +537,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xfe, 0x40, 0x01])
 
         struct Dummy: Error {
         }
@@ -552,6 +552,6 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xf1], try self.decoderChannel.readAllOutboundBytes()))
     }
 }

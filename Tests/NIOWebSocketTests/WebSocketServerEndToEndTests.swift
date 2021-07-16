@@ -443,7 +443,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
 
         // Send a fake frame header that claims this is a ping frame with 126 bytes of data.
         var data = client.allocator.buffer(capacity: 12)
-        data.writeBytes([0x89, 0x7E, 0x00, 0x7E])
+        data.writeBytes([0x89, 0x7e, 0x00, 0x7e])
         XCTAssertNoThrow(try client.writeAndFlush(data).wait())
 
         XCTAssertThrowsError(try interactInMemory(client, server, eventLoop: loop)) { error in
@@ -454,7 +454,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
         XCTAssertEqual(recorder.errors.first as? NIOWebSocketError, .some(.multiByteControlFrameLength))
 
         // The client should have received a close frame, if we'd continued interacting.
-        XCTAssertNoThrow(XCTAssertEqual(try server.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xEA]))
+        XCTAssertNoThrow(XCTAssertEqual(try server.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xea]))
     }
 
     func testNoAutomaticErrorHandling() throws {
@@ -482,7 +482,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
 
         // Send a fake frame header that claims this is a ping frame with 126 bytes of data.
         var data = client.allocator.buffer(capacity: 12)
-        data.writeBytes([0x89, 0x7E, 0x00, 0x7E])
+        data.writeBytes([0x89, 0x7e, 0x00, 0x7e])
         XCTAssertNoThrow(try client.writeAndFlush(data).wait())
 
         XCTAssertThrowsError(try interactInMemory(client, server, eventLoop: loop)) { error in

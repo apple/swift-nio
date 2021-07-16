@@ -211,7 +211,7 @@ public final class ChannelTests: XCTestCase {
             var iovecs: [IOVector] = Array(repeating: iovec(), count: Socket.writevLimitIOVectors + 1)
             var managed: [Unmanaged<AnyObject>] = Array(repeating: Unmanaged.passUnretained(o), count: Socket.writevLimitIOVectors + 1)
             /* put a canary value at the end */
-            iovecs[iovecs.count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)!, iov_len: 0xDEADBEE)
+            iovecs[iovecs.count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!, iov_len: 0xdeadbee)
             try iovecs.withUnsafeMutableBufferPointer { iovecs in
                 try managed.withUnsafeMutableBufferPointer { managed in
                     let pwm = NIO.PendingStreamWritesManager(iovecs: iovecs, storageRefs: managed)
@@ -228,8 +228,8 @@ public final class ChannelTests: XCTestCase {
             }
             /* assert that the canary values are still okay, we should definitely have never written those */
             XCTAssertEqual(managed.last!.toOpaque(), Unmanaged.passUnretained(o).toOpaque())
-            XCTAssertEqual(0xDEADBEE, Int(bitPattern: iovecs.last!.iov_base))
-            XCTAssertEqual(0xDEADBEE, iovecs.last!.iov_len)
+            XCTAssertEqual(0xdeadbee, Int(bitPattern: iovecs.last!.iov_base))
+            XCTAssertEqual(0xdeadbee, iovecs.last!.iov_len)
         }
     }
 
@@ -510,7 +510,7 @@ public final class ChannelTests: XCTestCase {
         try self.withPendingStreamWritesManager { pwm in
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */ )
             buffer.clear()
-            buffer.writeBytes([UInt8](repeating: 0xFF, count: numberOfBytes))
+            buffer.writeBytes([UInt8](repeating: 0xff, count: numberOfBytes))
             let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             pwm.markFlushCheckpoint()
@@ -548,7 +548,7 @@ public final class ChannelTests: XCTestCase {
         try self.withPendingStreamWritesManager { pwm in
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */ )
             buffer.clear()
-            buffer.writeBytes([0xFF] as [UInt8])
+            buffer.writeBytes([0xff] as [UInt8])
             let ps: [EventLoopPromise<Void>] = (0..<numberOfBytes).map { (_: Int) in
                 let p = el.makePromise(of: Void.self)
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
@@ -603,7 +603,7 @@ public final class ChannelTests: XCTestCase {
         try self.withPendingStreamWritesManager { pwm in
             let numberOfWrites = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */ )
             buffer.clear()
-            buffer.writeBytes([UInt8](repeating: 0xFF, count: 1))
+            buffer.writeBytes([UInt8](repeating: 0xff, count: 1))
             let handle = NIOFileHandle(descriptor: -1)
             defer {
                 /* fake file handle, so don't actually close */
@@ -666,8 +666,8 @@ public final class ChannelTests: XCTestCase {
     /// Test that with a few massive buffers, we don't offer more than we should to `writev` if the individual chunks fit.
     func testPendingWritesNoMoreThanWritevLimitIsWritten() throws {
         let el = EmbeddedEventLoop()
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
-                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
+        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
         /* each buffer is half the writev limit */
@@ -702,8 +702,8 @@ public final class ChannelTests: XCTestCase {
         }
 
         let el = EmbeddedEventLoop()
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
-                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
+        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
 
@@ -2017,7 +2017,7 @@ public final class ChannelTests: XCTestCase {
 
         withChannel(skipStream: true) { channel in
             checkThatItThrowsInappropriateOperationForState {
-                XCTAssertEqual(0, channel.localAddress?.port ?? 0xFFFF)
+                XCTAssertEqual(0, channel.localAddress?.port ?? 0xffff)
                 XCTAssertNil(channel.remoteAddress)
                 try channel.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)).wait()
             }
@@ -2040,7 +2040,7 @@ public final class ChannelTests: XCTestCase {
                     // this is a copy of the exact error that'd come out of the real Socket.read
                     throw IOError(errnoCode: ECONNRESET, reason: "read(descriptor:pointer:size:)")
                 } else {
-                    pointer[0] = 0xFF
+                    pointer[0] = 0xff
                     return .processed(1)
                 }
             }
@@ -2073,7 +2073,7 @@ public final class ChannelTests: XCTestCase {
                 self.state = .read
                 var buffer = unwrapInboundIn(data)
                 XCTAssertEqual(1, buffer.readableBytes)
-                XCTAssertEqual([0xFF], buffer.readBytes(length: 1)!)
+                XCTAssertEqual([0xff], buffer.readBytes(length: 1)!)
             }
 
             func channelReadComplete(context _: ChannelHandlerContext) {

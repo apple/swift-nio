@@ -32,7 +32,6 @@
 --enable redundantParens
 --enable redundantPattern
 --enable redundantRawValues
---enable redundantReturn
 --enable redundantSelf
 --enable redundantType
 --enable redundantVoidReturnType
@@ -64,6 +63,7 @@
 --enable wrapMultilineStatementBraces
 --enable yodaConditions
 
+--disable redundantReturn
 --disable andOperator
 --disable redundantNilInit
 --disable redundantFileprivate
@@ -93,7 +93,7 @@
 --guardelse        auto
 --header           ignore
 --hexgrouping      4,8
---hexliteralcase   uppercase
+--hexliteralcase   lowercase
 --ifdef            indent
 --importgrouping   alpha
 --indent           4

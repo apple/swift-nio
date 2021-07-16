@@ -60,7 +60,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 controlMessageStorage.deallocate()
             }
             /* put a canary value at the end */
-            iovecs[iovecs.count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)!, iov_len: 0xDEADBEE)
+            iovecs[iovecs.count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!, iov_len: 0xdeadbee)
             try iovecs.withUnsafeMutableBufferPointer { iovecs in
                 try managed.withUnsafeMutableBufferPointer { managed in
                     try msgs.withUnsafeMutableBufferPointer { msgs in
@@ -85,8 +85,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             }
             /* assert that the canary values are still okay, we should definitely have never written those */
             XCTAssertEqual(managed.last!.toOpaque(), Unmanaged.passUnretained(o).toOpaque())
-            XCTAssertEqual(0xDEADBEE, Int(bitPattern: iovecs.last!.iov_base))
-            XCTAssertEqual(0xDEADBEE, iovecs.last!.iov_len)
+            XCTAssertEqual(0xdeadbee, Int(bitPattern: iovecs.last!.iov_base))
+            XCTAssertEqual(0xdeadbee, iovecs.last!.iov_len)
         }
     }
 
@@ -369,7 +369,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65_535)
         var buffer = alloc.buffer(capacity: 12)
-        buffer.writeBytes([UInt8](repeating: 0xFF, count: 12))
+        buffer.writeBytes([UInt8](repeating: 0xff, count: 12))
 
         try self.withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0...pwm.writeSpinCount + 1).map { (_: UInt) in el.makePromise() }
@@ -434,8 +434,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
     /// Test that with a few massive buffers, we don't offer more than we should to `writev` if the individual chunks fit.
     func testPendingWritesNoMoreThanWritevLimitIsWritten() throws {
         let el = EmbeddedEventLoop()
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
-                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
+        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
         /* each buffer is half the writev limit */
@@ -471,8 +471,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
         let el = EmbeddedEventLoop()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65_535)
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
-                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
+        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
 

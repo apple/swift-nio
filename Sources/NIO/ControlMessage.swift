@@ -46,7 +46,7 @@ struct UnsafeControlMessageStorage: Collection {
 
     mutating func deallocate() {
         self.buffer.deallocate()
-        self.buffer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer(bitPattern: 0x7EAD_BEEF), count: 0)
+        self.buffer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer(bitPattern: 0x7ead_beef), count: 0)
     }
 
     /// Get the part of the buffer for use with a message.

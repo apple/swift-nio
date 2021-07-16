@@ -20,7 +20,7 @@ import XCTest
 struct FakeContiguousBytes: ContiguousBytes {
     func withUnsafeBytes<T>(_ block: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
         let ptr = UnsafeMutableRawBufferPointer.allocate(byteCount: 8, alignment: 1)
-        ptr.initializeMemory(as: UInt8.self, repeating: 0xFF)
+        ptr.initializeMemory(as: UInt8.self, repeating: 0xff)
         defer {
             ptr.deallocate()
         }
@@ -54,7 +54,7 @@ class ByteBufferDataProtocolTests: XCTestCase {
         var b = ByteBufferAllocator().buffer(capacity: 1024)
         b.writeInteger(UInt64.max)
         b.setData(d, at: 2)
-        XCTAssertEqual(b.readBytes(length: b.readableBytes), [0xFF, 0xFF, 0x01, 0x02, 0x03, 0x04, 0xFF, 0xFF])
+        XCTAssertEqual(b.readBytes(length: b.readableBytes), [0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0xff, 0xff])
     }
 
     func testSettingDispatchDataThoughDataProtocol() {
@@ -69,7 +69,7 @@ class ByteBufferDataProtocolTests: XCTestCase {
         buffer.writeInteger(UInt64.max)
         buffer.setData(dd, at: 4)
         XCTAssertEqual(buffer.readBytes(length: buffer.readableBytes),
-                       [0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0xFF, 0xFF, 0xFF, 0xFF])
+                       [0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0xff, 0xff, 0xff, 0xff])
     }
 
     func testWriteContiguousBytes() {
@@ -77,7 +77,7 @@ class ByteBufferDataProtocolTests: XCTestCase {
         var b = ByteBufferAllocator().buffer(capacity: 1024)
         b.writeContiguousBytes(fake)
 
-        XCTAssertEqual(b.readBytes(length: b.readableBytes), [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
+        XCTAssertEqual(b.readBytes(length: b.readableBytes), [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
     }
 
     func testSetContiguousBytes() {
@@ -88,6 +88,6 @@ class ByteBufferDataProtocolTests: XCTestCase {
         b.setContiguousBytes(fake, at: 4)
 
         XCTAssertEqual(b.readBytes(length: b.readableBytes),
-                       [0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00])
+                       [0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00])
     }
 }

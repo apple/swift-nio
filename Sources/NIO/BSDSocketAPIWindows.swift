@@ -136,13 +136,13 @@
     }
 
     fileprivate var WSAID_WSARECVMSG: _GUID {
-        _GUID(Data1: 0xF689_D7C8, Data2: 0x6F1F, Data3: 0x436B,
-              Data4: (0x8A, 0x53, 0xE5, 0x4F, 0xE3, 0x51, 0xC3, 0x22))
+        _GUID(Data1: 0xf689_d7c8, Data2: 0x6f1f, Data3: 0x436b,
+              Data4: (0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22))
     }
 
     fileprivate var WSAID_WSASENDMSG: _GUID {
-        _GUID(Data1: 0xA441_E712, Data2: 0x754F, Data3: 0x43CA,
-              Data4: (0x84, 0xA7, 0x0D, 0xEE, 0x44, 0xCF, 0x60, 0x6D))
+        _GUID(Data1: 0xa441_e712, Data2: 0x754f, Data3: 0x43ca,
+              Data4: (0x84, 0xa7, 0x0d, 0xee, 0x44, 0xcf, 0x60, 0x6d))
     }
 
     // TODO(compnerd) rather than query the `WSARecvMsg` and `WSASendMsg` on each
@@ -404,8 +404,8 @@
                           size: size_t, offset: off_t) throws -> IOResult<size_t>
         {
             var ovlOverlapped = OVERLAPPED()
-            ovlOverlapped.OffsetHigh = DWORD(UInt32(offset >> 32) & 0xFFFF_FFFF)
-            ovlOverlapped.Offset = DWORD(UInt32(offset >> 0) & 0xFFFF_FFFF)
+            ovlOverlapped.OffsetHigh = DWORD(UInt32(offset >> 32) & 0xffff_ffff)
+            ovlOverlapped.Offset = DWORD(UInt32(offset >> 0) & 0xffff_ffff)
             var nNumberOfBytesRead: DWORD = 0
             if !ReadFile(HANDLE(bitPattern: UInt(socket)), pointer, DWORD(size),
                          &nNumberOfBytesRead, &ovlOverlapped)
@@ -423,8 +423,8 @@
                            size: size_t, offset: off_t) throws -> IOResult<size_t>
         {
             var ovlOverlapped = OVERLAPPED()
-            ovlOverlapped.OffsetHigh = DWORD(UInt32(offset >> 32) & 0xFFFF_FFFF)
-            ovlOverlapped.Offset = DWORD(UInt32(offset >> 0) & 0xFFFF_FFFF)
+            ovlOverlapped.OffsetHigh = DWORD(UInt32(offset >> 32) & 0xffff_ffff)
+            ovlOverlapped.Offset = DWORD(UInt32(offset >> 0) & 0xffff_ffff)
             var nNumberOfBytesWritten: DWORD = 0
             if !WriteFile(HANDLE(bitPattern: UInt(socket)), pointer, DWORD(size),
                           &nNumberOfBytesWritten, &ovlOverlapped)
@@ -474,8 +474,8 @@
             }
 
             var ovlOverlapped = OVERLAPPED()
-            ovlOverlapped.Offset = DWORD(UInt32(offset >> 0) & 0xFFFF_FFFF)
-            ovlOverlapped.OffsetHigh = DWORD(UInt32(offset >> 32) & 0xFFFF_FFFF)
+            ovlOverlapped.Offset = DWORD(UInt32(offset >> 0) & 0xffff_ffff)
+            ovlOverlapped.OffsetHigh = DWORD(UInt32(offset >> 32) & 0xffff_ffff)
             if !TransmitFile(s, hFile, DWORD(nNumberOfBytesToWrite), 0,
                              &ovlOverlapped, nil, DWORD(TF_USE_KERNEL_APC))
             {

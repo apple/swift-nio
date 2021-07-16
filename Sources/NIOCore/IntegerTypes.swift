@@ -23,7 +23,7 @@ struct _UInt24 {
 
     @inlinable
     init(_ value: UInt32) {
-        assert(value & 0xFF00_0000 == 0, "value \(value) too large for _UInt24")
+        assert(value & 0xff00_0000 == 0, "value \(value) too large for _UInt24")
         self._backing = IntegerBitPacking.unpackUInt16UInt8(value)
     }
 

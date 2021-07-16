@@ -254,8 +254,8 @@ public final class SNIHandler: ByteToMessageDecoder {
         }
 
         let handshakeTypeAndLength: UInt32 = buffer.readInteger()!
-        let handshakeType = UInt8((handshakeTypeAndLength & 0xFF00_0000) >> 24)
-        let handshakeLength: UInt32 = handshakeTypeAndLength & 0x00FF_FFFF
+        let handshakeType = UInt8((handshakeTypeAndLength & 0xff00_0000) >> 24)
+        let handshakeLength: UInt32 = handshakeTypeAndLength & 0x00ff_ffff
         guard handshakeType == handshakeTypeClientHello else {
             throw InternalSNIErrors.invalidRecord
         }
