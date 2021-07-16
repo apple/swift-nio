@@ -58,9 +58,11 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let res = self.unwrapOutboundIn(data)
         switch res {
-        case .head:
+        case .head(let head):
             precondition(!self.hasUnterminatedResponse)
-            self.hasUnterminatedResponse = true
+            if head.status != .`continue` {
+                self.hasUnterminatedResponse = true
+            }
         case .body:
             precondition(self.hasUnterminatedResponse)
         case .end:
