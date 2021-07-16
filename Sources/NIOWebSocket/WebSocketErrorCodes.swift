@@ -42,6 +42,19 @@ public enum WebSocketErrorCode {
     /// Corresponds to code 1003.
     case unacceptableData
 
+    /// Indicates that the connection was closed but the close message
+    /// sent by the peer was missing a status code. This status code
+    /// should never be sent over the connection to a peer.
+    /// Corresponds to code 1005.
+    case closeFrameWasMissingCode
+
+    /// This indicates that the connection closed abnormally, without
+    /// a close frame and corresponding code. This might be from a
+    /// network outage or the peer has crashed. This status code
+    /// should never be sent over the connection to a peer.
+    /// Corresponds to code 1006.
+    case connectionClosedAbnormally
+
     /// Indicates that an endpoint is terminating the connection
     /// because it has received data within a message that was not
     /// consistent with the type of the message (e.g. non-UTF-8
@@ -97,6 +110,10 @@ public enum WebSocketErrorCode {
             self = .protocolError
         case 1003:
             self = .unacceptableData
+        case 1005:
+            self = .closeFrameWasMissingCode
+        case 1006:
+            self = .connectionClosedAbnormally
         case 1007:
             self = .dataInconsistentWithMessage
         case 1008:
@@ -171,6 +188,10 @@ extension UInt16 {
             self = 1002
         case .unacceptableData:
             self = 1003
+        case .closeFrameWasMissingCode:
+            self = 1005
+        case .connectionClosedAbnormally:
+            self = 1006
         case .dataInconsistentWithMessage:
             self = 1007
         case .policyViolation:
