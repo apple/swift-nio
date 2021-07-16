@@ -21,8 +21,8 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
     private var fixed: FixedSizeRecvByteBufferAllocator!
 
     override func setUp() {
-        self.adaptive = AdaptiveRecvByteBufferAllocator(minimum: 64, initial: 1_024, maximum: 16 * 1_024)
-        self.fixed = FixedSizeRecvByteBufferAllocator(capacity: 1_024)
+        self.adaptive = AdaptiveRecvByteBufferAllocator(minimum: 64, initial: 1024, maximum: 16 * 1024)
+        self.fixed = FixedSizeRecvByteBufferAllocator(capacity: 1024)
     }
 
     override func tearDown() {
@@ -32,47 +32,47 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
 
     func testAdaptive() throws {
         let buffer = self.adaptive.buffer(allocator: self.allocator)
-        XCTAssertEqual(1_024, buffer.capacity)
+        XCTAssertEqual(1024, buffer.capacity)
 
         // We double every time.
-        self.testActualReadBytes(mayGrow: true, actualReadBytes: 1_024, expectedCapacity: 2_048)
-        self.testActualReadBytes(mayGrow: true, actualReadBytes: 16_384, expectedCapacity: 4_096)
-        self.testActualReadBytes(mayGrow: true, actualReadBytes: 16_384, expectedCapacity: 8_192)
+        self.testActualReadBytes(mayGrow: true, actualReadBytes: 1024, expectedCapacity: 2048)
+        self.testActualReadBytes(mayGrow: true, actualReadBytes: 16_384, expectedCapacity: 4096)
+        self.testActualReadBytes(mayGrow: true, actualReadBytes: 16_384, expectedCapacity: 8192)
         self.testActualReadBytes(mayGrow: true, actualReadBytes: 16_384, expectedCapacity: 16_384)
 
         // Will never go over maximum
         self.testActualReadBytes(mayGrow: false, actualReadBytes: 32_768, expectedCapacity: 16_384)
 
         // Shrinks if two successive reads below half happen
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4_096, expectedCapacity: 16_384)
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 8_192, expectedCapacity: 8_192)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 16_384)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 8192, expectedCapacity: 8192)
 
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4_096, expectedCapacity: 8_192)
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4_096, expectedCapacity: 4_096)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 8192)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 4096)
 
         // But not if an intermediate read is above half.
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 2_048, expectedCapacity: 4_096)
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 2_049, expectedCapacity: 4_096)
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 2_048, expectedCapacity: 4_096)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 2048, expectedCapacity: 4096)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 2049, expectedCapacity: 4096)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 2048, expectedCapacity: 4096)
 
         // Or if we grow in-between.
-        self.testActualReadBytes(mayGrow: true, actualReadBytes: 4_096, expectedCapacity: 8_192)
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4_096, expectedCapacity: 8_192)
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4_096, expectedCapacity: 4_096)
+        self.testActualReadBytes(mayGrow: true, actualReadBytes: 4096, expectedCapacity: 8192)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 8192)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 4096)
 
         // Reads above half never shrink the capacity
         for _ in 0 ..< 10 {
-            self.testActualReadBytes(mayGrow: false, actualReadBytes: 2_049, expectedCapacity: 4_096)
+            self.testActualReadBytes(mayGrow: false, actualReadBytes: 2049, expectedCapacity: 4096)
         }
 
         // Consistently reading below half does shrink all the way down.
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 4_096)
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 2_048)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 4096)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 2048)
 
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 2_048)
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 1_024)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 2048)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 1024)
 
-        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 1_024)
+        self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 1024)
         self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 512)
 
         self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 512)

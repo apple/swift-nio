@@ -109,8 +109,8 @@ internal final class URing {
     internal static let POLLCANCEL: CUnsignedInt = 0xF000_0000 // Poll cancelled, need to reregister for singleshot polls
 
     private var ring = io_uring()
-    private let ringEntries: CUnsignedInt = 8_192
-    private let cqeMaxCount: UInt32 = 8_192 // this is the max chunk of CQE we take.
+    private let ringEntries: CUnsignedInt = 8192
+    private let cqeMaxCount: UInt32 = 8192 // this is the max chunk of CQE we take.
 
     var cqes: UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>
     var fdEvents = [FDEventKey: UInt32]() // fd, sequence_identifier : merged event_poll_return

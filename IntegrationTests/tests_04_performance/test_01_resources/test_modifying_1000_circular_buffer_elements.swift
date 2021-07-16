@@ -21,7 +21,7 @@ func run(identifier: String) {
     }
 
     measure(identifier: identifier) {
-        for idx in 0 ..< 1_000 {
+        for idx in 0 ..< 1000 {
             let index = buffer.index(buffer.startIndex, offsetBy: idx % 100)
             buffer.modify(index) { value in
                 value.append(idx)

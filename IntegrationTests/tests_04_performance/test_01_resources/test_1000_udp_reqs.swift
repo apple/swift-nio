@@ -76,7 +76,7 @@ private final class ClientHandler: ChannelInboundHandler {
     }
 
     func sendBytesAndWaitForReply(clientChannel: Channel) -> Int {
-        let numberOfIterations = 1_000
+        let numberOfIterations = 1000
 
         // Setup for iteration.
         self.iterationsOutstanding = numberOfIterations

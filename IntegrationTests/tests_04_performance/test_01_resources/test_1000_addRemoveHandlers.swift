@@ -48,19 +48,19 @@ private func addRemoveBench(iterations: Int, _ removalOperation: (Channel, Remov
 
 func run(identifier: String) {
     measure(identifier: identifier + "_handlertype") {
-        addRemoveBench(iterations: 1_000) { channel, handler in
+        addRemoveBench(iterations: 1000) { channel, handler in
             channel.pipeline.removeHandler(handler)
         }
     }
 
     measure(identifier: identifier + "_handlername") {
-        addRemoveBench(iterations: 1_000) { channel, _ in
+        addRemoveBench(iterations: 1000) { channel, _ in
             channel.pipeline.removeHandler(name: RemovableHandler.name)
         }
     }
 
     measure(identifier: identifier + "_handlercontext") {
-        addRemoveBench(iterations: 1_000) { channel, handler in
+        addRemoveBench(iterations: 1000) { channel, handler in
             channel.pipeline.removeHandler(context: handler.context!)
         }
     }

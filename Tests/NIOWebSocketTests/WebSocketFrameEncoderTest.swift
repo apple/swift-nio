@@ -68,7 +68,7 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
     }
 
     func test16BitFrameLength() throws {
-        let dataBytes = Array(repeating: UInt8(4), count: 1_000)
+        let dataBytes = Array(repeating: UInt8(4), count: 1000)
         buffer.writeBytes(dataBytes)
         let frame = WebSocketFrame(fin: true, opcode: .text, data: buffer)
         let expectedBytes = [0x81, UInt8(126), UInt8(0x03), UInt8(0xE8)] + dataBytes
@@ -184,7 +184,7 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         self.buffer = nil // gotta nil out here to enable prepending
 
         // We need an extra buffer for application data, but it'll be empty.
-        let applicationOriginalBuffer = ByteBufferAllocator().buffer(capacity: 1_024)
+        let applicationOriginalBuffer = ByteBufferAllocator().buffer(capacity: 1024)
 
         let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: applicationOriginalBuffer, extensionData: originalBuffer)
         channel.writeAndFlush(frame, promise: nil)

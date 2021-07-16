@@ -32,11 +32,11 @@ func run(identifier: String) {
     let data = ByteBuffer(bytes: [0x81, 0x00]) // empty websocket
 
     measure(identifier: identifier) {
-        for _ in 0 ..< 1_000 {
+        for _ in 0 ..< 1000 {
             try! channel.writeInbound(data)
             let _: WebSocketFrame? = try! channel.readInbound()
         }
-        return 1_000
+        return 1000
     }
 
     _ = try! channel.finish()

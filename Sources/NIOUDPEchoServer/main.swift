@@ -57,7 +57,7 @@ defer {
 var arguments = CommandLine.arguments.dropFirst(0) // just to get an ArraySlice<String> from [String]
 if arguments.dropFirst().first == .some("--enable-gathering-reads") {
     bootstrap = bootstrap.channelOption(ChannelOptions.datagramVectorReadMessageCount, value: 30)
-    bootstrap = bootstrap.channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 30 * 2_048))
+    bootstrap = bootstrap.channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 30 * 2048))
     arguments = arguments.dropFirst()
 }
 
@@ -65,7 +65,7 @@ let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst().dropFirst().first
 
 let defaultHost = "::1"
-let defaultPort = 9_999
+let defaultPort = 9999
 
 enum BindTo {
     case ip(host: String, port: Int)

@@ -172,7 +172,7 @@ let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
-let defaultPort: Int = 8_888
+let defaultPort: Int = 8888
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {

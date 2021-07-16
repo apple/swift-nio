@@ -69,7 +69,7 @@ class EventCounterHandlerTest: XCTestCase {
     }
 
     func testConnectChannel() {
-        XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5_678)).wait())
+        XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5678)).wait())
         XCTAssertEqual(["channelRegistered", "register", "connect", "channelActive"],
                        self.handler.allTriggeredEvents())
         XCTAssertNoThrow(try self.handler.checkValidity())
@@ -80,7 +80,7 @@ class EventCounterHandlerTest: XCTestCase {
     }
 
     func testBindChannel() {
-        XCTAssertNoThrow(try self.channel.bind(to: .init(ipAddress: "1.2.3.4", port: 5_678)).wait())
+        XCTAssertNoThrow(try self.channel.bind(to: .init(ipAddress: "1.2.3.4", port: 5678)).wait())
         XCTAssertEqual(["channelRegistered", "register", "bind"],
                        self.handler.allTriggeredEvents())
         XCTAssertNoThrow(try self.handler.checkValidity())
@@ -90,7 +90,7 @@ class EventCounterHandlerTest: XCTestCase {
     }
 
     func testConnectAndCloseChannel() {
-        XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5_678)).wait())
+        XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5678)).wait())
         XCTAssertNoThrow(try self.channel.close().wait())
         XCTAssertEqual(["channelRegistered", "register", "connect", "channelActive", "close", "channelInactive",
                         "channelUnregistered"],

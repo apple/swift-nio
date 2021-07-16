@@ -20,7 +20,7 @@ func run(identifier: String) {
         let dispatchData = ("A" as StaticString).withUTF8Buffer { ptr in
             DispatchData(bytes: UnsafeRawBufferPointer(ptr))
         }
-        var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1_000)
+        var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1000)
         let foundationData = "A".data(using: .utf8)!
         @inline(never)
         func doWrites(buffer: inout ByteBuffer) {
@@ -53,7 +53,7 @@ func run(identifier: String) {
             let str = buffer.readString(length: 1)
             precondition(str == "A", "\(str!)")
         }
-        for _ in 0 ..< 1_000 {
+        for _ in 0 ..< 1000 {
             doWrites(buffer: &buffer)
             doReads(buffer: &buffer)
         }

@@ -47,7 +47,7 @@ class StreamChannelTest: XCTestCase {
             XCTAssertNoThrow(try chan1.pipeline.addHandler(EchoHandler()).wait())
             XCTAssertNoThrow(try chan2.pipeline.addHandler(AccumulateAllReads(allDonePromise: allDonePromise)).wait())
 
-            for f in [1, 10, 100, 1_000, 10_000, 300_000] {
+            for f in [1, 10, 100, 1000, 10_000, 300_000] {
                 let from = everythingBuffer.writerIndex
                 everythingBuffer.writeString("\(f)")
                 everythingBuffer.writeBytes(repeatElement(UInt8(ascii: "x"), count: f))
@@ -140,8 +140,8 @@ class StreamChannelTest: XCTestCase {
             func handlerAdded(context: ChannelHandlerContext) {
                 // 5 MB, this must be safely more than send buffer + receive buffer. The reason is that we don't want
                 // the overall write to complete before we make the other end of the channel readable.
-                let totalAmount = 5 * 1_024 * 1_024
-                let chunkSize = 10 * 1_024
+                let totalAmount = 5 * 1024 * 1024
+                let chunkSize = 10 * 1024
                 XCTAssertEqual(.beginsTrue, self.state)
                 self.state = .thenFalse
                 XCTAssertEqual(true, context.channel.isWritable)
@@ -337,7 +337,7 @@ class StreamChannelTest: XCTestCase {
             XCTAssertNoThrow(try receiver.pipeline.addHandler(FailOnReadHandler(areReadOkayNow: areReadsOkayNow)).wait())
 
             // We will immediately send exactly the amount of data that fits in the receiver's receive buffer.
-            let receiveBufferSize = Int((try? receiver.getOption(ChannelOptions.socketOption(.so_rcvbuf)).wait()) ?? 8_192)
+            let receiveBufferSize = Int((try? receiver.getOption(ChannelOptions.socketOption(.so_rcvbuf)).wait()) ?? 8192)
             var buffer = sender.allocator.buffer(capacity: receiveBufferSize)
             buffer.writeBytes(Array(repeating: UInt8(ascii: "X"), count: receiveBufferSize))
 
@@ -442,7 +442,7 @@ class StreamChannelTest: XCTestCase {
                     // raise the high water mark so we don't get another call straight away.
                     var buffer = context.channel.allocator.buffer(capacity: 5)
                     buffer.writeString("hello")
-                    context.channel.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1_024, high: 1_024)).flatMap {
+                    context.channel.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1024, high: 1024)).flatMap {
                         context.writeAndFlush(self.wrapOutboundOut(buffer))
                     }.whenFailure { error in
                         XCTFail("unexpected error: \(error)")
@@ -675,7 +675,7 @@ class StreamChannelTest: XCTestCase {
                 case .waitingForWritableAgain:
                     XCTAssert(context.channel.isWritable)
                     self.state = .done
-                    var buffer = context.channel.allocator.buffer(capacity: 10 * 1_024 * 1_024)
+                    var buffer = context.channel.allocator.buffer(capacity: 10 * 1024 * 1024)
                     buffer.writeBytes(Array(repeating: UInt8(ascii: "X"), count: buffer.capacity - 1))
                     context.writeAndFlush(wrapOutboundOut(buffer), promise: self.finishedBigWritePromise)
                     self.beganBigWritePromise.succeed(())
@@ -764,7 +764,7 @@ class StreamChannelTest: XCTestCase {
             // This promise is fulfilled when we're done writing the big write, ie. all is done.
             let finishedBigWritePromise: EventLoopPromise<Void> = sender.eventLoop.makePromise()
 
-            let chunkSize = 1_024
+            let chunkSize = 1024
 
             // We need to not read automatically from the receiving end to be able to force writability notifications
             // for the sender.
@@ -870,7 +870,7 @@ final class AccumulateAllReads: ChannelInboundHandler {
     }
 
     func handlerAdded(context: ChannelHandlerContext) {
-        self.accumulator = context.channel.allocator.buffer(capacity: 1_024)
+        self.accumulator = context.channel.allocator.buffer(capacity: 1024)
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {

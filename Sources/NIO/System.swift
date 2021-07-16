@@ -200,7 +200,7 @@ internal func wrapErrorIsNullReturnCall<T>(where function: String = #function, _
 
 internal enum Posix {
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    static let UIO_MAXIOV: Int = 1_024
+    static let UIO_MAXIOV: Int = 1024
     static let SHUT_RD = CInt(Darwin.SHUT_RD)
     static let SHUT_WR = CInt(Darwin.SHUT_WR)
     static let SHUT_RDWR = CInt(Darwin.SHUT_RDWR)

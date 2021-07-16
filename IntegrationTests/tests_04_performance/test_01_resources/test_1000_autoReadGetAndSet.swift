@@ -28,7 +28,7 @@ func run(identifier: String) {
     }
 
     measure(identifier: identifier) {
-        let iterations = 1_000
+        let iterations = 1000
 
         for _ in 0 ..< iterations {
             let autoReadOption = try! server.getOption(ChannelOptions.autoRead).wait()

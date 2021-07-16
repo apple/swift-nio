@@ -25,8 +25,8 @@ class CodableByteBufferTest: XCTestCase {
 
     override func setUp() {
         self.allocator = ByteBufferAllocator()
-        self.buffer = self.allocator.buffer(capacity: 1_024)
-        self.buffer.writeString(String(repeating: "A", count: 1_024))
+        self.buffer = self.allocator.buffer(capacity: 1024)
+        self.buffer.writeString(String(repeating: "A", count: 1024))
         self.buffer.moveReaderIndex(to: 129)
         self.buffer.moveWriterIndex(to: 129)
         self.decoder = JSONDecoder()
@@ -127,7 +127,7 @@ class CodableByteBufferTest: XCTestCase {
 
     func testGetSetJSONDecodableWorks() {
         let expectedSandI = StringAndInt(string: "hello", int: 42)
-        buffer.writeString(String(repeating: "{", count: 1_000))
+        buffer.writeString(String(repeating: "{", count: 1000))
         var writtenBytes: Int?
         XCTAssertNoThrow(writtenBytes = try self.buffer.setJSONEncodable(expectedSandI,
                                                                          at: self.buffer.readerIndex + 123))

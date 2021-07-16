@@ -7,6 +7,8 @@
 --disable redundantNilInit
 --disable unusedArguments
 --disable sortedImports
+--disable redundantFileprivate
+
 --ifdef no-indent
 
 --self insert
@@ -17,4 +19,4 @@
 
 --operatorfunc spaced
 
---decimalgrouping 3,4
+--decimalgrouping 3,5

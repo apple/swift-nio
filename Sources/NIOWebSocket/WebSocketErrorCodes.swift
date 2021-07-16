@@ -89,23 +89,23 @@ public enum WebSocketErrorCode {
     ///     integer: The integer form of the status code.
     internal init(networkInteger integer: UInt16) {
         switch integer {
-        case 1_000:
+        case 1000:
             self = .normalClosure
-        case 1_001:
+        case 1001:
             self = .goingAway
-        case 1_002:
+        case 1002:
             self = .protocolError
-        case 1_003:
+        case 1003:
             self = .unacceptableData
-        case 1_007:
+        case 1007:
             self = .dataInconsistentWithMessage
-        case 1_008:
+        case 1008:
             self = .policyViolation
-        case 1_009:
+        case 1009:
             self = .messageTooLarge
-        case 1_010:
+        case 1010:
             self = .missingExtension
-        case 1_011:
+        case 1011:
             self = .unexpectedServerError
         default:
             self = .unknown(integer)
@@ -164,23 +164,23 @@ public extension UInt16 {
     init(webSocketErrorCode code: WebSocketErrorCode) {
         switch code {
         case .normalClosure:
-            self = 1_000
+            self = 1000
         case .goingAway:
-            self = 1_001
+            self = 1001
         case .protocolError:
-            self = 1_002
+            self = 1002
         case .unacceptableData:
-            self = 1_003
+            self = 1003
         case .dataInconsistentWithMessage:
-            self = 1_007
+            self = 1007
         case .policyViolation:
-            self = 1_008
+            self = 1008
         case .messageTooLarge:
-            self = 1_009
+            self = 1009
         case .missingExtension:
-            self = 1_010
+            self = 1010
         case .unexpectedServerError:
-            self = 1_011
+            self = 1011
         case let .unknown(i):
             self = i
         }

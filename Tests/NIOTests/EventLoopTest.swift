@@ -682,11 +682,11 @@ public final class EventLoopTest: XCTestCase {
             array.append((2, .now()))
         }
 
-        let scheduled3 = eventLoopGroup.next().scheduleTask(in: .milliseconds(1_000)) {
+        let scheduled3 = eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
             array.append((3, .now()))
         }
 
-        var result = try eventLoopGroup.next().scheduleTask(in: .milliseconds(1_000)) {
+        var result = try eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
             array
         }.futureResult.wait()
 

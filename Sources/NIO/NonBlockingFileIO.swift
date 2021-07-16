@@ -32,7 +32,7 @@ public struct NonBlockingFileIO {
     public static let defaultThreadPoolSize = 2
 
     /// The default and recommended chunk size.
-    public static let defaultChunkSize = 128 * 1_024
+    public static let defaultChunkSize = 128 * 1024
 
     /// `NonBlockingFileIO` errors.
     public enum Error: Swift.Error {

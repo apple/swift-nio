@@ -111,7 +111,7 @@ public enum ByteToMessageDecoderVerifier {
         }
 
         func verifyManyAtOnce(channel: RecordingChannel) throws {
-            var overallBuffer = channel.allocator.buffer(capacity: 1_024)
+            var overallBuffer = channel.allocator.buffer(capacity: 1024)
             var overallExpecteds: [Out] = []
 
             for _ in 0 ..< 10 {

@@ -339,7 +339,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                         context.write(self.wrapOutboundOut(.head(response)), promise: nil)
                     }
                     return self.fileIO.readChunked(fileRegion: region,
-                                                   chunkSize: 32 * 1_024,
+                                                   chunkSize: 32 * 1024,
                                                    allocator: context.channel.allocator,
                                                    eventLoop: context.eventLoop) { buffer in
                         if !responseStarted {
@@ -481,7 +481,7 @@ let arg2 = arguments.dropFirst(2).first
 let arg3 = arguments.dropFirst(3).first
 
 let defaultHost = "::1"
-let defaultPort = 8_888
+let defaultPort = 8888
 let defaultHtdocs = "/dev/null/"
 
 enum BindTo {

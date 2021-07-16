@@ -176,7 +176,7 @@ internal final class SelectableEventLoop: EventLoop {
         self.addresses = UnsafeMutableBufferPointer(start: self._addresses, count: Socket.writevLimitIOVectors)
         self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
         // We will process 4096 tasks per while loop.
-        self.tasksCopy.reserveCapacity(4_096)
+        self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
         self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
@@ -425,7 +425,7 @@ internal final class SelectableEventLoop: EventLoop {
                     task.fail(EventLoopError.shutdown)
                 }
                 iterations += 1
-            } while scheduledTasksCopy.count > 0 && iterations < 1_000
+            } while scheduledTasksCopy.count > 0 && iterations < 1000
             precondition(scheduledTasksCopy.count == 0, "EventLoop \(self) didn't quiesce after 1000 ticks.")
 
             assert(self.internalState == .noLongerRunning, "illegal state: \(self.internalState)")

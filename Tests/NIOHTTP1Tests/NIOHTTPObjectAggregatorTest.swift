@@ -106,7 +106,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         self.channel = EmbeddedChannel()
         self.readRecorder = ReadRecorder()
         self.writeRecorder = WriteRecorder()
-        self.aggregatorHandler = NIOHTTPServerRequestAggregator(maxContentLength: 1_024 * 1_024)
+        self.aggregatorHandler = NIOHTTPServerRequestAggregator(maxContentLength: 1024 * 1024)
 
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(self.writeRecorder).wait())
@@ -350,7 +350,7 @@ class NIOHTTPClientResponseAggregatorTest: XCTestCase {
     override func setUp() {
         self.channel = EmbeddedChannel()
         self.readRecorder = ReadRecorder()
-        self.aggregatorHandler = NIOHTTPClientResponseAggregator(maxContentLength: 1_024 * 1_024)
+        self.aggregatorHandler = NIOHTTPClientResponseAggregator(maxContentLength: 1024 * 1024)
 
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(self.aggregatorHandler).wait())

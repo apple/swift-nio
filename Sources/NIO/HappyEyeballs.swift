@@ -298,7 +298,7 @@ internal class HappyEyeballsConnector {
         precondition(resolutionDelay.nanoseconds > 0, "Resolution delay must be greater than zero, got \(resolutionDelay).")
         self.resolutionDelay = resolutionDelay
 
-        precondition(connectionDelay >= .milliseconds(100) && connectionDelay <= .milliseconds(2_000), "Connection delay must be between 100 and 2000 ms, got \(connectionDelay)")
+        precondition(connectionDelay >= .milliseconds(100) && connectionDelay <= .milliseconds(2000), "Connection delay must be between 100 and 2000 ms, got \(connectionDelay)")
         self.connectionDelay = connectionDelay
     }
 

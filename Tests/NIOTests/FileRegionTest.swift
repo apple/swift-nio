@@ -22,7 +22,7 @@ class FileRegionTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let numBytes = 16 * 1_024
+        let numBytes = 16 * 1024
 
         var content = ""
         for i in 0 ..< numBytes {
@@ -113,7 +113,7 @@ class FileRegionTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let numBytes = 16 * 1_024
+        let numBytes = 16 * 1024
 
         var content = ""
         for i in 0 ..< numBytes {
@@ -232,9 +232,9 @@ class FileRegionTest: XCTestCase {
     func testMassiveFileRegionReaderIndexWorks() {
         withTemporaryFile(content: "0123456789") { fh, _ in
             // just in case someone uses 32bit platforms
-            let readerIndex = (UInt64(_UInt56.max) < UInt64(Int.max) ? Int(_UInt56.max) : Int.max) - 1_000
+            let readerIndex = (UInt64(_UInt56.max) < UInt64(Int.max) ? Int(_UInt56.max) : Int.max) - 1000
             var fr = FileRegion(fileHandle: fh, readerIndex: readerIndex, endIndex: Int.max)
-            for i in 0 ..< 1_000 {
+            for i in 0 ..< 1000 {
                 XCTAssertEqual(readerIndex + i, fr.readerIndex)
                 XCTAssertEqual(Int.max, fr.endIndex)
                 fr.moveReaderIndex(forwardBy: 1)

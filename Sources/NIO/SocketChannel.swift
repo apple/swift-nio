@@ -397,7 +397,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         try super.init(socket: socket,
                        parent: nil,
                        eventLoop: eventLoop,
-                       recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2_048))
+                       recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
@@ -408,7 +408,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           addresses: eventLoop.addresses,
                                                           storageRefs: eventLoop.storageRefs,
                                                           controlMessageStorage: eventLoop.controlMessageStorage)
-        try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2_048))
+        try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
     // MARK: Datagram Channel overrides required by BaseSocketChannel

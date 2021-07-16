@@ -283,7 +283,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
-    internal var waterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1_024, high: 64 * 1_024)
+    internal var waterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag: NIOAtomic<Bool> = .makeAtomic(value: true)
     internal var publishedWritability = true
 

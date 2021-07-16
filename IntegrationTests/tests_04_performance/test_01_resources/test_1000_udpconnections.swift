@@ -39,7 +39,7 @@ private final class CountReadsHandler: ChannelInboundHandler {
 }
 
 func run(identifier: String) {
-    let numberOfIterations = 1_000
+    let numberOfIterations = 1000
 
     let serverHandler = CountReadsHandler(numberOfReadsExpected: numberOfIterations,
                                           completionPromise: group.next().makePromise())

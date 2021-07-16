@@ -75,10 +75,10 @@ func run(identifier: String) {
             _ = try! f.wait()
         }
         let el = EmbeddedEventLoop()
-        for _ in 0 ..< 1_000 {
+        for _ in 0 ..< 1000 {
             doThenAndFriends(loop: el)
             doAnd(loop: el)
         }
-        return 1_000
+        return 1000
     }
 }

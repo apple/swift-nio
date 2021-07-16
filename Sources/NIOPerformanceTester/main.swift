@@ -71,7 +71,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
 
     private let cachedHead: HTTPResponseHead
     private let cachedBody: [UInt8]
-    private let bodyLength = 1_024
+    private let bodyLength = 1024
     private let numberOfAdditionalHeaders = 10
 
     init() {
@@ -203,7 +203,7 @@ measureAndPrint(desc: "write_http_headers") {
 }
 
 measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
-    let bufferSize = 12 * 1_024 * 1_024
+    let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
 
     for _ in 0 ..< 5 {
@@ -219,7 +219,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
 }
 
 measureAndPrint(desc: "bytebuffer_write_12MB_short_calculated_strings") {
-    let bufferSize = 12 * 1_024 * 1_024
+    let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 4)
 
@@ -236,7 +236,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_calculated_strings") {
 }
 
 measureAndPrint(desc: "bytebuffer_write_12MB_medium_string_literals") {
-    let bufferSize = 12 * 1_024 * 1_024
+    let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
 
     for _ in 0 ..< 10 {
@@ -252,7 +252,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_string_literals") {
 }
 
 measureAndPrint(desc: "bytebuffer_write_12MB_medium_calculated_strings") {
-    let bufferSize = 12 * 1_024 * 1_024
+    let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 24)
 
@@ -269,9 +269,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_calculated_strings") {
 }
 
 measureAndPrint(desc: "bytebuffer_write_12MB_large_calculated_strings") {
-    let bufferSize = 12 * 1_024 * 1_024
+    let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
-    let s = someString(size: 1_024 * 1_024)
+    let s = someString(size: 1024 * 1024)
 
     for _ in 0 ..< 10 {
         buffer.clear()
@@ -289,7 +289,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
     let dispatchData = ("A" as StaticString).withUTF8Buffer { ptr in
         DispatchData(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(ptr.baseAddress), count: ptr.count))
     }
-    var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1_024 * 1_024)
+    var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1024 * 1024)
     @inline(never)
     func doWrites(buffer: inout ByteBuffer) {
         /* all of those should be 0 allocations */
@@ -320,7 +320,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         let str = buffer.readString(length: 1)
         precondition(str == "A", "\(str!)")
     }
-    for _ in 0 ..< 1_024 * 1_024 {
+    for _ in 0 ..< 1024 * 1024 {
         doWrites(buffer: &buffer)
         doReads(buffer: &buffer)
     }
@@ -450,7 +450,7 @@ func writeExampleHTTPResponseAsStaticString(buffer: inout ByteBuffer) {
 }
 
 measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_string") {
-    var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1_024)
+    var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0 ..< 20_000 {
         writeExampleHTTPResponseAsString(buffer: &buffer)
         buffer.writeString(htmlASCIIOnly)
@@ -460,7 +460,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_string") {
 }
 
 measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_staticstring") {
-    var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1_024)
+    var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0 ..< 20_000 {
         writeExampleHTTPResponseAsStaticString(buffer: &buffer)
         buffer.writeStaticString(htmlASCIIOnlyStaticString)
@@ -470,7 +470,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_staticstring
 }
 
 measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_string") {
-    var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1_024)
+    var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0 ..< 20_000 {
         writeExampleHTTPResponseAsString(buffer: &buffer)
         buffer.writeString(htmlMostlyASCII)
@@ -480,7 +480,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_string") 
 }
 
 measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_staticstring") {
-    var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1_024)
+    var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0 ..< 20_000 {
         writeExampleHTTPResponseAsStaticString(buffer: &buffer)
         buffer.writeStaticString(htmlMostlyASCIIStaticString)
@@ -720,13 +720,13 @@ try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow_mas
                     benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .always))
 
 try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_100k_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1_024, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_1m_frames_cow",
                     benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_100k_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1_024, runCount: 100_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_space_at_front_10k_frames",
                     benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
@@ -735,13 +735,13 @@ try measureAndPrint(desc: "websocket_encode_50b_space_at_front_10k_frames_maskin
                     benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .always))
 
 try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_1k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1_024, runCount: 1_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_10k_frames",
                     benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1_024, runCount: 1_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
+                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1000, dataStrategy: .noSpaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
 
 try measureAndPrint(desc: "websocket_decode_125b_100k_frames",
                     benchmark: WebSocketFrameDecoderBenchmark(dataSize: 125, runCount: 100_000))
@@ -761,14 +761,14 @@ try measureAndPrint(desc: "websocket_decode_64kb_+1_100k_frames",
 try measureAndPrint(desc: "websocket_decode_64kb_+1_with_a_masking_key_100k_frames",
                     benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max) + 1, runCount: 100_000, maskingKey: [0x80, 0x08, 0x10, 0x01]))
 
-try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: CircularBufferIntoByteBufferBenchmark(iterations: 10_000, bufferSize: 1_024))
+try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: CircularBufferIntoByteBufferBenchmark(iterations: 10_000, bufferSize: 1024))
 
-try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1mb", benchmark: CircularBufferIntoByteBufferBenchmark(iterations: 20, bufferSize: 1_024 * 1_024))
+try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1mb", benchmark: CircularBufferIntoByteBufferBenchmark(iterations: 20, bufferSize: 1024 * 1024))
 
-try measureAndPrint(desc: "byte_buffer_view_iterator_1mb", benchmark: ByteBufferViewIteratorBenchmark(iterations: 20, bufferSize: 1_024 * 1_024))
+try measureAndPrint(desc: "byte_buffer_view_iterator_1mb", benchmark: ByteBufferViewIteratorBenchmark(iterations: 20, bufferSize: 1024 * 1024))
 
 try measureAndPrint(desc: "byte_to_message_decoder_decode_many_small",
-                    benchmark: ByteToMessageDecoderDecodeManySmallsBenchmark(iterations: 1_000, bufferSize: 16_384))
+                    benchmark: ByteToMessageDecoderDecodeManySmallsBenchmark(iterations: 1000, bufferSize: 16_384))
 
 measureAndPrint(desc: "generate_10k_random_request_keys") {
     (0 ..< 10_000).reduce(into: 0) { result, _ in result &+= NIOWebSocketClientUpgrader.randomRequestKey().count }

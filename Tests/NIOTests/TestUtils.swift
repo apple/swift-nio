@@ -298,7 +298,7 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
 
     repeat {
         if condition() { return }
-        usleep(UInt32(testInterval.nanoseconds / 1_000))
+        usleep(UInt32(testInterval.nanoseconds / 1000))
     } while NIODeadline.now() < endTime
 
     if !condition() {

@@ -24,7 +24,7 @@ class EchoServerClientTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let numBytes = 16 * 1_024
+        let numBytes = 16 * 1024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -96,7 +96,7 @@ class EchoServerClientTest: XCTestCase {
         }
 
         try withTemporaryUnixDomainSocketPathName { udsPath in
-            let numBytes = 16 * 1_024
+            let numBytes = 16 * 1024
             let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -138,7 +138,7 @@ class EchoServerClientTest: XCTestCase {
         }
 
         try withTemporaryUnixDomainSocketPathName { udsPath in
-            let numBytes = 16 * 1_024
+            let numBytes = 16 * 1024
             let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -252,7 +252,7 @@ class EchoServerClientTest: XCTestCase {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let numBytes = 16 * 1_024
+        let numBytes = 16 * 1024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { $0.pipeline.addHandler(countingHandler) }
@@ -809,7 +809,7 @@ class EchoServerClientTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let numBytes = 16 * 1_024
+        let numBytes = 16 * 1024
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: promise)
 

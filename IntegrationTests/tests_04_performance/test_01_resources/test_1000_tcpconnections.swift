@@ -64,7 +64,7 @@ func run(identifier: String) {
     }
 
     measure(identifier: identifier) {
-        let numberOfIterations = 1_000
+        let numberOfIterations = 1000
         let serverAddress = serverChannel.localAddress!
         let buffer = ByteBuffer(integer: 1, as: UInt8.self)
         let el = group.next()

@@ -32,7 +32,7 @@ struct FakeContiguousBytes: ContiguousBytes {
 class ByteBufferDataProtocolTests: XCTestCase {
     func testWritingData() {
         let d = Data([1, 2, 3, 4])
-        var b = ByteBufferAllocator().buffer(capacity: 1_024)
+        var b = ByteBufferAllocator().buffer(capacity: 1024)
         b.writeData(d)
         XCTAssertEqual(b.readBytes(length: b.readableBytes), [1, 2, 3, 4])
     }
@@ -51,7 +51,7 @@ class ByteBufferDataProtocolTests: XCTestCase {
 
     func testSettingData() {
         let d = Data([1, 2, 3, 4])
-        var b = ByteBufferAllocator().buffer(capacity: 1_024)
+        var b = ByteBufferAllocator().buffer(capacity: 1024)
         b.writeInteger(UInt64.max)
         b.setData(d, at: 2)
         XCTAssertEqual(b.readBytes(length: b.readableBytes), [0xFF, 0xFF, 0x01, 0x02, 0x03, 0x04, 0xFF, 0xFF])
@@ -74,7 +74,7 @@ class ByteBufferDataProtocolTests: XCTestCase {
 
     func testWriteContiguousBytes() {
         let fake = FakeContiguousBytes()
-        var b = ByteBufferAllocator().buffer(capacity: 1_024)
+        var b = ByteBufferAllocator().buffer(capacity: 1024)
         b.writeContiguousBytes(fake)
 
         XCTAssertEqual(b.readBytes(length: b.readableBytes), [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
@@ -82,7 +82,7 @@ class ByteBufferDataProtocolTests: XCTestCase {
 
     func testSetContiguousBytes() {
         let fake = FakeContiguousBytes()
-        var b = ByteBufferAllocator().buffer(capacity: 1_024)
+        var b = ByteBufferAllocator().buffer(capacity: 1024)
         b.writeInteger(UInt64.min)
         b.writeInteger(UInt64.min)
         b.setContiguousBytes(fake, at: 4)

@@ -62,7 +62,7 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
 
 class HTTPServerClientTest: XCTestCase {
     /* needs to be something reasonably large and odd so it has good odds producing incomplete writes even on the loopback interface */
-    private static let massiveResponseLength = 1 * 1_024 * 1_024 + 7
+    private static let massiveResponseLength = 1 * 1024 * 1024 + 7
     private static let massiveResponseBytes: [UInt8] = {
         Array(repeating: 0xFF, count: HTTPServerClientTest.massiveResponseLength)
     }()
@@ -135,7 +135,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    var b = context.channel.allocator.buffer(capacity: 1_024)
+                    var b = context.channel.allocator.buffer(capacity: 1024)
                     for i in 1 ... 10 {
                         b.clear()
                         b.writeString("\(i)")
@@ -161,7 +161,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    var b = context.channel.allocator.buffer(capacity: 1_024)
+                    var b = context.channel.allocator.buffer(capacity: 1024)
                     for i in 1 ... 10 {
                         b.clear()
                         b.writeString("\(i)")
@@ -509,7 +509,7 @@ class HTTPServerClientTest: XCTestCase {
             XCTAssertEqual(expectedSuffix.count, actualSuffix.count)
             XCTAssert(expectedSuffix.elementsEqual(actualSuffix))
         }
-        let numBytes = 16 * 1_024
+        let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)

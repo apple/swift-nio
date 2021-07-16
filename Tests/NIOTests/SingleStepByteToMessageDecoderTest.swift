@@ -62,11 +62,11 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         typealias InboundOut = ByteBuffer
 
         func decode(buffer: inout ByteBuffer) throws -> InboundOut? {
-            guard buffer.readableBytes >= 5_120 else {
+            guard buffer.readableBytes >= 5120 else {
                 return nil
             }
 
-            return buffer.readSlice(length: 2_048)!
+            return buffer.readSlice(length: 2048)!
         }
 
         func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut? {
@@ -157,7 +157,7 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
 
         XCTAssertEqual(512, messageReceiver.retrieveMessage()!.readableBytes)
 
-        XCTAssertEqual(processor._buffer!.capacity, 1_024)
+        XCTAssertEqual(processor._buffer!.capacity, 1024)
         XCTAssertEqual(1, processor._buffer!.readableBytes)
         XCTAssertEqual(512, processor._buffer!.readerIndex)
 
@@ -173,9 +173,9 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try processor.process(buffer: buffer, messageReceiver.receiveMessage))
         XCTAssertEqual(512, messageReceiver.retrieveMessage()!.readableBytes)
 
-        XCTAssertEqual(processor._buffer!.capacity, 2_048)
+        XCTAssertEqual(processor._buffer!.capacity, 2048)
         XCTAssertEqual(2, processor._buffer!.readableBytes)
-        XCTAssertEqual(1_024, processor._buffer!.readerIndex)
+        XCTAssertEqual(1024, processor._buffer!.readerIndex)
 
         // Finally we're going to send in another 513 bytes. This will cause another chunk to be
         // passed into our decoder buffer, which has a capacity of 2048 bytes. Since the buffer has
@@ -188,7 +188,7 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try processor.process(buffer: buffer, messageReceiver.receiveMessage))
         XCTAssertEqual(512, messageReceiver.retrieveMessage()!.readableBytes)
 
-        XCTAssertEqual(processor._buffer!.capacity, 2_048)
+        XCTAssertEqual(processor._buffer!.capacity, 2048)
         XCTAssertEqual(3, processor._buffer!.readableBytes)
         XCTAssertEqual(0, processor._buffer!.readerIndex)
     }
@@ -202,19 +202,19 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         }
 
         // We're going to send in 5119 bytes. This will be held.
-        var buffer = allocator.buffer(capacity: 5_119)
-        buffer.writeBytes(Array(repeating: 0x04, count: 5_119))
+        var buffer = allocator.buffer(capacity: 5119)
+        buffer.writeBytes(Array(repeating: 0x04, count: 5119))
         XCTAssertNoThrow(try processor.process(buffer: buffer, messageReceiver.receiveMessage))
         XCTAssertEqual(0, messageReceiver.count)
 
-        XCTAssertEqual(5_119, processor._buffer!.readableBytes)
+        XCTAssertEqual(5119, processor._buffer!.readableBytes)
         XCTAssertEqual(0, processor._buffer!.readerIndex)
 
         // Now we're going to send in one more byte. This will cause a chunk to be passed on,
         // shrinking the held memory to 3072 bytes. However, memory will be reclaimed.
         XCTAssertNoThrow(try processor.process(buffer: buffer.getSlice(at: 0, length: 1)!, messageReceiver.receiveMessage))
-        XCTAssertEqual(2_048, messageReceiver.retrieveMessage()!.readableBytes)
-        XCTAssertEqual(3_072, processor._buffer!.readableBytes)
+        XCTAssertEqual(2048, messageReceiver.retrieveMessage()!.readableBytes)
+        XCTAssertEqual(3072, processor._buffer!.readableBytes)
         XCTAssertEqual(0, processor._buffer!.readerIndex)
     }
 

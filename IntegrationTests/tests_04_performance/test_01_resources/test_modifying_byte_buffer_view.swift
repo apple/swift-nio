@@ -15,12 +15,12 @@ import NIO
 
 func run(identifier: String) {
     let allocator = ByteBufferAllocator()
-    let data = Array(repeating: UInt8(0), count: 1_024)
+    let data = Array(repeating: UInt8(0), count: 1024)
 
     measure(identifier: identifier) {
         var count = 0
 
-        for _ in 0 ..< 1_000 {
+        for _ in 0 ..< 1000 {
             var buffer = allocator.buffer(capacity: data.count)
             buffer.writeBytes(data)
 

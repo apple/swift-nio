@@ -56,7 +56,7 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
     private static let maximumAllocationSize = 1 << 30
 
     public init() {
-        self.init(minimum: 64, initial: 2_048, maximum: 65_536)
+        self.init(minimum: 64, initial: 2048, maximum: 65_536)
     }
 
     public init(minimum: Int, initial: Int, maximum: Int) {

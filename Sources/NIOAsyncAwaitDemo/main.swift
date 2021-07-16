@@ -22,7 +22,7 @@ import NIOHTTP1
 
 import _Concurrency
 
-@available(macOS 9_999, iOS 9_999, watchOS 9_999, tvOS 9_999, *)
+@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
 func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
     let channel = try await ClientBootstrap(group: group).connect(host: host, port: port).get()
     try await channel.pipeline.addHTTPClientHandlers().get()
@@ -31,7 +31,7 @@ func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throw
     return try await AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull>(channel).start()
 }
 
-@available(macOS 9_999, iOS 9_999, watchOS 9_999, tvOS 9_999, *)
+@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
 func main() async {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     do {
@@ -71,7 +71,7 @@ func main() async {
 
 let dg = DispatchGroup()
 dg.enter()
-if #available(macOS 9_999, iOS 9_999, watchOS 9_999, tvOS 9_999, *) {
+if #available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *) {
     Task {
         await main()
         dg.leave()

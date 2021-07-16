@@ -154,7 +154,7 @@ public final class ChannelTests: XCTestCase {
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait())
 
-        let bufferSize = 1_024 * 1_024 * 2
+        let bufferSize = 1024 * 1024 * 2
         var buffer = clientChannel.allocator.buffer(capacity: bufferSize)
         for _ in 0 ..< bufferSize {
             buffer.writeStaticString("a")
@@ -1027,7 +1027,7 @@ public final class ChannelTests: XCTestCase {
             let ps: [EventLoopPromise<Void>] = (0 ..< 1).map { (_: Int) in el.makePromise() }
 
             let fh = NIOFileHandle(descriptor: -1)
-            let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8_192)
+            let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8192)
             defer {
                 // fake descriptor, so shouldn't be closed.
                 XCTAssertNoThrow(try fh.takeDescriptorOwnership())
@@ -1040,8 +1040,8 @@ public final class ChannelTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: nil,
                                                        expectedVectorWritabilities: nil,
-                                                       expectedFileWritabilities: [(0, 8_192)],
-                                                       returns: [.wouldBlock(8_192)],
+                                                       expectedFileWritabilities: [(0, 8192)],
+                                                       returns: [.wouldBlock(8192)],
                                                        promiseStates: [[true]])
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
@@ -1576,7 +1576,7 @@ public final class ChannelTests: XCTestCase {
         try clientChannel.writeAndFlush(buffer).wait()
 
         // Wait for 100 ms. No data should be delivered.
-        usleep(100 * 1_000)
+        usleep(100 * 1000)
 
         // Now we send close. This should deliver data.
         try clientChannel.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
@@ -1637,7 +1637,7 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try clientChannel.close().wait())
 
         // Wait for 100 ms.
-        usleep(100 * 1_000)
+        usleep(100 * 1000)
         XCTAssertNoThrow(try serverChannel.close().wait())
     }
 
@@ -1986,7 +1986,7 @@ public final class ChannelTests: XCTestCase {
         }
         withChannel { channel in
             checkThatItThrowsInappropriateOperationForState {
-                try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 1_234)).wait()
+                try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 1234)).wait()
             }
         }
         withChannel { channel in
@@ -2754,7 +2754,7 @@ public final class ChannelTests: XCTestCase {
         let actualAllocator = ByteBufferAllocator()
         var allocator = FixedSizeRecvByteBufferAllocator(capacity: 1)
         let b1 = allocator.buffer(allocator: actualAllocator)
-        XCTAssertFalse(allocator.record(actualReadBytes: 1_024))
+        XCTAssertFalse(allocator.record(actualReadBytes: 1024))
         let b2 = allocator.buffer(allocator: actualAllocator)
         XCTAssertEqual(1, b1.capacity)
         XCTAssertEqual(1, b2.capacity)

@@ -21,7 +21,7 @@ private final class DoNothingHandler: ChannelInboundHandler {
 
 func run(identifier: String) {
     measure(identifier: identifier) {
-        let numberOfIterations = 1_000
+        let numberOfIterations = 1000
         for _ in 0 ..< numberOfIterations {
             _ = DatagramBootstrap(group: group)
                 .channelInitializer { channel in

@@ -56,29 +56,29 @@ func doSendFramesNewBuffer(channel: EmbeddedChannel, number numberOfFrameSends: 
 func run(identifier: String) {
     let channel = EmbeddedChannel()
     try! channel.pipeline.addHandler(WebSocketFrameEncoder()).wait()
-    let data = Array(repeating: UInt8(0), count: 1_024)
+    let data = Array(repeating: UInt8(0), count: 1024)
 
     measure(identifier: identifier + "_holding_buffer") {
-        let numberDone = try! doSendFramesHoldingBuffer(channel: channel, number: 1_000, data: data, spareBytesAtFront: 0)
-        precondition(numberDone == 1_000)
+        let numberDone = try! doSendFramesHoldingBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 0)
+        precondition(numberDone == 1000)
         return numberDone
     }
 
     measure(identifier: identifier + "_holding_buffer_with_space") {
-        let numberDone = try! doSendFramesHoldingBuffer(channel: channel, number: 1_000, data: data, spareBytesAtFront: 8)
-        precondition(numberDone == 1_000)
+        let numberDone = try! doSendFramesHoldingBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 8)
+        precondition(numberDone == 1000)
         return numberDone
     }
 
     measure(identifier: identifier + "_new_buffer") {
-        let numberDone = try! doSendFramesNewBuffer(channel: channel, number: 1_000, data: data, spareBytesAtFront: 0)
-        precondition(numberDone == 1_000)
+        let numberDone = try! doSendFramesNewBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 0)
+        precondition(numberDone == 1000)
         return numberDone
     }
 
     measure(identifier: identifier + "_new_buffer_with_space") {
-        let numberDone = try! doSendFramesNewBuffer(channel: channel, number: 1_000, data: data, spareBytesAtFront: 8)
-        precondition(numberDone == 1_000)
+        let numberDone = try! doSendFramesNewBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 8)
+        precondition(numberDone == 1000)
         return numberDone
     }
 

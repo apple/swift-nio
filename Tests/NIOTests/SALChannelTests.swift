@@ -233,7 +233,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                                                                         interested: [.read],
                                                                         registrationID: .initialRegistrationID))
             try self.assertWaitingForNotification(result: readEvent)
-            try self.assertRead(expectedFD: .max, expectedBufferSpace: 2_048, return: buffer)
+            try self.assertRead(expectedFD: .max, expectedBufferSpace: 2048, return: buffer)
         }) {
             channel.pipeline.addHandler(SignalGroupOnRead(group: g))
         })

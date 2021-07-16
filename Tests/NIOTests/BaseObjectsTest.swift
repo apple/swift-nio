@@ -17,7 +17,7 @@ import XCTest
 
 class BaseObjectTest: XCTestCase {
     func testNIOByteBufferConversion() {
-        let expected = ByteBufferAllocator().buffer(capacity: 1_024)
+        let expected = ByteBufferAllocator().buffer(capacity: 1024)
         let asAny = NIOAny(expected)
         XCTAssertEqual(expected, asAny.forceAs(type: ByteBuffer.self))
         XCTAssertEqual(expected, asAny.forceAsByteBuffer())
@@ -34,7 +34,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testNIOIODataConversion() {
-        let expected = IOData.byteBuffer(ByteBufferAllocator().buffer(capacity: 1_024))
+        let expected = IOData.byteBuffer(ByteBufferAllocator().buffer(capacity: 1024))
         let asAny = NIOAny(expected)
         XCTAssertEqual(expected, asAny.forceAs(type: IOData.self))
         XCTAssertEqual(expected, asAny.forceAsIOData())
@@ -74,7 +74,7 @@ class BaseObjectTest: XCTestCase {
 
     func testBadConversions() {
         let handle = NIOFileHandle(descriptor: -1)
-        let bb = ByteBufferAllocator().buffer(capacity: 1_024)
+        let bb = ByteBufferAllocator().buffer(capacity: 1024)
         let fr = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
             // fake descriptor, so shouldn't be closed.
@@ -88,7 +88,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testByteBufferFromIOData() {
-        let expected = ByteBufferAllocator().buffer(capacity: 1_024)
+        let expected = ByteBufferAllocator().buffer(capacity: 1024)
         let wrapped = IOData.byteBuffer(expected)
         XCTAssertEqual(expected, NIOAny(wrapped).tryAsByteBuffer())
     }
@@ -106,8 +106,8 @@ class BaseObjectTest: XCTestCase {
 
     func testIODataEquals() {
         let handle = NIOFileHandle(descriptor: -1)
-        var bb1 = ByteBufferAllocator().buffer(capacity: 1_024)
-        let bb2 = ByteBufferAllocator().buffer(capacity: 1_024)
+        var bb1 = ByteBufferAllocator().buffer(capacity: 1024)
+        let bb2 = ByteBufferAllocator().buffer(capacity: 1024)
         bb1.writeString("hello")
         let fr = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {

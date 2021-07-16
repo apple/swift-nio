@@ -223,10 +223,10 @@ public extension ByteToMessageDecoder {
         // 1. If there is at least 2kB of memory to reclaim
         // 2. If the buffer is more than 50% reclaimable memory and is at least
         //    1kB in size.
-        if buffer.readerIndex >= 2_048 {
+        if buffer.readerIndex >= 2048 {
             return true
         }
-        return buffer.storageCapacity > 1_024 && (buffer.storageCapacity - buffer.readerIndex) < buffer.readerIndex
+        return buffer.storageCapacity > 1024 && (buffer.storageCapacity - buffer.readerIndex) < buffer.readerIndex
     }
 
     func wrapInboundOut(_ value: InboundOut) -> NIOAny {
