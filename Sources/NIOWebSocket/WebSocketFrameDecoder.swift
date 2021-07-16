@@ -39,12 +39,12 @@ extension WebSocketErrorCode {
     }
 }
 
-extension ByteBuffer {
+public extension ByteBuffer {
     /// Applies the WebSocket unmasking operation.
     ///
     /// - parameters:
     ///     - maskingKey: The masking key.
-    public mutating func webSocketUnmask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
+    mutating func webSocketUnmask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
         /// Shhhh: secretly unmasking and masking are the same operation!
         webSocketMask(maskingKey, indexOffset: indexOffset)
     }
@@ -57,8 +57,8 @@ extension ByteBuffer {
     ///         This is used when masking multiple "contiguous" byte buffers, to ensure that
     ///         the masking key is applied uniformly to the collection rather than from the
     ///         start each time.
-    public mutating func webSocketMask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
-        self.withUnsafeMutableReadableBytes {
+    mutating func webSocketMask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
+        withUnsafeMutableReadableBytes {
             for (index, byte) in $0.enumerated() {
                 $0[index] = byte ^ maskingKey[(index + indexOffset) % 4]
             }
@@ -105,16 +105,16 @@ struct WSParser {
     var state: DecoderState = .idle
 
     mutating func parseStep(_ buffer: inout ByteBuffer) -> ParseResult {
-        switch self.state {
+        switch state {
         case .idle:
             // This is a new buffer. We want to find the first octet and save it off.
             guard let firstByte = buffer.readInteger(as: UInt8.self) else {
                 return .insufficientData
             }
-            self.state = .firstByteReceived(firstByte: firstByte)
+            state = .firstByteReceived(firstByte: firstByte)
             return .continueParsing
 
-        case .firstByteReceived(let firstByte):
+        case let .firstByteReceived(firstByte):
             // Now we're looking for the length. We begin by finding the length byte to see if we
             // need any more data.
             guard let lengthByte = buffer.readInteger(as: UInt8.self) else {
@@ -125,60 +125,60 @@ struct WSParser {
 
             switch (lengthByte & 0x7F, masked) {
             case (126, _):
-                self.state = .waitingForLengthWord(firstByte: firstByte, masked: masked)
+                state = .waitingForLengthWord(firstByte: firstByte, masked: masked)
             case (127, _):
-                self.state = .waitingForLengthQWord(firstByte: firstByte, masked: masked)
+                state = .waitingForLengthQWord(firstByte: firstByte, masked: masked)
             case (let len, true):
                 assert(len <= 125)
-                self.state = .waitingForMask(firstByte: firstByte, length: Int(len))
+                state = .waitingForMask(firstByte: firstByte, length: Int(len))
             case (let len, false):
                 assert(len <= 125)
-                self.state = .waitingForData(firstByte: firstByte, length: Int(len), maskingKey: nil)
+                state = .waitingForData(firstByte: firstByte, length: Int(len), maskingKey: nil)
             }
             return .continueParsing
 
-        case .waitingForLengthWord(let firstByte, let masked):
+        case let .waitingForLengthWord(firstByte, masked):
             // We've got a one-word length here.
             guard let lengthWord = buffer.readInteger(as: UInt16.self) else {
                 return .insufficientData
             }
 
             if masked {
-                self.state = .waitingForMask(firstByte: firstByte, length: Int(lengthWord))
+                state = .waitingForMask(firstByte: firstByte, length: Int(lengthWord))
             } else {
-                self.state = .waitingForData(firstByte: firstByte, length: Int(lengthWord), maskingKey: nil)
+                state = .waitingForData(firstByte: firstByte, length: Int(lengthWord), maskingKey: nil)
             }
             return .continueParsing
 
-        case .waitingForLengthQWord(let firstByte, let masked):
+        case let .waitingForLengthQWord(firstByte, masked):
             // We've got a qword of length here.
             guard let lengthQWord = buffer.readInteger(as: UInt64.self) else {
                 return .insufficientData
             }
 
             if masked {
-                self.state = .waitingForMask(firstByte: firstByte, length: Int(lengthQWord))
+                state = .waitingForMask(firstByte: firstByte, length: Int(lengthQWord))
             } else {
-                self.state = .waitingForData(firstByte: firstByte, length: Int(lengthQWord), maskingKey: nil)
+                state = .waitingForData(firstByte: firstByte, length: Int(lengthQWord), maskingKey: nil)
             }
             return .continueParsing
 
-        case .waitingForMask(let firstByte, let length):
+        case let .waitingForMask(firstByte, length):
             // We're waiting for the masking key.
             guard let maskingKey = buffer.readInteger(as: UInt32.self) else {
                 return .insufficientData
             }
 
-            self.state = .waitingForData(firstByte: firstByte, length: length, maskingKey: WebSocketMaskingKey(networkRepresentation: maskingKey))
+            state = .waitingForData(firstByte: firstByte, length: length, maskingKey: WebSocketMaskingKey(networkRepresentation: maskingKey))
             return .continueParsing
 
-        case .waitingForData(let firstByte, let length, let maskingKey):
+        case let .waitingForData(firstByte, length, maskingKey):
             guard let data = buffer.readSlice(length: length) else {
                 return .insufficientData
             }
 
             let frame = WebSocketFrame(firstByte: firstByte, maskKey: maskingKey, applicationData: data)
-            self.state = .idle
+            state = .idle
             return .result(frame)
         }
     }
@@ -186,8 +186,8 @@ struct WSParser {
     /// Apply a number of validations to the incremental state, ensuring that the frame we're
     /// receiving is valid.
     func validateState(maxFrameSize: Int) throws {
-        switch self.state {
-        case .waitingForMask(let firstByte, let length), .waitingForData(let firstByte, let length, _):
+        switch state {
+        case let .waitingForMask(firstByte, length), let .waitingForData(firstByte, length, _):
             if length > maxFrameSize {
                 throw NIOWebSocketError.invalidFrameLength
             }
@@ -195,10 +195,10 @@ struct WSParser {
             let isControlFrame = (firstByte & 0x08) != 0
             let isFragment = (firstByte & 0x80) == 0
 
-            if isControlFrame && isFragment {
+            if isControlFrame, isFragment {
                 throw NIOWebSocketError.fragmentedControlFrame
             }
-            if isControlFrame && length > 125 {
+            if isControlFrame, length > 125 {
                 throw NIOWebSocketError.multiByteControlFrameLength
             }
         case .idle, .firstByteReceived, .waitingForLengthWord, .waitingForLengthQWord:
@@ -251,18 +251,18 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         self.maxFrameSize = maxFrameSize
     }
 
-    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState  {
+    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         // Even though the calling code will loop around calling us in `decode`, we can't quite
         // rely on that: sometimes we have zero-length elements to parse, and the caller doesn't
         // guarantee to call us with zero-length bytes.
         while true {
             switch parser.parseStep(&buffer) {
-            case .result(let frame):
-                context.fireChannelRead(self.wrapInboundOut(frame))
+            case let .result(frame):
+                context.fireChannelRead(wrapInboundOut(frame))
                 return .continue
             case .continueParsing:
-                try self.parser.validateState(maxFrameSize: self.maxFrameSize)
-                // loop again, might be 'waiting' for 0 bytes
+                try parser.validateState(maxFrameSize: maxFrameSize)
+            // loop again, might be 'waiting' for 0 bytes
             case .insufficientData:
                 return .needMoreData
             }

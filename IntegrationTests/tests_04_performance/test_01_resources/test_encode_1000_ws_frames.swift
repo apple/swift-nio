@@ -25,7 +25,7 @@ func doSendFramesHoldingBuffer(channel: EmbeddedChannel, number numberOfFrameSen
 
     // We're interested in counting allocations, so this test reads the data from the EmbeddedChannel
     // to force the data out of memory.
-    for _ in 0..<numberOfFrameSends {
+    for _ in 0 ..< numberOfFrameSends {
         channel.writeAndFlush(frame, promise: nil)
         _ = try channel.readOutbound(as: ByteBuffer.self)
         _ = try channel.readOutbound(as: ByteBuffer.self)
@@ -34,9 +34,8 @@ func doSendFramesHoldingBuffer(channel: EmbeddedChannel, number numberOfFrameSen
     return numberOfFrameSends
 }
 
-
 func doSendFramesNewBuffer(channel: EmbeddedChannel, number numberOfFrameSends: Int, data originalData: [UInt8], spareBytesAtFront: Int) throws -> Int {
-    for _ in 0..<numberOfFrameSends {
+    for _ in 0 ..< numberOfFrameSends {
         // We need a new allocation every time to drop the original data ref.
         var data = channel.allocator.buffer(capacity: originalData.count + spareBytesAtFront)
         data.moveWriterIndex(forwardBy: spareBytesAtFront)
@@ -53,7 +52,6 @@ func doSendFramesNewBuffer(channel: EmbeddedChannel, number numberOfFrameSends: 
 
     return numberOfFrameSends
 }
-
 
 func run(identifier: String) {
     let channel = EmbeddedChannel()

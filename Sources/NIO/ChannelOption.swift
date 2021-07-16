@@ -63,32 +63,32 @@ public typealias ConnectTimeoutOption = ChannelOptions.Types.ConnectTimeoutOptio
 @available(*, deprecated, renamed: "ChannelOptions.Types.AllowRemoteHalfClosureOption")
 public typealias AllowRemoteHalfClosureOption = ChannelOptions.Types.AllowRemoteHalfClosureOption
 
-extension ChannelOptions {
-    public enum Types {
-
+public extension ChannelOptions {
+    enum Types {
         /// `SocketOption` allows users to specify configuration settings that are directly applied to the underlying socket file descriptor.
         ///
         /// Valid options are typically found in the various man pages like `man 4 tcp`.
         public struct SocketOption: ChannelOption, Equatable {
-            public typealias Value = (SocketOptionValue)
+            public typealias Value = SocketOptionValue
 
             public var optionLevel: NIOBSDSocket.OptionLevel
             public var optionName: NIOBSDSocket.Option
 
             public var level: SocketOptionLevel {
                 get {
-                    return SocketOptionLevel(optionLevel.rawValue)
+                    SocketOptionLevel(optionLevel.rawValue)
                 }
                 set {
-                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(newValue))
+                    optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(newValue))
                 }
             }
+
             public var name: SocketOptionName {
                 get {
-                    return SocketOptionName(optionName.rawValue)
+                    SocketOptionName(optionName.rawValue)
                 }
                 set {
-                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(newValue))
+                    optionName = NIOBSDSocket.Option(rawValue: CInt(newValue))
                 }
             }
 
@@ -99,8 +99,8 @@ extension ChannelOptions {
                 ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
                 ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
                 public init(level: SocketOptionLevel, name: SocketOptionName) {
-                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
-                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
+                    optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
+                    optionName = NIOBSDSocket.Option(rawValue: CInt(name))
                 }
             #endif
 
@@ -110,8 +110,8 @@ extension ChannelOptions {
             ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
             ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
             public init(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) {
-                self.optionLevel = level
-                self.optionName = name
+                optionLevel = level
+                optionName = name
             }
         }
 
@@ -188,9 +188,9 @@ extension ChannelOptions {
         public struct DatagramVectorReadMessageCountOption: ChannelOption {
             public typealias Value = Int
 
-            public init() { }
+            public init() {}
         }
-        
+
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
         public struct ExplicitCongestionNotificationsOption: ChannelOption {
             public typealias Value = Bool
@@ -265,7 +265,7 @@ extension ChannelOptions {
 }
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
-public struct ChannelOptions {
+public enum ChannelOptions {
     #if !os(Windows)
         public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
             .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
@@ -311,7 +311,7 @@ public struct ChannelOptions {
 
     /// - seealso: `DatagramVectorReadMessageCountOption`
     public static let datagramVectorReadMessageCount = Types.DatagramVectorReadMessageCountOption()
-    
+
     /// - seealso: `ExplicitCongestionNotificationsOption`
     public static let explicitCongestionNotification = Types.ExplicitCongestionNotificationsOption()
 
@@ -319,16 +319,16 @@ public struct ChannelOptions {
     public static let receivePacketInfo = Types.ReceivePacketInfo()
 }
 
-extension ChannelOptions {
+public extension ChannelOptions {
     /// A type-safe storage facility for `ChannelOption`s. You will only ever need this if you implement your own
     /// `Channel` that needs to store `ChannelOption`s.
-    public struct Storage {
+    struct Storage {
         @usableFromInline
         internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))]
 
         public init() {
-            self._storage = []
-            self._storage.reserveCapacity(2)
+            _storage = []
+            _storage.reserveCapacity(2)
         }
 
         /// Add `Options`, a `ChannelOption` to the `ChannelOptions.Storage`.
@@ -339,12 +339,12 @@ extension ChannelOptions {
         @inlinable
         public mutating func append<Option: ChannelOption>(key newKey: Option, value newValue: Option.Value) {
             func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
-                return { (option, value) in
-                    return t.setOption(option as! Option, value: value as! Option.Value)
+                { option, value in
+                    t.setOption(option as! Option, value: value as! Option.Value)
                 }
             }
             var hasSet = false
-            self._storage = self._storage.map { currentKeyAndValue in
+            _storage = _storage.map { currentKeyAndValue in
                 let (currentKey, _) = currentKeyAndValue
                 if let currentKey = currentKey as? Option, currentKey == newKey {
                     hasSet = true
@@ -354,7 +354,7 @@ extension ChannelOptions {
                 }
             }
             if !hasSet {
-                self._storage.append((newKey, (newValue, applier)))
+                _storage.append((newKey, (newValue, applier)))
             }
         }
 
@@ -366,7 +366,7 @@ extension ChannelOptions {
         ///    - An `EventLoopFuture` that is fulfilled when all `ChannelOption`s have been applied to the `Channel`.
         public func applyAllChannelOptions(to channel: Channel) -> EventLoopFuture<Void> {
             let applyPromise = channel.eventLoop.makePromise(of: Void.self)
-            var it = self._storage.makeIterator()
+            var it = _storage.makeIterator()
 
             func applyNext() {
                 guard let (key, (value, applier)) = it.next() else {

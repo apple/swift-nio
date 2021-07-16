@@ -23,24 +23,22 @@ import XCTest
 ///
 
 extension HTTPClientUpgradeTestCase {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPClientUpgradeTestCase) -> () throws -> Void)] {
-      return [
-                ("testSimpleUpgradeSucceeds", testSimpleUpgradeSucceeds),
-                ("testUpgradeWithRequiredHeadersShowsInRequest", testUpgradeWithRequiredHeadersShowsInRequest),
-                ("testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols", testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols),
-                ("testUpgradeCompleteFlush", testUpgradeCompleteFlush),
-                ("testNoUpgradeAsNoServerUpgrade", testNoUpgradeAsNoServerUpgrade),
-                ("testFirstResponseReturnsServerError", testFirstResponseReturnsServerError),
-                ("testUpgradeResponseMissingAllProtocols", testUpgradeResponseMissingAllProtocols),
-                ("testUpgradeOnlyHandlesKnownProtocols", testUpgradeOnlyHandlesKnownProtocols),
-                ("testUpgradeResponseCanBeRejectedByClientUpgrader", testUpgradeResponseCanBeRejectedByClientUpgrader),
-                ("testUpgradeIsCaseInsensitive", testUpgradeIsCaseInsensitive),
-                ("testBuffersInboundDataDuringAddingHandlers", testBuffersInboundDataDuringAddingHandlers),
-                ("testFiresOutboundErrorDuringAddingHandlers", testFiresOutboundErrorDuringAddingHandlers),
-                ("testFiresInboundErrorBeforeSendsRequestUpgrade", testFiresInboundErrorBeforeSendsRequestUpgrade),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPClientUpgradeTestCase) -> () throws -> Void)] {
+        [
+            ("testSimpleUpgradeSucceeds", testSimpleUpgradeSucceeds),
+            ("testUpgradeWithRequiredHeadersShowsInRequest", testUpgradeWithRequiredHeadersShowsInRequest),
+            ("testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols", testSimpleUpgradeSucceedsWhenMultipleAvailableProtocols),
+            ("testUpgradeCompleteFlush", testUpgradeCompleteFlush),
+            ("testNoUpgradeAsNoServerUpgrade", testNoUpgradeAsNoServerUpgrade),
+            ("testFirstResponseReturnsServerError", testFirstResponseReturnsServerError),
+            ("testUpgradeResponseMissingAllProtocols", testUpgradeResponseMissingAllProtocols),
+            ("testUpgradeOnlyHandlesKnownProtocols", testUpgradeOnlyHandlesKnownProtocols),
+            ("testUpgradeResponseCanBeRejectedByClientUpgrader", testUpgradeResponseCanBeRejectedByClientUpgrader),
+            ("testUpgradeIsCaseInsensitive", testUpgradeIsCaseInsensitive),
+            ("testBuffersInboundDataDuringAddingHandlers", testBuffersInboundDataDuringAddingHandlers),
+            ("testFiresOutboundErrorDuringAddingHandlers", testFiresOutboundErrorDuringAddingHandlers),
+            ("testFiresInboundErrorBeforeSendsRequestUpgrade", testFiresInboundErrorBeforeSendsRequestUpgrade),
+        ]
+    }
 }
-

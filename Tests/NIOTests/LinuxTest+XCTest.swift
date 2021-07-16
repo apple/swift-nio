@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension LinuxTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (LinuxTest) -> () throws -> Void)] {
-      return [
-                ("testCoreCountQuota", testCoreCountQuota),
-                ("testCoreCountCpuset", testCoreCountCpuset),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (LinuxTest) -> () throws -> Void)] {
+        [
+            ("testCoreCountQuota", testCoreCountQuota),
+            ("testCoreCountCpuset", testCoreCountCpuset),
+        ]
+    }
 }
-

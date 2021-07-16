@@ -18,20 +18,20 @@ import XCTest
 
 class BootstrapTest: XCTestCase {
     var group: MultiThreadedEventLoopGroup!
-    var groupBag: [MultiThreadedEventLoopGroup]? = nil // protected by `self.lock`
+    var groupBag: [MultiThreadedEventLoopGroup]? // protected by `self.lock`
     let lock = Lock()
 
     override func setUp() {
-        XCTAssertNil(self.group)
-        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        self.lock.withLock {
+        XCTAssertNil(group)
+        group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        lock.withLock {
             XCTAssertNil(self.groupBag)
             self.groupBag = []
         }
     }
 
     override func tearDown() {
-        XCTAssertNoThrow(try self.lock.withLock {
+        XCTAssertNoThrow(try lock.withLock {
             guard let groupBag = self.groupBag else {
                 XCTFail()
                 return
@@ -42,13 +42,13 @@ class BootstrapTest: XCTestCase {
             self.groupBag = nil
             XCTAssertNotNil(self.group)
         })
-        XCTAssertNoThrow(try self.group?.syncShutdownGracefully())
-        self.group = nil
+        XCTAssertNoThrow(try group?.syncShutdownGracefully())
+        group = nil
     }
 
     func freshEventLoop() -> EventLoop {
-        let group: MultiThreadedEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        self.lock.withLock {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        lock.withLock {
             self.groupBag!.append(group)
         }
         return group.next()
@@ -57,7 +57,8 @@ class BootstrapTest: XCTestCase {
     func testBootstrapsCallInitializersOnCorrectEventLoop() throws {
         for numThreads in [1 /* everything on one event loop */,
                            2 /* some stuff has shared event loops */,
-                           5 /* everything on a different event loop */] {
+                           5 /* everything on a different event loop */ ]
+        {
             let group = MultiThreadedEventLoopGroup(numberOfThreads: numThreads)
             defer {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -88,7 +89,7 @@ class BootstrapTest: XCTestCase {
                     return channel.eventLoop.makeSucceededFuture(())
                 }
                 .connect(to: serverChannel.localAddress!)
-                .wait(), message: "resolver debug info: \(try! resolverDebugInformation(eventLoop: group.next(),host: "localhost", previouslyReceivedResult: serverChannel.localAddress!))")
+                .wait(), message: "resolver debug info: \(try! resolverDebugInformation(eventLoop: group.next(), host: "localhost", previouslyReceivedResult: serverChannel.localAddress!))")
             defer {
                 XCTAssertNoThrow(try client.syncCloseAcceptingAlreadyClosed())
             }
@@ -98,9 +99,9 @@ class BootstrapTest: XCTestCase {
     }
 
     func testTCPBootstrapsTolerateFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
-        let childChannelDone = self.freshEventLoop().makePromise(of: Void.self)
-        let serverChannelDone = self.freshEventLoop().makePromise(of: Void.self)
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: self.freshEventLoop())
+        let childChannelDone = freshEventLoop().makePromise(of: Void.self)
+        let serverChannelDone = freshEventLoop().makePromise(of: Void.self)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: freshEventLoop())
             .childChannelInitializer { channel in
                 XCTAssert(channel.eventLoop.inEventLoop)
                 defer {
@@ -121,7 +122,7 @@ class BootstrapTest: XCTestCase {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let client = try assertNoThrowWithValue(ClientBootstrap(group: self.freshEventLoop())
+        let client = try assertNoThrowWithValue(ClientBootstrap(group: freshEventLoop())
             .channelInitializer { channel in
                 XCTAssert(channel.eventLoop.inEventLoop)
                 return self.freshEventLoop().makeSucceededFuture(())
@@ -136,7 +137,7 @@ class BootstrapTest: XCTestCase {
     }
 
     func testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
-        XCTAssertNoThrow(try DatagramBootstrap(group: self.freshEventLoop())
+        XCTAssertNoThrow(try DatagramBootstrap(group: freshEventLoop())
             .channelInitializer { channel in
                 XCTAssert(channel.eventLoop.inEventLoop)
                 return self.freshEventLoop().makeSucceededFuture(())
@@ -158,7 +159,7 @@ class BootstrapTest: XCTestCase {
             XCTAssertNoThrow(try NIOBSDSocket.close(socket: socketFDs[1]))
         }
 
-        XCTAssertNoThrow(try ClientBootstrap(group: self.freshEventLoop())
+        XCTAssertNoThrow(try ClientBootstrap(group: freshEventLoop())
             .channelInitializer { channel in
                 XCTAssert(channel.eventLoop.inEventLoop)
                 return self.freshEventLoop().makeSucceededFuture(())
@@ -179,10 +180,10 @@ class BootstrapTest: XCTestCase {
                                   address_len: socklen_t(len))
         }
 
-        let childChannelDone = self.freshEventLoop().next().makePromise(of: Void.self)
-        let serverChannelDone = self.freshEventLoop().next().makePromise(of: Void.self)
+        let childChannelDone = freshEventLoop().next().makePromise(of: Void.self)
+        let serverChannelDone = freshEventLoop().next().makePromise(of: Void.self)
 
-        let serverChannel = try assertNoThrowWithValue(try ServerBootstrap(group: self.freshEventLoop())
+        let serverChannel = try assertNoThrowWithValue(try ServerBootstrap(group: freshEventLoop())
             .childChannelInitializer { channel in
                 XCTAssert(channel.eventLoop.inEventLoop)
                 defer {
@@ -199,7 +200,7 @@ class BootstrapTest: XCTestCase {
             }
             .withBoundSocket(socket)
             .wait())
-        let client = try assertNoThrowWithValue(ClientBootstrap(group: self.freshEventLoop())
+        let client = try assertNoThrowWithValue(ClientBootstrap(group: freshEventLoop())
             .channelInitializer { channel in
                 XCTAssert(channel.eventLoop.inEventLoop)
                 return self.freshEventLoop().makeSucceededFuture(())
@@ -226,10 +227,10 @@ class BootstrapTest: XCTestCase {
                 .childChannelInitializer { channel in
                     serverAcceptedChannelPromise.succeed(channel)
                     return channel.eventLoop.makeSucceededFuture(())
-            }.bind(host: "127.0.0.1", port: 0).wait())
+                }.bind(host: "127.0.0.1", port: 0).wait())
 
             let clientChannel = try assertNoThrowWithValue(clientBootstrap
-                .channelInitializer({ (channel: Channel) in channel.eventLoop.makeSucceededFuture(()) })
+                .channelInitializer { (channel: Channel) in channel.eventLoop.makeSucceededFuture(()) }
                 .connect(host: "127.0.0.1", port: serverChannel.localAddress!.port!).wait())
 
             var buffer = clientChannel.allocator.buffer(capacity: 1)
@@ -244,13 +245,13 @@ class BootstrapTest: XCTestCase {
             // Wait for the close promises. These fire last.
             XCTAssertNoThrow(try EventLoopFuture.andAllSucceed([clientChannel.closeFuture,
                                                                 serverAcceptedChannel.closeFuture],
-                                                                on: group.next()).wait())
+                                                               on: group.next()).wait())
         }
 
         let bootstrap = NIOClientTCPBootstrap(ClientBootstrap(group: group), tls: NIOInsecureNoTLS())
         try restrictBootstrapType(clientBootstrap: bootstrap)
     }
-    
+
     func testServerBootstrapBindTimeout() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -268,8 +269,8 @@ class BootstrapTest: XCTestCase {
     }
 
     func testServerBootstrapSetsChannelOptionsBeforeChannelInitializer() {
-        var channel: Channel? = nil
-        XCTAssertNoThrow(channel = try ServerBootstrap(group: self.group)
+        var channel: Channel?
+        XCTAssertNoThrow(channel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.autoRead, value: false)
             .serverChannelInitializer { channel in
                 channel.getOption(ChannelOptions.autoRead).whenComplete { result in
@@ -279,16 +280,16 @@ class BootstrapTest: XCTestCase {
                     workaround()
                 }
                 return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
-        }
-        .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
-        .wait())
+            }
+            .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
+            .wait())
         XCTAssertNotNil(channel)
         XCTAssertNoThrow(try channel?.close().wait())
     }
 
     func testClientBootstrapSetsChannelOptionsBeforeChannelInitializer() {
-        XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
-            var channel: Channel? = nil
+        XCTAssertNoThrow(try withTCPServerChannel(group: group) { server in
+            var channel: Channel?
             XCTAssertNoThrow(channel = try ClientBootstrap(group: self.group)
                 .channelOption(ChannelOptions.autoRead, value: false)
                 .channelInitializer { channel in
@@ -299,27 +300,27 @@ class BootstrapTest: XCTestCase {
                         workaround()
                     }
                     return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
-            }
-            .connect(to: server.localAddress!)
-            .wait())
+                }
+                .connect(to: server.localAddress!)
+                .wait())
             XCTAssertNotNil(channel)
             XCTAssertNoThrow(try channel?.close().wait())
         })
     }
 
     func testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer() {
-        XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
-            var maybeSocket: Socket? = nil
+        XCTAssertNoThrow(try withTCPServerChannel(group: group) { server in
+            var maybeSocket: Socket?
             XCTAssertNoThrow(maybeSocket = try Socket(protocolFamily: .inet, type: .stream))
             XCTAssertNoThrow(XCTAssertEqual(true, try maybeSocket?.connect(to: server.localAddress!)))
-            var maybeFD: CInt? = nil
+            var maybeFD: CInt?
             XCTAssertNoThrow(maybeFD = try maybeSocket?.takeDescriptorOwnership())
             guard let fd = maybeFD else {
                 XCTFail("could not get a socket fd")
                 return
             }
 
-            var channel: Channel? = nil
+            var channel: Channel?
             XCTAssertNoThrow(channel = try ClientBootstrap(group: self.group)
                 .channelOption(ChannelOptions.autoRead, value: false)
                 .channelInitializer { channel in
@@ -330,17 +331,17 @@ class BootstrapTest: XCTestCase {
                         workaround()
                     }
                     return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
-            }
-            .withConnectedSocket(fd)
-            .wait())
+                }
+                .withConnectedSocket(fd)
+                .wait())
             XCTAssertNotNil(channel)
             XCTAssertNoThrow(try channel?.close().wait())
         })
     }
 
     func testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer() {
-        var channel: Channel? = nil
-        XCTAssertNoThrow(channel = try DatagramBootstrap(group: self.group)
+        var channel: Channel?
+        XCTAssertNoThrow(channel = try DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.autoRead, value: false)
             .channelInitializer { channel in
                 channel.getOption(ChannelOptions.autoRead).whenComplete { result in
@@ -350,24 +351,24 @@ class BootstrapTest: XCTestCase {
                     workaround()
                 }
                 return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
-        }
-        .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
-        .wait())
+            }
+            .bind(to: .init(ipAddress: "127.0.0.1", port: 0))
+            .wait())
         XCTAssertNotNil(channel)
         XCTAssertNoThrow(try channel?.close().wait())
     }
 
     func testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer() {
         XCTAssertNoThrow(try withPipe { inPipe, outPipe in
-            var maybeInFD: CInt? = nil
-            var maybeOutFD: CInt? = nil
+            var maybeInFD: CInt?
+            var maybeOutFD: CInt?
             XCTAssertNoThrow(maybeInFD = try inPipe.takeDescriptorOwnership())
             XCTAssertNoThrow(maybeOutFD = try outPipe.takeDescriptorOwnership())
             guard let inFD = maybeInFD, let outFD = maybeOutFD else {
                 XCTFail("couldn't get pipe fds")
                 return [inPipe, outPipe]
             }
-            var channel: Channel? = nil
+            var channel: Channel?
             XCTAssertNoThrow(channel = try NIOPipeBootstrap(group: self.group)
                 .channelOption(ChannelOptions.autoRead, value: false)
                 .channelInitializer { channel in
@@ -378,9 +379,9 @@ class BootstrapTest: XCTestCase {
                         workaround()
                     }
                     return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
-            }
-            .withPipes(inputDescriptor: inFD, outputDescriptor: outFD)
-            .wait())
+                }
+                .withPipes(inputDescriptor: inFD, outputDescriptor: outFD)
+                .wait())
             XCTAssertNotNil(channel)
             XCTAssertNoThrow(try channel?.close().wait())
             return []
@@ -396,11 +397,11 @@ class BootstrapTest: XCTestCase {
 
         struct FoundHandlerThatWasNotSupposedToBeThereError: Error {}
 
-        var maybeServer: Channel? = nil
+        var maybeServer: Channel?
         XCTAssertNoThrow(maybeServer = try ServerBootstrap(group: group)
             .serverChannelInitializer { channel in
                 // Here, we test that we can't find the AcceptHandler
-                return channel.pipeline.context(name: "AcceptHandler").flatMap { context -> EventLoopFuture<Void> in
+                channel.pipeline.context(name: "AcceptHandler").flatMap { context -> EventLoopFuture<Void> in
                     XCTFail("unexpectedly found \(context)")
                     return channel.eventLoop.makeFailedFuture(FoundHandlerThatWasNotSupposedToBeThereError())
                 }.flatMapError { error -> EventLoopFuture<Void> in
@@ -530,30 +531,33 @@ class BootstrapTest: XCTestCase {
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: elg))
         XCTAssertNil(NIOPipeBootstrap(validatingGroup: el))
     }
-    
+
     func testConvenienceOptionsAreEquivalentUniversalClient() throws {
-        func setAndGetOption<Option>(option: Option, _ applyOptions : (NIOClientTCPBootstrap) -> NIOClientTCPBootstrap) throws
-            -> Option.Value where Option : ChannelOption {
-            var optionRead : EventLoopFuture<Option.Value>?
-            XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
-                var channel: Channel? = nil
+        func setAndGetOption<Option>(option: Option, _ applyOptions: (NIOClientTCPBootstrap) -> NIOClientTCPBootstrap) throws
+            -> Option.Value where Option: ChannelOption
+        {
+            var optionRead: EventLoopFuture<Option.Value>?
+            XCTAssertNoThrow(try withTCPServerChannel(group: group) { server in
+                var channel: Channel?
                 XCTAssertNoThrow(channel = try applyOptions(NIOClientTCPBootstrap(
-                    ClientBootstrap(group: self.group), tls: NIOInsecureNoTLS()))
+                    ClientBootstrap(group: self.group), tls: NIOInsecureNoTLS()
+                ))
                     .channelInitializer { channel in optionRead = channel.getOption(option)
                         return channel.eventLoop.makeSucceededFuture(())
                     }
-                .connect(to: server.localAddress!)
-                .wait())
+                    .connect(to: server.localAddress!)
+                    .wait())
                 XCTAssertNotNil(optionRead)
                 XCTAssertNotNil(channel)
                 XCTAssertNoThrow(try channel?.close().wait())
             })
             return try optionRead!.wait()
         }
-        
+
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
                                             shortOption: ChannelOptions.TCPConvenienceOption) throws
-            where Option : ChannelOption, Option.Value : Equatable {
+            where Option: ChannelOption, Option.Value: Equatable
+        {
             let longSetValue = try setAndGetOption(option: longOption) { bs in
                 bs.channelOption(longOption, value: setValue)
             }
@@ -561,11 +565,11 @@ class BootstrapTest: XCTestCase {
                 bs.channelConvenienceOptions([shortOption])
             }
             let unsetValue = try setAndGetOption(option: longOption) { $0 }
-            
+
             XCTAssertEqual(longSetValue, shortSetValue)
             XCTAssertNotEqual(longSetValue, unsetValue)
         }
-        
+
         try checkOptionEquivalence(longOption: ChannelOptions.socketOption(.so_reuseaddr),
                                    setValue: 1,
                                    shortOption: .allowLocalEndpointReuse)
@@ -585,18 +589,19 @@ class BootstrapTest: XCTestCase {
             let localIP = isIPv4 ? "127.0.0.1" : "::1"
             guard let serverLocalAddressChoice = try? SocketAddress(ipAddress: localIP, port: 0),
                   let clientLocalAddressWholeInterface = try? SocketAddress(ipAddress: localIP, port: 0),
-                  let server1 = (try? ServerBootstrap(group: self.group)
-                                    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                                    .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-                                    .bind(to: serverLocalAddressChoice)
-                                    .wait()),
-                  let server2 = (try? ServerBootstrap(group: self.group)
-                                    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                                    .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-                                    .bind(to: serverLocalAddressChoice)
-                                    .wait()),
+                  let server1 = (try? ServerBootstrap(group: group)
+                      .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                      .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+                      .bind(to: serverLocalAddressChoice)
+                      .wait()),
+                  let server2 = (try? ServerBootstrap(group: group)
+                      .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                      .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+                      .bind(to: serverLocalAddressChoice)
+                      .wait()),
                   let server1LocalAddress = server1.localAddress,
-                  let server2LocalAddress = server2.localAddress else {
+                  let server2LocalAddress = server2.localAddress
+            else {
                 XCTFail("can't boot servers even")
                 return
             }
@@ -606,39 +611,39 @@ class BootstrapTest: XCTestCase {
             }
 
             // Try 1: Directly connect to 127.0.0.1, this won't do Happy Eyeballs.
-            XCTAssertNoThrow(try ClientBootstrap(group: self.group)
-                                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                                .bind(to: clientLocalAddressWholeInterface)
-                                .connect(to: server1LocalAddress)
-                                .wait()
-                                .close()
-                                .wait())
+            XCTAssertNoThrow(try ClientBootstrap(group: group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(to: clientLocalAddressWholeInterface)
+                .connect(to: server1LocalAddress)
+                .wait()
+                .close()
+                .wait())
 
-            var maybeChannel1: Channel? = nil
+            var maybeChannel1: Channel?
             // Try 2: Connect to "localhost", this will do Happy Eyeballs.
-            XCTAssertNoThrow(maybeChannel1 = try ClientBootstrap(group: self.group)
-                                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                                .bind(to: clientLocalAddressWholeInterface)
-                                .connect(host: "localhost", port: server1LocalAddress.port!)
-                                .wait())
+            XCTAssertNoThrow(maybeChannel1 = try ClientBootstrap(group: group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(to: clientLocalAddressWholeInterface)
+                .connect(host: "localhost", port: server1LocalAddress.port!)
+                .wait())
             guard let myChannel1 = maybeChannel1, let myChannel1Address = myChannel1.localAddress else {
                 XCTFail("can't connect channel 1")
                 return
             }
             XCTAssertEqual(localIP, maybeChannel1?.localAddress?.ipAddress)
             // Try 3: Bind the client to the same address/port as in try 2 but to server 2.
-            XCTAssertNoThrow(try ClientBootstrap(group: self.group)
-                                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                                .connectTimeout(.hours(2))
-                                .bind(to: myChannel1Address)
-                                .connect(to: server2LocalAddress)
-                                .map { channel -> Channel in
-                                    XCTAssertEqual(myChannel1Address, channel.localAddress)
-                                    return channel
-                                }
-                                .wait()
-                                .close()
-                                .wait())
+            XCTAssertNoThrow(try ClientBootstrap(group: group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .connectTimeout(.hours(2))
+                .bind(to: myChannel1Address)
+                .connect(to: server2LocalAddress)
+                .map { channel -> Channel in
+                    XCTAssertEqual(myChannel1Address, channel.localAddress)
+                    return channel
+                }
+                .wait()
+                .close()
+                .wait())
         }
     }
 }
@@ -654,13 +659,13 @@ private final class WriteStringOnChannelActive: ChannelInboundHandler {
     }
 
     func channelActive(context: ChannelHandlerContext) {
-        var buffer = context.channel.allocator.buffer(capacity: self.string.utf8.count)
+        var buffer = context.channel.allocator.buffer(capacity: string.utf8.count)
         buffer.writeString(string)
-        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+        context.writeAndFlush(wrapOutboundOut(buffer), promise: nil)
     }
 }
 
-private final class MakeSureAutoReadIsOffInChannelInitializer:  ChannelInboundHandler {
+private final class MakeSureAutoReadIsOffInChannelInitializer: ChannelInboundHandler {
     typealias InboundIn = Channel
 
     func channelActive(context: ChannelHandlerContext) {

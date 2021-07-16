@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 public protocol FileDescriptor {
-
     /// Will be called with the file descriptor if still open, if not it will
     /// throw an `IOError`.
     ///
@@ -33,7 +32,7 @@ public protocol FileDescriptor {
 }
 
 extension FileDescriptor {
-    internal static func setNonBlocking(fileDescriptor: CInt) throws {
+    static func setNonBlocking(fileDescriptor: CInt) throws {
         let flags = try Posix.fcntl(descriptor: fileDescriptor, command: F_GETFL, value: 0)
         do {
             let ret = try Posix.fcntl(descriptor: fileDescriptor, command: F_SETFL, value: flags | O_NONBLOCK)

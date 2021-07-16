@@ -14,84 +14,83 @@
 
 #if os(Windows)
 
-import WinSDK
+    import WinSDK
 
+    typealias ThreadOpsSystem = ThreadOpsWindows
+    enum ThreadOpsWindows: ThreadOps {
+        typealias ThreadHandle = HANDLE
+        typealias ThreadSpecificKey = DWORD
+        typealias ThreadSpecificKeyDestructor = @convention(c) (UnsafeMutableRawPointer?) -> Void
 
-typealias ThreadOpsSystem = ThreadOpsWindows
-enum ThreadOpsWindows: ThreadOps {
-    typealias ThreadHandle = HANDLE
-    typealias ThreadSpecificKey = DWORD
-    typealias ThreadSpecificKeyDestructor = @convention(c) (UnsafeMutableRawPointer?) -> Void
+        static func threadName(_ thread: ThreadOpsSystem.ThreadHandle) -> String? {
+            var pszBuffer: PWSTR?
+            GetThreadDescription(thread, &pszBuffer)
+            guard let buffer = pszBuffer else { return nil }
+            let string = String(decodingCString: buffer, as: UTF16.self)
+            LocalFree(buffer)
+            return string
+        }
 
-    static func threadName(_ thread: ThreadOpsSystem.ThreadHandle) -> String? {
-        var pszBuffer: PWSTR?
-        GetThreadDescription(thread, &pszBuffer)
-        guard let buffer = pszBuffer else { return nil }
-        let string: String = String(decodingCString: buffer, as: UTF16.self)
-        LocalFree(buffer)
-        return string
-    }
+        static func run(handle _: inout ThreadOpsSystem.ThreadHandle?, args: Box<NIOThread.ThreadBoxValue>, detachThread: Bool) {
+            let argv0 = Unmanaged.passRetained(args).toOpaque()
 
-    static func run(handle: inout ThreadOpsSystem.ThreadHandle?, args: Box<NIOThread.ThreadBoxValue>, detachThread: Bool) {
-        let argv0 = Unmanaged.passRetained(args).toOpaque()
+            // FIXME(compnerd) this should use the `stdcall` calling convention
+            let routine: @convention(c) (UnsafeMutableRawPointer?) -> CUnsignedInt = {
+                let boxed = Unmanaged<NIOThread.ThreadBox>.fromOpaque($0!).takeRetainedValue()
+                let (body, name) = (boxed.value.body, boxed.value.name)
+                let hThread: ThreadOpsSystem.ThreadHandle = GetCurrentThread()
 
-        // FIXME(compnerd) this should use the `stdcall` calling convention
-        let routine: @convention(c) (UnsafeMutableRawPointer?) -> CUnsignedInt = {
-            let boxed = Unmanaged<NIOThread.ThreadBox>.fromOpaque($0!).takeRetainedValue()
-            let (body, name) = (boxed.value.body, boxed.value.name)
-            let hThread: ThreadOpsSystem.ThreadHandle = GetCurrentThread()
-
-            if let name = name {
-                _ = name.withCString(encodedAs: UTF16.self) {
-                    SetThreadDescription(hThread, $0)
+                if let name = name {
+                    _ = name.withCString(encodedAs: UTF16.self) {
+                        SetThreadDescription(hThread, $0)
+                    }
                 }
+
+                body(NIOThread(handle: hThread, desiredName: name))
+
+                return 0
             }
+            let hThread =
+                HANDLE(bitPattern: _beginthreadex(nil, 0, routine, argv0, 0, nil))!
 
-            body(NIOThread(handle: hThread, desiredName: name))
-
-            return 0
+            if detachThread {
+                CloseHandle(hThread)
+            }
         }
-        let hThread: HANDLE =
-            HANDLE(bitPattern: _beginthreadex(nil, 0, routine, argv0, 0, nil))!
 
-        if detachThread {
-            CloseHandle(hThread)
+        static func isCurrentThread(_ thread: ThreadOpsSystem.ThreadHandle) -> Bool {
+            CompareObjectHandles(thread, GetCurrentThread())
+        }
+
+        static var currentThread: ThreadOpsSystem.ThreadHandle {
+            GetCurrentThread()
+        }
+
+        static func joinThread(_ thread: ThreadOpsSystem.ThreadHandle) {
+            let dwResult: DWORD = WaitForSingleObject(thread, INFINITE)
+            assert(dwResult == WAIT_OBJECT_0, "WaitForSingleObject: \(GetLastError())")
+        }
+
+        static func allocateThreadSpecificValue(destructor: @escaping ThreadSpecificKeyDestructor) -> ThreadSpecificKey {
+            FlsAlloc(destructor)
+        }
+
+        static func deallocateThreadSpecificValue(_ key: ThreadSpecificKey) {
+            let dwResult: Bool = FlsFree(key)
+            precondition(dwResult, "FlsFree: \(GetLastError())")
+        }
+
+        static func getThreadSpecificValue(_ key: ThreadSpecificKey) -> UnsafeMutableRawPointer? {
+            FlsGetValue(key)
+        }
+
+        static func setThreadSpecificValue(key: ThreadSpecificKey, value: UnsafeMutableRawPointer?) {
+            FlsSetValue(key, value)
+        }
+
+        static func compareThreads(_ lhs: ThreadOpsSystem.ThreadHandle, _ rhs: ThreadOpsSystem.ThreadHandle) -> Bool {
+            CompareObjectHandles(lhs, rhs)
         }
     }
-
-    static func isCurrentThread(_ thread: ThreadOpsSystem.ThreadHandle) -> Bool {
-        return CompareObjectHandles(thread, GetCurrentThread())
-    }
-
-    static var currentThread: ThreadOpsSystem.ThreadHandle {
-        return GetCurrentThread()
-    }
-
-    static func joinThread(_ thread: ThreadOpsSystem.ThreadHandle) {
-        let dwResult: DWORD = WaitForSingleObject(thread, INFINITE)
-        assert(dwResult == WAIT_OBJECT_0, "WaitForSingleObject: \(GetLastError())")
-    }
-
-    static func allocateThreadSpecificValue(destructor: @escaping ThreadSpecificKeyDestructor) -> ThreadSpecificKey {
-        return FlsAlloc(destructor)
-    }
-
-    static func deallocateThreadSpecificValue(_ key: ThreadSpecificKey) {
-        let dwResult: Bool = FlsFree(key)
-        precondition(dwResult, "FlsFree: \(GetLastError())")
-    }
-
-    static func getThreadSpecificValue(_ key: ThreadSpecificKey) -> UnsafeMutableRawPointer? {
-        return FlsGetValue(key)
-    }
-
-    static func setThreadSpecificValue(key: ThreadSpecificKey, value: UnsafeMutableRawPointer?) {
-        FlsSetValue(key, value)
-    }
-
-    static func compareThreads(_ lhs: ThreadOpsSystem.ThreadHandle, _ rhs: ThreadOpsSystem.ThreadHandle) -> Bool {
-        return CompareObjectHandles(lhs, rhs)
-    }
-}
 
 #endif

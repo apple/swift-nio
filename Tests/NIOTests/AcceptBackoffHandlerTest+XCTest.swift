@@ -23,21 +23,19 @@ import XCTest
 ///
 
 extension AcceptBackoffHandlerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (AcceptBackoffHandlerTest) -> () throws -> Void)] {
-      return [
-                ("testECONNABORTED", testECONNABORTED),
-                ("testEMFILE", testEMFILE),
-                ("testENFILE", testENFILE),
-                ("testENOBUFS", testENOBUFS),
-                ("testENOMEM", testENOMEM),
-                ("testRemovalTriggerReadWhenPreviousReadScheduled", testRemovalTriggerReadWhenPreviousReadScheduled),
-                ("testRemovalTriggerNoReadWhenPreviousNoReadScheduled", testRemovalTriggerNoReadWhenPreviousNoReadScheduled),
-                ("testNotScheduleReadIfAlreadyScheduled", testNotScheduleReadIfAlreadyScheduled),
-                ("testChannelInactiveCancelScheduled", testChannelInactiveCancelScheduled),
-                ("testSecondErrorUpdateScheduledRead", testSecondErrorUpdateScheduledRead),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (AcceptBackoffHandlerTest) -> () throws -> Void)] {
+        [
+            ("testECONNABORTED", testECONNABORTED),
+            ("testEMFILE", testEMFILE),
+            ("testENFILE", testENFILE),
+            ("testENOBUFS", testENOBUFS),
+            ("testENOMEM", testENOMEM),
+            ("testRemovalTriggerReadWhenPreviousReadScheduled", testRemovalTriggerReadWhenPreviousReadScheduled),
+            ("testRemovalTriggerNoReadWhenPreviousNoReadScheduled", testRemovalTriggerNoReadWhenPreviousNoReadScheduled),
+            ("testNotScheduleReadIfAlreadyScheduled", testNotScheduleReadIfAlreadyScheduled),
+            ("testChannelInactiveCancelScheduled", testChannelInactiveCancelScheduled),
+            ("testSecondErrorUpdateScheduledRead", testSecondErrorUpdateScheduledRead),
+        ]
+    }
 }
-

@@ -15,7 +15,7 @@
 @testable import NIO
 import XCTest
 
-private class EmbeddedTestError: Error { }
+private class EmbeddedTestError: Error {}
 
 public final class EmbeddedEventLoopTest: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() throws {
@@ -109,13 +109,13 @@ public final class EmbeddedEventLoopTest: XCTestCase {
     func testCanScheduleMultipleTasks() throws {
         var sentinel = 0
         let loop = EmbeddedEventLoop()
-        for index in 1...10 {
+        for index in 1 ... 10 {
             _ = loop.scheduleTask(in: .nanoseconds(Int64(index))) {
                 sentinel = index
             }
         }
 
-        for val in 1...10 {
+        for val in 1 ... 10 {
             XCTAssertEqual(sentinel, val - 1)
             loop.advanceTime(by: .nanoseconds(1))
             XCTAssertEqual(sentinel, val)
@@ -183,7 +183,7 @@ public final class EmbeddedEventLoopTest: XCTestCase {
 
     func testCancellingScheduledTasks() throws {
         let loop = EmbeddedEventLoop()
-        let task = loop.scheduleTask(in: .nanoseconds(10), { XCTFail("Cancelled task ran") })
+        let task = loop.scheduleTask(in: .nanoseconds(10)) { XCTFail("Cancelled task ran") }
         _ = loop.scheduleTask(in: .nanoseconds(5)) {
             task.cancel()
         }
@@ -204,7 +204,7 @@ public final class EmbeddedEventLoopTest: XCTestCase {
     }
 
     func testScheduledTasksFuturesError() throws {
-        var err: EmbeddedTestError? = nil
+        var err: EmbeddedTestError?
         var fired = false
         let loop = EmbeddedEventLoop()
         let task = loop.scheduleTask(in: .nanoseconds(5)) {
@@ -231,8 +231,8 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         // schedule that expire "now" all run at the same time, and that any work they schedule is run
         // after all such tasks expire.
         let loop = EmbeddedEventLoop()
-        var firstScheduled: Scheduled<Void>? = nil
-        var secondScheduled: Scheduled<Void>? = nil
+        var firstScheduled: Scheduled<Void>?
+        var secondScheduled: Scheduled<Void>?
         var orderingCounter = 0
 
         // Here's the setup. First, we'll set up two scheduled tasks to fire in 5 nanoseconds. Each of these
@@ -320,7 +320,7 @@ public final class EmbeddedEventLoopTest: XCTestCase {
 
         class Thing {}
 
-        weak var weakThing: Thing? = nil
+        weak var weakThing: Thing?
 
         func make() -> Scheduled<Never> {
             let aThing = Thing()
@@ -343,13 +343,13 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         let timeAtStart = eventLoop._now
         var tasksRun = 0
 
-        eventLoop.scheduleTask(in: .nanoseconds(3141592)) {
-            XCTAssertEqual(eventLoop._now, timeAtStart + .nanoseconds(3141592))
+        eventLoop.scheduleTask(in: .nanoseconds(3_141_592)) {
+            XCTAssertEqual(eventLoop._now, timeAtStart + .nanoseconds(3_141_592))
             tasksRun += 1
         }
 
-        eventLoop.scheduleTask(in: .seconds(3141592)) {
-            XCTAssertEqual(eventLoop._now, timeAtStart + .seconds(3141592))
+        eventLoop.scheduleTask(in: .seconds(3_141_592)) {
+            XCTAssertEqual(eventLoop._now, timeAtStart + .seconds(3_141_592))
             tasksRun += 1
         }
 

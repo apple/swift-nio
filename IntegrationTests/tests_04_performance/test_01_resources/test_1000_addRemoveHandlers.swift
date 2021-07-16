@@ -14,7 +14,7 @@
 
 import NIO
 
-fileprivate final class RemovableHandler: ChannelInboundHandler, RemovableChannelHandler {
+private final class RemovableHandler: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = NIOAny
 
     static let name: String = "RemovableHandler"
@@ -25,8 +25,8 @@ fileprivate final class RemovableHandler: ChannelInboundHandler, RemovableChanne
         self.context = context
     }
 
-    func handlerRemoved(context: ChannelHandlerContext) {
-        self.context = nil
+    func handlerRemoved(context _: ChannelHandlerContext) {
+        context = nil
     }
 }
 
@@ -37,7 +37,7 @@ private func addRemoveBench(iterations: Int, _ removalOperation: (Channel, Remov
         _ = try! channel.finish()
     }
 
-    for _ in 0..<iterations {
+    for _ in 0 ..< iterations {
         let handler = RemovableHandler()
         try! channel.pipeline.syncOperations.addHandler(handler, name: RemovableHandler.name)
         try! removalOperation(channel, handler).wait()

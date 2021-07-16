@@ -12,19 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIO
+import XCTest
 
 class NIOAnyDebugTest: XCTestCase {
-    
     func testCustomStringConvertible() throws {
         XCTAssertEqual(wrappedInNIOAnyBlock("string"), wrappedInNIOAnyBlock("string"))
         XCTAssertEqual(wrappedInNIOAnyBlock(123), wrappedInNIOAnyBlock("123"))
-        
+
         let bb = ByteBuffer(string: "byte buffer string")
         XCTAssertTrue(wrappedInNIOAnyBlock(bb).contains("NIOAny { ByteBuffer { readerIndex: 0, writerIndex: 18, readableBytes: 18, capacity: 32, storageCapacity: 32, slice: _ByteBufferSlice { 0..<32 }, storage: "))
         XCTAssertTrue(wrappedInNIOAnyBlock(bb).hasSuffix(" }"))
-        
+
         let fileHandle = NIOFileHandle(descriptor: 1)
         defer {
             XCTAssertNoThrow(_ = try fileHandle.takeDescriptorOwnership())
@@ -39,7 +38,7 @@ class NIOAnyDebugTest: XCTestCase {
         readerIndex: \(fileRegion.readerIndex), \
         endIndex: \(fileRegion.endIndex) }
         """))
-        
+
         let socketAddress = try SocketAddress(unixDomainSocketPath: "socketAdress")
         let envelopeByteBuffer = ByteBuffer(string: "envelope buffer")
         let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: socketAddress, data: envelopeByteBuffer)
@@ -49,9 +48,8 @@ class NIOAnyDebugTest: XCTestCase {
         data: \(envelopeByteBuffer) }
         """))
     }
-    
+
     private func wrappedInNIOAnyBlock(_ item: Any) -> String {
-        return "NIOAny { \(item) }"
+        "NIOAny { \(item) }"
     }
-    
 }

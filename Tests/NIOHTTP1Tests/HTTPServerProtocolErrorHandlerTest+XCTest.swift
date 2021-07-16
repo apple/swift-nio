@@ -23,15 +23,13 @@ import XCTest
 ///
 
 extension HTTPServerProtocolErrorHandlerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPServerProtocolErrorHandlerTest) -> () throws -> Void)] {
-      return [
-                ("testHandlesBasicErrors", testHandlesBasicErrors),
-                ("testIgnoresNonParserErrors", testIgnoresNonParserErrors),
-                ("testDoesNotSendAResponseIfResponseHasAlreadyStarted", testDoesNotSendAResponseIfResponseHasAlreadyStarted),
-                ("testCanHandleErrorsWhenResponseHasStarted", testCanHandleErrorsWhenResponseHasStarted),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPServerProtocolErrorHandlerTest) -> () throws -> Void)] {
+        [
+            ("testHandlesBasicErrors", testHandlesBasicErrors),
+            ("testIgnoresNonParserErrors", testIgnoresNonParserErrors),
+            ("testDoesNotSendAResponseIfResponseHasAlreadyStarted", testDoesNotSendAResponseIfResponseHasAlreadyStarted),
+            ("testCanHandleErrorsWhenResponseHasStarted", testCanHandleErrorsWhenResponseHasStarted),
+        ]
+    }
 }
-

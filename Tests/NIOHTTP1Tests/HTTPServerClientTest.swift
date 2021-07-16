@@ -12,18 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Dispatch
 import NIO
 import NIOConcurrencyHelpers
 import NIOFoundationCompat
-import Dispatch
 @testable import NIOHTTP1
+import XCTest
 
-extension Array where Array.Element == ByteBuffer {
-    public func allAsBytes() -> [UInt8] {
+public extension Array where Array.Element == ByteBuffer {
+    func allAsBytes() -> [UInt8] {
         var out: [UInt8] = []
-        out.reserveCapacity(self.reduce(0, { $0 + $1.readableBytes }))
-        self.forEach { bb in
+        out.reserveCapacity(reduce(0) { $0 + $1.readableBytes })
+        forEach { bb in
             bb.withUnsafeReadableBytes { ptr in
                 out.append(contentsOf: ptr)
             }
@@ -31,40 +31,40 @@ extension Array where Array.Element == ByteBuffer {
         return out
     }
 
-    public func allAsString() -> String? {
-        return String(decoding: self.allAsBytes(), as: Unicode.UTF8.self)
+    func allAsString() -> String? {
+        String(decoding: allAsBytes(), as: Unicode.UTF8.self)
     }
 }
 
 internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
     typealias InboundIn = T
     private var receiveds: [T] = []
-    private var allDoneBlock: DispatchWorkItem! = nil
+    private var allDoneBlock: DispatchWorkItem!
 
     public init(completion: @escaping ([T]) -> Void) {
-        self.allDoneBlock = DispatchWorkItem { [unowned self] () -> Void in
+        allDoneBlock = DispatchWorkItem { [unowned self] () -> Void in
             completion(self.receiveds)
         }
     }
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.receiveds.append(self.unwrapInboundIn(data))
+    public func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
+        receiveds.append(unwrapInboundIn(data))
     }
 
-    public func channelUnregistered(context: ChannelHandlerContext) {
-        self.allDoneBlock.perform()
+    public func channelUnregistered(context _: ChannelHandlerContext) {
+        allDoneBlock.perform()
     }
 
     public func syncWaitForCompletion() {
-        self.allDoneBlock.wait()
+        allDoneBlock.wait()
     }
 }
 
-class HTTPServerClientTest : XCTestCase {
+class HTTPServerClientTest: XCTestCase {
     /* needs to be something reasonably large and odd so it has good odds producing incomplete writes even on the loopback interface */
     private static let massiveResponseLength = 1 * 1024 * 1024 + 7
     private static let massiveResponseBytes: [UInt8] = {
-        return Array(repeating: 0xff, count: HTTPServerClientTest.massiveResponseLength)
+        Array(repeating: 0xFF, count: HTTPServerClientTest.massiveResponseLength)
     }()
 
     enum SendMode {
@@ -86,7 +86,7 @@ class HTTPServerClientTest : XCTestCase {
             self.mode = mode
         }
 
-        private func outboundBody(_  buffer: ByteBuffer) -> (body: HTTPServerResponsePart, destructor: () -> Void) {
+        private func outboundBody(_ buffer: ByteBuffer) -> (body: HTTPServerResponsePart, destructor: () -> Void) {
             switch mode {
             case .byteBuffer:
                 return (.body(.byteBuffer(buffer)), { () in })
@@ -98,15 +98,15 @@ class HTTPServerClientTest : XCTestCase {
                 XCTAssertNoThrow(try content.write(to: URL(fileURLWithPath: filePath)))
                 let fh = try! NIOFileHandle(path: filePath)
                 let region = FileRegion(fileHandle: fh,
-                                             readerIndex: 0,
-                                             endIndex: buffer.readableBytes)
+                                        readerIndex: 0,
+                                        endIndex: buffer.readableBytes)
                 return (.body(.fileRegion(region)), { try! fh.close() })
             }
         }
 
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-            switch self.unwrapInboundIn(data) {
-            case .head(let req):
+            switch unwrapInboundIn(data) {
+            case let .head(req):
                 switch req.uri {
                 case "/helloworld":
                     let replyString = "Hello World!\r\n"
@@ -114,15 +114,15 @@ class HTTPServerClientTest : XCTestCase {
                     head.headers.add(name: "Content-Length", value: "\(replyString.utf8.count)")
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r), promise: nil)
+                    context.write(wrapOutboundOut(r), promise: nil)
                     var b = context.channel.allocator.buffer(capacity: replyString.count)
                     b.writeString(replyString)
 
-                    let outbound = self.outboundBody(b)
-                    context.write(self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
+                    let outbound = outboundBody(b)
+                    context.write(wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -132,22 +132,22 @@ class HTTPServerClientTest : XCTestCase {
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
                     var b = context.channel.allocator.buffer(capacity: 1024)
-                    for i in 1...10 {
+                    for i in 1 ... 10 {
                         b.clear()
                         b.writeString("\(i)")
 
-                        let outbound = self.outboundBody(b)
-                        context.write(self.wrapOutboundOut(outbound.body)).recover { error in
+                        let outbound = outboundBody(b)
+                        context.write(wrapOutboundOut(outbound.body)).recover { error in
                             XCTFail("unexpected error \(error)")
                         }.whenComplete { (_: Result<Void, Error>) in
                             outbound.destructor()
                         }
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -158,16 +158,16 @@ class HTTPServerClientTest : XCTestCase {
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Transfer-Encoding", value: "chunked")
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
                     var b = context.channel.allocator.buffer(capacity: 1024)
-                    for i in 1...10 {
+                    for i in 1 ... 10 {
                         b.clear()
                         b.writeString("\(i)")
 
-                        let outbound = self.outboundBody(b)
-                        context.write(self.wrapOutboundOut(outbound.body)).recover { error in
+                        let outbound = outboundBody(b)
+                        context.write(wrapOutboundOut(outbound.body)).recover { error in
                             XCTFail("unexpected error \(error)")
                         }.whenComplete { (_: Result<Void, Error>) in
                             outbound.destructor()
@@ -177,7 +177,7 @@ class HTTPServerClientTest : XCTestCase {
                     var trailers = HTTPHeaders()
                     trailers.add(name: "X-URL-Path", value: "/trailers")
                     trailers.add(name: "X-Should-Trail", value: "sure")
-                    context.write(self.wrapOutboundOut(.end(trailers))).recover { error in
+                    context.write(wrapOutboundOut(.end(trailers))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -192,16 +192,16 @@ class HTTPServerClientTest : XCTestCase {
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Content-Length", value: "\(HTTPServerClientTest.massiveResponseLength)")
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    let outbound = self.outboundBody(buf)
-                    context.writeAndFlush(self.wrapOutboundOut(outbound.body)).recover { error in
+                    let outbound = outboundBody(buf)
+                    context.writeAndFlush(wrapOutboundOut(outbound.body)).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -211,10 +211,10 @@ class HTTPServerClientTest : XCTestCase {
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Content-Length", value: "5000")
-                    context.write(self.wrapOutboundOut(.head(head))).whenFailure { error in
+                    context.write(wrapOutboundOut(.head(head))).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -223,10 +223,10 @@ class HTTPServerClientTest : XCTestCase {
                 case "/204":
                     var head = HTTPResponseHead(version: req.version, status: .noContent)
                     head.headers.add(name: "Connection", value: "keep-alive")
-                    context.write(self.wrapOutboundOut(.head(head))).whenFailure { error in
+                    context.write(wrapOutboundOut(.head(head))).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -236,24 +236,24 @@ class HTTPServerClientTest : XCTestCase {
                     let replyString = "Hello World!\r\n"
                     let head = HTTPResponseHead(version: req.version, status: .ok)
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r), promise: nil)
+                    context.write(wrapOutboundOut(r), promise: nil)
                     var b = context.channel.allocator.buffer(capacity: replyString.count)
                     b.writeString(replyString)
 
-                    let outbound = self.outboundBody(b)
-                    context.write(self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
+                    let outbound = outboundBody(b)
+                    context.write(wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
-                        }.whenComplete { (_: Result<Void, Error>) in
-                            self.sentEnd = true
-                            self.maybeClose(context: context)
+                    }.whenComplete { (_: Result<Void, Error>) in
+                        self.sentEnd = true
+                        self.maybeClose(context: context)
                     }
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
                 }
-            case .end(let trailers):
+            case let .end(trailers):
                 XCTAssertNil(trailers)
                 seenEnd = true
             default:
@@ -268,8 +268,8 @@ class HTTPServerClientTest : XCTestCase {
         // We should only close the connection when the remote peer has sent the entire request
         // and we have sent our entire response.
         private func maybeClose(context: ChannelHandlerContext) {
-            if sentEnd && seenEnd && self.isOpen {
-                self.isOpen = false
+            if sentEnd, seenEnd, isOpen {
+                isOpen = false
                 context.close().whenFailure { error in
                     XCTFail("unexpected error \(error)")
                 }
@@ -292,7 +292,7 @@ class HTTPServerClientTest : XCTestCase {
                     XCTFail("only \(parts.count) parts")
                     return
                 }
-                if case .head(let h) = parts[0] {
+                if case let .head(h) = parts[0] {
                     XCTAssertEqual(expectedVersion, h.version)
                     XCTAssertEqual(expectedStatus, h.status)
                     XCTAssertEqual(expectedHeaders, h.headers)
@@ -303,7 +303,7 @@ class HTTPServerClientTest : XCTestCase {
                 var i = 1
                 var bytes: [UInt8] = []
                 while i < parts.count - 1 {
-                    if case .body(let bb) = parts[i] {
+                    if case let .body(bb) = parts[i] {
                         bb.withUnsafeReadableBytes { ptr in
                             bytes.append(contentsOf: ptr)
                         }
@@ -315,7 +315,7 @@ class HTTPServerClientTest : XCTestCase {
 
                 XCTAssertEqual(expectedBody, String(decoding: bytes, as: Unicode.UTF8.self))
 
-                if case .end(let trailers) = parts[parts.count - 1] {
+                if case let .end(trailers) = parts[parts.count - 1] {
                     XCTAssertEqual(expectedTrailers, trailers)
                 } else {
                     XCTFail("unexpected type on index \(parts.count - 1) \(parts[parts.count - 1])")
@@ -327,7 +327,8 @@ class HTTPServerClientTest : XCTestCase {
     private func testSimpleGet(_ mode: SendMode,
                                httpVersion: HTTPVersion = .http1_1,
                                uri: String = "/helloworld",
-                               expectedHeaders maybeExpectedHeaders: HTTPHeaders? = nil) throws {
+                               expectedHeaders maybeExpectedHeaders: HTTPHeaders? = nil) throws
+    {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -504,7 +505,7 @@ class HTTPServerClientTest : XCTestCase {
             let expectedSuffix = HTTPServerClientTest.massiveResponseBytes
             let actual = bbs.allAsBytes()
             XCTAssertGreaterThan(actual.count, expectedSuffix.count)
-            let actualSuffix = actual[(actual.count - expectedSuffix.count)..<actual.count]
+            let actualSuffix = actual[(actual.count - expectedSuffix.count) ..< actual.count]
             XCTAssertEqual(expectedSuffix.count, actualSuffix.count)
             XCTAssert(expectedSuffix.elementsEqual(actualSuffix))
         }
@@ -525,7 +526,7 @@ class HTTPServerClientTest : XCTestCase {
         }
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .channelInitializer({ $0.pipeline.addHandler(accumulation) })
+            .channelInitializer { $0.pipeline.addHandler(accumulation) }
             .connect(to: serverChannel.localAddress!)
             .wait())
         defer {
@@ -628,9 +629,9 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testNoResponseHeaders() {
-        XCTAssertNoThrow(try self.testSimpleGet(.byteBuffer,
-                                                httpVersion: .http1_0,
-                                                uri: "/no-headers",
-                                                expectedHeaders: [:]))
+        XCTAssertNoThrow(try testSimpleGet(.byteBuffer,
+                                           httpVersion: .http1_0,
+                                           uri: "/no-headers",
+                                           expectedHeaders: [:]))
     }
 }

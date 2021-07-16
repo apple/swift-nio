@@ -14,7 +14,7 @@
 
 import NIO
 
-fileprivate final class DoNothingHandler: ChannelInboundHandler {
+private final class DoNothingHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
 }

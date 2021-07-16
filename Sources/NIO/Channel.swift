@@ -147,10 +147,10 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker {
     var syncOptions: NIOSynchronousChannelOptions? { get }
 }
 
-extension Channel {
+public extension Channel {
     /// Default implementation: `NIOSynchronousChannelOptions` are not supported.
-    public var syncOptions: NIOSynchronousChannelOptions? {
-        return nil
+    var syncOptions: NIOSynchronousChannelOptions? {
+        nil
     }
 }
 
@@ -203,84 +203,80 @@ internal protocol SelectableChannel: Channel {
 }
 
 /// Default implementations which will start on the head of the `ChannelPipeline`.
-extension Channel {
-
-    public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+public extension Channel {
+    func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         pipeline.bind(to: address, promise: promise)
     }
 
-    public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         pipeline.connect(to: address, promise: promise)
     }
 
-    public func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         pipeline.write(data, promise: promise)
     }
 
-    public func flush() {
+    func flush() {
         pipeline.flush()
     }
 
-    public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         pipeline.writeAndFlush(data, promise: promise)
     }
 
-    public func read() {
+    func read() {
         pipeline.read()
     }
 
-    public func close(mode: CloseMode = .all, promise: EventLoopPromise<Void>?) {
+    func close(mode: CloseMode = .all, promise: EventLoopPromise<Void>?) {
         pipeline.close(mode: mode, promise: promise)
     }
 
-    public func register(promise: EventLoopPromise<Void>?) {
+    func register(promise: EventLoopPromise<Void>?) {
         pipeline.register(promise: promise)
     }
 
-    public func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+    func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.operationUnsupported)
     }
 
-    public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
+    func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
         pipeline.triggerUserOutboundEvent(event, promise: promise)
     }
 }
 
-
 /// Provides special extension to make writing data to the `Channel` easier by removing the need to wrap data in `NIOAny` manually.
-extension Channel {
-
+public extension Channel {
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.write(NIOAny(any))
+    func write<T>(_ any: T) -> EventLoopFuture<Void> {
+        write(NIOAny(any))
     }
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
-        self.write(NIOAny(any), promise: promise)
+    func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+        write(NIOAny(any), promise: promise)
     }
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.writeAndFlush(NIOAny(any))
+    func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
+        writeAndFlush(NIOAny(any))
     }
-
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
-        self.writeAndFlush(NIOAny(any), promise: promise)
+    func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+        writeAndFlush(NIOAny(any), promise: promise)
     }
 }
 
-extension ChannelCore {
+public extension ChannelCore {
     /// Unwraps the given `NIOAny` as a specific concrete type.
     ///
     /// This method is intended for use when writing custom `ChannelCore` implementations.
@@ -297,8 +293,8 @@ extension ChannelCore {
     ///     - as: The type to extract from the `NIOAny`.
     /// - returns: The content of the `NIOAny`.
     @inlinable
-    public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
-        return data.forceAs()
+    func unwrapData<T>(_ data: NIOAny, as _: T.Type = T.self) -> T {
+        data.forceAs()
     }
 
     /// Removes the `ChannelHandler`s from the `ChannelPipeline` belonging to `channel`, and
@@ -310,7 +306,7 @@ extension ChannelCore {
     ///
     /// - parameters:
     ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
-    public func removeHandlers(channel: Channel) {
+    func removeHandlers(channel: Channel) {
         channel.pipeline.removeHandlers()
     }
 }
@@ -373,7 +369,7 @@ public enum ChannelError: Error {
     case unremovableHandler
 }
 
-extension ChannelError: Equatable { }
+extension ChannelError: Equatable {}
 
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
@@ -406,6 +402,5 @@ public enum ChannelEvent: Equatable {
 /// protocol supports a notion of requests and responses, it might make sense to stop accepting new requests but finish
 /// processing the request currently in flight.
 public struct ChannelShouldQuiesceEvent {
-    public init() {
-    }
+    public init() {}
 }

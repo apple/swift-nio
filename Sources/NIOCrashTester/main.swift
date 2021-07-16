@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import class Foundation.FileHandle
 import class Foundation.Process
 import struct Foundation.URL
-import class Foundation.FileHandle
+import NIO
 
 struct CrashTest {
     let crashRegex: String
@@ -74,14 +74,14 @@ func main() throws {
     }
 
     func allTestsForSuite(_ testSuite: String) -> [(String, CrashTest)] {
-        return crashTestSuites[testSuite].map { testSuiteObject in
+        crashTestSuites[testSuite].map { testSuiteObject in
             Mirror(reflecting: testSuiteObject)
                 .children
                 .filter { $0.label?.starts(with: "test") ?? false }
                 .compactMap { crashTestDescriptor in
                     crashTestDescriptor.label.flatMap { label in
                         (crashTestDescriptor.value as? CrashTest).map { crashTest in
-                            return (label, crashTest)
+                            (label, crashTest)
                         }
                     }
                 }
@@ -89,14 +89,15 @@ func main() throws {
     }
 
     func findCrashTest(_ testName: String, suite: String) -> CrashTest? {
-        return allTestsForSuite(suite)
+        allTestsForSuite(suite)
             .first(where: { $0.0 == testName })?
             .1
     }
 
     func interpretOutput(_ result: Result<ProgramOutput, Error>,
                          regex: String,
-                         runResult: RunResult) throws -> InterpretedRunResult {
+                         runResult: RunResult) throws -> InterpretedRunResult
+    {
         struct NoOutputFound: Error {}
 
         guard case .signal(Int(SIGILL)) = runResult else {
@@ -104,7 +105,7 @@ func main() throws {
         }
 
         let output = try result.get()
-        if  output.range(of: regex, options: .regularExpression) != nil {
+        if output.range(of: regex, options: .regularExpression) != nil {
             return .crashedAsExpected
         } else {
             return .regexDidNotMatch(regex: regex, output: output)
@@ -158,22 +159,22 @@ func main() throws {
         return try interpretOutput(result,
                                    regex: crashTest.crashRegex,
                                    runResult: process.terminationReason == .exit ?
-                                    .exit(Int(process.terminationStatus)) :
-                                    .signal(Int(process.terminationStatus)))
+                                       .exit(Int(process.terminationStatus)) :
+                                       .signal(Int(process.terminationStatus)))
     }
 
     var failedTests = 0
     func runAndEval(_ test: String, suite: String) throws {
         print("running crash test \(suite).\(test)", terminator: " ")
         switch try runCrashTest(test, suite: suite, binary: CommandLine.arguments.first!) {
-        case .regexDidNotMatch(regex: let regex, output: let output):
+        case let .regexDidNotMatch(regex: regex, output: output):
             print("FAILED: regex did not match output", "regex: \(regex)", "output: \(output)",
                   separator: "\n", terminator: "")
             failedTests += 1
-        case .unexpectedRunResult(let runResult):
+        case let .unexpectedRunResult(runResult):
             print("FAILED: unexpected run result: \(runResult)")
             failedTests += 1
-        case .outputError(let description):
+        case let .outputError(description):
             print("FAILED: \(description)")
             failedTests += 1
         case .crashedAsExpected:
@@ -200,7 +201,8 @@ func main() throws {
     case .some("_exec"):
         if let testSuiteName = CommandLine.arguments.dropFirst(2).first,
            let testName = CommandLine.arguments.dropFirst(3).first,
-           let crashTest = findCrashTest(testName, suite: testSuiteName) {
+           let crashTest = findCrashTest(testName, suite: testSuiteName)
+        {
             crashTest.runTest()
         } else {
             fatalError("can't find/create test for \(Array(CommandLine.arguments.dropFirst(2)))")

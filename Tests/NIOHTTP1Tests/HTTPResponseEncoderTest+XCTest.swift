@@ -23,21 +23,19 @@ import XCTest
 ///
 
 extension HTTPResponseEncoderTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPResponseEncoderTests) -> () throws -> Void)] {
-      return [
-                ("testNoAutoHeadersFor101", testNoAutoHeadersFor101),
-                ("testNoAutoHeadersForCustom1XX", testNoAutoHeadersForCustom1XX),
-                ("testNoAutoHeadersFor204", testNoAutoHeadersFor204),
-                ("testNoContentLengthHeadersFor101", testNoContentLengthHeadersFor101),
-                ("testNoContentLengthHeadersForCustom1XX", testNoContentLengthHeadersForCustom1XX),
-                ("testNoContentLengthHeadersFor204", testNoContentLengthHeadersFor204),
-                ("testNoTransferEncodingHeadersFor101", testNoTransferEncodingHeadersFor101),
-                ("testNoTransferEncodingHeadersForCustom1XX", testNoTransferEncodingHeadersForCustom1XX),
-                ("testNoTransferEncodingHeadersFor204", testNoTransferEncodingHeadersFor204),
-                ("testNoChunkedEncodingForHTTP10", testNoChunkedEncodingForHTTP10),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPResponseEncoderTests) -> () throws -> Void)] {
+        [
+            ("testNoAutoHeadersFor101", testNoAutoHeadersFor101),
+            ("testNoAutoHeadersForCustom1XX", testNoAutoHeadersForCustom1XX),
+            ("testNoAutoHeadersFor204", testNoAutoHeadersFor204),
+            ("testNoContentLengthHeadersFor101", testNoContentLengthHeadersFor101),
+            ("testNoContentLengthHeadersForCustom1XX", testNoContentLengthHeadersForCustom1XX),
+            ("testNoContentLengthHeadersFor204", testNoContentLengthHeadersFor204),
+            ("testNoTransferEncodingHeadersFor101", testNoTransferEncodingHeadersFor101),
+            ("testNoTransferEncodingHeadersForCustom1XX", testNoTransferEncodingHeadersForCustom1XX),
+            ("testNoTransferEncodingHeadersFor204", testNoTransferEncodingHeadersFor204),
+            ("testNoChunkedEncodingForHTTP10", testNoChunkedEncodingForHTTP10),
+        ]
+    }
 }
-

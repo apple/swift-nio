@@ -20,42 +20,41 @@ let line = readLine(strippingNewline: true)!
 private final class HTTPEchoHandler: ChannelInboundHandler {
     public typealias InboundIn = HTTPClientResponsePart
     public typealias OutboundOut = HTTPClientRequestPart
-    
+
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress!)")
-        
+
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
-        
+
         let buffer = context.channel.allocator.buffer(string: line)
 
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(buffer.readableBytes)")
-        
+
         // This sample only sends an echo request.
         // The sample server has more functionality which can be easily tested by playing with the URI.
         // For example, try "/dynamic/count-to-ten" or "/dynamic/client-ip"
-        
+
         let requestHead = HTTPRequestHead(version: .http1_1,
                                           method: .GET,
                                           uri: "/dynamic/echo",
                                           headers: headers)
-        
-        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
-        
-        context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-        
-        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+
+        context.write(wrapOutboundOut(.head(requestHead)), promise: nil)
+
+        context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+
+        context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: nil)
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let clientResponse = unwrapInboundIn(data)
 
-        let clientResponse = self.unwrapInboundIn(data)
-        
         switch clientResponse {
-        case .head(let responseHead):
+        case let .head(responseHead):
             print("Received status: \(responseHead.status)")
-        case .body(let byteBuffer):
+        case let .body(byteBuffer):
             let string = String(buffer: byteBuffer)
             print("Received: '\(string)' back from the server.")
         case .end:
@@ -83,6 +82,7 @@ let bootstrap = ClientBootstrap(group: group)
             channel.pipeline.addHandler(HTTPEchoHandler())
         }
     }
+
 defer {
     try! group.syncShutdownGracefully()
 }
@@ -102,13 +102,13 @@ enum ConnectTo {
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
+case let (.some(h), _, .some(p)):
     /* we got two arguments, let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)
-case (.some(let portString), .none, _):
+case let (.some(portString), .none, _):
     /* couldn't parse as number, expecting unix domain socket path */
     connectTarget = .unixDomainSocket(path: portString)
-case (_, .some(let p), _):
+case let (_, .some(p), _):
     /* only one argument --> port */
     connectTarget = .ip(host: defaultHost, port: p)
 default:
@@ -117,9 +117,9 @@ default:
 
 let channel = try { () -> Channel in
     switch connectTarget {
-    case .ip(let host, let port):
+    case let .ip(host, port):
         return try bootstrap.connect(host: host, port: port).wait()
-    case .unixDomainSocket(let path):
+    case let .unixDomainSocket(path):
         return try bootstrap.connect(unixDomainSocketPath: path).wait()
     }
 }()

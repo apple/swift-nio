@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension NIOThreadPoolTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (NIOThreadPoolTest) -> () throws -> Void)] {
-      return [
-                ("testThreadNamesAreSetUp", testThreadNamesAreSetUp),
-                ("testThreadPoolStartsMultipleTimes", testThreadPoolStartsMultipleTimes),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (NIOThreadPoolTest) -> () throws -> Void)] {
+        [
+            ("testThreadNamesAreSetUp", testThreadNamesAreSetUp),
+            ("testThreadPoolStartsMultipleTimes", testThreadPoolStartsMultipleTimes),
+        ]
+    }
 }
-

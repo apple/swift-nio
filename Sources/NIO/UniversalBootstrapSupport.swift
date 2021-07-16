@@ -48,7 +48,7 @@ public protocol NIOClientTCPBootstrapProtocol {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
-    
+
     /// Apply any understood convenience options to the bootstrap, removing them from the set of options if they are consumed.
     /// Method is optional to implement and should never be directly called by users.
     /// - parameters:
@@ -153,22 +153,24 @@ public struct NIOClientTCPBootstrap {
     ///     - bootstrap: The underlying bootstrap to use.
     ///     - tls: The TLS implementation to use, needs to be compatible with `Bootstrap`.
     public init<Bootstrap: NIOClientTCPBootstrapProtocol,
-                TLS: NIOClientTLSProvider>(_ bootstrap: Bootstrap, tls: TLS) where TLS.Bootstrap == Bootstrap {
-        self.underlyingBootstrap = bootstrap
-        self.tlsEnablerTypeErased = { bootstrap in
-            return tls.enableTLS(bootstrap as! TLS.Bootstrap)
+        TLS: NIOClientTLSProvider>(_ bootstrap: Bootstrap, tls: TLS) where TLS.Bootstrap == Bootstrap
+    {
+        underlyingBootstrap = bootstrap
+        tlsEnablerTypeErased = { bootstrap in
+            tls.enableTLS(bootstrap as! TLS.Bootstrap)
         }
     }
 
     private init(_ bootstrap: NIOClientTCPBootstrapProtocol,
-                 tlsEnabler: @escaping (NIOClientTCPBootstrapProtocol) -> NIOClientTCPBootstrapProtocol) {
-        self.underlyingBootstrap = bootstrap
-        self.tlsEnablerTypeErased = tlsEnabler
+                 tlsEnabler: @escaping (NIOClientTCPBootstrapProtocol) -> NIOClientTCPBootstrapProtocol)
+    {
+        underlyingBootstrap = bootstrap
+        tlsEnablerTypeErased = tlsEnabler
     }
-    
-    internal init(_ original : NIOClientTCPBootstrap, updating underlying : NIOClientTCPBootstrapProtocol) {
-        self.underlyingBootstrap = underlying
-        self.tlsEnablerTypeErased = original.tlsEnablerTypeErased
+
+    internal init(_ original: NIOClientTCPBootstrap, updating underlying: NIOClientTCPBootstrapProtocol) {
+        underlyingBootstrap = underlying
+        tlsEnablerTypeErased = original.tlsEnablerTypeErased
     }
 
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
@@ -189,8 +191,8 @@ public struct NIOClientTCPBootstrap {
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
     public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> NIOClientTCPBootstrap {
-        return NIOClientTCPBootstrap(self.underlyingBootstrap.channelInitializer(handler),
-                                     tlsEnabler: self.tlsEnablerTypeErased)
+        NIOClientTCPBootstrap(underlyingBootstrap.channelInitializer(handler),
+                              tlsEnabler: tlsEnablerTypeErased)
     }
 
     /// Specifies a `ChannelOption` to be applied to the `SocketChannel`.
@@ -199,15 +201,15 @@ public struct NIOClientTCPBootstrap {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> NIOClientTCPBootstrap {
-        return NIOClientTCPBootstrap(self.underlyingBootstrap.channelOption(option, value: value),
-                                     tlsEnabler: self.tlsEnablerTypeErased)
+        NIOClientTCPBootstrap(underlyingBootstrap.channelOption(option, value: value),
+                              tlsEnabler: tlsEnablerTypeErased)
     }
 
     /// - parameters:
     ///     - timeout: The timeout that will apply to the connection attempt.
     public func connectTimeout(_ timeout: TimeAmount) -> NIOClientTCPBootstrap {
-        return NIOClientTCPBootstrap(self.underlyingBootstrap.connectTimeout(timeout),
-                                     tlsEnabler: self.tlsEnablerTypeErased)
+        NIOClientTCPBootstrap(underlyingBootstrap.connectTimeout(timeout),
+                              tlsEnabler: tlsEnablerTypeErased)
     }
 
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
@@ -217,7 +219,7 @@ public struct NIOClientTCPBootstrap {
     ///     - port: The port to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
-        return self.underlyingBootstrap.connect(host: host, port: port)
+        underlyingBootstrap.connect(host: host, port: port)
     }
 
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
@@ -226,7 +228,7 @@ public struct NIOClientTCPBootstrap {
     ///     - address: The address to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
-        return self.underlyingBootstrap.connect(to: address)
+        underlyingBootstrap.connect(to: address)
     }
 
     /// Specify the `unixDomainSocket` path to connect to for the UDS `Channel` that will be established.
@@ -235,14 +237,13 @@ public struct NIOClientTCPBootstrap {
     ///     - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
-        return self.underlyingBootstrap.connect(unixDomainSocketPath: unixDomainSocketPath)
+        underlyingBootstrap.connect(unixDomainSocketPath: unixDomainSocketPath)
     }
-
 
     @discardableResult
     public func enableTLS() -> NIOClientTCPBootstrap {
-        return NIOClientTCPBootstrap(self.tlsEnablerTypeErased(self.underlyingBootstrap),
-                                     tlsEnabler: self.tlsEnablerTypeErased)
+        NIOClientTCPBootstrap(tlsEnablerTypeErased(underlyingBootstrap),
+                              tlsEnabler: tlsEnablerTypeErased)
     }
 }
 
@@ -255,7 +256,7 @@ public protocol NIOClientTLSProvider {
 public struct NIOInsecureNoTLS<Bootstrap: NIOClientTCPBootstrapProtocol>: NIOClientTLSProvider {
     public init() {}
 
-    public func enableTLS(_ bootstrap: Bootstrap) -> Bootstrap {
+    public func enableTLS(_: Bootstrap) -> Bootstrap {
         fatalError("NIOInsecureNoTLS cannot enable TLS.")
     }
 }

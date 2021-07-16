@@ -23,19 +23,17 @@ import XCTest
 ///
 
 extension ApplicationProtocolNegotiationHandlerTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (ApplicationProtocolNegotiationHandlerTests) -> () throws -> Void)] {
-      return [
-                ("testChannelProvidedToCallback", testChannelProvidedToCallback),
-                ("testIgnoresUnknownUserEvents", testIgnoresUnknownUserEvents),
-                ("testCallbackReflectsNotificationResult", testCallbackReflectsNotificationResult),
-                ("testCallbackNotesFallbackForNoNegotiation", testCallbackNotesFallbackForNoNegotiation),
-                ("testNoBufferingBeforeEventFires", testNoBufferingBeforeEventFires),
-                ("testBufferingWhileWaitingForFuture", testBufferingWhileWaitingForFuture),
-                ("testNothingBufferedDoesNotFireReadCompleted", testNothingBufferedDoesNotFireReadCompleted),
-                ("testUnbufferingFiresReadCompleted", testUnbufferingFiresReadCompleted),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (ApplicationProtocolNegotiationHandlerTests) -> () throws -> Void)] {
+        [
+            ("testChannelProvidedToCallback", testChannelProvidedToCallback),
+            ("testIgnoresUnknownUserEvents", testIgnoresUnknownUserEvents),
+            ("testCallbackReflectsNotificationResult", testCallbackReflectsNotificationResult),
+            ("testCallbackNotesFallbackForNoNegotiation", testCallbackNotesFallbackForNoNegotiation),
+            ("testNoBufferingBeforeEventFires", testNoBufferingBeforeEventFires),
+            ("testBufferingWhileWaitingForFuture", testBufferingWhileWaitingForFuture),
+            ("testNothingBufferedDoesNotFireReadCompleted", testNothingBufferedDoesNotFireReadCompleted),
+            ("testUnbufferingFiresReadCompleted", testUnbufferingFiresReadCompleted),
+        ]
+    }
 }
-

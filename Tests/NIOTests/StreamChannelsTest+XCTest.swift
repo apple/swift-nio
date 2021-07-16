@@ -23,27 +23,25 @@ import XCTest
 ///
 
 extension StreamChannelTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (StreamChannelTest) -> () throws -> Void)] {
-      return [
-                ("testEchoBasic", testEchoBasic),
-                ("testSyncChannelOptions", testSyncChannelOptions),
-                ("testChannelReturnsNilForDefaultSyncOptionsImplementation", testChannelReturnsNilForDefaultSyncOptionsImplementation),
-                ("testWritabilityStartsTrueGoesFalseAndBackToTrue", testWritabilityStartsTrueGoesFalseAndBackToTrue),
-                ("testHalfCloseOwnOutput", testHalfCloseOwnOutput),
-                ("testHalfCloseOwnInput", testHalfCloseOwnInput),
-                ("testDoubleShutdownInput", testDoubleShutdownInput),
-                ("testDoubleShutdownOutput", testDoubleShutdownOutput),
-                ("testWriteFailsAfterOutputClosed", testWriteFailsAfterOutputClosed),
-                ("testVectorWrites", testVectorWrites),
-                ("testLotsOfWritesWhilstOtherSideNotReading", testLotsOfWritesWhilstOtherSideNotReading),
-                ("testFlushInWritePromise", testFlushInWritePromise),
-                ("testWriteAndFlushInChannelWritabilityChangedToTrue", testWriteAndFlushInChannelWritabilityChangedToTrue),
-                ("testWritabilityChangedDoesNotGetCalledOnSimpleWrite", testWritabilityChangedDoesNotGetCalledOnSimpleWrite),
-                ("testWriteAndFlushFromReentrantFlushNowTriggeredOutOfWritabilityWhereOuterSaysAllWrittenAndInnerDoesNot", testWriteAndFlushFromReentrantFlushNowTriggeredOutOfWritabilityWhereOuterSaysAllWrittenAndInnerDoesNot),
-                ("testCloseInReEntrantFlushNowCall", testCloseInReEntrantFlushNowCall),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (StreamChannelTest) -> () throws -> Void)] {
+        [
+            ("testEchoBasic", testEchoBasic),
+            ("testSyncChannelOptions", testSyncChannelOptions),
+            ("testChannelReturnsNilForDefaultSyncOptionsImplementation", testChannelReturnsNilForDefaultSyncOptionsImplementation),
+            ("testWritabilityStartsTrueGoesFalseAndBackToTrue", testWritabilityStartsTrueGoesFalseAndBackToTrue),
+            ("testHalfCloseOwnOutput", testHalfCloseOwnOutput),
+            ("testHalfCloseOwnInput", testHalfCloseOwnInput),
+            ("testDoubleShutdownInput", testDoubleShutdownInput),
+            ("testDoubleShutdownOutput", testDoubleShutdownOutput),
+            ("testWriteFailsAfterOutputClosed", testWriteFailsAfterOutputClosed),
+            ("testVectorWrites", testVectorWrites),
+            ("testLotsOfWritesWhilstOtherSideNotReading", testLotsOfWritesWhilstOtherSideNotReading),
+            ("testFlushInWritePromise", testFlushInWritePromise),
+            ("testWriteAndFlushInChannelWritabilityChangedToTrue", testWriteAndFlushInChannelWritabilityChangedToTrue),
+            ("testWritabilityChangedDoesNotGetCalledOnSimpleWrite", testWritabilityChangedDoesNotGetCalledOnSimpleWrite),
+            ("testWriteAndFlushFromReentrantFlushNowTriggeredOutOfWritabilityWhereOuterSaysAllWrittenAndInnerDoesNot", testWriteAndFlushFromReentrantFlushNowTriggeredOutOfWritabilityWhereOuterSaysAllWrittenAndInnerDoesNot),
+            ("testCloseInReEntrantFlushNowCall", testCloseInReEntrantFlushNowCall),
+        ]
+    }
 }
-

@@ -24,6 +24,6 @@ func measureAndPrint<B: Benchmark>(desc: String, benchmark bench: B) throws {
         bench.tearDown()
     }
     try measureAndPrint(desc: desc) {
-        return try bench.run()
+        try bench.run()
     }
 }

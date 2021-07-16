@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension ByteBufferUtilsTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (ByteBufferUtilsTest) -> () throws -> Void)] {
-      return [
-                ("testComparators", testComparators),
-                ("testTrimming", testTrimming),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (ByteBufferUtilsTest) -> () throws -> Void)] {
+        [
+            ("testComparators", testComparators),
+            ("testTrimming", testTrimming),
+        ]
+    }
 }
-

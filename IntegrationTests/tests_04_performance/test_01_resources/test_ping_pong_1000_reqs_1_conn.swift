@@ -18,7 +18,7 @@ private struct PingPongFailure: Error, CustomStringConvertible {
     public var description: String
 
     init(problem: String) {
-        self.description = problem
+        description = problem
     }
 }
 
@@ -27,15 +27,15 @@ private final class PongDecoder: ByteToMessageDecoder {
 
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
         if let ping = buffer.readInteger(as: UInt8.self) {
-            context.fireChannelRead(self.wrapInboundOut(ping))
+            context.fireChannelRead(wrapInboundOut(ping))
             return .continue
         } else {
             return .needMoreData
         }
     }
 
-    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-        return .needMoreData
+    public func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+        .needMoreData
     }
 }
 
@@ -47,44 +47,45 @@ private final class PingHandler: ChannelInboundHandler {
     private let numberOfRequests: Int
     private var remainingNumberOfRequests: Int
     private let allDone: EventLoopPromise<Void>
-    public static let pingCode: UInt8 = 0xbe
+    public static let pingCode: UInt8 = 0xBE
 
     public init(numberOfRequests: Int, eventLoop: EventLoop) {
         self.numberOfRequests = numberOfRequests
-        self.remainingNumberOfRequests = numberOfRequests
-        self.allDone = eventLoop.makePromise()
+        remainingNumberOfRequests = numberOfRequests
+        allDone = eventLoop.makePromise()
     }
 
     public func handlerAdded(context: ChannelHandlerContext) {
         (context.channel as? SocketOptionProvider)?.setSoLinger(linger(l_onoff: 1, l_linger: 0))
-            .whenFailure({ error in fatalError("Failed to set linger \(error)") })
+            .whenFailure { error in fatalError("Failed to set linger \(error)") }
     }
 
     public func channelActive(context: ChannelHandlerContext) {
-        self.pingBuffer = context.channel.allocator.buffer(capacity: 1)
-        self.pingBuffer.writeInteger(PingHandler.pingCode)
+        pingBuffer = context.channel.allocator.buffer(capacity: 1)
+        pingBuffer.writeInteger(PingHandler.pingCode)
 
-        context.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+        context.writeAndFlush(wrapOutboundOut(pingBuffer), promise: nil)
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buf = self.unwrapInboundIn(data)
-        if buf.readableBytes == 1 &&
-            buf.readInteger(as: UInt8.self) == PongHandler.pongCode {
-            if self.remainingNumberOfRequests > 0 {
-                self.remainingNumberOfRequests -= 1
-                context.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+        var buf = unwrapInboundIn(data)
+        if buf.readableBytes == 1,
+           buf.readInteger(as: UInt8.self) == PongHandler.pongCode
+        {
+            if remainingNumberOfRequests > 0 {
+                remainingNumberOfRequests -= 1
+                context.writeAndFlush(wrapOutboundOut(pingBuffer), promise: nil)
             } else {
-                context.close(promise: self.allDone)
+                context.close(promise: allDone)
             }
         } else {
             context.close(promise: nil)
-            self.allDone.fail(PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
+            allDone.fail(PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
         }
     }
 
     public func wait() throws {
-        try self.allDone.futureResult.wait()
+        try allDone.futureResult.wait()
     }
 }
 
@@ -93,23 +94,23 @@ private final class PongHandler: ChannelInboundHandler {
     typealias OutboundOut = ByteBuffer
 
     private var pongBuffer: ByteBuffer!
-    public static let pongCode: UInt8 = 0xef
+    public static let pongCode: UInt8 = 0xEF
 
     public func handlerAdded(context: ChannelHandlerContext) {
-        self.pongBuffer = context.channel.allocator.buffer(capacity: 1)
-        self.pongBuffer.writeInteger(PongHandler.pongCode)
+        pongBuffer = context.channel.allocator.buffer(capacity: 1)
+        pongBuffer.writeInteger(PongHandler.pongCode)
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let data = self.unwrapInboundIn(data)
+        let data = unwrapInboundIn(data)
         if data == PingHandler.pingCode {
-            context.writeAndFlush(NIOAny(self.pongBuffer), promise: nil)
+            context.writeAndFlush(NIOAny(pongBuffer), promise: nil)
         } else {
             context.close(promise: nil)
         }
     }
 
-    func errorCaught(context: ChannelHandlerContext, error: Error) {
+    func errorCaught(context: ChannelHandlerContext, error _: Error) {
         context.close(promise: nil)
     }
 }

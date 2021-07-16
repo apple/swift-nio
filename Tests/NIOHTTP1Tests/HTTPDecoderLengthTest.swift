@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIO
 import NIOHTTP1
+import XCTest
 
 private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboundHandler {
     typealias InboundIn = HTTPPart<Head, Body>
@@ -23,17 +23,17 @@ private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboun
     var seenBody = false
     var seenHead = false
 
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        switch self.unwrapInboundIn(data) {
+    func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
+        switch unwrapInboundIn(data) {
         case .head:
-            XCTAssertFalse(self.seenHead)
-            self.seenHead = true
+            XCTAssertFalse(seenHead)
+            seenHead = true
         case .body:
-            XCTAssertFalse(self.seenBody)
-            self.seenBody = true
+            XCTAssertFalse(seenBody)
+            seenBody = true
         case .end:
-            XCTAssertFalse(self.seenEnd)
-            self.seenEnd = true
+            XCTAssertFalse(seenEnd)
+            seenEnd = true
         }
     }
 }
@@ -44,16 +44,16 @@ private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboun
 class HTTPDecoderLengthTest: XCTestCase {
     private var channel: EmbeddedChannel!
     private var loop: EmbeddedEventLoop {
-        return self.channel.embeddedEventLoop
+        self.channel.embeddedEventLoop
     }
 
     override func setUp() {
-        self.channel = EmbeddedChannel()
+        channel = EmbeddedChannel()
     }
 
     override func tearDown() {
-        XCTAssertNoThrow(try self.channel?.finish(acceptAlreadyClosed: true))
-        self.channel = nil
+        XCTAssertNoThrow(try channel?.finish(acceptAlreadyClosed: true))
+        channel = nil
     }
 
     /// The mechanism by which EOF is being sent.
@@ -82,29 +82,29 @@ class HTTPDecoderLengthTest: XCTestCase {
                 self.eofMechanism = eofMechanism
             }
 
-            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                switch self.unwrapInboundIn(data) {
-                case .head(let h):
-                    self.response = h
+            func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
+                switch unwrapInboundIn(data) {
+                case let .head(h):
+                    response = h
                 case .end:
-                    self.receivedEnd = true
-                case .body(var b):
-                    XCTAssertNil(self.body)
-                    self.body = b.readBytes(length: b.readableBytes)!
+                    receivedEnd = true
+                case var .body(b):
+                    XCTAssertNil(body)
+                    body = b.readBytes(length: b.readableBytes)!
                 }
             }
 
-            func channelInactive(context: ChannelHandlerContext) {
-                if case .channelInactive = self.eofMechanism {
+            func channelInactive(context _: ChannelHandlerContext) {
+                if case .channelInactive = eofMechanism {
                     XCTAssert(self.receivedEnd, "Received channelInactive before response end!")
                     self.eof = true
                 } else {
-                    XCTAssert(self.eof, "Did not receive .inputClosed")
+                    XCTAssert(eof, "Did not receive .inputClosed")
                 }
             }
 
             func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
-                guard case .halfClosure = self.eofMechanism else {
+                guard case .halfClosure = eofMechanism else {
                     XCTFail("Got half closure when not expecting it")
                     return
                 }
@@ -114,8 +114,8 @@ class HTTPDecoderLengthTest: XCTestCase {
                     return
                 }
 
-                XCTAssert(self.receivedEnd, "Received inputClosed before response end!")
-                self.eof = true
+                XCTAssert(receivedEnd, "Received inputClosed before response end!")
+                eof = true
             }
         }
 
@@ -181,7 +181,8 @@ class HTTPDecoderLengthTest: XCTestCase {
 
     private func assertIgnoresLengthFields(requestMethod: HTTPMethod,
                                            responseStatus: HTTPResponseStatus,
-                                           responseFramingField: FramingField) throws {
+                                           responseFramingField: FramingField) throws
+    {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 

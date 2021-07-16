@@ -14,21 +14,21 @@
 
 import NIO
 
-fileprivate final class SimpleHandler: ChannelInboundHandler {
+private final class SimpleHandler: ChannelInboundHandler {
     typealias InboundIn = NIOAny
 }
 
 func run(identifier: String) {
     measure(identifier: identifier) {
         let iterations = 1000
-        for _ in 0..<iterations {
+        for _ in 0 ..< iterations {
             let channel = EmbeddedChannel()
             defer {
                 _ = try! channel.finish()
             }
             try! channel.pipeline.addHandlers([
                 SimpleHandler(),
-                SimpleHandler()
+                SimpleHandler(),
             ]).wait()
         }
         return iterations

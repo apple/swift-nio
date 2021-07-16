@@ -23,15 +23,13 @@ import XCTest
 ///
 
 extension IntegerBitPackingTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (IntegerBitPackingTests) -> () throws -> Void)] {
-      return [
-                ("testAllUInt8PairsRoundtrip", testAllUInt8PairsRoundtrip),
-                ("testExtremesWorkForUInt32UInt16UInt8", testExtremesWorkForUInt32UInt16UInt8),
-                ("testExtremesWorkForUInt16UInt8", testExtremesWorkForUInt16UInt8),
-                ("testExtremesWorkForUInt32CInt", testExtremesWorkForUInt32CInt),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (IntegerBitPackingTests) -> () throws -> Void)] {
+        [
+            ("testAllUInt8PairsRoundtrip", testAllUInt8PairsRoundtrip),
+            ("testExtremesWorkForUInt32UInt16UInt8", testExtremesWorkForUInt32UInt16UInt8),
+            ("testExtremesWorkForUInt16UInt8", testExtremesWorkForUInt16UInt8),
+            ("testExtremesWorkForUInt32CInt", testExtremesWorkForUInt32CInt),
+        ]
+    }
 }
-

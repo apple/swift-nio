@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension DispatchQueueWithFutureTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (DispatchQueueWithFutureTest) -> () throws -> Void)] {
-      return [
-                ("testDispatchQueueAsyncWithFuture", testDispatchQueueAsyncWithFuture),
-                ("testDispatchQueueAsyncWithFutureThrows", testDispatchQueueAsyncWithFutureThrows),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (DispatchQueueWithFutureTest) -> () throws -> Void)] {
+        [
+            ("testDispatchQueueAsyncWithFuture", testDispatchQueueAsyncWithFuture),
+            ("testDispatchQueueAsyncWithFutureThrows", testDispatchQueueAsyncWithFutureThrows),
+        ]
+    }
 }
-

@@ -23,24 +23,22 @@ import XCTest
 ///
 
 extension WebSocketServerEndToEndTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (WebSocketServerEndToEndTests) -> () throws -> Void)] {
-      return [
-                ("testBasicUpgradeDance", testBasicUpgradeDance),
-                ("testUpgradeWithProtocolName", testUpgradeWithProtocolName),
-                ("testCanRejectUpgrade", testCanRejectUpgrade),
-                ("testCanDelayAcceptingUpgrade", testCanDelayAcceptingUpgrade),
-                ("testRequiresVersion13", testRequiresVersion13),
-                ("testRequiresVersionHeader", testRequiresVersionHeader),
-                ("testRequiresKeyHeader", testRequiresKeyHeader),
-                ("testUpgradeMayAddCustomHeaders", testUpgradeMayAddCustomHeaders),
-                ("testMayRegisterMultipleWebSocketEndpoints", testMayRegisterMultipleWebSocketEndpoints),
-                ("testSendAFewFrames", testSendAFewFrames),
-                ("testMaxFrameSize", testMaxFrameSize),
-                ("testAutomaticErrorHandling", testAutomaticErrorHandling),
-                ("testNoAutomaticErrorHandling", testNoAutomaticErrorHandling),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (WebSocketServerEndToEndTests) -> () throws -> Void)] {
+        [
+            ("testBasicUpgradeDance", testBasicUpgradeDance),
+            ("testUpgradeWithProtocolName", testUpgradeWithProtocolName),
+            ("testCanRejectUpgrade", testCanRejectUpgrade),
+            ("testCanDelayAcceptingUpgrade", testCanDelayAcceptingUpgrade),
+            ("testRequiresVersion13", testRequiresVersion13),
+            ("testRequiresVersionHeader", testRequiresVersionHeader),
+            ("testRequiresKeyHeader", testRequiresKeyHeader),
+            ("testUpgradeMayAddCustomHeaders", testUpgradeMayAddCustomHeaders),
+            ("testMayRegisterMultipleWebSocketEndpoints", testMayRegisterMultipleWebSocketEndpoints),
+            ("testSendAFewFrames", testSendAFewFrames),
+            ("testMaxFrameSize", testMaxFrameSize),
+            ("testAutomaticErrorHandling", testAutomaticErrorHandling),
+            ("testNoAutomaticErrorHandling", testNoAutomaticErrorHandling),
+        ]
+    }
 }
-

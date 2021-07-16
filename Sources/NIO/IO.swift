@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
-import typealias WinSDK.DWORD
+    import typealias WinSDK.DWORD
 #endif
 
 /// An `Error` for an IO operation.
@@ -29,7 +29,7 @@ public struct IOError: Swift.Error {
 
     @available(*, deprecated, message: "NIO no longer uses FailureDescription, use IOError.description for a human-readable error description")
     public var reason: FailureDescription {
-        return .reason(self.failureDescription)
+        .reason(failureDescription)
     }
 
     private enum Error {
@@ -44,8 +44,8 @@ public struct IOError: Swift.Error {
 
     /// The `errno` that was set for the operation.
     public var errnoCode: CInt {
-        switch self.error {
-        case .errno(let code):
+        switch error {
+        case let .errno(code):
             return code
         #if os(Windows)
             default:
@@ -54,17 +54,17 @@ public struct IOError: Swift.Error {
         }
     }
 
-#if os(Windows)
-    public init(windows code: DWORD, reason: String) {
-        self.error = .windows(code)
-        self.failureDescription = reason
-    }
+    #if os(Windows)
+        public init(windows code: DWORD, reason: String) {
+            error = .windows(code)
+            failureDescription = reason
+        }
 
-    public init(winsock code: CInt, reason: String) {
-        self.error = .winsock(code)
-        self.failureDescription = reason
-    }
-#endif
+        public init(winsock code: CInt, reason: String) {
+            error = .winsock(code)
+            failureDescription = reason
+        }
+    #endif
 
     /// Creates a new `IOError``
     ///
@@ -72,8 +72,8 @@ public struct IOError: Swift.Error {
     ///     - errorCode: the `errno` that was set for the operation.
     ///     - reason: the actual reason (in an human-readable form).
     public init(errnoCode code: CInt, reason: String) {
-        self.error = .errno(code)
-        self.failureDescription = reason
+        error = .errno(code)
+        failureDescription = reason
     }
 
     /// Creates a new `IOError``
@@ -83,8 +83,8 @@ public struct IOError: Swift.Error {
     ///     - function: The function the error happened in, the human readable description will be generated automatically when needed.
     @available(*, deprecated, renamed: "init(errnoCode:reason:)")
     public init(errnoCode code: CInt, function: StaticString) {
-        self.error = .errno(code)
-        self.failureDescription = "\(function)"
+        error = .errno(code)
+        failureDescription = "\(function)"
     }
 }
 
@@ -105,9 +105,9 @@ private func reasonForError(errnoCode: CInt, reason: String) -> String {
 internal extension IOResult where T: FixedWidthInteger {
     var result: T {
         switch self {
-        case .processed(let value):
+        case let .processed(value):
             return value
-        case .wouldBlock(_):
+        case .wouldBlock:
             fatalError("cannot unwrap IOResult")
         }
     }
@@ -115,17 +115,16 @@ internal extension IOResult where T: FixedWidthInteger {
 
 extension IOError: CustomStringConvertible {
     public var description: String {
-        return self.localizedDescription
+        localizedDescription
     }
 
     public var localizedDescription: String {
-        return reasonForError(errnoCode: self.errnoCode, reason: self.failureDescription)
+        reasonForError(errnoCode: errnoCode, reason: failureDescription)
     }
 }
 
 /// An result for an IO operation that was done on a non-blocking resource.
 enum IOResult<T: Equatable>: Equatable {
-
     /// Signals that the IO operation could not be completed as otherwise we would need to block.
     case wouldBlock(T)
 

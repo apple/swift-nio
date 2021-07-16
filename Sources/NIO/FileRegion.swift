@@ -24,7 +24,6 @@
 ///
 /// - note: It is important to manually manage the lifetime of the `NIOFileHandle` used to create a `FileRegion`.
 public struct FileRegion {
-
     /// The `NIOFileHandle` that is used by this `FileRegion`.
     public let fileHandle: NIOFileHandle
 
@@ -32,18 +31,18 @@ public struct FileRegion {
     private var _readerIndex: _UInt56
 
     /// The current reader index of this `FileRegion`
-    private(set) public var readerIndex: Int {
+    public private(set) var readerIndex: Int {
         get {
-            return Int(self._readerIndex)
+            Int(_readerIndex)
         }
         set {
-            self._readerIndex = _UInt56(newValue)
+            _readerIndex = _UInt56(newValue)
         }
     }
 
     /// The end index of this `FileRegion`.
     public var endIndex: Int {
-        return Int(self._endIndex)
+        Int(_endIndex)
     }
 
     /// Create a new `FileRegion` from an open `NIOFileHandle`.
@@ -56,29 +55,29 @@ public struct FileRegion {
         precondition(readerIndex <= endIndex, "readerIndex(\(readerIndex) must be <= endIndex(\(endIndex).")
 
         self.fileHandle = fileHandle
-        self._readerIndex = _UInt56(readerIndex)
-        self._endIndex = UInt64(endIndex)
+        _readerIndex = _UInt56(readerIndex)
+        _endIndex = UInt64(endIndex)
     }
 
     /// The number of readable bytes within this FileRegion (taking the `readerIndex` and `endIndex` into account).
     public var readableBytes: Int {
-        return endIndex - readerIndex
+        endIndex - readerIndex
     }
 
     /// Move the readerIndex forward by `offset`.
     public mutating func moveReaderIndex(forwardBy offset: Int) {
-        let newIndex = self.readerIndex + offset
+        let newIndex = readerIndex + offset
         assert(offset >= 0 && newIndex <= endIndex, "new readerIndex: \(newIndex), expected: range(0, \(endIndex))")
-        self.readerIndex = newIndex
+        readerIndex = newIndex
     }
 }
 
-extension FileRegion {
+public extension FileRegion {
     /// Create a new `FileRegion` forming a complete file.
     ///
     /// - parameters:
     ///     - fileHandle: An open `NIOFileHandle` to the file.
-    public init(fileHandle: NIOFileHandle) throws {
+    init(fileHandle: NIOFileHandle) throws {
         let eof = try fileHandle.withUnsafeFileDescriptor { (fd: CInt) throws -> off_t in
             let eof = try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
@@ -86,17 +85,16 @@ extension FileRegion {
         }
         self.init(fileHandle: fileHandle, readerIndex: 0, endIndex: Int(eof))
     }
-
 }
 
 extension FileRegion: Equatable {
-    public static func ==(lhs: FileRegion, rhs: FileRegion) -> Bool {
-        return lhs.fileHandle === rhs.fileHandle && lhs.readerIndex == rhs.readerIndex && lhs.endIndex == rhs.endIndex
+    public static func == (lhs: FileRegion, rhs: FileRegion) -> Bool {
+        lhs.fileHandle === rhs.fileHandle && lhs.readerIndex == rhs.readerIndex && lhs.endIndex == rhs.endIndex
     }
 }
 
 extension FileRegion: CustomStringConvertible {
     public var description: String {
-        return "FileRegion { handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex) }"
+        "FileRegion { handle: \(fileHandle), readerIndex: \(readerIndex), endIndex: \(endIndex) }"
     }
 }

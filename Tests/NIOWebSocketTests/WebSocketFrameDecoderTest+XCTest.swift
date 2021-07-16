@@ -23,33 +23,31 @@ import XCTest
 ///
 
 extension WebSocketFrameDecoderTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (WebSocketFrameDecoderTest) -> () throws -> Void)] {
-      return [
-                ("testFramesWithoutBodies", testFramesWithoutBodies),
-                ("testFramesWithExtensionDataDontRoundTrip", testFramesWithExtensionDataDontRoundTrip),
-                ("testFramesWithExtensionDataCanBeRecovered", testFramesWithExtensionDataCanBeRecovered),
-                ("testFramesWithReservedBitsSetRoundTrip", testFramesWithReservedBitsSetRoundTrip),
-                ("testFramesWith16BitLengthsRoundTrip", testFramesWith16BitLengthsRoundTrip),
-                ("testFramesWith64BitLengthsRoundTrip", testFramesWith64BitLengthsRoundTrip),
-                ("testMaskedFramesRoundTripWithMaskingIntact", testMaskedFramesRoundTripWithMaskingIntact),
-                ("testMaskedFramesRoundTripWithMaskingIntactEvenWithExtensions", testMaskedFramesRoundTripWithMaskingIntactEvenWithExtensions),
-                ("testDecoderRejectsOverlongFrames", testDecoderRejectsOverlongFrames),
-                ("testDecoderRejectsFragmentedControlFrames", testDecoderRejectsFragmentedControlFrames),
-                ("testDecoderRejectsMultibyteControlFrameLengths", testDecoderRejectsMultibyteControlFrameLengths),
-                ("testIgnoresFurtherDataAfterRejectedFrame", testIgnoresFurtherDataAfterRejectedFrame),
-                ("testClosingSynchronouslyOnChannelRead", testClosingSynchronouslyOnChannelRead),
-                ("testDecoderRejectsOverlongFramesWithNoAutomaticErrorHandling", testDecoderRejectsOverlongFramesWithNoAutomaticErrorHandling),
-                ("testDecoderRejectsFragmentedControlFramesWithNoAutomaticErrorHandling", testDecoderRejectsFragmentedControlFramesWithNoAutomaticErrorHandling),
-                ("testDecoderRejectsMultibyteControlFrameLengthsWithNoAutomaticErrorHandling", testDecoderRejectsMultibyteControlFrameLengthsWithNoAutomaticErrorHandling),
-                ("testIgnoresFurtherDataAfterRejectedFrameWithNoAutomaticErrorHandling", testIgnoresFurtherDataAfterRejectedFrameWithNoAutomaticErrorHandling),
-                ("testDecoderRejectsOverlongFramesWithSeparateErrorHandling", testDecoderRejectsOverlongFramesWithSeparateErrorHandling),
-                ("testDecoderRejectsFragmentedControlFramesWithSeparateErrorHandling", testDecoderRejectsFragmentedControlFramesWithSeparateErrorHandling),
-                ("testDecoderRejectsMultibyteControlFrameLengthsWithSeparateErrorHandling", testDecoderRejectsMultibyteControlFrameLengthsWithSeparateErrorHandling),
-                ("testIgnoresFurtherDataAfterRejectedFrameWithSeparateErrorHandling", testIgnoresFurtherDataAfterRejectedFrameWithSeparateErrorHandling),
-                ("testErrorHandlerDoesNotSwallowRandomErrors", testErrorHandlerDoesNotSwallowRandomErrors),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (WebSocketFrameDecoderTest) -> () throws -> Void)] {
+        [
+            ("testFramesWithoutBodies", testFramesWithoutBodies),
+            ("testFramesWithExtensionDataDontRoundTrip", testFramesWithExtensionDataDontRoundTrip),
+            ("testFramesWithExtensionDataCanBeRecovered", testFramesWithExtensionDataCanBeRecovered),
+            ("testFramesWithReservedBitsSetRoundTrip", testFramesWithReservedBitsSetRoundTrip),
+            ("testFramesWith16BitLengthsRoundTrip", testFramesWith16BitLengthsRoundTrip),
+            ("testFramesWith64BitLengthsRoundTrip", testFramesWith64BitLengthsRoundTrip),
+            ("testMaskedFramesRoundTripWithMaskingIntact", testMaskedFramesRoundTripWithMaskingIntact),
+            ("testMaskedFramesRoundTripWithMaskingIntactEvenWithExtensions", testMaskedFramesRoundTripWithMaskingIntactEvenWithExtensions),
+            ("testDecoderRejectsOverlongFrames", testDecoderRejectsOverlongFrames),
+            ("testDecoderRejectsFragmentedControlFrames", testDecoderRejectsFragmentedControlFrames),
+            ("testDecoderRejectsMultibyteControlFrameLengths", testDecoderRejectsMultibyteControlFrameLengths),
+            ("testIgnoresFurtherDataAfterRejectedFrame", testIgnoresFurtherDataAfterRejectedFrame),
+            ("testClosingSynchronouslyOnChannelRead", testClosingSynchronouslyOnChannelRead),
+            ("testDecoderRejectsOverlongFramesWithNoAutomaticErrorHandling", testDecoderRejectsOverlongFramesWithNoAutomaticErrorHandling),
+            ("testDecoderRejectsFragmentedControlFramesWithNoAutomaticErrorHandling", testDecoderRejectsFragmentedControlFramesWithNoAutomaticErrorHandling),
+            ("testDecoderRejectsMultibyteControlFrameLengthsWithNoAutomaticErrorHandling", testDecoderRejectsMultibyteControlFrameLengthsWithNoAutomaticErrorHandling),
+            ("testIgnoresFurtherDataAfterRejectedFrameWithNoAutomaticErrorHandling", testIgnoresFurtherDataAfterRejectedFrameWithNoAutomaticErrorHandling),
+            ("testDecoderRejectsOverlongFramesWithSeparateErrorHandling", testDecoderRejectsOverlongFramesWithSeparateErrorHandling),
+            ("testDecoderRejectsFragmentedControlFramesWithSeparateErrorHandling", testDecoderRejectsFragmentedControlFramesWithSeparateErrorHandling),
+            ("testDecoderRejectsMultibyteControlFrameLengthsWithSeparateErrorHandling", testDecoderRejectsMultibyteControlFrameLengthsWithSeparateErrorHandling),
+            ("testIgnoresFurtherDataAfterRejectedFrameWithSeparateErrorHandling", testIgnoresFurtherDataAfterRejectedFrameWithSeparateErrorHandling),
+            ("testErrorHandlerDoesNotSwallowRandomErrors", testErrorHandlerDoesNotSwallowRandomErrors),
+        ]
+    }
 }
-

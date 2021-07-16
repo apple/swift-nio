@@ -20,10 +20,9 @@ func run(identifier: String) {
         func doEraseResult(loop: EventLoop) {
             // In an ideal implementation the only allocation is this promise.
             let p = loop.makePromise(of: Int.self)
-            let f = p.futureResult.map { (r: Int) -> Void in
+            let f = p.futureResult.map { (_: Int) -> Void in
                 // This closure is a value-to-no-value erase that closes over nothing.
                 // Ideally this would not allocate.
-                return
             }.map { (_: Void) -> Void in
                 // This closure is a nothing-to-nothing map, basically a "completed" observer. This should
                 // also not allocate, but it has a separate code path to the above.
@@ -32,7 +31,7 @@ func run(identifier: String) {
         }
 
         let el = EmbeddedEventLoop()
-        for _ in 0..<1000  {
+        for _ in 0 ..< 1000 {
             doEraseResult(loop: el)
         }
         return 1000

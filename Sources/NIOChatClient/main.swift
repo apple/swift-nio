@@ -19,14 +19,14 @@ private final class ChatHandler: ChannelInboundHandler {
 
     private func printByte(_ byte: UInt8) {
         #if os(Android)
-        print(Character(UnicodeScalar(byte)),  terminator:"")
+            print(Character(UnicodeScalar(byte)), terminator: "")
         #else
-        fputc(Int32(byte), stdout)
+            fputc(Int32(byte), stdout)
         #endif
     }
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buffer = self.unwrapInboundIn(data)
+    public func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
+        var buffer = unwrapInboundIn(data)
         while let byte: UInt8 = buffer.readInteger() {
             printByte(byte)
         }
@@ -48,6 +48,7 @@ let bootstrap = ClientBootstrap(group: group)
     .channelInitializer { channel in
         channel.pipeline.addHandler(ChatHandler())
     }
+
 defer {
     try! group.syncShutdownGracefully()
 }
@@ -67,13 +68,13 @@ enum ConnectTo {
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
+case let (.some(h), _, .some(p)):
     /* we got two arguments, let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)
-case (.some(let portString), .none, _):
+case let (.some(portString), .none, _):
     /* couldn't parse as number, expecting unix domain socket path */
     connectTarget = .unixDomainSocket(path: portString)
-case (_, .some(let p), _):
+case let (_, .some(p), _):
     /* only one argument --> port */
     connectTarget = .ip(host: defaultHost, port: p)
 default:
@@ -82,9 +83,9 @@ default:
 
 let channel = try { () -> Channel in
     switch connectTarget {
-    case .ip(let host, let port):
+    case let .ip(host, port):
         return try bootstrap.connect(host: host, port: port).wait()
-    case .unixDomainSocket(let path):
+    case let .unixDomainSocket(path):
         return try bootstrap.connect(unixDomainSocketPath: path).wait()
     }
 }()

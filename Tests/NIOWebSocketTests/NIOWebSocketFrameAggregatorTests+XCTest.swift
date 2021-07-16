@@ -23,22 +23,20 @@ import XCTest
 ///
 
 extension NIOWebSocketFrameAggregatorTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (NIOWebSocketFrameAggregatorTests) -> () throws -> Void)] {
-      return [
-                ("testEmptyButFinalFrameIsForwardedEvenIfMinNonFinalFragmentSizeIsGreaterThanZero", testEmptyButFinalFrameIsForwardedEvenIfMinNonFinalFragmentSizeIsGreaterThanZero),
-                ("testTooSmallAndNonFinalFrameThrows", testTooSmallAndNonFinalFrameThrows),
-                ("testTooBigFrameThrows", testTooBigFrameThrows),
-                ("testTooBigAccumulatedFrameThrows", testTooBigAccumulatedFrameThrows),
-                ("testTooManyFramesThrow", testTooManyFramesThrow),
-                ("testAlmostTooManyFramesDoNotThrow", testAlmostTooManyFramesDoNotThrow),
-                ("testTextFrameIsStillATextFrameAfterAggregation", testTextFrameIsStillATextFrameAfterAggregation),
-                ("testPingFrameIsForwarded", testPingFrameIsForwarded),
-                ("testPongFrameIsForwarded", testPongFrameIsForwarded),
-                ("testCloseConnectionFrameIsForwarded", testCloseConnectionFrameIsForwarded),
-                ("testFrameAggregationWithMask", testFrameAggregationWithMask),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (NIOWebSocketFrameAggregatorTests) -> () throws -> Void)] {
+        [
+            ("testEmptyButFinalFrameIsForwardedEvenIfMinNonFinalFragmentSizeIsGreaterThanZero", testEmptyButFinalFrameIsForwardedEvenIfMinNonFinalFragmentSizeIsGreaterThanZero),
+            ("testTooSmallAndNonFinalFrameThrows", testTooSmallAndNonFinalFrameThrows),
+            ("testTooBigFrameThrows", testTooBigFrameThrows),
+            ("testTooBigAccumulatedFrameThrows", testTooBigAccumulatedFrameThrows),
+            ("testTooManyFramesThrow", testTooManyFramesThrow),
+            ("testAlmostTooManyFramesDoNotThrow", testAlmostTooManyFramesDoNotThrow),
+            ("testTextFrameIsStillATextFrameAfterAggregation", testTextFrameIsStillATextFrameAfterAggregation),
+            ("testPingFrameIsForwarded", testPingFrameIsForwarded),
+            ("testPongFrameIsForwarded", testPongFrameIsForwarded),
+            ("testCloseConnectionFrameIsForwarded", testCloseConnectionFrameIsForwarded),
+            ("testFrameAggregationWithMask", testFrameAggregationWithMask),
+        ]
+    }
 }
-

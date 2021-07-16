@@ -23,32 +23,30 @@ import XCTest
 ///
 
 extension EmbeddedEventLoopTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (EmbeddedEventLoopTest) -> () throws -> Void)] {
-      return [
-                ("testExecuteDoesNotImmediatelyRunTasks", testExecuteDoesNotImmediatelyRunTasks),
-                ("testExecuteWillRunAllTasks", testExecuteWillRunAllTasks),
-                ("testExecuteWillRunTasksAddedRecursively", testExecuteWillRunTasksAddedRecursively),
-                ("testTasksSubmittedAfterRunDontRun", testTasksSubmittedAfterRunDontRun),
-                ("testShutdownGracefullyRunsTasks", testShutdownGracefullyRunsTasks),
-                ("testCanControlTime", testCanControlTime),
-                ("testCanScheduleMultipleTasks", testCanScheduleMultipleTasks),
-                ("testExecutedTasksFromScheduledOnesAreRun", testExecutedTasksFromScheduledOnesAreRun),
-                ("testScheduledTasksFromScheduledTasksProperlySchedule", testScheduledTasksFromScheduledTasksProperlySchedule),
-                ("testScheduledTasksFromExecutedTasks", testScheduledTasksFromExecutedTasks),
-                ("testCancellingScheduledTasks", testCancellingScheduledTasks),
-                ("testScheduledTasksFuturesFire", testScheduledTasksFuturesFire),
-                ("testScheduledTasksFuturesError", testScheduledTasksFuturesError),
-                ("testTaskOrdering", testTaskOrdering),
-                ("testCancelledScheduledTasksDoNotHoldOnToRunClosure", testCancelledScheduledTasksDoNotHoldOnToRunClosure),
-                ("testDrainScheduledTasks", testDrainScheduledTasks),
-                ("testDrainScheduledTasksDoesNotRunNewlyScheduledTasks", testDrainScheduledTasksDoesNotRunNewlyScheduledTasks),
-                ("testAdvanceTimeToDeadline", testAdvanceTimeToDeadline),
-                ("testWeCantTimeTravelByAdvancingTimeToThePast", testWeCantTimeTravelByAdvancingTimeToThePast),
-                ("testExecuteInOrder", testExecuteInOrder),
-                ("testScheduledTasksInOrder", testScheduledTasksInOrder),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (EmbeddedEventLoopTest) -> () throws -> Void)] {
+        [
+            ("testExecuteDoesNotImmediatelyRunTasks", testExecuteDoesNotImmediatelyRunTasks),
+            ("testExecuteWillRunAllTasks", testExecuteWillRunAllTasks),
+            ("testExecuteWillRunTasksAddedRecursively", testExecuteWillRunTasksAddedRecursively),
+            ("testTasksSubmittedAfterRunDontRun", testTasksSubmittedAfterRunDontRun),
+            ("testShutdownGracefullyRunsTasks", testShutdownGracefullyRunsTasks),
+            ("testCanControlTime", testCanControlTime),
+            ("testCanScheduleMultipleTasks", testCanScheduleMultipleTasks),
+            ("testExecutedTasksFromScheduledOnesAreRun", testExecutedTasksFromScheduledOnesAreRun),
+            ("testScheduledTasksFromScheduledTasksProperlySchedule", testScheduledTasksFromScheduledTasksProperlySchedule),
+            ("testScheduledTasksFromExecutedTasks", testScheduledTasksFromExecutedTasks),
+            ("testCancellingScheduledTasks", testCancellingScheduledTasks),
+            ("testScheduledTasksFuturesFire", testScheduledTasksFuturesFire),
+            ("testScheduledTasksFuturesError", testScheduledTasksFuturesError),
+            ("testTaskOrdering", testTaskOrdering),
+            ("testCancelledScheduledTasksDoNotHoldOnToRunClosure", testCancelledScheduledTasksDoNotHoldOnToRunClosure),
+            ("testDrainScheduledTasks", testDrainScheduledTasks),
+            ("testDrainScheduledTasksDoesNotRunNewlyScheduledTasks", testDrainScheduledTasksDoesNotRunNewlyScheduledTasks),
+            ("testAdvanceTimeToDeadline", testAdvanceTimeToDeadline),
+            ("testWeCantTimeTravelByAdvancingTimeToThePast", testWeCantTimeTravelByAdvancingTimeToThePast),
+            ("testExecuteInOrder", testExecuteInOrder),
+            ("testScheduledTasksInOrder", testScheduledTasksInOrder),
+        ]
+    }
 }
-

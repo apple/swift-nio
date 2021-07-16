@@ -23,17 +23,15 @@ import XCTest
 ///
 
 extension ByteBufferDataProtocolTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (ByteBufferDataProtocolTests) -> () throws -> Void)] {
-      return [
-                ("testWritingData", testWritingData),
-                ("testWritingDispatchDataThoughDataProtocol", testWritingDispatchDataThoughDataProtocol),
-                ("testSettingData", testSettingData),
-                ("testSettingDispatchDataThoughDataProtocol", testSettingDispatchDataThoughDataProtocol),
-                ("testWriteContiguousBytes", testWriteContiguousBytes),
-                ("testSetContiguousBytes", testSetContiguousBytes),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (ByteBufferDataProtocolTests) -> () throws -> Void)] {
+        [
+            ("testWritingData", testWritingData),
+            ("testWritingDispatchDataThoughDataProtocol", testWritingDispatchDataThoughDataProtocol),
+            ("testSettingData", testSettingData),
+            ("testSettingDispatchDataThoughDataProtocol", testSettingDispatchDataThoughDataProtocol),
+            ("testWriteContiguousBytes", testWriteContiguousBytes),
+            ("testSetContiguousBytes", testSetContiguousBytes),
+        ]
+    }
 }
-

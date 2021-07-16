@@ -70,9 +70,9 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
     /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
     ///   negotiation has completed.
     public init(alpnCompleteHandler: @escaping (ALPNResult, Channel) -> EventLoopFuture<Void>) {
-        self.completionHandler = alpnCompleteHandler
-        self.waitingForUser = false
-        self.eventBuffer = []
+        completionHandler = alpnCompleteHandler
+        waitingForUser = false
+        eventBuffer = []
     }
 
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
@@ -92,7 +92,7 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
             return
         }
 
-        if case .handshakeCompleted(let p) = tlsEvent {
+        if case let .handshakeCompleted(p) = tlsEvent {
             handshakeCompleted(context: context, negotiatedProtocol: p)
         } else {
             context.fireUserInboundEventTriggered(event)
@@ -117,7 +117,7 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
             result = .fallback
         }
 
-        let switchFuture = self.completionHandler(result, context.channel)
+        let switchFuture = completionHandler(result, context.channel)
         switchFuture.whenComplete { (_: Result<Void, Error>) in
             self.unbuffer(context: context)
             context.pipeline.removeHandler(self, promise: nil)

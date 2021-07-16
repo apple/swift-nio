@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 /// A protocol that covers an object that does DNS lookups.
 ///
 /// In general the rules for the resolver are relatively broad: there are no specific requirements on how

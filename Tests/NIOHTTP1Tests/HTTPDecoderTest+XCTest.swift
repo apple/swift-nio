@@ -23,41 +23,39 @@ import XCTest
 ///
 
 extension HTTPDecoderTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPDecoderTest) -> () throws -> Void)] {
-      return [
-                ("testDoesNotDecodeRealHTTP09Request", testDoesNotDecodeRealHTTP09Request),
-                ("testDoesNotDecodeFakeHTTP09Request", testDoesNotDecodeFakeHTTP09Request),
-                ("testDoesNotDecodeHTTP2XRequest", testDoesNotDecodeHTTP2XRequest),
-                ("testToleratesHTTP13Request", testToleratesHTTP13Request),
-                ("testDoesNotDecodeRealHTTP09Response", testDoesNotDecodeRealHTTP09Response),
-                ("testDoesNotDecodeFakeHTTP09Response", testDoesNotDecodeFakeHTTP09Response),
-                ("testDoesNotDecodeHTTP2XResponse", testDoesNotDecodeHTTP2XResponse),
-                ("testToleratesHTTP13Response", testToleratesHTTP13Response),
-                ("testCorrectlyMaintainIndicesWhenDiscardReadBytes", testCorrectlyMaintainIndicesWhenDiscardReadBytes),
-                ("testDropExtraBytes", testDropExtraBytes),
-                ("testDontDropExtraBytesRequest", testDontDropExtraBytesRequest),
-                ("testDontDropExtraBytesResponse", testDontDropExtraBytesResponse),
-                ("testExtraCRLF", testExtraCRLF),
-                ("testSOURCEDoesntExplodeUs", testSOURCEDoesntExplodeUs),
-                ("testExtraCarriageReturnBetweenSubsequentRequests", testExtraCarriageReturnBetweenSubsequentRequests),
-                ("testIllegalHeaderNamesCauseError", testIllegalHeaderNamesCauseError),
-                ("testNonASCIIWorksAsHeaderValue", testNonASCIIWorksAsHeaderValue),
-                ("testDoesNotDeliverLeftoversUnnecessarily", testDoesNotDeliverLeftoversUnnecessarily),
-                ("testHTTPResponseWithoutHeaders", testHTTPResponseWithoutHeaders),
-                ("testBasicVerifications", testBasicVerifications),
-                ("testNothingHappensOnEOFForLeftOversInAllLeftOversModes", testNothingHappensOnEOFForLeftOversInAllLeftOversModes),
-                ("testBytesCanBeForwardedWhenHandlerRemoved", testBytesCanBeForwardedWhenHandlerRemoved),
-                ("testBytesCanBeFiredAsErrorWhenHandlerRemoved", testBytesCanBeFiredAsErrorWhenHandlerRemoved),
-                ("testBytesCanBeDroppedWhenHandlerRemoved", testBytesCanBeDroppedWhenHandlerRemoved),
-                ("testAppropriateErrorWhenReceivingUnsolicitedResponse", testAppropriateErrorWhenReceivingUnsolicitedResponse),
-                ("testAppropriateErrorWhenReceivingUnsolicitedResponseDoesNotRecover", testAppropriateErrorWhenReceivingUnsolicitedResponseDoesNotRecover),
-                ("testOneRequestTwoResponses", testOneRequestTwoResponses),
-                ("testRefusesRequestSmugglingAttempt", testRefusesRequestSmugglingAttempt),
-                ("testTrimsTrailingOWS", testTrimsTrailingOWS),
-                ("testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable", testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPDecoderTest) -> () throws -> Void)] {
+        [
+            ("testDoesNotDecodeRealHTTP09Request", testDoesNotDecodeRealHTTP09Request),
+            ("testDoesNotDecodeFakeHTTP09Request", testDoesNotDecodeFakeHTTP09Request),
+            ("testDoesNotDecodeHTTP2XRequest", testDoesNotDecodeHTTP2XRequest),
+            ("testToleratesHTTP13Request", testToleratesHTTP13Request),
+            ("testDoesNotDecodeRealHTTP09Response", testDoesNotDecodeRealHTTP09Response),
+            ("testDoesNotDecodeFakeHTTP09Response", testDoesNotDecodeFakeHTTP09Response),
+            ("testDoesNotDecodeHTTP2XResponse", testDoesNotDecodeHTTP2XResponse),
+            ("testToleratesHTTP13Response", testToleratesHTTP13Response),
+            ("testCorrectlyMaintainIndicesWhenDiscardReadBytes", testCorrectlyMaintainIndicesWhenDiscardReadBytes),
+            ("testDropExtraBytes", testDropExtraBytes),
+            ("testDontDropExtraBytesRequest", testDontDropExtraBytesRequest),
+            ("testDontDropExtraBytesResponse", testDontDropExtraBytesResponse),
+            ("testExtraCRLF", testExtraCRLF),
+            ("testSOURCEDoesntExplodeUs", testSOURCEDoesntExplodeUs),
+            ("testExtraCarriageReturnBetweenSubsequentRequests", testExtraCarriageReturnBetweenSubsequentRequests),
+            ("testIllegalHeaderNamesCauseError", testIllegalHeaderNamesCauseError),
+            ("testNonASCIIWorksAsHeaderValue", testNonASCIIWorksAsHeaderValue),
+            ("testDoesNotDeliverLeftoversUnnecessarily", testDoesNotDeliverLeftoversUnnecessarily),
+            ("testHTTPResponseWithoutHeaders", testHTTPResponseWithoutHeaders),
+            ("testBasicVerifications", testBasicVerifications),
+            ("testNothingHappensOnEOFForLeftOversInAllLeftOversModes", testNothingHappensOnEOFForLeftOversInAllLeftOversModes),
+            ("testBytesCanBeForwardedWhenHandlerRemoved", testBytesCanBeForwardedWhenHandlerRemoved),
+            ("testBytesCanBeFiredAsErrorWhenHandlerRemoved", testBytesCanBeFiredAsErrorWhenHandlerRemoved),
+            ("testBytesCanBeDroppedWhenHandlerRemoved", testBytesCanBeDroppedWhenHandlerRemoved),
+            ("testAppropriateErrorWhenReceivingUnsolicitedResponse", testAppropriateErrorWhenReceivingUnsolicitedResponse),
+            ("testAppropriateErrorWhenReceivingUnsolicitedResponseDoesNotRecover", testAppropriateErrorWhenReceivingUnsolicitedResponseDoesNotRecover),
+            ("testOneRequestTwoResponses", testOneRequestTwoResponses),
+            ("testRefusesRequestSmugglingAttempt", testRefusesRequestSmugglingAttempt),
+            ("testTrimsTrailingOWS", testTrimsTrailingOWS),
+            ("testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable", testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable),
+        ]
+    }
 }
-

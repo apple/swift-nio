@@ -23,31 +23,28 @@ import XCTest
 ///
 
 extension NIOHTTPServerRequestAggregatorTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (NIOHTTPServerRequestAggregatorTest) -> () throws -> Void)] {
-      return [
-                ("testAggregateNoBody", testAggregateNoBody),
-                ("testAggregateWithBody", testAggregateWithBody),
-                ("testAggregateChunkedBody", testAggregateChunkedBody),
-                ("testAggregateWithTrailer", testAggregateWithTrailer),
-                ("testOversizeRequest", testOversizeRequest),
-                ("testOversizedRequestWithoutKeepAlive", testOversizedRequestWithoutKeepAlive),
-                ("testOversizedRequestWithContentLength", testOversizedRequestWithContentLength),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (NIOHTTPServerRequestAggregatorTest) -> () throws -> Void)] {
+        [
+            ("testAggregateNoBody", testAggregateNoBody),
+            ("testAggregateWithBody", testAggregateWithBody),
+            ("testAggregateChunkedBody", testAggregateChunkedBody),
+            ("testAggregateWithTrailer", testAggregateWithTrailer),
+            ("testOversizeRequest", testOversizeRequest),
+            ("testOversizedRequestWithoutKeepAlive", testOversizedRequestWithoutKeepAlive),
+            ("testOversizedRequestWithContentLength", testOversizedRequestWithContentLength),
+        ]
+    }
 }
 
 extension NIOHTTPClientResponseAggregatorTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (NIOHTTPClientResponseAggregatorTest) -> () throws -> Void)] {
-      return [
-                ("testOversizeResponseHead", testOversizeResponseHead),
-                ("testOversizeResponse", testOversizeResponse),
-                ("testAggregatedResponse", testAggregatedResponse),
-                ("testOkAfterOversized", testOkAfterOversized),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (NIOHTTPClientResponseAggregatorTest) -> () throws -> Void)] {
+        [
+            ("testOversizeResponseHead", testOversizeResponseHead),
+            ("testOversizeResponse", testOversizeResponse),
+            ("testAggregatedResponse", testAggregatedResponse),
+            ("testOkAfterOversized", testOkAfterOversized),
+        ]
+    }
 }
-

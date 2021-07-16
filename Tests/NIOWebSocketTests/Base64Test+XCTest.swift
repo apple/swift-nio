@@ -23,14 +23,12 @@ import XCTest
 ///
 
 extension Base64Test {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (Base64Test) -> () throws -> Void)] {
-      return [
-                ("testEncodeEmptyData", testEncodeEmptyData),
-                ("testBase64EncodingArrayOfNulls", testBase64EncodingArrayOfNulls),
-                ("testBase64EncodingAllTheBytesSequentially", testBase64EncodingAllTheBytesSequentially),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (Base64Test) -> () throws -> Void)] {
+        [
+            ("testEncodeEmptyData", testEncodeEmptyData),
+            ("testBase64EncodingArrayOfNulls", testBase64EncodingArrayOfNulls),
+            ("testBase64EncodingAllTheBytesSequentially", testBase64EncodingAllTheBytesSequentially),
+        ]
+    }
 }
-

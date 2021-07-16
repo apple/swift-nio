@@ -23,19 +23,17 @@ import XCTest
 ///
 
 extension IntegerTypesTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (IntegerTypesTest) -> () throws -> Void)] {
-      return [
-                ("testNextPowerOfOfTwoZero", testNextPowerOfOfTwoZero),
-                ("testNextPowerOfTwoOfOne", testNextPowerOfTwoOfOne),
-                ("testNextPowerOfTwoOfTwo", testNextPowerOfTwoOfTwo),
-                ("testNextPowerOfTwoOfThree", testNextPowerOfTwoOfThree),
-                ("testNextPowerOfTwoOfFour", testNextPowerOfTwoOfFour),
-                ("testNextPowerOfTwoOfFive", testNextPowerOfTwoOfFive),
-                ("testDescriptionUInt24", testDescriptionUInt24),
-                ("testDescriptionUInt56", testDescriptionUInt56),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (IntegerTypesTest) -> () throws -> Void)] {
+        [
+            ("testNextPowerOfOfTwoZero", testNextPowerOfOfTwoZero),
+            ("testNextPowerOfTwoOfOne", testNextPowerOfTwoOfOne),
+            ("testNextPowerOfTwoOfTwo", testNextPowerOfTwoOfTwo),
+            ("testNextPowerOfTwoOfThree", testNextPowerOfTwoOfThree),
+            ("testNextPowerOfTwoOfFour", testNextPowerOfTwoOfFour),
+            ("testNextPowerOfTwoOfFive", testNextPowerOfTwoOfFive),
+            ("testDescriptionUInt24", testDescriptionUInt24),
+            ("testDescriptionUInt56", testDescriptionUInt56),
+        ]
+    }
 }
-

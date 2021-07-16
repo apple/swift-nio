@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 import NIO
 
-
 /// A simple `ChannelHandler` that catches protocol errors emitted by the
 /// `WebSocketFrameDecoder` and automatically generates protocol error responses.
 ///
@@ -23,7 +22,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
     public typealias InboundIn = Never
     public typealias OutboundOut = WebSocketFrame
 
-    public init() { }
+    public init() {}
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         if let error = error as? NIOWebSocketError {
@@ -32,7 +31,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
             let frame = WebSocketFrame(fin: true,
                                        opcode: .connectionClose,
                                        data: data)
-            context.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
+            context.writeAndFlush(wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
                 context.close(promise: nil)
             }
         }

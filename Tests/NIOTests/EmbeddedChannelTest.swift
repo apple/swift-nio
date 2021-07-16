@@ -12,54 +12,53 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
+import XCTest
 
 class EmbeddedChannelTest: XCTestCase {
-    
     func testSingleHandlerInit() {
         class Handler: ChannelInboundHandler {
             typealias InboundIn = Never
         }
-        
+
         let channel = EmbeddedChannel(handler: Handler())
         XCTAssertNoThrow(try channel.pipeline.handler(type: Handler.self).wait())
     }
-    
+
     func testSingleHandlerInitNil() {
         class Handler: ChannelInboundHandler {
             typealias InboundIn = Never
         }
-        
+
         let channel = EmbeddedChannel(handler: nil)
         XCTAssertThrowsError(try channel.pipeline.handler(type: Handler.self).wait()) { e in
             XCTAssertEqual(e as? ChannelPipelineError, .notFound)
         }
     }
-    
+
     func testMultipleHandlerInit() {
         class Handler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
             let identifier: String
-            
+
             init(identifier: String) {
                 self.identifier = identifier
             }
         }
-        
+
         let channel = EmbeddedChannel(
             handlers: [Handler(identifier: "0"), Handler(identifier: "1"), Handler(identifier: "2")]
         )
         XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).wait().identifier, "0"))
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler0").wait())
-        
+
         XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).wait().identifier, "1"))
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler1").wait())
-        
+
         XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).wait().identifier, "2"))
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler2").wait())
     }
-    
+
     func testWriteOutboundByteBuffer() throws {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
@@ -195,7 +194,6 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertTrue(try channel.writeOutbound(ioData).isFull)
         XCTAssertTrue(try channel.writeOutbound(fileRegion).isFull)
 
-
         XCTAssertTrue(try channel.writeInbound(buffer).isFull)
         XCTAssertTrue(try channel.writeInbound(ioData).isFull)
         XCTAssertTrue(try channel.writeInbound(fileHandle).isFull)
@@ -207,28 +205,29 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertTrue(try channel.writeInbound(ioData).isFull)
         XCTAssertTrue(try channel.writeInbound(fileRegion).isFull)
 
-        func check<Expected, Actual>(expected: Expected.Type,
-                                     actual: Actual.Type,
+        func check<Expected, Actual>(expected _: Expected.Type,
+                                     actual _: Actual.Type,
                                      file: StaticString = #file,
-                                     line: UInt = #line) {
+                                     line: UInt = #line)
+        {
             do {
                 _ = try channel.readOutbound(as: Expected.self)
-                XCTFail("this should have failed", file: (file), line: line)
+                XCTFail("this should have failed", file: file, line: line)
             } catch let error as EmbeddedChannel.WrongTypeError {
                 let expectedError = EmbeddedChannel.WrongTypeError(expected: Expected.self, actual: Actual.self)
-                XCTAssertEqual(error, expectedError, file: (file), line: line)
+                XCTAssertEqual(error, expectedError, file: file, line: line)
             } catch {
-                XCTFail("unexpected error: \(error)", file: (file), line: line)
+                XCTFail("unexpected error: \(error)", file: file, line: line)
             }
 
             do {
                 _ = try channel.readInbound(as: Expected.self)
-                XCTFail("this should have failed", file: (file), line: line)
+                XCTFail("this should have failed", file: file, line: line)
             } catch let error as EmbeddedChannel.WrongTypeError {
                 let expectedError = EmbeddedChannel.WrongTypeError(expected: Expected.self, actual: Actual.self)
-                XCTAssertEqual(error, expectedError, file: (file), line: line)
+                XCTAssertEqual(error, expectedError, file: file, line: line)
             } catch {
-                XCTFail("unexpected error: \(error)", file: (file), line: line)
+                XCTFail("unexpected error: \(error)", file: file, line: line)
             }
         }
 
@@ -283,19 +282,19 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertFalse(channel.isActive)
     }
 
-    private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
+    private final class ExceptionThrowingInboundHandler: ChannelInboundHandler {
         typealias InboundIn = String
 
-        public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        public func channelRead(context: ChannelHandlerContext, data _: NIOAny) {
             context.fireErrorCaught(ChannelError.operationUnsupported)
         }
     }
 
-    private final class ExceptionThrowingOutboundHandler : ChannelOutboundHandler {
+    private final class ExceptionThrowingOutboundHandler: ChannelOutboundHandler {
         typealias OutboundIn = String
         typealias OutboundOut = Never
 
-        public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        public func write(context _: ChannelHandlerContext, data _: NIOAny, promise: EventLoopPromise<Void>?) {
             promise!.fail(ChannelError.operationUnsupported)
         }
     }

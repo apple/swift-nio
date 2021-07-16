@@ -21,8 +21,8 @@ func run(identifier: String) {
     }
 
     let server = try! ServerBootstrap(group: group)
-      .bind(host: "127.0.0.1", port: 0)
-      .wait()
+        .bind(host: "127.0.0.1", port: 0)
+        .wait()
     defer {
         try! server.close().wait()
     }
@@ -30,7 +30,7 @@ func run(identifier: String) {
     measure(identifier: identifier) {
         let iterations = 1000
 
-        for _ in 0..<iterations {
+        for _ in 0 ..< iterations {
             let autoReadOption = try! server.getOption(ChannelOptions.autoRead).wait()
             try! server.setOption(ChannelOptions.autoRead, value: !autoReadOption).wait()
         }

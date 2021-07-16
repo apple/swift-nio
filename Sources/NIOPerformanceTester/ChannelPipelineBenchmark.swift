@@ -18,11 +18,11 @@ final class ChannelPipelineBenchmark: Benchmark {
     private final class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
         typealias InboundIn = Any
     }
+
     private final class ConsumingHandler: ChannelInboundHandler, RemovableChannelHandler {
         typealias InboundIn = Any
 
-        func channelReadComplete(context: ChannelHandlerContext) {
-        }
+        func channelReadComplete(context _: ChannelHandlerContext) {}
     }
 
     private let channel: EmbeddedChannel
@@ -30,31 +30,31 @@ final class ChannelPipelineBenchmark: Benchmark {
     private var handlers: [RemovableChannelHandler] = []
 
     init() {
-        self.channel = EmbeddedChannel()
+        channel = EmbeddedChannel()
     }
 
     func setUp() throws {
-        for _ in 0..<self.extraHandlers {
+        for _ in 0 ..< extraHandlers {
             let handler = NoOpHandler()
-            self.handlers.append(handler)
-            try self.channel.pipeline.addHandler(handler).wait()
+            handlers.append(handler)
+            try channel.pipeline.addHandler(handler).wait()
         }
         let handler = ConsumingHandler()
-        self.handlers.append(handler)
-        try self.channel.pipeline.addHandler(handler).wait()
+        handlers.append(handler)
+        try channel.pipeline.addHandler(handler).wait()
     }
 
     func tearDown() {
-        let handlersToRemove = self.handlers
-        self.handlers.removeAll()
+        let handlersToRemove = handlers
+        handlers.removeAll()
         try! handlersToRemove.forEach {
             try self.channel.pipeline.removeHandler($0).wait()
         }
     }
 
     func run() -> Int {
-        for _ in 0..<1_000_000 {
-            self.channel.pipeline.fireChannelReadComplete()
+        for _ in 0 ..< 1_000_000 {
+            channel.pipeline.fireChannelReadComplete()
         }
         return 1
     }

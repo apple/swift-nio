@@ -23,25 +23,23 @@ import XCTest
 ///
 
 extension SocketOptionProviderTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (SocketOptionProviderTest) -> () throws -> Void)] {
-      return [
-                ("testSettingAndGettingComplexSocketOption", testSettingAndGettingComplexSocketOption),
-                ("testObtainingDefaultValueOfComplexSocketOption", testObtainingDefaultValueOfComplexSocketOption),
-                ("testSettingAndGettingSimpleSocketOption", testSettingAndGettingSimpleSocketOption),
-                ("testObtainingDefaultValueOfSimpleSocketOption", testObtainingDefaultValueOfSimpleSocketOption),
-                ("testPassingInvalidSizeToSetComplexSocketOptionFails", testPassingInvalidSizeToSetComplexSocketOptionFails),
-                ("testLinger", testLinger),
-                ("testSoIpMulticastIf", testSoIpMulticastIf),
-                ("testIpMulticastTtl", testIpMulticastTtl),
-                ("testIpMulticastLoop", testIpMulticastLoop),
-                ("testIpv6MulticastIf", testIpv6MulticastIf),
-                ("testIPv6MulticastHops", testIPv6MulticastHops),
-                ("testIPv6MulticastLoop", testIPv6MulticastLoop),
-                ("testTCPInfo", testTCPInfo),
-                ("testTCPConnectionInfo", testTCPConnectionInfo),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (SocketOptionProviderTest) -> () throws -> Void)] {
+        [
+            ("testSettingAndGettingComplexSocketOption", testSettingAndGettingComplexSocketOption),
+            ("testObtainingDefaultValueOfComplexSocketOption", testObtainingDefaultValueOfComplexSocketOption),
+            ("testSettingAndGettingSimpleSocketOption", testSettingAndGettingSimpleSocketOption),
+            ("testObtainingDefaultValueOfSimpleSocketOption", testObtainingDefaultValueOfSimpleSocketOption),
+            ("testPassingInvalidSizeToSetComplexSocketOptionFails", testPassingInvalidSizeToSetComplexSocketOptionFails),
+            ("testLinger", testLinger),
+            ("testSoIpMulticastIf", testSoIpMulticastIf),
+            ("testIpMulticastTtl", testIpMulticastTtl),
+            ("testIpMulticastLoop", testIpMulticastLoop),
+            ("testIpv6MulticastIf", testIpv6MulticastIf),
+            ("testIPv6MulticastHops", testIPv6MulticastHops),
+            ("testIPv6MulticastLoop", testIPv6MulticastLoop),
+            ("testTCPInfo", testTCPInfo),
+            ("testTCPConnectionInfo", testTCPConnectionInfo),
+        ]
+    }
 }
-

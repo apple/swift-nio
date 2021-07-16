@@ -30,7 +30,7 @@ public final class NIOFileHandle: FileDescriptor {
     /// this object can be safely released.
     public init(descriptor: CInt) {
         self.descriptor = descriptor
-        self.isOpen = true
+        isOpen = true
     }
 
     deinit {
@@ -44,7 +44,7 @@ public final class NIOFileHandle: FileDescriptor {
     ///
     /// - returns: A new `NIOFileHandle` with a fresh underlying file descriptor but shared seek pointer.
     public func duplicate() throws -> NIOFileHandle {
-        return try withUnsafeFileDescriptor { fd in
+        try withUnsafeFileDescriptor { fd in
             NIOFileHandle(descriptor: try Posix.dup(descriptor: fd))
         }
     }
@@ -56,12 +56,12 @@ public final class NIOFileHandle: FileDescriptor {
     ///
     /// - returns: The underlying file descriptor, now owned by the caller.
     public func takeDescriptorOwnership() throws -> CInt {
-        guard self.isOpen else {
+        guard isOpen else {
             throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
         }
 
-        self.isOpen = false
-        return self.descriptor
+        isOpen = false
+        return descriptor
     }
 
     public func close() throws {
@@ -69,20 +69,20 @@ public final class NIOFileHandle: FileDescriptor {
             try Posix.close(descriptor: fd)
         }
 
-        self.isOpen = false
+        isOpen = false
     }
 
     public func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
-        guard self.isOpen else {
+        guard isOpen else {
             throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
         }
-        return try body(self.descriptor)
+        return try body(descriptor)
     }
 }
 
-extension NIOFileHandle {
+public extension NIOFileHandle {
     /// `Mode` represents file access modes.
-    public struct Mode: OptionSet {
+    struct Mode: OptionSet {
         public let rawValue: UInt8
 
         public init(rawValue: UInt8) {
@@ -109,7 +109,7 @@ extension NIOFileHandle {
     }
 
     /// `Flags` allows to specify additional flags to `Mode`, such as permission for file creation.
-    public struct Flags {
+    struct Flags {
         internal var posixMode: mode_t
         internal var posixFlags: CInt
 
@@ -120,7 +120,7 @@ extension NIOFileHandle {
         /// - parameters:
         ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
         public static func allowFileCreation(posixMode: mode_t = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
-            return Flags(posixMode: posixMode, posixFlags: O_CREAT)
+            Flags(posixMode: posixMode, posixFlags: O_CREAT)
         }
 
         /// Allows the specification of POSIX flags (e.g. `O_TRUNC`) and mode (e.g. `S_IWUSR`)
@@ -130,7 +130,7 @@ extension NIOFileHandle {
         ///     - mode: The POSIX mode (the third parameter for `open(2)`).
         /// - returns: A `NIOFileHandle.Mode` equivalent to the given POSIX flags and mode.
         public static func posix(flags: CInt, mode: mode_t) -> Flags {
-            return Flags(posixMode: mode, posixFlags: flags)
+            Flags(posixMode: mode, posixFlags: flags)
         }
     }
 
@@ -140,7 +140,7 @@ extension NIOFileHandle {
     ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
     ///     - mode: Access mode. Default mode is `.read`.
     ///     - flags: Additional POSIX flags.
-    public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
+    convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
         let fd = try Posix.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
@@ -149,7 +149,7 @@ extension NIOFileHandle {
     ///
     /// - parameters:
     ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
-    public convenience init(path: String) throws {
+    convenience init(path: String) throws {
         // This function is here because we had a function like this in NIO 2.0, and the one above doesn't quite match. Sadly we can't
         // really deprecate this either, because it'll be preferred to the one above in many cases.
         try self.init(path: path, mode: .read, flags: .default)
@@ -158,6 +158,6 @@ extension NIOFileHandle {
 
 extension NIOFileHandle: CustomStringConvertible {
     public var description: String {
-        return "FileHandle { descriptor: \(self.descriptor) }"
+        "FileHandle { descriptor: \(descriptor) }"
     }
 }

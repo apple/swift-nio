@@ -27,7 +27,7 @@
 
 private extension Array where Element == EventLoopFuture<Channel> {
     mutating func remove(element: Element) {
-        guard let channelIndex = self.firstIndex(where: { $0 === element }) else {
+        guard let channelIndex = firstIndex(where: { $0 === element }) else {
             return
         }
 
@@ -54,10 +54,10 @@ public struct NIOConnectionError: Error {
     public let port: Int
 
     /// The error we encountered doing the DNS A lookup, if any.
-    public fileprivate(set) var dnsAError: Error? = nil
+    public fileprivate(set) var dnsAError: Error?
 
     /// The error we encountered doing the DNS AAAA lookup, if any.
-    public fileprivate(set) var dnsAAAAError: Error? = nil
+    public fileprivate(set) var dnsAAAAError: Error?
 
     /// The errors we encountered during the connection attempts.
     public fileprivate(set) var connectionErrors: [SingleConnectionFailure] = []
@@ -230,7 +230,7 @@ internal class HappyEyeballsConnector {
     /// A reference to the task that will execute after the resolution delay expires, if
     /// one is scheduled. This is held to ensure that we can cancel this task if the AAAA
     /// response comes in before the resolution delay expires.
-    private var resolutionTask: Optional<Scheduled<Void>>
+    private var resolutionTask: Scheduled<Void>?
 
     /// The amount of time to wait for a connection to succeed before beginning a new connection
     /// attempt. By default this is 250ms.
@@ -239,13 +239,13 @@ internal class HappyEyeballsConnector {
     /// A reference to the task that will execute after the connection delay expires, if one
     /// is scheduled. This is held to ensure that we can cancel this task if a connection
     /// succeeds before the connection delay expires.
-    private var connectionTask: Optional<Scheduled<Void>>
+    private var connectionTask: Scheduled<Void>?
 
     /// The amount of time to allow for the overall connection process before timing it out.
     private let connectTimeout: TimeAmount
 
     /// A reference to the task that will time us out.
-    private var timeoutTask: Optional<Scheduled<Void>>
+    private var timeoutTask: Scheduled<Void>?
 
     /// The promise that will hold the final connected channel.
     private let resolutionPromise: EventLoopPromise<Channel>
@@ -255,7 +255,7 @@ internal class HappyEyeballsConnector {
 
     /// Our iterator of resolved targets. This keeps track of what targets are left to have
     /// connection attempts made to them, and emits them in the appropriate order as needed.
-    private var targets: TargetIterator = TargetIterator()
+    private var targets = TargetIterator()
 
     /// An array of futures of channels that are currently attempting to connect.
     ///
@@ -279,20 +279,21 @@ internal class HappyEyeballsConnector {
          connectTimeout: TimeAmount,
          resolutionDelay: TimeAmount = .milliseconds(50),
          connectionDelay: TimeAmount = .milliseconds(250),
-         channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel>) {
+         channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel>)
+    {
         self.resolver = resolver
         self.loop = loop
         self.host = host
         self.port = port
         self.connectTimeout = connectTimeout
         self.channelBuilderCallback = channelBuilderCallback
-        self.resolutionTask = nil
-        self.connectionTask = nil
-        self.timeoutTask = nil
+        resolutionTask = nil
+        connectionTask = nil
+        timeoutTask = nil
 
-        self.state = .idle
-        self.resolutionPromise = self.loop.makePromise()
-        self.error = NIOConnectionError(host: host, port: port)
+        state = .idle
+        resolutionPromise = self.loop.makePromise()
+        error = NIOConnectionError(host: host, port: port)
 
         precondition(resolutionDelay.nanoseconds > 0, "Resolution delay must be greater than zero, got \(resolutionDelay).")
         self.resolutionDelay = resolutionDelay
@@ -306,7 +307,7 @@ internal class HappyEyeballsConnector {
     /// returns: An `EventLoopFuture` that fires with a connected `Channel`.
     public func resolveAndConnect() -> EventLoopFuture<Channel> {
         // We dispatch ourselves onto the event loop, rather than do all the rest of our processing from outside it.
-        self.loop.execute {
+        loop.execute {
             self.timeoutTask = self.loop.scheduleTask(in: self.connectTimeout) { self.processInput(.connectTimeoutElapsed) }
             self.processInput(.resolve)
         }
@@ -452,7 +453,7 @@ internal class HappyEyeballsConnector {
     private func beginConnecting() {
         precondition(connectionTask == nil, "beginConnecting called while connection attempts outstanding")
         guard let target = targets.next() else {
-            if self.pendingConnections.isEmpty {
+            if pendingConnections.isEmpty {
                 processInput(.noTargetsRemaining)
             }
             return
@@ -491,9 +492,9 @@ internal class HappyEyeballsConnector {
     /// This method checks that we don't have any connection attempts outstanding. If
     /// we discover we don't, it automatically triggers the next connection attempt.
     private func connectFailed() {
-        if self.pendingConnections.isEmpty {
-            self.connectionTask?.cancel()
-            self.connectionTask = nil
+        if pendingConnections.isEmpty {
+            connectionTask?.cancel()
+            connectionTask = nil
             beginConnecting()
         }
     }
@@ -510,7 +511,7 @@ internal class HappyEyeballsConnector {
     /// Cleans up internal state and fails the connection promise.
     private func timedOut() {
         cleanUp()
-        self.resolutionPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
+        resolutionPromise.fail(ChannelError.connectTimeout(connectTimeout))
     }
 
     /// Called when we've attempted to connect to all our resolved targets,
@@ -521,7 +522,7 @@ internal class HappyEyeballsConnector {
     private func failed() {
         precondition(pendingConnections.isEmpty, "failed with pending connections")
         cleanUp()
-        self.resolutionPromise.fail(self.error)
+        resolutionPromise.fail(error)
     }
 
     /// Called to connect to a given target.
@@ -529,7 +530,7 @@ internal class HappyEyeballsConnector {
     /// - parameters:
     ///     - target: The address to connect to.
     private func connectToTarget(_ target: SocketAddress) {
-        let channelFuture = channelBuilderCallback(self.loop, target.protocol)
+        let channelFuture = channelBuilderCallback(loop, target.protocol)
         pendingConnections.append(channelFuture)
 
         channelFuture.whenSuccess { channel in
@@ -575,7 +576,7 @@ internal class HappyEyeballsConnector {
     // Cleans up all internal state, ensuring that there are no reference cycles and allowing
     // everything to eventually be deallocated.
     private func cleanUp() {
-        assert(self.state == .complete, "Clean up in invalid state \(self.state)")
+        assert(state == .complete, "Clean up in invalid state \(state)")
 
         if dnsResolutions < 2 {
             resolver.cancelQueries()
@@ -596,8 +597,8 @@ internal class HappyEyeballsConnector {
             self.timeoutTask = nil
         }
 
-        let connections = self.pendingConnections
-        self.pendingConnections = []
+        let connections = pendingConnections
+        pendingConnections = []
         for connection in connections {
             connection.whenSuccess { channel in channel.close(promise: nil) }
         }

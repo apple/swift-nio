@@ -23,28 +23,26 @@ import XCTest
 ///
 
 extension EchoServerClientTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (EchoServerClientTest) -> () throws -> Void)] {
-      return [
-                ("testEcho", testEcho),
-                ("testLotsOfUnflushedWrites", testLotsOfUnflushedWrites),
-                ("testEchoUnixDomainSocket", testEchoUnixDomainSocket),
-                ("testConnectUnixDomainSocket", testConnectUnixDomainSocket),
-                ("testCleanupUnixDomainSocket", testCleanupUnixDomainSocket),
-                ("testBootstrapUnixDomainSocketNameClash", testBootstrapUnixDomainSocketNameClash),
-                ("testChannelActiveOnConnect", testChannelActiveOnConnect),
-                ("testWriteThenRead", testWriteThenRead),
-                ("testCloseInInactive", testCloseInInactive),
-                ("testFlushOnEmpty", testFlushOnEmpty),
-                ("testWriteOnConnect", testWriteOnConnect),
-                ("testWriteOnAccept", testWriteOnAccept),
-                ("testWriteAfterChannelIsDead", testWriteAfterChannelIsDead),
-                ("testPendingReadProcessedAfterWriteError", testPendingReadProcessedAfterWriteError),
-                ("testChannelErrorEOFNotFiredThroughPipeline", testChannelErrorEOFNotFiredThroughPipeline),
-                ("testPortNumbers", testPortNumbers),
-                ("testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4", testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (EchoServerClientTest) -> () throws -> Void)] {
+        [
+            ("testEcho", testEcho),
+            ("testLotsOfUnflushedWrites", testLotsOfUnflushedWrites),
+            ("testEchoUnixDomainSocket", testEchoUnixDomainSocket),
+            ("testConnectUnixDomainSocket", testConnectUnixDomainSocket),
+            ("testCleanupUnixDomainSocket", testCleanupUnixDomainSocket),
+            ("testBootstrapUnixDomainSocketNameClash", testBootstrapUnixDomainSocketNameClash),
+            ("testChannelActiveOnConnect", testChannelActiveOnConnect),
+            ("testWriteThenRead", testWriteThenRead),
+            ("testCloseInInactive", testCloseInInactive),
+            ("testFlushOnEmpty", testFlushOnEmpty),
+            ("testWriteOnConnect", testWriteOnConnect),
+            ("testWriteOnAccept", testWriteOnAccept),
+            ("testWriteAfterChannelIsDead", testWriteAfterChannelIsDead),
+            ("testPendingReadProcessedAfterWriteError", testPendingReadProcessedAfterWriteError),
+            ("testChannelErrorEOFNotFiredThroughPipeline", testChannelErrorEOFNotFiredThroughPipeline),
+            ("testPortNumbers", testPortNumbers),
+            ("testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4", testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4),
+        ]
+    }
 }
-

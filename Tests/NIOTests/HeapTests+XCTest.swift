@@ -23,16 +23,14 @@ import XCTest
 ///
 
 extension HeapTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HeapTests) -> () throws -> Void)] {
-      return [
-                ("testSimple", testSimple),
-                ("testSortedDesc", testSortedDesc),
-                ("testSortedAsc", testSortedAsc),
-                ("testAddAndRemoveRandomNumbers", testAddAndRemoveRandomNumbers),
-                ("testRemoveElement", testRemoveElement),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HeapTests) -> () throws -> Void)] {
+        [
+            ("testSimple", testSimple),
+            ("testSortedDesc", testSortedDesc),
+            ("testSortedAsc", testSortedAsc),
+            ("testAddAndRemoveRandomNumbers", testAddAndRemoveRandomNumbers),
+            ("testRemoveElement", testRemoveElement),
+        ]
+    }
 }
-

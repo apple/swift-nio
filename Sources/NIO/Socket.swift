@@ -96,18 +96,18 @@ typealias IOVector = iovec
     /// - throws: An `IOError` if the operation failed.
     func connect(to address: SocketAddress) throws -> Bool {
         switch address {
-        case .v4(let addr):
-            return try self.connectSocket(addr: addr.address)
-        case .v6(let addr):
-            return try self.connectSocket(addr: addr.address)
-        case .unixDomainSocket(let addr):
-            return try self.connectSocket(addr: addr.address)
+        case let .v4(addr):
+            return try connectSocket(addr: addr.address)
+        case let .v6(addr):
+            return try connectSocket(addr: addr.address)
+        case let .unixDomainSocket(addr):
+            return try connectSocket(addr: addr.address)
         }
     }
 
     /// Private helper function to handle connection attempts.
     private func connectSocket<T>(addr: T) throws -> Bool {
-        return try withUnsafeHandle { fd in
+        try withUnsafeHandle { fd in
             var addr = addr
             return try withUnsafePointer(to: &addr) { ptr in
                 try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
@@ -135,7 +135,7 @@ typealias IOVector = iovec
     /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
-        return try withUnsafeHandle {
+        try withUnsafeHandle {
             try NIOBSDSocket.send(socket: $0, buffer: pointer.baseAddress!,
                                   length: pointer.count)
         }
@@ -148,7 +148,7 @@ typealias IOVector = iovec
     /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
-        return try withUnsafeHandle {
+        try withUnsafeHandle {
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
     }
@@ -166,35 +166,36 @@ typealias IOVector = iovec
     func sendmsg(pointer: UnsafeRawBufferPointer,
                  destinationPtr: UnsafePointer<sockaddr>,
                  destinationSize: socklen_t,
-                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
+                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
+    {
         // Dubious const casts - it should be OK as there is no reason why this should get mutated
         // just bad const declaration below us.
         var vec = iovec(iov_base: UnsafeMutableRawPointer(mutating: pointer.baseAddress!), iov_len: numericCast(pointer.count))
         let notConstCorrectDestinationPtr = UnsafeMutableRawPointer(mutating: destinationPtr)
 
         return try withUnsafeHandle { handle in
-            return try withUnsafeMutablePointer(to: &vec) { vecPtr in
-#if os(Windows)
-                var messageHeader =
-                    WSAMSG(name: notConstCorrectDestinationPtr
-                                    .assumingMemoryBound(to: sockaddr.self),
-                           namelen: destinationSize,
-                           lpBuffers: vecPtr,
-                           dwBufferCount: 1,
-                           Control: WSABUF(len: ULONG(controlBytes.count),
-                                           buf: controlBytes.baseAddress?
-                                                    .bindMemory(to: CHAR.self,
-                                                                capacity: controlBytes.count)),
-                           dwFlags: 0)
-#else
-                var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
-                                           msg_namelen: destinationSize,
-                                           msg_iov: vecPtr,
-                                           msg_iovlen: 1,
-                                           msg_control: controlBytes.baseAddress,
-                                           msg_controllen: .init(controlBytes.count),
-                                           msg_flags: 0)
-#endif
+            try withUnsafeMutablePointer(to: &vec) { vecPtr in
+                #if os(Windows)
+                    var messageHeader =
+                        WSAMSG(name: notConstCorrectDestinationPtr
+                            .assumingMemoryBound(to: sockaddr.self),
+                            namelen: destinationSize,
+                            lpBuffers: vecPtr,
+                            dwBufferCount: 1,
+                            Control: WSABUF(len: ULONG(controlBytes.count),
+                                            buf: controlBytes.baseAddress?
+                                                .bindMemory(to: CHAR.self,
+                                                            capacity: controlBytes.count)),
+                            dwFlags: 0)
+                #else
+                    var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
+                                               msg_namelen: destinationSize,
+                                               msg_iov: vecPtr,
+                                               msg_iovlen: 1,
+                                               msg_control: controlBytes.baseAddress,
+                                               msg_controllen: .init(controlBytes.count),
+                                               msg_flags: 0)
+                #endif
                 return try NIOBSDSocket.sendmsg(socket: handle, msgHdr: &messageHeader, flags: 0)
             }
         }
@@ -207,7 +208,7 @@ typealias IOVector = iovec
     /// - returns: The `IOResult` which indicates how much data could be read and if the operation returned before all could be read (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        return try withUnsafeHandle {
+        try withUnsafeHandle {
             try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
@@ -225,49 +226,50 @@ typealias IOVector = iovec
     func recvmsg(pointer: UnsafeMutableRawBufferPointer,
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
-                 controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int> {
+                 controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int>
+    {
         var vec = iovec(iov_base: pointer.baseAddress, iov_len: numericCast(pointer.count))
 
         return try withUnsafeMutablePointer(to: &vec) { vecPtr in
-            return try storage.withMutableSockAddr { (sockaddrPtr, _) in
-#if os(Windows)
-                var messageHeader =
-                    WSAMSG(name: sockaddrPtr, namelen: storageLen,
-                           lpBuffers: vecPtr, dwBufferCount: 1,
-                           Control: WSABUF(len: ULONG(controlBytes.controlBytesBuffer.count),
-                                           buf: controlBytes.controlBytesBuffer.baseAddress?
-                                                    .bindMemory(to: CHAR.self,
-                                                                capacity: controlBytes.controlBytesBuffer.count)),
-                           dwFlags: 0)
-                defer {
-                    // We need to write back the length of the message.
-                    storageLen = messageHeader.namelen
-                }
-#else
-                var messageHeader = msghdr(msg_name: sockaddrPtr,
-                                           msg_namelen: storageLen,
-                                           msg_iov: vecPtr,
-                                           msg_iovlen: 1,
-                                           msg_control: controlBytes.controlBytesBuffer.baseAddress,
-                                           msg_controllen: .init(controlBytes.controlBytesBuffer.count),
-                                           msg_flags: 0)
-                defer {
-                    // We need to write back the length of the message.
-                    storageLen = messageHeader.msg_namelen
-                }
-#endif
+            try storage.withMutableSockAddr { sockaddrPtr, _ in
+                #if os(Windows)
+                    var messageHeader =
+                        WSAMSG(name: sockaddrPtr, namelen: storageLen,
+                               lpBuffers: vecPtr, dwBufferCount: 1,
+                               Control: WSABUF(len: ULONG(controlBytes.controlBytesBuffer.count),
+                                               buf: controlBytes.controlBytesBuffer.baseAddress?
+                                                   .bindMemory(to: CHAR.self,
+                                                               capacity: controlBytes.controlBytesBuffer.count)),
+                               dwFlags: 0)
+                    defer {
+                        // We need to write back the length of the message.
+                        storageLen = messageHeader.namelen
+                    }
+                #else
+                    var messageHeader = msghdr(msg_name: sockaddrPtr,
+                                               msg_namelen: storageLen,
+                                               msg_iov: vecPtr,
+                                               msg_iovlen: 1,
+                                               msg_control: controlBytes.controlBytesBuffer.baseAddress,
+                                               msg_controllen: .init(controlBytes.controlBytesBuffer.count),
+                                               msg_flags: 0)
+                    defer {
+                        // We need to write back the length of the message.
+                        storageLen = messageHeader.msg_namelen
+                    }
+                #endif
 
                 let result = try withUnsafeMutablePointer(to: &messageHeader) { messageHeader in
-                    return try withUnsafeHandle { fd in
-                        return try NIOBSDSocket.recvmsg(socket: fd, msgHdr: messageHeader, flags: 0)
+                    try withUnsafeHandle { fd in
+                        try NIOBSDSocket.recvmsg(socket: fd, msgHdr: messageHeader, flags: 0)
                     }
                 }
-                
+
                 // Only look at the control bytes if all is good.
                 if case .processed = result {
                     controlBytes.receivedControlMessages = UnsafeControlMessageCollection(messageHeader: messageHeader)
                 }
-                
+
                 return result
             }
         }
@@ -282,7 +284,7 @@ typealias IOVector = iovec
     /// - returns: The `IOResult` which indicates how much data could be send and if the operation returned before all could be send (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func sendFile(fd: CInt, offset: Int, count: Int) throws -> IOResult<Int> {
-        return try withUnsafeHandle {
+        try withUnsafeHandle {
             try NIOBSDSocket.sendfile(socket: $0, fd: fd, offset: off_t(offset),
                                       len: off_t(count))
         }
@@ -295,7 +297,7 @@ typealias IOVector = iovec
     /// - returns: The `IOResult` which indicates how many messages could be received and if the operation returned before all messages could be received (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
-        return try withUnsafeHandle {
+        try withUnsafeHandle {
             try NIOBSDSocket.recvmmsg(socket: $0, msgvec: msgs.baseAddress!,
                                       vlen: CUnsignedInt(msgs.count), flags: 0,
                                       timeout: nil)
@@ -309,7 +311,7 @@ typealias IOVector = iovec
     /// - returns: The `IOResult` which indicates how many messages could be send and if the operation returned before all messages could be send (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func sendmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
-        return try withUnsafeHandle {
+        try withUnsafeHandle {
             try NIOBSDSocket.sendmmsg(socket: $0, msgvec: msgs.baseAddress!,
                                       vlen: CUnsignedInt(msgs.count), flags: 0)
         }
@@ -321,7 +323,7 @@ typealias IOVector = iovec
     ///     - how: the mode of `Shutdown`.
     /// - throws: An `IOError` if the operation failed.
     func shutdown(how: Shutdown) throws {
-        return try withUnsafeHandle {
+        try withUnsafeHandle {
             try NIOBSDSocket.shutdown(socket: $0, how: how)
         }
     }

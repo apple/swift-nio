@@ -12,27 +12,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Dispatch
 @testable import NIO
 import NIOConcurrencyHelpers
-import Dispatch
+import XCTest
 
 final class SALEventLoopTests: XCTestCase, SALTest {
     var group: MultiThreadedEventLoopGroup!
     var kernelToUserBox: LockedBox<KernelToUser>!
     var userToKernelBox: LockedBox<UserToKernel>!
-    var wakeups: LockedBox<()>!
+    var wakeups: LockedBox<Void>!
 
     override func setUp() {
-        self.setUpSAL()
+        setUpSAL()
     }
 
     override func tearDown() {
-        self.tearDownSAL()
+        tearDownSAL()
     }
 
     func testSchedulingTaskOnSleepingLoopWakesUpOnce() throws {
-        let thisLoop = self.group.next()
+        let thisLoop = group.next()
 
         try thisLoop.runSAL(syscallAssertions: {
             try self.assertParkedRightNow()
@@ -58,7 +58,7 @@ final class SALEventLoopTests: XCTestCase, SALTest {
 
                 // Now execute 10 tasks.
                 var i = 0
-                for _ in 0..<10 {
+                for _ in 0 ..< 10 {
                     thisLoop.execute {
                         i &+= 1
                     }
@@ -72,7 +72,7 @@ final class SALEventLoopTests: XCTestCase, SALTest {
 
                 lastTask.cascade(to: promise)
             }
-            
+
             return promise.futureResult
         }.salWait()
     }

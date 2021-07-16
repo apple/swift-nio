@@ -13,24 +13,24 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
-import let WinSDK.ECONNABORTED
-import let WinSDK.ECONNREFUSED
-import let WinSDK.EMFILE
-import let WinSDK.ENFILE
-import let WinSDK.ENOBUFS
-import let WinSDK.ENOMEM
+    import let WinSDK.ECONNABORTED
+    import let WinSDK.ECONNREFUSED
+    import let WinSDK.EMFILE
+    import let WinSDK.ENFILE
+    import let WinSDK.ENOBUFS
+    import let WinSDK.ENOMEM
 #endif
 
 extension ByteBuffer {
     mutating func withMutableWritePointer(body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
         var singleResult: IOResult<Int>!
-        _ = try self.writeWithUnsafeMutableBytes(minimumWritableBytes: 0) { ptr in
+        _ = try writeWithUnsafeMutableBytes(minimumWritableBytes: 0) { ptr in
             let localWriteResult = try body(ptr)
             singleResult = localWriteResult
             switch localWriteResult {
-            case .processed(let written):
+            case let .processed(written):
                 return written
-            case .wouldBlock(let written):
+            case let .wouldBlock(written):
                 return written
             }
         }
@@ -42,7 +42,7 @@ extension ByteBuffer {
 ///
 /// - note: All operations on `SocketChannel` are thread-safe.
 final class SocketChannel: BaseStreamSocketChannel<Socket> {
-    private var connectTimeout: TimeAmount? = nil
+    private var connectTimeout: TimeAmount?
 
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
         let socket = try Socket(protocolFamily: protocolFamily, type: .stream, setNonBlocking: true)
@@ -59,7 +59,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     }
 
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
-        self.eventLoop.assertInEventLoop()
+        eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -74,7 +74,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     }
 
     override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
-        self.eventLoop.assertInEventLoop()
+        eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -89,13 +89,13 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     }
 
     func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .socketChannel(self),
-                               interested: interested,
-                               registrationID: registrationID)
+        NIORegistration(channel: .socketChannel(self),
+                        interested: interested,
+                        registrationID: registrationID)
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
-        if try self.socket.connect(to: address) {
+        if try socket.connect(to: address) {
             return true
         }
         if let timeout = connectTimeout {
@@ -111,28 +111,27 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     }
 
     override func finishConnectSocket() throws {
-        if let scheduled = self.connectTimeoutScheduled {
+        if let scheduled = connectTimeoutScheduled {
             // Connection established so cancel the previous scheduled timeout.
-            self.connectTimeoutScheduled = nil
+            connectTimeoutScheduled = nil
             scheduled.cancel()
         }
-        try self.socket.finishConnect()
+        try socket.finishConnect()
     }
 
-
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.socket,
+        try selector.register(selectable: socket,
                               interested: interested,
-                              makeRegistration: self.registrationFor)
+                              makeRegistration: registrationFor)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
         assert(mode == .all)
-        try selector.deregister(selectable: self.socket)
+        try selector.deregister(selectable: socket)
     }
 
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.reregister(selectable: self.socket, interested: interested)
+        try selector.reregister(selectable: socket, interested: interested)
     }
 }
 
@@ -140,13 +139,12 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
 ///
 /// - note: All operations on `ServerSocketChannel` are thread-safe.
 final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
-
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
 
     /// The server socket channel is never writable.
     // This is `Channel` API so must be thread-safe.
-    override public var isWritable: Bool { return false }
+    override public var isWritable: Bool { false }
 
     convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
         try self.init(serverSocket: try ServerSocket(protocolFamily: protocolFamily, setNonBlocking: true), eventLoop: eventLoop, group: group)
@@ -167,13 +165,13 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .serverSocketChannel(self),
-                               interested: interested,
-                               registrationID: registrationID)
+        NIORegistration(channel: .serverSocketChannel(self),
+                        interested: interested,
+                        registrationID: registrationID)
     }
 
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
-        self.eventLoop.assertInEventLoop()
+        eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -188,7 +186,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
-        self.eventLoop.assertInEventLoop()
+        eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -203,14 +201,14 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        self.eventLoop.assertInEventLoop()
+        eventLoop.assertInEventLoop()
 
-        guard self.isOpen else {
+        guard isOpen else {
             promise?.fail(ChannelError.ioOnClosedChannel)
             return
         }
 
-        guard self.isRegistered else {
+        guard isRegistered else {
             promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
@@ -219,7 +217,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         p.futureResult.map {
             // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
-        }.whenFailure{ error in
+        }.whenFailure { error in
             promise?.fail(error)
         }
         executeAndComplete(p) {
@@ -229,7 +227,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
     }
 
-    override func connectSocket(to address: SocketAddress) throws -> Bool {
+    override func connectSocket(to _: SocketAddress) throws -> Bool {
         throw ChannelError.operationUnsupported
     }
 
@@ -239,18 +237,18 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     override func readFromSocket() throws -> ReadResult {
         var result = ReadResult.none
-        for _ in 1...maxMessagesPerRead {
-            guard self.isOpen else {
+        for _ in 1 ... maxMessagesPerRead {
+            guard isOpen else {
                 throw ChannelError.eof
             }
-            if let accepted = try self.socket.accept(setNonBlocking: true) {
+            if let accepted = try socket.accept(setNonBlocking: true) {
                 readPending = false
                 result = .some
                 do {
                     let chan = try SocketChannel(socket: accepted,
                                                  parent: self,
                                                  eventLoop: group.next() as! SelectableEventLoop)
-                    assert(self.isActive)
+                    assert(isActive)
                     pipeline.fireChannelRead0(NIOAny(chan))
                 } catch {
                     try? accepted.close()
@@ -288,13 +286,12 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
     }
 
-    override func cancelWritesOnClose(error: Error) {
+    override func cancelWritesOnClose(error _: Error) {
         // No writes to cancel.
-        return
     }
 
     override public func channelRead0(_ data: NIOAny) {
-        self.eventLoop.assertInEventLoop()
+        eventLoop.assertInEventLoop()
 
         let ch = data.forceAsOther() as SocketChannel
         ch.eventLoop.execute {
@@ -303,17 +300,17 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
                     throw ChannelError.ioOnClosedChannel
                 }
                 ch.becomeActive0(promise: nil)
-            }.whenFailure { error in
+            }.whenFailure { _ in
                 ch.close(promise: nil)
             }
         }
     }
 
     override func hasFlushedPendingWrites() -> Bool {
-        return false
+        false
     }
 
-    override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+    override func bufferPendingWrite(data _: NIOAny, promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.operationUnsupported)
     }
 
@@ -322,22 +319,22 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func flushNow() -> IONotificationState {
-        return IONotificationState.unregister
+        IONotificationState.unregister
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.socket,
+        try selector.register(selectable: socket,
                               interested: interested,
-                              makeRegistration: self.registrationFor)
+                              makeRegistration: registrationFor)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
         assert(mode == .all)
-        try selector.deregister(selectable: self.socket)
+        try selector.deregister(selectable: socket)
     }
 
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.reregister(selectable: self.socket, interested: interested)
+        try selector.reregister(selectable: socket, interested: interested)
     }
 }
 
@@ -352,10 +349,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     private let pendingWrites: PendingDatagramWritesManager
 
     /// Support for vector reads, if enabled.
-    private var vectorReadManager: Optional<DatagramVectorReadManager>
+    private var vectorReadManager: DatagramVectorReadManager?
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
-        return pendingWrites.isWritable
+        pendingWrites.isWritable
     }
 
     override var isOpen: Bool {
@@ -382,7 +379,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
-        self.vectorReadManager = nil
+        vectorReadManager = nil
         let socket = try Socket(protocolFamily: protocolFamily, type: .datagram)
         do {
             try socket.setNonBlocking()
@@ -391,11 +388,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             throw err
         }
 
-        self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
-                                                          iovecs: eventLoop.iovecs,
-                                                          addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs,
-                                                          controlMessageStorage: eventLoop.controlMessageStorage)
+        pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
+                                                     iovecs: eventLoop.iovecs,
+                                                     addresses: eventLoop.addresses,
+                                                     storageRefs: eventLoop.storageRefs,
+                                                     controlMessageStorage: eventLoop.controlMessageStorage)
 
         try super.init(socket: socket,
                        parent: nil,
@@ -404,20 +401,20 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
-        self.vectorReadManager = nil
+        vectorReadManager = nil
         try socket.setNonBlocking()
-        self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
-                                                          iovecs: eventLoop.iovecs,
-                                                          addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs,
-                                                          controlMessageStorage: eventLoop.controlMessageStorage)
+        pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
+                                                     iovecs: eventLoop.iovecs,
+                                                     addresses: eventLoop.addresses,
+                                                     storageRefs: eventLoop.storageRefs,
+                                                     controlMessageStorage: eventLoop.controlMessageStorage)
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
     // MARK: Datagram Channel overrides required by BaseSocketChannel
 
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
-        self.eventLoop.assertInEventLoop()
+        eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -431,52 +428,51 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
             // We only support vector reads on these OSes. Let us know if there's another OS with this syscall!
             #if os(Linux) || os(FreeBSD) || os(Android)
-            self.vectorReadManager.updateMessageCount(value as! Int)
+                vectorReadManager.updateMessageCount(value as! Int)
             #else
-            break
+                break
             #endif
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
             let valueAsInt: CInt = value as! Bool ? 1 : 0
-            switch self.localAddress?.protocol {
+            switch localAddress?.protocol {
             case .some(.inet):
-                self.reportExplicitCongestionNotifications = true
-                try self.socket.setOption(level: .ip,
-                                          name: .ip_recv_tos,
-                                          value: valueAsInt)
+                reportExplicitCongestionNotifications = true
+                try socket.setOption(level: .ip,
+                                     name: .ip_recv_tos,
+                                     value: valueAsInt)
             case .some(.inet6):
-                self.reportExplicitCongestionNotifications = true
-                try self.socket.setOption(level: .ipv6,
-                                          name: .ipv6_recv_tclass,
-                                          value: valueAsInt)
+                reportExplicitCongestionNotifications = true
+                try socket.setOption(level: .ipv6,
+                                     name: .ipv6_recv_tclass,
+                                     value: valueAsInt)
             default:
                 // Explicit congestion notification is only supported for IP
                 throw ChannelError.operationUnsupported
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
             let valueAsInt: CInt = value as! Bool ? 1 : 0
-            switch self.localAddress?.protocol {
+            switch localAddress?.protocol {
             case .some(.inet):
-                self.receivePacketInfo = true
-                try self.socket.setOption(level: .ip,
-                                          name: .ip_recv_pktinfo,
-                                          value: valueAsInt)
+                receivePacketInfo = true
+                try socket.setOption(level: .ip,
+                                     name: .ip_recv_pktinfo,
+                                     value: valueAsInt)
             case .some(.inet6):
-                self.receivePacketInfo = true
-                try self.socket.setOption(level: .ipv6,
-                                          name: .ipv6_recv_pktinfo,
-                                          value: valueAsInt)
+                receivePacketInfo = true
+                try socket.setOption(level: .ipv6,
+                                     name: .ipv6_recv_pktinfo,
+                                     value: valueAsInt)
             default:
                 // Receiving packet info is only supported for IP
                 throw ChannelError.operationUnsupported
             }
-            break
         default:
             try super.setOption0(option, value: value)
         }
     }
 
     override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
-        self.eventLoop.assertInEventLoop()
+        eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -488,27 +484,27 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
             return pendingWrites.waterMark as! Option.Value
         case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
-            return (self.vectorReadManager?.messageCount ?? 0) as! Option.Value
+            return (vectorReadManager?.messageCount ?? 0) as! Option.Value
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
-            switch self.localAddress?.protocol {
+            switch localAddress?.protocol {
             case .some(.inet):
-                return try (self.socket.getOption(level: .ip,
-                                                  name: .ip_recv_tos) != 0) as! Option.Value
+                return try (socket.getOption(level: .ip,
+                                             name: .ip_recv_tos) != 0) as! Option.Value
             case .some(.inet6):
-                return try (self.socket.getOption(level: .ipv6,
-                                                  name: .ipv6_recv_tclass) != 0) as! Option.Value
+                return try (socket.getOption(level: .ipv6,
+                                             name: .ipv6_recv_tclass) != 0) as! Option.Value
             default:
                 // Explicit congestion notification is only supported for IP
                 throw ChannelError.operationUnsupported
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
-            switch self.localAddress?.protocol {
+            switch localAddress?.protocol {
             case .some(.inet):
-                return try (self.socket.getOption(level: .ip,
-                                                  name: .ip_recv_pktinfo) != 0) as! Option.Value
+                return try (socket.getOption(level: .ip,
+                                             name: .ip_recv_pktinfo) != 0) as! Option.Value
             case .some(.inet6):
-                return try (self.socket.getOption(level: .ipv6,
-                                                  name: .ipv6_recv_pktinfo) != 0) as! Option.Value
+                return try (socket.getOption(level: .ipv6,
+                                             name: .ipv6_recv_pktinfo) != 0) as! Option.Value
             default:
                 // Receiving packet info is only supported for IP
                 throw ChannelError.operationUnsupported
@@ -519,12 +515,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .datagramChannel(self),
-                               interested: interested,
-                               registrationID: registrationID)
+        NIORegistration(channel: .datagramChannel(self),
+                        interested: interested,
+                        registrationID: registrationID)
     }
 
-    override func connectSocket(to address: SocketAddress) throws -> Bool {
+    override func connectSocket(to _: SocketAddress) throws -> Bool {
         // For now we don't support operating in connected mode for datagram channels.
         throw ChannelError.operationUnsupported
     }
@@ -535,29 +531,29 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func readFromSocket() throws -> ReadResult {
-        if self.vectorReadManager != nil {
-            return try self.vectorReadFromSocket()
+        if vectorReadManager != nil {
+            return try vectorReadFromSocket()
         } else {
-            return try self.singleReadFromSocket()
+            return try singleReadFromSocket()
         }
     }
 
     private func singleReadFromSocket() throws -> ReadResult {
         var rawAddress = sockaddr_storage()
         var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
-        var buffer = self.recvAllocator.buffer(allocator: self.allocator)
+        var buffer = recvAllocator.buffer(allocator: allocator)
         var readResult = ReadResult.none
 
         // These control bytes must not escape the current call stack
         let controlBytesBuffer: UnsafeMutableRawBufferPointer
-        if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
-            controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
+        if reportExplicitCongestionNotifications || receivePacketInfo {
+            controlBytesBuffer = selectableEventLoop.controlMessageStorage[0]
         } else {
             controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
 
-        for i in 1...self.maxMessagesPerRead {
-            guard self.isOpen else {
+        for i in 1 ... maxMessagesPerRead {
+            guard isOpen else {
                 throw ChannelError.eof
             }
             buffer.clear()
@@ -571,15 +567,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                         controlBytes: &controlBytes)
             }
             switch result {
-            case .processed(let bytesRead):
+            case let .processed(bytesRead):
                 assert(bytesRead > 0)
-                assert(self.isOpen)
+                assert(isOpen)
                 let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                if self.reportExplicitCongestionNotifications || self.receivePacketInfo,
-                   let controlMessagesReceived = controlBytes.receivedControlMessages {
+                if reportExplicitCongestionNotifications || receivePacketInfo,
+                   let controlMessagesReceived = controlBytes.receivedControlMessages
+                {
                     metadata = .init(from: controlMessagesReceived)
                 } else {
                     metadata = nil
@@ -588,13 +585,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
                                             data: buffer,
                                             metadata: metadata)
-                assert(self.isActive)
+                assert(isActive)
                 pipeline.fireChannelRead0(NIOAny(msg))
-                if mayGrow && i < maxMessagesPerRead {
+                if mayGrow, i < maxMessagesPerRead {
                     buffer = recvAllocator.buffer(allocator: allocator)
                 }
                 readResult = .some
-            case .wouldBlock(let bytesRead):
+            case let .wouldBlock(bytesRead):
                 assert(bytesRead == 0)
                 return readResult
             }
@@ -604,50 +601,51 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     private func vectorReadFromSocket() throws -> ReadResult {
         #if os(Linux) || os(FreeBSD) || os(Android)
-        var buffer = self.recvAllocator.buffer(allocator: self.allocator)
-        var readResult = ReadResult.none
+            var buffer = recvAllocator.buffer(allocator: allocator)
+            var readResult = ReadResult.none
 
-        readLoop: for i in 1...self.maxMessagesPerRead {
-            guard self.isOpen else {
-                throw ChannelError.eof
-            }
-            guard let vectorReadManager = self.vectorReadManager else {
-                // The vector read manager went away. This happens if users unset the vector read manager
-                // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
-                break readLoop
-            }
-            buffer.clear()
-
-            // This force-unwrap is safe, as we checked whether this is nil in the caller.
-            let result = try vectorReadManager.readFromSocket(
-                socket: self.socket,
-                buffer: &buffer,
-                parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo)
-            switch result {
-            case .some(let results, let totalRead):
-                assert(self.isOpen)
-                assert(self.isActive)
-
-                let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
-                readPending = false
-
-                var messageIterator = results.makeIterator()
-                while self.isActive, let message = messageIterator.next() {
-                    pipeline.fireChannelRead(NIOAny(message))
+            readLoop: for i in 1 ... maxMessagesPerRead {
+                guard isOpen else {
+                    throw ChannelError.eof
                 }
-
-                if mayGrow && i < maxMessagesPerRead {
-                    buffer = recvAllocator.buffer(allocator: allocator)
+                guard let vectorReadManager = self.vectorReadManager else {
+                    // The vector read manager went away. This happens if users unset the vector read manager
+                    // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
+                    break readLoop
                 }
-                readResult = .some
-            case .none:
-                break readLoop
-            }
-        }
+                buffer.clear()
 
-        return readResult
+                // This force-unwrap is safe, as we checked whether this is nil in the caller.
+                let result = try vectorReadManager.readFromSocket(
+                    socket: socket,
+                    buffer: &buffer,
+                    parseControlMessages: reportExplicitCongestionNotifications || receivePacketInfo
+                )
+                switch result {
+                case let .some(results, totalRead):
+                    assert(isOpen)
+                    assert(isActive)
+
+                    let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
+                    readPending = false
+
+                    var messageIterator = results.makeIterator()
+                    while isActive, let message = messageIterator.next() {
+                        pipeline.fireChannelRead(NIOAny(message))
+                    }
+
+                    if mayGrow, i < maxMessagesPerRead {
+                        buffer = recvAllocator.buffer(allocator: allocator)
+                    }
+                    readResult = .some
+                case .none:
+                    break readLoop
+                }
+            }
+
+            return readResult
         #else
-        fatalError("Cannot perform vector reads on this operating system")
+            fatalError("Cannot perform vector reads on this operating system")
         #endif
     }
 
@@ -667,18 +665,19 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return true
         }
     }
+
     /// Buffer a write in preparation for a flush.
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         let data = data.forceAsByteEnvelope()
 
-        if !self.pendingWrites.add(envelope: data, promise: promise) {
-            assert(self.isActive)
+        if !pendingWrites.add(envelope: data, promise: promise) {
+            assert(isActive)
             pipeline.fireChannelWritabilityChanged0()
         }
     }
 
     override final func hasFlushedPendingWrites() -> Bool {
-        return self.pendingWrites.isFlushPending
+        pendingWrites.isFlushPending
     }
 
     /// Mark a flush point. This is called when flush is received, and instructs
@@ -686,18 +685,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
-        self.pendingWrites.markFlushCheckpoint()
+        pendingWrites.markFlushCheckpoint()
     }
 
     /// Called when closing, to instruct the specific implementation to discard all pending
     /// writes.
     override func cancelWritesOnClose(error: Error) {
-        self.pendingWrites.failAll(error: error, close: true)
+        pendingWrites.failAll(error: error, close: true)
     }
 
     override func writeToSocket() throws -> OverallWriteResult {
-        let result = try self.pendingWrites.triggerAppropriateWriteOperations(
-            scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
+        let result = try pendingWrites.triggerAppropriateWriteOperations(
+            scalarWriteOperation: { ptr, destinationPtr, destinationSize, metadata in
                 guard ptr.count > 0 else {
                     // No need to call write if the buffer is empty.
                     return .processed(0)
@@ -715,24 +714,23 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
             },
             vectorWriteOperation: { msgs in
-                return try self.socket.sendmmsg(msgs: msgs)
+                try self.socket.sendmmsg(msgs: msgs)
             }
         )
         return result
     }
 
-
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        self.eventLoop.assertInEventLoop()
-        guard self.isRegistered else {
+        eventLoop.assertInEventLoop()
+        guard isRegistered else {
             promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
         do {
             try socket.bind(to: address)
-            self.updateCachedAddressesFromSocket(updateRemote: false)
+            updateCachedAddressesFromSocket(updateRemote: false)
             becomeActive0(promise: promise)
         } catch let err {
             promise?.fail(err)
@@ -740,36 +738,36 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.socket,
+        try selector.register(selectable: socket,
                               interested: interested,
-                              makeRegistration: self.registrationFor)
+                              makeRegistration: registrationFor)
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
         assert(mode == .all)
-        try selector.deregister(selectable: self.socket)
+        try selector.deregister(selectable: socket)
     }
 
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.reregister(selectable: self.socket, interested: interested)
+        try selector.reregister(selectable: socket, interested: interested)
     }
 }
 
 extension SocketChannel: CustomStringConvertible {
     var description: String {
-        return "SocketChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+        "SocketChannel { \(socketDescription), active = \(isActive), localAddress = \(localAddress.debugDescription), remoteAddress = \(remoteAddress.debugDescription) }"
     }
 }
 
 extension ServerSocketChannel: CustomStringConvertible {
     var description: String {
-        return "ServerSocketChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+        "ServerSocketChannel { \(socketDescription), active = \(isActive), localAddress = \(localAddress.debugDescription), remoteAddress = \(remoteAddress.debugDescription) }"
     }
 }
 
 extension DatagramChannel: CustomStringConvertible {
     var description: String {
-        return "DatagramChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+        "DatagramChannel { \(socketDescription), active = \(isActive), localAddress = \(localAddress.debugDescription), remoteAddress = \(remoteAddress.debugDescription) }"
     }
 }
 
@@ -807,33 +805,33 @@ extension DatagramChannel: MulticastChannel {
         }
     }
 
-#if !os(Windows)
-    @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
-    func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
-        if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
-        } else {
-            eventLoop.execute {
-                self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
+    #if !os(Windows)
+        @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
+        func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+            if eventLoop.inEventLoop {
+                performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
+            } else {
+                eventLoop.execute {
+                    self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
+                }
             }
         }
-    }
 
-    @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
-    func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
-        if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
-        } else {
-            eventLoop.execute {
-                self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+        @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
+        func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+            if eventLoop.inEventLoop {
+                performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+            } else {
+                eventLoop.execute {
+                    self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+                }
             }
         }
-    }
-#endif
+    #endif
 
     func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, device: device, promise: promise, operation: .join)
+            performGroupOperation0(group, device: device, promise: promise, operation: .join)
         } else {
             eventLoop.execute {
                 self.performGroupOperation0(group, device: device, promise: promise, operation: .join)
@@ -843,7 +841,7 @@ extension DatagramChannel: MulticastChannel {
 
     func leaveGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, device: device, promise: promise, operation: .leave)
+            performGroupOperation0(group, device: device, promise: promise, operation: .leave)
         } else {
             eventLoop.execute {
                 self.performGroupOperation0(group, device: device, promise: promise, operation: .leave)
@@ -857,10 +855,11 @@ extension DatagramChannel: MulticastChannel {
     private func performGroupOperation0(_ group: SocketAddress,
                                         device: NIONetworkDevice?,
                                         promise: EventLoopPromise<Void>?,
-                                        operation: GroupOperation) {
-        self.eventLoop.assertInEventLoop()
+                                        operation: GroupOperation)
+    {
+        eventLoop.assertInEventLoop()
 
-        guard self.isActive else {
+        guard isActive else {
             promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
@@ -896,22 +895,22 @@ extension DatagramChannel: MulticastChannel {
             switch (group, device?.address) {
             case (.unixDomainSocket, _):
                 preconditionFailure("Should not be reachable, UNIX sockets are never multicast addresses")
-            case (.v4(let groupAddress), .some(.v4(let interfaceAddress))):
+            case let (.v4(groupAddress), .some(.v4(interfaceAddress))):
                 // IPv4Binding with specific target interface.
                 let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: interfaceAddress.address.sin_addr)
-                try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
-            case (.v4(let groupAddress), .none):
+                try socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
+            case let (.v4(groupAddress), .none):
                 // IPv4 binding without target interface.
                 let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: in_addr(s_addr: INADDR_ANY))
-                try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
-            case (.v6(let groupAddress), .some(.v6)):
+                try socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
+            case let (.v6(groupAddress), .some(.v6)):
                 // IPv6 binding with specific target interface.
                 let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: UInt32(device!.interfaceIndex))
-                try self.socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)
-            case (.v6(let groupAddress), .none):
+                try socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)
+            case let (.v6(groupAddress), .none):
                 // IPv6 binding with no specific interface requested.
                 let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: 0)
-                try self.socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)
+                try socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)
             case (.v4, .some(.v6)), (.v6, .some(.v4)), (.v4, .some(.unixDomainSocket)), (.v6, .some(.unixDomainSocket)):
                 // Mismatched group and interface address: this is an error.
                 throw ChannelError.badInterfaceAddressFamily

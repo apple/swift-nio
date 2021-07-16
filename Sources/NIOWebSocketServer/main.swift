@@ -47,38 +47,38 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
     private var responseBody: ByteBuffer!
 
     func handlerAdded(context: ChannelHandlerContext) {
-        self.responseBody = context.channel.allocator.buffer(string: websocketResponse)
+        responseBody = context.channel.allocator.buffer(string: websocketResponse)
     }
 
-    func handlerRemoved(context: ChannelHandlerContext) {
-        self.responseBody = nil
+    func handlerRemoved(context _: ChannelHandlerContext) {
+        responseBody = nil
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let reqPart = self.unwrapInboundIn(data)
+        let reqPart = unwrapInboundIn(data)
 
         // We're not interested in request bodies here: we're just serving up GET responses
         // to get the client to initiate a websocket request.
-        guard case .head(let head) = reqPart else {
+        guard case let .head(head) = reqPart else {
             return
         }
 
         // GETs only.
         guard case .GET = head.method else {
-            self.respond405(context: context)
+            respond405(context: context)
             return
         }
 
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/html")
-        headers.add(name: "Content-Length", value: String(self.responseBody.readableBytes))
+        headers.add(name: "Content-Length", value: String(responseBody.readableBytes))
         headers.add(name: "Connection", value: "close")
         let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1),
-                                    status: .ok,
-                                    headers: headers)
-        context.write(self.wrapOutboundOut(.head(responseHead)), promise: nil)
-        context.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody))), promise: nil)
-        context.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
+                                            status: .ok,
+                                            headers: headers)
+        context.write(wrapOutboundOut(.head(responseHead)), promise: nil)
+        context.write(wrapOutboundOut(.body(.byteBuffer(responseBody))), promise: nil)
+        context.write(wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
             context.close(promise: nil)
         }
         context.flush()
@@ -91,8 +91,8 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
         let head = HTTPResponseHead(version: .http1_1,
                                     status: .methodNotAllowed,
                                     headers: headers)
-        context.write(self.wrapOutboundOut(.head(head)), promise: nil)
-        context.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
+        context.write(wrapOutboundOut(.head(head)), promise: nil)
+        context.write(wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
             context.close(promise: nil)
         }
         context.flush()
@@ -106,17 +106,17 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
     private var awaitingClose: Bool = false
 
     public func handlerAdded(context: ChannelHandlerContext) {
-        self.sendTime(context: context)
+        sendTime(context: context)
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let frame = self.unwrapInboundIn(data)
+        let frame = unwrapInboundIn(data)
 
         switch frame.opcode {
         case .connectionClose:
-            self.receivedClose(context: context, frame: frame)
+            receivedClose(context: context, frame: frame)
         case .ping:
-            self.pong(context: context, frame: frame)
+            pong(context: context, frame: frame)
         case .text:
             var data = frame.unmaskedData
             let text = data.readString(length: data.readableBytes) ?? ""
@@ -126,7 +126,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
             break
         default:
             // Unknown frames are errors.
-            self.closeOnError(context: context)
+            closeOnError(context: context)
         }
     }
 
@@ -138,7 +138,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         guard context.channel.isActive else { return }
 
         // We can't send if we sent a close message.
-        guard !self.awaitingClose else { return }
+        guard !awaitingClose else { return }
 
         // We can't really check for error here, but it's also not the purpose of the
         // example so let's not worry about it.
@@ -147,8 +147,8 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         buffer.writeString("\(theTime)")
 
         let frame = WebSocketFrame(fin: true, opcode: .text, data: buffer)
-        context.writeAndFlush(self.wrapOutboundOut(frame)).map {
-            context.eventLoop.scheduleTask(in: .seconds(1), { self.sendTime(context: context) })
+        context.writeAndFlush(wrapOutboundOut(frame)).map {
+            context.eventLoop.scheduleTask(in: .seconds(1)) { self.sendTime(context: context) }
         }.whenFailure { (_: Error) in
             context.close(promise: nil)
         }
@@ -167,7 +167,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
             var data = frame.unmaskedData
             let closeDataCode = data.readSlice(length: 2) ?? ByteBuffer()
             let closeFrame = WebSocketFrame(fin: true, opcode: .connectionClose, data: closeDataCode)
-            _ = context.write(self.wrapOutboundOut(closeFrame)).map { () in
+            _ = context.write(wrapOutboundOut(closeFrame)).map { () in
                 context.close(promise: nil)
             }
         }
@@ -182,7 +182,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         }
 
         let responseFrame = WebSocketFrame(fin: true, opcode: .pong, data: frameData)
-        context.write(self.wrapOutboundOut(responseFrame), promise: nil)
+        context.write(wrapOutboundOut(responseFrame), promise: nil)
     }
 
     private func closeOnError(context: ChannelHandlerContext) {
@@ -191,7 +191,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         var data = context.channel.allocator.buffer(capacity: 2)
         data.write(webSocketErrorCode: .protocolError)
         let frame = WebSocketFrame(fin: true, opcode: .connectionClose, data: data)
-        context.write(self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
+        context.write(wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
             context.close(mode: .output, promise: nil)
         }
         awaitingClose = true
@@ -200,10 +200,10 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
 
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
-let upgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { (channel: Channel, head: HTTPRequestHead) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
-                                 upgradePipelineHandler: { (channel: Channel, _: HTTPRequestHead) in
-                                    channel.pipeline.addHandler(WebSocketTimeHandler())
-                                 })
+let upgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { (channel: Channel, _: HTTPRequestHead) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
+                                          upgradePipelineHandler: { (channel: Channel, _: HTTPRequestHead) in
+                                              channel.pipeline.addHandler(WebSocketTimeHandler())
+                                          })
 
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
@@ -214,11 +214,11 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelInitializer { channel in
         let httpHandler = HTTPHandler()
         let config: NIOHTTPServerUpgradeConfiguration = (
-                        upgraders: [ upgrader ],
-                        completionHandler: { _ in
-                            channel.pipeline.removeHandler(httpHandler, promise: nil)
-                        }
-                    )
+            upgraders: [upgrader],
+            completionHandler: { _ in
+                channel.pipeline.removeHandler(httpHandler, promise: nil)
+            }
+        )
         return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).flatMap {
             channel.pipeline.addHandler(httpHandler)
         }
@@ -246,15 +246,15 @@ enum BindTo {
 
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
+case let (.some(h), _, .some(p)):
     /* we got two arguments, let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)
 
-case (let portString?, .none, _):
+case let (portString?, .none, _):
     // Couldn't parse as number, expecting unix domain socket path.
     bindTarget = .unixDomainSocket(path: portString)
 
-case (_, let p?, _):
+case let (_, p?, _):
     // Only one argument --> port.
     bindTarget = .ip(host: defaultHost, port: p)
 
@@ -264,9 +264,9 @@ default:
 
 let channel = try { () -> Channel in
     switch bindTarget {
-    case .ip(let host, let port):
+    case let .ip(host, port):
         return try bootstrap.bind(host: host, port: port).wait()
-    case .unixDomainSocket(let path):
+    case let .unixDomainSocket(path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
 }()
@@ -274,6 +274,7 @@ let channel = try { () -> Channel in
 guard let localAddress = channel.localAddress else {
     fatalError("Address was unable to bind. Please check that the socket was not closed or that the address family was understood.")
 }
+
 print("Server started and listening on \(localAddress)")
 
 // This will never unblock as we don't close the ServerChannel

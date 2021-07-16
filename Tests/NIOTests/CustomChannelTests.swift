@@ -12,13 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIO
 import NIOConcurrencyHelpers
+import XCTest
 
-struct NotImplementedError: Error { }
+struct NotImplementedError: Error {}
 
-struct InvalidTypeError: Error { }
+struct InvalidTypeError: Error {}
 
 /// A basic ChannelCore that expects write0 to receive a NIOAny containing an Int.
 ///
@@ -41,16 +41,16 @@ private class IntChannelCore: ChannelCore {
         promise?.fail(NotImplementedError())
     }
 
-    func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
+    func bind0(to _: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.fail(NotImplementedError())
     }
 
-    func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
+    func connect0(to _: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.fail(NotImplementedError())
     }
 
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
-        _ = self.unwrapData(data, as: Int.self)
+        _ = unwrapData(data, as: Int.self)
         promise?.succeed(())
     }
 
@@ -62,19 +62,19 @@ private class IntChannelCore: ChannelCore {
         preconditionFailure("Must not ew")
     }
 
-    func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+    func close0(error _: Error, mode _: CloseMode, promise: EventLoopPromise<Void>?) {
         promise?.fail(NotImplementedError())
     }
 
-    func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
+    func triggerUserOutboundEvent0(_: Any, promise: EventLoopPromise<Void>?) {
         promise?.fail(NotImplementedError())
     }
 
-    func channelRead0(_ data: NIOAny) {
+    func channelRead0(_: NIOAny) {
         preconditionFailure("Must not call channelRead0")
     }
 
-    func errorCaught0(error: Error) {
+    func errorCaught0(error _: Error) {
         preconditionFailure("Must not call errorCaught0")
     }
 }

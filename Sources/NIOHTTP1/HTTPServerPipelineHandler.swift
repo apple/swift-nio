@@ -64,8 +64,8 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     public typealias OutboundOut = HTTPServerResponsePart
 
     public init() {
-        self.nextExpectedInboundMessage = nil
-        self.nextExpectedOutboundMessage = nil
+        nextExpectedInboundMessage = nil
+        nextExpectedOutboundMessage = nil
 
         debugOnly {
             self.nextExpectedInboundMessage = .head
@@ -175,12 +175,12 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     private var lifecycleState: LifecycleState = .acceptingEvents
 
     // always `nil` in release builds, never `nil` in debug builds
-    private var nextExpectedInboundMessage: Optional<NextExpectedMessageType>
+    private var nextExpectedInboundMessage: NextExpectedMessageType?
     // always `nil` in release builds, never `nil` in debug builds
-    private var nextExpectedOutboundMessage: Optional<NextExpectedMessageType>
+    private var nextExpectedOutboundMessage: NextExpectedMessageType?
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        switch self.lifecycleState {
+        switch lifecycleState {
         case .quiescingLastRequestEndReceived, .quiescingCompleted:
             // We're done, no more data for you.
             return
@@ -189,19 +189,19 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             ()
         }
 
-        if self.eventBuffer.count != 0 || self.state == .responseEndPending {
-            self.eventBuffer.append(.channelRead(data))
+        if eventBuffer.count != 0 || state == .responseEndPending {
+            eventBuffer.append(.channelRead(data))
             return
         } else {
-            self.deliverOneMessage(context: context, data: data)
+            deliverOneMessage(context: context, data: data)
         }
     }
 
     private func deliverOneMessage(context: ChannelHandlerContext, data: NIOAny) {
-        assert(self.lifecycleState != .quiescingLastRequestEndReceived &&
-               self.lifecycleState != .quiescingCompleted,
-               "deliverOneMessage called in lifecycle illegal state \(self.lifecycleState)")
-        let msg = self.unwrapInboundIn(data)
+        assert(lifecycleState != .quiescingLastRequestEndReceived &&
+            lifecycleState != .quiescingCompleted,
+            "deliverOneMessage called in lifecycle illegal state \(lifecycleState)")
+        let msg = unwrapInboundIn(data)
 
         debugOnly {
             switch msg {
@@ -218,17 +218,17 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
 
         switch msg {
         case .head:
-            self.state.requestHeadReceived()
+            state.requestHeadReceived()
         case .end:
             // New request is complete. We don't want any more data from now on.
-            self.state.requestEndReceived()
+            state.requestEndReceived()
 
-            if self.lifecycleState == .quiescingWaitingForRequestEnd {
-                self.lifecycleState = .quiescingLastRequestEndReceived
-                self.eventBuffer.removeAll()
+            if lifecycleState == .quiescingWaitingForRequestEnd {
+                lifecycleState = .quiescingLastRequestEndReceived
+                eventBuffer.removeAll()
             }
-            if self.lifecycleState == .quiescingLastRequestEndReceived && self.state == .idle {
-                self.lifecycleState = .quiescingCompleted
+            if lifecycleState == .quiescingLastRequestEndReceived, state == .idle {
+                lifecycleState = .quiescingCompleted
                 context.close(promise: nil)
             }
         case .body:
@@ -243,8 +243,8 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         // received a full request nor the beginning of a response we should treat this as a full request. The reason
         // is that what the user will probably do is send a `.badRequest` response and we should be in a state which
         // allows that.
-        if (self.state == .idle || self.state == .requestEndPending) && error is HTTPParserError {
-            self.state = .responseEndPending
+        if state == .idle || state == .requestEndPending, error is HTTPParserError {
+            state = .responseEndPending
         }
         context.fireErrorCaught(error)
     }
@@ -252,26 +252,26 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case is ChannelShouldQuiesceEvent:
-            assert(self.lifecycleState == .acceptingEvents,
-                   "unexpected lifecycle state when receiving ChannelShouldQuiesceEvent: \(self.lifecycleState)")
-            switch self.state {
+            assert(lifecycleState == .acceptingEvents,
+                   "unexpected lifecycle state when receiving ChannelShouldQuiesceEvent: \(lifecycleState)")
+            switch state {
             case .responseEndPending:
                 // we're not in the middle of a request, let's just shut the door
-                self.lifecycleState = .quiescingLastRequestEndReceived
-                self.eventBuffer.removeAll()
+                lifecycleState = .quiescingLastRequestEndReceived
+                eventBuffer.removeAll()
             case .idle:
                 // we're completely idle, let's just close
-                self.lifecycleState = .quiescingCompleted
-                self.eventBuffer.removeAll()
+                lifecycleState = .quiescingCompleted
+                eventBuffer.removeAll()
                 context.close(promise: nil)
             case .requestEndPending, .requestAndResponseEndPending:
                 // we're in the middle of a request, we'll need to keep accepting events until we see the .end
-                self.lifecycleState = .quiescingWaitingForRequestEnd
+                lifecycleState = .quiescingWaitingForRequestEnd
             }
         case ChannelEvent.inputClosed:
             // We only buffer half-close if there are request parts we're waiting to send.
             // Otherwise we deliver the half-close immediately.
-            if case .responseEndPending = self.state, self.eventBuffer.count > 0 {
+            if case .responseEndPending = state, eventBuffer.count > 0 {
                 self.eventBuffer.append(.halfClose)
             } else {
                 context.fireUserInboundEventTriggered(event)
@@ -283,18 +283,18 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         guard let httpError = error as? HTTPParserError else {
-            self.deliverOneError(context: context, error: error)
+            deliverOneError(context: context, error: error)
             return
         }
-        if case .responseEndPending = self.state {
+        if case .responseEndPending = state {
             self.eventBuffer.append(.error(httpError))
             return
         }
-        self.deliverOneError(context: context, error: error)
+        deliverOneError(context: context, error: error)
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        assert(self.state != .requestEndPending,
+        assert(state != .requestEndPending,
                "Received second response while waiting for first one to complete")
         debugOnly {
             let res = self.unwrapOutboundIn(data)
@@ -312,21 +312,21 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
 
         var startReadingAgain = false
 
-        switch self.unwrapOutboundIn(data) {
-        case .head(var head) where self.lifecycleState != .acceptingEvents:
+        switch unwrapOutboundIn(data) {
+        case var .head(head) where lifecycleState != .acceptingEvents:
             if head.isKeepAlive {
                 head.headers.replaceOrAdd(name: "connection", value: "close")
             }
-            context.write(self.wrapOutboundOut(.head(head)), promise: promise)
+            context.write(wrapOutboundOut(.head(head)), promise: promise)
         case .end:
             startReadingAgain = true
 
-            switch self.lifecycleState {
-            case .quiescingWaitingForRequestEnd where self.state == .responseEndPending:
+            switch lifecycleState {
+            case .quiescingWaitingForRequestEnd where state == .responseEndPending:
                 // we just received the .end that we're missing so we can fall through to closing the connection
                 fallthrough
             case .quiescingLastRequestEndReceived:
-                self.lifecycleState = .quiescingCompleted
+                lifecycleState = .quiescingCompleted
                 context.write(data).flatMap {
                     context.close()
                 }.cascade(to: promise)
@@ -343,19 +343,19 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         }
 
         if startReadingAgain {
-            self.state.responseEndReceived()
-            self.deliverPendingRequests(context: context)
-            self.startReading(context: context)
+            state.responseEndReceived()
+            deliverPendingRequests(context: context)
+            startReading(context: context)
         }
     }
 
     public func read(context: ChannelHandlerContext) {
-        switch self.lifecycleState {
+        switch lifecycleState {
         case .quiescingLastRequestEndReceived, .quiescingCompleted:
             // We swallow all reads now, as we're going to close the connection.
             ()
         case .acceptingEvents, .quiescingWaitingForRequestEnd:
-            if case .responseEndPending = self.state {
+            if case .responseEndPending = state {
                 self.readPending = true
             } else {
                 context.read()
@@ -379,20 +379,19 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         // At this stage we are no longer in the pipeline, so all further content should be
         // blocked from reaching us. Thus we can avoid mutating our own internal state any
         // longer.
-        let bufferedEvents = self.eventBuffer
+        let bufferedEvents = eventBuffer
         for event in bufferedEvents {
             switch event {
-            case .channelRead(let read):
+            case let .channelRead(read):
                 context.fireChannelRead(read)
             case .halfClose:
                 context.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
-            case .error(let error):
+            case let .error(error):
                 context.fireErrorCaught(error)
             }
         }
 
-
-        switch self.lifecycleState {
+        switch lifecycleState {
         case .quiescingLastRequestEndReceived, .quiescingWaitingForRequestEnd:
             context.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
         case .acceptingEvents, .quiescingCompleted:
@@ -400,7 +399,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             ()
         }
 
-        if self.readPending {
+        if readPending {
             context.read()
         }
     }
@@ -415,7 +414,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         // the channel closed.
         //
         // We set keepingCapacity to avoid this reallocating a buffer, as we'll just free it shortly anyway.
-        self.eventBuffer.removeAll(keepingCapacity: true)
+        eventBuffer.removeAll(keepingCapacity: true)
         context.fireChannelInactive()
     }
 
@@ -423,13 +422,13 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     /// again if there are no further pending requests, and send any read()
     /// call we may have swallowed.
     private func startReading(context: ChannelHandlerContext) {
-        if self.readPending && self.state != .responseEndPending {
-            switch self.lifecycleState {
+        if readPending, state != .responseEndPending {
+            switch lifecycleState {
             case .quiescingLastRequestEndReceived, .quiescingCompleted:
                 // No more reads in these states.
                 ()
             case .acceptingEvents, .quiescingWaitingForRequestEnd:
-                self.readPending = false
+                readPending = false
                 context.read()
             }
         }
@@ -440,20 +439,20 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     private func deliverPendingRequests(context: ChannelHandlerContext) {
         var deliveredRead = false
 
-        while self.state != .responseEndPending, let event = self.eventBuffer.first {
-            self.eventBuffer.removeFirst()
+        while state != .responseEndPending, let event = eventBuffer.first {
+            eventBuffer.removeFirst()
 
             switch event {
-            case .channelRead(let read):
-                self.deliverOneMessage(context: context, data: read)
+            case let .channelRead(read):
+                deliverOneMessage(context: context, data: read)
                 deliveredRead = true
-            case .error(let error):
-                self.deliverOneError(context: context, error: error)
+            case let .error(error):
+                deliverOneError(context: context, error: error)
             case .halfClose:
                 // When we fire the half-close, we want to forget all prior reads.
                 // They will just trigger further half-close notifications we don't
                 // need.
-                self.readPending = false
+                readPending = false
                 context.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
             }
         }
@@ -468,7 +467,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         // be more sensible about keep-alive logic if they can see this early.
         // This is done after `fireChannelReadComplete` to keep the same observable
         // behaviour as `SocketChannel`, which fires these events in this order.
-        if case .some(.halfClose) = self.eventBuffer.first {
+        if case .some(.halfClose) = eventBuffer.first {
             self.eventBuffer.removeFirst()
             self.readPending = false
             context.fireUserInboundEventTriggered(ChannelEvent.inputClosed)

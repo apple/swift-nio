@@ -25,8 +25,6 @@ public protocol RecvByteBufferAllocator {
     mutating func record(actualReadBytes: Int) -> Bool
 }
 
-
-
 /// `RecvByteBufferAllocator` which will always return a `ByteBuffer` with the same fixed size no matter what was recorded.
 public struct FixedSizeRecvByteBufferAllocator: RecvByteBufferAllocator {
     public let capacity: Int
@@ -36,13 +34,13 @@ public struct FixedSizeRecvByteBufferAllocator: RecvByteBufferAllocator {
         self.capacity = capacity
     }
 
-    public mutating func record(actualReadBytes: Int) -> Bool {
+    public mutating func record(actualReadBytes _: Int) -> Bool {
         // Returns false as we always allocate the same size of buffers.
-        return false
+        false
     }
 
     public func buffer(allocator: ByteBufferAllocator) -> ByteBuffer {
-        return allocator.buffer(capacity: capacity)
+        allocator.buffer(capacity: capacity)
     }
 }
 
@@ -72,43 +70,44 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
         self.initial = min(initial, AdaptiveRecvByteBufferAllocator.maximumAllocationSize).previousPowerOf2()
         self.maximum = min(maximum, AdaptiveRecvByteBufferAllocator.maximumAllocationSize).nextPowerOf2()
 
-        self.nextReceiveBufferSize = self.initial
-        self.decreaseNow = false
+        nextReceiveBufferSize = self.initial
+        decreaseNow = false
     }
 
     public func buffer(allocator: ByteBufferAllocator) -> ByteBuffer {
-        return allocator.buffer(capacity: self.nextReceiveBufferSize)
+        allocator.buffer(capacity: nextReceiveBufferSize)
     }
 
     public mutating func record(actualReadBytes: Int) -> Bool {
-        precondition(self.nextReceiveBufferSize % 2 == 0)
-        precondition(self.nextReceiveBufferSize >= self.minimum)
-        precondition(self.nextReceiveBufferSize <= self.maximum)
+        precondition(nextReceiveBufferSize % 2 == 0)
+        precondition(nextReceiveBufferSize >= minimum)
+        precondition(nextReceiveBufferSize <= maximum)
 
         var mayGrow = false
 
         // This right shift is safe: nextReceiveBufferSize can never be negative, so this will stop at 0.
-        let lowerBound = self.nextReceiveBufferSize &>> 1
+        let lowerBound = nextReceiveBufferSize &>> 1
 
         // Here we need to be careful with 32-bit systems: if maximum is too large then any shift or multiply will overflow, which
         // we don't want. Instead we check, and clamp to this current value if we overflow.
-        let upperBoundCandidate = Int(truncatingIfNeeded: Int64(self.nextReceiveBufferSize) &<< 1)
-        let upperBound = upperBoundCandidate <= 0 ? self.nextReceiveBufferSize : upperBoundCandidate
+        let upperBoundCandidate = Int(truncatingIfNeeded: Int64(nextReceiveBufferSize) &<< 1)
+        let upperBound = upperBoundCandidate <= 0 ? nextReceiveBufferSize : upperBoundCandidate
 
-        if actualReadBytes <= lowerBound && lowerBound >= self.minimum {
-            if self.decreaseNow {
-                self.nextReceiveBufferSize = lowerBound
-                self.decreaseNow = false
+        if actualReadBytes <= lowerBound, lowerBound >= minimum {
+            if decreaseNow {
+                nextReceiveBufferSize = lowerBound
+                decreaseNow = false
             } else {
-                self.decreaseNow = true
+                decreaseNow = true
             }
-        } else if actualReadBytes >= self.nextReceiveBufferSize && upperBound <= self.maximum &&
-                  self.nextReceiveBufferSize != upperBound {
-            self.nextReceiveBufferSize = upperBound
-            self.decreaseNow = false
+        } else if actualReadBytes >= nextReceiveBufferSize, upperBound <= maximum,
+                  nextReceiveBufferSize != upperBound
+        {
+            nextReceiveBufferSize = upperBound
+            decreaseNow = false
             mayGrow = true
         } else {
-            self.decreaseNow = false
+            decreaseNow = false
         }
 
         return mayGrow

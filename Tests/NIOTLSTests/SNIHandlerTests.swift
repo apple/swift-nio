@@ -1,3 +1,6 @@
+@testable import NIO
+import NIOFoundationCompat
+import NIOTLS
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -12,9 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 import XCTest
-@testable import NIO
-import NIOFoundationCompat
-import NIOTLS
 
 private let libressl227HelloNoSNI = """
 FgMBATkBAAE1AwNqcHrXsRJKtLx2HC1BXLt+kAk7SnCMk8qK
@@ -229,12 +229,13 @@ private let fuzzingInputOne = "FgMAAAQAAgo="
 extension ChannelPipeline {
     func contains(handler: ChannelHandler) throws -> Bool {
         do {
-            _ = try self.context(handler: handler).wait()
+            _ = try context(handler: handler).wait()
             return true
         } catch ChannelPipelineError.notFound {
             return false
         }
     }
+
     func assertDoesNotContain(handler: ChannelHandler) throws {
         XCTAssertFalse(try contains(handler: handler))
     }
@@ -243,7 +244,6 @@ extension ChannelPipeline {
         XCTAssertTrue(try contains(handler: handler))
     }
 }
-
 
 class SNIHandlerTest: XCTestCase {
     private func bufferForBase64String(string: String) -> ByteBuffer {
@@ -356,7 +356,7 @@ class SNIHandlerTest: XCTestCase {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
 
-        let handler = ByteToMessageHandler(SNIHandler { result in
+        let handler = ByteToMessageHandler(SNIHandler { _ in
             XCTFail("Handler was called")
             return loop.makeSucceededFuture(())
         })

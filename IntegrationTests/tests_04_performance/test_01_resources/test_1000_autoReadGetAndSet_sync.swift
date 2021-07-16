@@ -22,7 +22,7 @@ func run(identifier: String) {
 
                 let syncOptions = server.syncOptions!
 
-                for _ in 0..<iterations {
+                for _ in 0 ..< iterations {
                     let autoReadOption = try! syncOptions.getOption(ChannelOptions.autoRead)
                     try! syncOptions.setOption(ChannelOptions.autoRead, value: !autoReadOption)
                 }

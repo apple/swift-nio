@@ -22,10 +22,10 @@ public final class MakeFullRequestHandler: ChannelOutboundHandler {
     public typealias OutboundIn = HTTPRequestHead
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let req = self.unwrapOutboundIn(data)
+        let req = unwrapOutboundIn(data)
 
-        context.write(self.wrapOutboundOut(.head(req)), promise: nil)
-        context.write(self.wrapOutboundOut(.end(nil)), promise: promise)
+        context.write(wrapOutboundOut(.head(req)), promise: nil)
+        context.write(wrapOutboundOut(.end(nil)), promise: promise)
     }
 }
 
@@ -63,7 +63,6 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
     private var state: State = .operational
     private var promiseBuffer: CircularBuffer<EventLoopPromise<Response>>
 
-
     /// Create a new `RequestResponseHandler`.
     ///
     /// - parameters:
@@ -71,15 +70,15 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
     ///          buffer. `initialBufferCapacity` is the initial capacity for this buffer. You usually do not need to set
     ///          this parameter unless you intend to pipeline very deeply and don't want the buffer to resize.
     public init(initialBufferCapacity: Int = 4) {
-        self.promiseBuffer = CircularBuffer(initialCapacity: initialBufferCapacity)
+        promiseBuffer = CircularBuffer(initialCapacity: initialBufferCapacity)
     }
 
     public func channelInactive(context: ChannelHandlerContext) {
-        switch self.state {
+        switch state {
         case .error:
             // We failed any outstanding promises when we entered the error state and will fail any
             // new promises in write.
-            assert(self.promiseBuffer.count == 0)
+            assert(promiseBuffer.count == 0)
         case .operational:
             let promiseBuffer = self.promiseBuffer
             self.promiseBuffer.removeAll()
@@ -90,25 +89,25 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
         context.fireChannelInactive()
     }
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        guard self.state.isOperational else {
+    public func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
+        guard state.isOperational else {
             // we're in an error state, ignore further responses
-            assert(self.promiseBuffer.count == 0)
+            assert(promiseBuffer.count == 0)
             return
         }
 
-        let response = self.unwrapInboundIn(data)
-        let promise = self.promiseBuffer.removeFirst()
+        let response = unwrapInboundIn(data)
+        let promise = promiseBuffer.removeFirst()
 
         promise.succeed(response)
     }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        guard self.state.isOperational else {
+        guard state.isOperational else {
             assert(self.promiseBuffer.count == 0)
             return
         }
-        self.state = .error(error)
+        state = .error(error)
         let promiseBuffer = self.promiseBuffer
         self.promiseBuffer.removeAll()
         context.close(promise: nil)
@@ -118,15 +117,15 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let (request, responsePromise) = self.unwrapOutboundIn(data)
-        switch self.state {
-        case .error(let error):
-            assert(self.promiseBuffer.count == 0)
+        let (request, responsePromise) = unwrapOutboundIn(data)
+        switch state {
+        case let .error(error):
+            assert(promiseBuffer.count == 0)
             responsePromise.fail(error)
             promise?.fail(error)
         case .operational:
-            self.promiseBuffer.append(responsePromise)
-            context.write(self.wrapOutboundOut(request), promise: promise)
+            promiseBuffer.append(responsePromise)
+            context.write(wrapOutboundOut(request), promise: promise)
         }
     }
 }

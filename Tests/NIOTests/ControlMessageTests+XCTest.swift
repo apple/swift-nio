@@ -23,15 +23,13 @@ import XCTest
 ///
 
 extension ControlMessageTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (ControlMessageTests) -> () throws -> Void)] {
-      return [
-                ("testEmptyEncode", testEmptyEncode),
-                ("testEncodeDecode1", testEncodeDecode1),
-                ("testEncodeDecode2", testEncodeDecode2),
-                ("testStorageIndexing", testStorageIndexing),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (ControlMessageTests) -> () throws -> Void)] {
+        [
+            ("testEmptyEncode", testEmptyEncode),
+            ("testEncodeDecode1", testEncodeDecode1),
+            ("testEncodeDecode2", testEncodeDecode2),
+            ("testStorageIndexing", testStorageIndexing),
+        ]
+    }
 }
-

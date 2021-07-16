@@ -23,14 +23,12 @@ import XCTest
 ///
 
 extension HTTPTypesTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPTypesTest) -> () throws -> Void)] {
-      return [
-                ("testConvertToString", testConvertToString),
-                ("testConvertFromString", testConvertFromString),
-                ("testConvertFromStringToExplicitValue", testConvertFromStringToExplicitValue),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPTypesTest) -> () throws -> Void)] {
+        [
+            ("testConvertToString", testConvertToString),
+            ("testConvertFromString", testConvertFromString),
+            ("testConvertFromStringToExplicitValue", testConvertFromStringToExplicitValue),
+        ]
+    }
 }
-

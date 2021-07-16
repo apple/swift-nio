@@ -23,19 +23,17 @@ import XCTest
 ///
 
 extension BlockingIOThreadPoolTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (BlockingIOThreadPoolTest) -> () throws -> Void)] {
-      return [
-                ("testDoubleShutdownWorks", testDoubleShutdownWorks),
-                ("testStateCancelled", testStateCancelled),
-                ("testStateActive", testStateActive),
-                ("testLoseLastReferenceAndShutdownWhileTaskStillRunning", testLoseLastReferenceAndShutdownWhileTaskStillRunning),
-                ("testDeadLockIfCalledOutWithLockHeld", testDeadLockIfCalledOutWithLockHeld),
-                ("testPoolDoesGetReleasedWhenStoppedAndReferencedDropped", testPoolDoesGetReleasedWhenStoppedAndReferencedDropped),
-                ("testClosureReferenceDroppedAfterSingleWorkItemExecution", testClosureReferenceDroppedAfterSingleWorkItemExecution),
-                ("testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution", testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (BlockingIOThreadPoolTest) -> () throws -> Void)] {
+        [
+            ("testDoubleShutdownWorks", testDoubleShutdownWorks),
+            ("testStateCancelled", testStateCancelled),
+            ("testStateActive", testStateActive),
+            ("testLoseLastReferenceAndShutdownWhileTaskStillRunning", testLoseLastReferenceAndShutdownWhileTaskStillRunning),
+            ("testDeadLockIfCalledOutWithLockHeld", testDeadLockIfCalledOutWithLockHeld),
+            ("testPoolDoesGetReleasedWhenStoppedAndReferencedDropped", testPoolDoesGetReleasedWhenStoppedAndReferencedDropped),
+            ("testClosureReferenceDroppedAfterSingleWorkItemExecution", testClosureReferenceDroppedAfterSingleWorkItemExecution),
+            ("testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution", testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution),
+        ]
+    }
 }
-

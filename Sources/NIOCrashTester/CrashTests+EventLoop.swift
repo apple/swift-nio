@@ -14,7 +14,7 @@
 
 import NIO
 
-fileprivate let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+private let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
 
 struct EventLoopCrashTests {
     let testMultiThreadedELGCrashesOnZeroThreads = CrashTest(
@@ -65,7 +65,7 @@ struct EventLoopCrashTests {
     let testSchedulingEndlesslyInELShutdown = CrashTest(
         regex: #"Precondition failed: EventLoop SelectableEventLoop \{ .* \} didn't quiesce after 1000 ticks."#
     ) {
-        let group = MultiThreadedEventLoopGroup.init(numberOfThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             try? group.syncShutdownGracefully()
             exit(4)
@@ -79,9 +79,9 @@ struct EventLoopCrashTests {
                 exit(2)
             }
             func f() {
-                el.scheduleTask(in: .nanoseconds(0)) { [f /* to make 5.1 compiler not crash */] in
+                el.scheduleTask(in: .nanoseconds(0)) { [f /* to make 5.1 compiler not crash */ ] in
                     f()
-                }.futureResult.whenFailure { [f /* to make 5.1 compiler not crash */] error in
+                }.futureResult.whenFailure { [f /* to make 5.1 compiler not crash */ ] error in
                     guard case .some(.shutdown) = error as? EventLoopError else {
                         exit(3)
                     }

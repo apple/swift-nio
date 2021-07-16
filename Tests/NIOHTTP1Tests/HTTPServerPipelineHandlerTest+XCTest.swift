@@ -23,35 +23,33 @@ import XCTest
 ///
 
 extension HTTPServerPipelineHandlerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPServerPipelineHandlerTest) -> () throws -> Void)] {
-      return [
-                ("testBasicBufferingBehaviour", testBasicBufferingBehaviour),
-                ("testReadCallsAreSuppressedWhenPipelining", testReadCallsAreSuppressedWhenPipelining),
-                ("testReadCallsAreSuppressedWhenUnbufferingIfThereIsStillBufferedData", testReadCallsAreSuppressedWhenUnbufferingIfThereIsStillBufferedData),
-                ("testServerCanRespondEarly", testServerCanRespondEarly),
-                ("testPipelineHandlerWillBufferHalfClose", testPipelineHandlerWillBufferHalfClose),
-                ("testPipelineHandlerWillDeliverHalfCloseEarly", testPipelineHandlerWillDeliverHalfCloseEarly),
-                ("testAReadIsNotIssuedWhenUnbufferingAHalfCloseAfterRequestComplete", testAReadIsNotIssuedWhenUnbufferingAHalfCloseAfterRequestComplete),
-                ("testHalfCloseWhileWaitingForResponseIsPassedAlongIfNothingElseBuffered", testHalfCloseWhileWaitingForResponseIsPassedAlongIfNothingElseBuffered),
-                ("testRecursiveChannelReadInvocationsDoNotCauseIssues", testRecursiveChannelReadInvocationsDoNotCauseIssues),
-                ("testQuiescingEventWhenInitiallyIdle", testQuiescingEventWhenInitiallyIdle),
-                ("testQuiescingEventWhenIdleAfterARequest", testQuiescingEventWhenIdleAfterARequest),
-                ("testQuiescingInTheMiddleOfARequestNoResponseBitsYet", testQuiescingInTheMiddleOfARequestNoResponseBitsYet),
-                ("testQuiescingAfterHavingReceivedRequestButBeforeResponseWasSent", testQuiescingAfterHavingReceivedRequestButBeforeResponseWasSent),
-                ("testQuiescingAfterHavingReceivedRequestAndResponseHeadButNoResponseEndYet", testQuiescingAfterHavingReceivedRequestAndResponseHeadButNoResponseEndYet),
-                ("testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd", testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd),
-                ("testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd", testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd),
-                ("testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer", testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer),
-                ("testParserErrorOnly", testParserErrorOnly),
-                ("testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding", testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding),
-                ("testRemovingWithResponseOutstandingTriggersRead", testRemovingWithResponseOutstandingTriggersRead),
-                ("testRemovingWithPartialResponseOutstandingTriggersRead", testRemovingWithPartialResponseOutstandingTriggersRead),
-                ("testRemovingWithBufferedRequestForwards", testRemovingWithBufferedRequestForwards),
-                ("testQuiescingInAResponseThenRemovedFiresEventAndReads", testQuiescingInAResponseThenRemovedFiresEventAndReads),
-                ("testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead", testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPServerPipelineHandlerTest) -> () throws -> Void)] {
+        [
+            ("testBasicBufferingBehaviour", testBasicBufferingBehaviour),
+            ("testReadCallsAreSuppressedWhenPipelining", testReadCallsAreSuppressedWhenPipelining),
+            ("testReadCallsAreSuppressedWhenUnbufferingIfThereIsStillBufferedData", testReadCallsAreSuppressedWhenUnbufferingIfThereIsStillBufferedData),
+            ("testServerCanRespondEarly", testServerCanRespondEarly),
+            ("testPipelineHandlerWillBufferHalfClose", testPipelineHandlerWillBufferHalfClose),
+            ("testPipelineHandlerWillDeliverHalfCloseEarly", testPipelineHandlerWillDeliverHalfCloseEarly),
+            ("testAReadIsNotIssuedWhenUnbufferingAHalfCloseAfterRequestComplete", testAReadIsNotIssuedWhenUnbufferingAHalfCloseAfterRequestComplete),
+            ("testHalfCloseWhileWaitingForResponseIsPassedAlongIfNothingElseBuffered", testHalfCloseWhileWaitingForResponseIsPassedAlongIfNothingElseBuffered),
+            ("testRecursiveChannelReadInvocationsDoNotCauseIssues", testRecursiveChannelReadInvocationsDoNotCauseIssues),
+            ("testQuiescingEventWhenInitiallyIdle", testQuiescingEventWhenInitiallyIdle),
+            ("testQuiescingEventWhenIdleAfterARequest", testQuiescingEventWhenIdleAfterARequest),
+            ("testQuiescingInTheMiddleOfARequestNoResponseBitsYet", testQuiescingInTheMiddleOfARequestNoResponseBitsYet),
+            ("testQuiescingAfterHavingReceivedRequestButBeforeResponseWasSent", testQuiescingAfterHavingReceivedRequestButBeforeResponseWasSent),
+            ("testQuiescingAfterHavingReceivedRequestAndResponseHeadButNoResponseEndYet", testQuiescingAfterHavingReceivedRequestAndResponseHeadButNoResponseEndYet),
+            ("testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd", testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd),
+            ("testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd", testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd),
+            ("testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer", testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer),
+            ("testParserErrorOnly", testParserErrorOnly),
+            ("testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding", testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding),
+            ("testRemovingWithResponseOutstandingTriggersRead", testRemovingWithResponseOutstandingTriggersRead),
+            ("testRemovingWithPartialResponseOutstandingTriggersRead", testRemovingWithPartialResponseOutstandingTriggersRead),
+            ("testRemovingWithBufferedRequestForwards", testRemovingWithBufferedRequestForwards),
+            ("testQuiescingInAResponseThenRemovedFiresEventAndReads", testQuiescingInAResponseThenRemovedFiresEventAndReads),
+            ("testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead", testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead),
+        ]
+    }
 }
-

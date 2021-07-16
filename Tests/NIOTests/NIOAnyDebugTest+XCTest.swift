@@ -23,12 +23,10 @@ import XCTest
 ///
 
 extension NIOAnyDebugTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (NIOAnyDebugTest) -> () throws -> Void)] {
-      return [
-                ("testCustomStringConvertible", testCustomStringConvertible),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (NIOAnyDebugTest) -> () throws -> Void)] {
+        [
+            ("testCustomStringConvertible", testCustomStringConvertible),
+        ]
+    }
 }
-

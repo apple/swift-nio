@@ -15,20 +15,19 @@
 //
 //
 
-
 /// A `ChannelHandler` that implements a backoff for a `ServerChannel` when accept produces an `IOError`.
 /// These errors are often recoverable by reducing the rate at which we call accept.
 public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelHandler {
     public typealias InboundIn = Channel
     public typealias OutboundIn = Channel
 
-    private var nextReadDeadlineNS: Optional<NIODeadline>
+    private var nextReadDeadlineNS: NIODeadline?
     private let backoffProvider: (IOError) -> TimeAmount?
-    private var scheduledRead: Optional<Scheduled<Void>>
+    private var scheduledRead: Scheduled<Void>?
 
     /// Default implementation used as `backoffProvider` which delays accept by 1 second.
-    public static func defaultBackoffProvider(error: IOError) -> TimeAmount? {
-        return .seconds(1)
+    public static func defaultBackoffProvider(error _: IOError) -> TimeAmount? {
+        .seconds(1)
     }
 
     /// Create a new instance
@@ -37,15 +36,15 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     ///     - backoffProvider: returns a `TimeAmount` which will be the amount of time to wait before attempting another `read`.
     public init(backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider) {
         self.backoffProvider = backoffProvider
-        self.nextReadDeadlineNS = nil
-        self.scheduledRead = nil
+        nextReadDeadlineNS = nil
+        scheduledRead = nil
     }
 
     public func read(context: ChannelHandlerContext) {
         // If we already have a read scheduled there is no need to schedule another one.
         guard scheduledRead == nil else { return }
 
-        if let deadline = self.nextReadDeadlineNS {
+        if let deadline = nextReadDeadlineNS {
             let now = NIODeadline.now()
             if now >= deadline {
                 // The backoff already expired, just do a read.
@@ -62,10 +61,10 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         if let ioError = error as? IOError {
             if let amount = backoffProvider(ioError) {
-                self.nextReadDeadlineNS = .now() + amount
-                if let scheduled = self.scheduledRead {
+                nextReadDeadlineNS = .now() + amount
+                if let scheduled = scheduledRead {
                     scheduled.cancel()
-                    scheduleRead(at: self.nextReadDeadlineNS!, context: context)
+                    scheduleRead(at: nextReadDeadlineNS!, context: context)
                 }
             }
         }
@@ -73,34 +72,34 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     }
 
     public func channelInactive(context: ChannelHandlerContext) {
-        if let scheduled = self.scheduledRead {
+        if let scheduled = scheduledRead {
             scheduled.cancel()
-            self.scheduledRead = nil
+            scheduledRead = nil
         }
-        self.nextReadDeadlineNS = nil
+        nextReadDeadlineNS = nil
         context.fireChannelInactive()
     }
 
     public func handlerRemoved(context: ChannelHandlerContext) {
-        if let scheduled = self.scheduledRead {
+        if let scheduled = scheduledRead {
             // Cancel the previous scheduled read and trigger a read directly. This is needed as otherwise we may never read again.
             scheduled.cancel()
-            self.scheduledRead = nil
+            scheduledRead = nil
             context.read()
         }
-        self.nextReadDeadlineNS = nil
+        nextReadDeadlineNS = nil
     }
 
     private func scheduleRead(at: NIODeadline, context: ChannelHandlerContext) {
-        self.scheduledRead = context.eventLoop.scheduleTask(deadline: at) {
+        scheduledRead = context.eventLoop.scheduleTask(deadline: at) {
             self.doRead(context)
         }
     }
 
     private func doRead(_ context: ChannelHandlerContext) {
         // Reset the backoff time and read.
-        self.nextReadDeadlineNS = nil
-        self.scheduledRead = nil
+        nextReadDeadlineNS = nil
+        scheduledRead = nil
         context.read()
     }
 }
@@ -108,7 +107,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
 /**
  ChannelHandler implementation which enforces back-pressure by stopping to read from the remote peer when it cannot write back fast enough.
  It will start reading again once pending data was written.
-*/
+ */
 public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHandler {
     public typealias OutboundIn = NIOAny
     public typealias InboundIn = ByteBuffer
@@ -118,7 +117,7 @@ public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHa
     private var pendingRead = false
     private var writable: Bool = true
 
-    public init() { }
+    public init() {}
 
     public func read(context: ChannelHandlerContext) {
         if writable {
@@ -129,7 +128,7 @@ public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHa
     }
 
     public func channelWritabilityChanged(context: ChannelHandlerContext) {
-        self.writable = context.channel.isWritable
+        writable = context.channel.isWritable
         if writable {
             mayRead(context: context)
         } else {
@@ -159,7 +158,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     public typealias OutboundIn = NIOAny
     public typealias OutboundOut = NIOAny
 
-    ///A user event triggered by IdleStateHandler when a Channel is idle.
+    /// A user event triggered by IdleStateHandler when a Channel is idle.
     public enum IdleStateEvent {
         /// Will be triggered when no write was performed for the specified amount of time
         case write
@@ -176,17 +175,17 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     private var reading = false
     private var lastReadTime: NIODeadline = .distantPast
     private var lastWriteCompleteTime: NIODeadline = .distantPast
-    private var scheduledReaderTask: Optional<Scheduled<Void>>
-    private var scheduledWriterTask: Optional<Scheduled<Void>>
-    private var scheduledAllTask: Optional<Scheduled<Void>>
+    private var scheduledReaderTask: Scheduled<Void>?
+    private var scheduledWriterTask: Scheduled<Void>?
+    private var scheduledAllTask: Scheduled<Void>?
 
     public init(readTimeout: TimeAmount? = nil, writeTimeout: TimeAmount? = nil, allTimeout: TimeAmount? = nil) {
         self.readTimeout = readTimeout
         self.writeTimeout = writeTimeout
         self.allTimeout = allTimeout
-        self.scheduledAllTask = nil
-        self.scheduledReaderTask = nil
-        self.scheduledWriterTask = nil
+        scheduledAllTask = nil
+        scheduledReaderTask = nil
+        scheduledWriterTask = nil
     }
 
     public func handlerAdded(context: ChannelHandlerContext) {
@@ -212,7 +211,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     }
 
     public func channelReadComplete(context: ChannelHandlerContext) {
-        if (readTimeout != nil  || allTimeout != nil) && reading {
+        if readTimeout != nil || allTimeout != nil, reading {
             lastReadTime = .now()
             reading = false
         }
@@ -220,7 +219,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        if writeTimeout == nil && allTimeout == nil {
+        if writeTimeout == nil, allTimeout == nil {
             context.write(data, promise: promise)
             return
         }
@@ -241,7 +240,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
 
     private func makeReadTimeoutTask(_ context: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
-            guard self.shouldReschedule(context) else  {
+            guard self.shouldReschedule(context) else {
                 return
             }
 
@@ -265,7 +264,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
 
     private func makeWriteTimeoutTask(_ context: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
-            guard self.shouldReschedule(context) else  {
+            guard self.shouldReschedule(context) else {
                 return
             }
 
@@ -286,7 +285,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
 
     private func makeAllTimeoutTask(_ context: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
-            guard self.shouldReschedule(context) else  {
+            guard self.shouldReschedule(context) else {
                 return
             }
 
@@ -311,7 +310,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
         }
     }
 
-    private func schedule(_ context: ChannelHandlerContext, _ amount: TimeAmount?, _ body: @escaping (ChannelHandlerContext, TimeAmount) -> (() -> Void) ) -> Scheduled<Void>? {
+    private func schedule(_ context: ChannelHandlerContext, _ amount: TimeAmount?, _ body: @escaping (ChannelHandlerContext, TimeAmount) -> (() -> Void)) -> Scheduled<Void>? {
         if let timeout = amount {
             return context.eventLoop.scheduleTask(in: timeout, body(context, timeout))
         }
@@ -327,7 +326,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
         scheduledAllTask = schedule(context, allTimeout, makeAllTimeoutTask)
     }
 
-    private func cancelIdleTasks(_ context: ChannelHandlerContext) {
+    private func cancelIdleTasks(_: ChannelHandlerContext) {
         scheduledReaderTask?.cancel()
         scheduledWriterTask?.cancel()
         scheduledAllTask?.cancel()

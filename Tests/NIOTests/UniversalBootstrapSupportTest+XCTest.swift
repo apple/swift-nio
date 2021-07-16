@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension UniversalBootstrapSupportTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (UniversalBootstrapSupportTest) -> () throws -> Void)] {
-      return [
-                ("testBootstrappingWorks", testBootstrappingWorks),
-                ("testBootstrapOverrideOfShortcutOptions", testBootstrapOverrideOfShortcutOptions),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (UniversalBootstrapSupportTest) -> () throws -> Void)] {
+        [
+            ("testBootstrappingWorks", testBootstrappingWorks),
+            ("testBootstrapOverrideOfShortcutOptions", testBootstrapOverrideOfShortcutOptions),
+        ]
+    }
 }
-

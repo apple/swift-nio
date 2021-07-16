@@ -21,10 +21,11 @@ let package = Package(
     products: [
         .library(name: "AtomicCounter", targets: ["AtomicCounter"]),
     ],
-    dependencies: [ ],
+    dependencies: [],
     targets: [
         .target(
             name: "AtomicCounter",
-            dependencies: []),
+            dependencies: []
+        ),
     ]
 )

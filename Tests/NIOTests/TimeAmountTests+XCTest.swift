@@ -23,15 +23,13 @@ import XCTest
 ///
 
 extension TimeAmountTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (TimeAmountTests) -> () throws -> Void)] {
-      return [
-                ("testTimeAmountConversion", testTimeAmountConversion),
-                ("testTimeAmountIsHashable", testTimeAmountIsHashable),
-                ("testTimeAmountDoesAddTime", testTimeAmountDoesAddTime),
-                ("testTimeAmountDoesSubtractTime", testTimeAmountDoesSubtractTime),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (TimeAmountTests) -> () throws -> Void)] {
+        [
+            ("testTimeAmountConversion", testTimeAmountConversion),
+            ("testTimeAmountIsHashable", testTimeAmountIsHashable),
+            ("testTimeAmountDoesAddTime", testTimeAmountDoesAddTime),
+            ("testTimeAmountDoesSubtractTime", testTimeAmountDoesSubtractTime),
+        ]
+    }
 }
-

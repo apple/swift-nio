@@ -23,12 +23,10 @@ import XCTest
 ///
 
 extension TypeAssistedChannelHandlerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (TypeAssistedChannelHandlerTest) -> () throws -> Void)] {
-      return [
-                ("testCanDefineBothInboundAndOutbound", testCanDefineBothInboundAndOutbound),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (TypeAssistedChannelHandlerTest) -> () throws -> Void)] {
+        [
+            ("testCanDefineBothInboundAndOutbound", testCanDefineBothInboundAndOutbound),
+        ]
+    }
 }
-

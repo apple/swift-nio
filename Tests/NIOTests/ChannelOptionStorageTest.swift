@@ -35,7 +35,7 @@ class ChannelOptionStorageTest: XCTestCase {
 
     func testSetTwoOptionsOfSameType() throws {
         let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [(ChannelOptions.socketOption(.so_reuseaddr), 1),
-                                                            (ChannelOptions.socketOption(.so_rcvtimeo), 2)]
+                                                                                 (ChannelOptions.socketOption(.so_rcvtimeo), 2)]
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
         for kv in options {
@@ -43,13 +43,13 @@ class ChannelOptionStorageTest: XCTestCase {
         }
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
-        XCTAssertEqual(options.map { $0.0 },
+        XCTAssertEqual(options.map(\.0),
                        optionsCollector.allOptions.map { option in
-                           return option.0 as! ChannelOptions.Types.SocketOption
+                           option.0 as! ChannelOptions.Types.SocketOption
                        })
-        XCTAssertEqual(options.map { $0.1 },
+        XCTAssertEqual(options.map(\.1),
                        optionsCollector.allOptions.map { option in
-                           return option.1 as! SocketOptionValue
+                           option.1 as! SocketOptionValue
                        })
     }
 
@@ -62,11 +62,11 @@ class ChannelOptionStorageTest: XCTestCase {
         XCTAssertEqual(1, optionsCollector.allOptions.count)
         XCTAssertEqual([ChannelOptions.socketOption(.so_reuseaddr)],
                        optionsCollector.allOptions.map { option in
-                           return option.0 as! ChannelOptions.Types.SocketOption
+                           option.0 as! ChannelOptions.Types.SocketOption
                        })
         XCTAssertEqual([SocketOptionValue(2)],
                        optionsCollector.allOptions.map { option in
-                           return option.1 as! SocketOptionValue
+                           option.1 as! SocketOptionValue
                        })
     }
 }
@@ -87,11 +87,11 @@ class OptionsCollectingChannel: Channel {
     var parent: Channel? { fatalError() }
 
     func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        self.allOptions.append((option, value))
-        return self.eventLoop.makeSucceededFuture(())
+        allOptions.append((option, value))
+        return eventLoop.makeSucceededFuture(())
     }
 
-    func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
+    func getOption<Option: ChannelOption>(_: Option) -> EventLoopFuture<Option.Value> {
         fatalError()
     }
 
@@ -102,6 +102,6 @@ class OptionsCollectingChannel: Channel {
     var _channelCore: ChannelCore { fatalError() }
 
     var eventLoop: EventLoop {
-        return EmbeddedEventLoop()
+        EmbeddedEventLoop()
     }
 }

@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension IOErrorTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (IOErrorTest) -> () throws -> Void)] {
-      return [
-                ("testMemoryLayoutBelowThreshold", testMemoryLayoutBelowThreshold),
-                ("testDeprecatedAPIStillFunctional", testDeprecatedAPIStillFunctional),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (IOErrorTest) -> () throws -> Void)] {
+        [
+            ("testMemoryLayoutBelowThreshold", testMemoryLayoutBelowThreshold),
+            ("testDeprecatedAPIStillFunctional", testDeprecatedAPIStillFunctional),
+        ]
+    }
 }
-

@@ -23,22 +23,20 @@ import XCTest
 ///
 
 extension EventCounterHandlerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (EventCounterHandlerTest) -> () throws -> Void)] {
-      return [
-                ("testNothingButEmbeddedChannelInit", testNothingButEmbeddedChannelInit),
-                ("testNothing", testNothing),
-                ("testInboundWrite", testInboundWrite),
-                ("testOutboundWrite", testOutboundWrite),
-                ("testConnectChannel", testConnectChannel),
-                ("testBindChannel", testBindChannel),
-                ("testConnectAndCloseChannel", testConnectAndCloseChannel),
-                ("testError", testError),
-                ("testEventsWithoutArguments", testEventsWithoutArguments),
-                ("testInboundUserEvent", testInboundUserEvent),
-                ("testOutboundUserEvent", testOutboundUserEvent),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (EventCounterHandlerTest) -> () throws -> Void)] {
+        [
+            ("testNothingButEmbeddedChannelInit", testNothingButEmbeddedChannelInit),
+            ("testNothing", testNothing),
+            ("testInboundWrite", testInboundWrite),
+            ("testOutboundWrite", testOutboundWrite),
+            ("testConnectChannel", testConnectChannel),
+            ("testBindChannel", testBindChannel),
+            ("testConnectAndCloseChannel", testConnectAndCloseChannel),
+            ("testError", testError),
+            ("testEventsWithoutArguments", testEventsWithoutArguments),
+            ("testInboundUserEvent", testInboundUserEvent),
+            ("testOutboundUserEvent", testOutboundUserEvent),
+        ]
+    }
 }
-

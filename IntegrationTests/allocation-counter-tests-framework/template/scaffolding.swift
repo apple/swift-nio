@@ -12,17 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import AtomicCounter
+import Foundation
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-import Darwin
+    import Darwin
 #else
-import Glibc
+    import Glibc
 #endif
 
 func waitForThreadsToQuiesce(shouldReachZero: Bool) {
     func getUnfreed() -> Int {
-        return AtomicCounter.read_malloc_counter() - AtomicCounter.read_free_counter()
+        AtomicCounter.read_malloc_counter() - AtomicCounter.read_free_counter()
     }
 
     var oldNumberOfUnfreed = getUnfreed()
@@ -33,9 +33,9 @@ func waitForThreadsToQuiesce(shouldReachZero: Bool) {
             return
         }
         count += 1
-        usleep(shouldReachZero ? 50_000 : 200_000) // allocs/frees happen on multiple threads, allow some cool down time
+        usleep(shouldReachZero ? 50000 : 200_000) // allocs/frees happen on multiple threads, allow some cool down time
         let newNumberOfUnfreed = getUnfreed()
-        if oldNumberOfUnfreed == newNumberOfUnfreed && (!shouldReachZero || newNumberOfUnfreed <= 0) {
+        if oldNumberOfUnfreed == newNumberOfUnfreed, !shouldReachZero || newNumberOfUnfreed <= 0 {
             // nothing happened in the last 100ms, let's assume everything's
             // calmed down already.
             if count > 5 || newNumberOfUnfreed != 0 {
@@ -52,13 +52,13 @@ func measureAll(_ fn: () -> Int) -> [[String: Int]] {
         AtomicCounter.reset_free_counter()
         AtomicCounter.reset_malloc_counter()
         AtomicCounter.reset_malloc_bytes_counter()
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-        autoreleasepool {
+        #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+            autoreleasepool {
+                _ = fn()
+            }
+        #else
             _ = fn()
-        }
-#else
-        _ = fn()
-#endif
+        #endif
         waitForThreadsToQuiesce(shouldReachZero: !throwAway)
         let frees = AtomicCounter.read_free_counter()
         let mallocs = AtomicCounter.read_malloc_counter()
@@ -70,14 +70,14 @@ func measureAll(_ fn: () -> Int) -> [[String: Int]] {
         return [
             "total_allocations": mallocs,
             "total_allocated_bytes": mallocedBytes,
-            "remaining_allocations": mallocs - frees
+            "remaining_allocations": mallocs - frees,
         ]
     }
 
     _ = measureOne(throwAway: true, fn) /* pre-heat and throw away */
 
     var measurements: [[String: Int]] = []
-    for _ in 0..<10 {
+    for _ in 0 ..< 10 {
         if let results = measureOne(fn) {
             measurements.append(results)
         }
@@ -85,7 +85,7 @@ func measureAll(_ fn: () -> Int) -> [[String: Int]] {
     return measurements
 }
 
-func measureAndPrint(desc: String, fn: () -> Int) -> Void {
+func measureAndPrint(desc: String, fn: () -> Int) {
     let measurements = measureAll(fn)
     for k in measurements[0].keys {
         let vs = measurements.map { $0[k]! }
@@ -96,6 +96,6 @@ func measureAndPrint(desc: String, fn: () -> Int) -> Void {
 
 public func measure(identifier: String, _ body: () -> Int) {
     measureAndPrint(desc: identifier) {
-        return body()
+        body()
     }
 }

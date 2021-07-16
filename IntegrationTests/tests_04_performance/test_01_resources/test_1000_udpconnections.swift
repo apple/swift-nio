@@ -14,39 +14,39 @@
 
 import NIO
 
-fileprivate final class CountReadsHandler: ChannelInboundHandler {
+private final class CountReadsHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
-    
+
     private var readsRemaining: Int
     private let completed: EventLoopPromise<Void>
-    
+
     var completionFuture: EventLoopFuture<Void> {
-        return self.completed.futureResult
+        completed.futureResult
     }
-    
+
     init(numberOfReadsExpected: Int, completionPromise: EventLoopPromise<Void>) {
-        self.readsRemaining = numberOfReadsExpected
-        self.completed = completionPromise
+        readsRemaining = numberOfReadsExpected
+        completed = completionPromise
     }
-    
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.readsRemaining -= 1
-        if self.readsRemaining <= 0 {
-            self.completed.succeed(())
+
+    func channelRead(context _: ChannelHandlerContext, data _: NIOAny) {
+        readsRemaining -= 1
+        if readsRemaining <= 0 {
+            completed.succeed(())
         }
     }
 }
 
 func run(identifier: String) {
     let numberOfIterations = 1000
-    
+
     let serverHandler = CountReadsHandler(numberOfReadsExpected: numberOfIterations,
                                           completionPromise: group.next().makePromise())
     let serverChannel = try! DatagramBootstrap(group: group)
         // Set the handlers that are applied to the bound channel
         .channelInitializer { channel in
-            return channel.pipeline.addHandler(serverHandler)
+            channel.pipeline.addHandler(serverHandler)
         }
         .bind(to: localhostPickPort).wait()
     defer {
@@ -54,13 +54,13 @@ func run(identifier: String) {
     }
 
     let remoteAddress = serverChannel.localAddress!
-    
+
     let clientBootstrap = DatagramBootstrap(group: group)
 
     measure(identifier: identifier) {
         let buffer = ByteBuffer(integer: 1, as: UInt8.self)
         for _ in 0 ..< numberOfIterations {
-            try! clientBootstrap.bind(to: localhostPickPort).flatMap { clientChannel -> EventLoopFuture<Void> in 
+            try! clientBootstrap.bind(to: localhostPickPort).flatMap { clientChannel -> EventLoopFuture<Void> in
                 // Send a byte to make sure everything is really open.
                 let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
                 return clientChannel.writeAndFlush(envelope).flatMap {
@@ -72,4 +72,3 @@ func run(identifier: String) {
         return numberOfIterations
     }
 }
-

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIO
+import XCTest
 
 final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
@@ -21,13 +21,13 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
     private var fixed: FixedSizeRecvByteBufferAllocator!
 
     override func setUp() {
-        self.adaptive = AdaptiveRecvByteBufferAllocator(minimum: 64, initial: 1024, maximum: 16 * 1024)
-        self.fixed = FixedSizeRecvByteBufferAllocator(capacity: 1024)
+        adaptive = AdaptiveRecvByteBufferAllocator(minimum: 64, initial: 1024, maximum: 16 * 1024)
+        fixed = FixedSizeRecvByteBufferAllocator(capacity: 1024)
     }
 
     override func tearDown() {
-        self.adaptive = nil
-        self.fixed = nil
+        adaptive = nil
+        fixed = nil
     }
 
     func testAdaptive() throws {
@@ -61,7 +61,7 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
         testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 4096)
 
         // Reads above half never shrink the capacity
-        for _ in 0..<10 {
+        for _ in 0 ..< 10 {
             testActualReadBytes(mayGrow: false, actualReadBytes: 2049, expectedCapacity: 4096)
         }
 
@@ -85,7 +85,7 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
         testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 64)
 
         // Until the bottom, where it stays forever.
-        for _ in 0..<10 {
+        for _ in 0 ..< 10 {
             testActualReadBytes(mayGrow: false, actualReadBytes: 1, expectedCapacity: 64)
         }
     }
@@ -110,22 +110,22 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
     func testMaxAllocSizeIsIntMax() {
         // To find the max alloc size, we're going to search for a fixed point in resizing. To do that we're just going to
         // keep saying we read max until we can't resize any longer.
-        self.adaptive = AdaptiveRecvByteBufferAllocator(minimum: 0, initial: .max / 2, maximum: .max)
+        adaptive = AdaptiveRecvByteBufferAllocator(minimum: 0, initial: .max / 2, maximum: .max)
         var mayGrow = true
         while mayGrow {
-            mayGrow = self.adaptive.record(actualReadBytes: .max)
+            mayGrow = adaptive.record(actualReadBytes: .max)
         }
 
-        let buffer = self.adaptive.buffer(allocator: self.allocator)
+        let buffer = adaptive.buffer(allocator: allocator)
         XCTAssertEqual(buffer.capacity, 1 << 30)
-        XCTAssertEqual(self.adaptive.maximum, 1 << 30)
-        XCTAssertEqual(self.adaptive.minimum, 0)
+        XCTAssertEqual(adaptive.maximum, 1 << 30)
+        XCTAssertEqual(adaptive.minimum, 0)
     }
 
     func testAdaptiveRoundsValues() {
-        let adaptive = AdaptiveRecvByteBufferAllocator(minimum: 9, initial: 677, maximum: 111111)
+        let adaptive = AdaptiveRecvByteBufferAllocator(minimum: 9, initial: 677, maximum: 111_111)
         XCTAssertEqual(adaptive.minimum, 8)
-        XCTAssertEqual(adaptive.maximum, 131072)
+        XCTAssertEqual(adaptive.maximum, 131_072)
         XCTAssertEqual(adaptive.initial, 512)
     }
 

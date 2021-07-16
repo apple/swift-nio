@@ -23,37 +23,35 @@ import XCTest
 ///
 
 extension SocketAddressTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (SocketAddressTest) -> () throws -> Void)] {
-      return [
-                ("testDescriptionWorks", testDescriptionWorks),
-                ("testDescriptionWorksWithoutIP", testDescriptionWorksWithoutIP),
-                ("testDescriptionWorksWithIPOnly", testDescriptionWorksWithIPOnly),
-                ("testDescriptionWorksWithByteBufferIPv4IP", testDescriptionWorksWithByteBufferIPv4IP),
-                ("testDescriptionWorksWithByteBufferIPv6IP", testDescriptionWorksWithByteBufferIPv6IP),
-                ("testRejectsWrongIPByteBufferLength", testRejectsWrongIPByteBufferLength),
-                ("testIn6AddrDescriptionWorks", testIn6AddrDescriptionWorks),
-                ("testIPAddressWorks", testIPAddressWorks),
-                ("testCanCreateIPv4AddressFromString", testCanCreateIPv4AddressFromString),
-                ("testCanCreateIPv6AddressFromString", testCanCreateIPv6AddressFromString),
-                ("testRejectsNonIPStrings", testRejectsNonIPStrings),
-                ("testWithMutableAddressCopiesFaithfully", testWithMutableAddressCopiesFaithfully),
-                ("testWithMutableAddressAllowsMutationWithoutPersistence", testWithMutableAddressAllowsMutationWithoutPersistence),
-                ("testConvertingStorage", testConvertingStorage),
-                ("testComparingSockaddrs", testComparingSockaddrs),
-                ("testEqualSocketAddresses", testEqualSocketAddresses),
-                ("testUnequalAddressesOnPort", testUnequalAddressesOnPort),
-                ("testUnequalOnAddress", testUnequalOnAddress),
-                ("testHashEqualSocketAddresses", testHashEqualSocketAddresses),
-                ("testHashUnequalAddressesOnPort", testHashUnequalAddressesOnPort),
-                ("testHashUnequalOnAddress", testHashUnequalOnAddress),
-                ("testUnequalAcrossFamilies", testUnequalAcrossFamilies),
-                ("testUnixSocketAddressIgnoresTrailingJunk", testUnixSocketAddressIgnoresTrailingJunk),
-                ("testPortAccessor", testPortAccessor),
-                ("testCanMutateSockaddrStorage", testCanMutateSockaddrStorage),
-                ("testPortIsMutable", testPortIsMutable),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (SocketAddressTest) -> () throws -> Void)] {
+        [
+            ("testDescriptionWorks", testDescriptionWorks),
+            ("testDescriptionWorksWithoutIP", testDescriptionWorksWithoutIP),
+            ("testDescriptionWorksWithIPOnly", testDescriptionWorksWithIPOnly),
+            ("testDescriptionWorksWithByteBufferIPv4IP", testDescriptionWorksWithByteBufferIPv4IP),
+            ("testDescriptionWorksWithByteBufferIPv6IP", testDescriptionWorksWithByteBufferIPv6IP),
+            ("testRejectsWrongIPByteBufferLength", testRejectsWrongIPByteBufferLength),
+            ("testIn6AddrDescriptionWorks", testIn6AddrDescriptionWorks),
+            ("testIPAddressWorks", testIPAddressWorks),
+            ("testCanCreateIPv4AddressFromString", testCanCreateIPv4AddressFromString),
+            ("testCanCreateIPv6AddressFromString", testCanCreateIPv6AddressFromString),
+            ("testRejectsNonIPStrings", testRejectsNonIPStrings),
+            ("testWithMutableAddressCopiesFaithfully", testWithMutableAddressCopiesFaithfully),
+            ("testWithMutableAddressAllowsMutationWithoutPersistence", testWithMutableAddressAllowsMutationWithoutPersistence),
+            ("testConvertingStorage", testConvertingStorage),
+            ("testComparingSockaddrs", testComparingSockaddrs),
+            ("testEqualSocketAddresses", testEqualSocketAddresses),
+            ("testUnequalAddressesOnPort", testUnequalAddressesOnPort),
+            ("testUnequalOnAddress", testUnequalOnAddress),
+            ("testHashEqualSocketAddresses", testHashEqualSocketAddresses),
+            ("testHashUnequalAddressesOnPort", testHashUnequalAddressesOnPort),
+            ("testHashUnequalOnAddress", testHashUnequalOnAddress),
+            ("testUnequalAcrossFamilies", testUnequalAcrossFamilies),
+            ("testUnixSocketAddressIgnoresTrailingJunk", testUnixSocketAddressIgnoresTrailingJunk),
+            ("testPortAccessor", testPortAccessor),
+            ("testCanMutateSockaddrStorage", testCanMutateSockaddrStorage),
+            ("testPortIsMutable", testPortIsMutable),
+        ]
+    }
 }
-

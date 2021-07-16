@@ -16,7 +16,7 @@ struct SelectableFileHandle {
     var handle: NIOFileHandle
 
     var isOpen: Bool {
-        return handle.isOpen
+        handle.isOpen
     }
 
     init(_ handle: NIOFileHandle) {
@@ -30,7 +30,7 @@ struct SelectableFileHandle {
 
 extension SelectableFileHandle: Selectable {
     func withUnsafeHandle<T>(_ body: (CInt) throws -> T) throws -> T {
-        return try self.handle.withUnsafeFileDescriptor(body)
+        try handle.withUnsafeFileDescriptor(body)
     }
 }
 
@@ -43,7 +43,7 @@ final class PipePair: SocketProtocol {
     init(inputFD: NIOFileHandle, outputFD: NIOFileHandle) throws {
         self.inputFD = SelectableFileHandle(inputFD)
         self.outputFD = SelectableFileHandle(outputFD)
-        try self.ignoreSIGPIPE()
+        try ignoreSIGPIPE()
         for fileHandle in [inputFD, outputFD] {
             try fileHandle.withUnsafeFileDescriptor {
                 try NIOFileHandle.setNonBlocking(fileDescriptor: $0)
@@ -52,7 +52,7 @@ final class PipePair: SocketProtocol {
     }
 
     func ignoreSIGPIPE() throws {
-        for fileHandle in [self.inputFD, self.outputFD] {
+        for fileHandle in [inputFD, outputFD] {
             try fileHandle.withUnsafeHandle {
                 try PipePair.ignoreSIGPIPE(descriptor: $0)
             }
@@ -60,10 +60,10 @@ final class PipePair: SocketProtocol {
     }
 
     var description: String {
-        return "PipePair { in=\(inputFD), out=\(outputFD) }"
+        "PipePair { in=\(inputFD), out=\(outputFD) }"
     }
 
-    func connect(to address: SocketAddress) throws -> Bool {
+    func connect(to _: SocketAddress) throws -> Bool {
         throw ChannelError.operationUnsupported
     }
 
@@ -72,66 +72,68 @@ final class PipePair: SocketProtocol {
     }
 
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
-        return try self.outputFD.withUnsafeHandle {
+        try outputFD.withUnsafeHandle {
             try Posix.write(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
 
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
-        return try self.outputFD.withUnsafeHandle {
+        try outputFD.withUnsafeHandle {
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
     }
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        return try self.inputFD.withUnsafeHandle {
+        try inputFD.withUnsafeHandle {
             try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
 
-    func recvmsg(pointer: UnsafeMutableRawBufferPointer,
-                 storage: inout sockaddr_storage,
-                 storageLen: inout socklen_t,
-                 controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int> {
-        throw ChannelError.operationUnsupported
-    }
-    
-    func sendmsg(pointer: UnsafeRawBufferPointer,
-                 destinationPtr: UnsafePointer<sockaddr>,
-                 destinationSize: socklen_t,
-                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
+    func recvmsg(pointer _: UnsafeMutableRawBufferPointer,
+                 storage _: inout sockaddr_storage,
+                 storageLen _: inout socklen_t,
+                 controlBytes _: inout UnsafeReceivedControlBytes) throws -> IOResult<Int>
+    {
         throw ChannelError.operationUnsupported
     }
 
-    func sendFile(fd: CInt, offset: Int, count: Int) throws -> IOResult<Int> {
+    func sendmsg(pointer _: UnsafeRawBufferPointer,
+                 destinationPtr _: UnsafePointer<sockaddr>,
+                 destinationSize _: socklen_t,
+                 controlBytes _: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
+    {
         throw ChannelError.operationUnsupported
     }
 
-    func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
+    func sendFile(fd _: CInt, offset _: Int, count _: Int) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
     }
 
-    func sendmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
+    func recvmmsg(msgs _: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
+        throw ChannelError.operationUnsupported
+    }
+
+    func sendmmsg(msgs _: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
     }
 
     func shutdown(how: Shutdown) throws {
         switch how {
         case .RD:
-            try self.inputFD.close()
+            try inputFD.close()
         case .WR:
-            try self.outputFD.close()
+            try outputFD.close()
         case .RDWR:
-            try self.close()
+            try close()
         }
     }
 
     var isOpen: Bool {
-        return self.inputFD.isOpen || self.outputFD.isOpen
+        inputFD.isOpen || outputFD.isOpen
     }
 
     func close() throws {
-        guard self.inputFD.isOpen || self.outputFD.isOpen else {
+        guard inputFD.isOpen || outputFD.isOpen else {
             throw ChannelError.alreadyClosed
         }
         let r1 = Result {
@@ -148,7 +150,7 @@ final class PipePair: SocketProtocol {
         try r2.get()
     }
 
-    func bind(to address: SocketAddress) throws {
+    func bind(to _: SocketAddress) throws {
         throw ChannelError.operationUnsupported
     }
 
@@ -160,11 +162,11 @@ final class PipePair: SocketProtocol {
         throw ChannelError.operationUnsupported
     }
 
-    func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
+    func setOption<T>(level _: NIOBSDSocket.OptionLevel, name _: NIOBSDSocket.Option, value _: T) throws {
         throw ChannelError.operationUnsupported
     }
 
-    func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T {
+    func getOption<T>(level _: NIOBSDSocket.OptionLevel, name _: NIOBSDSocket.Option) throws -> T {
         throw ChannelError.operationUnsupported
     }
 }

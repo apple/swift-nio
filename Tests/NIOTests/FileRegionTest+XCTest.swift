@@ -23,20 +23,18 @@ import XCTest
 ///
 
 extension FileRegionTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (FileRegionTest) -> () throws -> Void)] {
-      return [
-                ("testWriteFileRegion", testWriteFileRegion),
-                ("testWriteEmptyFileRegionDoesNotHang", testWriteEmptyFileRegionDoesNotHang),
-                ("testOutstandingFileRegionsWork", testOutstandingFileRegionsWork),
-                ("testWholeFileFileRegion", testWholeFileFileRegion),
-                ("testWholeEmptyFileFileRegion", testWholeEmptyFileFileRegion),
-                ("testFileRegionDuplicatesShareSeekPointer", testFileRegionDuplicatesShareSeekPointer),
-                ("testMassiveFileRegionThatJustAboutWorks", testMassiveFileRegionThatJustAboutWorks),
-                ("testMassiveFileRegionReaderIndexWorks", testMassiveFileRegionReaderIndexWorks),
-                ("testFileRegionAndIODataFitsInACoupleOfEnums", testFileRegionAndIODataFitsInACoupleOfEnums),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (FileRegionTest) -> () throws -> Void)] {
+        [
+            ("testWriteFileRegion", testWriteFileRegion),
+            ("testWriteEmptyFileRegionDoesNotHang", testWriteEmptyFileRegionDoesNotHang),
+            ("testOutstandingFileRegionsWork", testOutstandingFileRegionsWork),
+            ("testWholeFileFileRegion", testWholeFileFileRegion),
+            ("testWholeEmptyFileFileRegion", testWholeEmptyFileFileRegion),
+            ("testFileRegionDuplicatesShareSeekPointer", testFileRegionDuplicatesShareSeekPointer),
+            ("testMassiveFileRegionThatJustAboutWorks", testMassiveFileRegionThatJustAboutWorks),
+            ("testMassiveFileRegionReaderIndexWorks", testMassiveFileRegionReaderIndexWorks),
+            ("testFileRegionAndIODataFitsInACoupleOfEnums", testFileRegionAndIODataFitsInACoupleOfEnums),
+        ]
+    }
 }
-

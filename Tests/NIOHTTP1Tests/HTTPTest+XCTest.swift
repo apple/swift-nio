@@ -23,21 +23,19 @@ import XCTest
 ///
 
 extension HTTPTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPTest) -> () throws -> Void)] {
-      return [
-                ("testHTTPSimpleNoHeaders", testHTTPSimpleNoHeaders),
-                ("testHTTPSimple1Header", testHTTPSimple1Header),
-                ("testHTTPSimpleSomeHeader", testHTTPSimpleSomeHeader),
-                ("testHTTPPipelining", testHTTPPipelining),
-                ("testHTTPBody", testHTTPBody),
-                ("test1ByteHTTPBody", test1ByteHTTPBody),
-                ("testHTTPPipeliningWithBody", testHTTPPipeliningWithBody),
-                ("testChunkedBody", testChunkedBody),
-                ("testHTTPRequestHeadCoWWorks", testHTTPRequestHeadCoWWorks),
-                ("testHTTPResponseHeadCoWWorks", testHTTPResponseHeadCoWWorks),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPTest) -> () throws -> Void)] {
+        [
+            ("testHTTPSimpleNoHeaders", testHTTPSimpleNoHeaders),
+            ("testHTTPSimple1Header", testHTTPSimple1Header),
+            ("testHTTPSimpleSomeHeader", testHTTPSimpleSomeHeader),
+            ("testHTTPPipelining", testHTTPPipelining),
+            ("testHTTPBody", testHTTPBody),
+            ("test1ByteHTTPBody", test1ByteHTTPBody),
+            ("testHTTPPipeliningWithBody", testHTTPPipeliningWithBody),
+            ("testChunkedBody", testChunkedBody),
+            ("testHTTPRequestHeadCoWWorks", testHTTPRequestHeadCoWWorks),
+            ("testHTTPResponseHeadCoWWorks", testHTTPResponseHeadCoWWorks),
+        ]
+    }
 }
-

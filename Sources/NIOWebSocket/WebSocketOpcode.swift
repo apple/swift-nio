@@ -33,29 +33,29 @@ public struct WebSocketOpcode {
             return nil
         }
 
-        self.networkRepresentation = encoded
+        networkRepresentation = encoded
     }
 
     /// Create an opcode directly with no validation.
     ///
     /// Used only to create the static lets on this structure.
     private init(rawValue: UInt8) {
-        self.networkRepresentation = rawValue
+        networkRepresentation = rawValue
     }
 
     /// Whether the opcode is in the control range: that is, if the
     /// high bit of the opcode nibble is `1`.
     public var isControlOpcode: Bool {
-        return self.networkRepresentation & 0x8 == 0x8
+        networkRepresentation & 0x8 == 0x8
     }
 }
 
-extension WebSocketOpcode: Equatable { }
+extension WebSocketOpcode: Equatable {}
 
-extension WebSocketOpcode: Hashable { }
+extension WebSocketOpcode: Hashable {}
 
 extension WebSocketOpcode: CaseIterable {
-    public static var allCases = (0..<0x10).map { WebSocketOpcode(rawValue: $0) }
+    public static var allCases = (0 ..< 0x10).map { WebSocketOpcode(rawValue: $0) }
 }
 
 extension WebSocketOpcode: CustomStringConvertible {
@@ -81,7 +81,7 @@ extension WebSocketOpcode: CustomStringConvertible {
     }
 }
 
-extension UInt8 {
+public extension UInt8 {
     /// Create a UInt8 corresponding to a given `WebSocketOpcode`.
     ///
     /// This places the opcode in the four least-significant bits, in
@@ -89,18 +89,18 @@ extension UInt8 {
     ///
     /// - parameters:
     ///     - opcode: The `WebSocketOpcode`.
-    public init(webSocketOpcode opcode: WebSocketOpcode) {
+    init(webSocketOpcode opcode: WebSocketOpcode) {
         precondition(opcode.networkRepresentation < 0x10)
         self = opcode.networkRepresentation
     }
 }
 
-extension Int {
+public extension Int {
     /// Create a UInt8 corresponding to the integer value for a given `WebSocketOpcode`.
     ///
     /// - parameters:
     ///     - opcode: The `WebSocketOpcode`.
-    public init(webSocketOpcode opcode: WebSocketOpcode) {
+    init(webSocketOpcode opcode: WebSocketOpcode) {
         precondition(opcode.networkRepresentation < 0x10)
         self = Int(opcode.networkRepresentation)
     }

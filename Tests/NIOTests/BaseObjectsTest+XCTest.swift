@@ -23,18 +23,16 @@ import XCTest
 ///
 
 extension BaseObjectTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (BaseObjectTest) -> () throws -> Void)] {
-      return [
-                ("testNIOByteBufferConversion", testNIOByteBufferConversion),
-                ("testNIOIODataConversion", testNIOIODataConversion),
-                ("testNIOFileRegionConversion", testNIOFileRegionConversion),
-                ("testBadConversions", testBadConversions),
-                ("testByteBufferFromIOData", testByteBufferFromIOData),
-                ("testFileRegionFromIOData", testFileRegionFromIOData),
-                ("testIODataEquals", testIODataEquals),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (BaseObjectTest) -> () throws -> Void)] {
+        [
+            ("testNIOByteBufferConversion", testNIOByteBufferConversion),
+            ("testNIOIODataConversion", testNIOIODataConversion),
+            ("testNIOFileRegionConversion", testNIOFileRegionConversion),
+            ("testBadConversions", testBadConversions),
+            ("testByteBufferFromIOData", testByteBufferFromIOData),
+            ("testFileRegionFromIOData", testFileRegionFromIOData),
+            ("testIODataEquals", testIODataEquals),
+        ]
+    }
 }
-

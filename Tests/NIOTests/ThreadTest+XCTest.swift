@@ -23,24 +23,22 @@ import XCTest
 ///
 
 extension ThreadTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (ThreadTest) -> () throws -> Void)] {
-      return [
-                ("testCurrentThreadWorks", testCurrentThreadWorks),
-                ("testCurrentThreadIsNotTrueOnOtherThread", testCurrentThreadIsNotTrueOnOtherThread),
-                ("testThreadSpecificsAreNilWhenNotPresent", testThreadSpecificsAreNilWhenNotPresent),
-                ("testThreadSpecificsWorks", testThreadSpecificsWorks),
-                ("testThreadSpecificsAreNotAvailableOnADifferentThread", testThreadSpecificsAreNotAvailableOnADifferentThread),
-                ("testThreadSpecificDoesNotLeakIfThreadExitsWhilstSet", testThreadSpecificDoesNotLeakIfThreadExitsWhilstSet),
-                ("testThreadSpecificDoesNotLeakIfThreadExitsAfterUnset", testThreadSpecificDoesNotLeakIfThreadExitsAfterUnset),
-                ("testThreadSpecificDoesNotLeakIfReplacedWithNewValue", testThreadSpecificDoesNotLeakIfReplacedWithNewValue),
-                ("testSharingThreadSpecificVariableWorks", testSharingThreadSpecificVariableWorks),
-                ("testThreadSpecificInitWithValueWorks", testThreadSpecificInitWithValueWorks),
-                ("testThreadSpecificDoesNotLeakWhenOutOfScopeButThreadStillRunning", testThreadSpecificDoesNotLeakWhenOutOfScopeButThreadStillRunning),
-                ("testThreadSpecificDoesNotLeakIfThreadExitsWhilstSetOnMultipleThreads", testThreadSpecificDoesNotLeakIfThreadExitsWhilstSetOnMultipleThreads),
-                ("testThreadSpecificDoesNotLeakWhenOutOfScopeButSetOnMultipleThreads", testThreadSpecificDoesNotLeakWhenOutOfScopeButSetOnMultipleThreads),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (ThreadTest) -> () throws -> Void)] {
+        [
+            ("testCurrentThreadWorks", testCurrentThreadWorks),
+            ("testCurrentThreadIsNotTrueOnOtherThread", testCurrentThreadIsNotTrueOnOtherThread),
+            ("testThreadSpecificsAreNilWhenNotPresent", testThreadSpecificsAreNilWhenNotPresent),
+            ("testThreadSpecificsWorks", testThreadSpecificsWorks),
+            ("testThreadSpecificsAreNotAvailableOnADifferentThread", testThreadSpecificsAreNotAvailableOnADifferentThread),
+            ("testThreadSpecificDoesNotLeakIfThreadExitsWhilstSet", testThreadSpecificDoesNotLeakIfThreadExitsWhilstSet),
+            ("testThreadSpecificDoesNotLeakIfThreadExitsAfterUnset", testThreadSpecificDoesNotLeakIfThreadExitsAfterUnset),
+            ("testThreadSpecificDoesNotLeakIfReplacedWithNewValue", testThreadSpecificDoesNotLeakIfReplacedWithNewValue),
+            ("testSharingThreadSpecificVariableWorks", testSharingThreadSpecificVariableWorks),
+            ("testThreadSpecificInitWithValueWorks", testThreadSpecificInitWithValueWorks),
+            ("testThreadSpecificDoesNotLeakWhenOutOfScopeButThreadStillRunning", testThreadSpecificDoesNotLeakWhenOutOfScopeButThreadStillRunning),
+            ("testThreadSpecificDoesNotLeakIfThreadExitsWhilstSetOnMultipleThreads", testThreadSpecificDoesNotLeakIfThreadExitsWhilstSetOnMultipleThreads),
+            ("testThreadSpecificDoesNotLeakWhenOutOfScopeButSetOnMultipleThreads", testThreadSpecificDoesNotLeakWhenOutOfScopeButSetOnMultipleThreads),
+        ]
+    }
 }
-

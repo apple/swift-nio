@@ -46,14 +46,14 @@ private enum InternalSNIErrors: Error {
 
 private extension ByteBuffer {
     mutating func moveReaderIndexIfPossible(forwardBy distance: Int) throws {
-        guard self.readableBytes >= distance else {
+        guard readableBytes >= distance else {
             throw InternalSNIErrors.invalidLengthInRecord
         }
-        self.moveReaderIndex(forwardBy: distance)
+        moveReaderIndex(forwardBy: distance)
     }
 
     mutating func readIntegerIfPossible<T: FixedWidthInteger>() throws -> T {
-        guard let integer: T = self.readInteger() else {
+        guard let integer: T = readInteger() else {
             throw InternalSNIErrors.invalidLengthInRecord
         }
         return integer
@@ -62,13 +62,13 @@ private extension ByteBuffer {
 
 private extension Sequence where Element == UInt8 {
     func decodeStringValidatingASCII() -> String? {
-        var bytesIterator = self.makeIterator()
+        var bytesIterator = makeIterator()
         var scalars: [Unicode.Scalar] = []
-        scalars.reserveCapacity(self.underestimatedCount)
+        scalars.reserveCapacity(underestimatedCount)
         var decoder = Unicode.ASCII.Parser()
         decode: while true {
             switch decoder.parseScalar(from: &bytesIterator) {
-            case .valid(let v):
+            case let .valid(v):
                 scalars.append(Unicode.Scalar(v[0]))
             case .emptyInput:
                 break decode
@@ -95,7 +95,7 @@ private extension Sequence where Element == UInt8 {
 /// be done asynchronously, providing more flexibility about how the user configures the
 /// pipeline.
 public final class SNIHandler: ByteToMessageDecoder {
-    public var cumulationBuffer: Optional<ByteBuffer>
+    public var cumulationBuffer: ByteBuffer?
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
 
@@ -103,12 +103,12 @@ public final class SNIHandler: ByteToMessageDecoder {
     private var waitingForUser: Bool
 
     public init(sniCompleteHandler: @escaping (SNIResult) -> EventLoopFuture<Void>) {
-        self.cumulationBuffer = nil
-        self.completionHandler = sniCompleteHandler
-        self.waitingForUser = false
+        cumulationBuffer = nil
+        completionHandler = sniCompleteHandler
+        waitingForUser = false
     }
 
-    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
         context.fireChannelRead(NIOAny(buffer))
         return .needMoreData
     }
@@ -254,8 +254,8 @@ public final class SNIHandler: ByteToMessageDecoder {
         }
 
         let handshakeTypeAndLength: UInt32 = buffer.readInteger()!
-        let handshakeType: UInt8 = UInt8((handshakeTypeAndLength & 0xFF000000) >> 24)
-        let handshakeLength: UInt32 = handshakeTypeAndLength & 0x00FFFFFF
+        let handshakeType = UInt8((handshakeTypeAndLength & 0xFF00_0000) >> 24)
+        let handshakeLength: UInt32 = handshakeTypeAndLength & 0x00FF_FFFF
         guard handshakeType == handshakeTypeClientHello else {
             throw InternalSNIErrors.invalidRecord
         }

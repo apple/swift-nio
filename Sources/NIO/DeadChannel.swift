@@ -32,39 +32,37 @@ private final class DeadChannelCore: ChannelCore {
         promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
-    func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
+    func bind0(to _: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
-    func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
+    func connect0(to _: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
-    func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func write0(_: NIOAny, promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
-    func flush0() {
-    }
+    func flush0() {}
 
-    func read0() {
-    }
+    func read0() {}
 
-    func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+    func close0(error _: Error, mode _: CloseMode, promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.alreadyClosed)
     }
 
-    func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
+    func triggerUserOutboundEvent0(_: Any, promise: EventLoopPromise<Void>?) {
         promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
-    func channelRead0(_ data: NIOAny) {
+    func channelRead0(_: NIOAny) {
         // a `DeadChannel` should never be in any running `ChannelPipeline` and therefore the `TailChannelHandler`
         // should never invoke this.
         fatalError("\(#function) called on DeadChannelCore")
     }
 
-    func errorCaught0(error: Error) {
+    func errorCaught0(error _: Error) {
         // a `DeadChannel` should never be in any running `ChannelPipeline` and therefore the `TailChannelHandler`
         // should never invoke this.
         fatalError("\(#function) called on DeadChannelCore")
@@ -80,35 +78,35 @@ internal final class DeadChannel: Channel {
     let pipeline: ChannelPipeline
 
     public var closeFuture: EventLoopFuture<Void> {
-        return self.eventLoop.makeSucceededFuture(())
+        eventLoop.makeSucceededFuture(())
     }
 
     internal init(pipeline: ChannelPipeline) {
         self.pipeline = pipeline
-        self.eventLoop = pipeline.eventLoop
+        eventLoop = pipeline.eventLoop
     }
 
     // This is `Channel` API so must be thread-safe.
     var allocator: ByteBufferAllocator {
-        return ByteBufferAllocator()
+        ByteBufferAllocator()
     }
 
     var localAddress: SocketAddress? {
-        return nil
+        nil
     }
 
     var remoteAddress: SocketAddress? {
-        return nil
+        nil
     }
 
     let parent: Channel? = nil
 
-    func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        return EventLoopFuture(eventLoop: self.pipeline.eventLoop, error: ChannelError.ioOnClosedChannel, file: #file, line: #line)
+    func setOption<Option: ChannelOption>(_: Option, value _: Option.Value) -> EventLoopFuture<Void> {
+        EventLoopFuture(eventLoop: pipeline.eventLoop, error: ChannelError.ioOnClosedChannel, file: #file, line: #line)
     }
 
-    func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
-        return eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
+    func getOption<Option: ChannelOption>(_: Option) -> EventLoopFuture<Option.Value> {
+        eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
     }
 
     let isWritable = false

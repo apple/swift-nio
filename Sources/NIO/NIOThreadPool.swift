@@ -17,11 +17,9 @@ import NIOConcurrencyHelpers
 
 /// Errors that may be thrown when executing work on a `NIOThreadPool`
 public enum NIOThreadPoolError {
-    
     /// The `NIOThreadPool` was not active.
-    public struct ThreadPoolInactive: Error { }
+    public struct ThreadPoolInactive: Error {}
 }
-
 
 /// A thread pool that should be used if some (kernel thread) blocking work
 /// needs to be performed for which no non-blocking API exists.
@@ -39,7 +37,6 @@ public enum NIOThreadPoolError {
 ///   `NIOThreadPool`. Under the covers `NonBlockingFileIO` will use
 ///   `NIOThreadPool` on all currently supported platforms though.
 public final class NIOThreadPool {
-
     /// The state of the `WorkItem`.
     public enum WorkItemState {
         /// The `WorkItem` is active now and in process by the `NIOThreadPool`.
@@ -59,9 +56,10 @@ public final class NIOThreadPool {
         /// The `NIOThreadPool` is up and running, the `CircularBuffer` containing the yet unprocessed `WorkItems`.
         case running(CircularBuffer<WorkItem>)
     }
+
     private let semaphore = DispatchSemaphore(value: 0)
     private let lock = Lock()
-    private var threads: [NIOThread]? = nil // protected by `lock`
+    private var threads: [NIOThread]? // protected by `lock`
     private var state: State = .stopped
     private let numberOfThreads: Int
 
@@ -72,14 +70,14 @@ public final class NIOThreadPool {
     ///     - callback: The function to be executed once the shutdown is complete.
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         let g = DispatchGroup()
-        let threadsToJoin = self.lock.withLock { () -> [NIOThread] in
+        let threadsToJoin = lock.withLock { () -> [NIOThread] in
             switch self.state {
-            case .running(let items):
+            case let .running(items):
                 queue.async {
                     items.forEach { $0(.cancelled) }
                 }
                 self.state = .shuttingDown(Array(repeating: true, count: numberOfThreads))
-                (0..<numberOfThreads).forEach { _ in
+                (0 ..< numberOfThreads).forEach { _ in
                     self.semaphore.signal()
                 }
                 let threads = self.threads!
@@ -108,9 +106,9 @@ public final class NIOThreadPool {
     /// - parameters:
     ///     - body: The `WorkItem` to process by the `NIOThreadPool`.
     public func submit(_ body: @escaping WorkItem) {
-        let item = self.lock.withLock { () -> WorkItem? in
+        let item = lock.withLock { () -> WorkItem? in
             switch self.state {
-            case .running(var items):
+            case var .running(items):
                 items.append(body)
                 self.state = .running(items)
                 self.semaphore.signal()
@@ -132,19 +130,19 @@ public final class NIOThreadPool {
     }
 
     private func process(identifier: Int) {
-        var item: WorkItem? = nil
+        var item: WorkItem?
         repeat {
             /* wait until work has become available */
-            item = nil	// ensure previous work item is not retained for duration of semaphore wait
-            self.semaphore.wait()
+            item = nil // ensure previous work item is not retained for duration of semaphore wait
+            semaphore.wait()
 
-            item = self.lock.withLock { () -> (WorkItem)? in
+            item = lock.withLock { () -> (WorkItem)? in
                 switch self.state {
-                case .running(var items):
+                case var .running(items):
                     let item = items.removeFirst()
                     self.state = .running(items)
                     return item
-                case .shuttingDown(var aliveStates):
+                case var .shuttingDown(aliveStates):
                     assert(aliveStates[identifier])
                     aliveStates[identifier] = false
                     self.state = .shuttingDown(aliveStates)
@@ -160,11 +158,11 @@ public final class NIOThreadPool {
 
     /// Start the `NIOThreadPool` if not already started.
     public func start() {
-        let alreadyRunning: Bool = self.lock.withLock {
+        let alreadyRunning: Bool = lock.withLock {
             switch self.state {
-            case .running(_):
+            case .running:
                 return true
-            case .shuttingDown(_):
+            case .shuttingDown:
                 // This should never happen
                 fatalError("start() called while in shuttingDown")
             case .stopped:
@@ -179,13 +177,13 @@ public final class NIOThreadPool {
 
         let group = DispatchGroup()
 
-        self.lock.withLock {
+        lock.withLock {
             assert(self.threads == nil)
             self.threads = []
             self.threads?.reserveCapacity(self.numberOfThreads)
         }
 
-        for id in 0..<self.numberOfThreads {
+        for id in 0 ..< numberOfThreads {
             group.enter()
             // We should keep thread names under 16 characters because Linux doesn't allow more.
             NIOThread.spawnAndRun(name: "TP-#\(id)", detachThread: false) { thread in
@@ -199,7 +197,7 @@ public final class NIOThreadPool {
         }
 
         group.wait()
-        assert(self.lock.withLock { self.threads?.count ?? -1 } == self.numberOfThreads)
+        assert(lock.withLock { self.threads?.count ?? -1 } == numberOfThreads)
     }
 
     deinit {
@@ -212,8 +210,7 @@ public final class NIOThreadPool {
     }
 }
 
-extension NIOThreadPool {
-    
+public extension NIOThreadPool {
     /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
     /// The closure will be run on the thread pool so can do blocking work.
     ///
@@ -221,9 +218,9 @@ extension NIOThreadPool {
     ///     - eventLoop: The `EventLoop` the returned `EventLoopFuture` will fire on.
     ///     - body: The closure which performs some blocking work to be done on the thread pool.
     /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
-    public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
+    func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
-        self.submit { shouldRun in
+        submit { shouldRun in
             guard case shouldRun = NIOThreadPool.WorkItemState.active else {
                 promise.fail(NIOThreadPoolError.ThreadPoolInactive())
                 return
@@ -238,16 +235,16 @@ extension NIOThreadPool {
     }
 }
 
-extension NIOThreadPool {
-    public func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
-        self.shutdownGracefully(queue: .global(), callback)
+public extension NIOThreadPool {
+    func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
+        shutdownGracefully(queue: .global(), callback)
     }
 
-    public func syncShutdownGracefully() throws {
+    func syncShutdownGracefully() throws {
         let errorStorageLock = Lock()
-        var errorStorage: Swift.Error? = nil
+        var errorStorage: Swift.Error?
         let continuation = DispatchWorkItem {}
-        self.shutdownGracefully { error in
+        shutdownGracefully { error in
             if let error = error {
                 errorStorageLock.withLock {
                     errorStorage = error

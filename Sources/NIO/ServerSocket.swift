@@ -50,7 +50,7 @@
     #if !os(Windows)
         @available(*, deprecated, renamed: "init(socket:setNonBlocking:)")
         convenience init(descriptor: CInt, setNonBlocking: Bool = false) throws {
-          try self.init(socket: descriptor, setNonBlocking: setNonBlocking)
+            try self.init(socket: descriptor, setNonBlocking: setNonBlocking)
         }
     #endif
 
@@ -61,7 +61,7 @@
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if socket is invalid.
     init(socket: NIOBSDSocket.Handle, setNonBlocking: Bool = false) throws {
-        cleanupOnClose = false  // socket already bound, owner must clean up
+        cleanupOnClose = false // socket already bound, owner must clean up
         try super.init(socket: socket)
         if setNonBlocking {
             try self.setNonBlocking()
@@ -86,17 +86,17 @@
     /// - returns: A `Socket` once a new connection was established or `nil` if this `ServerSocket` is in non-blocking mode and there is no new connection that can be accepted when this method is called.
     /// - throws: An `IOError` if the operation failed.
     func accept(setNonBlocking: Bool = false) throws -> Socket? {
-        return try withUnsafeHandle { fd in
+        try withUnsafeHandle { fd in
             #if os(Linux)
-            let flags: Int32
-            if setNonBlocking {
-                flags = Linux.SOCK_NONBLOCK
-            } else {
-                flags = 0
-            }
-            let result = try Linux.accept4(descriptor: fd, addr: nil, len: nil, flags: flags)
+                let flags: Int32
+                if setNonBlocking {
+                    flags = Linux.SOCK_NONBLOCK
+                } else {
+                    flags = 0
+                }
+                let result = try Linux.accept4(descriptor: fd, addr: nil, len: nil, flags: flags)
             #else
-            let result = try NIOBSDSocket.accept(socket: fd, address: nil, address_len: nil)
+                let result = try NIOBSDSocket.accept(socket: fd, address: nil, address_len: nil)
             #endif
 
             guard let fd = result else {
@@ -104,27 +104,27 @@
             }
             let sock = try Socket(socket: fd)
             #if !os(Linux)
-            if setNonBlocking {
-                do {
-                    try sock.setNonBlocking()
-                } catch {
-                    // best effort
-                    try? sock.close()
-                    throw error
+                if setNonBlocking {
+                    do {
+                        try sock.setNonBlocking()
+                    } catch {
+                        // best effort
+                        try? sock.close()
+                        throw error
+                    }
                 }
-            }
             #endif
             return sock
         }
     }
-    
+
     /// Close the socket.
     ///
     /// After the socket was closed all other methods will throw an `IOError` when called.
     ///
     /// - throws: An `IOError` if the operation failed.
     override func close() throws {
-        let maybePathname = self.cleanupOnClose ? (try? self.localAddress().pathname) : nil
+        let maybePathname = cleanupOnClose ? (try? localAddress().pathname) : nil
         try super.close()
         if let socketPath = maybePathname {
             try BaseSocket.cleanupSocket(unixDomainSocketPath: socketPath)

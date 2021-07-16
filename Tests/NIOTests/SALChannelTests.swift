@@ -12,22 +12,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
 import NIOConcurrencyHelpers
+import XCTest
 
 final class SALChannelTest: XCTestCase, SALTest {
     var group: MultiThreadedEventLoopGroup!
     var kernelToUserBox: LockedBox<KernelToUser>!
     var userToKernelBox: LockedBox<UserToKernel>!
-    var wakeups: LockedBox<()>!
+    var wakeups: LockedBox<Void>!
 
     override func setUp() {
-        self.setUpSAL()
+        setUpSAL()
     }
 
     override func tearDown() {
-        self.tearDownSAL()
+        tearDownSAL()
     }
 
     func testBasicConnectedChannel() throws {
@@ -35,8 +35,8 @@ final class SALChannelTest: XCTestCase, SALTest {
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
         let buffer = ByteBuffer(string: "xxx")
 
-        let channel = try self.makeConnectedSocketChannel(localAddress: localAddress,
-                                                          remoteAddress: serverAddress)
+        let channel = try makeConnectedSocketChannel(localAddress: localAddress,
+                                                     remoteAddress: serverAddress)
 
         try channel.eventLoop.runSAL(syscallAssertions: {
             try self.assertWrite(expectedFD: .max, expectedBytes: buffer, return: .processed(buffer.readableBytes))
@@ -82,11 +82,11 @@ final class SALChannelTest: XCTestCase, SALTest {
             }
 
             func channelWritabilityChanged(context: ChannelHandlerContext) {
-                self.numberOfCalls += 1
+                numberOfCalls += 1
 
-                XCTAssertEqual(self.writableNotificationStepExpectation.load(),
+                XCTAssertEqual(writableNotificationStepExpectation.load(),
                                numberOfCalls)
-                switch self.numberOfCalls {
+                switch numberOfCalls {
                 case 1:
                     // First, we should see a `false` here because 2 bytes is above the high watermark.
                     XCTAssertFalse(context.channel.isWritable)
@@ -99,8 +99,8 @@ final class SALChannelTest: XCTestCase, SALTest {
                     buffer.writeString("ABC")
 
                     // We expect another channelWritabilityChanged notification
-                    XCTAssertTrue(self.writableNotificationStepExpectation.compareAndExchange(expected: 2, desired: 3))
-                    context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+                    XCTAssertTrue(writableNotificationStepExpectation.compareAndExchange(expected: 2, desired: 3))
+                    context.writeAndFlush(wrapOutboundOut(buffer), promise: nil)
                 case 3:
                     // Next, we should go to false because we never send all the bytes.
                     XCTAssertFalse(context.channel.isWritable)
@@ -108,14 +108,14 @@ final class SALChannelTest: XCTestCase, SALTest {
                     // And finally, back to `true` because eventually, we'll write enough.
                     XCTAssertTrue(context.channel.isWritable)
                 default:
-                    XCTFail("call \(self.numberOfCalls) unexpected (\(context.channel.isWritable))")
+                    XCTFail("call \(numberOfCalls) unexpected (\(context.channel.isWritable))")
                 }
             }
         }
 
-        var maybeChannel: SocketChannel? = nil
-        XCTAssertNoThrow(maybeChannel = try self.makeConnectedSocketChannel(localAddress: localAddress,
-                                                                            remoteAddress: serverAddress))
+        var maybeChannel: SocketChannel?
+        XCTAssertNoThrow(maybeChannel = try makeConnectedSocketChannel(localAddress: localAddress,
+                                                                       remoteAddress: serverAddress))
         guard let channel = maybeChannel else {
             XCTFail("couldn't construct channel")
             return
@@ -136,7 +136,7 @@ final class SALChannelTest: XCTestCase, SALTest {
             XCTAssertTrue(writableNotificationStepExpectation.compareAndExchange(expected: 1, desired: 2))
             let writableEvent = SelectorEvent(io: [.write],
                                               registration: NIORegistration(channel: .socketChannel(channel),
-                                                                            interested:  [.write],
+                                                                            interested: [.write],
                                                                             registrationID: .initialRegistrationID))
             try self.assertWaitingForNotification(result: writableEvent)
             try self.assertWrite(expectedFD: .max,
@@ -185,7 +185,7 @@ final class SALChannelTest: XCTestCase, SALTest {
     func testWeSurviveIfIgnoringSIGPIPEFails() {
         // We know this sometimes happens on Darwin, so let's test it.
         let expectedError = IOError(errnoCode: EINVAL, reason: "bad")
-        XCTAssertThrowsError(try self.makeSocketChannelInjectingFailures(disableSIGPIPEFailure: expectedError)) { error in
+        XCTAssertThrowsError(try makeSocketChannelInjectingFailures(disableSIGPIPEFailure: expectedError)) { error in
             XCTAssertEqual(expectedError.errnoCode, (error as? IOError)?.errnoCode)
         }
     }
@@ -204,19 +204,19 @@ final class SALChannelTest: XCTestCase, SALTest {
                 self.group = group
             }
 
-            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                self.numberOfCalls += 1
+            func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
+                numberOfCalls += 1
                 XCTAssertEqual("hello",
-                               String(decoding: self.unwrapInboundIn(data).readableBytesView, as: Unicode.UTF8.self))
-                if self.numberOfCalls == 1 {
-                    self.group.leave()
+                               String(decoding: unwrapInboundIn(data).readableBytesView, as: Unicode.UTF8.self))
+                if numberOfCalls == 1 {
+                    group.leave()
                 }
             }
         }
 
-        var maybeChannel: SocketChannel? = nil
-        XCTAssertNoThrow(maybeChannel = try self.makeConnectedSocketChannel(localAddress: localAddress,
-                                                                            remoteAddress: serverAddress))
+        var maybeChannel: SocketChannel?
+        XCTAssertNoThrow(maybeChannel = try makeConnectedSocketChannel(localAddress: localAddress,
+                                                                       remoteAddress: serverAddress))
         guard let channel = maybeChannel else {
             XCTFail("couldn't construct channel")
             return
@@ -242,7 +242,7 @@ final class SALChannelTest: XCTestCase, SALTest {
     }
 
     func testBasicConnectWithClientBootstrap() {
-        guard let channel = try? self.makeSocketChannel() else {
+        guard let channel = try? makeSocketChannel() else {
             XCTFail("couldn't make a channel")
             return
         }
@@ -250,21 +250,21 @@ final class SALChannelTest: XCTestCase, SALTest {
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
         XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
             try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
-                return (value as? SocketOptionValue) == 1
+                (value as? SocketOptionValue) == 1
             }
             try self.assertConnect(expectedAddress: serverAddress, result: true)
             try self.assertLocalAddress(address: localAddress)
             try self.assertRemoteAddress(address: localAddress)
-            try self.assertRegister { selectable, event, Registration in
+            try self.assertRegister { _, event, _ in
                 XCTAssertEqual([.reset], event)
                 return true
             }
-            try self.assertReregister { selectable, event in
+            try self.assertReregister { _, event in
                 XCTAssertEqual([.reset, .readEOF], event)
                 return true
             }
-            try self.assertDeregister { selectable in
-                return true
+            try self.assertDeregister { _ in
+                true
             }
             try self.assertClose(expectedFD: .max)
         }) {
@@ -278,7 +278,7 @@ final class SALChannelTest: XCTestCase, SALTest {
     }
 
     func testClientBootstrapBindIsDoneAfterSocketOptions() {
-        guard let channel = try? self.makeSocketChannel() else {
+        guard let channel = try? makeSocketChannel() else {
             XCTFail("couldn't make a channel")
             return
         }
@@ -286,11 +286,11 @@ final class SALChannelTest: XCTestCase, SALTest {
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
         XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
             try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
-                return (value as? SocketOptionValue) == 1
+                (value as? SocketOptionValue) == 1
             }
             // This is the important bit: We need to apply the socket options _before_ ...
             try self.assertSetOption(expectedLevel: .socket, expectedOption: .so_reuseaddr) { value in
-                return (value as? SocketOptionValue) == 1
+                (value as? SocketOptionValue) == 1
             }
             // ... we call bind.
             try self.assertBind(expectedAddress: localAddress)
@@ -298,16 +298,16 @@ final class SALChannelTest: XCTestCase, SALTest {
             try self.assertConnect(expectedAddress: serverAddress, result: true)
             try self.assertLocalAddress(address: localAddress)
             try self.assertRemoteAddress(address: localAddress)
-            try self.assertRegister { selectable, event, Registration in
+            try self.assertRegister { _, event, _ in
                 XCTAssertEqual([.reset], event)
                 return true
             }
-            try self.assertReregister { selectable, event in
+            try self.assertReregister { _, event in
                 XCTAssertEqual([.reset, .readEOF], event)
                 return true
             }
-            try self.assertDeregister { selectable in
-                return true
+            try self.assertDeregister { _ in
+                true
             }
             try self.assertClose(expectedFD: .max)
         }) {
@@ -321,5 +321,4 @@ final class SALChannelTest: XCTestCase, SALTest {
                 }
         }.salWait())
     }
-
 }

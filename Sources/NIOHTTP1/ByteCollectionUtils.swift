@@ -14,20 +14,21 @@
 
 import NIO
 
-fileprivate let defaultWhitespaces = [" ", "\t"].map({$0.utf8.first!})
+private let defaultWhitespaces = [" ", "\t"].map { $0.utf8.first! }
 
 extension ByteBufferView {
-    internal func trim(limitingElements: [UInt8]) -> ByteBufferView {
-        guard let lastNonWhitespaceIndex = self.lastIndex(where: { !limitingElements.contains($0) }),
-              let firstNonWhitespaceIndex = self.firstIndex(where: { !limitingElements.contains($0) }) else {
-                // This buffer is entirely trimmed elements, so trim it to nothing.
-                return self[self.startIndex..<self.startIndex]
+    func trim(limitingElements: [UInt8]) -> ByteBufferView {
+        guard let lastNonWhitespaceIndex = lastIndex(where: { !limitingElements.contains($0) }),
+              let firstNonWhitespaceIndex = firstIndex(where: { !limitingElements.contains($0) })
+        else {
+            // This buffer is entirely trimmed elements, so trim it to nothing.
+            return self[startIndex ..< startIndex]
         }
-        return self[firstNonWhitespaceIndex..<index(after: lastNonWhitespaceIndex)]
+        return self[firstNonWhitespaceIndex ..< index(after: lastNonWhitespaceIndex)]
     }
-    
-    internal func trimSpaces() -> ByteBufferView {
-        return trim(limitingElements: defaultWhitespaces)
+
+    func trimSpaces() -> ByteBufferView {
+        trim(limitingElements: defaultWhitespaces)
     }
 }
 
@@ -39,35 +40,36 @@ extension Sequence where Self.Element == UInt8 {
     ///
     /// - Parameter bytes: The string constant in the form of a collection of `UInt8`
     /// - Returns: Whether the collection contains **EXACTLY** this array or no, but by ignoring case.
-    internal func compareCaseInsensitiveASCIIBytes<T: Sequence>(to: T) -> Bool
-        where T.Element == UInt8 {
-            // fast path: we can get the underlying bytes of both
-            let maybeMaybeResult = self.withContiguousStorageIfAvailable { lhsBuffer -> Bool? in
-                to.withContiguousStorageIfAvailable { rhsBuffer in
-                    if lhsBuffer.count != rhsBuffer.count {
+    func compareCaseInsensitiveASCIIBytes<T: Sequence>(to: T) -> Bool
+        where T.Element == UInt8
+    {
+        // fast path: we can get the underlying bytes of both
+        let maybeMaybeResult = withContiguousStorageIfAvailable { lhsBuffer -> Bool? in
+            to.withContiguousStorageIfAvailable { rhsBuffer in
+                if lhsBuffer.count != rhsBuffer.count {
+                    return false
+                }
+
+                for idx in 0 ..< lhsBuffer.count {
+                    // let's hope this gets vectorised ;)
+                    if lhsBuffer[idx] & 0xDF != rhsBuffer[idx] & 0xDF {
                         return false
                     }
-
-                    for idx in 0 ..< lhsBuffer.count {
-                        // let's hope this gets vectorised ;)
-                        if lhsBuffer[idx] & 0xdf != rhsBuffer[idx] & 0xdf {
-                            return false
-                        }
-                    }
-                    return true
                 }
+                return true
             }
+        }
 
-            if let maybeResult = maybeMaybeResult, let result = maybeResult {
-                return result
-            } else {
-                return self.elementsEqual(to, by: {return ($0 & 0xdf) == ($1 & 0xdf)})
-            }
+        if let maybeResult = maybeMaybeResult, let result = maybeResult {
+            return result
+        } else {
+            return elementsEqual(to, by: { ($0 & 0xDF) == ($1 & 0xDF) })
+        }
     }
 }
 
 extension String {
-    internal func isEqualCaseInsensitiveASCIIBytes(to: String) -> Bool {
-        return self.utf8.compareCaseInsensitiveASCIIBytes(to: to.utf8)
+    func isEqualCaseInsensitiveASCIIBytes(to: String) -> Bool {
+        utf8.compareCaseInsensitiveASCIIBytes(to: to.utf8)
     }
 }

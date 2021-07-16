@@ -12,18 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIO
 @testable import NIOHTTP1
+import XCTest
 
-fileprivate enum DummyError: Error {
+private enum DummyError: Error {
     case err
 }
 
 class ByteBufferUtilsTest: XCTestCase {
-    
     func testComparators() {
-        let someByteBuffer: ByteBuffer = ByteBuffer(string: "fiRSt")
+        let someByteBuffer = ByteBuffer(string: "fiRSt")
         XCTAssert(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "first".utf8))
@@ -61,16 +60,15 @@ class ByteBufferUtilsTest: XCTestCase {
     }
 
     func testTrimming() {
-        XCTAssertEqual(byteBufferView(string: "   first").trimSpaces().map({CChar($0)}), byteBufferView(string: "first").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "   first  ").trimSpaces().map({CChar($0)}), byteBufferView(string: "first").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "first  ").trimSpaces().map({CChar($0)}), byteBufferView(string: "first").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "first").trimSpaces().map({CChar($0)}), byteBufferView(string: "first").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: " \t\t  fi  rst").trimSpaces().map({CChar($0)}), byteBufferView(string: "fi  rst").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "   firs  t \t ").trimSpaces().map({CChar($0)}), byteBufferView(string: "firs  t").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "f\t  irst  ").trimSpaces().map({CChar($0)}), byteBufferView(string: "f\t  irst").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "f i  rs  t").trimSpaces().map({CChar($0)}), byteBufferView(string: "f i  rs  t").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "   \t \t ").trimSpaces().map({CChar($0)}),
-            byteBufferView(string: "").map({CChar($0)}))
+        XCTAssertEqual(byteBufferView(string: "   first").trimSpaces().map { CChar($0) }, byteBufferView(string: "first").map { CChar($0) })
+        XCTAssertEqual(byteBufferView(string: "   first  ").trimSpaces().map { CChar($0) }, byteBufferView(string: "first").map { CChar($0) })
+        XCTAssertEqual(byteBufferView(string: "first  ").trimSpaces().map { CChar($0) }, byteBufferView(string: "first").map { CChar($0) })
+        XCTAssertEqual(byteBufferView(string: "first").trimSpaces().map { CChar($0) }, byteBufferView(string: "first").map { CChar($0) })
+        XCTAssertEqual(byteBufferView(string: " \t\t  fi  rst").trimSpaces().map { CChar($0) }, byteBufferView(string: "fi  rst").map { CChar($0) })
+        XCTAssertEqual(byteBufferView(string: "   firs  t \t ").trimSpaces().map { CChar($0) }, byteBufferView(string: "firs  t").map { CChar($0) })
+        XCTAssertEqual(byteBufferView(string: "f\t  irst  ").trimSpaces().map { CChar($0) }, byteBufferView(string: "f\t  irst").map { CChar($0) })
+        XCTAssertEqual(byteBufferView(string: "f i  rs  t").trimSpaces().map { CChar($0) }, byteBufferView(string: "f i  rs  t").map { CChar($0) })
+        XCTAssertEqual(byteBufferView(string: "   \t \t ").trimSpaces().map { CChar($0) },
+                       byteBufferView(string: "").map { CChar($0) })
     }
-
 }

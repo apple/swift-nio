@@ -1,3 +1,6 @@
+import Dispatch
+@testable import NIO
+import NIOConcurrencyHelpers
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -12,12 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 import XCTest
-@testable import NIO
-import Dispatch
-import NIOConcurrencyHelpers
 
-public final class EventLoopTest : XCTestCase {
-
+public final class EventLoopTest: XCTestCase {
     public func testSchedule() throws {
         let eventLoop = EmbeddedEventLoop()
 
@@ -209,7 +208,7 @@ public final class EventLoopTest : XCTestCase {
 
         let loop = eventLoopGroup.next()
         loop.execute {
-            let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0)) { task in
+            let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0)) { _ in
                 XCTFail()
             }
             task.cancel()
@@ -274,7 +273,7 @@ public final class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleRepeatedTaskToNotRetainEventLoop() throws {
-        weak var weakEventLoop: EventLoop? = nil
+        weak var weakEventLoop: EventLoop?
         try {
             let initialDelay: TimeAmount = .milliseconds(5)
             let delay: TimeAmount = .milliseconds(10)
@@ -300,7 +299,7 @@ public final class EventLoopTest : XCTestCase {
             }
             return p.futureResult
         }
-        for _ in 0..<10 {
+        for _ in 0 ..< 10 {
             // just running shouldn't do anything
             eventLoop.run()
         }
@@ -409,13 +408,13 @@ public final class EventLoopTest : XCTestCase {
 
         // We now want to connect to it. To try to slow this stuff down, we're going to use a multiple of the number
         // of event loops.
-        for _ in 0..<(threads * 5) {
+        for _ in 0 ..< (threads * 5) {
             let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
                 .connect(to: serverChannel.localAddress!)
                 .wait())
 
             var buffer = clientChannel.allocator.buffer(capacity: numBytes)
-            for i in 0..<numBytes {
+            for i in 0 ..< numBytes {
                 buffer.writeInteger(UInt8(i % 256))
             }
 
@@ -439,7 +438,7 @@ public final class EventLoopTest : XCTestCase {
 
             private let promiseRegisterCallback: (EventLoopPromise<Void>) -> Void
 
-            var closePromise: EventLoopPromise<Void>? = nil
+            var closePromise: EventLoopPromise<Void>?
             private let channelActivePromise: EventLoopPromise<Void>?
 
             init(channelActivePromise: EventLoopPromise<Void>? = nil, _ promiseRegisterCallback: @escaping (EventLoopPromise<Void>) -> Void) {
@@ -447,21 +446,21 @@ public final class EventLoopTest : XCTestCase {
                 self.channelActivePromise = channelActivePromise
             }
 
-            func channelActive(context: ChannelHandlerContext) {
-                self.channelActivePromise?.succeed(())
+            func channelActive(context _: ChannelHandlerContext) {
+                channelActivePromise?.succeed(())
             }
 
             func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-                guard self.closePromise == nil else {
+                guard closePromise == nil else {
                     XCTFail("Attempted to create duplicate close promise")
                     return
                 }
                 XCTAssertTrue(context.channel.isActive)
-                self.closePromise = context.eventLoop.makePromise()
-                self.closePromise!.futureResult.whenSuccess {
+                closePromise = context.eventLoop.makePromise()
+                closePromise!.futureResult.whenSuccess {
                     context.close(mode: mode, promise: promise)
                 }
-                promiseRegisterCallback(self.closePromise!)
+                promiseRegisterCallback(closePromise!)
             }
         }
 
@@ -539,7 +538,7 @@ public final class EventLoopTest : XCTestCase {
 
     public func testEventLoopThreads() throws {
         var counter = 0
-        let body: ThreadInitializer = { t in
+        let body: ThreadInitializer = { _ in
             counter += 1
         }
         let threads: [ThreadInitializer] = [body, body]
@@ -627,7 +626,7 @@ public final class EventLoopTest : XCTestCase {
     public func testShutdownWhileScheduledTasksNotReady() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let eventLoop = group.next()
-        _ = eventLoop.scheduleTask(in: .hours(1)) { }
+        _ = eventLoop.scheduleTask(in: .hours(1)) {}
         try group.syncShutdownGracefully()
     }
 
@@ -638,7 +637,7 @@ public final class EventLoopTest : XCTestCase {
             let groupIsShutdown = NIOAtomic.makeAtomic(value: false)
             let removed = NIOAtomic.makeAtomic(value: false)
 
-            public func handlerRemoved(context: ChannelHandlerContext) {
+            public func handlerRemoved(context _: ChannelHandlerContext) {
                 XCTAssertFalse(groupIsShutdown.load())
                 XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
             }
@@ -674,7 +673,7 @@ public final class EventLoopTest : XCTestCase {
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
-        var array = Array<(Int, NIODeadline)>()
+        var array = [(Int, NIODeadline)]()
         let scheduled1 = eventLoopGroup.next().scheduleTask(in: .milliseconds(500)) {
             array.append((1, .now()))
         }
@@ -706,7 +705,6 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertTrue(second.1 < third.1)
 
         XCTAssertTrue(result.isEmpty)
-
     }
 
     public func testRepeatedTaskThatIsImmediatelyCancelledNotifies() throws {
@@ -723,7 +721,7 @@ public final class EventLoopTest : XCTestCase {
         promise1.futureResult.whenSuccess { expect1.fulfill() }
         promise2.futureResult.whenSuccess { expect2.fulfill() }
         loop.execute {
-            let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0), notifying: promise1) { task in
+            let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0), notifying: promise1) { _ in
                 XCTFail()
             }
             task.cancel(promise: promise2)
@@ -744,7 +742,7 @@ public final class EventLoopTest : XCTestCase {
         let promise2: EventLoopPromise<Void> = loop.makePromise()
         let expectRuns = XCTestExpectation(description: "Repeated task has run")
         expectRuns.expectedFulfillmentCount = 2
-        let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(10), notifying: promise1) { task in
+        let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(10), notifying: promise1) { _ in
             expectRuns.fulfill()
         }
         XCTAssertEqual(XCTWaiter.wait(for: [expectRuns], timeout: 0.05), .completed)
@@ -789,7 +787,7 @@ public final class EventLoopTest : XCTestCase {
 
         class Thing {}
 
-        weak var weakThing: Thing? = nil
+        weak var weakThing: Thing?
 
         func make() -> Scheduled<Never> {
             let aThing = Thing()
@@ -905,7 +903,8 @@ public final class EventLoopTest : XCTestCase {
 
         for timeAmount in [smallestPossibleTimeAmount, largestPossibleTimeAmount, zeroTimeAmount] {
             for deadline in [smallestPossibleDeadline, largestPossibleDeadline, distantPast, distantFuture,
-                             zeroDeadline, nowDeadline] {
+                             zeroDeadline, nowDeadline]
+            {
                 let (partial, overflow) = Int64(deadline.uptimeNanoseconds).addingReportingOverflow(timeAmount.nanoseconds)
                 let expectedValue: UInt64
                 if overflow {
@@ -939,7 +938,8 @@ public final class EventLoopTest : XCTestCase {
 
         for timeAmount in [smallestPossibleTimeAmount, largestPossibleTimeAmount, zeroTimeAmount] {
             for deadline in [smallestPossibleDeadline, largestPossibleDeadline, distantPast, distantFuture,
-                             zeroDeadline, nowDeadline] {
+                             zeroDeadline, nowDeadline]
+            {
                 let (partial, overflow) = Int64(deadline.uptimeNanoseconds).subtractingReportingOverflow(timeAmount.nanoseconds)
                 let expectedValue: UInt64
                 if overflow {
@@ -1012,7 +1012,7 @@ public final class EventLoopTest : XCTestCase {
                 self.groupToNotify = groupToNotify
             }
 
-            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data _: NIOAny) {
                 context.eventLoop.execute {
                     self.groupToNotify.leave()
                 }
@@ -1071,7 +1071,7 @@ public final class EventLoopTest : XCTestCase {
         let task = el.scheduleTask(in: .milliseconds(10)) {}
         task.cancel()
         // sleep for 10ms which should have the above scheduled (and cancelled) task have caused an unnecessary wakeup.
-        Thread.sleep(forTimeInterval: 0.015 /* 15 ms */)
+        Thread.sleep(forTimeInterval: 0.015 /* 15 ms */ )
     }
 
     func testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask() {
@@ -1083,7 +1083,7 @@ public final class EventLoopTest : XCTestCase {
         let el = elg.next()
         let g = DispatchGroup()
         g.enter()
-        el.scheduleTask(in: .nanoseconds(10) /* something non-0 */) {
+        el.scheduleTask(in: .nanoseconds(10) /* something non-0 */ ) {
             el.execute {
                 g.leave()
             }
@@ -1179,21 +1179,21 @@ public final class EventLoopTest : XCTestCase {
             typealias InboundIn = ByteBuffer
 
             // For once, we don't need thread-safety as we're taking the calling thread :)
-            var received: UInt8? = nil
+            var received: UInt8?
             var readCalls: Int = 0
-            var allDonePromise: EventLoopPromise<Void>? = nil
+            var allDonePromise: EventLoopPromise<Void>?
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                self.readCalls += 1
-                XCTAssertEqual(1, self.readCalls)
+                readCalls += 1
+                XCTAssertEqual(1, readCalls)
 
-                var data = self.unwrapInboundIn(data)
+                var data = unwrapInboundIn(data)
                 XCTAssertEqual(1, data.readableBytes)
 
-                XCTAssertNil(self.received)
-                self.received = data.readInteger()
+                XCTAssertNil(received)
+                received = data.readInteger()
 
-                self.allDonePromise?.succeed(())
+                allDonePromise?.succeed(())
 
                 context.close(promise: nil)
             }
@@ -1290,7 +1290,7 @@ public final class EventLoopTest : XCTestCase {
 
         let provider = NIOEventLoopGroupProvider.shared(eventLoopGroup)
 
-        if case .shared(let sharedEventLoopGroup) = provider {
+        if case let .shared(sharedEventLoopGroup) = provider {
             XCTAssertTrue(sharedEventLoopGroup is MultiThreadedEventLoopGroup)
             XCTAssertTrue(sharedEventLoopGroup === eventLoopGroup)
         } else {
@@ -1398,85 +1398,85 @@ public final class EventLoopTest : XCTestCase {
     }
 }
 
-fileprivate class EventLoopWithPreSucceededFuture: EventLoop {
+private class EventLoopWithPreSucceededFuture: EventLoop {
     var inEventLoop: Bool {
-        return true
+        true
     }
 
-    func execute(_ task: @escaping () -> Void) {
+    func execute(_: @escaping () -> Void) {
         preconditionFailure("not implemented")
     }
 
-    func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
-        preconditionFailure("not implemented")
-    }
-
-    @discardableResult
-    func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    func submit<T>(_: @escaping () throws -> T) -> EventLoopFuture<T> {
         preconditionFailure("not implemented")
     }
 
     @discardableResult
-    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    func scheduleTask<T>(deadline _: NIODeadline, _: @escaping () throws -> T) -> Scheduled<T> {
         preconditionFailure("not implemented")
     }
 
-    func preconditionInEventLoop(file: StaticString, line: UInt) {
+    @discardableResult
+    func scheduleTask<T>(in _: TimeAmount, _: @escaping () throws -> T) -> Scheduled<T> {
         preconditionFailure("not implemented")
     }
 
-    func preconditionNotInEventLoop(file: StaticString, line: UInt) {
+    func preconditionInEventLoop(file _: StaticString, line _: UInt) {
+        preconditionFailure("not implemented")
+    }
+
+    func preconditionNotInEventLoop(file _: StaticString, line _: UInt) {
         preconditionFailure("not implemented")
     }
 
     var _succeededVoidFuture: EventLoopFuture<Void>?
     func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
-        guard self.inEventLoop, let voidFuture = self._succeededVoidFuture else {
-            return self.makeSucceededFuture(())
+        guard inEventLoop, let voidFuture = _succeededVoidFuture else {
+            return makeSucceededFuture(())
         }
         return voidFuture
     }
 
     init() {
-        self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+        _succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
     }
 
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
-        self._succeededVoidFuture = nil
+        _succeededVoidFuture = nil
         queue.async {
             callback(nil)
         }
     }
 }
 
-fileprivate class EventLoopWithoutPreSucceededFuture: EventLoop {
+private class EventLoopWithoutPreSucceededFuture: EventLoop {
     var inEventLoop: Bool {
-        return true
+        true
     }
 
-    func execute(_ task: @escaping () -> Void) {
+    func execute(_: @escaping () -> Void) {
         preconditionFailure("not implemented")
     }
 
-    func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
-        preconditionFailure("not implemented")
-    }
-
-    @discardableResult
-    func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    func submit<T>(_: @escaping () throws -> T) -> EventLoopFuture<T> {
         preconditionFailure("not implemented")
     }
 
     @discardableResult
-    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    func scheduleTask<T>(deadline _: NIODeadline, _: @escaping () throws -> T) -> Scheduled<T> {
         preconditionFailure("not implemented")
     }
 
-    func preconditionInEventLoop(file: StaticString, line: UInt) {
+    @discardableResult
+    func scheduleTask<T>(in _: TimeAmount, _: @escaping () throws -> T) -> Scheduled<T> {
         preconditionFailure("not implemented")
     }
 
-    func preconditionNotInEventLoop(file: StaticString, line: UInt) {
+    func preconditionInEventLoop(file _: StaticString, line _: UInt) {
+        preconditionFailure("not implemented")
+    }
+
+    func preconditionNotInEventLoop(file _: StaticString, line _: UInt) {
         preconditionFailure("not implemented")
     }
 

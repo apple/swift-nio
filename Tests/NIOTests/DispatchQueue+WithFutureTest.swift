@@ -27,7 +27,7 @@ class DispatchQueueWithFutureTest: XCTestCase {
         var nonBlockingRan = false
         let futureResult: EventLoopFuture<String> = DispatchQueue.global().asyncWithFuture(eventLoop: eventLoop) {
             () -> String in
-            sem.wait()  // Block in callback
+            sem.wait() // Block in callback
             return "hello"
         }
         futureResult.whenSuccess { value in
@@ -50,7 +50,7 @@ class DispatchQueueWithFutureTest: XCTestCase {
         var nonBlockingRan = false
         let futureResult: EventLoopFuture<String> = DispatchQueue.global().asyncWithFuture(eventLoop: eventLoop) {
             () -> String in
-            sem.wait()  // Block in callback
+            sem.wait() // Block in callback
             throw DispatchQueueTestError.example
         }
         futureResult.whenFailure { err in

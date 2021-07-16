@@ -23,40 +23,38 @@ import XCTest
 ///
 
 extension SNIHandlerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (SNIHandlerTest) -> () throws -> Void)] {
-      return [
-                ("testLibre227NoSNIDripFeed", testLibre227NoSNIDripFeed),
-                ("testLibre227WithSNIDripFeed", testLibre227WithSNIDripFeed),
-                ("testOpenSSL102NoSNIDripFeed", testOpenSSL102NoSNIDripFeed),
-                ("testOpenSSL102WithSNIDripFeed", testOpenSSL102WithSNIDripFeed),
-                ("testCurlSecureTransportDripFeed", testCurlSecureTransportDripFeed),
-                ("testSafariDripFeed", testSafariDripFeed),
-                ("testChromeDripFeed", testChromeDripFeed),
-                ("testFirefoxDripFeed", testFirefoxDripFeed),
-                ("testLibre227NoSNIBlast", testLibre227NoSNIBlast),
-                ("testLibre227WithSNIBlast", testLibre227WithSNIBlast),
-                ("testOpenSSL102NoSNIBlast", testOpenSSL102NoSNIBlast),
-                ("testOpenSSL102WithSNIBlast", testOpenSSL102WithSNIBlast),
-                ("testCurlSecureTransportBlast", testCurlSecureTransportBlast),
-                ("testSafariBlast", testSafariBlast),
-                ("testChromeBlast", testChromeBlast),
-                ("testFirefoxBlast", testFirefoxBlast),
-                ("testIgnoresUnknownRecordTypes", testIgnoresUnknownRecordTypes),
-                ("testIgnoresUnknownTlsVersions", testIgnoresUnknownTlsVersions),
-                ("testIgnoresNonClientHelloHandshakeMessages", testIgnoresNonClientHelloHandshakeMessages),
-                ("testIgnoresInvalidHandshakeLength", testIgnoresInvalidHandshakeLength),
-                ("testIgnoresInvalidCipherSuiteLength", testIgnoresInvalidCipherSuiteLength),
-                ("testIgnoresInvalidCompressionLength", testIgnoresInvalidCompressionLength),
-                ("testIgnoresInvalidExtensionLength", testIgnoresInvalidExtensionLength),
-                ("testIgnoresInvalidIndividualExtensionLength", testIgnoresInvalidIndividualExtensionLength),
-                ("testIgnoresUnknownNameType", testIgnoresUnknownNameType),
-                ("testIgnoresInvalidNameLength", testIgnoresInvalidNameLength),
-                ("testIgnoresInvalidNameExtensionLength", testIgnoresInvalidNameExtensionLength),
-                ("testLudicrouslyTruncatedPacket", testLudicrouslyTruncatedPacket),
-                ("testFuzzingInputOne", testFuzzingInputOne),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (SNIHandlerTest) -> () throws -> Void)] {
+        [
+            ("testLibre227NoSNIDripFeed", testLibre227NoSNIDripFeed),
+            ("testLibre227WithSNIDripFeed", testLibre227WithSNIDripFeed),
+            ("testOpenSSL102NoSNIDripFeed", testOpenSSL102NoSNIDripFeed),
+            ("testOpenSSL102WithSNIDripFeed", testOpenSSL102WithSNIDripFeed),
+            ("testCurlSecureTransportDripFeed", testCurlSecureTransportDripFeed),
+            ("testSafariDripFeed", testSafariDripFeed),
+            ("testChromeDripFeed", testChromeDripFeed),
+            ("testFirefoxDripFeed", testFirefoxDripFeed),
+            ("testLibre227NoSNIBlast", testLibre227NoSNIBlast),
+            ("testLibre227WithSNIBlast", testLibre227WithSNIBlast),
+            ("testOpenSSL102NoSNIBlast", testOpenSSL102NoSNIBlast),
+            ("testOpenSSL102WithSNIBlast", testOpenSSL102WithSNIBlast),
+            ("testCurlSecureTransportBlast", testCurlSecureTransportBlast),
+            ("testSafariBlast", testSafariBlast),
+            ("testChromeBlast", testChromeBlast),
+            ("testFirefoxBlast", testFirefoxBlast),
+            ("testIgnoresUnknownRecordTypes", testIgnoresUnknownRecordTypes),
+            ("testIgnoresUnknownTlsVersions", testIgnoresUnknownTlsVersions),
+            ("testIgnoresNonClientHelloHandshakeMessages", testIgnoresNonClientHelloHandshakeMessages),
+            ("testIgnoresInvalidHandshakeLength", testIgnoresInvalidHandshakeLength),
+            ("testIgnoresInvalidCipherSuiteLength", testIgnoresInvalidCipherSuiteLength),
+            ("testIgnoresInvalidCompressionLength", testIgnoresInvalidCompressionLength),
+            ("testIgnoresInvalidExtensionLength", testIgnoresInvalidExtensionLength),
+            ("testIgnoresInvalidIndividualExtensionLength", testIgnoresInvalidIndividualExtensionLength),
+            ("testIgnoresUnknownNameType", testIgnoresUnknownNameType),
+            ("testIgnoresInvalidNameLength", testIgnoresInvalidNameLength),
+            ("testIgnoresInvalidNameExtensionLength", testIgnoresInvalidNameExtensionLength),
+            ("testLudicrouslyTruncatedPacket", testLudicrouslyTruncatedPacket),
+            ("testFuzzingInputOne", testFuzzingInputOne),
+        ]
+    }
 }
-

@@ -12,11 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
+import XCTest
 
-class FileRegionTest : XCTestCase {
-
+class FileRegionTest: XCTestCase {
     func testWriteFileRegion() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -26,7 +25,7 @@ class FileRegionTest : XCTestCase {
         let numBytes = 16 * 1024
 
         var content = ""
-        for i in 0..<numBytes {
+        for i in 0 ..< numBytes {
             content.append("\(i)")
         }
         let bytes = Array(content.utf8)
@@ -100,7 +99,7 @@ class FileRegionTest : XCTestCase {
             try "".write(toFile: filePath, atomically: false, encoding: .ascii)
 
             var futures: [EventLoopFuture<Void>] = []
-            for _ in 0..<10 {
+            for _ in 0 ..< 10 {
                 futures.append(clientChannel.write(NIOAny(fr)))
             }
             try clientChannel.writeAndFlush(NIOAny(fr)).wait()
@@ -117,7 +116,7 @@ class FileRegionTest : XCTestCase {
         let numBytes = 16 * 1024
 
         var content = ""
-        for i in 0..<numBytes {
+        for i in 0 ..< numBytes {
             content.append("\(i)")
         }
         let bytes = Array(content.utf8)
@@ -142,7 +141,7 @@ class FileRegionTest : XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        try withTemporaryFile { fd, filePath in
+        try withTemporaryFile { _, filePath in
             let fh1 = try NIOFileHandle(path: filePath)
             let fh2 = try NIOFileHandle(path: filePath)
             let fr1 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: bytes.count)
@@ -171,7 +170,7 @@ class FileRegionTest : XCTestCase {
     }
 
     func testWholeFileFileRegion() throws {
-        try withTemporaryFile(content: "hello") { fd, path in
+        try withTemporaryFile(content: "hello") { _, path in
             let handle = try NIOFileHandle(path: path)
             let region = try FileRegion(fileHandle: handle)
             defer {
@@ -197,7 +196,7 @@ class FileRegionTest : XCTestCase {
     }
 
     func testFileRegionDuplicatesShareSeekPointer() throws {
-        try withTemporaryFile(content: "0123456789") { fh1, path in
+        try withTemporaryFile(content: "0123456789") { fh1, _ in
             let fh2 = try fh1.duplicate()
 
             var fr1Bytes: [UInt8] = Array(repeating: 0, count: 5)
@@ -221,7 +220,7 @@ class FileRegionTest : XCTestCase {
     }
 
     func testMassiveFileRegionThatJustAboutWorks() {
-        withTemporaryFile(content: "0123456789") { fh, path in
+        withTemporaryFile(content: "0123456789") { fh, _ in
             // just in case someone uses 32bit platforms
             let readerIndex = UInt64(_UInt56.max) < UInt64(Int.max) ? Int(_UInt56.max) : Int.max
             let fr = FileRegion(fileHandle: fh, readerIndex: readerIndex, endIndex: Int.max)
@@ -231,11 +230,11 @@ class FileRegionTest : XCTestCase {
     }
 
     func testMassiveFileRegionReaderIndexWorks() {
-        withTemporaryFile(content: "0123456789") { fh, path in
+        withTemporaryFile(content: "0123456789") { fh, _ in
             // just in case someone uses 32bit platforms
             let readerIndex = (UInt64(_UInt56.max) < UInt64(Int.max) ? Int(_UInt56.max) : Int.max) - 1000
             var fr = FileRegion(fileHandle: fh, readerIndex: readerIndex, endIndex: Int.max)
-            for i in 0..<1000 {
+            for i in 0 ..< 1000 {
                 XCTAssertEqual(readerIndex + i, fr.readerIndex)
                 XCTAssertEqual(Int.max, fr.endIndex)
                 fr.moveReaderIndex(forwardBy: 1)
@@ -272,7 +271,7 @@ class FileRegionTest : XCTestCase {
         XCTAssertLessThanOrEqual(MemoryLayout<FileRegion>.size, 23)
         XCTAssertLessThanOrEqual(MemoryLayout<Level1>.size, 24)
 
-        XCTAssertNoThrow(try withTemporaryFile(content: "0123456789") { fh, path in
+        XCTAssertNoThrow(try withTemporaryFile(content: "0123456789") { fh, _ in
             let fr = try FileRegion(fileHandle: fh)
             XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case2(.case3(.case4(.fileRegion(fr)))))), 24)
             XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case3(.case4(.case1(fr))))), 24)

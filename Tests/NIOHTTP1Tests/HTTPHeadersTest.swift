@@ -12,17 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
 @testable import NIOHTTP1
+import XCTest
 
-class HTTPHeadersTest : XCTestCase {
+class HTTPHeadersTest: XCTestCase {
     func testCasePreservedButInsensitiveLookup() {
-        let originalHeaders = [ ("User-Agent", "1"),
-                                ("host", "2"),
-                                ("X-SOMETHING", "3"),
-                                ("SET-COOKIE", "foo=bar"),
-                                ("Set-Cookie", "buz=cux")]
+        let originalHeaders = [("User-Agent", "1"),
+                               ("host", "2"),
+                               ("X-SOMETHING", "3"),
+                               ("SET-COOKIE", "foo=bar"),
+                               ("Set-Cookie", "buz=cux")]
 
         let headers = HTTPHeaders(originalHeaders)
 
@@ -32,7 +32,7 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertEqual(["2"], headers["Host"])
         XCTAssertEqual(["foo=bar", "buz=cux"], headers["set-cookie"])
 
-        for (key,value) in headers {
+        for (key, value) in headers {
             switch key {
             case "User-Agent":
                 XCTAssertEqual("1", value)
@@ -51,11 +51,11 @@ class HTTPHeadersTest : XCTestCase {
     }
 
     func testDictionaryLiteralAlternative() {
-        let headers: HTTPHeaders = [ "User-Agent": "1",
-                                     "host": "2",
-                                     "X-SOMETHING": "3",
-                                     "SET-COOKIE": "foo=bar",
-                                     "Set-Cookie": "buz=cux"]
+        let headers: HTTPHeaders = ["User-Agent": "1",
+                                    "host": "2",
+                                    "X-SOMETHING": "3",
+                                    "SET-COOKIE": "foo=bar",
+                                    "Set-Cookie": "buz=cux"]
 
         // looking up headers value is case-insensitive
         XCTAssertEqual(["1"], headers["User-Agent"])
@@ -63,7 +63,7 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertEqual(["2"], headers["Host"])
         XCTAssertEqual(["foo=bar", "buz=cux"], headers["set-cookie"])
 
-        for (key,value) in headers {
+        for (key, value) in headers {
             switch key {
             case "User-Agent":
                 XCTAssertEqual("1", value)
@@ -82,12 +82,12 @@ class HTTPHeadersTest : XCTestCase {
     }
 
     func testWriteHeadersSeparately() {
-        let originalHeaders = [ ("User-Agent", "1"),
-                                ("host", "2"),
-                                ("X-SOMETHING", "3"),
-                                ("X-Something", "4"),
-                                ("SET-COOKIE", "foo=bar"),
-                                ("Set-Cookie", "buz=cux")]
+        let originalHeaders = [("User-Agent", "1"),
+                               ("host", "2"),
+                               ("X-SOMETHING", "3"),
+                               ("X-Something", "4"),
+                               ("SET-COOKIE", "foo=bar"),
+                               ("Set-Cookie", "buz=cux")]
 
         let headers = HTTPHeaders(originalHeaders)
         let channel = EmbeddedChannel()
@@ -106,10 +106,10 @@ class HTTPHeadersTest : XCTestCase {
     }
 
     func testRevealHeadersSeparately() {
-        let originalHeaders = [ ("User-Agent", "1"),
-                                ("host", "2"),
-                                ("X-SOMETHING", "3, 4"),
-                                ("X-Something", "5")]
+        let originalHeaders = [("User-Agent", "1"),
+                               ("host", "2"),
+                               ("X-SOMETHING", "3, 4"),
+                               ("X-Something", "5")]
 
         let headers = HTTPHeaders(originalHeaders)
         XCTAssertEqual(headers[canonicalForm: "user-agent"], ["1"])
@@ -119,10 +119,10 @@ class HTTPHeadersTest : XCTestCase {
     }
 
     func testSubscriptDoesntSplitHeaders() {
-        let originalHeaders = [ ("User-Agent", "1"),
-                                ("host", "2"),
-                                ("X-SOMETHING", "3, 4"),
-                                ("X-Something", "5")]
+        let originalHeaders = [("User-Agent", "1"),
+                               ("host", "2"),
+                               ("X-SOMETHING", "3, 4"),
+                               ("X-Something", "5")]
 
         let headers = HTTPHeaders(originalHeaders)
         XCTAssertEqual(headers["user-agent"], ["1"])
@@ -132,10 +132,10 @@ class HTTPHeadersTest : XCTestCase {
     }
 
     func testCanonicalisationDoesntHappenForSetCookie() {
-        let originalHeaders = [ ("User-Agent", "1"),
-                                ("host", "2"),
-                                ("Set-Cookie", "foo=bar; expires=Sun, 17-Mar-2013 13:49:50 GMT"),
-                                ("Set-Cookie", "buz=cux; expires=Fri, 13 Oct 2017 21:21:41 GMT")]
+        let originalHeaders = [("User-Agent", "1"),
+                               ("host", "2"),
+                               ("Set-Cookie", "foo=bar; expires=Sun, 17-Mar-2013 13:49:50 GMT"),
+                               ("Set-Cookie", "buz=cux; expires=Fri, 13 Oct 2017 21:21:41 GMT")]
 
         let headers = HTTPHeaders(originalHeaders)
         XCTAssertEqual(headers[canonicalForm: "user-agent"], ["1"])
@@ -165,9 +165,9 @@ class HTTPHeadersTest : XCTestCase {
     }
 
     func testContains() {
-        let originalHeaders = [ ("X-Header", "1"),
-                                ("X-SomeHeader", "3"),
-                                ("X-Header", "2")]
+        let originalHeaders = [("X-Header", "1"),
+                               ("X-SomeHeader", "3"),
+                               ("X-Header", "2")]
 
         let headers = HTTPHeaders(originalHeaders)
         XCTAssertTrue(headers.contains(name: "x-header"))
@@ -180,7 +180,7 @@ class HTTPHeadersTest : XCTestCase {
             (":method", "GET"),
             ("foo", "bar"),
             ("foo", "baz"),
-            ("custom-key", "value-1,value-2")
+            ("custom-key", "value-1,value-2"),
         ])
 
         XCTAssertEqual(headers.first(name: ":method"), "GET")
@@ -188,7 +188,7 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertEqual(headers.first(name: "custom-key"), "value-1,value-2")
         XCTAssertNil(headers.first(name: "not-present"))
     }
-    
+
     func testKeepAliveStateStartsWithClose() {
         var headers = HTTPHeaders([("Connection", "close")])
 
@@ -225,7 +225,7 @@ class HTTPHeadersTest : XCTestCase {
         let headers = HTTPHeaders([("Connection", "other, keEP-alive"),
                                    ("Content-Type", "text/html"),
                                    ("Connection", "server, x-options")])
-        
+
         XCTAssertTrue(headers.isKeepAlive(version: .http1_1))
     }
 
@@ -233,24 +233,24 @@ class HTTPHeadersTest : XCTestCase {
         let headers = HTTPHeaders([("Connection", "x-options,  other"),
                                    ("Content-Type", "text/html"),
                                    ("Connection", "server,     clOse")])
-        
+
         XCTAssertFalse(headers.isKeepAlive(version: .http1_1))
     }
-        
+
     func testRandomAccess() {
-        let originalHeaders = [ ("X-first", "one"),
-                                ("X-second", "two")]
+        let originalHeaders = [("X-first", "one"),
+                               ("X-second", "two")]
         let headers = HTTPHeaders(originalHeaders)
-        
+
         XCTAssertEqual(headers[headers.startIndex].name, originalHeaders.first?.0)
         XCTAssertEqual(headers[headers.startIndex].value, originalHeaders.first?.1)
         XCTAssertEqual(headers[headers.index(before: headers.endIndex)].name, originalHeaders.last?.0)
         XCTAssertEqual(headers[headers.index(before: headers.endIndex)].value, originalHeaders.last?.1)
-        
+
         let beforeLast = headers[headers.index(before: headers.endIndex)]
         XCTAssertEqual(beforeLast.name, originalHeaders[originalHeaders.endIndex - 1].0)
         XCTAssertEqual(beforeLast.value, originalHeaders[originalHeaders.endIndex - 1].1)
-        
+
         let afterFirst = headers[headers.index(after: headers.startIndex)]
         XCTAssertEqual(afterFirst.name, originalHeaders[originalHeaders.startIndex + 1].0)
         XCTAssertEqual(afterFirst.value, originalHeaders[originalHeaders.startIndex + 1].1)

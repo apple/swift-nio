@@ -13,59 +13,59 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
-import ucrt
+    import ucrt
 
-import let WinSDK.INVALID_SOCKET
+    import let WinSDK.INVALID_SOCKET
 
-import let WinSDK.IPPROTO_IP
-import let WinSDK.IPPROTO_IPV6
-import let WinSDK.IPPROTO_TCP
+    import let WinSDK.IPPROTO_IP
+    import let WinSDK.IPPROTO_IPV6
+    import let WinSDK.IPPROTO_TCP
 
-import let WinSDK.IP_ADD_MEMBERSHIP
-import let WinSDK.IP_DROP_MEMBERSHIP
-import let WinSDK.IP_MULTICAST_IF
-import let WinSDK.IP_MULTICAST_LOOP
-import let WinSDK.IP_MULTICAST_TTL
-import let WinSDK.IP_RECVTOS
-import let WinSDK.IPV6_JOIN_GROUP
-import let WinSDK.IPV6_LEAVE_GROUP
-import let WinSDK.IPV6_MULTICAST_HOPS
-import let WinSDK.IPV6_MULTICAST_IF
-import let WinSDK.IPV6_MULTICAST_LOOP
-import let WinSDK.IPV6_RECVTCLASS
-import let WinSDK.IPV6_V6ONLY
+    import let WinSDK.IP_ADD_MEMBERSHIP
+    import let WinSDK.IP_DROP_MEMBERSHIP
+    import let WinSDK.IP_MULTICAST_IF
+    import let WinSDK.IP_MULTICAST_LOOP
+    import let WinSDK.IP_MULTICAST_TTL
+    import let WinSDK.IP_RECVTOS
+    import let WinSDK.IPV6_JOIN_GROUP
+    import let WinSDK.IPV6_LEAVE_GROUP
+    import let WinSDK.IPV6_MULTICAST_HOPS
+    import let WinSDK.IPV6_MULTICAST_IF
+    import let WinSDK.IPV6_MULTICAST_LOOP
+    import let WinSDK.IPV6_RECVTCLASS
+    import let WinSDK.IPV6_V6ONLY
 
-import let WinSDK.AF_INET
-import let WinSDK.AF_INET6
-import let WinSDK.AF_UNIX
+    import let WinSDK.AF_INET
+    import let WinSDK.AF_INET6
+    import let WinSDK.AF_UNIX
 
-import let WinSDK.PF_INET
-import let WinSDK.PF_INET6
-import let WinSDK.PF_UNIX
+    import let WinSDK.PF_INET
+    import let WinSDK.PF_INET6
+    import let WinSDK.PF_UNIX
 
-import let WinSDK.SOCK_DGRAM
-import let WinSDK.SOCK_STREAM
+    import let WinSDK.SOCK_DGRAM
+    import let WinSDK.SOCK_STREAM
 
-import let WinSDK.SO_ERROR
-import let WinSDK.SO_KEEPALIVE
-import let WinSDK.SO_LINGER
-import let WinSDK.SO_RCVBUF
-import let WinSDK.SO_RCVTIMEO
-import let WinSDK.SO_REUSEADDR
+    import let WinSDK.SO_ERROR
+    import let WinSDK.SO_KEEPALIVE
+    import let WinSDK.SO_LINGER
+    import let WinSDK.SO_RCVBUF
+    import let WinSDK.SO_RCVTIMEO
+    import let WinSDK.SO_REUSEADDR
 
-import let WinSDK.SOL_SOCKET
+    import let WinSDK.SOL_SOCKET
 
-import let WinSDK.TCP_NODELAY
+    import let WinSDK.TCP_NODELAY
 
-import struct WinSDK.SOCKET
+    import struct WinSDK.SOCKET
 
-import struct WinSDK.WSACMSGHDR
-import struct WinSDK.WSAMSG
+    import struct WinSDK.WSACMSGHDR
+    import struct WinSDK.WSAMSG
 
-import struct WinSDK.socklen_t
+    import struct WinSDK.socklen_t
 
-internal typealias msghdr = WSAMSG
-internal typealias cmsghdr = WSACMSGHDR
+    internal typealias msghdr = WSAMSG
+    internal typealias cmsghdr = WSACMSGHDR
 #endif
 
 protocol _SocketShutdownProtocol {
@@ -79,22 +79,22 @@ internal enum Shutdown: _SocketShutdownProtocol {
 }
 
 public enum NIOBSDSocket {
-#if os(Windows)
-    public typealias Handle = SOCKET
-#else
-    public typealias Handle = CInt
-#endif
+    #if os(Windows)
+        public typealias Handle = SOCKET
+    #else
+        public typealias Handle = CInt
+    #endif
 
-#if os(Windows)
-    internal static let invalidHandle: Handle = INVALID_SOCKET
-#else
-    internal static let invalidHandle: Handle = -1
-#endif
+    #if os(Windows)
+        internal static let invalidHandle: Handle = INVALID_SOCKET
+    #else
+        internal static let invalidHandle: Handle = -1
+    #endif
 }
 
 extension NIOBSDSocket {
     /// Specifies the type of socket.
-    internal struct SocketType: RawRepresentable {
+    struct SocketType: RawRepresentable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -103,15 +103,13 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.SocketType: Equatable {
-}
+extension NIOBSDSocket.SocketType: Equatable {}
 
-extension NIOBSDSocket.SocketType: Hashable {
-}
+extension NIOBSDSocket.SocketType: Hashable {}
 
-extension NIOBSDSocket {
+public extension NIOBSDSocket {
     /// Specifies the addressing scheme that the socket can use.
-    public struct AddressFamily: RawRepresentable {
+    struct AddressFamily: RawRepresentable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -120,15 +118,13 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.AddressFamily: Equatable {
-}
+extension NIOBSDSocket.AddressFamily: Equatable {}
 
-extension NIOBSDSocket.AddressFamily: Hashable {
-}
+extension NIOBSDSocket.AddressFamily: Hashable {}
 
-extension NIOBSDSocket {
+public extension NIOBSDSocket {
     /// Specifies the type of protocol that the socket can use.
-    public struct ProtocolFamily: RawRepresentable {
+    struct ProtocolFamily: RawRepresentable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -137,15 +133,13 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.ProtocolFamily: Equatable {
-}
+extension NIOBSDSocket.ProtocolFamily: Equatable {}
 
-extension NIOBSDSocket.ProtocolFamily: Hashable {
-}
+extension NIOBSDSocket.ProtocolFamily: Hashable {}
 
-extension NIOBSDSocket {
+public extension NIOBSDSocket {
     /// Defines socket option levels.
-    public struct OptionLevel: RawRepresentable {
+    struct OptionLevel: RawRepresentable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -154,15 +148,13 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.OptionLevel: Equatable {
-}
+extension NIOBSDSocket.OptionLevel: Equatable {}
 
-extension NIOBSDSocket.OptionLevel: Hashable {
-}
+extension NIOBSDSocket.OptionLevel: Hashable {}
 
-extension NIOBSDSocket {
+public extension NIOBSDSocket {
     /// Defines configuration option names.
-    public struct Option: RawRepresentable {
+    struct Option: RawRepresentable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -171,47 +163,45 @@ extension NIOBSDSocket {
     }
 }
 
-extension NIOBSDSocket.Option: Equatable {
-}
+extension NIOBSDSocket.Option: Equatable {}
 
-extension NIOBSDSocket.Option: Hashable {
-}
+extension NIOBSDSocket.Option: Hashable {}
 
 // Address Family
-extension NIOBSDSocket.AddressFamily {
+public extension NIOBSDSocket.AddressFamily {
     /// Address for IP version 4.
-    public static let inet: NIOBSDSocket.AddressFamily =
-            NIOBSDSocket.AddressFamily(rawValue: AF_INET)
+    static let inet =
+        NIOBSDSocket.AddressFamily(rawValue: AF_INET)
 
     /// Address for IP version 6.
-    public static let inet6: NIOBSDSocket.AddressFamily =
-            NIOBSDSocket.AddressFamily(rawValue: AF_INET6)
+    static let inet6 =
+        NIOBSDSocket.AddressFamily(rawValue: AF_INET6)
 
     /// Unix local to host address.
-    public static let unix: NIOBSDSocket.AddressFamily =
-            NIOBSDSocket.AddressFamily(rawValue: AF_UNIX)
+    static let unix =
+        NIOBSDSocket.AddressFamily(rawValue: AF_UNIX)
 }
 
 // Protocol Family
-extension NIOBSDSocket.ProtocolFamily {
+public extension NIOBSDSocket.ProtocolFamily {
     /// IP network 4 protocol.
-    public static let inet: NIOBSDSocket.ProtocolFamily =
-            NIOBSDSocket.ProtocolFamily(rawValue: PF_INET)
+    static let inet =
+        NIOBSDSocket.ProtocolFamily(rawValue: PF_INET)
 
     /// IP network 6 protocol.
-    public static let inet6: NIOBSDSocket.ProtocolFamily =
-            NIOBSDSocket.ProtocolFamily(rawValue: PF_INET6)
+    static let inet6 =
+        NIOBSDSocket.ProtocolFamily(rawValue: PF_INET6)
 
     /// UNIX local to the host.
-    public static let unix: NIOBSDSocket.ProtocolFamily =
-            NIOBSDSocket.ProtocolFamily(rawValue: PF_UNIX)
+    static let unix =
+        NIOBSDSocket.ProtocolFamily(rawValue: PF_UNIX)
 }
 
 #if !os(Windows)
-    extension NIOBSDSocket.ProtocolFamily {
+    public extension NIOBSDSocket.ProtocolFamily {
         /// UNIX local to the host, alias for `PF_UNIX` (`.unix`)
-        public static let local: NIOBSDSocket.ProtocolFamily =
-                NIOBSDSocket.ProtocolFamily(rawValue: PF_LOCAL)
+        static let local =
+            NIOBSDSocket.ProtocolFamily(rawValue: PF_LOCAL)
     }
 #endif
 
@@ -220,85 +210,85 @@ extension NIOBSDSocket.SocketType {
     /// Supports datagrams, which are connectionless, unreliable messages of a
     /// fixed (typically small) maximum length.
     #if os(Linux)
-        internal static let datagram: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: CInt(SOCK_DGRAM.rawValue))
+        static let datagram =
+            NIOBSDSocket.SocketType(rawValue: CInt(SOCK_DGRAM.rawValue))
     #else
-        internal static let datagram: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: SOCK_DGRAM)
+        static let datagram =
+            NIOBSDSocket.SocketType(rawValue: SOCK_DGRAM)
     #endif
 
     /// Supports reliable, two-way, connection-based byte streams without
     /// duplication of data and without preservation of boundaries.
     #if os(Linux)
-        internal static let stream: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: CInt(SOCK_STREAM.rawValue))
+        static let stream =
+            NIOBSDSocket.SocketType(rawValue: CInt(SOCK_STREAM.rawValue))
     #else
-        internal static let stream: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: SOCK_STREAM)
+        static let stream =
+            NIOBSDSocket.SocketType(rawValue: SOCK_STREAM)
     #endif
 }
 
 // Option Level
-extension NIOBSDSocket.OptionLevel {
+public extension NIOBSDSocket.OptionLevel {
     /// Socket options that apply only to IP sockets.
     #if os(Linux) || os(Android)
-        public static let ip: NIOBSDSocket.OptionLevel =
-                NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_IP))
+        static let ip =
+            NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_IP))
     #else
-        public static let ip: NIOBSDSocket.OptionLevel =
-                NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IP)
+        static let ip =
+            NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IP)
     #endif
 
     /// Socket options that apply only to IPv6 sockets.
     #if os(Linux) || os(Android)
-        public static let ipv6: NIOBSDSocket.OptionLevel =
-                NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_IPV6))
+        static let ipv6 =
+            NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_IPV6))
     #elseif os(Windows)
-        public static let ipv6: NIOBSDSocket.OptionLevel =
-                NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IPV6.rawValue)
+        static let ipv6 =
+            NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IPV6.rawValue)
     #else
-        public static let ipv6: NIOBSDSocket.OptionLevel =
-                NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IPV6)
+        static let ipv6 =
+            NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IPV6)
     #endif
 
     /// Socket options that apply only to TCP sockets.
     #if os(Linux) || os(Android)
-        public static let tcp: NIOBSDSocket.OptionLevel =
-                NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_TCP))
+        static let tcp =
+            NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_TCP))
     #elseif os(Windows)
-        public static let tcp: NIOBSDSocket.OptionLevel =
-                NIOBSDSocket.OptionLevel(rawValue: IPPROTO_TCP.rawValue)
+        static let tcp =
+            NIOBSDSocket.OptionLevel(rawValue: IPPROTO_TCP.rawValue)
     #else
-        public static let tcp: NIOBSDSocket.OptionLevel =
-                NIOBSDSocket.OptionLevel(rawValue: IPPROTO_TCP)
+        static let tcp =
+            NIOBSDSocket.OptionLevel(rawValue: IPPROTO_TCP)
     #endif
 
     /// Socket options that apply to all sockets.
-    public static let socket: NIOBSDSocket.OptionLevel =
-            NIOBSDSocket.OptionLevel(rawValue: SOL_SOCKET)
+    static let socket =
+        NIOBSDSocket.OptionLevel(rawValue: SOL_SOCKET)
 }
 
 // IPv4 Options
-extension NIOBSDSocket.Option {
+public extension NIOBSDSocket.Option {
     /// Add a multicast group membership.
-    public static let ip_add_membership: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IP_ADD_MEMBERSHIP)
+    static let ip_add_membership =
+        NIOBSDSocket.Option(rawValue: IP_ADD_MEMBERSHIP)
 
     /// Drop a multicast group membership.
-    public static let ip_drop_membership: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IP_DROP_MEMBERSHIP)
+    static let ip_drop_membership =
+        NIOBSDSocket.Option(rawValue: IP_DROP_MEMBERSHIP)
 
     /// Set the interface for outgoing multicast packets.
-    public static let ip_multicast_if: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IP_MULTICAST_IF)
+    static let ip_multicast_if =
+        NIOBSDSocket.Option(rawValue: IP_MULTICAST_IF)
 
     /// Control multicast loopback.
-    public static let ip_multicast_loop: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IP_MULTICAST_LOOP)
+    static let ip_multicast_loop =
+        NIOBSDSocket.Option(rawValue: IP_MULTICAST_LOOP)
 
     /// Control multicast time-to-live.
-    public static let ip_multicast_ttl: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IP_MULTICAST_TTL)
+    static let ip_multicast_ttl =
+        NIOBSDSocket.Option(rawValue: IP_MULTICAST_TTL)
 
     /// Request that we are passed type of service details when receiving
     /// datagrams.
@@ -306,8 +296,8 @@ extension NIOBSDSocket.Option {
     /// Not public as the way to request this is to use
     /// `ChannelOptions.explicitCongestionNotification` which works for both
     /// IPv4 and IPv6.
-    static let ip_recv_tos: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IP_RECVTOS)
+    internal static let ip_recv_tos =
+        NIOBSDSocket.Option(rawValue: IP_RECVTOS)
 
     /// Request that we are passed destination address and the receiving interface index when
     /// receiving datagrams.
@@ -315,36 +305,36 @@ extension NIOBSDSocket.Option {
     /// This option is not public as the way to request this is to use
     /// `ChannelOptions.receivePacketInfo` which works for both
     /// IPv4 and IPv6.
-    static let ip_recv_pktinfo: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
+    internal static let ip_recv_pktinfo =
+        NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
 }
 
 // IPv6 Options
-extension NIOBSDSocket.Option {
+public extension NIOBSDSocket.Option {
     /// Add an IPv6 group membership.
-    public static let ipv6_join_group: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IPV6_JOIN_GROUP)
+    static let ipv6_join_group =
+        NIOBSDSocket.Option(rawValue: IPV6_JOIN_GROUP)
 
     /// Drop an IPv6 group membership.
-    public static let ipv6_leave_group: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IPV6_LEAVE_GROUP)
+    static let ipv6_leave_group =
+        NIOBSDSocket.Option(rawValue: IPV6_LEAVE_GROUP)
 
     /// Specify the maximum number of router hops for an IPv6 packet.
-    public static let ipv6_multicast_hops: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_HOPS)
+    static let ipv6_multicast_hops =
+        NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_HOPS)
 
     /// Set the interface for outgoing multicast packets.
-    public static let ipv6_multicast_if: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_IF)
+    static let ipv6_multicast_if =
+        NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_IF)
 
     /// Control multicast loopback.
-    public static let ipv6_multicast_loop: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_LOOP)
+    static let ipv6_multicast_loop =
+        NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_LOOP)
 
     /// Indicates if a socket created for the `AF_INET6` address family is
     /// restricted to IPv6 only.
-    public static let ipv6_v6only: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IPV6_V6ONLY)
+    static let ipv6_v6only =
+        NIOBSDSocket.Option(rawValue: IPV6_V6ONLY)
 
     /// Request that we are passed traffic class details when receiving
     /// datagrams.
@@ -352,8 +342,8 @@ extension NIOBSDSocket.Option {
     /// Not public as the way to request this is to use
     /// `ChannelOptions.explicitCongestionNotification` which works for both
     /// IPv4 and IPv6.
-    static let ipv6_recv_tclass: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
+    internal static let ipv6_recv_tclass =
+        NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
 
     /// Request that we are passed destination address and the receiving interface index when
     /// receiving datagrams.
@@ -361,66 +351,66 @@ extension NIOBSDSocket.Option {
     /// This option is not public as the way to request this is to use
     /// `ChannelOptions.receivePacketInfo` which works for both
     /// IPv4 and IPv6.
-    static let ipv6_recv_pktinfo: NIOBSDSocket.Option =
+    internal static let ipv6_recv_pktinfo =
         NIOBSDSocket.Option(rawValue: Posix.IPV6_RECVPKTINFO)
 }
 
 // TCP Options
-extension NIOBSDSocket.Option {
+public extension NIOBSDSocket.Option {
     /// Disables the Nagle algorithm for send coalescing.
-    public static let tcp_nodelay: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: TCP_NODELAY)
+    static let tcp_nodelay =
+        NIOBSDSocket.Option(rawValue: TCP_NODELAY)
 }
 
 #if os(Linux) || os(FreeBSD) || os(Android)
-extension NIOBSDSocket.Option {
-    /// Get information about the TCP connection.
-    public static let tcp_info: NIOBSDSocket.Option =
+    public extension NIOBSDSocket.Option {
+        /// Get information about the TCP connection.
+        static let tcp_info =
             NIOBSDSocket.Option(rawValue: TCP_INFO)
-}
+    }
 #endif
 
 #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
-extension NIOBSDSocket.Option {
-    /// Get information about the TCP connection.
-    public static let tcp_connection_info: NIOBSDSocket.Option =
+    public extension NIOBSDSocket.Option {
+        /// Get information about the TCP connection.
+        static let tcp_connection_info =
             NIOBSDSocket.Option(rawValue: TCP_CONNECTION_INFO)
-}
+    }
 #endif
 
 // Socket Options
-extension NIOBSDSocket.Option {
+public extension NIOBSDSocket.Option {
     /// Get the error status and clear.
-    public static let so_error: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_ERROR)
+    static let so_error =
+        NIOBSDSocket.Option(rawValue: SO_ERROR)
 
     /// Use keep-alives.
-    public static let so_keepalive: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_KEEPALIVE)
+    static let so_keepalive =
+        NIOBSDSocket.Option(rawValue: SO_KEEPALIVE)
 
     /// Linger on close if unsent data is present.
-    public static let so_linger: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_LINGER)
+    static let so_linger =
+        NIOBSDSocket.Option(rawValue: SO_LINGER)
 
     /// Specifies the total per-socket buffer space reserved for receives.
-    public static let so_rcvbuf: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_RCVBUF)
+    static let so_rcvbuf =
+        NIOBSDSocket.Option(rawValue: SO_RCVBUF)
 
     /// Specifies the receive timeout.
-    public static let so_rcvtimeo: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_RCVTIMEO)
+    static let so_rcvtimeo =
+        NIOBSDSocket.Option(rawValue: SO_RCVTIMEO)
 
     /// Allows the socket to be bound to an address that is already in use.
-    public static let so_reuseaddr: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_REUSEADDR)
+    static let so_reuseaddr =
+        NIOBSDSocket.Option(rawValue: SO_REUSEADDR)
 }
 
 #if !os(Windows)
-extension NIOBSDSocket.Option {
-    /// Indicate when to generate timestamps.
-    public static let so_timestamp: NIOBSDSocket.Option =
+    public extension NIOBSDSocket.Option {
+        /// Indicate when to generate timestamps.
+        static let so_timestamp =
             NIOBSDSocket.Option(rawValue: SO_TIMESTAMP)
-}
+    }
 #endif
 
 /// The requested UDS path exists and has wrong type (not a socket).
@@ -471,14 +461,14 @@ protocol _BSDSocketProtocol {
     // which is the same size, but is unsigned.
     static func recvmsg(socket: NIOBSDSocket.Handle,
                         msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt)
-            throws -> IOResult<size_t>
+        throws -> IOResult<size_t>
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard
     // type, and defining that type is difficult.  Opt to return a `size_t`
     // which is the same size, but is unsigned.
     static func sendmsg(socket: NIOBSDSocket.Handle,
                         msgHdr: UnsafePointer<msghdr>, flags: CInt)
-            throws -> IOResult<size_t>
+        throws -> IOResult<size_t>
 
     static func send(socket s: NIOBSDSocket.Handle,
                      buffer buf: UnsafeRawPointer,
@@ -494,7 +484,7 @@ protocol _BSDSocketProtocol {
 
     static func socket(domain af: NIOBSDSocket.ProtocolFamily,
                        type: NIOBSDSocket.SocketType,
-                       `protocol`: CInt) throws -> NIOBSDSocket.Handle
+                       protocol: CInt) throws -> NIOBSDSocket.Handle
 
     static func recvmmsg(socket: NIOBSDSocket.Handle,
                          msgvec: UnsafeMutablePointer<MMsgHdr>,
@@ -523,15 +513,15 @@ protocol _BSDSocketProtocol {
                        size: size_t,
                        offset: off_t) throws -> IOResult<size_t>
 
-#if !os(Windows)
-    // NOTE: We do not support this on Windows as WSAPoll behaves differently
-    // from poll with reporting of failed connections (Connect Report 309411),
-    // which recommended that you use NetAPI instead.
-    //
-    // This is safe to exclude as this is a testing-only API.
-    static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t,
-                     timeout: CInt) throws -> CInt
-#endif
+    #if !os(Windows)
+        // NOTE: We do not support this on Windows as WSAPoll behaves differently
+        // from poll with reporting of failed connections (Connect Report 309411),
+        // which recommended that you use NetAPI instead.
+        //
+        // This is safe to exclude as this is a testing-only API.
+        static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t,
+                         timeout: CInt) throws -> CInt
+    #endif
 
     static func inet_ntop(af family: NIOBSDSocket.AddressFamily,
                           src addr: UnsafeRawPointer,
@@ -556,7 +546,7 @@ protocol _BSDSocketProtocol {
 
 /// If this extension is hitting a compile error, your platform is missing one
 /// of the functions defined above!
-extension NIOBSDSocket: _BSDSocketProtocol { }
+extension NIOBSDSocket: _BSDSocketProtocol {}
 
 /// This protocol defines the methods that are expected to be found on
 /// `NIOBSDControlMessage`. While defined as a protocol there is no expectation
@@ -565,17 +555,17 @@ extension NIOBSDSocket: _BSDSocketProtocol { }
 /// operating systems must implement.
 protocol _BSDSocketControlMessageProtocol {
     static func firstHeader(inside msghdr: UnsafePointer<msghdr>)
-            -> UnsafeMutablePointer<cmsghdr>?
+        -> UnsafeMutablePointer<cmsghdr>?
 
     static func nextHeader(inside msghdr: UnsafeMutablePointer<msghdr>,
                            after: UnsafeMutablePointer<cmsghdr>)
-            -> UnsafeMutablePointer<cmsghdr>?
+        -> UnsafeMutablePointer<cmsghdr>?
 
     static func data(for header: UnsafePointer<cmsghdr>)
-            -> UnsafeRawBufferPointer?
+        -> UnsafeRawBufferPointer?
 
     static func data(for header: UnsafeMutablePointer<cmsghdr>)
-            -> UnsafeMutableRawBufferPointer?
+        -> UnsafeMutableRawBufferPointer?
 
     static func length(payloadSize: size_t) -> size_t
 
@@ -584,4 +574,4 @@ protocol _BSDSocketControlMessageProtocol {
 
 /// If this extension is hitting a compile error, your platform is missing one
 /// of the functions defined above!
-enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol { }
+enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol {}

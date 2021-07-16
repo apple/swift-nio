@@ -12,24 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Foundation
 @testable import NIO
 import NIOTestUtils
+import XCTest
 
 final class PipeChannelTest: XCTestCase {
-    var group: MultiThreadedEventLoopGroup! = nil
-    var channel: Channel! = nil
-    var toChannel: FileHandle! = nil
-    var fromChannel: FileHandle! = nil
-    var buffer: ByteBuffer! = nil
+    var group: MultiThreadedEventLoopGroup!
+    var channel: Channel!
+    var toChannel: FileHandle!
+    var fromChannel: FileHandle!
+    var buffer: ByteBuffer!
 
     var eventLoop: SelectableEventLoop {
-        return self.group.next() as! SelectableEventLoop
+        self.group.next() as! SelectableEventLoop
     }
 
     override func setUp() {
-        self.group = .init(numberOfThreads: 1)
+        group = .init(numberOfThreads: 1)
 
         XCTAssertNoThrow(try withPipe { pipe1Read, pipe1Write in
             try withPipe { pipe2Read, pipe2Write in
@@ -54,17 +54,17 @@ final class PipeChannelTest: XCTestCase {
             }
             return [] // we may leak the file handles because we take care of closing
         })
-        self.buffer = self.channel.allocator.buffer(capacity: 128)
+        buffer = channel.allocator.buffer(capacity: 128)
     }
 
     override func tearDown() {
-        self.buffer = nil
-        self.toChannel.closeFile()
-        self.fromChannel.closeFile()
-        self.toChannel = nil
-        self.fromChannel = nil
-        XCTAssertNoThrow(try self.channel.syncCloseAcceptingAlreadyClosed())
-        XCTAssertNoThrow(try self.group.syncShutdownGracefully())
+        buffer = nil
+        toChannel.closeFile()
+        fromChannel.closeFile()
+        toChannel = nil
+        fromChannel = nil
+        XCTAssertNoThrow(try channel.syncCloseAcceptingAlreadyClosed())
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
     }
 
     func testBasicIO() throws {
@@ -78,37 +78,37 @@ final class PipeChannelTest: XCTestCase {
             }
         }
 
-        XCTAssertTrue(self.channel.isActive)
-        XCTAssertNoThrow(try self.channel.pipeline.addHandler(Handler()).wait())
+        XCTAssertTrue(channel.isActive)
+        XCTAssertNoThrow(try channel.pipeline.addHandler(Handler()).wait())
         let longArray = Array(repeating: UInt8(ascii: "x"), count: 200_000)
-        for length in [1, 10_000, 100_000, 200_000] {
+        for length in [1, 10000, 100_000, 200_000] {
             let fromChannel = self.fromChannel!
 
-            XCTAssertNoThrow(try self.toChannel.writeBytes(longArray[0 ..< length]))
+            XCTAssertNoThrow(try toChannel.writeBytes(longArray[0 ..< length]))
             let data = try? fromChannel.readBytes(ofExactLength: length)
             XCTAssertEqual(Array(longArray[0 ..< length]), data)
         }
-        XCTAssertNoThrow(try self.channel.close().wait())
+        XCTAssertNoThrow(try channel.close().wait())
     }
 
     func testWriteErrorsCloseChannel() {
-        XCTAssertNoThrow(try self.channel.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
-        self.fromChannel.closeFile()
-        var buffer = self.channel.allocator.buffer(capacity: 1)
+        XCTAssertNoThrow(try channel.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+        fromChannel.closeFile()
+        var buffer = channel.allocator.buffer(capacity: 1)
         buffer.writeString("X")
-        XCTAssertThrowsError(try self.channel.writeAndFlush(buffer).wait()) { error in
+        XCTAssertThrowsError(try channel.writeAndFlush(buffer).wait()) { error in
             if let error = error as? IOError {
                 XCTAssert([EPIPE, EBADF].contains(error.errnoCode), "unexpected errno: \(error)")
             } else {
                 XCTFail("unexpected error: \(error)")
             }
         }
-        XCTAssertNoThrow(try self.channel.closeFuture.wait())
+        XCTAssertNoThrow(try channel.closeFuture.wait())
     }
 
     func testWeDontAcceptRegularFiles() throws {
         try withPipe { pipeIn, pipeOut in
-            try withTemporaryFile { fileFH, path in
+            try withTemporaryFile { fileFH, _ in
                 try fileFH.withUnsafeFileDescriptor { fileFHDescriptor in
                     try pipeIn.withUnsafeFileDescriptor { pipeInDescriptor in
                         try pipeOut.withUnsafeFileDescriptor { pipeOutDescriptor in
@@ -155,8 +155,8 @@ final class PipeChannelTest: XCTestCase {
             try Posix.write(descriptor: socketPair[1], pointer: xPtr, size: 1)
         })
 
-        var maybeChannel: Channel? = nil
-        XCTAssertNoThrow(maybeChannel = try NIOPipeBootstrap(group: self.group)
+        var maybeChannel: Channel?
+        XCTAssertNoThrow(maybeChannel = try NIOPipeBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(EchoHandler())
             }
@@ -176,7 +176,7 @@ final class PipeChannelTest: XCTestCase {
 
 extension FileHandle {
     func writeBytes(_ bytes: ByteBuffer) throws {
-        try self.writeBytes(Array(bytes.readableBytesView))
+        try writeBytes(Array(bytes.readableBytesView))
     }
 
     func writeBytes(_ bytes: ArraySlice<UInt8>) throws {
@@ -186,7 +186,7 @@ extension FileHandle {
     }
 
     func writeBytes(_ bytes: [UInt8]) throws {
-        try self.writeBytes(bytes[...])
+        try writeBytes(bytes[...])
     }
 
     func readBytes(ofExactLength completeLength: Int) throws -> [UInt8] {
@@ -194,7 +194,7 @@ extension FileHandle {
         buffer.reserveCapacity(completeLength)
         var remaining = completeLength
         while remaining > 0 {
-            buffer.append(contentsOf: self.readData(ofLength: remaining))
+            buffer.append(contentsOf: readData(ofLength: remaining))
             remaining = completeLength - buffer.count
         }
         return buffer

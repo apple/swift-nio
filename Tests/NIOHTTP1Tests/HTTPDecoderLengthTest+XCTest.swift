@@ -23,47 +23,45 @@ import XCTest
 ///
 
 extension HTTPDecoderLengthTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPDecoderLengthTest) -> () throws -> Void)] {
-      return [
-                ("testHTTP11SemanticEOFOnChannelInactive", testHTTP11SemanticEOFOnChannelInactive),
-                ("testHTTP10SemanticEOFOnChannelInactive", testHTTP10SemanticEOFOnChannelInactive),
-                ("testHTTP11SemanticEOFOnHalfClosure", testHTTP11SemanticEOFOnHalfClosure),
-                ("testHTTP10SemanticEOFOnHalfClosure", testHTTP10SemanticEOFOnHalfClosure),
-                ("testIgnoresTransferEncodingFieldOnCONNECTResponses", testIgnoresTransferEncodingFieldOnCONNECTResponses),
-                ("testIgnoresContentLengthFieldOnCONNECTResponses", testIgnoresContentLengthFieldOnCONNECTResponses),
-                ("testEarlyFinishWithoutLengthAtAllOnCONNECTResponses", testEarlyFinishWithoutLengthAtAllOnCONNECTResponses),
-                ("testIgnoresTransferEncodingFieldOnHEADResponses", testIgnoresTransferEncodingFieldOnHEADResponses),
-                ("testIgnoresContentLengthFieldOnHEADResponses", testIgnoresContentLengthFieldOnHEADResponses),
-                ("testEarlyFinishWithoutLengthAtAllOnHEADResponses", testEarlyFinishWithoutLengthAtAllOnHEADResponses),
-                ("testIgnoresTransferEncodingFieldOn1XXResponses", testIgnoresTransferEncodingFieldOn1XXResponses),
-                ("testIgnoresContentLengthFieldOn1XXResponses", testIgnoresContentLengthFieldOn1XXResponses),
-                ("testEarlyFinishWithoutLengthAtAllOn1XXResponses", testEarlyFinishWithoutLengthAtAllOn1XXResponses),
-                ("testIgnoresTransferEncodingFieldOn204Responses", testIgnoresTransferEncodingFieldOn204Responses),
-                ("testIgnoresContentLengthFieldOn204Responses", testIgnoresContentLengthFieldOn204Responses),
-                ("testEarlyFinishWithoutLengthAtAllOn204Responses", testEarlyFinishWithoutLengthAtAllOn204Responses),
-                ("testIgnoresTransferEncodingFieldOn304Responses", testIgnoresTransferEncodingFieldOn304Responses),
-                ("testIgnoresContentLengthFieldOn304Responses", testIgnoresContentLengthFieldOn304Responses),
-                ("testEarlyFinishWithoutLengthAtAllOn304Responses", testEarlyFinishWithoutLengthAtAllOn304Responses),
-                ("testMultipleTEWithChunkedLastWorksFine", testMultipleTEWithChunkedLastWorksFine),
-                ("testMultipleTEWithChunkedFirstHasNoBodyOnRequest", testMultipleTEWithChunkedFirstHasNoBodyOnRequest),
-                ("testMultipleTEWithChunkedInTheMiddleHasNoBodyOnRequest", testMultipleTEWithChunkedInTheMiddleHasNoBodyOnRequest),
-                ("testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithChannelInactive", testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithChannelInactive),
-                ("testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithChannelInactive", testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithChannelInactive),
-                ("testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithChannelInactive", testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithChannelInactive),
-                ("testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithHalfClosure", testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithHalfClosure),
-                ("testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithHalfClosure", testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithHalfClosure),
-                ("testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithHalfClosure", testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithHalfClosure),
-                ("testRequestWithTEAndContentLengthErrors", testRequestWithTEAndContentLengthErrors),
-                ("testResponseWithTEAndContentLengthErrors", testResponseWithTEAndContentLengthErrors),
-                ("testRequestWithMultipleDifferentContentLengthsFails", testRequestWithMultipleDifferentContentLengthsFails),
-                ("testRequestWithMultipleDifferentContentLengthsOnDifferentLinesFails", testRequestWithMultipleDifferentContentLengthsOnDifferentLinesFails),
-                ("testRequestWithInvalidContentLengthFails", testRequestWithInvalidContentLengthFails),
-                ("testRequestWithIdenticalContentLengthRepeatedErrors", testRequestWithIdenticalContentLengthRepeatedErrors),
-                ("testRequestWithMultipleIdenticalContentLengthFieldsErrors", testRequestWithMultipleIdenticalContentLengthFieldsErrors),
-                ("testRequestWithoutExplicitLengthIsZeroLength", testRequestWithoutExplicitLengthIsZeroLength),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPDecoderLengthTest) -> () throws -> Void)] {
+        [
+            ("testHTTP11SemanticEOFOnChannelInactive", testHTTP11SemanticEOFOnChannelInactive),
+            ("testHTTP10SemanticEOFOnChannelInactive", testHTTP10SemanticEOFOnChannelInactive),
+            ("testHTTP11SemanticEOFOnHalfClosure", testHTTP11SemanticEOFOnHalfClosure),
+            ("testHTTP10SemanticEOFOnHalfClosure", testHTTP10SemanticEOFOnHalfClosure),
+            ("testIgnoresTransferEncodingFieldOnCONNECTResponses", testIgnoresTransferEncodingFieldOnCONNECTResponses),
+            ("testIgnoresContentLengthFieldOnCONNECTResponses", testIgnoresContentLengthFieldOnCONNECTResponses),
+            ("testEarlyFinishWithoutLengthAtAllOnCONNECTResponses", testEarlyFinishWithoutLengthAtAllOnCONNECTResponses),
+            ("testIgnoresTransferEncodingFieldOnHEADResponses", testIgnoresTransferEncodingFieldOnHEADResponses),
+            ("testIgnoresContentLengthFieldOnHEADResponses", testIgnoresContentLengthFieldOnHEADResponses),
+            ("testEarlyFinishWithoutLengthAtAllOnHEADResponses", testEarlyFinishWithoutLengthAtAllOnHEADResponses),
+            ("testIgnoresTransferEncodingFieldOn1XXResponses", testIgnoresTransferEncodingFieldOn1XXResponses),
+            ("testIgnoresContentLengthFieldOn1XXResponses", testIgnoresContentLengthFieldOn1XXResponses),
+            ("testEarlyFinishWithoutLengthAtAllOn1XXResponses", testEarlyFinishWithoutLengthAtAllOn1XXResponses),
+            ("testIgnoresTransferEncodingFieldOn204Responses", testIgnoresTransferEncodingFieldOn204Responses),
+            ("testIgnoresContentLengthFieldOn204Responses", testIgnoresContentLengthFieldOn204Responses),
+            ("testEarlyFinishWithoutLengthAtAllOn204Responses", testEarlyFinishWithoutLengthAtAllOn204Responses),
+            ("testIgnoresTransferEncodingFieldOn304Responses", testIgnoresTransferEncodingFieldOn304Responses),
+            ("testIgnoresContentLengthFieldOn304Responses", testIgnoresContentLengthFieldOn304Responses),
+            ("testEarlyFinishWithoutLengthAtAllOn304Responses", testEarlyFinishWithoutLengthAtAllOn304Responses),
+            ("testMultipleTEWithChunkedLastWorksFine", testMultipleTEWithChunkedLastWorksFine),
+            ("testMultipleTEWithChunkedFirstHasNoBodyOnRequest", testMultipleTEWithChunkedFirstHasNoBodyOnRequest),
+            ("testMultipleTEWithChunkedInTheMiddleHasNoBodyOnRequest", testMultipleTEWithChunkedInTheMiddleHasNoBodyOnRequest),
+            ("testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithChannelInactive", testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithChannelInactive),
+            ("testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithChannelInactive", testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithChannelInactive),
+            ("testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithChannelInactive", testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithChannelInactive),
+            ("testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithHalfClosure", testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithHalfClosure),
+            ("testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithHalfClosure", testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithHalfClosure),
+            ("testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithHalfClosure", testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithHalfClosure),
+            ("testRequestWithTEAndContentLengthErrors", testRequestWithTEAndContentLengthErrors),
+            ("testResponseWithTEAndContentLengthErrors", testResponseWithTEAndContentLengthErrors),
+            ("testRequestWithMultipleDifferentContentLengthsFails", testRequestWithMultipleDifferentContentLengthsFails),
+            ("testRequestWithMultipleDifferentContentLengthsOnDifferentLinesFails", testRequestWithMultipleDifferentContentLengthsOnDifferentLinesFails),
+            ("testRequestWithInvalidContentLengthFails", testRequestWithInvalidContentLengthFails),
+            ("testRequestWithIdenticalContentLengthRepeatedErrors", testRequestWithIdenticalContentLengthRepeatedErrors),
+            ("testRequestWithMultipleIdenticalContentLengthFieldsErrors", testRequestWithMultipleIdenticalContentLengthFieldsErrors),
+            ("testRequestWithoutExplicitLengthIsZeroLength", testRequestWithoutExplicitLengthIsZeroLength),
+        ]
+    }
 }
-

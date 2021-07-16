@@ -51,7 +51,7 @@ protocol SocketProtocol: BaseSocketProtocol {
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
                  controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int>
-    
+
     func sendmsg(pointer: UnsafeRawBufferPointer,
                  destinationPtr: UnsafePointer<sockaddr>,
                  destinationSize: socklen_t,
@@ -69,40 +69,40 @@ protocol SocketProtocol: BaseSocketProtocol {
 }
 
 #if os(Linux) || os(Android)
-// This is a lazily initialised global variable that when read for the first time, will ignore SIGPIPE.
-private let globallyIgnoredSIGPIPE: Bool = {
-    /* no F_SETNOSIGPIPE on Linux :( */
-    _ = Glibc.signal(SIGPIPE, SIG_IGN)
-    return true
-}()
+    // This is a lazily initialised global variable that when read for the first time, will ignore SIGPIPE.
+    private let globallyIgnoredSIGPIPE: Bool = {
+        /* no F_SETNOSIGPIPE on Linux :( */
+        _ = Glibc.signal(SIGPIPE, SIG_IGN)
+        return true
+    }()
 #endif
 
 extension BaseSocketProtocol {
     // used by `BaseSocket` and `PipePair`.
-    internal static func ignoreSIGPIPE(descriptor fd: CInt) throws {
+    static func ignoreSIGPIPE(descriptor fd: CInt) throws {
         #if os(Linux) || os(Android)
-        let haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt = globallyIgnoredSIGPIPE
-        guard haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt else {
-            fatalError("BUG in NIO. We did not ignore SIGPIPE, this code path should definitely not be reachable.")
-        }
+            let haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt = globallyIgnoredSIGPIPE
+            guard haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt else {
+                fatalError("BUG in NIO. We did not ignore SIGPIPE, this code path should definitely not be reachable.")
+            }
         #elseif os(Windows)
         // Deliberately empty: SIGPIPE just ain't a thing on Windows
         #else
-        assert(fd >= 0, "illegal file descriptor \(fd)")
-        do {
-            try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
-        } catch let error as IOError {
-            if error.errnoCode == EINVAL {
-                // Darwin seems to sometimes do this despite the docs claiming it can't happen
-                throw NIOFcntlFailedError()
+            assert(fd >= 0, "illegal file descriptor \(fd)")
+            do {
+                try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
+            } catch let error as IOError {
+                if error.errnoCode == EINVAL {
+                    // Darwin seems to sometimes do this despite the docs claiming it can't happen
+                    throw NIOFcntlFailedError()
+                }
+                try? Posix.close(descriptor: fd) // don't care about failure here
+                throw error
             }
-            try? Posix.close(descriptor: fd) // don't care about failure here
-            throw error
-        }
         #endif
     }
 
-    internal static func ignoreSIGPIPE(socket handle: NIOBSDSocket.Handle) throws {
+    static func ignoreSIGPIPE(socket handle: NIOBSDSocket.Handle) throws {
         #if os(Windows)
         // Deliberately empty: SIGPIPE just ain't a thing on Windows
         #else

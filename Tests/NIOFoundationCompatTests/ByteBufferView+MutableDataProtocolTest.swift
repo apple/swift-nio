@@ -13,12 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import XCTest
 import NIO
 import NIOFoundationCompat
+import XCTest
 
 class ByteBufferViewDataProtocolTests: XCTestCase {
-
     func testResetBytes() {
         var view = ByteBufferView()
         view.resetBytes(in: view.indices)
@@ -26,13 +25,13 @@ class ByteBufferViewDataProtocolTests: XCTestCase {
 
         view.replaceSubrange(view.indices, with: [1, 2, 3, 4, 5])
 
-        view.resetBytes(in: 0..<2)
+        view.resetBytes(in: 0 ..< 2)
         XCTAssertTrue(view.elementsEqual([0, 0, 3, 4, 5]))
 
-        view.resetBytes(in: 2...4)
+        view.resetBytes(in: 2 ... 4)
         XCTAssertTrue(view.elementsEqual([0, 0, 0, 0, 0]))
     }
-    
+
     func testCreateDataFromBuffer() {
         let testString = "some sample bytes"
         let buffer = ByteBuffer(ByteBufferView(testString.utf8))

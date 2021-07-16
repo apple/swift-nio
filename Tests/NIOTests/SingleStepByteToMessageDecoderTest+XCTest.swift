@@ -23,20 +23,18 @@ import XCTest
 ///
 
 extension NIOSingleStepByteToMessageDecoderTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (NIOSingleStepByteToMessageDecoderTest) -> () throws -> Void)] {
-      return [
-                ("testDecoder", testDecoder),
-                ("testMemoryIsReclaimedIfMostIsConsumed", testMemoryIsReclaimedIfMostIsConsumed),
-                ("testMemoryIsReclaimedIfLotsIsAvailable", testMemoryIsReclaimedIfLotsIsAvailable),
-                ("testLeftOversMakeDecodeLastCalled", testLeftOversMakeDecodeLastCalled),
-                ("testStructsWorkAsOSBTMDecoders", testStructsWorkAsOSBTMDecoders),
-                ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed),
-                ("testPayloadTooLarge", testPayloadTooLarge),
-                ("testPayloadTooLargeButHandlerOk", testPayloadTooLargeButHandlerOk),
-                ("testReentrancy", testReentrancy),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (NIOSingleStepByteToMessageDecoderTest) -> () throws -> Void)] {
+        [
+            ("testDecoder", testDecoder),
+            ("testMemoryIsReclaimedIfMostIsConsumed", testMemoryIsReclaimedIfMostIsConsumed),
+            ("testMemoryIsReclaimedIfLotsIsAvailable", testMemoryIsReclaimedIfLotsIsAvailable),
+            ("testLeftOversMakeDecodeLastCalled", testLeftOversMakeDecodeLastCalled),
+            ("testStructsWorkAsOSBTMDecoders", testStructsWorkAsOSBTMDecoders),
+            ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed),
+            ("testPayloadTooLarge", testPayloadTooLarge),
+            ("testPayloadTooLargeButHandlerOk", testPayloadTooLargeButHandlerOk),
+            ("testReentrancy", testReentrancy),
+        ]
+    }
 }
-

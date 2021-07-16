@@ -23,14 +23,12 @@ import XCTest
 ///
 
 extension UtilitiesTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (UtilitiesTest) -> () throws -> Void)] {
-      return [
-                ("testCoreCountWorks", testCoreCountWorks),
-                ("testEnumeratingInterfaces", testEnumeratingInterfaces),
-                ("testEnumeratingDevices", testEnumeratingDevices),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (UtilitiesTest) -> () throws -> Void)] {
+        [
+            ("testCoreCountWorks", testCoreCountWorks),
+            ("testEnumeratingInterfaces", testEnumeratingInterfaces),
+            ("testEnumeratingDevices", testEnumeratingDevices),
+        ]
+    }
 }
-

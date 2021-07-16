@@ -39,21 +39,21 @@ func run(identifier: String) {
         func doReads(buffer: inout ByteBuffer) {
             /* these ones are zero allocations */
             let val = buffer.readInteger(as: UInt8.self)
-            precondition(0x41 == val, "\(val!)")
+            precondition(val == 0x41, "\(val!)")
             var slice = buffer.readSlice(length: 1)
             let sliceVal = slice!.readInteger(as: UInt8.self)
-            precondition(0x41 == sliceVal, "\(sliceVal!)")
+            precondition(sliceVal == 0x41, "\(sliceVal!)")
             buffer.withUnsafeReadableBytes { ptr in
                 precondition(ptr[0] == 0x41)
             }
 
             /* those down here should be one allocation each */
             let arr = buffer.readBytes(length: 1)
-            precondition([0x41] == arr!, "\(arr!)")
+            precondition(arr! == [0x41], "\(arr!)")
             let str = buffer.readString(length: 1)
-            precondition("A" == str, "\(str!)")
+            precondition(str == "A", "\(str!)")
         }
-        for _ in 0..<1000  {
+        for _ in 0 ..< 1000 {
             doWrites(buffer: &buffer)
             doReads(buffer: &buffer)
         }

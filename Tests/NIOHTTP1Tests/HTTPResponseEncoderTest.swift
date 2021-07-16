@@ -1,3 +1,5 @@
+@testable import NIO
+@testable import NIOHTTP1
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -12,12 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 import XCTest
-@testable import NIO
-@testable import NIOHTTP1
 
 private extension ByteBuffer {
     func assertContainsOnly(_ string: String) {
-        let innerData = self.getString(at: self.readerIndex, length: self.readableBytes)!
+        let innerData = getString(at: readerIndex, length: readableBytes)!
         XCTAssertEqual(innerData, string)
     }
 }

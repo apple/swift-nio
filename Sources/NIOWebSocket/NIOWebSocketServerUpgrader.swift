@@ -33,6 +33,7 @@ public struct NIOWebSocketUpgradeError: Error, Equatable {
     private init(actualError: ActualError) {
         self.actualError = actualError
     }
+
     /// A HTTP header on the upgrade request was invalid.
     public static let invalidUpgradeHeader = NIOWebSocketUpgradeError(actualError: .invalidUpgradeHeader)
 
@@ -41,7 +42,7 @@ public struct NIOWebSocketUpgradeError: Error, Equatable {
     public static let unsupportedWebSocketTarget = NIOWebSocketUpgradeError(actualError: .unsupportedWebSocketTarget)
 }
 
-fileprivate extension HTTPHeaders {
+private extension HTTPHeaders {
     func nonListHeader(_ name: String) throws -> String {
         let fields = self[canonicalForm: name]
         guard fields.count == 1 else {
@@ -92,11 +93,11 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
     public convenience init(automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
-                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
+                            upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>)
+    {
         self.init(maxFrameSize: 1 << 14, automaticErrorHandling: automaticErrorHandling,
                   shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
     }
-
 
     /// Create a new `NIOWebSocketServerUpgrader`.
     ///
@@ -119,7 +120,8 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
     public init(maxFrameSize: Int, automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
-                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
+                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>)
+    {
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.shouldUpgrade = shouldUpgrade
         self.upgradePipelineHandler = upgradePipelineHandler
@@ -127,7 +129,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
         self.automaticErrorHandling = automaticErrorHandling
     }
 
-    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders _: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         let key: String
         let version: String
 
@@ -143,7 +145,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
             return channel.eventLoop.makeFailedFuture(NIOWebSocketUpgradeError.invalidUpgradeHeader)
         }
 
-        return self.shouldUpgrade(channel, upgradeRequest).flatMapThrowing { extraHeaders in
+        return shouldUpgrade(channel, upgradeRequest).flatMapThrowing { extraHeaders in
             guard let extraHeaders = extraHeaders else {
                 throw NIOWebSocketUpgradeError.unsupportedWebSocketTarget
             }
@@ -176,7 +178,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
             context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
         }
 
-        if self.automaticErrorHandling {
+        if automaticErrorHandling {
             upgradeFuture = upgradeFuture.flatMap {
                 context.pipeline.addHandler(WebSocketProtocolErrorHandler())
             }

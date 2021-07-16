@@ -12,15 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIO
+import XCTest
 
 final class DummyFailingHandler1: ChannelInboundHandler {
     typealias InboundIn = NIOAny
 
     struct DummyError1: Error {}
 
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data _: NIOAny) {
         context.fireErrorCaught(DummyError1())
     }
 }
@@ -32,29 +32,28 @@ class NIOCloseOnErrorHandlerTest: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        self.eventLoop = EmbeddedEventLoop()
-        self.channel = EmbeddedChannel(loop: self.eventLoop)
+        eventLoop = EmbeddedEventLoop()
+        channel = EmbeddedChannel(loop: eventLoop)
     }
 
     override func tearDown() {
-        self.eventLoop = nil
-        if self.channel.isActive {
-            XCTAssertNoThrow(XCTAssertTrue(try self.channel.finish().isClean))
+        eventLoop = nil
+        if channel.isActive {
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
         }
 
         super.tearDown()
     }
 
     func testChannelCloseOnError() throws {
-        XCTAssertNoThrow(self.channel.pipeline.addHandlers([
+        XCTAssertNoThrow(channel.pipeline.addHandlers([
             DummyFailingHandler1(),
-            NIOCloseOnErrorHandler()
+            NIOCloseOnErrorHandler(),
         ]))
 
-        XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait())
-        XCTAssertTrue(self.channel.isActive)
-        XCTAssertThrowsError(try self.channel.writeInbound("Hello World")) { XCTAssertTrue($0 is DummyFailingHandler1.DummyError1) }
-        XCTAssertFalse(self.channel.isActive)
+        XCTAssertNoThrow(try channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait())
+        XCTAssertTrue(channel.isActive)
+        XCTAssertThrowsError(try channel.writeInbound("Hello World")) { XCTAssertTrue($0 is DummyFailingHandler1.DummyError1) }
+        XCTAssertFalse(channel.isActive)
     }
-
 }

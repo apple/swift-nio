@@ -20,51 +20,50 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
     private var numBytes = 0
-    
+
     private let remoteAddressInitializer: () throws -> SocketAddress
-    
+
     init(remoteAddressInitializer: @escaping () throws -> SocketAddress) {
         self.remoteAddressInitializer = remoteAddressInitializer
     }
-    
+
     public func channelActive(context: ChannelHandlerContext) {
-        
         do {
             // Channel is available. It's time to send the message to the server to initialize the ping-pong sequence.
-            
+
             // Get the server address.
-            let remoteAddress = try self.remoteAddressInitializer()
-            
+            let remoteAddress = try remoteAddressInitializer()
+
             // Set the transmission data.
             let buffer = context.channel.allocator.buffer(string: line)
-            self.numBytes = buffer.readableBytes
-            
+            numBytes = buffer.readableBytes
+
             // Forward the data.
             let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
-            
-            context.writeAndFlush(self.wrapOutboundOut(envolope), promise: nil)
-            
+
+            context.writeAndFlush(wrapOutboundOut(envolope), promise: nil)
+
         } catch {
             print("Could not resolve remote address")
         }
     }
-    
+
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let envelope = self.unwrapInboundIn(data)
+        let envelope = unwrapInboundIn(data)
         let byteBuffer = envelope.data
-        
-        self.numBytes -= byteBuffer.readableBytes
-        
-        if self.numBytes <= 0 {
+
+        numBytes -= byteBuffer.readableBytes
+
+        if numBytes <= 0 {
             let string = String(buffer: byteBuffer)
             print("Received: '\(string)' back from the server, closing channel.")
             context.close(promise: nil)
         }
     }
-    
+
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
-        
+
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
         context.close(promise: nil)
@@ -91,14 +90,14 @@ enum ConnectTo {
 let connectTarget: ConnectTo
 
 switch (arg1, arg1.flatMap(Int.init), arg2, arg2.flatMap(Int.init), arg3.flatMap(Int.init)) {
-case (.some(let h), .none , _, .some(let sp), .some(let lp)):
+case let (.some(h), .none, _, .some(sp), .some(lp)):
     /* We received three arguments (String Int Int), let's interpret that as a server host with a server port and a local listening port */
     connectTarget = .ip(host: h, sendPort: sp, listeningPort: lp)
-case (.some(let sp), .none , .some(let lp), .none, _):
+case let (.some(sp), .none, .some(lp), .none, _):
     /* We received two arguments (String String), let's interpret that as sending socket path and listening socket path  */
     assert(sp != lp, "The sending and listening sockets should differ.")
     connectTarget = .unixDomainSocket(sendPath: sp, listeningPath: lp)
-case (_, .some(let sp), _, .some(let lp), _):
+case let (_, .some(sp), _, .some(lp), _):
     /* We received two argument (Int Int), let's interpret that as the server port and a listening port on the default host. */
     connectTarget = .ip(host: defaultHost, sendPort: sp, listeningPort: lp)
 default:
@@ -107,9 +106,9 @@ default:
 
 let remoteAddress = { () -> SocketAddress in
     switch connectTarget {
-    case .ip(let host, let sendPort, _):
+    case let .ip(host, sendPort, _):
         return try SocketAddress.makeAddressResolvingHost(host, port: sendPort)
-    case .unixDomainSocket(let sendPath, _):
+    case let .unixDomainSocket(sendPath, _):
         return try SocketAddress(unixDomainSocketPath: sendPath)
     }
 }
@@ -120,19 +119,20 @@ let bootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
         channel.pipeline.addHandler(EchoHandler(remoteAddressInitializer: remoteAddress))
-}
+    }
+
 defer {
     try! group.syncShutdownGracefully()
 }
 
 let channel = try { () -> Channel in
     switch connectTarget {
-    case .ip(let host, _, let listeningPort):
+    case let .ip(host, _, listeningPort):
         return try bootstrap.bind(host: host, port: listeningPort).wait()
-    case .unixDomainSocket(_, let listeningPath):
+    case let .unixDomainSocket(_, listeningPath):
         return try bootstrap.bind(unixDomainSocketPath: listeningPath).wait()
     }
-    }()
+}()
 
 // Will be closed after we echo-ed back to the server.
 try channel.closeFuture.wait()

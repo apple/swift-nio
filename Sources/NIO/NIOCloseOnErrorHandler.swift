@@ -12,15 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 /// A `ChannelInboundHandler` that closes the channel when an error is caught
 public final class NIOCloseOnErrorHandler: ChannelInboundHandler {
-
     public typealias InboundIn = NIOAny
-    
+
     /// Initialize a `NIOCloseOnErrorHandler`
     public init() {}
-    
+
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         context.fireErrorCaught(error)
         context.close(promise: nil)

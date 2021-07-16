@@ -23,17 +23,15 @@ import XCTest
 ///
 
 extension PriorityQueueTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (PriorityQueueTest) -> () throws -> Void)] {
-      return [
-                ("testSomeStringsAsc", testSomeStringsAsc),
-                ("testRemoveNonExisting", testRemoveNonExisting),
-                ("testRemoveFromEmpty", testRemoveFromEmpty),
-                ("testBuildAndRemoveFromRandomPriorityQueues", testBuildAndRemoveFromRandomPriorityQueues),
-                ("testPartialOrder", testPartialOrder),
-                ("testDescription", testDescription),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (PriorityQueueTest) -> () throws -> Void)] {
+        [
+            ("testSomeStringsAsc", testSomeStringsAsc),
+            ("testRemoveNonExisting", testRemoveNonExisting),
+            ("testRemoveFromEmpty", testRemoveFromEmpty),
+            ("testBuildAndRemoveFromRandomPriorityQueues", testBuildAndRemoveFromRandomPriorityQueues),
+            ("testPartialOrder", testPartialOrder),
+            ("testDescription", testDescription),
+        ]
+    }
 }
-

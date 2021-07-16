@@ -23,19 +23,17 @@ import XCTest
 ///
 
 extension MulticastTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (MulticastTest) -> () throws -> Void)] {
-      return [
-                ("testCanJoinBasicMulticastGroupIPv4", testCanJoinBasicMulticastGroupIPv4),
-                ("testCanJoinBasicMulticastGroupIPv6", testCanJoinBasicMulticastGroupIPv6),
-                ("testCanLeaveAnIPv4MulticastGroup", testCanLeaveAnIPv4MulticastGroup),
-                ("testCanLeaveAnIPv6MulticastGroup", testCanLeaveAnIPv6MulticastGroup),
-                ("testCanJoinBasicMulticastGroupIPv4WithDevice", testCanJoinBasicMulticastGroupIPv4WithDevice),
-                ("testCanJoinBasicMulticastGroupIPv6WithDevice", testCanJoinBasicMulticastGroupIPv6WithDevice),
-                ("testCanLeaveAnIPv4MulticastGroupWithDevice", testCanLeaveAnIPv4MulticastGroupWithDevice),
-                ("testCanLeaveAnIPv6MulticastGroupWithDevice", testCanLeaveAnIPv6MulticastGroupWithDevice),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (MulticastTest) -> () throws -> Void)] {
+        [
+            ("testCanJoinBasicMulticastGroupIPv4", testCanJoinBasicMulticastGroupIPv4),
+            ("testCanJoinBasicMulticastGroupIPv6", testCanJoinBasicMulticastGroupIPv6),
+            ("testCanLeaveAnIPv4MulticastGroup", testCanLeaveAnIPv4MulticastGroup),
+            ("testCanLeaveAnIPv6MulticastGroup", testCanLeaveAnIPv6MulticastGroup),
+            ("testCanJoinBasicMulticastGroupIPv4WithDevice", testCanJoinBasicMulticastGroupIPv4WithDevice),
+            ("testCanJoinBasicMulticastGroupIPv6WithDevice", testCanJoinBasicMulticastGroupIPv6WithDevice),
+            ("testCanLeaveAnIPv4MulticastGroupWithDevice", testCanLeaveAnIPv4MulticastGroupWithDevice),
+            ("testCanLeaveAnIPv6MulticastGroupWithDevice", testCanLeaveAnIPv6MulticastGroupWithDevice),
+        ]
+    }
 }
-

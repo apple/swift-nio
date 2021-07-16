@@ -12,13 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
 import NIOConcurrencyHelpers
-
+import XCTest
 
 public final class AcceptBackoffHandlerTest: XCTestCase {
-
     private let acceptHandlerName = "AcceptBackoffHandler"
 
     public func testECONNABORTED() throws {
@@ -50,17 +48,17 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         let readCountHandler = ReadCountHandler()
         let serverChannel = try setupChannel(group: group,
                                              readCountHandler: readCountHandler,
-                                             backoffProvider: { _ in return .milliseconds(100) },
+                                             backoffProvider: { _ in .milliseconds(100) },
                                              errors: [error])
         XCTAssertEqual(0, try serverChannel.eventLoop.submit {
             serverChannel.readable()
             serverChannel.read()
             return readCountHandler.readCount
-            }.wait())
+        }.wait())
 
         // Inspect the read count after our scheduled backoff elapsed.
         XCTAssertEqual(1, try serverChannel.eventLoop.scheduleTask(in: .milliseconds(100)) {
-            return readCountHandler.readCount
+            readCountHandler.readCount
         }.futureResult.wait())
 
         // The read should go through as the scheduled read happened
@@ -87,8 +85,8 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         }
 
         let readCountHandler = ReadCountHandler()
-        let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { err in
-            return .hours(1)
+        let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { _ in
+            .hours(1)
         }, errors: [ENFILE])
         XCTAssertEqual(0, try serverChannel.eventLoop.submit {
             serverChannel.readable()
@@ -103,12 +101,12 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         if read {
             // Removal should have triggered a read.
             XCTAssertEqual(1, try serverChannel.eventLoop.submit {
-                return readCountHandler.readCount
+                readCountHandler.readCount
             }.wait())
         } else {
             // Removal should have triggered no read.
             XCTAssertEqual(0, try serverChannel.eventLoop.submit {
-                return readCountHandler.readCount
+                readCountHandler.readCount
             }.wait())
         }
         XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
@@ -121,8 +119,8 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         }
 
         let readCountHandler = ReadCountHandler()
-        let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { err in
-            return .milliseconds(10)
+        let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { _ in
+            .milliseconds(10)
         }, errors: [ENFILE])
         XCTAssertEqual(0, try serverChannel.eventLoop.submit {
             serverChannel.readable()
@@ -134,7 +132,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         // Inspect the read count after our scheduled backoff elapsed multiple times. This should still only have triggered one read as we should only ever
         // schedule one read.
         XCTAssertEqual(1, try serverChannel.eventLoop.scheduleTask(in: .milliseconds(500)) {
-            return readCountHandler.readCount
+            readCountHandler.readCount
         }.futureResult.wait())
 
         // The read should go through as the scheduled read happened
@@ -155,14 +153,13 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         class InactiveVerificationHandler: ChannelInboundHandler {
             typealias InboundIn = Any
 
-
             private let promise: EventLoopPromise<Void>
 
             init(promise: EventLoopPromise<Void>) {
                 self.promise = promise
             }
 
-            public func channelInactive(context: ChannelHandlerContext) {
+            public func channelInactive(context _: ChannelHandlerContext) {
                 promise.succeed(())
             }
 
@@ -172,8 +169,8 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         }
 
         let readCountHandler = ReadCountHandler()
-        let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { err in
-            return .milliseconds(10)
+        let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { _ in
+            .milliseconds(10)
         }, errors: [ENFILE])
 
         let inactiveVerificationHandler = InactiveVerificationHandler(promise: serverChannel.eventLoop.makePromise())
@@ -189,7 +186,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
 
         // Inspect the read count after our scheduled backoff elapsed multiple times. This should have triggered no read as the channel was closed.
         XCTAssertEqual(0, try serverChannel.eventLoop.scheduleTask(in: .milliseconds(500)) {
-            return readCountHandler.readCount
+            readCountHandler.readCount
         }.futureResult.wait())
 
         XCTAssertNoThrow(try inactiveVerificationHandler.waitForInactive())
@@ -204,7 +201,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         let readCountHandler = ReadCountHandler()
 
         let backoffProviderCalled = NIOAtomic<Int>.makeAtomic(value: 0)
-        let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { err in
+        let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { _ in
             if backoffProviderCalled.add(1) == 0 {
                 return .seconds(1)
             }
@@ -223,12 +220,12 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
 
         // This should have not fired a read yet as we updated the scheduled read because we received two errors.
         XCTAssertEqual(0, try serverChannel.eventLoop.scheduleTask(in: .seconds(1)) {
-            return readCountHandler.readCount
+            readCountHandler.readCount
         }.futureResult.wait())
 
         // This should have fired now as the updated scheduled read task should have been complete by now
         XCTAssertEqual(1, try serverChannel.eventLoop.scheduleTask(in: .seconds(1)) {
-            return readCountHandler.readCount
+            readCountHandler.readCount
         }.futureResult.wait())
 
         XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
@@ -251,7 +248,8 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
     private func setupChannel(group: EventLoopGroup,
                               readCountHandler: ReadCountHandler,
                               backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider,
-                              errors: [Int32]) throws -> ServerSocketChannel {
+                              errors: [Int32]) throws -> ServerSocketChannel
+    {
         let eventLoop = group.next() as! SelectableEventLoop
         let socket = try NonAcceptingServerSocket(errors: errors)
         let serverChannel = try assertNoThrowWithValue(ServerSocketChannel(serverSocket: socket,
@@ -269,8 +267,8 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
             // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `flatMap` on the eventloop that the
             // `register` will succeed.
-            serverChannel.register().flatMap { () -> EventLoopFuture<()> in
-                return serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
+            serverChannel.register().flatMap { () -> EventLoopFuture<Void> in
+                serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
             }
         }.wait() as Void)
         return serverChannel

@@ -23,34 +23,32 @@ import XCTest
 ///
 
 extension BootstrapTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (BootstrapTest) -> () throws -> Void)] {
-      return [
-                ("testBootstrapsCallInitializersOnCorrectEventLoop", testBootstrapsCallInitializersOnCorrectEventLoop),
-                ("testTCPBootstrapsTolerateFuturesFromDifferentEventLoopsReturnedInInitializers", testTCPBootstrapsTolerateFuturesFromDifferentEventLoopsReturnedInInitializers),
-                ("testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
-                ("testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
-                ("testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
-                ("testTCPClientBootstrapAllowsConformanceCorrectly", testTCPClientBootstrapAllowsConformanceCorrectly),
-                ("testServerBootstrapBindTimeout", testServerBootstrapBindTimeout),
-                ("testServerBootstrapSetsChannelOptionsBeforeChannelInitializer", testServerBootstrapSetsChannelOptionsBeforeChannelInitializer),
-                ("testClientBootstrapSetsChannelOptionsBeforeChannelInitializer", testClientBootstrapSetsChannelOptionsBeforeChannelInitializer),
-                ("testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer", testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer),
-                ("testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer", testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer),
-                ("testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer", testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer),
-                ("testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser", testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser),
-                ("testClientBootstrapValidatesWorkingELGsCorrectly", testClientBootstrapValidatesWorkingELGsCorrectly),
-                ("testClientBootstrapRejectsNotWorkingELGsCorrectly", testClientBootstrapRejectsNotWorkingELGsCorrectly),
-                ("testServerBootstrapValidatesWorkingELGsCorrectly", testServerBootstrapValidatesWorkingELGsCorrectly),
-                ("testServerBootstrapRejectsNotWorkingELGsCorrectly", testServerBootstrapRejectsNotWorkingELGsCorrectly),
-                ("testDatagramBootstrapValidatesWorkingELGsCorrectly", testDatagramBootstrapValidatesWorkingELGsCorrectly),
-                ("testDatagramBootstrapRejectsNotWorkingELGsCorrectly", testDatagramBootstrapRejectsNotWorkingELGsCorrectly),
-                ("testNIOPipeBootstrapValidatesWorkingELGsCorrectly", testNIOPipeBootstrapValidatesWorkingELGsCorrectly),
-                ("testNIOPipeBootstrapRejectsNotWorkingELGsCorrectly", testNIOPipeBootstrapRejectsNotWorkingELGsCorrectly),
-                ("testConvenienceOptionsAreEquivalentUniversalClient", testConvenienceOptionsAreEquivalentUniversalClient),
-                ("testClientBindWorksOnSocketsBoundToEitherIPv4OrIPv6Only", testClientBindWorksOnSocketsBoundToEitherIPv4OrIPv6Only),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (BootstrapTest) -> () throws -> Void)] {
+        [
+            ("testBootstrapsCallInitializersOnCorrectEventLoop", testBootstrapsCallInitializersOnCorrectEventLoop),
+            ("testTCPBootstrapsTolerateFuturesFromDifferentEventLoopsReturnedInInitializers", testTCPBootstrapsTolerateFuturesFromDifferentEventLoopsReturnedInInitializers),
+            ("testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
+            ("testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
+            ("testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers", testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers),
+            ("testTCPClientBootstrapAllowsConformanceCorrectly", testTCPClientBootstrapAllowsConformanceCorrectly),
+            ("testServerBootstrapBindTimeout", testServerBootstrapBindTimeout),
+            ("testServerBootstrapSetsChannelOptionsBeforeChannelInitializer", testServerBootstrapSetsChannelOptionsBeforeChannelInitializer),
+            ("testClientBootstrapSetsChannelOptionsBeforeChannelInitializer", testClientBootstrapSetsChannelOptionsBeforeChannelInitializer),
+            ("testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer", testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer),
+            ("testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer", testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer),
+            ("testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer", testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer),
+            ("testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser", testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser),
+            ("testClientBootstrapValidatesWorkingELGsCorrectly", testClientBootstrapValidatesWorkingELGsCorrectly),
+            ("testClientBootstrapRejectsNotWorkingELGsCorrectly", testClientBootstrapRejectsNotWorkingELGsCorrectly),
+            ("testServerBootstrapValidatesWorkingELGsCorrectly", testServerBootstrapValidatesWorkingELGsCorrectly),
+            ("testServerBootstrapRejectsNotWorkingELGsCorrectly", testServerBootstrapRejectsNotWorkingELGsCorrectly),
+            ("testDatagramBootstrapValidatesWorkingELGsCorrectly", testDatagramBootstrapValidatesWorkingELGsCorrectly),
+            ("testDatagramBootstrapRejectsNotWorkingELGsCorrectly", testDatagramBootstrapRejectsNotWorkingELGsCorrectly),
+            ("testNIOPipeBootstrapValidatesWorkingELGsCorrectly", testNIOPipeBootstrapValidatesWorkingELGsCorrectly),
+            ("testNIOPipeBootstrapRejectsNotWorkingELGsCorrectly", testNIOPipeBootstrapRejectsNotWorkingELGsCorrectly),
+            ("testConvenienceOptionsAreEquivalentUniversalClient", testConvenienceOptionsAreEquivalentUniversalClient),
+            ("testClientBindWorksOnSocketsBoundToEitherIPv4OrIPv6Only", testClientBindWorksOnSocketsBoundToEitherIPv4OrIPv6Only),
+        ]
+    }
 }
-

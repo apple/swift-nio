@@ -23,12 +23,10 @@ import XCTest
 ///
 
 extension NIOCloseOnErrorHandlerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (NIOCloseOnErrorHandlerTest) -> () throws -> Void)] {
-      return [
-                ("testChannelCloseOnError", testChannelCloseOnError),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (NIOCloseOnErrorHandlerTest) -> () throws -> Void)] {
+        [
+            ("testChannelCloseOnError", testChannelCloseOnError),
+        ]
+    }
 }
-

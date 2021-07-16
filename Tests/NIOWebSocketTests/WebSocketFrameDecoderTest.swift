@@ -12,24 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIO
 import NIOWebSocket
+import XCTest
 
 private class CloseSwallower: ChannelOutboundHandler, RemovableChannelHandler {
     typealias OutboundIn = Any
     typealias OutboundOut = Any
 
-    private var closePromise: EventLoopPromise<Void>? = nil
-    private var context: ChannelHandlerContext? = nil
+    private var closePromise: EventLoopPromise<Void>?
+    private var context: ChannelHandlerContext?
 
     public func allowClose() {
-        self.context!.close(promise: self.closePromise)
-        self.context = nil
+        context!.close(promise: closePromise)
+        context = nil
     }
 
-    func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        self.closePromise = promise
+    func close(context: ChannelHandlerContext, mode _: CloseMode, promise: EventLoopPromise<Void>?) {
+        closePromise = promise
         self.context = context
     }
 }
@@ -42,15 +42,15 @@ private final class SynchronousCloser: ChannelInboundHandler {
     private var closeFrame: WebSocketFrame?
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let frame = self.unwrapInboundIn(data)
+        let frame = unwrapInboundIn(data)
         guard case .connectionClose = frame.opcode else {
             context.fireChannelRead(data)
             return
         }
 
         // Ok, connection close. Confirm we haven't seen one before.
-        XCTAssertNil(self.closeFrame)
-        self.closeFrame = frame
+        XCTAssertNil(closeFrame)
+        closeFrame = frame
 
         // Now we're going to call close.
         context.close(promise: nil)
@@ -62,36 +62,36 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
     public var encoderChannel: EmbeddedChannel!
     public var buffer: ByteBuffer!
 
-    public override func setUp() {
-        self.decoderChannel = EmbeddedChannel()
-        self.encoderChannel = EmbeddedChannel()
-        self.buffer = decoderChannel.allocator.buffer(capacity: 128)
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder())).wait())
-        XCTAssertNoThrow(try self.encoderChannel.pipeline.addHandler(WebSocketFrameEncoder()).wait())
+    override public func setUp() {
+        decoderChannel = EmbeddedChannel()
+        encoderChannel = EmbeddedChannel()
+        buffer = decoderChannel.allocator.buffer(capacity: 128)
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder())).wait())
+        XCTAssertNoThrow(try encoderChannel.pipeline.addHandler(WebSocketFrameEncoder()).wait())
     }
 
-    public override func tearDown() {
-        XCTAssertNoThrow(try self.encoderChannel.finish())
-        _ = try? self.decoderChannel.finish()
-        self.encoderChannel = nil
-        self.buffer = nil
+    override public func tearDown() {
+        XCTAssertNoThrow(try encoderChannel.finish())
+        _ = try? decoderChannel.finish()
+        encoderChannel = nil
+        buffer = nil
     }
 
     private func frameForFrame(_ frame: WebSocketFrame) -> WebSocketFrame? {
-        self.encoderChannel.writeAndFlush(frame, promise: nil)
+        encoderChannel.writeAndFlush(frame, promise: nil)
 
         do {
-            while let d = try self.encoderChannel.readOutbound(as: ByteBuffer.self) {
-                XCTAssertNoThrow(try self.decoderChannel.writeInbound(d))
+            while let d = try encoderChannel.readOutbound(as: ByteBuffer.self) {
+                XCTAssertNoThrow(try decoderChannel.writeInbound(d))
             }
 
-            guard let producedFrame: WebSocketFrame = try self.decoderChannel.readInbound() else {
+            guard let producedFrame: WebSocketFrame = try decoderChannel.readInbound() else {
                 XCTFail("Did not produce a frame")
                 return nil
             }
 
             // Should only have gotten one frame!
-            XCTAssertNoThrow(XCTAssertNil(try self.decoderChannel.readInbound(as: WebSocketFrame.self)))
+            XCTAssertNoThrow(XCTAssertNil(try decoderChannel.readInbound(as: WebSocketFrame.self)))
             return producedFrame
         } catch {
             XCTFail("unexpected error: \(error)")
@@ -110,7 +110,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
     private func swapDecoder(for handler: ChannelHandler) {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
-        let f = self.decoderChannel.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self).flatMapThrowing {
+        let f = decoderChannel.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self).flatMapThrowing {
             if let handler = $0.handler as? RemovableChannelHandler {
                 return handler
             } else {
@@ -121,7 +121,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         }
 
         // we need to run the event loop here because removal is not synchronous
-        (self.decoderChannel.eventLoop as! EmbeddedEventLoop).run()
+        (decoderChannel.eventLoop as! EmbeddedEventLoop).run()
 
         XCTAssertNoThrow(try f.flatMap {
             self.decoderChannel.pipeline.addHandler(handler)
@@ -129,26 +129,26 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testFramesWithoutBodies() throws {
-        let frame = WebSocketFrame(fin: true, opcode: .ping, data: self.buffer)
+        let frame = WebSocketFrame(fin: true, opcode: .ping, data: buffer)
         assertFrameRoundTrips(frame: frame)
     }
 
     public func testFramesWithExtensionDataDontRoundTrip() throws {
         // We don't know what the extensions are, so all data goes in...well...data.
-        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    opcode: .binary,
-                                   data: self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!,
-                                   extensionData: self.buffer.getSlice(at: self.buffer.readerIndex + 5, length: 5)!)
+                                   data: buffer.getSlice(at: buffer.readerIndex, length: 5)!,
+                                   extensionData: buffer.getSlice(at: buffer.readerIndex + 5, length: 5)!)
         assertFrameDoesNotRoundTrip(frame: frame)
     }
 
     public func testFramesWithExtensionDataCanBeRecovered() throws {
-        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    opcode: .binary,
-                                   data: self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!,
-                                   extensionData: self.buffer.getSlice(at: self.buffer.readerIndex + 5, length: 5)!)
+                                   data: buffer.getSlice(at: buffer.readerIndex, length: 5)!,
+                                   extensionData: buffer.getSlice(at: buffer.readerIndex + 5, length: 5)!)
         var newFrame = frameForFrame(frame)!
         // Copy some data out into the extension on the frame. The first 5 bytes are extension.
         newFrame.extensionData = newFrame.data.readSlice(length: 5)
@@ -156,43 +156,43 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testFramesWithReservedBitsSetRoundTrip() throws {
-        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    rsv1: true,
                                    rsv2: true,
                                    rsv3: true,
                                    opcode: .binary,
-                                   data: self.buffer)
+                                   data: buffer)
         assertFrameRoundTrips(frame: frame)
     }
 
     public func testFramesWith16BitLengthsRoundTrip() throws {
-        self.buffer.writeBytes(Array(repeating: UInt8(4), count: 300))
+        buffer.writeBytes(Array(repeating: UInt8(4), count: 300))
         let frame = WebSocketFrame(fin: true,
                                    opcode: .binary,
-                                   data: self.buffer)
+                                   data: buffer)
         assertFrameRoundTrips(frame: frame)
     }
 
     public func testFramesWith64BitLengthsRoundTrip() throws {
         // We need a new decoder channel here, because the max length would otherwise trigger an error.
-        _ = try! self.decoderChannel.finish()
-        self.decoderChannel = EmbeddedChannel()
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: 80000))).wait())
+        _ = try! decoderChannel.finish()
+        decoderChannel = EmbeddedChannel()
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: 80000))).wait())
 
-        self.buffer.writeBytes(Array(repeating: UInt8(4), count: 66000))
+        buffer.writeBytes(Array(repeating: UInt8(4), count: 66000))
         let frame = WebSocketFrame(fin: true,
                                    opcode: .binary,
-                                   data: self.buffer)
+                                   data: buffer)
         assertFrameRoundTrips(frame: frame)
     }
 
     public func testMaskedFramesRoundTripWithMaskingIntact() throws {
-        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    opcode: .binary,
                                    maskKey: [0x80, 0x77, 0x11, 0x33],
-                                   data: self.buffer)
+                                   data: buffer)
         let producedFrame = frameForFrame(frame)!
         XCTAssertEqual(producedFrame.fin, frame.fin)
         XCTAssertEqual(producedFrame.rsv1, frame.rsv1)
@@ -202,21 +202,21 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertEqual(producedFrame.length, frame.length)
 
         // The produced frame contains the masked data in its data field.
-        var maskedBuffer = self.buffer!
+        var maskedBuffer = buffer!
         maskedBuffer.webSocketMask([0x80, 0x77, 0x11, 0x33])
         XCTAssertEqual(maskedBuffer, producedFrame.data)
 
         // But we can get the unmasked data back.
-        XCTAssertEqual(producedFrame.unmaskedData, self.buffer)
+        XCTAssertEqual(producedFrame.unmaskedData, buffer)
     }
 
     public func testMaskedFramesRoundTripWithMaskingIntactEvenWithExtensions() throws {
-        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    opcode: .binary,
                                    maskKey: [0x80, 0x77, 0x11, 0x33],
-                                   data: self.buffer.getSlice(at: self.buffer.readerIndex + 5, length: 5)!,
-                                   extensionData: self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!)
+                                   data: buffer.getSlice(at: buffer.readerIndex + 5, length: 5)!,
+                                   extensionData: buffer.getSlice(at: buffer.readerIndex, length: 5)!)
         var producedFrame = frameForFrame(frame)!
         XCTAssertEqual(producedFrame.fin, frame.fin)
         XCTAssertEqual(producedFrame.rsv1, frame.rsv1)
@@ -229,84 +229,84 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         // is not. Let's fix that up first.
         producedFrame.extensionData = producedFrame.data.readSlice(length: 5)
 
-        var maskedBuffer = self.buffer!
+        var maskedBuffer = buffer!
         maskedBuffer.webSocketMask([0x80, 0x77, 0x11, 0x33])
         XCTAssertEqual(maskedBuffer.getSlice(at: maskedBuffer.readerIndex + 5, length: 5)!, producedFrame.data)
         XCTAssertEqual(maskedBuffer.getSlice(at: maskedBuffer.readerIndex, length: 5)!, producedFrame.extensionData)
 
         // But we can get the unmasked data back.
-        XCTAssertEqual(producedFrame.unmaskedData, self.buffer.getSlice(at: self.buffer.readerIndex + 5, length: 5)!)
-        XCTAssertEqual(producedFrame.unmaskedExtensionData, self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!)
+        XCTAssertEqual(producedFrame.unmaskedData, buffer.getSlice(at: buffer.readerIndex + 5, length: 5)!)
+        XCTAssertEqual(producedFrame.unmaskedExtensionData, buffer.getSlice(at: buffer.readerIndex, length: 5)!)
     }
 
     public func testDecoderRejectsOverlongFrames() throws {
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
+        buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsFragmentedControlFrames() throws {
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.writeBytes([0x09, 0x00])
+        buffer.writeBytes([0x09, 0x00])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.fragmentedControlFrame, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsMultibyteControlFrameLengths() throws {
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
-        self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
+        buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.multiByteControlFrameLength, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try decoderChannel.readAllOutboundBytes()))
     }
 
     func testIgnoresFurtherDataAfterRejectedFrame() throws {
         let swallower = CloseSwallower()
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(swallower, position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(swallower, position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.writeBytes([0x09, 0x00])
+        buffer.writeBytes([0x09, 0x00])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.fragmentedControlFrame, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try decoderChannel.readAllOutboundBytes()))
 
         // Now write another broken frame, this time an overlong frame.
-        self.buffer.clear()
+        buffer.clear()
         let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
-        self.buffer.writeBytes(wrongFrame)
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
+        buffer.writeBytes(wrongFrame)
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
+            if case let .some(.dataReceivedInErrorState(innerError, data)) = error as? ByteToMessageDecoderError {
                 // ok
                 XCTAssertEqual(.fragmentedControlFrame, innerError as? NIOWebSocketError)
                 XCTAssertEqual(wrongFrame, Array(data.readableBytesView))
@@ -316,111 +316,111 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         }
 
         // No extra data should have been sent.
-        XCTAssertNoThrow(XCTAssertNil(try self.decoderChannel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try decoderChannel.readOutbound()))
 
         // Allow the channel to close.
         swallower.allowClose()
 
         // Take the handler out for cleanliness.
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.removeHandler(swallower).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.removeHandler(swallower).wait())
     }
 
     public func testClosingSynchronouslyOnChannelRead() throws {
         // We're going to send a connectionClose frame and confirm we only see it once.
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(SynchronousCloser()).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(SynchronousCloser()).wait())
 
-        var errorCodeBuffer = self.encoderChannel.allocator.buffer(capacity: 4)
+        var errorCodeBuffer = encoderChannel.allocator.buffer(capacity: 4)
         errorCodeBuffer.write(webSocketErrorCode: .normalClosure)
         let frame = WebSocketFrame(fin: true, opcode: .connectionClose, data: errorCodeBuffer)
 
         // Write the frame, send it through the decoder channel. We need to do this in one go to trigger
         // a double-parse edge case.
-        self.encoderChannel.write(frame, promise: nil)
-        var frameBuffer = self.decoderChannel.allocator.buffer(capacity: 10)
-        while var d = try self.encoderChannel.readOutbound(as: ByteBuffer.self) {
+        encoderChannel.write(frame, promise: nil)
+        var frameBuffer = decoderChannel.allocator.buffer(capacity: 10)
+        while var d = try encoderChannel.readOutbound(as: ByteBuffer.self) {
             frameBuffer.writeBuffer(&d)
         }
-        XCTAssertNoThrow(try self.decoderChannel.writeInbound(frameBuffer))
+        XCTAssertNoThrow(try decoderChannel.writeInbound(frameBuffer))
 
         // No data should have been sent or received.
-        XCTAssertNoThrow(XCTAssertNil(try self.decoderChannel.readOutbound()))
-        XCTAssertNoThrow(XCTAssertNil(try self.decoderChannel.readInbound(as: WebSocketFrame.self)))
+        XCTAssertNoThrow(XCTAssertNil(try decoderChannel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try decoderChannel.readInbound(as: WebSocketFrame.self)))
     }
 
     public func testDecoderRejectsOverlongFramesWithNoAutomaticErrorHandling() {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
-        self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
+        buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
         }
 
         // No error frame should be written.
-        XCTAssertNoThrow(XCTAssertEqual([], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([], try decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsFragmentedControlFramesWithNoAutomaticErrorHandling() throws {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
-        self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.writeBytes([0x09, 0x00])
+        buffer.writeBytes([0x09, 0x00])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.fragmentedControlFrame, error as? NIOWebSocketError)
         }
 
         // No error frame should be written.
-        XCTAssertNoThrow(XCTAssertEqual([], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([], try decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsMultibyteControlFrameLengthsWithNoAutomaticErrorHandling() throws {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
-        self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
-        self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
+        buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.multiByteControlFrameLength, error as? NIOWebSocketError)
         }
 
         // No error frame should be written.
-        XCTAssertNoThrow(XCTAssertEqual([], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([], try decoderChannel.readAllOutboundBytes()))
     }
 
     func testIgnoresFurtherDataAfterRejectedFrameWithNoAutomaticErrorHandling() {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
-         self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.writeBytes([0x09, 0x00])
+        buffer.writeBytes([0x09, 0x00])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.fragmentedControlFrame, error as? NIOWebSocketError)
         }
 
         // No error frame should be written.
-        XCTAssertNoThrow(XCTAssertEqual([], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([], try decoderChannel.readAllOutboundBytes()))
 
         // Now write another broken frame, this time an overlong frame.
-        self.buffer.clear()
+        buffer.clear()
         let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
-        self.buffer.writeBytes(wrongFrame)
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
+        buffer.writeBytes(wrongFrame)
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
+            if case let .some(.dataReceivedInErrorState(innerError, data)) = error as? ByteToMessageDecoderError {
                 // ok
                 XCTAssertEqual(.fragmentedControlFrame, innerError as? NIOWebSocketError)
                 XCTAssertEqual(wrongFrame, Array(data.readableBytesView))
@@ -430,89 +430,89 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         }
 
         // No extra data should have been sent.
-        XCTAssertNoThrow(XCTAssertNil(try self.decoderChannel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try decoderChannel.readOutbound()))
     }
 
     public func testDecoderRejectsOverlongFramesWithSeparateErrorHandling() throws {
         // We need to insert a decoder that doesn't do error handling, and then a separate error
         // handler.
-        self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
+        buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsFragmentedControlFramesWithSeparateErrorHandling() throws {
         // We need to insert a decoder that doesn't do error handling, and then a separate error
         // handler.
-        self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.writeBytes([0x09, 0x00])
+        buffer.writeBytes([0x09, 0x00])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.fragmentedControlFrame, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try decoderChannel.readAllOutboundBytes()))
     }
 
     public func testDecoderRejectsMultibyteControlFrameLengthsWithSeparateErrorHandling() throws {
         // We need to insert a decoder that doesn't do error handling, and then a separate error
         // handler.
-        self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
-        self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
+        buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.multiByteControlFrameLength, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual(try self.decoderChannel.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xEA]))
+        XCTAssertNoThrow(XCTAssertEqual(try decoderChannel.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xEA]))
     }
 
     func testIgnoresFurtherDataAfterRejectedFrameWithSeparateErrorHandling() {
         let swallower = CloseSwallower()
         // We need to insert a decoder that doesn't do error handling, and then a separate error
         // handler.
-        self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(swallower, position: .first).wait())
+        swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(swallower, position: .first).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.writeBytes([0x09, 0x00])
+        buffer.writeBytes([0x09, 0x00])
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.fragmentedControlFrame, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual(try self.decoderChannel.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xEA]))
+        XCTAssertNoThrow(XCTAssertEqual(try decoderChannel.readAllOutboundBytes(), [0x88, 0x02, 0x03, 0xEA]))
 
         // Now write another broken frame, this time an overlong frame.
-        self.buffer.clear()
+        buffer.clear()
         let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
-        self.buffer.writeBytes(wrongFrame)
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
+        buffer.writeBytes(wrongFrame)
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
+            if case let .some(.dataReceivedInErrorState(innerError, data)) = error as? ByteToMessageDecoderError {
                 // ok
                 XCTAssertEqual(.fragmentedControlFrame, innerError as? NIOWebSocketError)
                 XCTAssertEqual(wrongFrame, Array(data.readableBytesView))
@@ -522,35 +522,35 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         }
 
         // No extra data should have been sent.
-        XCTAssertNoThrow(XCTAssertNil(try self.decoderChannel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try decoderChannel.readOutbound()))
 
         // Allow the channel to close.
         swallower.allowClose()
 
         // Take the handler out for cleanliness.
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.removeHandler(swallower).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.removeHandler(swallower).wait())
     }
 
     func testErrorHandlerDoesNotSwallowRandomErrors() throws {
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
+        buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
 
         struct Dummy: Error {}
 
-        self.decoderChannel.pipeline.fireErrorCaught(Dummy())
-        XCTAssertThrowsError(try self.decoderChannel.throwIfErrorCaught()) { error in
+        decoderChannel.pipeline.fireErrorCaught(Dummy())
+        XCTAssertThrowsError(try decoderChannel.throwIfErrorCaught()) { error in
             XCTAssertNotNil(error as? Dummy, "unexpected error: \(error)")
         }
 
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+        XCTAssertThrowsError(try decoderChannel.writeInbound(buffer)) { error in
             XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
         }
 
         // We expect that an error frame will have been written out.
-        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try decoderChannel.readAllOutboundBytes()))
     }
 }

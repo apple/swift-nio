@@ -23,35 +23,33 @@ import XCTest
 ///
 
 extension HappyEyeballsTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HappyEyeballsTest) -> () throws -> Void)] {
-      return [
-                ("testIPv4OnlyResolution", testIPv4OnlyResolution),
-                ("testIPv6OnlyResolution", testIPv6OnlyResolution),
-                ("testTimeOutDuringDNSResolution", testTimeOutDuringDNSResolution),
-                ("testAAAAQueryReturningFirst", testAAAAQueryReturningFirst),
-                ("testAQueryReturningFirstDelayElapses", testAQueryReturningFirstDelayElapses),
-                ("testAQueryReturningFirstThenAAAAReturns", testAQueryReturningFirstThenAAAAReturns),
-                ("testAQueryReturningFirstThenAAAAErrors", testAQueryReturningFirstThenAAAAErrors),
-                ("testAQueryReturningFirstThenEmptyAAAA", testAQueryReturningFirstThenEmptyAAAA),
-                ("testEmptyResultsFail", testEmptyResultsFail),
-                ("testAllDNSFail", testAllDNSFail),
-                ("testMaximalConnectionDelay", testMaximalConnectionDelay),
-                ("testAllConnectionsFail", testAllConnectionsFail),
-                ("testDelayedAAAAResult", testDelayedAAAAResult),
-                ("testTimeoutWaitingForAAAA", testTimeoutWaitingForAAAA),
-                ("testTimeoutAfterAQuery", testTimeoutAfterAQuery),
-                ("testAConnectFailsWaitingForAAAA", testAConnectFailsWaitingForAAAA),
-                ("testDelayedAResult", testDelayedAResult),
-                ("testTimeoutBeforeAResponse", testTimeoutBeforeAResponse),
-                ("testAllConnectionsFailImmediately", testAllConnectionsFailImmediately),
-                ("testLaterConnections", testLaterConnections),
-                ("testDelayedChannelCreation", testDelayedChannelCreation),
-                ("testChannelCreationFails", testChannelCreationFails),
-                ("testCancellationSyncWithConnectDelay", testCancellationSyncWithConnectDelay),
-                ("testCancellationSyncWithResolutionDelay", testCancellationSyncWithResolutionDelay),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HappyEyeballsTest) -> () throws -> Void)] {
+        [
+            ("testIPv4OnlyResolution", testIPv4OnlyResolution),
+            ("testIPv6OnlyResolution", testIPv6OnlyResolution),
+            ("testTimeOutDuringDNSResolution", testTimeOutDuringDNSResolution),
+            ("testAAAAQueryReturningFirst", testAAAAQueryReturningFirst),
+            ("testAQueryReturningFirstDelayElapses", testAQueryReturningFirstDelayElapses),
+            ("testAQueryReturningFirstThenAAAAReturns", testAQueryReturningFirstThenAAAAReturns),
+            ("testAQueryReturningFirstThenAAAAErrors", testAQueryReturningFirstThenAAAAErrors),
+            ("testAQueryReturningFirstThenEmptyAAAA", testAQueryReturningFirstThenEmptyAAAA),
+            ("testEmptyResultsFail", testEmptyResultsFail),
+            ("testAllDNSFail", testAllDNSFail),
+            ("testMaximalConnectionDelay", testMaximalConnectionDelay),
+            ("testAllConnectionsFail", testAllConnectionsFail),
+            ("testDelayedAAAAResult", testDelayedAAAAResult),
+            ("testTimeoutWaitingForAAAA", testTimeoutWaitingForAAAA),
+            ("testTimeoutAfterAQuery", testTimeoutAfterAQuery),
+            ("testAConnectFailsWaitingForAAAA", testAConnectFailsWaitingForAAAA),
+            ("testDelayedAResult", testDelayedAResult),
+            ("testTimeoutBeforeAResponse", testTimeoutBeforeAResponse),
+            ("testAllConnectionsFailImmediately", testAllConnectionsFailImmediately),
+            ("testLaterConnections", testLaterConnections),
+            ("testDelayedChannelCreation", testDelayedChannelCreation),
+            ("testChannelCreationFails", testChannelCreationFails),
+            ("testCancellationSyncWithConnectDelay", testCancellationSyncWithConnectDelay),
+            ("testCancellationSyncWithResolutionDelay", testCancellationSyncWithResolutionDelay),
+        ]
+    }
 }
-

@@ -19,10 +19,11 @@ public enum ByteToMessageDecoderVerifier {
     ///
     /// Verify `ByteToMessageDecoder`s with `String` inputs
     public static func verifyDecoder<Decoder: ByteToMessageDecoder>(stringInputOutputPairs: [(String, [Decoder.InboundOut])],
-                                                                    decoderFactory: @escaping () -> Decoder) throws where Decoder.InboundOut: Equatable {
+                                                                    decoderFactory: @escaping () -> Decoder) throws where Decoder.InboundOut: Equatable
+    {
         let alloc = ByteBufferAllocator()
         let ioPairs = stringInputOutputPairs.map { (ioPair: (String, [Decoder.InboundOut])) -> (ByteBuffer, [Decoder.InboundOut]) in
-            return (alloc.buffer(string: ioPair.0), ioPair.1)
+            (alloc.buffer(string: ioPair.0), ioPair.1)
         }
         return try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: ioPairs, decoderFactory: decoderFactory)
     }
@@ -51,7 +52,8 @@ public enum ByteToMessageDecoderVerifier {
     ///     XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: expectedInOuts,
     ///                                                                     decoderFactory: { ExampleDecoder() }))
     public static func verifyDecoder<Decoder: ByteToMessageDecoder>(inputOutputPairs: [(ByteBuffer, [Decoder.InboundOut])],
-                                                                    decoderFactory: @escaping () -> Decoder) throws where Decoder.InboundOut: Equatable {
+                                                                    decoderFactory: @escaping () -> Decoder) throws where Decoder.InboundOut: Equatable
+    {
         typealias Out = Decoder.InboundOut
 
         func verifySimple(channel: RecordingChannel) throws {
@@ -65,7 +67,7 @@ public enum ByteToMessageDecoderVerifier {
                     guard actualOutput == expectedOutput else {
                         throw VerificationError<Out>(inputs: channel.inboundWrites,
                                                      errorCode: .wrongProduction(actual: actualOutput,
-                                                                                     expected: expectedOutput))
+                                                                                 expected: expectedOutput))
                     }
                 }
                 let actualExtraOutput = try channel.readInbound(as: Out.self)
@@ -77,7 +79,7 @@ public enum ByteToMessageDecoderVerifier {
         }
 
         func verifyDripFeed(channel: RecordingChannel) throws {
-            for _ in 0..<10 {
+            for _ in 0 ..< 10 {
                 for (input, expectedOutputs) in inputOutputPairs.shuffled() {
                     for c in input.readableBytesView {
                         var buffer = channel.allocator.buffer(capacity: 12)
@@ -96,7 +98,7 @@ public enum ByteToMessageDecoderVerifier {
                         guard actualOutput == expectedOutput else {
                             throw VerificationError<Out>(inputs: channel.inboundWrites,
                                                          errorCode: .wrongProduction(actual: actualOutput,
-                                                                                         expected: expectedOutput))
+                                                                                     expected: expectedOutput))
                         }
                     }
                     let actualExtraOutput = try channel.readInbound(as: Out.self)
@@ -112,7 +114,7 @@ public enum ByteToMessageDecoderVerifier {
             var overallBuffer = channel.allocator.buffer(capacity: 1024)
             var overallExpecteds: [Out] = []
 
-            for _ in 0..<10 {
+            for _ in 0 ..< 10 {
                 for (var input, expectedOutputs) in inputOutputPairs.shuffled() {
                     overallBuffer.writeBuffer(&input)
                     overallExpecteds.append(contentsOf: expectedOutputs)
@@ -128,7 +130,7 @@ public enum ByteToMessageDecoderVerifier {
                 guard actualOutput == expectedOutput else {
                     throw VerificationError<Out>(inputs: channel.inboundWrites,
                                                  errorCode: .wrongProduction(actual: actualOutput,
-                                                                                 expected: expectedOutput))
+                                                                             expected: expectedOutput))
                 }
             }
         }
@@ -140,7 +142,7 @@ public enum ByteToMessageDecoderVerifier {
         try verifyDripFeed(channel: channel)
         try verifyManyAtOnce(channel: channel)
 
-        if case .leftOvers(inbound: let ib, outbound: let ob, pendingOutbound: let pob) = try channel.finish() {
+        if case let .leftOvers(inbound: ib, outbound: ob, pendingOutbound: pob) = try channel.finish() {
             throw VerificationError<Out>(inputs: channel.inboundWrites,
                                          errorCode: .leftOversOnDeconstructingChannel(inbound: ib,
                                                                                       outbound: ob,
@@ -158,28 +160,28 @@ extension ByteToMessageDecoderVerifier {
             self.actualChannel = actualChannel
         }
 
-        func readInbound<T>(as type: T.Type = T.self) throws -> T? {
-            return try self.actualChannel.readInbound()
+        func readInbound<T>(as _: T.Type = T.self) throws -> T? {
+            try actualChannel.readInbound()
         }
 
         @discardableResult public func writeInbound(_ data: ByteBuffer) throws -> EmbeddedChannel.BufferState {
-            self.inboundWrites.append(data)
-            return try self.actualChannel.writeInbound(data)
+            inboundWrites.append(data)
+            return try actualChannel.writeInbound(data)
         }
 
         var allocator: ByteBufferAllocator {
-            return self.actualChannel.allocator
+            actualChannel.allocator
         }
 
         func finish() throws -> EmbeddedChannel.LeftOverState {
-            return try self.actualChannel.finish()
+            try actualChannel.finish()
         }
     }
 }
 
-extension ByteToMessageDecoderVerifier {
+public extension ByteToMessageDecoderVerifier {
     /// A `VerificationError` is thrown when the verification of a `ByteToMessageDecoder` failed.
-    public struct VerificationError<OutputType: Equatable>: Error {
+    struct VerificationError<OutputType: Equatable>: Error {
         /// Contains the `inputs` that were passed to the `ByteToMessageDecoder` at the point where it failed
         /// verification.
         public var inputs: [ByteBuffer]

@@ -12,13 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIOCore
 @testable import NIO
+@testable import NIOCore
+import XCTest
 
 private var testDecoderIsNotQuadratic_mallocs = 0
 private var testDecoderIsNotQuadratic_reallocs = 0
-private func testDecoderIsNotQuadratic_freeHook(_ ptr: UnsafeMutableRawPointer?) -> Void {
+private func testDecoderIsNotQuadratic_freeHook(_ ptr: UnsafeMutableRawPointer?) {
     free(ptr)
 }
 
@@ -32,7 +32,7 @@ private func testDecoderIsNotQuadratic_reallocHook(_ ptr: UnsafeMutableRawPointe
     return realloc(ptr, count)
 }
 
-private func testDecoderIsNotQuadratic_memcpyHook(_ dst: UnsafeMutableRawPointer, _ src: UnsafeRawPointer, _ count: Int) -> Void {
+private func testDecoderIsNotQuadratic_memcpyHook(_ dst: UnsafeMutableRawPointer, _ src: UnsafeRawPointer, _ count: Int) {
     _ = memcpy(dst, src, count)
 }
 
@@ -45,13 +45,13 @@ private final class ChannelInactivePromiser: ChannelInboundHandler {
         channelInactivePromise = channel.eventLoop.makePromise()
     }
 
-    func channelInactive(context: ChannelHandlerContext) {
+    func channelInactive(context _: ChannelHandlerContext) {
         channelInactivePromise.succeed(())
     }
 }
 
 public final class ByteToMessageDecoderTest: XCTestCase {
-    private final class ByteToInt32Decoder : ByteToMessageDecoder {
+    private final class ByteToInt32Decoder: ByteToMessageDecoder {
         typealias InboundIn = ByteBuffer
         typealias InboundOut = Int32
 
@@ -59,13 +59,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             guard buffer.readableBytes >= MemoryLayout<Int32>.size else {
                 return .needMoreData
             }
-            context.fireChannelRead(self.wrapInboundOut(buffer.readInteger()!))
+            context.fireChannelRead(wrapInboundOut(buffer.readInteger()!))
             return .continue
         }
 
         func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
             XCTAssertTrue(seenEOF)
-            return self.decode(context: context, buffer: &buffer)
+            return decode(context: context, buffer: &buffer)
         }
     }
 
@@ -73,13 +73,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         typealias InboundIn = ByteBuffer
         typealias InboundOut = Never
 
-        func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
-            return .needMoreData
+        func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) -> DecodingState {
+            .needMoreData
         }
 
         func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
             XCTAssertTrue(seenEOF)
-            return self.decode(context: context, buffer: &buffer)
+            return decode(context: context, buffer: &buffer)
         }
     }
 
@@ -88,17 +88,17 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         typealias InboundOut = ByteBuffer
 
         func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
-            guard case .some(let buffer) = buffer.readSlice(length: 512) else {
+            guard case let .some(buffer) = buffer.readSlice(length: 512) else {
                 return .needMoreData
             }
 
-            context.fireChannelRead(self.wrapInboundOut(buffer))
+            context.fireChannelRead(wrapInboundOut(buffer))
             return .continue
         }
 
         func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
             XCTAssertTrue(seenEOF)
-            return self.decode(context: context, buffer: &buffer)
+            return decode(context: context, buffer: &buffer)
         }
     }
 
@@ -113,13 +113,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 return .needMoreData
             }
 
-            context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 2048)!))
+            context.fireChannelRead(wrapInboundOut(buffer.readSlice(length: 2048)!))
             return .continue
         }
 
         func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
             XCTAssertTrue(seenEOF)
-            return self.decode(context: context, buffer: &buffer)
+            return decode(context: context, buffer: &buffer)
         }
     }
 
@@ -190,7 +190,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         var inputBuffer = dummyAllocator.buffer(capacity: 8)
         inputBuffer.writeStaticString("whatwhat")
 
-        for _ in 0..<10 {
+        for _ in 0 ..< 10 {
             channel.pipeline.fireChannelRead(NIOAny(inputBuffer))
         }
 
@@ -239,7 +239,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual(decoder.cumulationBuffer!.capacity, 2048)
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 2)
         XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 1024)
-        
+
         // Finally we're going to send in another 513 bytes. This will cause another chunk to be
         // passed into our decoder buffer, which has a capacity of 2048 bytes. Since the buffer has
         // enough available space (1022 bytes) there will be no buffer resize before the decoding.
@@ -250,7 +250,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertTrue(try channel.writeInbound(buffer).isFull))
         XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 512), try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
-        
+
         XCTAssertEqual(decoder.cumulationBuffer!.capacity, 2048)
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 3)
         XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 0)
@@ -290,29 +290,31 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var numberOfDecodeCalls = 0
             var numberOfShouldReclaimCalls = 0
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                self.numberOfDecodeCalls += 1
+            func decode(context _: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                numberOfDecodeCalls += 1
 
                 guard buffer.readSlice(length: [2048, 1024, 512, 256,
-                                                128, 64, .max][self.numberOfDecodeCalls - 1]) != nil else {
+                                                128, 64, .max][numberOfDecodeCalls - 1]) != nil
+                else {
                     return .needMoreData
                 }
 
-                XCTAssertEqual(0, self.numberOfShouldReclaimCalls)
+                XCTAssertEqual(0, numberOfShouldReclaimCalls)
                 return .continue
             }
 
             func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
-                XCTAssertEqual(7, self.numberOfDecodeCalls)
+                XCTAssertEqual(7, numberOfDecodeCalls)
                 XCTAssertEqual(64, buffer.readableBytes)
-                self.numberOfShouldReclaimCalls += 1
+                numberOfShouldReclaimCalls += 1
 
                 return false
             }
 
-            func decodeLast(context: ChannelHandlerContext,
+            func decodeLast(context _: ChannelHandlerContext,
                             buffer: inout ByteBuffer,
-                            seenEOF: Bool) throws  -> DecodingState {
+                            seenEOF: Bool) throws -> DecodingState
+            {
                 XCTAssertEqual(64, buffer.readableBytes)
                 XCTAssertTrue(seenEOF)
                 return .needMoreData
@@ -350,7 +352,6 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         }
 
         class TestDecoder: ByteToMessageDecoder {
-
             typealias InboundIn = ByteBuffer
             typealias InboundOut = ByteBuffer
 
@@ -358,25 +359,25 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var hasReentranced = false
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                self.numberOfDecodeCalls += 1
+                numberOfDecodeCalls += 1
                 var reentrantWriteBuffer = context.channel.allocator.buffer(capacity: 1)
-                if self.numberOfDecodeCalls == 2 {
+                if numberOfDecodeCalls == 2 {
                     // this is the first time, let's fireChannelRead
-                    self.hasReentranced = true
+                    hasReentranced = true
                     reentrantWriteBuffer.clear()
                     reentrantWriteBuffer.writeStaticString("3")
-                    context.channel.pipeline.fireChannelRead(self.wrapInboundOut(reentrantWriteBuffer))
+                    context.channel.pipeline.fireChannelRead(wrapInboundOut(reentrantWriteBuffer))
                 }
-                context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 1)!))
-                if self.numberOfDecodeCalls == 2 {
+                context.fireChannelRead(wrapInboundOut(buffer.readSlice(length: 1)!))
+                if numberOfDecodeCalls == 2 {
                     reentrantWriteBuffer.clear()
                     reentrantWriteBuffer.writeStaticString("4")
-                    context.channel.pipeline.fireChannelRead(self.wrapInboundOut(reentrantWriteBuffer))
+                    context.channel.pipeline.fireChannelRead(wrapInboundOut(reentrantWriteBuffer))
                 }
                 return .continue
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+            func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertTrue(seenEOF)
                 return .needMoreData
             }
@@ -405,7 +406,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         func readOneInboundString() -> String {
             do {
                 switch try channel.readInbound(as: ByteBuffer.self) {
-                case .some(let buffer):
+                case let .some(buffer):
                     return String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self)
                 case .none:
                     XCTFail("expected ByteBuffer found nothing")
@@ -435,7 +436,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 let originalBuffer = buffer
-                context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: buffer.readableBytes)!))
+                context.fireChannelRead(wrapInboundOut(buffer.readSlice(length: buffer.readableBytes)!))
                 if originalBuffer.readableBytesView.last == "0".utf8.last {
                     context.close().whenFailure { error in
                         XCTFail("unexpected error: \(error)")
@@ -444,10 +445,10 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+            func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertTrue(seenEOF)
-                self.decodeLastCalls += 1
-                XCTAssertEqual(1, self.decodeLastCalls)
+                decodeLastCalls += 1
+                XCTAssertEqual(1, decodeLastCalls)
                 return .needMoreData
             }
         }
@@ -541,7 +542,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).flatMap { context in
-            return channel.pipeline.removeHandler(context: context)
+            channel.pipeline.removeHandler(context: context)
         }.whenFailure { error in
             XCTFail("unexpected error: \(error)")
         }
@@ -576,11 +577,11 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var state: Int = 1
 
             mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                if buffer.readSlice(length: self.state) != nil {
+                if buffer.readSlice(length: state) != nil {
                     defer {
                         self.state += 1
                     }
-                    context.fireChannelRead(self.wrapInboundOut(self.state))
+                    context.fireChannelRead(wrapInboundOut(state))
                     return .continue
                 } else {
                     return .needMoreData
@@ -589,7 +590,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertTrue(seenEOF)
-                context.fireChannelRead(self.wrapInboundOut(buffer.readableBytes * -1))
+                context.fireChannelRead(wrapInboundOut(buffer.readableBytes * -1))
                 return .needMoreData
             }
         }
@@ -625,13 +626,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var state = 16
 
             mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                XCTAssertGreaterThan(self.state, 0)
-                if let slice = buffer.readSlice(length: self.state) {
-                    self.state >>= 1
-                    for i in 0..<self.state {
+                XCTAssertGreaterThan(state, 0)
+                if let slice = buffer.readSlice(length: state) {
+                    state >>= 1
+                    for i in 0 ..< state {
                         XCTAssertNoThrow(try (context.channel as! EmbeddedChannel).writeInbound(slice.getSlice(at: i, length: 1)))
                     }
-                    context.fireChannelRead(self.wrapInboundOut(String(decoding: slice.readableBytesView, as: Unicode.UTF8.self)))
+                    context.fireChannelRead(wrapInboundOut(String(decoding: slice.readableBytesView, as: Unicode.UTF8.self)))
                     return .continue
                 } else {
                     return .needMoreData
@@ -640,7 +641,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertTrue(seenEOF)
-                return try self.decode(context: context, buffer: &buffer)
+                return try decode(context: context, buffer: &buffer)
             }
         }
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(ProcessAndReentrantylyProcessExponentiallyLessStuffDecoder()))
@@ -662,7 +663,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 if let slice = buffer.readSlice(length: 16) {
-                    context.fireChannelRead(self.wrapInboundOut(slice))
+                    context.fireChannelRead(wrapInboundOut(slice))
                     context.channel.close().whenFailure { error in
                         XCTFail("unexpected error: \(error)")
                     }
@@ -674,7 +675,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertTrue(seenEOF)
-                context.fireChannelRead(self.wrapInboundOut(buffer))
+                context.fireChannelRead(wrapInboundOut(buffer))
                 return .needMoreData
             }
         }
@@ -683,8 +684,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         buffer.writeStaticString("0123456789abcdefQWER")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
-        XCTAssertNoThrow(XCTAssertEqual("0123456789abcdef", try channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)}))
-        XCTAssertNoThrow(XCTAssertEqual("QWER", try channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)}))
+        XCTAssertNoThrow(XCTAssertEqual("0123456789abcdef", try channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) }))
+        XCTAssertNoThrow(XCTAssertEqual("QWER", try channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) }))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
     }
 
@@ -694,7 +695,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 if let slice = buffer.readSlice(length: 16) {
-                    context.fireChannelRead(self.wrapInboundOut(slice))
+                    context.fireChannelRead(wrapInboundOut(slice))
                     context.pipeline.removeHandler(context: context).whenFailure { error in
                         XCTFail("unexpected error: \(error)")
                     }
@@ -706,7 +707,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertFalse(seenEOF)
-                context.fireChannelRead(self.wrapInboundOut(buffer))
+                context.fireChannelRead(wrapInboundOut(buffer))
                 return .needMoreData
             }
         }
@@ -731,7 +732,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 if let slice = buffer.readSlice(length: 16) {
-                    context.fireChannelRead(self.wrapInboundOut(slice))
+                    context.fireChannelRead(wrapInboundOut(slice))
                     context.close().whenFailure { error in
                         XCTFail("unexpected error: \(error)")
                     }
@@ -741,7 +742,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 }
             }
 
-            mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+            mutating func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertTrue(seenEOF)
                 return .needMoreData
             }
@@ -749,7 +750,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         class DoNotForwardChannelInactiveHandler: ChannelInboundHandler {
             typealias InboundIn = Never
 
-            func channelInactive(context: ChannelHandlerContext) {
+            func channelInactive(context _: ChannelHandlerContext) {
                 // just eat this event
             }
         }
@@ -775,10 +776,10 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 XCTAssertEqual(9, buffer.readableBytes)
-                self.callsToDecode += 1
-                XCTAssertEqual(1, self.callsToDecode)
-                context.fireChannelRead(self.wrapInboundOut(String(decoding: buffer.readBytes(length: 1)!,
-                                                               as: Unicode.UTF8.self)))
+                callsToDecode += 1
+                XCTAssertEqual(1, callsToDecode)
+                context.fireChannelRead(wrapInboundOut(String(decoding: buffer.readBytes(length: 1)!,
+                                                              as: Unicode.UTF8.self)))
                 context.pipeline.removeHandler(context: context).whenFailure { error in
                     XCTFail("unexpected error: \(error)")
                 }
@@ -787,13 +788,14 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertFalse(seenEOF)
-                self.callsToDecodeLast += 1
-                XCTAssertLessThanOrEqual(self.callsToDecodeLast, 2)
-                context.fireChannelRead(self.wrapInboundOut(String(decoding: buffer.readBytes(length: 4) ??
-                                                                         [ /* "no bytes" */
-                                                                            0x6e, 0x6f, 0x20,
-                                                                            0x62, 0x79, 0x74, 0x65, 0x73],
-                                                               as: Unicode.UTF8.self) + "#\(self.callsToDecodeLast)"))
+                callsToDecodeLast += 1
+                XCTAssertLessThanOrEqual(callsToDecodeLast, 2)
+                context.fireChannelRead(wrapInboundOut(String(decoding: buffer.readBytes(length: 4) ??
+                        [ /* "no bytes" */
+                            0x6E, 0x6F, 0x20,
+                            0x62, 0x79, 0x74, 0x65, 0x73,
+                        ],
+                    as: Unicode.UTF8.self) + "#\(callsToDecodeLast)"))
                 return .continue
             }
         }
@@ -823,17 +825,17 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             typealias InboundOut = ()
             var decodeLastCalls = 0
 
-            public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            public func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
                 XCTFail("did not expect to see decode called")
                 return .needMoreData
             }
 
             public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertTrue(seenEOF)
-                self.decodeLastCalls += 1
-                XCTAssertEqual(1, self.decodeLastCalls)
+                decodeLastCalls += 1
+                XCTAssertEqual(1, decodeLastCalls)
                 XCTAssertEqual(0, buffer.readableBytes)
-                context.fireChannelRead(self.wrapInboundOut(()))
+                context.fireChannelRead(wrapInboundOut(()))
                 return .needMoreData
             }
         }
@@ -856,17 +858,17 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             typealias InboundOut = ()
             var decodeLastCalls = 0
 
-            public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            public func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
                 XCTFail("did not expect to see decode called")
                 return .needMoreData
             }
 
             public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertTrue(seenEOF)
-                self.decodeLastCalls += 1
-                XCTAssertEqual(1, self.decodeLastCalls)
+                decodeLastCalls += 1
+                XCTAssertEqual(1, decodeLastCalls)
                 XCTAssertEqual(0, buffer.readableBytes)
-                context.fireChannelRead(self.wrapInboundOut(()))
+                context.fireChannelRead(wrapInboundOut(()))
                 return .needMoreData
             }
         }
@@ -894,15 +896,15 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             typealias InboundOut = ()
             var decodeLastCalls = 0
 
-            public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            public func decode(context _: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 XCTAssertEqual(1, buffer.readableBytes)
                 return .needMoreData
             }
 
-            public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                self.decodeLastCalls += 1
+            public func decodeLast(context _: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                decodeLastCalls += 1
                 XCTAssertEqual(1, buffer.readableBytes)
-                XCTAssertEqual(1, self.decodeLastCalls)
+                XCTAssertEqual(1, decodeLastCalls)
                 XCTAssertFalse(seenEOF)
                 return .needMoreData
             }
@@ -927,15 +929,15 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             typealias InboundOut = ()
             var decodeLastCalls = 0
 
-            public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            public func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
                 XCTFail("shouldn't have been called")
                 return .needMoreData
             }
 
-            public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                self.decodeLastCalls += 1
+            public func decodeLast(context _: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                decodeLastCalls += 1
                 XCTAssertEqual(0, buffer.readableBytes)
-                XCTAssertEqual(1, self.decodeLastCalls)
+                XCTAssertEqual(1, decodeLastCalls)
                 XCTAssertFalse(seenEOF)
                 return .needMoreData
             }
@@ -957,15 +959,15 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             typealias InboundOut = ()
             var decodeLastCalls = 0
 
-            public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            public func decode(context _: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 XCTAssertEqual(1, buffer.readableBytes)
                 return .needMoreData
             }
 
-            public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                self.decodeLastCalls += 1
+            public func decodeLast(context _: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                decodeLastCalls += 1
                 XCTAssertEqual(1, buffer.readableBytes)
-                XCTAssertEqual(1, self.decodeLastCalls)
+                XCTAssertEqual(1, decodeLastCalls)
                 XCTAssertTrue(seenEOF)
                 return .needMoreData
             }
@@ -989,20 +991,20 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var allObservedWrites: [Int] = []
 
             func write(data: Int) {
-                self.allObservedWrites.append(data)
+                allObservedWrites.append(data)
             }
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 if let string = buffer.readString(length: 1) {
-                    context.fireChannelRead(self.wrapInboundOut(string))
+                    context.fireChannelRead(wrapInboundOut(string))
                     return .continue
                 } else {
                     return .needMoreData
                 }
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                while case .continue = try self.decode(context: context, buffer: &buffer) {}
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                while case .continue = try decode(context: context, buffer: &buffer) {}
                 return .needMoreData
             }
         }
@@ -1035,15 +1037,15 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var decodeRun = 0
 
             func write(data: String) {
-                self.allObservedWrites.append(data)
+                allObservedWrites.append(data)
             }
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                self.decodeRun += 1
+                decodeRun += 1
                 if let string = buffer.readString(length: 1) {
-                    context.fireChannelRead(self.wrapInboundOut("I: \(self.decodeRun): \(string)"))
-                    XCTAssertNoThrow(try (context.channel as! EmbeddedChannel).writeOutbound("O: \(self.decodeRun): \(string)"))
-                    if self.decodeRun == 1 {
+                    context.fireChannelRead(wrapInboundOut("I: \(decodeRun): \(string)"))
+                    XCTAssertNoThrow(try (context.channel as! EmbeddedChannel).writeOutbound("O: \(decodeRun): \(string)"))
+                    if decodeRun == 1 {
                         var buffer = context.channel.allocator.buffer(capacity: 1)
                         buffer.writeStaticString("X")
                         XCTAssertNoThrow(try (context.channel as! EmbeddedChannel).writeInbound(buffer))
@@ -1054,8 +1056,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 }
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                while case .continue = try self.decode(context: context, buffer: &buffer) {}
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                while case .continue = try decode(context: context, buffer: &buffer) {}
                 return .needMoreData
             }
         }
@@ -1071,8 +1073,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             }
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-                let string = self.unwrapOutboundIn(data)
-                context.write(self.wrapOutboundOut("\(string) @ \(decoder.decodeRun)"), promise: promise)
+                let string = unwrapOutboundIn(data)
+                context.write(wrapOutboundOut("\(string) @ \(decoder.decodeRun)"), promise: promise)
             }
         }
 
@@ -1120,13 +1122,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             private var errorThrownAlready = false
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                XCTAssertFalse(self.errorThrownAlready)
-                self.errorThrownAlready = true
+            func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
+                XCTAssertFalse(errorThrownAlready)
+                errorThrownAlready = true
                 throw DecodeError()
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+            func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
                 XCTFail("decodeLast should never be called")
                 return .needMoreData
             }
@@ -1143,8 +1145,9 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            if case .some(ByteToMessageDecoderError.dataReceivedInErrorState(let error, let receivedBuffer)) =
-                error as? ByteToMessageDecoderError {
+            if case let .some(ByteToMessageDecoderError.dataReceivedInErrorState(error, receivedBuffer)) =
+                error as? ByteToMessageDecoderError
+            {
                 XCTAssert(error is Decoder.DecodeError)
                 XCTAssertEqual(buffer, receivedBuffer)
             } else {
@@ -1165,15 +1168,15 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             private var errorThrownAlready = false
             private var decodeCalls = 0
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                self.decodeCalls += 1
-                XCTAssertEqual(1, self.decodeCalls)
+            func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
+                decodeCalls += 1
+                XCTAssertEqual(1, decodeCalls)
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                XCTAssertFalse(self.errorThrownAlready)
-                self.errorThrownAlready = true
+            func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                XCTAssertFalse(errorThrownAlready)
+                errorThrownAlready = true
                 throw DecodeError()
             }
         }
@@ -1203,31 +1206,32 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 case decodeLast
                 case removed
             }
+
             var state = State.constructed
 
             typealias InboundOut = ()
 
-            func decoderAdded(context: ChannelHandlerContext) {
-                XCTAssertEqual(.constructed, self.state)
-                self.state = .added
+            func decoderAdded(context _: ChannelHandlerContext) {
+                XCTAssertEqual(.constructed, state)
+                state = .added
             }
 
-            func decoderRemoved(context: ChannelHandlerContext) {
-                XCTAssertEqual(.decodeLast, self.state)
-                self.state = .removed
+            func decoderRemoved(context _: ChannelHandlerContext) {
+                XCTAssertEqual(.decodeLast, state)
+                state = .removed
             }
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                XCTAssertEqual(.added, self.state)
+            func decode(context _: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                XCTAssertEqual(.added, state)
                 XCTAssertEqual(1, buffer.readableBytes)
-                self.state = .decode
+                state = .decode
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                XCTAssertEqual(.decode, self.state)
+            func decodeLast(context _: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                XCTAssertEqual(.decode, state)
                 XCTAssertEqual(1, buffer.readableBytes)
-                self.state = .decodeLast
+                state = .decodeLast
                 return .needMoreData
             }
         }
@@ -1250,17 +1254,17 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var decodeLastCalls = 0
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                self.decodeCalls += 1
+                decodeCalls += 1
                 XCTAssert(buffer.readableBytes > 0)
-                context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 1)!))
-                if self.decodeCalls == 3 {
+                context.fireChannelRead(wrapInboundOut(buffer.readSlice(length: 1)!))
+                if decodeCalls == 3 {
                     context.close(promise: nil)
                 }
                 return .continue
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                self.decodeLastCalls += 1
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                decodeLastCalls += 1
                 if buffer.readableBytes > 0 {
                     context.fireErrorCaught(ByteToMessageDecoderError.leftoverDataWhenDone(buffer))
                 }
@@ -1277,13 +1281,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.writeStaticString("0123456")
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            if case .some(.leftoverDataWhenDone(let buffer)) = error as? ByteToMessageDecoderError {
+            if case let .some(.leftoverDataWhenDone(buffer)) = error as? ByteToMessageDecoderError {
                 XCTAssertEqual("3456", buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes))
             } else {
                 XCTFail("unexpected error: \(error)")
             }
         }
-        for i in 0..<3 {
+        for i in 0 ..< 3 {
             buffer.clear()
             buffer.writeString("\(i)")
             XCTAssertNoThrow(XCTAssertEqual(buffer, try channel.readInbound(as: ByteBuffer.self)))
@@ -1301,17 +1305,17 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var decodeLastCalls = 0
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                self.decodeCalls += 1
+                decodeCalls += 1
                 XCTAssert(buffer.readableBytes > 0)
-                context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 1)!))
-                if self.decodeCalls == 3 {
+                context.fireChannelRead(wrapInboundOut(buffer.readSlice(length: 1)!))
+                if decodeCalls == 3 {
                     context.channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
                 }
                 return .continue
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                self.decodeLastCalls += 1
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                decodeLastCalls += 1
                 if buffer.readableBytes > 0 {
                     context.fireErrorCaught(ByteToMessageDecoderError.leftoverDataWhenDone(buffer))
                 }
@@ -1328,13 +1332,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.writeStaticString("0123456")
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            if case .some(.leftoverDataWhenDone(let buffer)) = error as? ByteToMessageDecoderError {
+            if case let .some(.leftoverDataWhenDone(buffer)) = error as? ByteToMessageDecoderError {
                 XCTAssertEqual("3456", buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes))
             } else {
                 XCTFail("unexpected error: \(error)")
             }
         }
-        for i in 0..<3 {
+        for i in 0 ..< 3 {
             buffer.clear()
             buffer.writeString("\(i)")
             XCTAssertNoThrow(XCTAssertEqual(buffer, try channel.readInbound(as: ByteBuffer.self)))
@@ -1350,14 +1354,14 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             var decodeLastCalls = 0
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
                 XCTFail("should not have been called")
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                self.decodeLastCalls += 1
-                XCTAssertEqual(self.decodeLastCalls, 1)
+            func decodeLast(context _: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                decodeLastCalls += 1
+                XCTAssertEqual(decodeLastCalls, 1)
                 XCTAssertTrue(seenEOF)
                 XCTAssertEqual(0, buffer.readableBytes)
                 return .needMoreData
@@ -1370,15 +1374,15 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var readEOFEvents = 0
             var channelInactiveEvents = 0
 
-            func channelInactive(context: ChannelHandlerContext) {
-                self.channelInactiveEvents += 1
-                XCTAssertEqual(1, self.channelInactiveEvents)
+            func channelInactive(context _: ChannelHandlerContext) {
+                channelInactiveEvents += 1
+                XCTAssertEqual(1, channelInactiveEvents)
             }
 
-            func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+            func userInboundEventTriggered(context _: ChannelHandlerContext, event: Any) {
                 if let event = event as? ChannelEvent, event == .inputClosed {
-                    self.readEOFEvents += 1
-                    XCTAssertEqual(1, self.readEOFEvents)
+                    readEOFEvents += 1
+                    XCTAssertEqual(1, readEOFEvents)
                 }
             }
         }
@@ -1403,13 +1407,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         struct Decoder: ByteToMessageDecoder {
             typealias InboundOut = Never
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            func decode(context: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
                 // simulate a re-entrant trigger of reading EOF
                 context.channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+            func decodeLast(context _: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
                 XCTAssertEqual("X", buffer.readString(length: buffer.readableBytes))
                 throw DummyError()
             }
@@ -1430,13 +1434,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var decodeCalls = 0
             var decodeLastCalls = 0
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                self.decodeCalls += 1
+            func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
+                decodeCalls += 1
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                self.decodeLastCalls += 1
+            func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                decodeLastCalls += 1
                 return .needMoreData
             }
         }
@@ -1467,13 +1471,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             var decodeCalls = 0
             var decodeLastCalls = 0
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                self.decodeCalls += 1
+            func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
+                decodeCalls += 1
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                self.decodeLastCalls += 1
+            func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                decodeLastCalls += 1
                 return .needMoreData
             }
         }
@@ -1494,17 +1498,17 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual(1, decoder.decodeCalls)
         XCTAssertEqual(1, decoder.decodeLastCalls)
     }
-    
+
     func testPayloadTooLarge() {
         struct Decoder: ByteToMessageDecoder {
             typealias InboundOut = Never
-            
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                return .needMoreData
+
+            func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
+                .needMoreData
             }
-            
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                return .needMoreData
+
+            func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                .needMoreData
             }
         }
 
@@ -1523,14 +1527,14 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             var decodeCalls = 0
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                self.decodeCalls += 1
+            func decode(context _: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                decodeCalls += 1
                 buffer.moveReaderIndex(to: buffer.readableBytes)
                 return .continue
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-                self.decodeCalls += 1
+            func decodeLast(context _: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+                decodeCalls += 1
                 buffer.moveReaderIndex(to: buffer.readableBytes)
                 return .continue
             }
@@ -1552,20 +1556,20 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
             var removedCalls = 0
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
                 XCTFail("\(#function) should never have been called")
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+            func decodeLast(context _: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
                 XCTAssertEqual(0, buffer.readableBytes)
                 XCTAssertTrue(seenEOF)
                 return .needMoreData
             }
 
-            func decoderRemoved(context: ChannelHandlerContext) {
-                self.removedCalls += 1
-                XCTAssertEqual(1, self.removedCalls)
+            func decoderRemoved(context _: ChannelHandlerContext) {
+                removedCalls += 1
+                XCTAssertEqual(1, removedCalls)
             }
         }
 
@@ -1608,7 +1612,6 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 }
 
 public final class MessageToByteEncoderTest: XCTestCase {
-
     private struct Int32ToByteEncoder: MessageToByteEncoder {
         typealias OutboundIn = Int32
 
@@ -1634,13 +1637,13 @@ public final class MessageToByteEncoderTest: XCTestCase {
         try testEncoder(MessageToByteHandler(Int32ToByteEncoderWithDefaultImpl()))
     }
 
-    private func testEncoder(_ handler: ChannelHandler, file: StaticString = #file, line: UInt = #line) throws {
+    private func testEncoder(_: ChannelHandler, file: StaticString = #file, line: UInt = #line) throws {
         let channel = EmbeddedChannel()
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(MessageToByteHandler(Int32ToByteEncoder())).wait(),
-                         file: (file), line: line)
+                         file: file, line: line)
 
-        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny(Int32(5))).wait(), file: (file), line: line)
+        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny(Int32(5))).wait(), file: file, line: line)
 
         if var buffer = try channel.readOutbound(as: ByteBuffer.self) {
             XCTAssertEqual(Int32(5), buffer.readInteger())
@@ -1658,12 +1661,12 @@ public final class MessageToByteEncoderTest: XCTestCase {
             struct Decoder: ByteToMessageDecoder {
                 typealias InboundOut = Never
 
-                func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
                     XCTFail()
                     return .needMoreData
                 }
 
-                func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                func decodeLast(context _: ChannelHandlerContext, buffer _: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
                     XCTFail()
                     return .needMoreData
                 }
@@ -1679,7 +1682,7 @@ public final class MessageToByteEncoderTest: XCTestCase {
             struct Encoder: MessageToByteEncoder {
                 typealias OutboundIn = Void
 
-                func encode(data: Void, out: inout ByteBuffer) throws {
+                func encode(data _: Void, out _: inout ByteBuffer) throws {
                     XCTFail()
                 }
             }
@@ -1687,7 +1690,6 @@ public final class MessageToByteEncoderTest: XCTestCase {
         }
         createAndReleaseIt()
     }
-
 }
 
 private class PairOfBytesDecoder: ByteToMessageDecoder {
@@ -1702,25 +1704,25 @@ private class PairOfBytesDecoder: ByteToMessageDecoder {
 
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         if let slice = buffer.readSlice(length: 2) {
-            context.fireChannelRead(self.wrapInboundOut(slice))
+            context.fireChannelRead(wrapInboundOut(slice))
             return .continue
         } else {
             return .needMoreData
         }
     }
 
-    func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-        self.decodeLastCalls += 1
-        XCTAssertEqual(1, self.decodeLastCalls)
-        self.lastPromise.succeed(buffer)
+    func decodeLast(context _: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF _: Bool) throws -> DecodingState {
+        decodeLastCalls += 1
+        XCTAssertEqual(1, decodeLastCalls)
+        lastPromise.succeed(buffer)
         return .needMoreData
     }
 }
 
 public final class MessageToByteHandlerTest: XCTestCase {
     private struct ThrowingMessageToByteEncoder: MessageToByteEncoder {
-        private struct HandlerError: Error { }
-        
+        private struct HandlerError: Error {}
+
         typealias OutboundIn = Int
 
         public func encode(data value: Int, out: inout ByteBuffer) throws {
@@ -1731,16 +1733,16 @@ public final class MessageToByteHandlerTest: XCTestCase {
             }
         }
     }
-    
+
     func testThrowingEncoderFailsPromises() {
         let channel = EmbeddedChannel()
-        
+
         XCTAssertNoThrow(try channel.pipeline.addHandler(MessageToByteHandler(ThrowingMessageToByteEncoder())).wait())
-        
+
         XCTAssertNoThrow(try channel.writeAndFlush(0).wait())
-        
+
         XCTAssertThrowsError(try channel.writeAndFlush(1).wait())
-        
+
         XCTAssertThrowsError(try channel.writeAndFlush(0).wait())
     }
 }

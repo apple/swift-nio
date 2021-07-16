@@ -125,14 +125,14 @@ public enum WebSocketErrorCode {
 
 extension WebSocketErrorCode: Equatable {}
 
-extension ByteBuffer {
+public extension ByteBuffer {
     /// Read a websocket error code from a byte buffer.
     ///
     /// This method increments the reader index.
     ///
     /// - returns: The error code, or `nil` if there were not enough readable bytes.
-    public mutating func readWebSocketErrorCode() -> WebSocketErrorCode? {
-        return self.readInteger(as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
+    mutating func readWebSocketErrorCode() -> WebSocketErrorCode? {
+        readInteger(as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
     }
 
     /// Get a websocket error code from a byte buffer.
@@ -143,25 +143,25 @@ extension ByteBuffer {
     /// - parameters:
     ///     - index: The index into the buffer to read the error code from.
     /// - returns: The error code, or `nil` if there were not enough bytes at that index.
-    public func getWebSocketErrorCode(at index: Int) -> WebSocketErrorCode? {
-        return self.getInteger(at: index, as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
+    func getWebSocketErrorCode(at index: Int) -> WebSocketErrorCode? {
+        getInteger(at: index, as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
     }
 
     /// Write the given error code to the buffer.
     ///
     /// - parameters:
     ///     - code: The code to write into the buffer.
-    public mutating func write(webSocketErrorCode code: WebSocketErrorCode) {
-        self.writeInteger(UInt16(webSocketErrorCode: code))
+    mutating func write(webSocketErrorCode code: WebSocketErrorCode) {
+        writeInteger(UInt16(webSocketErrorCode: code))
     }
 }
 
-extension UInt16 {
+public extension UInt16 {
     /// Create a UInt16 corresponding to a given `WebSocketErrorCode`.
     ///
     /// - parameters:
     ///     - code: The `WebSocketErrorCode`.
-    public init(webSocketErrorCode code: WebSocketErrorCode) {
+    init(webSocketErrorCode code: WebSocketErrorCode) {
         switch code {
         case .normalClosure:
             self = 1000
@@ -181,7 +181,7 @@ extension UInt16 {
             self = 1010
         case .unexpectedServerError:
             self = 1011
-        case .unknown(let i):
+        case let .unknown(i):
             self = i
         }
     }

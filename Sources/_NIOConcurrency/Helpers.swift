@@ -15,13 +15,13 @@
 import NIO
 
 #if compiler(>=5.5)
-fileprivate let hasAsyncAwait = true
+    fileprivate let hasAsyncAwait = true
 #else
-fileprivate let hasAsyncAwait = false
+    fileprivate let hasAsyncAwait = false
 #endif
 
-extension NIO.System {
-    public static var hasAsyncAwaitSupport: Bool {
-        return hasAsyncAwait
+public extension NIO.System {
+    static var hasAsyncAwaitSupport: Bool {
+        hasAsyncAwait
     }
 }

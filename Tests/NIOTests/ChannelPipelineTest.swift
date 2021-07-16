@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIOConcurrencyHelpers
 @testable import NIO
+import NIOConcurrencyHelpers
+import XCTest
 
 private final class IndexWritingHandler: ChannelDuplexHandler {
     typealias InboundIn = ByteBuffer
@@ -29,46 +29,47 @@ private final class IndexWritingHandler: ChannelDuplexHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buf = self.unwrapInboundIn(data)
-        buf.writeInteger(UInt8(self.index))
-        context.fireChannelRead(self.wrapInboundOut(buf))
+        var buf = unwrapInboundIn(data)
+        buf.writeInteger(UInt8(index))
+        context.fireChannelRead(wrapInboundOut(buf))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        var buf = self.unwrapOutboundIn(data)
-        buf.writeInteger(UInt8(self.index))
-        context.write(self.wrapOutboundOut(buf), promise: promise)
+        var buf = unwrapOutboundIn(data)
+        buf.writeInteger(UInt8(index))
+        context.write(wrapOutboundOut(buf), promise: promise)
     }
 }
 
 private extension EmbeddedChannel {
     func assertReadIndexOrder(_ order: [UInt8]) {
-        XCTAssertTrue(try self.writeInbound(self.allocator.buffer(capacity: 32)).isFull)
+        XCTAssertTrue(try writeInbound(allocator.buffer(capacity: 32)).isFull)
         XCTAssertNoThrow(XCTAssertEqual(order,
-                                        try self.readInbound(as: ByteBuffer.self).flatMap { buffer in
+                                        try readInbound(as: ByteBuffer.self).flatMap { buffer in
                                             var buffer = buffer
                                             return buffer.readBytes(length: buffer.readableBytes)
-            }))
+                                        }))
     }
 
     func assertWriteIndexOrder(_ order: [UInt8]) {
-        XCTAssertTrue(try self.writeOutbound(self.allocator.buffer(capacity: 32)).isFull)
+        XCTAssertTrue(try writeOutbound(allocator.buffer(capacity: 32)).isFull)
         XCTAssertNoThrow(XCTAssertEqual(order,
-                                        try self.readOutbound(as: ByteBuffer.self).flatMap { buffer in
+                                        try readOutbound(as: ByteBuffer.self).flatMap { buffer in
                                             var buffer = buffer
                                             return buffer.readBytes(length: buffer.readableBytes)
-            }))
+                                        }))
     }
 }
 
 class ChannelPipelineTest: XCTestCase {
-
     class SimpleTypedHandler1: ChannelInboundHandler {
         typealias InboundIn = NIOAny
     }
+
     class SimpleTypedHandler2: ChannelInboundHandler {
         typealias InboundIn = NIOAny
     }
+
     class SimpleTypedHandler3: ChannelInboundHandler {
         typealias InboundIn = NIOAny
     }
@@ -77,7 +78,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler1 = SimpleTypedHandler1()
         let handler2 = SimpleTypedHandler2()
         let handler3 = SimpleTypedHandler3()
-        
+
         let channel = EmbeddedChannel()
         defer {
             XCTAssertNoThrow(try channel.finish())
@@ -85,19 +86,19 @@ class ChannelPipelineTest: XCTestCase {
         try channel.pipeline.addHandlers([
             handler1,
             handler2,
-            handler3
+            handler3,
         ]).wait()
-        
+
         let result1 = try channel.pipeline.handler(type: SimpleTypedHandler1.self).wait()
         XCTAssertTrue(result1 === handler1)
-        
+
         let result2 = try channel.pipeline.handler(type: SimpleTypedHandler2.self).wait()
         XCTAssertTrue(result2 === handler2)
 
         let result3 = try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()
         XCTAssertTrue(result3 === handler3)
     }
-    
+
     func testGetFirstHandler() throws {
         let sameTypeHandler1 = SimpleTypedHandler1()
         let sameTypeHandler2 = SimpleTypedHandler1()
@@ -110,17 +111,17 @@ class ChannelPipelineTest: XCTestCase {
         try channel.pipeline.addHandlers([
             sameTypeHandler1,
             sameTypeHandler2,
-            otherHandler
+            otherHandler,
         ]).wait()
-        
+
         let result = try channel.pipeline.handler(type: SimpleTypedHandler1.self).wait()
         XCTAssertTrue(result === sameTypeHandler1)
     }
-    
+
     func testGetNotAddedHandler() throws {
         let handler1 = SimpleTypedHandler1()
         let handler2 = SimpleTypedHandler2()
-        
+
         let channel = EmbeddedChannel()
         defer {
             XCTAssertNoThrow(try channel.finish())
@@ -129,12 +130,11 @@ class ChannelPipelineTest: XCTestCase {
             handler1,
             handler2,
         ]).wait()
-        
-        XCTAssertThrowsError(try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()) { XCTAssertTrue($0 is ChannelPipelineError )}
-    }
-    
-    func testAddAfterClose() throws {
 
+        XCTAssertThrowsError(try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()) { XCTAssertTrue($0 is ChannelPipelineError) }
+    }
+
+    func testAddAfterClose() throws {
         let channel = EmbeddedChannel()
         defer {
             XCTAssertNoThrow(try channel.finish(acceptAlreadyClosed: true))
@@ -157,17 +157,16 @@ class ChannelPipelineTest: XCTestCase {
         let handlerAddedCalled = NIOAtomic<Bool>.makeAtomic(value: false)
         let handlerRemovedCalled = NIOAtomic<Bool>.makeAtomic(value: false)
 
-        public func handlerAdded(context: ChannelHandlerContext) {
+        public func handlerAdded(context _: ChannelHandlerContext) {
             handlerAddedCalled.store(true)
         }
 
-        public func handlerRemoved(context: ChannelHandlerContext) {
+        public func handlerRemoved(context _: ChannelHandlerContext) {
             handlerRemovedCalled.store(true)
         }
     }
 
     func testOutboundOrdering() throws {
-
         let channel = EmbeddedChannel()
 
         var buf = channel.allocator.buffer(capacity: 1024)
@@ -223,7 +222,7 @@ class ChannelPipelineTest: XCTestCase {
 
         public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             do {
-                context.write(self.wrapOutboundOut(try body(self.unwrapOutboundIn(data))), promise: promise)
+                context.write(wrapOutboundOut(try body(unwrapOutboundIn(data))), promise: promise)
             } catch let err {
                 promise!.fail(err)
             }
@@ -238,7 +237,7 @@ class ChannelPipelineTest: XCTestCase {
             case CalledBind
         }
 
-        public func bind(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        public func bind(context _: ChannelHandlerContext, to _: SocketAddress, promise: EventLoopPromise<Void>?) {
             promise!.fail(TestFailureError.CalledBind)
         }
     }
@@ -248,7 +247,7 @@ class ChannelPipelineTest: XCTestCase {
         typealias InboundOut = Int
 
         public func handlerRemoved(context: ChannelHandlerContext) {
-            context.fireChannelRead(self.wrapInboundOut(1))
+            context.fireChannelRead(wrapInboundOut(1))
         }
     }
 
@@ -260,19 +259,18 @@ class ChannelPipelineTest: XCTestCase {
             channel.pipeline.removeHandler(h)
         }.wait()
 
-        XCTAssertNoThrow(XCTAssertEqual(Optional<Int>.some(1), try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertEqual(Int?.some(1), try channel.readInbound()))
         XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testEmptyPipelineWorks() throws {
         let channel = EmbeddedChannel()
         XCTAssertTrue(try assertNoThrowWithValue(channel.writeInbound(2)).isFull)
-        XCTAssertNoThrow(XCTAssertEqual(Optional<Int>.some(2), try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertEqual(Int?.some(2), try channel.readInbound()))
         XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testWriteAfterClose() throws {
-
         let channel = EmbeddedChannel()
         defer {
             XCTAssertNoThrow(XCTAssertTrue(try channel.finish(acceptAlreadyClosed: true).isClean))
@@ -306,12 +304,12 @@ class ChannelPipelineTest: XCTestCase {
             private let no: Int
 
             init(number: Int) {
-                self.no = number
+                no = number
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let data = self.unwrapInboundIn(data)
-                context.fireChannelRead(self.wrapInboundOut(data + [self.no]))
+                let data = unwrapInboundIn(data)
+                context.fireChannelRead(wrapInboundOut(data + [no]))
             }
         }
 
@@ -323,12 +321,12 @@ class ChannelPipelineTest: XCTestCase {
             private let no: Int
 
             init(number: Int) {
-                self.no = number
+                no = number
             }
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-                let data = self.unwrapOutboundIn(data)
-                context.write(self.wrapOutboundOut(data + [self.no]), promise: promise)
+                let data = unwrapOutboundIn(data)
+                context.write(wrapOutboundOut(data + [no]), promise: promise)
             }
         }
 
@@ -339,9 +337,9 @@ class ChannelPipelineTest: XCTestCase {
             typealias OutboundOut = [Int]
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let data = self.unwrapInboundIn(data)
-                context.writeAndFlush(self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
-                context.fireChannelRead(self.wrapInboundOut(data))
+                let data = unwrapInboundIn(data)
+                context.writeAndFlush(wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
+                context.fireChannelRead(wrapInboundOut(data))
             }
         }
 
@@ -351,10 +349,10 @@ class ChannelPipelineTest: XCTestCase {
             typealias OutboundOut = ByteBuffer
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-                let data = self.unwrapOutboundIn(data)
+                let data = unwrapOutboundIn(data)
                 var buf = context.channel.allocator.buffer(capacity: 123)
                 buf.writeString(String(describing: data))
-                context.write(self.wrapOutboundOut(buf), promise: promise)
+                context.write(wrapOutboundOut(buf), promise: promise)
             }
         }
 
@@ -415,7 +413,7 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func handlerAdded(context: ChannelHandlerContext) {
-                self.body(context)
+                body(context)
             }
         }
         try {
@@ -440,7 +438,7 @@ class ChannelPipelineTest: XCTestCase {
                 weakHandler2 = handler2
                 XCTAssertNoThrow(try channel.pipeline.addHandler(handler1).flatMap {
                     channel.pipeline.addHandler(handler2)
-                    }.wait())
+                }.wait())
             }()
 
             XCTAssertNotNil(weakHandler1)
@@ -472,9 +470,9 @@ class ChannelPipelineTest: XCTestCase {
 
             var intReadCount = 0
 
-            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                 if data.tryAs(type: Int.self) != nil {
-                    self.intReadCount += 1
+                    intReadCount += 1
                 }
             }
         }
@@ -485,7 +483,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if let dataString = data.tryAs(type: String.self) {
-                    context.fireChannelRead(self.wrapInboundOut(dataString.count))
+                    context.fireChannelRead(wrapInboundOut(dataString.count))
                 }
             }
         }
@@ -496,7 +494,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if var buffer = data.tryAs(type: ByteBuffer.self) {
-                    context.fireChannelRead(self.wrapInboundOut(buffer.readString(length: buffer.readableBytes)!))
+                    context.fireChannelRead(wrapInboundOut(buffer.readString(length: buffer.readableBytes)!))
                 }
             }
         }
@@ -720,7 +718,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -746,7 +744,7 @@ class ChannelPipelineTest: XCTestCase {
         channel.pipeline.removeHandler(context: context, promise: removalPromise)
 
         XCTAssertNoThrow(try removalPromise.futureResult.wait())
-        guard case .some(.byteBuffer(let receivedBuffer)) = try channel.readOutbound(as: IOData.self) else {
+        guard case let .some(.byteBuffer(receivedBuffer)) = try channel.readOutbound(as: IOData.self) else {
             XCTFail("No buffer")
             return
         }
@@ -761,7 +759,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -790,7 +788,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -828,7 +826,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -857,7 +855,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -894,7 +892,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -926,7 +924,7 @@ class ChannelPipelineTest: XCTestCase {
             typealias InboundOut = ()
 
             func channelInactive(context: ChannelHandlerContext) {
-                context.fireChannelRead(self.wrapInboundOut(()))
+                context.fireChannelRead(wrapInboundOut(()))
             }
         }
         let handler = FireWhenInactiveHandler()
@@ -955,17 +953,18 @@ class ChannelPipelineTest: XCTestCase {
             private let handlerRemovedPromise: EventLoopPromise<Void>
 
             init(removalTokenPromise: EventLoopPromise<ChannelHandlerContext.RemovalToken>,
-                 handlerRemovedPromise: EventLoopPromise<Void>) {
+                 handlerRemovedPromise: EventLoopPromise<Void>)
+            {
                 self.removalTokenPromise = removalTokenPromise
                 self.handlerRemovedPromise = handlerRemovedPromise
             }
 
-            func handlerRemoved(context: ChannelHandlerContext) {
-                self.handlerRemovedPromise.succeed(())
+            func handlerRemoved(context _: ChannelHandlerContext) {
+                handlerRemovedPromise.succeed(())
             }
 
-            func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-                self.removalTokenPromise.succeed(removalToken)
+            func removeHandler(context _: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+                removalTokenPromise.succeed(removalToken)
             }
         }
 
@@ -985,7 +984,7 @@ class ChannelPipelineTest: XCTestCase {
             channel.pipeline.removeHandler(context: handler, promise: nil)
         }.wait())
 
-        XCTAssertNoThrow(try removalTokenPromise.futureResult.map { removalToken in
+        XCTAssertNoThrow(try removalTokenPromise.futureResult.map { _ in
             // we know that the removal process has been started, so let's tear down the pipeline
             func workaroundSR9815withAUselessFunction() {
                 XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
@@ -1005,17 +1004,17 @@ class ChannelPipelineTest: XCTestCase {
             var withinRemoveHandler = false
 
             func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-                self.removeHandlerCalled = true
-                self.withinRemoveHandler = true
+                removeHandlerCalled = true
+                withinRemoveHandler = true
                 defer {
                     self.withinRemoveHandler = false
                 }
                 context.leavePipeline(removalToken: removalToken)
             }
 
-            func handlerRemoved(context: ChannelHandlerContext) {
-                XCTAssertTrue(self.removeHandlerCalled)
-                XCTAssertTrue(self.withinRemoveHandler)
+            func handlerRemoved(context _: ChannelHandlerContext) {
+                XCTAssertTrue(removeHandlerCalled)
+                XCTAssertTrue(withinRemoveHandler)
             }
         }
 
@@ -1101,7 +1100,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertEqual([a, b, c, d, e, f, g, h, i, j], Handler.allHandlers)
     }
-    
+
     func testPipelineDebugDescription() {
         final class HTTPRequestParser: ChannelInboundHandler {
             typealias InboundIn = Never
@@ -1152,7 +1151,7 @@ class ChannelPipelineTest: XCTestCase {
             case error = 999
 
             mutating func next() {
-                if let newState = State(rawValue: self.rawValue + 1) {
+                if let newState = State(rawValue: rawValue + 1) {
                     self = newState
                 } else {
                     XCTFail("there's no next state starting from \(self)")
@@ -1165,7 +1164,7 @@ class ChannelPipelineTest: XCTestCase {
             typealias InboundOut = State
 
             private(set) var state: State = .testStarted
-            private var removalToken: ChannelHandlerContext.RemovalToken? = nil
+            private var removalToken: ChannelHandlerContext.RemovalToken?
             private let allDonePromise: EventLoopPromise<Void>
 
             init(allDonePromise: EventLoopPromise<Void>) {
@@ -1173,12 +1172,12 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let step = self.unwrapInboundIn(data)
-                self.state.next()
-                XCTAssertEqual(self.state, step)
+                let step = unwrapInboundIn(data)
+                state.next()
+                XCTAssertEqual(state, step)
 
                 // just to communicate to the outside where we are in our state machine
-                context.fireChannelRead(self.wrapInboundOut(self.state))
+                context.fireChannelRead(wrapInboundOut(state))
 
                 switch step {
                 case .triggerEventRead:
@@ -1186,38 +1185,38 @@ class ChannelPipelineTest: XCTestCase {
                     context.pipeline.removeHandler(self).map {
                         // When the manual removal completes, we advance the state.
                         self.state.next()
-                    }.cascade(to: self.allDonePromise)
+                    }.cascade(to: allDonePromise)
                 default:
-                    XCTFail("channelRead called in state \(self.state)")
+                    XCTFail("channelRead called in state \(state)")
                 }
             }
 
-            func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-                self.state.next()
-                XCTAssertEqual(.manualRemovalStarted, self.state)
+            func removeHandler(context _: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+                state.next()
+                XCTAssertEqual(.manualRemovalStarted, state)
 
                 // Step 2: Save the removal token that we got from kicking off the manual removal (in step 1)
                 self.removalToken = removalToken
             }
 
             func handlerRemoved(context: ChannelHandlerContext) {
-                self.state.next()
-                XCTAssertEqual(.pipelineTeardown, self.state)
+                state.next()
+                XCTAssertEqual(.pipelineTeardown, state)
 
                 // Step 3: We'll call our own channelRead which will advance the state.
-                self.completeTheManualRemoval(context: context)
+                completeTheManualRemoval(context: context)
             }
 
             func completeTheManualRemoval(context: ChannelHandlerContext) {
-                self.state.next()
-                XCTAssertEqual(.handlerRemovedCalled, self.state)
+                state.next()
+                XCTAssertEqual(.handlerRemovedCalled, state)
 
                 // just to communicate to the outside where we are in our state machine
-                context.fireChannelRead(self.wrapInboundOut(self.state))
+                context.fireChannelRead(wrapInboundOut(state))
 
                 // Step 4: This happens when the pipeline is being torn down, so let's now also finish the manual
                 // removal process.
-                self.removalToken.map(context.leavePipeline(removalToken:))
+                removalToken.map(context.leavePipeline(removalToken:))
             }
         }
 
@@ -1238,7 +1237,7 @@ class ChannelPipelineTest: XCTestCase {
             switch try channel.finish() {
             case .clean:
                 XCTFail("expected output")
-            case .leftOvers(inbound: let inbound, outbound: let outbound, pendingOutbound: let pendingOutbound):
+            case let .leftOvers(inbound: inbound, outbound: outbound, pendingOutbound: pendingOutbound):
                 XCTAssertEqual(0, outbound.count)
                 XCTAssertEqual(0, pendingOutbound.count)
                 XCTAssertEqual(1, inbound.count)
@@ -1260,16 +1259,17 @@ class ChannelPipelineTest: XCTestCase {
             private var removeHandlerCalls = 0
 
             init(removalTriggeredPromise: EventLoopPromise<Void>,
-                 continueRemovalFuture: EventLoopFuture<Void>) {
+                 continueRemovalFuture: EventLoopFuture<Void>)
+            {
                 self.removalTriggeredPromise = removalTriggeredPromise
                 self.continueRemovalFuture = continueRemovalFuture
             }
 
             func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-                self.removeHandlerCalls += 1
-                XCTAssertEqual(1, self.removeHandlerCalls)
-                self.removalTriggeredPromise.succeed(())
-                self.continueRemovalFuture.whenSuccess {
+                removeHandlerCalls += 1
+                XCTAssertEqual(1, removeHandlerCalls)
+                removalTriggeredPromise.succeed(())
+                continueRemovalFuture.whenSuccess {
                     context.leavePipeline(removalToken: removalToken)
                 }
             }
@@ -1398,7 +1398,8 @@ final class TestAddMultipleHandlersHandlerWorkingAroundSR9956: ChannelDuplexHand
     }
 
     public static func == (lhs: TestAddMultipleHandlersHandlerWorkingAroundSR9956,
-                           rhs: TestAddMultipleHandlersHandlerWorkingAroundSR9956) -> Bool {
-        return lhs === rhs
+                           rhs: TestAddMultipleHandlersHandlerWorkingAroundSR9956) -> Bool
+    {
+        lhs === rhs
     }
 }

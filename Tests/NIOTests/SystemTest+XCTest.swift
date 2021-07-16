@@ -23,17 +23,15 @@ import XCTest
 ///
 
 extension SystemTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (SystemTest) -> () throws -> Void)] {
-      return [
-                ("testSystemCallWrapperPerformance", testSystemCallWrapperPerformance),
-                ("testErrorsWorkCorrectly", testErrorsWorkCorrectly),
-                ("testCmsgFirstHeader", testCmsgFirstHeader),
-                ("testCMsgNextHeader", testCMsgNextHeader),
-                ("testCMsgData", testCMsgData),
-                ("testCMsgCollection", testCMsgCollection),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (SystemTest) -> () throws -> Void)] {
+        [
+            ("testSystemCallWrapperPerformance", testSystemCallWrapperPerformance),
+            ("testErrorsWorkCorrectly", testErrorsWorkCorrectly),
+            ("testCmsgFirstHeader", testCmsgFirstHeader),
+            ("testCMsgNextHeader", testCMsgNextHeader),
+            ("testCMsgData", testCMsgData),
+            ("testCMsgCollection", testCMsgCollection),
+        ]
+    }
 }
-

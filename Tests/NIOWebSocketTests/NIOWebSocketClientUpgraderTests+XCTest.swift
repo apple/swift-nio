@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension NIOWebSocketClientUpgraderTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (NIOWebSocketClientUpgraderTests) -> () throws -> Void)] {
-      return [
-                ("testRandomRequestKey", testRandomRequestKey),
-                ("testRandomRequestKeyWithSystemRandomNumberGenerator", testRandomRequestKeyWithSystemRandomNumberGenerator),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (NIOWebSocketClientUpgraderTests) -> () throws -> Void)] {
+        [
+            ("testRandomRequestKey", testRandomRequestKey),
+            ("testRandomRequestKeyWithSystemRandomNumberGenerator", testRandomRequestKeyWithSystemRandomNumberGenerator),
+        ]
+    }
 }
-

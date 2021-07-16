@@ -25,26 +25,27 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 buffer.moveReaderIndex(to: buffer.writerIndex)
-                context.fireChannelRead(self.wrapInboundOut("Y"))
+                context.fireChannelRead(wrapInboundOut("Y"))
                 return .needMoreData
             }
 
             func decodeLast(context: ChannelHandlerContext,
                             buffer: inout ByteBuffer,
-                            seenEOF: Bool) throws -> DecodingState {
-                while try self.decode(context: context, buffer: &buffer) == .continue {}
+                            seenEOF _: Bool) throws -> DecodingState
+            {
+                while try decode(context: context, buffer: &buffer) == .continue {}
                 return .needMoreData
             }
         }
 
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(stringInputOutputPairs: [("x", ["x"])],
                                                                             decoderFactory: AlwaysProduceY.init)) {
-                                                                                error in
+            error in
             switch error {
             case let error as VerificationError:
                 XCTAssertEqual(1, error.inputs.count)
                 switch error.errorCode {
-                case .wrongProduction(actual: let actual, expected: let expected):
+                case let .wrongProduction(actual: actual, expected: expected):
                     XCTAssertEqual("Y", actual)
                     XCTAssertEqual("x", expected)
                 default:
@@ -60,34 +61,35 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
         struct NeverProduce: ByteToMessageDecoder {
             typealias InboundOut = String
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            func decode(context _: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 buffer.moveReaderIndex(to: buffer.writerIndex)
                 return .needMoreData
             }
 
             func decodeLast(context: ChannelHandlerContext,
                             buffer: inout ByteBuffer,
-                            seenEOF: Bool) throws -> DecodingState {
-                while try self.decode(context: context, buffer: &buffer) == .continue {}
+                            seenEOF _: Bool) throws -> DecodingState
+            {
+                while try decode(context: context, buffer: &buffer) == .continue {}
                 return .needMoreData
             }
         }
 
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(stringInputOutputPairs: [("x", ["x"])],
                                                                             decoderFactory: NeverProduce.init)) {
-                                                                                error in
+            error in
             switch error {
             case let error as VerificationError:
                 XCTAssertEqual(1, error.inputs.count)
                 switch error.errorCode {
-                case .underProduction(let expected):
+                case let .underProduction(expected):
                     XCTAssertEqual("x", expected)
                 default:
                     XCTFail("unexpected error: \(error)")
                 }
             default:
                 XCTFail("unexpected error: \(error)")
-                                                                                }
+            }
         }
     }
 
@@ -95,33 +97,34 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
         struct ProduceTooEarly: ByteToMessageDecoder {
             typealias InboundOut = String
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                context.fireChannelRead(self.wrapInboundOut("Y"))
+            func decode(context: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
+                context.fireChannelRead(wrapInboundOut("Y"))
                 return .needMoreData
             }
 
             func decodeLast(context: ChannelHandlerContext,
                             buffer: inout ByteBuffer,
-                            seenEOF: Bool) throws -> DecodingState {
-                while try self.decode(context: context, buffer: &buffer) == .continue {}
+                            seenEOF _: Bool) throws -> DecodingState
+            {
+                while try decode(context: context, buffer: &buffer) == .continue {}
                 return .needMoreData
             }
         }
 
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(stringInputOutputPairs: [("xxxxxx", ["Y"])],
                                                                             decoderFactory: ProduceTooEarly.init)) {
-                                                                                error in
+            error in
             switch error {
             case let error as VerificationError:
                 switch error.errorCode {
-                case .overProduction(let actual):
+                case let .overProduction(actual):
                     XCTAssertEqual("Y", actual)
                 default:
                     XCTFail("unexpected error: \(error)")
                 }
             default:
                 XCTFail("unexpected error: \(error)")
-                                                                                }
+            }
         }
     }
 
@@ -129,16 +132,17 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
         struct NeverDoAnything: ByteToMessageDecoder {
             typealias InboundOut = String
 
-            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                return .needMoreData
+            func decode(context _: ChannelHandlerContext, buffer _: inout ByteBuffer) throws -> DecodingState {
+                .needMoreData
             }
 
             func decodeLast(context: ChannelHandlerContext,
                             buffer: inout ByteBuffer,
-                            seenEOF: Bool) throws -> DecodingState {
-                while try self.decode(context: context, buffer: &buffer) == .continue {}
+                            seenEOF _: Bool) throws -> DecodingState
+            {
+                while try decode(context: context, buffer: &buffer) == .continue {}
                 if buffer.readableBytes > 0 {
-                    context.fireChannelRead(self.wrapInboundOut("leftover"))
+                    context.fireChannelRead(wrapInboundOut("leftover"))
                 }
                 return .needMoreData
             }
@@ -146,13 +150,13 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
 
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(stringInputOutputPairs: [("xxxxxx", [])],
                                                                             decoderFactory: NeverDoAnything.init)) {
-                                                                                error in
+            error in
             switch error {
             case let error as VerificationError:
                 switch error.errorCode {
-                case .leftOversOnDeconstructingChannel(inbound: let inbound,
-                                                       outbound: let outbound,
-                                                       pendingOutbound: let pending):
+                case let .leftOversOnDeconstructingChannel(inbound: inbound,
+                                                           outbound: outbound,
+                                                           pendingOutbound: pending):
                     XCTAssertEqual(0, outbound.count)
                     XCTAssertEqual(["leftover"], inbound.map { $0.tryAs(type: String.self) })
                     XCTAssertEqual(0, pending.count)

@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension GetaddrinfoResolverTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (GetaddrinfoResolverTest) -> () throws -> Void)] {
-      return [
-                ("testResolveNoDuplicatesV4", testResolveNoDuplicatesV4),
-                ("testResolveNoDuplicatesV6", testResolveNoDuplicatesV6),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (GetaddrinfoResolverTest) -> () throws -> Void)] {
+        [
+            ("testResolveNoDuplicatesV4", testResolveNoDuplicatesV4),
+            ("testResolveNoDuplicatesV6", testResolveNoDuplicatesV6),
+        ]
+    }
 }
-

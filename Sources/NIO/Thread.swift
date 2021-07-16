@@ -13,12 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Linux) || os(FreeBSD) || os(Android)
-import CNIOLinux
+    import CNIOLinux
 #endif
 
-enum LowLevelThreadOperations {
-    
-}
+enum LowLevelThreadOperations {}
 
 protocol ThreadOps {
     associatedtype ThreadHandle
@@ -66,16 +64,16 @@ final class NIOThread {
     ///     - body: The closure that will accept the `pthread_t`.
     /// - returns: The value returned by `body`.
     internal func withUnsafeThreadHandle<T>(_ body: (ThreadOpsSystem.ThreadHandle) throws -> T) rethrows -> T {
-        return try body(self.handle)
+        try body(handle)
     }
 
     /// Get current name of the `NIOThread` or `nil` if not set.
     var currentName: String? {
-        return ThreadOpsSystem.threadName(self.handle)
+        ThreadOpsSystem.threadName(handle)
     }
 
     func join() {
-        ThreadOpsSystem.joinThread(self.handle)
+        ThreadOpsSystem.joinThread(handle)
     }
 
     /// Spawns and runs some task in a `NIOThread`.
@@ -85,8 +83,9 @@ final class NIOThread {
     ///     - body: The function to execute within the spawned `NIOThread`.
     ///     - detach: Whether to detach the thread. If the thread is not detached it must be `join`ed.
     static func spawnAndRun(name: String? = nil, detachThread: Bool = true,
-                            body: @escaping (NIOThread) -> Void) {
-        var handle: ThreadOpsSystem.ThreadHandle? = nil
+                            body: @escaping (NIOThread) -> Void)
+    {
+        var handle: ThreadOpsSystem.ThreadHandle?
 
         // Store everything we want to pass into the c function in a Box so we
         // can hand-over the reference.
@@ -98,7 +97,7 @@ final class NIOThread {
 
     /// Returns `true` if the calling thread is the same as this one.
     var isCurrent: Bool {
-        return ThreadOpsSystem.isCurrentThread(self.handle)
+        ThreadOpsSystem.isCurrentThread(handle)
     }
 
     /// Returns the current running `NIOThread`.
@@ -111,22 +110,22 @@ final class NIOThread {
 extension NIOThread: CustomStringConvertible {
     var description: String {
         let desiredName = self.desiredName
-        let actualName = self.currentName
+        let actualName = currentName
 
         switch (desiredName, actualName) {
         case (.some(let desiredName), .some(desiredName)):
             // We know the current, actual name and the desired name and they match. This is hopefully the most common
             // situation.
             return "NIOThread(name = \(desiredName))"
-        case (.some(let desiredName), .some(let actualName)):
+        case let (.some(desiredName), .some(actualName)):
             // We know both names but they're not equal. That's odd but not impossible, some misbehaved library might
             // have changed the name.
             return "NIOThread(desiredName = \(desiredName), actualName = \(actualName))"
-        case (.some(let desiredName), .none):
+        case let (.some(desiredName), .none):
             // We only know the desired name and can't get the actual thread name. The OS might not be able to provide
             // the name to us.
             return "NIOThread(desiredName = \(desiredName))"
-        case (.none, .some(let actualName)):
+        case let (.none, .some(actualName)):
             // We only know the actual name. This can happen when we don't have a reference to the actually spawned
             // thread but rather ask for the current thread and then print it.
             return "NIOThread(actualName = \(actualName))"
@@ -150,7 +149,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         private var underlyingKey: ThreadOpsSystem.ThreadSpecificKey
 
         internal init(destructor: @escaping ThreadOpsSystem.ThreadSpecificKeyDestructor) {
-            self.underlyingKey = ThreadOpsSystem.allocateThreadSpecificValue(destructor: destructor)
+            underlyingKey = ThreadOpsSystem.allocateThreadSpecificValue(destructor: destructor)
         }
 
         deinit {
@@ -158,11 +157,11 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         }
 
         public func get() -> UnsafeMutableRawPointer? {
-            return ThreadOpsSystem.getThreadSpecificValue(self.underlyingKey)
+            ThreadOpsSystem.getThreadSpecificValue(underlyingKey)
         }
 
         public func set(value: UnsafeMutableRawPointer?) {
-            ThreadOpsSystem.setThreadSpecificValue(key: self.underlyingKey, value: value)
+            ThreadOpsSystem.setThreadSpecificValue(key: underlyingKey, value: value)
         }
     }
 
@@ -170,8 +169,8 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
 
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).
     public init() {
-        self.key = Key(destructor: {
-          Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
+        key = Key(destructor: {
+            Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
         })
     }
 
@@ -182,34 +181,34 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     ///   - value: The value to set for the calling thread.
     public convenience init(value: Value) {
         self.init()
-        self.currentValue = value
+        currentValue = value
     }
 
     /// The value for the current thread.
     public var currentValue: Value? {
         /// Get the current value for the calling thread.
         get {
-            guard let raw = self.key.get() else { return nil }
-          // parenthesize the return value to silence the cast warning
-          return (Unmanaged<BoxedType>
-                   .fromOpaque(raw)
-                   .takeUnretainedValue()
-                   .value.1 as! Value)
+            guard let raw = key.get() else { return nil }
+            // parenthesize the return value to silence the cast warning
+            return (Unmanaged<BoxedType>
+                .fromOpaque(raw)
+                .takeUnretainedValue()
+                .value.1 as! Value)
         }
 
         /// Set the current value for the calling threads. The `currentValue` for all other threads remains unchanged.
         set {
-            if let raw = self.key.get() {
+            if let raw = key.get() {
                 Unmanaged<BoxedType>.fromOpaque(raw).release()
             }
-            self.key.set(value: newValue.map { Unmanaged.passRetained(Box((self, $0))).toOpaque() })
+            key.set(value: newValue.map { Unmanaged.passRetained(Box((self, $0))).toOpaque() })
         }
     }
 }
 
 extension NIOThread: Equatable {
-    static func ==(lhs: NIOThread, rhs: NIOThread) -> Bool {
-        return lhs.withUnsafeThreadHandle { lhs in
+    static func == (lhs: NIOThread, rhs: NIOThread) -> Bool {
+        lhs.withUnsafeThreadHandle { lhs in
             rhs.withUnsafeThreadHandle { rhs in
                 ThreadOpsSystem.compareThreads(lhs, rhs)
             }

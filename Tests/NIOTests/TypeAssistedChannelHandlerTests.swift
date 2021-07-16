@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
+import XCTest
 
 class TypeAssistedChannelHandlerTest: XCTestCase {
     func testCanDefineBothInboundAndOutbound() throws {

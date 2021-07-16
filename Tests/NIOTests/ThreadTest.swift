@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
 @testable import NIO
 import NIOConcurrencyHelpers
 import XCTest
-import Dispatch
 
 class ThreadTest: XCTestCase {
     func testCurrentThreadWorks() throws {
@@ -72,7 +72,7 @@ class ThreadTest: XCTestCase {
             XCTAssertNil(tsv.currentValue)
             tsv.currentValue = SomeClass()
             XCTAssertNotNil(tsv.currentValue)
-            NIOThread.spawnAndRun { t2 in
+            NIOThread.spawnAndRun { _ in
                 XCTAssertNil(tsv.currentValue)
                 s.signal()
             }
@@ -84,12 +84,12 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { self.s = sem }
+            init(sem: DispatchSemaphore) { s = sem }
             deinit {
                 s.signal()
             }
         }
-        weak var weakSome: SomeClass? = nil
+        weak var weakSome: SomeClass?
         NIOThread.spawnAndRun { (_: NIO.NIOThread) in
             let some = SomeClass(sem: s)
             weakSome = some
@@ -105,12 +105,12 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { self.s = sem }
+            init(sem: DispatchSemaphore) { s = sem }
             deinit {
                 s.signal()
             }
         }
-        weak var weakSome: SomeClass? = nil
+        weak var weakSome: SomeClass?
         NIOThread.spawnAndRun { (_: NIO.NIOThread) in
             let some = SomeClass(sem: s)
             weakSome = some
@@ -129,14 +129,14 @@ class ThreadTest: XCTestCase {
         let s3 = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { self.s = sem }
+            init(sem: DispatchSemaphore) { s = sem }
             deinit {
                 s.signal()
             }
         }
-        weak var weakSome1: SomeClass? = nil
-        weak var weakSome2: SomeClass? = nil
-        weak var weakSome3: SomeClass? = nil
+        weak var weakSome1: SomeClass?
+        weak var weakSome2: SomeClass?
+        weak var weakSome3: SomeClass?
         NIOThread.spawnAndRun { (_: NIO.NIOThread) in
             let some1 = SomeClass(sem: s1)
             weakSome1 = some1
@@ -165,17 +165,17 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { self.s = sem }
+            init(sem: DispatchSemaphore) { s = sem }
             deinit {
                 s.signal()
             }
         }
-        weak var weakSome: SomeClass? = nil
+        weak var weakSome: SomeClass?
         NIOThread.spawnAndRun { (_: NIO.NIOThread) in
             let some = SomeClass(sem: s)
             weakSome = some
             let tsv = ThreadSpecificVariable<SomeClass>()
-            for _ in 0..<10 {
+            for _ in 0 ..< 10 {
                 NIOThread.spawnAndRun { (_: NIO.NIOThread) in
                     tsv.currentValue = some
                 }
@@ -195,13 +195,13 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { self.s = sem }
+            init(sem: DispatchSemaphore) { s = sem }
             deinit {
                 s.signal()
             }
         }
-        weak var weakSome: SomeClass? = nil
-        weak var weakTSV: ThreadSpecificVariable<SomeClass>? = nil
+        weak var weakSome: SomeClass?
+        weak var weakTSV: ThreadSpecificVariable<SomeClass>?
         NIOThread.spawnAndRun { (_: NIOThread) in
             {
                 let some = SomeClass(sem: s)
@@ -223,13 +223,13 @@ class ThreadTest: XCTestCase {
         let s = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { self.s = sem }
+            init(sem: DispatchSemaphore) { s = sem }
             deinit {
                 s.signal()
             }
         }
 
-        for _ in 0..<numberOfThreads {
+        for _ in 0 ..< numberOfThreads {
             NIOThread.spawnAndRun { (_: NIOThread) in
                 let some = SomeClass(sem: s)
                 let tsv = ThreadSpecificVariable<SomeClass>()
@@ -239,7 +239,7 @@ class ThreadTest: XCTestCase {
         }
 
         let timeout: DispatchTime = .now() + .seconds(1)
-        for _ in 0..<numberOfThreads {
+        for _ in 0 ..< numberOfThreads {
             switch s.wait(timeout: timeout) {
             case .success:
                 ()
@@ -254,7 +254,7 @@ class ThreadTest: XCTestCase {
         let t2Sem = DispatchSemaphore(value: 0)
         class SomeClass {
             let s: DispatchSemaphore
-            init(sem: DispatchSemaphore) { self.s = sem }
+            init(sem: DispatchSemaphore) { s = sem }
             deinit {
                 s.signal()
             }
@@ -269,9 +269,9 @@ class ThreadTest: XCTestCase {
             }
         })()
 
-        weak var weakSome1: SomeClass? = nil
-        weak var weakSome2: SomeClass? = nil
-        weak var weakTSV: ThreadSpecificVariable<SomeClass>? = nil
+        weak var weakSome1: SomeClass?
+        weak var weakSome2: SomeClass?
+        weak var weakTSV: ThreadSpecificVariable<SomeClass>?
         NIOThread.spawnAndRun { (_: NIOThread) in
             {
                 let some = SomeClass(sem: t1Sem)

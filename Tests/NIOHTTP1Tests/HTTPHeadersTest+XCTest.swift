@@ -23,36 +23,34 @@ import XCTest
 ///
 
 extension HTTPHeadersTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPHeadersTest) -> () throws -> Void)] {
-      return [
-                ("testCasePreservedButInsensitiveLookup", testCasePreservedButInsensitiveLookup),
-                ("testDictionaryLiteralAlternative", testDictionaryLiteralAlternative),
-                ("testWriteHeadersSeparately", testWriteHeadersSeparately),
-                ("testRevealHeadersSeparately", testRevealHeadersSeparately),
-                ("testSubscriptDoesntSplitHeaders", testSubscriptDoesntSplitHeaders),
-                ("testCanonicalisationDoesntHappenForSetCookie", testCanonicalisationDoesntHappenForSetCookie),
-                ("testTrimWhitespaceWorksOnEmptyString", testTrimWhitespaceWorksOnEmptyString),
-                ("testTrimWhitespaceWorksOnOnlyWhitespace", testTrimWhitespaceWorksOnOnlyWhitespace),
-                ("testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround", testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround),
-                ("testContains", testContains),
-                ("testFirst", testFirst),
-                ("testKeepAliveStateStartsWithClose", testKeepAliveStateStartsWithClose),
-                ("testKeepAliveStateStartsWithKeepAlive", testKeepAliveStateStartsWithKeepAlive),
-                ("testKeepAliveStateHasKeepAlive", testKeepAliveStateHasKeepAlive),
-                ("testKeepAliveStateHasClose", testKeepAliveStateHasClose),
-                ("testRandomAccess", testRandomAccess),
-                ("testCanBeSeededWithKeepAliveState", testCanBeSeededWithKeepAliveState),
-                ("testSeedDominatesActualValue", testSeedDominatesActualValue),
-                ("testSeedDominatesEvenAfterMutation", testSeedDominatesEvenAfterMutation),
-                ("testSeedGetsUpdatedToDefaultOnConnectionHeaderModification", testSeedGetsUpdatedToDefaultOnConnectionHeaderModification),
-                ("testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent", testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent),
-                ("testWeDefaultToCloseIfDoesNotMakeSense", testWeDefaultToCloseIfDoesNotMakeSense),
-                ("testAddingSequenceOfPairs", testAddingSequenceOfPairs),
-                ("testAddingOtherHTTPHeader", testAddingOtherHTTPHeader),
-                ("testCapacity", testCapacity),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPHeadersTest) -> () throws -> Void)] {
+        [
+            ("testCasePreservedButInsensitiveLookup", testCasePreservedButInsensitiveLookup),
+            ("testDictionaryLiteralAlternative", testDictionaryLiteralAlternative),
+            ("testWriteHeadersSeparately", testWriteHeadersSeparately),
+            ("testRevealHeadersSeparately", testRevealHeadersSeparately),
+            ("testSubscriptDoesntSplitHeaders", testSubscriptDoesntSplitHeaders),
+            ("testCanonicalisationDoesntHappenForSetCookie", testCanonicalisationDoesntHappenForSetCookie),
+            ("testTrimWhitespaceWorksOnEmptyString", testTrimWhitespaceWorksOnEmptyString),
+            ("testTrimWhitespaceWorksOnOnlyWhitespace", testTrimWhitespaceWorksOnOnlyWhitespace),
+            ("testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround", testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround),
+            ("testContains", testContains),
+            ("testFirst", testFirst),
+            ("testKeepAliveStateStartsWithClose", testKeepAliveStateStartsWithClose),
+            ("testKeepAliveStateStartsWithKeepAlive", testKeepAliveStateStartsWithKeepAlive),
+            ("testKeepAliveStateHasKeepAlive", testKeepAliveStateHasKeepAlive),
+            ("testKeepAliveStateHasClose", testKeepAliveStateHasClose),
+            ("testRandomAccess", testRandomAccess),
+            ("testCanBeSeededWithKeepAliveState", testCanBeSeededWithKeepAliveState),
+            ("testSeedDominatesActualValue", testSeedDominatesActualValue),
+            ("testSeedDominatesEvenAfterMutation", testSeedDominatesEvenAfterMutation),
+            ("testSeedGetsUpdatedToDefaultOnConnectionHeaderModification", testSeedGetsUpdatedToDefaultOnConnectionHeaderModification),
+            ("testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent", testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent),
+            ("testWeDefaultToCloseIfDoesNotMakeSense", testWeDefaultToCloseIfDoesNotMakeSense),
+            ("testAddingSequenceOfPairs", testAddingSequenceOfPairs),
+            ("testAddingOtherHTTPHeader", testAddingOtherHTTPHeader),
+            ("testCapacity", testCapacity),
+        ]
+    }
 }
-

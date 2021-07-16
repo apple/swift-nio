@@ -31,24 +31,24 @@ public enum IOData {
 extension IOData: Equatable {}
 
 /// `IOData` provide a number of readable bytes.
-extension IOData {
+public extension IOData {
     /// Returns the number of readable bytes in this `IOData`.
-    public var readableBytes: Int {
+    var readableBytes: Int {
         switch self {
-        case .byteBuffer(let buf):
+        case let .byteBuffer(buf):
             return buf.readableBytes
-        case .fileRegion(let region):
+        case let .fileRegion(region):
             return region.readableBytes
         }
     }
 
     /// Move the readerIndex forward by `offset`.
-    public mutating func moveReaderIndex(forwardBy: Int) {
+    mutating func moveReaderIndex(forwardBy: Int) {
         switch self {
-        case .byteBuffer(var buffer):
+        case var .byteBuffer(buffer):
             buffer.moveReaderIndex(forwardBy: forwardBy)
             self = .byteBuffer(buffer)
-        case .fileRegion(var fileRegion):
+        case var .fileRegion(fileRegion):
             fileRegion.moveReaderIndex(forwardBy: forwardBy)
             self = .fileRegion(fileRegion)
         }
@@ -58,9 +58,9 @@ extension IOData {
 extension IOData: CustomStringConvertible {
     public var description: String {
         switch self {
-        case .byteBuffer(let byteBuffer):
+        case let .byteBuffer(byteBuffer):
             return "IOData { \(byteBuffer) }"
-        case .fileRegion(let fileRegion):
+        case let .fileRegion(fileRegion):
             return "IOData { \(fileRegion) }"
         }
     }

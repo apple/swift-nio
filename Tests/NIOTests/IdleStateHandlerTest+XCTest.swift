@@ -23,16 +23,14 @@ import XCTest
 ///
 
 extension IdleStateHandlerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (IdleStateHandlerTest) -> () throws -> Void)] {
-      return [
-                ("testIdleRead", testIdleRead),
-                ("testIdleWrite", testIdleWrite),
-                ("testIdleAllWrite", testIdleAllWrite),
-                ("testIdleAllRead", testIdleAllRead),
-                ("testPropagateInboundEvents", testPropagateInboundEvents),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (IdleStateHandlerTest) -> () throws -> Void)] {
+        [
+            ("testIdleRead", testIdleRead),
+            ("testIdleWrite", testIdleWrite),
+            ("testIdleAllWrite", testIdleAllWrite),
+            ("testIdleAllRead", testIdleAllRead),
+            ("testPropagateInboundEvents", testPropagateInboundEvents),
+        ]
+    }
 }
-

@@ -23,15 +23,13 @@ import XCTest
 ///
 
 extension SelectorTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (SelectorTest) -> () throws -> Void)] {
-      return [
-                ("testDeregisterWhileProcessingEvents", testDeregisterWhileProcessingEvents),
-                ("testDeregisterAndCloseWhileProcessingEvents", testDeregisterAndCloseWhileProcessingEvents),
-                ("testWeDoNotDeliverEventsForPreviouslyClosedChannels", testWeDoNotDeliverEventsForPreviouslyClosedChannels),
-                ("testTimerFDIsLevelTriggered", testTimerFDIsLevelTriggered),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (SelectorTest) -> () throws -> Void)] {
+        [
+            ("testDeregisterWhileProcessingEvents", testDeregisterWhileProcessingEvents),
+            ("testDeregisterAndCloseWhileProcessingEvents", testDeregisterAndCloseWhileProcessingEvents),
+            ("testWeDoNotDeliverEventsForPreviouslyClosedChannels", testWeDoNotDeliverEventsForPreviouslyClosedChannels),
+            ("testTimerFDIsLevelTriggered", testTimerFDIsLevelTriggered),
+        ]
+    }
 }
-

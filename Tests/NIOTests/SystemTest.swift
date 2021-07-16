@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
+import XCTest
 
 class SystemTest: XCTestCase {
     func testSystemCallWrapperPerformance() throws {
@@ -36,7 +36,7 @@ class SystemTest: XCTestCase {
                 }
                 XCTFail("success even though the call was invalid")
             } catch let e as IOError {
-                XCTAssert([ENOTSOCK /* almost everything */, ENOPROTOOPT /* in Qemu */].contains(e.errnoCode))
+                XCTAssert([ENOTSOCK /* almost everything */, ENOPROTOOPT /* in Qemu */ ].contains(e.errnoCode))
                 XCTAssert(e.description.contains("setsockopt"))
                 XCTAssert(e.description.contains("\(ENOTSOCK)") || e.description.contains("\(ENOPROTOOPT)"))
             } catch let e {
@@ -47,55 +47,55 @@ class SystemTest: XCTestCase {
     }
 
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    // Example twin data options captured on macOS
-    private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
-                                                  0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
-                                                  0x07, 0x00, 0x00, 0x00, // IP_RECVDSTADDR
-                                                  0x7F, 0x00, 0x00, 0x01, // 127.0.0.1
-                                                  0x0D, 0x00, 0x00, 0x00, // Length 13 including header
-                                                  0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
-                                                  0x1B, 0x00, 0x00, 0x00, // IP_RECVTOS
-                                                  0x01, 0x00, 0x00, 0x00] // ECT-1 (1 byte)
-    private static let cmsghdr_secondStartPosition = 16
-    private static let cmsghdr_firstDataStart = 12
-    private static let cmsghdr_firstDataCount = 4
-    private static let cmsghdr_secondDataCount = 1
-    private static let cmsghdr_firstType = IP_RECVDSTADDR
-    private static let cmsghdr_secondType = IP_RECVTOS
+        // Example twin data options captured on macOS
+        private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
+                                                      0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
+                                                      0x07, 0x00, 0x00, 0x00, // IP_RECVDSTADDR
+                                                      0x7F, 0x00, 0x00, 0x01, // 127.0.0.1
+                                                      0x0D, 0x00, 0x00, 0x00, // Length 13 including header
+                                                      0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
+                                                      0x1B, 0x00, 0x00, 0x00, // IP_RECVTOS
+                                                      0x01, 0x00, 0x00, 0x00] // ECT-1 (1 byte)
+        private static let cmsghdr_secondStartPosition = 16
+        private static let cmsghdr_firstDataStart = 12
+        private static let cmsghdr_firstDataCount = 4
+        private static let cmsghdr_secondDataCount = 1
+        private static let cmsghdr_firstType = IP_RECVDSTADDR
+        private static let cmsghdr_secondType = IP_RECVTOS
     #elseif os(Android) && arch(arm)
-    private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
-                                                  0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
-                                                  0x08, 0x00, 0x00, 0x00, // IP_PKTINFO
-                                                  0x7F, 0x00, 0x00, 0x01, // 127.0.0.1
-                                                  0x0D, 0x00, 0x00, 0x00, // Length 13 including header
-                                                  0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
-                                                  0x01, 0x00, 0x00, 0x00, // IP_TOS
-                                                  0x01, 0x00, 0x00, 0x00] // ECT-1 (1 byte)
-    private static let cmsghdr_secondStartPosition = 16
-    private static let cmsghdr_firstDataStart = 12
-    private static let cmsghdr_firstDataCount = 4
-    private static let cmsghdr_secondDataCount = 1
-    private static let cmsghdr_firstType = IP_PKTINFO
-    private static let cmsghdr_secondType = IP_TOS
+        private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
+                                                      0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
+                                                      0x08, 0x00, 0x00, 0x00, // IP_PKTINFO
+                                                      0x7F, 0x00, 0x00, 0x01, // 127.0.0.1
+                                                      0x0D, 0x00, 0x00, 0x00, // Length 13 including header
+                                                      0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
+                                                      0x01, 0x00, 0x00, 0x00, // IP_TOS
+                                                      0x01, 0x00, 0x00, 0x00] // ECT-1 (1 byte)
+        private static let cmsghdr_secondStartPosition = 16
+        private static let cmsghdr_firstDataStart = 12
+        private static let cmsghdr_firstDataCount = 4
+        private static let cmsghdr_secondDataCount = 1
+        private static let cmsghdr_firstType = IP_PKTINFO
+        private static let cmsghdr_secondType = IP_TOS
     #elseif os(Linux) || os(Android)
-    // Example twin data options captured on Linux
-    private static let cmsghdrExample: [UInt8] = [
-        0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 28 including header.
-        0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_PKTINFO
-        0x01, 0x00, 0x00, 0x00, 0x7F, 0x00, 0x00, 0x01, // interface number, 127.0.0.1 (local)
-        0x7F, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // 127.0.0.1 (destination), 4 bytes to align length
-        0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 17
-        0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_TOS
-        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  // ECT-1 (1 byte)
-    ]
-    private static let cmsghdr_secondStartPosition = 32
-    private static let cmsghdr_firstDataStart = 16
-    private static let cmsghdr_firstDataCount = 12
-    private static let cmsghdr_secondDataCount = 1
-    private static let cmsghdr_firstType = IP_PKTINFO
-    private static let cmsghdr_secondType = IP_TOS
+        // Example twin data options captured on Linux
+        private static let cmsghdrExample: [UInt8] = [
+            0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 28 including header.
+            0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_PKTINFO
+            0x01, 0x00, 0x00, 0x00, 0x7F, 0x00, 0x00, 0x01, // interface number, 127.0.0.1 (local)
+            0x7F, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // 127.0.0.1 (destination), 4 bytes to align length
+            0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Length 17
+            0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // IPPROTO_IP, IP_TOS
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // ECT-1 (1 byte)
+        ]
+        private static let cmsghdr_secondStartPosition = 32
+        private static let cmsghdr_firstDataStart = 16
+        private static let cmsghdr_firstDataCount = 12
+        private static let cmsghdr_secondDataCount = 1
+        private static let cmsghdr_firstType = IP_PKTINFO
+        private static let cmsghdr_secondType = IP_TOS
     #else
-    #error("No cmsg support on this platform.")
+        #error("No cmsg support on this platform.")
     #endif
 
     func testCmsgFirstHeader() {
@@ -111,7 +111,7 @@ class SystemTest: XCTestCase {
             }
         }
     }
-    
+
     func testCMsgNextHeader() {
         var exampleCmsgHdr = SystemTest.cmsghdrExample
         exampleCmsgHdr.withUnsafeMutableBytes { pCmsgHdr in
@@ -129,7 +129,7 @@ class SystemTest: XCTestCase {
             }
         }
     }
-    
+
     func testCMsgData() {
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
@@ -141,14 +141,14 @@ class SystemTest: XCTestCase {
                 let first = NIOBSDSocketControlMessage.firstHeader(inside: pMsgHdr)
                 let firstData = NIOBSDSocketControlMessage.data(for: first!)
                 let expecedFirstData = UnsafeRawBufferPointer(
-                    rebasing: pCmsgHdr[SystemTest.cmsghdr_firstDataStart..<(
-                                        SystemTest.cmsghdr_firstDataStart + SystemTest.cmsghdr_firstDataCount)])
+                    rebasing: pCmsgHdr[SystemTest.cmsghdr_firstDataStart ..< (
+                        SystemTest.cmsghdr_firstDataStart + SystemTest.cmsghdr_firstDataCount)])
                 XCTAssertEqual(expecedFirstData.baseAddress, firstData?.baseAddress)
                 XCTAssertEqual(expecedFirstData.count, firstData?.count)
             }
         }
     }
-    
+
     func testCMsgCollection() {
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in

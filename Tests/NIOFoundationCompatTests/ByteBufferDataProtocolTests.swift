@@ -13,14 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import XCTest
 import NIO
 import NIOFoundationCompat
+import XCTest
 
 struct FakeContiguousBytes: ContiguousBytes {
     func withUnsafeBytes<T>(_ block: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
         let ptr = UnsafeMutableRawBufferPointer.allocate(byteCount: 8, alignment: 1)
-        ptr.initializeMemory(as: UInt8.self, repeating: 0xff)
+        ptr.initializeMemory(as: UInt8.self, repeating: 0xFF)
         defer {
             ptr.deallocate()
         }
@@ -77,7 +77,7 @@ class ByteBufferDataProtocolTests: XCTestCase {
         var b = ByteBufferAllocator().buffer(capacity: 1024)
         b.writeContiguousBytes(fake)
 
-        XCTAssertEqual(b.readBytes(length: b.readableBytes), [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
+        XCTAssertEqual(b.readBytes(length: b.readableBytes), [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
     }
 
     func testSetContiguousBytes() {
@@ -88,6 +88,6 @@ class ByteBufferDataProtocolTests: XCTestCase {
         b.setContiguousBytes(fake, at: 4)
 
         XCTAssertEqual(b.readBytes(length: b.readableBytes),
-                       [0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00])
+                       [0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00])
     }
 }

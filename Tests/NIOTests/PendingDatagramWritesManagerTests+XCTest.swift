@@ -23,21 +23,19 @@ import XCTest
 ///
 
 extension PendingDatagramWritesManagerTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (PendingDatagramWritesManagerTests) -> () throws -> Void)] {
-      return [
-                ("testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings", testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings),
-                ("testPendingWritesUsesVectorWriteOperationAndDoesntWriteTooMuch", testPendingWritesUsesVectorWriteOperationAndDoesntWriteTooMuch),
-                ("testPendingWritesWorkWithPartialWrites", testPendingWritesWorkWithPartialWrites),
-                ("testPendingWritesSpinCountWorksForSingleWrites", testPendingWritesSpinCountWorksForSingleWrites),
-                ("testPendingWritesCancellationWorksCorrectly", testPendingWritesCancellationWorksCorrectly),
-                ("testPendingWritesNoMoreThanWritevLimitIsWritten", testPendingWritesNoMoreThanWritevLimitIsWritten),
-                ("testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk", testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk),
-                ("testPendingWritesWorksWithManyEmptyWrites", testPendingWritesWorksWithManyEmptyWrites),
-                ("testPendingWritesCloseDuringVectorWrite", testPendingWritesCloseDuringVectorWrite),
-                ("testPendingWritesMoreThanWritevIOVectorLimit", testPendingWritesMoreThanWritevIOVectorLimit),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (PendingDatagramWritesManagerTests) -> () throws -> Void)] {
+        [
+            ("testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings", testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings),
+            ("testPendingWritesUsesVectorWriteOperationAndDoesntWriteTooMuch", testPendingWritesUsesVectorWriteOperationAndDoesntWriteTooMuch),
+            ("testPendingWritesWorkWithPartialWrites", testPendingWritesWorkWithPartialWrites),
+            ("testPendingWritesSpinCountWorksForSingleWrites", testPendingWritesSpinCountWorksForSingleWrites),
+            ("testPendingWritesCancellationWorksCorrectly", testPendingWritesCancellationWorksCorrectly),
+            ("testPendingWritesNoMoreThanWritevLimitIsWritten", testPendingWritesNoMoreThanWritevLimitIsWritten),
+            ("testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk", testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk),
+            ("testPendingWritesWorksWithManyEmptyWrites", testPendingWritesWorksWithManyEmptyWrites),
+            ("testPendingWritesCloseDuringVectorWrite", testPendingWritesCloseDuringVectorWrite),
+            ("testPendingWritesMoreThanWritevIOVectorLimit", testPendingWritesMoreThanWritevIOVectorLimit),
+        ]
+    }
 }
-

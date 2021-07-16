@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket> {
-    internal var connectTimeoutScheduled: Optional<Scheduled<Void>>
+    internal var connectTimeoutScheduled: Scheduled<Void>?
     private var allowRemoteHalfClosure: Bool = false
     private var inputShutdown: Bool = false
     private var outputShutdown: Bool = false
@@ -22,9 +22,10 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     override init(socket: Socket,
                   parent: Channel?,
                   eventLoop: SelectableEventLoop,
-                  recvAllocator: RecvByteBufferAllocator) throws {
-        self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
-        self.connectTimeoutScheduled = nil
+                  recvAllocator: RecvByteBufferAllocator) throws
+    {
+        pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+        connectTimeoutScheduled = nil
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: recvAllocator)
     }
 
@@ -34,39 +35,40 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     // MARK: BaseSocketChannel's must override API that might be further refined by subclasses
-    override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
-        self.eventLoop.assertInEventLoop()
 
-        guard self.isOpen else {
+    override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
+        eventLoop.assertInEventLoop()
+
+        guard isOpen else {
             throw ChannelError.ioOnClosedChannel
         }
 
         switch option {
         case _ as ChannelOptions.Types.AllowRemoteHalfClosureOption:
-            self.allowRemoteHalfClosure = value as! Bool
+            allowRemoteHalfClosure = value as! Bool
         case _ as ChannelOptions.Types.WriteSpinOption:
-            self.pendingWrites.writeSpinCount = value as! UInt
+            pendingWrites.writeSpinCount = value as! UInt
         case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
-            self.pendingWrites.waterMark = value as! ChannelOptions.Types.WriteBufferWaterMark
+            pendingWrites.waterMark = value as! ChannelOptions.Types.WriteBufferWaterMark
         default:
             try super.setOption0(option, value: value)
         }
     }
 
     override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
-        self.eventLoop.assertInEventLoop()
+        eventLoop.assertInEventLoop()
 
-        guard self.isOpen else {
+        guard isOpen else {
             throw ChannelError.ioOnClosedChannel
         }
 
         switch option {
         case _ as ChannelOptions.Types.AllowRemoteHalfClosureOption:
-            return self.allowRemoteHalfClosure as! Option.Value
+            return allowRemoteHalfClosure as! Option.Value
         case _ as ChannelOptions.Types.WriteSpinOption:
-            return self.pendingWrites.writeSpinCount as! Option.Value
+            return pendingWrites.writeSpinCount as! Option.Value
         case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
-            return self.pendingWrites.waterMark as! Option.Value
+            return pendingWrites.waterMark as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -76,42 +78,43 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     func shutdownSocket(mode: CloseMode) throws {
         switch mode {
         case .output:
-            try self.socket.shutdown(how: .WR)
-            self.outputShutdown = true
+            try socket.shutdown(how: .WR)
+            outputShutdown = true
         case .input:
             try socket.shutdown(how: .RD)
-            self.inputShutdown = true
+            inputShutdown = true
         case .all:
             break
         }
     }
 
     // MARK: BaseSocketChannel's must override API that cannot be further refined by subclasses
+
     // This is `Channel` API so must be thread-safe.
-    final override public var isWritable: Bool {
-        return self.pendingWrites.isWritable
+    override public final var isWritable: Bool {
+        self.pendingWrites.isWritable
     }
 
-    final override var isOpen: Bool {
+    override final var isOpen: Bool {
         self.eventLoop.assertInEventLoop()
         assert(super.isOpen == self.pendingWrites.isOpen)
         return super.isOpen
     }
 
-    final override func readFromSocket() throws -> ReadResult {
-        self.eventLoop.assertInEventLoop()
+    override final func readFromSocket() throws -> ReadResult {
+        eventLoop.assertInEventLoop()
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
-        var buffer = self.recvAllocator.buffer(allocator: allocator)
+        var buffer = recvAllocator.buffer(allocator: allocator)
         var result = ReadResult.none
-        for i in 1...self.maxMessagesPerRead {
-            guard self.isOpen && !self.inputShutdown else {
+        for i in 1 ... maxMessagesPerRead {
+            guard isOpen, !inputShutdown else {
                 throw ChannelError.eof
             }
             // Reset reader and writerIndex and so allow to have the buffer filled again. This is better here than at
             // the end of the loop to not do an allocation when the loop exits.
             buffer.clear()
             switch try buffer.withMutableWritePointer(body: { try self.socket.read(pointer: $0) }) {
-            case .processed(let bytesRead):
+            case let .processed(bytesRead):
                 if bytesRead > 0 {
                     let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
 
@@ -127,7 +130,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                         // Also this will allow us to call fireChannelReadComplete() which may give the user the chance to flush out all pending
                         // writes.
                         return result
-                    } else if mayGrow && i < self.maxMessagesPerRead {
+                    } else if mayGrow, i < self.maxMessagesPerRead {
                         // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
                         // we are able to read on the next read operation.
                         buffer = self.recvAllocator.buffer(allocator: allocator)
@@ -142,7 +145,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     // end-of-file
                     throw ChannelError.eof
                 }
-            case .wouldBlock(let bytesRead):
+            case let .wouldBlock(bytesRead):
                 assert(bytesRead == 0)
                 return result
             }
@@ -150,8 +153,8 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         return result
     }
 
-    final override func writeToSocket() throws -> OverallWriteResult {
-        let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
+    override final func writeToSocket() throws -> OverallWriteResult {
+        let result = try pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
             guard ptr.count > 0 else {
                 // No need to call write if the buffer is empty.
                 return .processed(0)
@@ -167,23 +170,23 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         return result
     }
 
-    final override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+    override final func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         do {
             switch mode {
             case .output:
-                if self.outputShutdown {
+                if outputShutdown {
                     promise?.fail(ChannelError.outputClosed)
                     return
                 }
-                try self.shutdownSocket(mode: mode)
+                try shutdownSocket(mode: mode)
                 // Fail all pending writes and so ensure all pending promises are notified
-                self.pendingWrites.failAll(error: error, close: false)
-                self.unregisterForWritable()
+                pendingWrites.failAll(error: error, close: false)
+                unregisterForWritable()
                 promise?.succeed(())
 
-                self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
+                pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
             case .input:
-                if self.inputShutdown {
+                if inputShutdown {
                     promise?.fail(ChannelError.inputClosed)
                     return
                 }
@@ -191,18 +194,17 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 case ChannelError.eof:
                     // No need to explicit call socket.shutdown(...) as we received an EOF and the call would only cause
                     // ENOTCON
-                    self.inputShutdown = true
-                    break
+                    inputShutdown = true
                 default:
-                    try self.shutdownSocket(mode: mode)
+                    try shutdownSocket(mode: mode)
                 }
-                self.unregisterForReadable()
+                unregisterForReadable()
                 promise?.succeed(())
 
-                self.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+                pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
             case .all:
-                if let timeout = self.connectTimeoutScheduled {
-                    self.connectTimeoutScheduled = nil
+                if let timeout = connectTimeoutScheduled {
+                    connectTimeoutScheduled = nil
                     timeout.cancel()
                 }
                 super.close0(error: error, mode: mode, promise: promise)
@@ -212,45 +214,45 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }
     }
 
-    final override func hasFlushedPendingWrites() -> Bool {
-        return self.pendingWrites.isFlushPending
+    override final func hasFlushedPendingWrites() -> Bool {
+        pendingWrites.isFlushPending
     }
 
-    final override func markFlushPoint() {
+    override final func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
-        self.pendingWrites.markFlushCheckpoint()
+        pendingWrites.markFlushCheckpoint()
     }
 
-    final override func cancelWritesOnClose(error: Error) {
-        self.pendingWrites.failAll(error: error, close: true)
+    override final func cancelWritesOnClose(error: Error) {
+        pendingWrites.failAll(error: error, close: true)
     }
 
     @discardableResult
-    final override func readIfNeeded0() -> Bool {
-        if self.inputShutdown {
+    override final func readIfNeeded0() -> Bool {
+        if inputShutdown {
             return false
         }
         return super.readIfNeeded0()
     }
 
-    final override public func read0() {
-        if self.inputShutdown {
+    override public final func read0() {
+        if inputShutdown {
             return
         }
         super.read0()
     }
 
-    final override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        if self.outputShutdown {
+    override final func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+        if outputShutdown {
             promise?.fail(ChannelError.outputClosed)
             return
         }
 
         let data = data.forceAsIOData()
 
-        if !self.pendingWrites.add(data: data, promise: promise) {
-            self.pipeline.fireChannelWritabilityChanged0()
+        if !pendingWrites.add(data: data, promise: promise) {
+            pipeline.fireChannelWritabilityChanged0()
         }
     }
 }

@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
+import XCTest
 
 public func getRandomNumbers(count: Int) -> [UInt8] {
-    return (0..<count).map { _ in
+    (0 ..< count).map { _ in
         UInt8.random(in: .min ... .max)
     }
 }
@@ -76,7 +76,7 @@ class HeapTests: XCTestCase {
             XCTAssertEqual(Array(minHeap.sorted()), Array(minHeap))
         }
 
-        for _ in 0..<N/2 {
+        for _ in 0 ..< N / 2 {
             let value = minHeap.removeRoot()!
             XCTAssertGreaterThanOrEqual(value, minHeapLast)
             minHeapLast = value
@@ -93,7 +93,7 @@ class HeapTests: XCTestCase {
             XCTAssertTrue(minHeap.checkHeapProperty(), minHeap.debugDescription)
         }
 
-        for _ in 0..<N/2+N {
+        for _ in 0 ..< N / 2 + N {
             let value = minHeap.removeRoot()!
             XCTAssertGreaterThanOrEqual(value, minHeapLast)
             minHeapLast = value
@@ -115,23 +115,23 @@ class HeapTests: XCTestCase {
 }
 
 extension Heap {
-    internal func checkHeapProperty() -> Bool {
+    func checkHeapProperty() -> Bool {
         func checkHeapProperty(index: Int) -> Bool {
-            let li = self.leftIndex(index)
-            let ri = self.rightIndex(index)
-            if index >= self.storage.count {
+            let li = leftIndex(index)
+            let ri = rightIndex(index)
+            if index >= storage.count {
                 return true
             } else {
-                let me = self.storage[index]
+                let me = storage[index]
                 var lCond = true
                 var rCond = true
-                if li < self.storage.count {
-                    let l = self.storage[li]
-                    lCond = !self.comparator(l, me)
+                if li < storage.count {
+                    let l = storage[li]
+                    lCond = !comparator(l, me)
                 }
-                if ri < self.storage.count {
-                    let r = self.storage[ri]
-                    rCond = !self.comparator(r, me)
+                if ri < storage.count {
+                    let r = storage[ri]
+                    rCond = !comparator(r, me)
                 }
                 return lCond && rCond && checkHeapProperty(index: li) && checkHeapProperty(index: ri)
             }

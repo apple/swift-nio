@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIO
 import Dispatch
 import Foundation
+import NIO
+import XCTest
 
 class BlockingIOThreadPoolTest: XCTestCase {
     func testDoubleShutdownWorks() throws {
@@ -104,7 +104,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
         let taskRunningSem = DispatchSemaphore(value: 0)
         let doneSem = DispatchSemaphore(value: 0)
         let shutdownDoneSem = DispatchSemaphore(value: 0)
-        weak var weakThreadPool: NIOThreadPool? = nil
+        weak var weakThreadPool: NIOThreadPool?
         ({
             let threadPool = NIOThreadPool(numberOfThreads: 1)
             weakThreadPool = threadPool
@@ -136,7 +136,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
         let doneSem = DispatchSemaphore(value: 0)
         let threadPool = NIOThreadPool(numberOfThreads: 1)
         threadPool.start()
-        weak var referencedObject: SomeClass? = nil
+        weak var referencedObject: SomeClass?
         ({
             let object = SomeClass()
             referencedObject = object
@@ -158,8 +158,8 @@ class BlockingIOThreadPoolTest: XCTestCase {
         let doneSem = DispatchSemaphore(value: 0)
         let threadPool = NIOThreadPool(numberOfThreads: 1)
         threadPool.start()
-        weak var referencedObject1: SomeClass? = nil
-        weak var referencedObject2: SomeClass? = nil
+        weak var referencedObject1: SomeClass?
+        weak var referencedObject2: SomeClass?
         ({
             let object1 = SomeClass()
             let object2 = SomeClass()

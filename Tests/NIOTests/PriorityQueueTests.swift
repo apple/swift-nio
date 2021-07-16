@@ -1,3 +1,4 @@
+@testable import NIO
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -12,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 import XCTest
-@testable import NIO
 
 class PriorityQueueTest: XCTestCase {
     func testSomeStringsAsc() throws {
@@ -54,7 +54,7 @@ class PriorityQueueTest: XCTestCase {
     }
 
     func testBuildAndRemoveFromRandomPriorityQueues() {
-        for size in 0...33 {
+        for size in 0 ... 33 {
             var pq = PriorityQueue<UInt8>()
             let randoms = getRandomNumbers(count: size)
             randoms.forEach { pq.push($0) }
@@ -70,7 +70,7 @@ class PriorityQueueTest: XCTestCase {
             }
 
             /* remove up to `n` members and add them back at the end and check that the priority queues are still the same */
-            for n in 1...5 where n <= size {
+            for n in 1 ... 5 where n <= size {
                 var pq2 = pq
                 let deleted = randoms.prefix(n).map { (random: UInt8) -> UInt8 in
                     pq2.remove(random)
@@ -87,7 +87,7 @@ class PriorityQueueTest: XCTestCase {
     func testPartialOrder() {
         let clearlyTheSmallest = SomePartiallyOrderedDataType(width: 0, height: 0)
         let clearlyTheLargest = SomePartiallyOrderedDataType(width: 100, height: 100)
-        let inTheMiddles = zip(1...99, (1...99).reversed()).map { SomePartiallyOrderedDataType(width: $0, height: $1) }
+        let inTheMiddles = zip(1 ... 99, (1 ... 99).reversed()).map { SomePartiallyOrderedDataType(width: $0, height: $1) }
 
         /*
          the four values are only partially ordered (from small (top) to large (bottom)):
@@ -115,7 +115,7 @@ class PriorityQueueTest: XCTestCase {
         XCTAssertEqual(clearlyTheLargest, pq.pop()!)
         XCTAssert(pq.isEmpty)
     }
-    
+
     func testDescription() {
         let pq1 = PriorityQueue<Int>()
         var pq2 = PriorityQueue<Int>()
@@ -129,12 +129,12 @@ class PriorityQueueTest: XCTestCase {
 
 /// This data type is only partially ordered. Ie. from `a < b` and `a != b` we can't imply `a > b`.
 struct SomePartiallyOrderedDataType: Comparable, CustomStringConvertible {
-    public static func <(lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
-        return lhs.width < rhs.width && lhs.height < rhs.height
+    public static func < (lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
+        lhs.width < rhs.width && lhs.height < rhs.height
     }
 
-    public static func ==(lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
-        return lhs.width == rhs.width && lhs.height == rhs.height
+    public static func == (lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
+        lhs.width == rhs.width && lhs.height == rhs.height
     }
 
     private let width: Int
@@ -145,6 +145,6 @@ struct SomePartiallyOrderedDataType: Comparable, CustomStringConvertible {
     }
 
     public var description: String {
-        return "(w: \(self.width), h: \(self.height))"
+        "(w: \(width), h: \(height))"
     }
 }

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
+import XCTest
 
 class BaseObjectTest: XCTestCase {
     func testNIOByteBufferConversion() {

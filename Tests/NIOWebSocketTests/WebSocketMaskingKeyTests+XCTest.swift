@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension WebSocketMaskingKeyTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (WebSocketMaskingKeyTests) -> () throws -> Void)] {
-      return [
-                ("testRandomMaskingKey", testRandomMaskingKey),
-                ("testRandomMaskingKeyIsNotAlwaysZero", testRandomMaskingKeyIsNotAlwaysZero),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (WebSocketMaskingKeyTests) -> () throws -> Void)] {
+        [
+            ("testRandomMaskingKey", testRandomMaskingKey),
+            ("testRandomMaskingKeyIsNotAlwaysZero", testRandomMaskingKeyIsNotAlwaysZero),
+        ]
+    }
 }
-

@@ -35,7 +35,7 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
     public init(target: ConnectTo) {
         self.target = target
     }
-    
+
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress!)")
 
@@ -46,30 +46,29 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
         }
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
-        
+
         let requestHead = HTTPRequestHead(version: .http1_1,
                                           method: .GET,
                                           uri: "/",
                                           headers: headers)
-        
-        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
-        
+
+        context.write(wrapOutboundOut(.head(requestHead)), promise: nil)
+
         let body = HTTPClientRequestPart.body(.byteBuffer(ByteBuffer()))
-        context.write(self.wrapOutboundOut(body), promise: nil)
-        
-        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+        context.write(wrapOutboundOut(body), promise: nil)
+
+        context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: nil)
     }
-    
+
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        
-        let clientResponse = self.unwrapInboundIn(data)
-        
+        let clientResponse = unwrapInboundIn(data)
+
         print("Upgrade failed")
-        
+
         switch clientResponse {
-        case .head(let responseHead):
+        case let .head(responseHead):
             print("Received status: \(responseHead.status)")
-        case .body(let byteBuffer):
+        case let .body(byteBuffer):
             let string = String(buffer: byteBuffer)
             print("Received: '\(string)' back from the server.")
         case .end:
@@ -77,14 +76,14 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
             context.close(promise: nil)
         }
     }
-    
-    public func handlerRemoved(context: ChannelHandlerContext) {
+
+    public func handlerRemoved(context _: ChannelHandlerContext) {
         print("HTTP handler removed.")
     }
-    
+
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
-        
+
         // As we are not really interested getting notified on success or failure
         // we just pass nil as promise to reduce allocations.
         context.close(promise: nil)
@@ -98,70 +97,70 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
 private final class WebSocketPingPongHandler: ChannelInboundHandler {
     typealias InboundIn = WebSocketFrame
     typealias OutboundOut = WebSocketFrame
-    
+
     let testFrameData: String = "Hello World"
-    
+
     // This is being hit, channel active won't be called as it is already added.
     public func handlerAdded(context: ChannelHandlerContext) {
         print("WebSocket handler added.")
-        self.pingTestFrameData(context: context)
+        pingTestFrameData(context: context)
     }
 
-    public func handlerRemoved(context: ChannelHandlerContext) {
+    public func handlerRemoved(context _: ChannelHandlerContext) {
         print("WebSocket handler removed.")
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let frame = self.unwrapInboundIn(data)
-        
+        let frame = unwrapInboundIn(data)
+
         switch frame.opcode {
         case .pong:
-            self.pong(context: context, frame: frame)
+            pong(context: context, frame: frame)
         case .text:
             var data = frame.unmaskedData
             let text = data.readString(length: data.readableBytes) ?? ""
             print("Websocket: Received \(text)")
         case .connectionClose:
-            self.receivedClose(context: context, frame: frame)
+            receivedClose(context: context, frame: frame)
         case .binary, .continuation, .ping:
             // We ignore these frames.
             break
         default:
             // Unknown frames are errors.
-            self.closeOnError(context: context)
+            closeOnError(context: context)
         }
     }
-    
+
     public func channelReadComplete(context: ChannelHandlerContext) {
         context.flush()
     }
 
-    private func receivedClose(context: ChannelHandlerContext, frame: WebSocketFrame) {
+    private func receivedClose(context: ChannelHandlerContext, frame _: WebSocketFrame) {
         // Handle a received close frame. We're just going to close.
         print("Received Close instruction from server")
         context.close(promise: nil)
     }
-    
+
     private func pingTestFrameData(context: ChannelHandlerContext) {
-        let buffer = context.channel.allocator.buffer(string: self.testFrameData)
+        let buffer = context.channel.allocator.buffer(string: testFrameData)
         let frame = WebSocketFrame(fin: true, opcode: .ping, data: buffer)
-        context.write(self.wrapOutboundOut(frame), promise: nil)
+        context.write(wrapOutboundOut(frame), promise: nil)
     }
-    
-    private func pong(context: ChannelHandlerContext, frame: WebSocketFrame) {
+
+    private func pong(context _: ChannelHandlerContext, frame: WebSocketFrame) {
         var frameData = frame.data
-        if let frameDataString = frameData.readString(length: self.testFrameData.count) {
+        if let frameDataString = frameData.readString(length: testFrameData.count) {
             print("Websocket: Received: \(frameDataString)")
         }
     }
-    
+
     private func closeOnError(context: ChannelHandlerContext) {
         // We have hit an error, we want to close. We do that by sending a close frame and then
         // shutting down the write side of the connection. The server will respond with a close of its own.
         var data = context.channel.allocator.buffer(capacity: 2)
         data.write(webSocketErrorCode: .protocolError)
         let frame = WebSocketFrame(fin: true, opcode: .connectionClose, data: data)
-        context.write(self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
+        context.write(wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
             context.close(mode: .output, promise: nil)
         }
     }
@@ -177,13 +176,13 @@ let defaultPort: Int = 8888
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
+case let (.some(h), _, .some(p)):
     /* we got two arguments, let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)
-case (.some(let portString), .none, _):
+case let (.some(portString), .none, _):
     /* couldn't parse as number, expecting unix domain socket path */
     connectTarget = .unixDomainSocket(path: portString)
-case (_, .some(let p), _):
+case let (_, .some(p), _):
     /* only one argument --> port */
     connectTarget = .ip(host: defaultHost, port: p)
 default:
@@ -200,28 +199,30 @@ let bootstrap = ClientBootstrap(group: group)
 
         let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
                                                            upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-            channel.pipeline.addHandler(WebSocketPingPongHandler())
-        })
+                                                               channel.pipeline.addHandler(WebSocketPingPongHandler())
+                                                           })
 
         let config: NIOHTTPClientUpgradeConfiguration = (
-            upgraders: [ websocketUpgrader ],
+            upgraders: [websocketUpgrader],
             completionHandler: { _ in
                 channel.pipeline.removeHandler(httpHandler, promise: nil)
-        })
+            }
+        )
 
         return channel.pipeline.addHTTPClientHandlers(withClientUpgrade: config).flatMap {
             channel.pipeline.addHandler(httpHandler)
         }
-}
+    }
+
 defer {
     try! group.syncShutdownGracefully()
 }
 
 let channel = try { () -> Channel in
     switch connectTarget {
-    case .ip(let host, let port):
+    case let .ip(host, port):
         return try bootstrap.connect(host: host, port: port).wait()
-    case .unixDomainSocket(let path):
+    case let .unixDomainSocket(path):
         return try bootstrap.connect(unixDomainSocketPath: path).wait()
     }
 }()

@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+import class Foundation.Pipe
 import NIO
 import NIOFoundationCompat
-import class Foundation.Pipe
 
 internal struct OutputGrepper {
     internal var result: EventLoopFuture<ProgramOutput>
@@ -67,7 +67,8 @@ private final class GrepHandler: ChannelInboundHandler {
         let line = self.unwrapInboundIn(data)
         if line.lowercased().contains("fatal error") ||
             line.lowercased().contains("precondition failed") ||
-            line.lowercased().contains("assertion failed") {
+            line.lowercased().contains("assertion failed")
+        {
             self.promise.succeed(line)
             context.close(promise: nil)
         }
@@ -80,7 +81,7 @@ private final class GrepHandler: ChannelInboundHandler {
         }
     }
 
-    func handlerRemoved(context: ChannelHandlerContext) {
+    func handlerRemoved(context _: ChannelHandlerContext) {
         self.promise.fail(ChannelError.alreadyClosed)
     }
 }

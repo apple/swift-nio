@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
+import XCTest
 
-fileprivate extension UnsafeControlMessageCollection {
+private extension UnsafeControlMessageCollection {
     init(controlBytes: UnsafeMutableRawBufferPointer) {
         let msgHdr = msghdr(msg_name: nil,
                             msg_namelen: 0,
@@ -31,11 +31,11 @@ fileprivate extension UnsafeControlMessageCollection {
 class ControlMessageTests: XCTestCase {
     var encoderBytes: UnsafeMutableRawBufferPointer?
     var encoder: UnsafeOutboundControlBytes!
-    
+
     override func setUp() {
-        self.encoderBytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1000,
-                                                                  alignment: MemoryLayout<Int>.alignment)
-        self.encoder = UnsafeOutboundControlBytes(controlBytes: self.encoderBytes!)
+        encoderBytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1000,
+                                                              alignment: MemoryLayout<Int>.alignment)
+        encoder = UnsafeOutboundControlBytes(controlBytes: encoderBytes!)
     }
 
     override func tearDown() {
@@ -44,9 +44,9 @@ class ControlMessageTests: XCTestCase {
             encoderBytes.deallocate()
         }
     }
-    
+
     func testEmptyEncode() {
-        XCTAssertEqual(self.encoder.validControlBytes.count, 0)
+        XCTAssertEqual(encoder.validControlBytes.count, 0)
     }
 
     struct DecodedMessage: Equatable {
@@ -54,12 +54,12 @@ class ControlMessageTests: XCTestCase {
         var type: CInt
         var payload: CInt
     }
-    
+
     func testEncodeDecode1() {
-        self.encoder.appendControlMessage(level: 1, type: 2, payload: 3)
+        encoder.appendControlMessage(level: 1, type: 2, payload: 3)
         let expected = [DecodedMessage(level: 1, type: 2, payload: 3)]
-        let encodedBytes = self.encoder.validControlBytes
-        
+        let encodedBytes = encoder.validControlBytes
+
         let decoder = UnsafeControlMessageCollection(controlBytes: encodedBytes)
         XCTAssertEqual(decoder.count, 1)
         var decoded: [DecodedMessage] = []
@@ -70,16 +70,16 @@ class ControlMessageTests: XCTestCase {
         }
         XCTAssertEqual(expected, decoded)
     }
-    
+
     func testEncodeDecode2() {
-        self.encoder.appendControlMessage(level: 1, type: 2, payload: 3)
-        self.encoder.appendControlMessage(level: 4, type: 5, payload: 6)
+        encoder.appendControlMessage(level: 1, type: 2, payload: 3)
+        encoder.appendControlMessage(level: 4, type: 5, payload: 6)
         let expected = [
             DecodedMessage(level: 1, type: 2, payload: 3),
-            DecodedMessage(level: 4, type: 5, payload: 6)
+            DecodedMessage(level: 4, type: 5, payload: 6),
         ]
-        let encodedBytes = self.encoder.validControlBytes
-        
+        let encodedBytes = encoder.validControlBytes
+
         let decoder = UnsafeControlMessageCollection(controlBytes: encodedBytes)
         XCTAssertEqual(decoder.count, 2)
         var decoded: [DecodedMessage] = []
@@ -94,11 +94,12 @@ class ControlMessageTests: XCTestCase {
     private func assertBuffersNonOverlapping(_ b1: UnsafeMutableRawBufferPointer,
                                              _ b2: UnsafeMutableRawBufferPointer,
                                              file: StaticString = #file,
-                                             line: UInt = #line) {
+                                             line: UInt = #line)
+    {
         XCTAssert((b1.baseAddress! < b2.baseAddress! && (b1.baseAddress! + b1.count) <= b2.baseAddress!) ||
-                  (b2.baseAddress! < b1.baseAddress! && (b2.baseAddress! + b2.count) <= b1.baseAddress!),
-                  file: (file),
-                  line: line)
+            (b2.baseAddress! < b1.baseAddress! && (b2.baseAddress! + b2.count) <= b1.baseAddress!),
+            file: file,
+            line: line)
     }
 
     func testStorageIndexing() {

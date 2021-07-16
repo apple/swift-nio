@@ -23,13 +23,11 @@ import XCTest
 ///
 
 extension ByteBufferViewDataProtocolTests {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (ByteBufferViewDataProtocolTests) -> () throws -> Void)] {
-      return [
-                ("testResetBytes", testResetBytes),
-                ("testCreateDataFromBuffer", testCreateDataFromBuffer),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (ByteBufferViewDataProtocolTests) -> () throws -> Void)] {
+        [
+            ("testResetBytes", testResetBytes),
+            ("testCreateDataFromBuffer", testCreateDataFromBuffer),
+        ]
+    }
 }
-

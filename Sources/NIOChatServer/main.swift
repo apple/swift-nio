@@ -1,3 +1,4 @@
+import Dispatch
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -12,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 import NIO
-import Dispatch
 
 private let newLine = "\n".utf8.first!
 
@@ -26,7 +26,7 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readable = buffer.withUnsafeReadableBytes { $0.firstIndex(of: newLine) }
         if let r = readable {
-            context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: r + 1)!))
+            context.fireChannelRead(wrapInboundOut(buffer.readSlice(length: r + 1)!))
             return .continue
         }
         return .needMoreData
@@ -50,25 +50,25 @@ final class ChatHandler: ChannelInboundHandler {
     // All access to channels is guarded by channelsSyncQueue.
     private let channelsSyncQueue = DispatchQueue(label: "channelsQueue")
     private var channels: [ObjectIdentifier: Channel] = [:]
-    
+
     public func channelActive(context: ChannelHandlerContext) {
         let remoteAddress = context.remoteAddress!
         let channel = context.channel
-        self.channelsSyncQueue.async {
+        channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that just became active.
             self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - New client connected with address: \(remoteAddress)\n")
-            
+
             self.channels[ObjectIdentifier(channel)] = channel
         }
-        
+
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeString("(ChatServer) - Welcome to: \(context.localAddress!)\n")
-        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+        context.writeAndFlush(wrapOutboundOut(buffer), promise: nil)
     }
-    
+
     public func channelInactive(context: ChannelHandlerContext) {
         let channel = context.channel
-        self.channelsSyncQueue.async {
+        channelsSyncQueue.async {
             if self.channels.removeValue(forKey: ObjectIdentifier(channel)) != nil {
                 // Broadcast the message to all the connected clients except the one that just was disconnected.
                 self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - Client disconnected\n")
@@ -78,13 +78,13 @@ final class ChatHandler: ChannelInboundHandler {
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let id = ObjectIdentifier(context.channel)
-        var read = self.unwrapInboundIn(data)
+        var read = unwrapInboundIn(data)
 
         // 64 should be good enough for the ipaddress
         var buffer = context.channel.allocator.buffer(capacity: read.readableBytes + 64)
         buffer.writeString("(\(context.remoteAddress!)) - ")
         buffer.writeBuffer(&read)
-        self.channelsSyncQueue.async {
+        channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that wrote it.
             self.writeToAll(channels: self.channels.filter { id != $0.key }, buffer: buffer)
         }
@@ -99,8 +99,8 @@ final class ChatHandler: ChannelInboundHandler {
     }
 
     private func writeToAll(channels: [ObjectIdentifier: Channel], allocator: ByteBufferAllocator, message: String) {
-        let buffer =  allocator.buffer(string: message)
-        self.writeToAll(channels: channels, buffer: buffer)
+        let buffer = allocator.buffer(string: message)
+        writeToAll(channels: channels, buffer: buffer)
     }
 
     private func writeToAll(channels: [ObjectIdentifier: Channel], buffer: ByteBuffer) {
@@ -121,7 +121,7 @@ let bootstrap = ServerBootstrap(group: group)
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
         // Add handler that will buffer data until a \n is received
-        channel.pipeline.addHandler(ByteToMessageHandler(LineDelimiterCodec())).flatMap { v in
+        channel.pipeline.addHandler(ByteToMessageHandler(LineDelimiterCodec())).flatMap { _ in
             // It's important we use the same handler for all accepted channels. The ChatHandler is thread-safe!
             channel.pipeline.addHandler(chatHandler)
         }
@@ -150,15 +150,15 @@ enum BindTo {
 
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
+case let (.some(h), _, .some(p)):
     /* we got two arguments, let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)
 
-case (let portString?, .none, _):
+case let (portString?, .none, _):
     // Couldn't parse as number, expecting unix domain socket path.
     bindTarget = .unixDomainSocket(path: portString)
 
-case (_, let p?, _):
+case let (_, p?, _):
     // Only one argument --> port.
     bindTarget = .ip(host: defaultHost, port: p)
 
@@ -168,9 +168,9 @@ default:
 
 let channel = try { () -> Channel in
     switch bindTarget {
-    case .ip(let host, let port):
+    case let .ip(host, port):
         return try bootstrap.bind(host: host, port: port).wait()
-    case .unixDomainSocket(let path):
+    case let .unixDomainSocket(path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
 }()
@@ -178,6 +178,7 @@ let channel = try { () -> Channel in
 guard let localAddress = channel.localAddress else {
     fatalError("Address was unable to bind. Please check that the socket was not closed or that the address family was understood.")
 }
+
 print("Server started and listening on \(localAddress)")
 
 // This will never unblock as we don't close the ServerChannel.

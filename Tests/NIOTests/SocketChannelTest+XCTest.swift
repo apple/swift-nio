@@ -23,38 +23,36 @@ import XCTest
 ///
 
 extension SocketChannelTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (SocketChannelTest) -> () throws -> Void)] {
-      return [
-                ("testAsyncSetOption", testAsyncSetOption),
-                ("testDelayedConnectSetsUpRemotePeerAddress", testDelayedConnectSetsUpRemotePeerAddress),
-                ("testAcceptFailsWithECONNABORTED", testAcceptFailsWithECONNABORTED),
-                ("testAcceptFailsWithEMFILE", testAcceptFailsWithEMFILE),
-                ("testAcceptFailsWithENFILE", testAcceptFailsWithENFILE),
-                ("testAcceptFailsWithENOBUFS", testAcceptFailsWithENOBUFS),
-                ("testAcceptFailsWithENOMEM", testAcceptFailsWithENOMEM),
-                ("testAcceptFailsWithEFAULT", testAcceptFailsWithEFAULT),
-                ("testSetGetOptionClosedServerSocketChannel", testSetGetOptionClosedServerSocketChannel),
-                ("testConnect", testConnect),
-                ("testWriteServerSocketChannel", testWriteServerSocketChannel),
-                ("testWriteAndFlushServerSocketChannel", testWriteAndFlushServerSocketChannel),
-                ("testConnectServerSocketChannel", testConnectServerSocketChannel),
-                ("testCloseDuringWriteFailure", testCloseDuringWriteFailure),
-                ("testWithConfiguredStreamSocket", testWithConfiguredStreamSocket),
-                ("testWithConfiguredDatagramSocket", testWithConfiguredDatagramSocket),
-                ("testPendingConnectNotificationOrder", testPendingConnectNotificationOrder),
-                ("testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved", testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved),
-                ("testSocketFlagNONBLOCKWorks", testSocketFlagNONBLOCKWorks),
-                ("testInstantTCPConnectionResetThrowsError", testInstantTCPConnectionResetThrowsError),
-                ("testUnprocessedOutboundUserEventFailsOnServerSocketChannel", testUnprocessedOutboundUserEventFailsOnServerSocketChannel),
-                ("testUnprocessedOutboundUserEventFailsOnSocketChannel", testUnprocessedOutboundUserEventFailsOnSocketChannel),
-                ("testSetSockOptDoesNotOverrideExistingFlags", testSetSockOptDoesNotOverrideExistingFlags),
-                ("testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL", testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL),
-                ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide),
-                ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide),
-                ("testServerClosesTheConnectionImmediately", testServerClosesTheConnectionImmediately),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (SocketChannelTest) -> () throws -> Void)] {
+        [
+            ("testAsyncSetOption", testAsyncSetOption),
+            ("testDelayedConnectSetsUpRemotePeerAddress", testDelayedConnectSetsUpRemotePeerAddress),
+            ("testAcceptFailsWithECONNABORTED", testAcceptFailsWithECONNABORTED),
+            ("testAcceptFailsWithEMFILE", testAcceptFailsWithEMFILE),
+            ("testAcceptFailsWithENFILE", testAcceptFailsWithENFILE),
+            ("testAcceptFailsWithENOBUFS", testAcceptFailsWithENOBUFS),
+            ("testAcceptFailsWithENOMEM", testAcceptFailsWithENOMEM),
+            ("testAcceptFailsWithEFAULT", testAcceptFailsWithEFAULT),
+            ("testSetGetOptionClosedServerSocketChannel", testSetGetOptionClosedServerSocketChannel),
+            ("testConnect", testConnect),
+            ("testWriteServerSocketChannel", testWriteServerSocketChannel),
+            ("testWriteAndFlushServerSocketChannel", testWriteAndFlushServerSocketChannel),
+            ("testConnectServerSocketChannel", testConnectServerSocketChannel),
+            ("testCloseDuringWriteFailure", testCloseDuringWriteFailure),
+            ("testWithConfiguredStreamSocket", testWithConfiguredStreamSocket),
+            ("testWithConfiguredDatagramSocket", testWithConfiguredDatagramSocket),
+            ("testPendingConnectNotificationOrder", testPendingConnectNotificationOrder),
+            ("testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved", testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved),
+            ("testSocketFlagNONBLOCKWorks", testSocketFlagNONBLOCKWorks),
+            ("testInstantTCPConnectionResetThrowsError", testInstantTCPConnectionResetThrowsError),
+            ("testUnprocessedOutboundUserEventFailsOnServerSocketChannel", testUnprocessedOutboundUserEventFailsOnServerSocketChannel),
+            ("testUnprocessedOutboundUserEventFailsOnSocketChannel", testUnprocessedOutboundUserEventFailsOnSocketChannel),
+            ("testSetSockOptDoesNotOverrideExistingFlags", testSetSockOptDoesNotOverrideExistingFlags),
+            ("testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL", testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL),
+            ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide),
+            ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide),
+            ("testServerClosesTheConnectionImmediately", testServerClosesTheConnectionImmediately),
+        ]
+    }
 }
-

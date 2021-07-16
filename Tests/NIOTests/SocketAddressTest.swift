@@ -12,11 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @testable import NIO
+import XCTest
 
 class SocketAddressTest: XCTestCase {
-
     func testDescriptionWorks() throws {
         var ipv4SocketAddress = sockaddr_in()
         let res = "10.0.0.1".withCString { p in
@@ -34,29 +33,29 @@ class SocketAddressTest: XCTestCase {
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
         XCTAssertEqual("[IPv4]foobar.com/0.0.0.0:12345", sa.description)
     }
-    
+
     func testDescriptionWorksWithIPOnly() throws {
         let sa = try! SocketAddress(ipAddress: "10.0.0.2", port: 12345)
         XCTAssertEqual("[IPv4]10.0.0.2:12345", sa.description)
     }
-    
+
     func testDescriptionWorksWithByteBufferIPv4IP() throws {
         let IPv4: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
-        let ipv4Address: ByteBuffer = ByteBuffer.init(bytes: IPv4)
+        let ipv4Address = ByteBuffer(bytes: IPv4)
         let sa = try! SocketAddress(packedIPAddress: ipv4Address, port: 12345)
         XCTAssertEqual("[IPv4]127.0.0.1:12345", sa.description)
     }
-    
+
     func testDescriptionWorksWithByteBufferIPv6IP() throws {
-        let IPv6: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
-        let ipv6Address: ByteBuffer = ByteBuffer.init(bytes: IPv6)
+        let IPv6: [UInt8] = [0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
+        let ipv6Address = ByteBuffer(bytes: IPv6)
         let sa = try! SocketAddress(packedIPAddress: ipv6Address, port: 12345)
         XCTAssertEqual("[IPv6]fe80::5:12345", sa.description)
     }
-    
+
     func testRejectsWrongIPByteBufferLength() {
         let wrongIP: [UInt8] = [0x01, 0x7F, 0x00]
-        let ipAddress: ByteBuffer = ByteBuffer.init(bytes: wrongIP)
+        let ipAddress = ByteBuffer(bytes: wrongIP)
         XCTAssertThrowsError(try SocketAddress(packedIPAddress: ipAddress, port: 12345)) { error in
             switch error {
             case is SocketAddressError.FailedToParseIPByteBuffer:
@@ -66,23 +65,23 @@ class SocketAddressTest: XCTestCase {
             }
         }
     }
-    
+
     func testIn6AddrDescriptionWorks() throws {
         let sampleString = "::1"
         let sampleIn6Addr: [UInt8] = [ // ::1
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
             0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x70, 0x0, 0x0, 0x54,
-            0xc2, 0xb5, 0x58, 0xff, 0x7f, 0x0, 0x0, 0x7,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x1, 0x1, 0x0
+            0xC2, 0xB5, 0x58, 0xFF, 0x7F, 0x0, 0x0, 0x7,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x1, 0x1, 0x0,
         ]
 
-        var address         = sockaddr_in6()
+        var address = sockaddr_in6()
         #if os(Linux) || os(Android) // no sin6_len on Linux/Android
         #else
-          address.sin6_len  = UInt8(MemoryLayout<sockaddr_in6>.size)
+            address.sin6_len = UInt8(MemoryLayout<sockaddr_in6>.size)
         #endif
         address.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
-        address.sin6_addr   = sampleIn6Addr.withUnsafeBytes {
+        address.sin6_addr = sampleIn6Addr.withUnsafeBytes {
             $0.baseAddress!.bindMemory(to: in6_addr.self, capacity: 1).pointee
         }
 
@@ -92,7 +91,7 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual(s, sampleString,
                        "Address description is way below our expectations 😱")
     }
-	
+
     func testIPAddressWorks() throws {
         let sa = try! SocketAddress(ipAddress: "127.0.0.1", port: 12345)
         XCTAssertEqual("127.0.0.1", sa.ipAddress)
@@ -105,7 +104,7 @@ class SocketAddressTest: XCTestCase {
     func testCanCreateIPv4AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         let expectedAddress: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
-        if case .v4(let address) = sa {
+        if case let .v4(address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
@@ -124,8 +123,8 @@ class SocketAddressTest: XCTestCase {
 
     func testCanCreateIPv6AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "fe80::5", port: 443)
-        let expectedAddress: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
-        if case .v6(let address) = sa {
+        let expectedAddress: [UInt8] = [0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
+        if case let .v6(address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
@@ -160,15 +159,15 @@ class SocketAddressTest: XCTestCase {
         let second = try SocketAddress(ipAddress: "::1", port: 80)
         let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
-        guard case .v4(let firstAddress) = first else {
+        guard case let .v4(firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
             return
         }
-        guard case .v6(let secondAddress) = second else {
+        guard case let .v6(secondAddress) = second else {
             XCTFail("Unable to extract IPv6 address")
             return
         }
-        guard case .unixDomainSocket(let thirdAddress) = third else {
+        guard case let .unixDomainSocket(thirdAddress) = third else {
             XCTFail("Unable to extract UDS address")
             return
         }
@@ -177,15 +176,15 @@ class SocketAddressTest: XCTestCase {
         var secondIPAddress = secondAddress.address
         var thirdIPAddress = thirdAddress.address
 
-        var firstCopy = firstIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_in in
+        var firstCopy = firstIPAddress.withMutableSockAddr { addr, size -> sockaddr_in in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in>.size)
             return addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
         }
-        var secondCopy = secondIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_in6 in
+        var secondCopy = secondIPAddress.withMutableSockAddr { addr, size -> sockaddr_in6 in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
             return addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
         }
-        var thirdCopy = thirdIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_un in
+        var thirdCopy = thirdIPAddress.withMutableSockAddr { addr, size -> sockaddr_un in
             XCTAssertEqual(size, MemoryLayout<sockaddr_un>.size)
             return addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { $0.pointee }
         }
@@ -200,15 +199,15 @@ class SocketAddressTest: XCTestCase {
         let second = try SocketAddress(ipAddress: "::1", port: 80)
         let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
-        guard case .v4(let firstAddress) = first else {
+        guard case let .v4(firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
             return
         }
-        guard case .v6(let secondAddress) = second else {
+        guard case let .v6(secondAddress) = second else {
             XCTFail("Unable to extract IPv6 address")
             return
         }
-        guard case .unixDomainSocket(let thirdAddress) = third else {
+        guard case let .unixDomainSocket(thirdAddress) = third else {
             XCTFail("Unable to extract UDS address")
             return
         }
@@ -222,18 +221,18 @@ class SocketAddressTest: XCTestCase {
         var secondCopy = secondIPAddress
         var thirdCopy = thirdIPAddress
 
-        firstIPAddress.withMutableSockAddr { (addr, size) -> Void in
+        firstIPAddress.withMutableSockAddr { addr, _ -> Void in
             addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
                 $0.pointee.sin_port = 5
             }
         }
-        secondIPAddress.withMutableSockAddr { (addr, size) -> Void in
+        secondIPAddress.withMutableSockAddr { addr, size -> Void in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
             addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
                 $0.pointee.sin6_port = in_port_t(5).bigEndian
             }
         }
-        thirdIPAddress.withMutableSockAddr { (addr, size) -> Void in
+        thirdIPAddress.withMutableSockAddr { addr, size -> Void in
             XCTAssertEqual(size, MemoryLayout<sockaddr_un>.size)
             addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
                 $0.pointee.sun_path.2 = 50
@@ -250,15 +249,15 @@ class SocketAddressTest: XCTestCase {
         let second = try SocketAddress(ipAddress: "::1", port: 80)
         let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
-        guard case .v4(let firstAddress) = first else {
+        guard case let .v4(firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
             return
         }
-        guard case .v6(let secondAddress) = second else {
+        guard case let .v6(secondAddress) = second else {
             XCTFail("Unable to extract IPv6 address")
             return
         }
-        guard case .unixDomainSocket(let thirdAddress) = third else {
+        guard case let .unixDomainSocket(thirdAddress) = third else {
             XCTFail("Unable to extract UDS address")
             return
         }
@@ -297,15 +296,15 @@ class SocketAddressTest: XCTestCase {
         let second = try SocketAddress(ipAddress: "::1", port: 80)
         let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
-        guard case .v4(let firstAddress) = first else {
+        guard case let .v4(firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
             return
         }
-        guard case .v6(let secondAddress) = second else {
+        guard case let .v6(secondAddress) = second else {
             XCTFail("Unable to extract IPv6 address")
             return
         }
-        guard case .unixDomainSocket(let thirdAddress) = third else {
+        guard case let .unixDomainSocket(thirdAddress) = third else {
             XCTFail("Unable to extract UDS address")
             return
         }
@@ -452,7 +451,7 @@ class SocketAddressTest: XCTestCase {
     func testCanMutateSockaddrStorage() throws {
         var storage = sockaddr_storage()
         XCTAssertEqual(storage.ss_family, 0)
-        storage.withMutableSockAddr { (addr, _) in
+        storage.withMutableSockAddr { addr, _ in
             addr.pointee.sa_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
         }
         XCTAssertEqual(storage.ss_family, sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue))

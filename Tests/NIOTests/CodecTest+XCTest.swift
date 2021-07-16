@@ -23,69 +23,65 @@ import XCTest
 ///
 
 extension ByteToMessageDecoderTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (ByteToMessageDecoderTest) -> () throws -> Void)] {
-      return [
-                ("testDecoder", testDecoder),
-                ("testDecoderPropagatesChannelInactive", testDecoderPropagatesChannelInactive),
-                ("testDecoderIsNotQuadratic", testDecoderIsNotQuadratic),
-                ("testMemoryIsReclaimedIfMostIsConsumed", testMemoryIsReclaimedIfMostIsConsumed),
-                ("testMemoryIsReclaimedIfLotsIsAvailable", testMemoryIsReclaimedIfLotsIsAvailable),
-                ("testWeDoNotCallShouldReclaimMemoryAsLongAsWeContinue", testWeDoNotCallShouldReclaimMemoryAsLongAsWeContinue),
-                ("testDecoderReentranceChannelRead", testDecoderReentranceChannelRead),
-                ("testTrivialDecoderDoesSensibleStuffWhenCloseInRead", testTrivialDecoderDoesSensibleStuffWhenCloseInRead),
-                ("testLeftOversMakeDecodeLastCalled", testLeftOversMakeDecodeLastCalled),
-                ("testRemovingHandlerMakesLeftoversAppearInDecodeLast", testRemovingHandlerMakesLeftoversAppearInDecodeLast),
-                ("testStructsWorkAsByteToMessageDecoders", testStructsWorkAsByteToMessageDecoders),
-                ("testReentrantChannelReadWhileWholeBufferIsBeingProcessed", testReentrantChannelReadWhileWholeBufferIsBeingProcessed),
-                ("testReentrantChannelCloseInChannelRead", testReentrantChannelCloseInChannelRead),
-                ("testHandlerRemoveInChannelRead", testHandlerRemoveInChannelRead),
-                ("testChannelCloseInChannelRead", testChannelCloseInChannelRead),
-                ("testDecodeLoopGetsInterruptedWhenRemovalIsTriggered", testDecodeLoopGetsInterruptedWhenRemovalIsTriggered),
-                ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed),
-                ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelHalfClosure", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelHalfClosure),
-                ("testDecodeLastHasSeenEOFFalseOnHandlerRemoved", testDecodeLastHasSeenEOFFalseOnHandlerRemoved),
-                ("testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData", testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData),
-                ("testDecodeLastHasSeenEOFTrueOnChannelInactive", testDecodeLastHasSeenEOFTrueOnChannelInactive),
-                ("testWriteObservingByteToMessageDecoderBasic", testWriteObservingByteToMessageDecoderBasic),
-                ("testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled", testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled),
-                ("testDecodeMethodsNoLongerCalledIfErrorInDecode", testDecodeMethodsNoLongerCalledIfErrorInDecode),
-                ("testDecodeMethodsNoLongerCalledIfErrorInDecodeLast", testDecodeMethodsNoLongerCalledIfErrorInDecodeLast),
-                ("testBasicLifecycle", testBasicLifecycle),
-                ("testDecodeLoopStopsOnChannelInactive", testDecodeLoopStopsOnChannelInactive),
-                ("testDecodeLoopStopsOnInboundHalfClosure", testDecodeLoopStopsOnInboundHalfClosure),
-                ("testWeForwardReadEOFAndChannelInactive", testWeForwardReadEOFAndChannelInactive),
-                ("testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode", testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode),
-                ("testWeAreOkayWithReceivingDataAfterHalfClosureEOF", testWeAreOkayWithReceivingDataAfterHalfClosureEOF),
-                ("testWeAreOkayWithReceivingDataAfterFullClose", testWeAreOkayWithReceivingDataAfterFullClose),
-                ("testPayloadTooLarge", testPayloadTooLarge),
-                ("testPayloadTooLargeButHandlerOk", testPayloadTooLargeButHandlerOk),
-                ("testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress", testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (ByteToMessageDecoderTest) -> () throws -> Void)] {
+        [
+            ("testDecoder", testDecoder),
+            ("testDecoderPropagatesChannelInactive", testDecoderPropagatesChannelInactive),
+            ("testDecoderIsNotQuadratic", testDecoderIsNotQuadratic),
+            ("testMemoryIsReclaimedIfMostIsConsumed", testMemoryIsReclaimedIfMostIsConsumed),
+            ("testMemoryIsReclaimedIfLotsIsAvailable", testMemoryIsReclaimedIfLotsIsAvailable),
+            ("testWeDoNotCallShouldReclaimMemoryAsLongAsWeContinue", testWeDoNotCallShouldReclaimMemoryAsLongAsWeContinue),
+            ("testDecoderReentranceChannelRead", testDecoderReentranceChannelRead),
+            ("testTrivialDecoderDoesSensibleStuffWhenCloseInRead", testTrivialDecoderDoesSensibleStuffWhenCloseInRead),
+            ("testLeftOversMakeDecodeLastCalled", testLeftOversMakeDecodeLastCalled),
+            ("testRemovingHandlerMakesLeftoversAppearInDecodeLast", testRemovingHandlerMakesLeftoversAppearInDecodeLast),
+            ("testStructsWorkAsByteToMessageDecoders", testStructsWorkAsByteToMessageDecoders),
+            ("testReentrantChannelReadWhileWholeBufferIsBeingProcessed", testReentrantChannelReadWhileWholeBufferIsBeingProcessed),
+            ("testReentrantChannelCloseInChannelRead", testReentrantChannelCloseInChannelRead),
+            ("testHandlerRemoveInChannelRead", testHandlerRemoveInChannelRead),
+            ("testChannelCloseInChannelRead", testChannelCloseInChannelRead),
+            ("testDecodeLoopGetsInterruptedWhenRemovalIsTriggered", testDecodeLoopGetsInterruptedWhenRemovalIsTriggered),
+            ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed),
+            ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelHalfClosure", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelHalfClosure),
+            ("testDecodeLastHasSeenEOFFalseOnHandlerRemoved", testDecodeLastHasSeenEOFFalseOnHandlerRemoved),
+            ("testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData", testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData),
+            ("testDecodeLastHasSeenEOFTrueOnChannelInactive", testDecodeLastHasSeenEOFTrueOnChannelInactive),
+            ("testWriteObservingByteToMessageDecoderBasic", testWriteObservingByteToMessageDecoderBasic),
+            ("testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled", testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled),
+            ("testDecodeMethodsNoLongerCalledIfErrorInDecode", testDecodeMethodsNoLongerCalledIfErrorInDecode),
+            ("testDecodeMethodsNoLongerCalledIfErrorInDecodeLast", testDecodeMethodsNoLongerCalledIfErrorInDecodeLast),
+            ("testBasicLifecycle", testBasicLifecycle),
+            ("testDecodeLoopStopsOnChannelInactive", testDecodeLoopStopsOnChannelInactive),
+            ("testDecodeLoopStopsOnInboundHalfClosure", testDecodeLoopStopsOnInboundHalfClosure),
+            ("testWeForwardReadEOFAndChannelInactive", testWeForwardReadEOFAndChannelInactive),
+            ("testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode", testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode),
+            ("testWeAreOkayWithReceivingDataAfterHalfClosureEOF", testWeAreOkayWithReceivingDataAfterHalfClosureEOF),
+            ("testWeAreOkayWithReceivingDataAfterFullClose", testWeAreOkayWithReceivingDataAfterFullClose),
+            ("testPayloadTooLarge", testPayloadTooLarge),
+            ("testPayloadTooLargeButHandlerOk", testPayloadTooLargeButHandlerOk),
+            ("testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress", testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress),
+        ]
+    }
 }
 
 extension MessageToByteEncoderTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (MessageToByteEncoderTest) -> () throws -> Void)] {
-      return [
-                ("testEncoderOverrideAllocateOutBuffer", testEncoderOverrideAllocateOutBuffer),
-                ("testEncoder", testEncoder),
-                ("testB2MHIsHappyNeverBeingAddedToAPipeline", testB2MHIsHappyNeverBeingAddedToAPipeline),
-                ("testM2BHIsHappyNeverBeingAddedToAPipeline", testM2BHIsHappyNeverBeingAddedToAPipeline),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (MessageToByteEncoderTest) -> () throws -> Void)] {
+        [
+            ("testEncoderOverrideAllocateOutBuffer", testEncoderOverrideAllocateOutBuffer),
+            ("testEncoder", testEncoder),
+            ("testB2MHIsHappyNeverBeingAddedToAPipeline", testB2MHIsHappyNeverBeingAddedToAPipeline),
+            ("testM2BHIsHappyNeverBeingAddedToAPipeline", testM2BHIsHappyNeverBeingAddedToAPipeline),
+        ]
+    }
 }
 
 extension MessageToByteHandlerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (MessageToByteHandlerTest) -> () throws -> Void)] {
-      return [
-                ("testThrowingEncoderFailsPromises", testThrowingEncoderFailsPromises),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (MessageToByteHandlerTest) -> () throws -> Void)] {
+        [
+            ("testThrowingEncoderFailsPromises", testThrowingEncoderFailsPromises),
+        ]
+    }
 }
-

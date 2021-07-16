@@ -32,7 +32,7 @@ public struct NonBlockingFileIO {
     public static let defaultThreadPoolSize = 2
 
     /// The default and recommended chunk size.
-    public static let defaultChunkSize = 128*1024
+    public static let defaultChunkSize = 128 * 1024
 
     /// `NonBlockingFileIO` errors.
     public enum Error: Swift.Error {
@@ -76,15 +76,16 @@ public struct NonBlockingFileIO {
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
                             eventLoop: EventLoop,
-                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
+                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void>
+    {
         let readableBytes = fileRegion.readableBytes
-        return self.readChunked(fileHandle: fileRegion.fileHandle,
-                                fromOffset: Int64(fileRegion.readerIndex),
-                                byteCount: readableBytes,
-                                chunkSize: chunkSize,
-                                allocator: allocator,
-                                eventLoop: eventLoop,
-                                chunkHandler: chunkHandler)
+        return readChunked(fileHandle: fileRegion.fileHandle,
+                           fromOffset: Int64(fileRegion.readerIndex),
+                           byteCount: readableBytes,
+                           chunkSize: chunkSize,
+                           allocator: allocator,
+                           eventLoop: eventLoop,
+                           chunkHandler: chunkHandler)
     }
 
     /// Read `byteCount` bytes in chunks of `chunkSize` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread
@@ -115,14 +116,15 @@ public struct NonBlockingFileIO {
                             byteCount: Int,
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
-                            eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
-        return self.readChunked0(fileHandle: fileHandle,
-                                fromOffset: nil,
-                                byteCount: byteCount,
-                                chunkSize: chunkSize,
-                                allocator: allocator,
-                                eventLoop: eventLoop,
-                                chunkHandler: chunkHandler)
+                            eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void>
+    {
+        readChunked0(fileHandle: fileHandle,
+                     fromOffset: nil,
+                     byteCount: byteCount,
+                     chunkSize: chunkSize,
+                     allocator: allocator,
+                     eventLoop: eventLoop,
+                     chunkHandler: chunkHandler)
     }
 
     /// Read `byteCount` bytes from offset `fileOffset` in chunks of `chunkSize` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread
@@ -155,14 +157,15 @@ public struct NonBlockingFileIO {
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
                             eventLoop: EventLoop,
-                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
-        return self.readChunked0(fileHandle: fileHandle,
-                                 fromOffset: fileOffset,
-                                 byteCount: byteCount,
-                                 chunkSize: chunkSize,
-                                 allocator: allocator,
-                                 eventLoop: eventLoop,
-                                 chunkHandler: chunkHandler)
+                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void>
+    {
+        readChunked0(fileHandle: fileHandle,
+                     fromOffset: fileOffset,
+                     byteCount: byteCount,
+                     chunkSize: chunkSize,
+                     allocator: allocator,
+                     eventLoop: eventLoop,
+                     chunkHandler: chunkHandler)
     }
 
     private func readChunked0(fileHandle: NIOFileHandle,
@@ -170,25 +173,26 @@ public struct NonBlockingFileIO {
                               byteCount: Int,
                               chunkSize: Int,
                               allocator: ByteBufferAllocator,
-                              eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
+                              eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void>
+    {
         precondition(chunkSize > 0, "chunkSize must be > 0 (is \(chunkSize))")
         let remainingReads = 1 + (byteCount / chunkSize)
         let lastReadSize = byteCount % chunkSize
-      
+
         let promise = eventLoop.makePromise(of: Void.self)
 
         func _read(remainingReads: Int, bytesReadSoFar: Int64) {
             if remainingReads > 1 || (remainingReads == 1 && lastReadSize > 0) {
                 let readSize = remainingReads > 1 ? chunkSize : lastReadSize
                 assert(readSize > 0)
-                let readFuture = self.read0(fileHandle: fileHandle,
-                                            fromOffset: fromOffset.map { $0 + bytesReadSoFar },
-                                            byteCount: readSize,
-                                            allocator: allocator,
-                                            eventLoop: eventLoop)
-                readFuture.whenComplete { (result) in
+                let readFuture = read0(fileHandle: fileHandle,
+                                       fromOffset: fromOffset.map { $0 + bytesReadSoFar },
+                                       byteCount: readSize,
+                                       allocator: allocator,
+                                       eventLoop: eventLoop)
+                readFuture.whenComplete { result in
                     switch result {
-                    case .success(let buffer):
+                    case let .success(buffer):
                         guard buffer.readableBytes > 0 else {
                             // EOF, call `chunkHandler` one more time.
                             let handlerFuture = chunkHandler(buffer)
@@ -198,18 +202,18 @@ public struct NonBlockingFileIO {
                         let bytesRead = Int64(buffer.readableBytes)
                         chunkHandler(buffer).whenComplete { result in
                             switch result {
-                            case .success(_):
+                            case .success:
                                 eventLoop.assertInEventLoop()
                                 _read(remainingReads: remainingReads - 1,
                                       bytesReadSoFar: bytesReadSoFar + bytesRead)
-                            case .failure(let error):
+                            case let .failure(error):
                                 promise.fail(error)
                             }
                         }
-                  case .failure(let error):
-                      promise.fail(error)
-                  }
-              }
+                    case let .failure(error):
+                        promise.fail(error)
+                    }
+                }
             } else {
                 promise.succeed(())
             }
@@ -237,11 +241,11 @@ public struct NonBlockingFileIO {
     /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
     public func read(fileRegion: FileRegion, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         let readableBytes = fileRegion.readableBytes
-        return self.read(fileHandle: fileRegion.fileHandle,
-                         fromOffset: Int64(fileRegion.readerIndex),
-                         byteCount: readableBytes,
-                         allocator: allocator,
-                         eventLoop: eventLoop)
+        return read(fileHandle: fileRegion.fileHandle,
+                    fromOffset: Int64(fileRegion.readerIndex),
+                    byteCount: readableBytes,
+                    allocator: allocator,
+                    eventLoop: eventLoop)
     }
 
     /// Read `byteCount` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
@@ -265,12 +269,13 @@ public struct NonBlockingFileIO {
     public func read(fileHandle: NIOFileHandle,
                      byteCount: Int,
                      allocator: ByteBufferAllocator,
-                     eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
-        return self.read0(fileHandle: fileHandle,
-                         fromOffset: nil,
-                         byteCount: byteCount,
-                         allocator: allocator,
-                         eventLoop: eventLoop)
+                     eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer>
+    {
+        read0(fileHandle: fileHandle,
+              fromOffset: nil,
+              byteCount: byteCount,
+              allocator: allocator,
+              eventLoop: eventLoop)
     }
 
     /// Read `byteCount` bytes starting at `fileOffset` from `fileHandle` in `NonBlockingFileIO`'s private thread pool
@@ -296,25 +301,27 @@ public struct NonBlockingFileIO {
                      fromOffset fileOffset: Int64,
                      byteCount: Int,
                      allocator: ByteBufferAllocator,
-                     eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
-        return self.read0(fileHandle: fileHandle,
-                          fromOffset: fileOffset,
-                          byteCount: byteCount,
-                          allocator: allocator,
-                          eventLoop: eventLoop)
+                     eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer>
+    {
+        read0(fileHandle: fileHandle,
+              fromOffset: fileOffset,
+              byteCount: byteCount,
+              allocator: allocator,
+              eventLoop: eventLoop)
     }
 
     private func read0(fileHandle: NIOFileHandle,
                        fromOffset: Int64?, // > 2 GB offset is reasonable on 32-bit systems
                        byteCount: Int,
                        allocator: ByteBufferAllocator,
-                       eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
+                       eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer>
+    {
         guard byteCount > 0 else {
             return eventLoop.makeSucceededFuture(allocator.buffer(capacity: 0))
         }
 
         var buf = allocator.buffer(capacity: byteCount)
-        return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
+        return threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
             var bytesRead = 0
             while bytesRead < byteCount {
                 let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
@@ -331,7 +338,7 @@ public struct NonBlockingFileIO {
                         }
                     }
                     switch res {
-                    case .processed(let n):
+                    case let .processed(n):
                         assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
                         return n
                     case .wouldBlock:
@@ -361,8 +368,9 @@ public struct NonBlockingFileIO {
     /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
     public func changeFileSize(fileHandle: NIOFileHandle,
                                size: Int64,
-                               eventLoop: EventLoop) -> EventLoopFuture<()> {
-        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+                               eventLoop: EventLoop) -> EventLoopFuture<Void>
+    {
+        threadPool.runIfActive(eventLoop: eventLoop) {
             try fileHandle.withUnsafeFileDescriptor { descriptor -> Void in
                 try Posix.ftruncate(descriptor: descriptor, size: off_t(size))
             }
@@ -376,9 +384,10 @@ public struct NonBlockingFileIO {
     ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
     /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
     public func readFileSize(fileHandle: NIOFileHandle,
-                             eventLoop: EventLoop) -> EventLoopFuture<Int64> {
-        return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            return try fileHandle.withUnsafeFileDescriptor { descriptor in
+                             eventLoop: EventLoop) -> EventLoopFuture<Int64>
+    {
+        threadPool.runIfActive(eventLoop: eventLoop) {
+            try fileHandle.withUnsafeFileDescriptor { descriptor in
                 let curr = try Posix.lseek(descriptor: descriptor, offset: 0, whence: SEEK_CUR)
                 let eof = try Posix.lseek(descriptor: descriptor, offset: 0, whence: SEEK_END)
                 try Posix.lseek(descriptor: descriptor, offset: curr, whence: SEEK_SET)
@@ -396,8 +405,9 @@ public struct NonBlockingFileIO {
     /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
     public func write(fileHandle: NIOFileHandle,
                       buffer: ByteBuffer,
-                      eventLoop: EventLoop) -> EventLoopFuture<()> {
-        return self.write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer, eventLoop: eventLoop)
+                      eventLoop: EventLoop) -> EventLoopFuture<Void>
+    {
+        write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer, eventLoop: eventLoop)
     }
 
     /// Write `buffer` starting from `toOffset` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
@@ -411,21 +421,23 @@ public struct NonBlockingFileIO {
     public func write(fileHandle: NIOFileHandle,
                       toOffset: Int64,
                       buffer: ByteBuffer,
-                      eventLoop: EventLoop) -> EventLoopFuture<()> {
-        return self.write0(fileHandle: fileHandle, toOffset: toOffset, buffer: buffer, eventLoop: eventLoop)
+                      eventLoop: EventLoop) -> EventLoopFuture<Void>
+    {
+        write0(fileHandle: fileHandle, toOffset: toOffset, buffer: buffer, eventLoop: eventLoop)
     }
 
     private func write0(fileHandle: NIOFileHandle,
                         toOffset: Int64?,
                         buffer: ByteBuffer,
-                        eventLoop: EventLoop) -> EventLoopFuture<()> {
+                        eventLoop: EventLoop) -> EventLoopFuture<Void>
+    {
         let byteCount = buffer.readableBytes
 
         guard byteCount > 0 else {
             return eventLoop.makeSucceededFuture(())
         }
 
-        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+        return threadPool.runIfActive(eventLoop: eventLoop) {
             var buf = buffer
 
             var offsetAccumulator: Int = 0
@@ -445,7 +457,7 @@ public struct NonBlockingFileIO {
                         }
                     }
                     switch res {
-                    case .processed(let n):
+                    case let .processed(n):
                         assert(n >= 0, "write claims to have written a negative number of bytes \(n)")
                         return n
                     case .wouldBlock:
@@ -469,7 +481,7 @@ public struct NonBlockingFileIO {
     ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
     public func openFile(path: String, eventLoop: EventLoop) -> EventLoopFuture<(NIOFileHandle, FileRegion)> {
-        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+        threadPool.runIfActive(eventLoop: eventLoop) {
             let fh = try NIOFileHandle(path: path)
             do {
                 let fr = try FileRegion(fileHandle: fh)
@@ -493,9 +505,8 @@ public struct NonBlockingFileIO {
     ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing the `NIOFileHandle`.
     public func openFile(path: String, mode: NIOFileHandle.Mode, flags: NIOFileHandle.Flags = .default, eventLoop: EventLoop) -> EventLoopFuture<NIOFileHandle> {
-        return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            return try NIOFileHandle(path: path, mode: mode, flags: flags)
+        threadPool.runIfActive(eventLoop: eventLoop) {
+            try NIOFileHandle(path: path, mode: mode, flags: flags)
         }
     }
-
 }

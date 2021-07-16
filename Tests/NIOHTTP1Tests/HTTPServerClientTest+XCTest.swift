@@ -23,22 +23,20 @@ import XCTest
 ///
 
 extension HTTPServerClientTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (HTTPServerClientTest) -> () throws -> Void)] {
-      return [
-                ("testSimpleGetByteBuffer", testSimpleGetByteBuffer),
-                ("testSimpleGetFileRegion", testSimpleGetFileRegion),
-                ("testSimpleGetChunkedEncodingByteBuffer", testSimpleGetChunkedEncodingByteBuffer),
-                ("testSimpleGetChunkedEncodingFileRegion", testSimpleGetChunkedEncodingFileRegion),
-                ("testSimpleGetTrailersByteBuffer", testSimpleGetTrailersByteBuffer),
-                ("testSimpleGetTrailersFileRegion", testSimpleGetTrailersFileRegion),
-                ("testMassiveResponseByteBuffer", testMassiveResponseByteBuffer),
-                ("testMassiveResponseFileRegion", testMassiveResponseFileRegion),
-                ("testHead", testHead),
-                ("test204", test204),
-                ("testNoResponseHeaders", testNoResponseHeaders),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (HTTPServerClientTest) -> () throws -> Void)] {
+        [
+            ("testSimpleGetByteBuffer", testSimpleGetByteBuffer),
+            ("testSimpleGetFileRegion", testSimpleGetFileRegion),
+            ("testSimpleGetChunkedEncodingByteBuffer", testSimpleGetChunkedEncodingByteBuffer),
+            ("testSimpleGetChunkedEncodingFileRegion", testSimpleGetChunkedEncodingFileRegion),
+            ("testSimpleGetTrailersByteBuffer", testSimpleGetTrailersByteBuffer),
+            ("testSimpleGetTrailersFileRegion", testSimpleGetTrailersFileRegion),
+            ("testMassiveResponseByteBuffer", testMassiveResponseByteBuffer),
+            ("testMassiveResponseFileRegion", testMassiveResponseFileRegion),
+            ("testHead", testHead),
+            ("test204", test204),
+            ("testNoResponseHeaders", testNoResponseHeaders),
+        ]
+    }
 }
-

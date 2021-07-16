@@ -23,19 +23,17 @@ import XCTest
 ///
 
 extension NIOHTTP1TestServerTest {
-
-   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (NIOHTTP1TestServerTest) -> () throws -> Void)] {
-      return [
-                ("testTheExampleInTheDocs", testTheExampleInTheDocs),
-                ("testSimpleRequest", testSimpleRequest),
-                ("testConcurrentRequests", testConcurrentRequests),
-                ("testTestWebServerCanBeReleased", testTestWebServerCanBeReleased),
-                ("testStopClosesAcceptedChannel", testStopClosesAcceptedChannel),
-                ("testReceiveAndVerify", testReceiveAndVerify),
-                ("testReceive", testReceive),
-                ("testReceiveAndVerifyWrongPart", testReceiveAndVerifyWrongPart),
-           ]
-   }
+    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+    static var allTests: [(String, (NIOHTTP1TestServerTest) -> () throws -> Void)] {
+        [
+            ("testTheExampleInTheDocs", testTheExampleInTheDocs),
+            ("testSimpleRequest", testSimpleRequest),
+            ("testConcurrentRequests", testConcurrentRequests),
+            ("testTestWebServerCanBeReleased", testTestWebServerCanBeReleased),
+            ("testStopClosesAcceptedChannel", testStopClosesAcceptedChannel),
+            ("testReceiveAndVerify", testReceiveAndVerify),
+            ("testReceive", testReceive),
+            ("testReceiveAndVerifyWrongPart", testReceiveAndVerifyWrongPart),
+        ]
+    }
 }
-

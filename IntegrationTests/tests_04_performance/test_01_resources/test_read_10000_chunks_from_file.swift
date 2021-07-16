@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import Dispatch
+import Foundation
 import NIO
 import NIOConcurrencyHelpers
 
@@ -30,7 +30,7 @@ func run(identifier: String) {
     }
     let fileIO = NonBlockingFileIO(threadPool: threadPool)
 
-    let numberOfChunks = 10_000
+    let numberOfChunks = 10000
 
     let allocator = ByteBufferAllocator()
     var fileBuffer = allocator.buffer(capacity: numberOfChunks)
@@ -55,8 +55,8 @@ func run(identifier: String) {
                                 chunkSize: 1,
                                 allocator: allocator,
                                 eventLoop: loop) { buffer in
-                _ = numberOfBytes.add(buffer.readableBytes)
-                return loop.makeSucceededFuture(())
+            _ = numberOfBytes.add(buffer.readableBytes)
+            return loop.makeSucceededFuture(())
         }.wait()
         precondition(numberOfBytes.load() == numberOfChunks, "\(numberOfBytes.load()), \(numberOfChunks)")
         return numberOfBytes.load()
