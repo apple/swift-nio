@@ -39,7 +39,7 @@ extension HTTPRequestEncoderTests {
             ("testChunkedEncodingIsTheDefault", testChunkedEncodingIsTheDefault),
             ("testChunkedEncodingCanBetEnabled", testChunkedEncodingCanBetEnabled),
             ("testChunkedEncodingDealsWithZeroLengthChunks", testChunkedEncodingDealsWithZeroLengthChunks),
-            ("testChunkedEncodingWorksIfNoPromisesAreAttachedToTheWrites", testChunkedEncodingWorksIfNoPromisesAreAttachedToTheWrites),
+            ("testChunkedEncodingWorksIfNoPromisesAreAttachedToTheWrites", testChunkedEncodingWorksIfNoPromisesAreAttachedToTheWrites)
         ]
     }
 }

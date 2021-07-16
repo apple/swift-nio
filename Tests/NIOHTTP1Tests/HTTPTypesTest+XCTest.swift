@@ -28,7 +28,7 @@ extension HTTPTypesTest {
         [
             ("testConvertToString", testConvertToString),
             ("testConvertFromString", testConvertFromString),
-            ("testConvertFromStringToExplicitValue", testConvertFromStringToExplicitValue),
+            ("testConvertFromStringToExplicitValue", testConvertFromStringToExplicitValue)
         ]
     }
 }

@@ -83,7 +83,7 @@ var targets: [PackageDescription.Target] = [
     .testTarget(name: "NIOTestUtilsTests",
                 dependencies: ["NIOTestUtils"]),
     .testTarget(name: "NIOFoundationCompatTests",
-                dependencies: ["NIO", "NIOFoundationCompat"]),
+                dependencies: ["NIO", "NIOFoundationCompat"])
 ]
 
 let package = Package(
@@ -97,7 +97,7 @@ let package = Package(
         .library(name: "NIOConcurrencyHelpers", targets: ["NIOConcurrencyHelpers"]),
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
-        .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
+        .library(name: "NIOTestUtils", targets: ["NIOTestUtils"])
     ],
     dependencies: [
     ],

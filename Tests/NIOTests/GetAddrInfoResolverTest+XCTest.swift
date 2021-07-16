@@ -27,7 +27,7 @@ extension GetaddrinfoResolverTest {
     static var allTests: [(String, (GetaddrinfoResolverTest) -> () throws -> Void)] {
         [
             ("testResolveNoDuplicatesV4", testResolveNoDuplicatesV4),
-            ("testResolveNoDuplicatesV6", testResolveNoDuplicatesV6),
+            ("testResolveNoDuplicatesV6", testResolveNoDuplicatesV6)
         ]
     }
 }

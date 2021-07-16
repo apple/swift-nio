@@ -34,7 +34,7 @@ extension FileRegionTest {
             ("testFileRegionDuplicatesShareSeekPointer", testFileRegionDuplicatesShareSeekPointer),
             ("testMassiveFileRegionThatJustAboutWorks", testMassiveFileRegionThatJustAboutWorks),
             ("testMassiveFileRegionReaderIndexWorks", testMassiveFileRegionReaderIndexWorks),
-            ("testFileRegionAndIODataFitsInACoupleOfEnums", testFileRegionAndIODataFitsInACoupleOfEnums),
+            ("testFileRegionAndIODataFitsInACoupleOfEnums", testFileRegionAndIODataFitsInACoupleOfEnums)
         ]
     }
 }

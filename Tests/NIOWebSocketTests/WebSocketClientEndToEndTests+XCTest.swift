@@ -31,7 +31,7 @@ extension WebSocketClientEndToEndTests {
             ("testRejectUpgradeIfIncorrectAcceptKey", testRejectUpgradeIfIncorrectAcceptKey),
             ("testRejectUpgradeIfNotWebsocket", testRejectUpgradeIfNotWebsocket),
             ("testSendAFewFrames", testSendAFewFrames),
-            ("testReceiveAFewFrames", testReceiveAFewFrames),
+            ("testReceiveAFewFrames", testReceiveAFewFrames)
         ]
     }
 }

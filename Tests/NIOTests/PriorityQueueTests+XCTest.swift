@@ -31,7 +31,7 @@ extension PriorityQueueTest {
             ("testRemoveFromEmpty", testRemoveFromEmpty),
             ("testBuildAndRemoveFromRandomPriorityQueues", testBuildAndRemoveFromRandomPriorityQueues),
             ("testPartialOrder", testPartialOrder),
-            ("testDescription", testDescription),
+            ("testDescription", testDescription)
         ]
     }
 }

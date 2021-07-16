@@ -51,7 +51,7 @@ extension SocketAddressTest {
             ("testUnixSocketAddressIgnoresTrailingJunk", testUnixSocketAddressIgnoresTrailingJunk),
             ("testPortAccessor", testPortAccessor),
             ("testCanMutateSockaddrStorage", testCanMutateSockaddrStorage),
-            ("testPortIsMutable", testPortIsMutable),
+            ("testPortIsMutable", testPortIsMutable)
         ]
     }
 }

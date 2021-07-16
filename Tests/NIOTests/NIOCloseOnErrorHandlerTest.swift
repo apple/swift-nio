@@ -48,7 +48,7 @@ class NIOCloseOnErrorHandlerTest: XCTestCase {
     func testChannelCloseOnError() throws {
         XCTAssertNoThrow(self.channel.pipeline.addHandlers([
             DummyFailingHandler1(),
-            NIOCloseOnErrorHandler(),
+            NIOCloseOnErrorHandler()
         ]))
 
         XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait())

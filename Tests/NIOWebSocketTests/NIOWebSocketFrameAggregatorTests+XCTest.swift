@@ -36,7 +36,7 @@ extension NIOWebSocketFrameAggregatorTests {
             ("testPingFrameIsForwarded", testPingFrameIsForwarded),
             ("testPongFrameIsForwarded", testPongFrameIsForwarded),
             ("testCloseConnectionFrameIsForwarded", testCloseConnectionFrameIsForwarded),
-            ("testFrameAggregationWithMask", testFrameAggregationWithMask),
+            ("testFrameAggregationWithMask", testFrameAggregationWithMask)
         ]
     }
 }

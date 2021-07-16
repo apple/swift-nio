@@ -29,7 +29,7 @@ extension SelectorTest {
             ("testDeregisterWhileProcessingEvents", testDeregisterWhileProcessingEvents),
             ("testDeregisterAndCloseWhileProcessingEvents", testDeregisterAndCloseWhileProcessingEvents),
             ("testWeDoNotDeliverEventsForPreviouslyClosedChannels", testWeDoNotDeliverEventsForPreviouslyClosedChannels),
-            ("testTimerFDIsLevelTriggered", testTimerFDIsLevelTriggered),
+            ("testTimerFDIsLevelTriggered", testTimerFDIsLevelTriggered)
         ]
     }
 }

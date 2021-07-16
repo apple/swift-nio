@@ -41,7 +41,7 @@ extension StreamChannelTest {
             ("testWriteAndFlushInChannelWritabilityChangedToTrue", testWriteAndFlushInChannelWritabilityChangedToTrue),
             ("testWritabilityChangedDoesNotGetCalledOnSimpleWrite", testWritabilityChangedDoesNotGetCalledOnSimpleWrite),
             ("testWriteAndFlushFromReentrantFlushNowTriggeredOutOfWritabilityWhereOuterSaysAllWrittenAndInnerDoesNot", testWriteAndFlushFromReentrantFlushNowTriggeredOutOfWritabilityWhereOuterSaysAllWrittenAndInnerDoesNot),
-            ("testCloseInReEntrantFlushNowCall", testCloseInReEntrantFlushNowCall),
+            ("testCloseInReEntrantFlushNowCall", testCloseInReEntrantFlushNowCall)
         ]
     }
 }

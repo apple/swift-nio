@@ -61,7 +61,7 @@ extension HTTPDecoderLengthTest {
             ("testRequestWithInvalidContentLengthFails", testRequestWithInvalidContentLengthFails),
             ("testRequestWithIdenticalContentLengthRepeatedErrors", testRequestWithIdenticalContentLengthRepeatedErrors),
             ("testRequestWithMultipleIdenticalContentLengthFieldsErrors", testRequestWithMultipleIdenticalContentLengthFieldsErrors),
-            ("testRequestWithoutExplicitLengthIsZeroLength", testRequestWithoutExplicitLengthIsZeroLength),
+            ("testRequestWithoutExplicitLengthIsZeroLength", testRequestWithoutExplicitLengthIsZeroLength)
         ]
     }
 }

@@ -39,7 +39,7 @@ extension WebSocketFrameEncoderTest {
             ("testFrameEncoderCanPrependLargeHeader", testFrameEncoderCanPrependLargeHeader),
             ("testFrameEncoderFailsToPrependHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependHeaderWithInsufficientSpace),
             ("testFrameEncoderFailsToPrependMediumHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependMediumHeaderWithInsufficientSpace),
-            ("testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace),
+            ("testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace", testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace)
         ]
     }
 }

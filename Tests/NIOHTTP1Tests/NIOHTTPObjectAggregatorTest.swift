@@ -165,7 +165,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
             .channelRead(NIOHTTPServerRequestFull(
                 head: self.requestHead,
                 body: self.channel.allocator.buffer(string: "hello")
-            )),
+            ))
         ])
     }
 
@@ -183,7 +183,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
             .channelRead(NIOHTTPServerRequestFull(
                 head: self.requestHead,
                 body: self.channel.allocator.buffer(string: "helloworld")
-            )),
+            ))
         ])
     }
 
@@ -209,7 +209,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
             .channelRead(NIOHTTPServerRequestFull(
                 head: reqWithChunking,
                 body: self.channel.allocator.buffer(string: "helloworld")
-            )),
+            ))
         ])
     }
 
@@ -236,7 +236,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
 
         XCTAssertEqual(writeRecorder.writes, [
             HTTPServerResponsePart.head(resTooLarge),
-            HTTPServerResponsePart.end(nil),
+            HTTPServerResponsePart.end(nil)
         ])
 
         XCTAssertFalse(self.channel.isActive)
@@ -266,7 +266,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
 
         XCTAssertEqual(writeRecorder.writes, [
             HTTPServerResponsePart.head(resTooLarge),
-            HTTPServerResponsePart.end(nil),
+            HTTPServerResponsePart.end(nil)
         ])
 
         // Connection should be closed right away
@@ -304,7 +304,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         let requestParts = [
             HTTPServerRequestPart.body(self.channel.allocator.buffer(bytes: [1, 2, 3, 4])),
             HTTPServerRequestPart.body(self.channel.allocator.buffer(bytes: [5, 6])),
-            HTTPServerRequestPart.body(self.channel.allocator.buffer(bytes: [7, 8])),
+            HTTPServerRequestPart.body(self.channel.allocator.buffer(bytes: [7, 8]))
         ]
 
         for requestPart in requestParts {
@@ -335,7 +335,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
             .channelRead(NIOHTTPServerRequestFull(
                 head: secondReqWithContentLength,
                 body: self.channel.allocator.buffer(bytes: [1, 2])
-            )),
+            ))
         ])
     }
 }
@@ -433,7 +433,7 @@ class NIOHTTPClientResponseAggregatorTest: XCTestCase {
             .channelRead(NIOHTTPClientResponseFull(
                 head: aggregatedHead,
                 body: self.channel.allocator.buffer(string: "helloworld")
-            )),
+            ))
         ])
     }
 
@@ -466,7 +466,7 @@ class NIOHTTPClientResponseAggregatorTest: XCTestCase {
             .channelRead(NIOHTTPClientResponseFull(
                 head: self.responseHead,
                 body: self.channel.allocator.buffer(string: "test")
-            )),
+            ))
         ])
     }
 }

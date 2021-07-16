@@ -128,7 +128,7 @@ class EventCounterHandlerTest: XCTestCase {
             (ChannelPipeline.fireChannelReadComplete, "channelReadComplete"),
             (ChannelPipeline.fireChannelWritabilityChanged, "channelWritabilityChanged"),
             (ChannelPipeline.flush, "flush"),
-            (ChannelPipeline.read, "read"),
+            (ChannelPipeline.read, "read")
         ]
 
         for (fire, name) in noArgEvents {

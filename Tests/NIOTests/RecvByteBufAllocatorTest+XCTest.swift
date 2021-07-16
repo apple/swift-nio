@@ -30,7 +30,7 @@ extension AdaptiveRecvByteBufferAllocatorTest {
             ("testFixed", testFixed),
             ("testMaxAllocSizeIsIntMax", testMaxAllocSizeIsIntMax),
             ("testAdaptiveRoundsValues", testAdaptiveRoundsValues),
-            ("testSettingMinimumAboveMaxAllowed", testSettingMinimumAboveMaxAllowed),
+            ("testSettingMinimumAboveMaxAllowed", testSettingMinimumAboveMaxAllowed)
         ]
     }
 }

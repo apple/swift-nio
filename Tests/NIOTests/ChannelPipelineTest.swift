@@ -86,7 +86,7 @@ class ChannelPipelineTest: XCTestCase {
         try channel.pipeline.addHandlers([
             handler1,
             handler2,
-            handler3,
+            handler3
         ]).wait()
 
         let result1 = try channel.pipeline.handler(type: SimpleTypedHandler1.self).wait()
@@ -111,7 +111,7 @@ class ChannelPipelineTest: XCTestCase {
         try channel.pipeline.addHandlers([
             sameTypeHandler1,
             sameTypeHandler2,
-            otherHandler,
+            otherHandler
         ]).wait()
 
         let result = try channel.pipeline.handler(type: SimpleTypedHandler1.self).wait()
@@ -128,7 +128,7 @@ class ChannelPipelineTest: XCTestCase {
         }
         try channel.pipeline.addHandlers([
             handler1,
-            handler2,
+            handler2
         ]).wait()
 
         XCTAssertThrowsError(try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()) { XCTAssertTrue($0 is ChannelPipelineError) }

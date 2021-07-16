@@ -93,7 +93,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
                                                     uri: "/some-route",
                                                     headers: .init([
                                                         ("Content-Type", "text/plain; charset=utf-8"),
-                                                        ("Content-Length", "4"),
+                                                        ("Content-Length", "4")
                                                     ]))),
             try testServer.readInbound()))
         var requestBuffer = allocator.buffer(capacity: 128)

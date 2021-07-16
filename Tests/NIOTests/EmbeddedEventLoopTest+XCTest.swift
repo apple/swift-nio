@@ -46,7 +46,7 @@ extension EmbeddedEventLoopTest {
             ("testAdvanceTimeToDeadline", testAdvanceTimeToDeadline),
             ("testWeCantTimeTravelByAdvancingTimeToThePast", testWeCantTimeTravelByAdvancingTimeToThePast),
             ("testExecuteInOrder", testExecuteInOrder),
-            ("testScheduledTasksInOrder", testScheduledTasksInOrder),
+            ("testScheduledTasksInOrder", testScheduledTasksInOrder)
         ]
     }
 }

@@ -27,7 +27,7 @@ extension LinuxTest {
     static var allTests: [(String, (LinuxTest) -> () throws -> Void)] {
         [
             ("testCoreCountQuota", testCoreCountQuota),
-            ("testCoreCountCpuset", testCoreCountCpuset),
+            ("testCoreCountCpuset", testCoreCountCpuset)
         ]
     }
 }

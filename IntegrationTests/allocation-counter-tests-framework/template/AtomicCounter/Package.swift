@@ -19,13 +19,13 @@ import PackageDescription
 let package = Package(
     name: "AtomicCounter",
     products: [
-        .library(name: "AtomicCounter", targets: ["AtomicCounter"]),
+        .library(name: "AtomicCounter", targets: ["AtomicCounter"])
     ],
     dependencies: [],
     targets: [
         .target(
             name: "AtomicCounter",
             dependencies: []
-        ),
+        )
     ]
 )

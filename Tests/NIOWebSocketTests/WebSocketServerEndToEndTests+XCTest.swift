@@ -38,7 +38,7 @@ extension WebSocketServerEndToEndTests {
             ("testSendAFewFrames", testSendAFewFrames),
             ("testMaxFrameSize", testMaxFrameSize),
             ("testAutomaticErrorHandling", testAutomaticErrorHandling),
-            ("testNoAutomaticErrorHandling", testNoAutomaticErrorHandling),
+            ("testNoAutomaticErrorHandling", testNoAutomaticErrorHandling)
         ]
     }
 }

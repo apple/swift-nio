@@ -27,7 +27,7 @@ extension DispatchQueueWithFutureTest {
     static var allTests: [(String, (DispatchQueueWithFutureTest) -> () throws -> Void)] {
         [
             ("testDispatchQueueAsyncWithFuture", testDispatchQueueAsyncWithFuture),
-            ("testDispatchQueueAsyncWithFutureThrows", testDispatchQueueAsyncWithFutureThrows),
+            ("testDispatchQueueAsyncWithFutureThrows", testDispatchQueueAsyncWithFutureThrows)
         ]
     }
 }

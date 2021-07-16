@@ -35,7 +35,7 @@ extension HTTPTest {
             ("testHTTPPipeliningWithBody", testHTTPPipeliningWithBody),
             ("testChunkedBody", testChunkedBody),
             ("testHTTPRequestHeadCoWWorks", testHTTPRequestHeadCoWWorks),
-            ("testHTTPResponseHeadCoWWorks", testHTTPResponseHeadCoWWorks),
+            ("testHTTPResponseHeadCoWWorks", testHTTPResponseHeadCoWWorks)
         ]
     }
 }

@@ -29,7 +29,7 @@ extension ByteToMessageDecoderVerifierTest {
             ("testWrongResults", testWrongResults),
             ("testNoOutputWhenWeShouldHaveOutput", testNoOutputWhenWeShouldHaveOutput),
             ("testOutputWhenWeShouldNotProduceOutput", testOutputWhenWeShouldNotProduceOutput),
-            ("testLeftovers", testLeftovers),
+            ("testLeftovers", testLeftovers)
         ]
     }
 }

@@ -555,7 +555,7 @@ class HTTPDecoderTest: XCTestCase {
                           uri: "/",
                           headers: .init([("transfer-encoding", "chunked"), ("one", "two")]))),
              .body(byteBufferContainingJustAnX),
-             .end(.init([("foo", "bar")]))]),
+             .end(.init([("foo", "bar")]))])
         ]
 
         let expectedInOutsBB: [(ByteBuffer, [HTTPServerRequestPart])] = expectedInOuts.map { io in

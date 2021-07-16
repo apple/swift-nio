@@ -29,7 +29,7 @@ extension HTTPServerProtocolErrorHandlerTest {
             ("testHandlesBasicErrors", testHandlesBasicErrors),
             ("testIgnoresNonParserErrors", testIgnoresNonParserErrors),
             ("testDoesNotSendAResponseIfResponseHasAlreadyStarted", testDoesNotSendAResponseIfResponseHasAlreadyStarted),
-            ("testCanHandleErrorsWhenResponseHasStarted", testCanHandleErrorsWhenResponseHasStarted),
+            ("testCanHandleErrorsWhenResponseHasStarted", testCanHandleErrorsWhenResponseHasStarted)
         ]
     }
 }

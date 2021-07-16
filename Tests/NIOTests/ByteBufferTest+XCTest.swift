@@ -219,7 +219,7 @@ extension ByteBufferTest {
             ("testInvalidBufferEqualityWithDifferentContent", testInvalidBufferEqualityWithDifferentContent),
             ("testHashableConformance", testHashableConformance),
             ("testInvalidHash", testInvalidHash),
-            ("testValidHashFromSlice", testValidHashFromSlice),
+            ("testValidHashFromSlice", testValidHashFromSlice)
         ]
     }
 }

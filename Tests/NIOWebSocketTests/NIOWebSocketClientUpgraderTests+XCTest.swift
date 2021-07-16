@@ -27,7 +27,7 @@ extension NIOWebSocketClientUpgraderTests {
     static var allTests: [(String, (NIOWebSocketClientUpgraderTests) -> () throws -> Void)] {
         [
             ("testRandomRequestKey", testRandomRequestKey),
-            ("testRandomRequestKeyWithSystemRandomNumberGenerator", testRandomRequestKeyWithSystemRandomNumberGenerator),
+            ("testRandomRequestKeyWithSystemRandomNumberGenerator", testRandomRequestKeyWithSystemRandomNumberGenerator)
         ]
     }
 }

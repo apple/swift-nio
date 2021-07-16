@@ -42,7 +42,7 @@ extension EchoServerClientTest {
             ("testPendingReadProcessedAfterWriteError", testPendingReadProcessedAfterWriteError),
             ("testChannelErrorEOFNotFiredThroughPipeline", testChannelErrorEOFNotFiredThroughPipeline),
             ("testPortNumbers", testPortNumbers),
-            ("testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4", testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4),
+            ("testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4", testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4)
         ]
     }
 }

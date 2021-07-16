@@ -49,7 +49,7 @@ extension HappyEyeballsTest {
             ("testDelayedChannelCreation", testDelayedChannelCreation),
             ("testChannelCreationFails", testChannelCreationFails),
             ("testCancellationSyncWithConnectDelay", testCancellationSyncWithConnectDelay),
-            ("testCancellationSyncWithResolutionDelay", testCancellationSyncWithResolutionDelay),
+            ("testCancellationSyncWithResolutionDelay", testCancellationSyncWithResolutionDelay)
         ]
     }
 }

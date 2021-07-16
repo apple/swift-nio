@@ -82,7 +82,7 @@ extension ChannelTests {
             ("testDescriptionCanBeCalledFromNonEventLoopThreads", testDescriptionCanBeCalledFromNonEventLoopThreads),
             ("testFixedSizeRecvByteBufferAllocatorSizeIsConstant", testFixedSizeRecvByteBufferAllocatorSizeIsConstant),
             ("testCloseInConnectPromise", testCloseInConnectPromise),
-            ("testWritabilityChangeDuringReentrantFlushNow", testWritabilityChangeDuringReentrantFlushNow),
+            ("testWritabilityChangeDuringReentrantFlushNow", testWritabilityChangeDuringReentrantFlushNow)
         ]
     }
 }

@@ -93,7 +93,7 @@ extension EventLoopFutureTest {
             ("testWhenSuccessBlocking", testWhenSuccessBlocking),
             ("testWhenFailureBlocking", testWhenFailureBlocking),
             ("testWhenCompleteBlockingSuccess", testWhenCompleteBlockingSuccess),
-            ("testWhenCompleteBlockingFailure", testWhenCompleteBlockingFailure),
+            ("testWhenCompleteBlockingFailure", testWhenCompleteBlockingFailure)
         ]
     }
 }

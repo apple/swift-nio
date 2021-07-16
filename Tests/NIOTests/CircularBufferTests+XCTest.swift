@@ -77,7 +77,7 @@ extension CircularBufferTests {
             ("testHash", testHash),
             ("testArrayLiteralInit", testArrayLiteralInit),
             ("testFirstWorks", testFirstWorks),
-            ("testReserveCapacityActuallyDoesSomething", testReserveCapacityActuallyDoesSomething),
+            ("testReserveCapacityActuallyDoesSomething", testReserveCapacityActuallyDoesSomething)
         ]
     }
 }

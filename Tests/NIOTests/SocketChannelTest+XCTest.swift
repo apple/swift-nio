@@ -52,7 +52,7 @@ extension SocketChannelTest {
             ("testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL", testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL),
             ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide),
             ("testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide", testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheClientSide),
-            ("testServerClosesTheConnectionImmediately", testServerClosesTheConnectionImmediately),
+            ("testServerClosesTheConnectionImmediately", testServerClosesTheConnectionImmediately)
         ]
     }
 }

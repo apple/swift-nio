@@ -31,7 +31,7 @@ extension ByteBufferDataProtocolTests {
             ("testSettingData", testSettingData),
             ("testSettingDispatchDataThoughDataProtocol", testSettingDispatchDataThoughDataProtocol),
             ("testWriteContiguousBytes", testWriteContiguousBytes),
-            ("testSetContiguousBytes", testSetContiguousBytes),
+            ("testSetContiguousBytes", testSetContiguousBytes)
         ]
     }
 }

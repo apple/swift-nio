@@ -30,7 +30,7 @@ extension HeapTests {
             ("testSortedDesc", testSortedDesc),
             ("testSortedAsc", testSortedAsc),
             ("testAddAndRemoveRandomNumbers", testAddAndRemoveRandomNumbers),
-            ("testRemoveElement", testRemoveElement),
+            ("testRemoveElement", testRemoveElement)
         ]
     }
 }

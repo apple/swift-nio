@@ -926,7 +926,7 @@ class EventLoopFutureTest: XCTestCase {
         func doTest(promise: EventLoopPromise<[Result<Bool, Error>]>?) {
             let futures: [EventLoopFuture<Bool>] = [
                 group.next().makeFailedFuture(EventLoopFutureTestError.example),
-                group.next().makeSucceededFuture(true),
+                group.next().makeSucceededFuture(true)
             ]
             let future: EventLoopFuture<[Result<Bool, Error>]>
 
@@ -956,7 +956,7 @@ class EventLoopFutureTest: XCTestCase {
                 group.next().makeFailedFuture(EventLoopFutureTestError.example),
                 group.next().makeSucceededFuture(10),
                 group.next().makeFailedFuture(EventLoopFutureTestError.example),
-                group.next().makeSucceededFuture(5),
+                group.next().makeSucceededFuture(5)
             ]
             let future: EventLoopFuture<[Result<Int, Error>]>
 

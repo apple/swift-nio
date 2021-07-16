@@ -39,7 +39,7 @@ extension SocketOptionProviderTest {
             ("testIPv6MulticastHops", testIPv6MulticastHops),
             ("testIPv6MulticastLoop", testIPv6MulticastLoop),
             ("testTCPInfo", testTCPInfo),
-            ("testTCPConnectionInfo", testTCPConnectionInfo),
+            ("testTCPConnectionInfo", testTCPConnectionInfo)
         ]
     }
 }

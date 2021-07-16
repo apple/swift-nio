@@ -127,7 +127,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
             testCase(WebSocketFrameDecoderTest.allTests),
             testCase(WebSocketFrameEncoderTest.allTests),
             testCase(WebSocketMaskingKeyTests.allTests),
-            testCase(WebSocketServerEndToEndTests.allTests),
+            testCase(WebSocketServerEndToEndTests.allTests)
         ])
     }
 }

@@ -27,7 +27,7 @@ extension ByteBufferViewDataProtocolTests {
     static var allTests: [(String, (ByteBufferViewDataProtocolTests) -> () throws -> Void)] {
         [
             ("testResetBytes", testResetBytes),
-            ("testCreateDataFromBuffer", testCreateDataFromBuffer),
+            ("testCreateDataFromBuffer", testCreateDataFromBuffer)
         ]
     }
 }

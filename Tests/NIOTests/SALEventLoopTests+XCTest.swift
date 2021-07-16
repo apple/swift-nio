@@ -26,7 +26,7 @@ extension SALEventLoopTests {
     @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
     static var allTests: [(String, (SALEventLoopTests) -> () throws -> Void)] {
         [
-            ("testSchedulingTaskOnSleepingLoopWakesUpOnce", testSchedulingTaskOnSleepingLoopWakesUpOnce),
+            ("testSchedulingTaskOnSleepingLoopWakesUpOnce", testSchedulingTaskOnSleepingLoopWakesUpOnce)
         ]
     }
 }

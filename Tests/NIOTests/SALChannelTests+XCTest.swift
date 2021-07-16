@@ -31,7 +31,7 @@ extension SALChannelTest {
             ("testWeSurviveIfIgnoringSIGPIPEFails", testWeSurviveIfIgnoringSIGPIPEFails),
             ("testBasicRead", testBasicRead),
             ("testBasicConnectWithClientBootstrap", testBasicConnectWithClientBootstrap),
-            ("testClientBootstrapBindIsDoneAfterSocketOptions", testClientBootstrapBindIsDoneAfterSocketOptions),
+            ("testClientBootstrapBindIsDoneAfterSocketOptions", testClientBootstrapBindIsDoneAfterSocketOptions)
         ]
     }
 }

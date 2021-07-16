@@ -35,7 +35,7 @@ extension PendingDatagramWritesManagerTests {
             ("testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk", testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk),
             ("testPendingWritesWorksWithManyEmptyWrites", testPendingWritesWorksWithManyEmptyWrites),
             ("testPendingWritesCloseDuringVectorWrite", testPendingWritesCloseDuringVectorWrite),
-            ("testPendingWritesMoreThanWritevIOVectorLimit", testPendingWritesMoreThanWritevIOVectorLimit),
+            ("testPendingWritesMoreThanWritevIOVectorLimit", testPendingWritesMoreThanWritevIOVectorLimit)
         ]
     }
 }

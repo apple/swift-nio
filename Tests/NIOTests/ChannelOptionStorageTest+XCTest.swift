@@ -29,7 +29,7 @@ extension ChannelOptionStorageTest {
             ("testWeStartWithNoOptions", testWeStartWithNoOptions),
             ("testSetTwoOptionsOfDifferentType", testSetTwoOptionsOfDifferentType),
             ("testSetTwoOptionsOfSameType", testSetTwoOptionsOfSameType),
-            ("testSetOneOptionTwice", testSetOneOptionTwice),
+            ("testSetOneOptionTwice", testSetOneOptionTwice)
         ]
     }
 }

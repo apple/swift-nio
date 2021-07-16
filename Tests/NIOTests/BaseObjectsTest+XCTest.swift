@@ -32,7 +32,7 @@ extension BaseObjectTest {
             ("testBadConversions", testBadConversions),
             ("testByteBufferFromIOData", testByteBufferFromIOData),
             ("testFileRegionFromIOData", testFileRegionFromIOData),
-            ("testIODataEquals", testIODataEquals),
+            ("testIODataEquals", testIODataEquals)
         ]
     }
 }

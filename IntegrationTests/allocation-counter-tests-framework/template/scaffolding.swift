@@ -70,7 +70,7 @@ func measureAll(_ fn: () -> Int) -> [[String: Int]] {
         return [
             "total_allocations": mallocs,
             "total_allocated_bytes": mallocedBytes,
-            "remaining_allocations": mallocs - frees,
+            "remaining_allocations": mallocs - frees
         ]
     }
 

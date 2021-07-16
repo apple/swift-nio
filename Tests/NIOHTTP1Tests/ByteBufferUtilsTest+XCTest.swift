@@ -27,7 +27,7 @@ extension ByteBufferUtilsTest {
     static var allTests: [(String, (ByteBufferUtilsTest) -> () throws -> Void)] {
         [
             ("testComparators", testComparators),
-            ("testTrimming", testTrimming),
+            ("testTrimming", testTrimming)
         ]
     }
 }

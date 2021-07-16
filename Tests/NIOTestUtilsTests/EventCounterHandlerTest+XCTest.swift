@@ -36,7 +36,7 @@ extension EventCounterHandlerTest {
             ("testError", testError),
             ("testEventsWithoutArguments", testEventsWithoutArguments),
             ("testInboundUserEvent", testInboundUserEvent),
-            ("testOutboundUserEvent", testOutboundUserEvent),
+            ("testOutboundUserEvent", testOutboundUserEvent)
         ]
     }
 }

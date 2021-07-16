@@ -47,7 +47,7 @@ extension HTTPServerUpgradeTestCase {
             ("testUpgradeWithUpgradePayloadInlineWithRequestWorks", testUpgradeWithUpgradePayloadInlineWithRequestWorks),
             ("testDeliversBytesWhenRemovedDuringPartialUpgrade", testDeliversBytesWhenRemovedDuringPartialUpgrade),
             ("testDeliversBytesWhenReentrantlyCalledInChannelReadCompleteOnRemoval", testDeliversBytesWhenReentrantlyCalledInChannelReadCompleteOnRemoval),
-            ("testWeTolerateUpgradeFuturesFromWrongEventLoops", testWeTolerateUpgradeFuturesFromWrongEventLoops),
+            ("testWeTolerateUpgradeFuturesFromWrongEventLoops", testWeTolerateUpgradeFuturesFromWrongEventLoops)
         ]
     }
 }

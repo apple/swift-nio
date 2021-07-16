@@ -27,7 +27,7 @@ extension WebSocketMaskingKeyTests {
     static var allTests: [(String, (WebSocketMaskingKeyTests) -> () throws -> Void)] {
         [
             ("testRandomMaskingKey", testRandomMaskingKey),
-            ("testRandomMaskingKeyIsNotAlwaysZero", testRandomMaskingKeyIsNotAlwaysZero),
+            ("testRandomMaskingKeyIsNotAlwaysZero", testRandomMaskingKeyIsNotAlwaysZero)
         ]
     }
 }

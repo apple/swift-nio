@@ -35,7 +35,7 @@ extension AcceptBackoffHandlerTest {
             ("testRemovalTriggerNoReadWhenPreviousNoReadScheduled", testRemovalTriggerNoReadWhenPreviousNoReadScheduled),
             ("testNotScheduleReadIfAlreadyScheduled", testNotScheduleReadIfAlreadyScheduled),
             ("testChannelInactiveCancelScheduled", testChannelInactiveCancelScheduled),
-            ("testSecondErrorUpdateScheduledRead", testSecondErrorUpdateScheduledRead),
+            ("testSecondErrorUpdateScheduledRead", testSecondErrorUpdateScheduledRead)
         ]
     }
 }

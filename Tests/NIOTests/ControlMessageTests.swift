@@ -76,7 +76,7 @@ class ControlMessageTests: XCTestCase {
         self.encoder.appendControlMessage(level: 4, type: 5, payload: 6)
         let expected = [
             DecodedMessage(level: 1, type: 2, payload: 3),
-            DecodedMessage(level: 4, type: 5, payload: 6),
+            DecodedMessage(level: 4, type: 5, payload: 6)
         ]
         let encodedBytes = self.encoder.validControlBytes
 

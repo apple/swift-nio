@@ -32,7 +32,7 @@ extension NIOHTTPServerRequestAggregatorTest {
             ("testAggregateWithTrailer", testAggregateWithTrailer),
             ("testOversizeRequest", testOversizeRequest),
             ("testOversizedRequestWithoutKeepAlive", testOversizedRequestWithoutKeepAlive),
-            ("testOversizedRequestWithContentLength", testOversizedRequestWithContentLength),
+            ("testOversizedRequestWithContentLength", testOversizedRequestWithContentLength)
         ]
     }
 }
@@ -44,7 +44,7 @@ extension NIOHTTPClientResponseAggregatorTest {
             ("testOversizeResponseHead", testOversizeResponseHead),
             ("testOversizeResponse", testOversizeResponse),
             ("testAggregatedResponse", testAggregatedResponse),
-            ("testOkAfterOversized", testOkAfterOversized),
+            ("testOkAfterOversized", testOkAfterOversized)
         ]
     }
 }

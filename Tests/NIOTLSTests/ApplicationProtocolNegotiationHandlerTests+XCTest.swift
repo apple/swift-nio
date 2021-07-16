@@ -33,7 +33,7 @@ extension ApplicationProtocolNegotiationHandlerTests {
             ("testNoBufferingBeforeEventFires", testNoBufferingBeforeEventFires),
             ("testBufferingWhileWaitingForFuture", testBufferingWhileWaitingForFuture),
             ("testNothingBufferedDoesNotFireReadCompleted", testNothingBufferedDoesNotFireReadCompleted),
-            ("testUnbufferingFiresReadCompleted", testUnbufferingFiresReadCompleted),
+            ("testUnbufferingFiresReadCompleted", testUnbufferingFiresReadCompleted)
         ]
     }
 }

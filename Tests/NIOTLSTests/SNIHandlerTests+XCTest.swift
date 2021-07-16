@@ -54,7 +54,7 @@ extension SNIHandlerTest {
             ("testIgnoresInvalidNameLength", testIgnoresInvalidNameLength),
             ("testIgnoresInvalidNameExtensionLength", testIgnoresInvalidNameExtensionLength),
             ("testLudicrouslyTruncatedPacket", testLudicrouslyTruncatedPacket),
-            ("testFuzzingInputOne", testFuzzingInputOne),
+            ("testFuzzingInputOne", testFuzzingInputOne)
         ]
     }
 }

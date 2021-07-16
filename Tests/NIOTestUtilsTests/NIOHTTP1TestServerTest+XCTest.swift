@@ -33,7 +33,7 @@ extension NIOHTTP1TestServerTest {
             ("testStopClosesAcceptedChannel", testStopClosesAcceptedChannel),
             ("testReceiveAndVerify", testReceiveAndVerify),
             ("testReceive", testReceive),
-            ("testReceiveAndVerifyWrongPart", testReceiveAndVerifyWrongPart),
+            ("testReceiveAndVerifyWrongPart", testReceiveAndVerifyWrongPart)
         ]
     }
 }

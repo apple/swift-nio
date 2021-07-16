@@ -31,7 +31,7 @@ extension SystemTest {
             ("testCmsgFirstHeader", testCmsgFirstHeader),
             ("testCMsgNextHeader", testCMsgNextHeader),
             ("testCMsgData", testCMsgData),
-            ("testCMsgCollection", testCMsgCollection),
+            ("testCMsgCollection", testCMsgCollection)
         ]
     }
 }

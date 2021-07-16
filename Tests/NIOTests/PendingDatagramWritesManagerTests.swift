@@ -337,7 +337,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        expectedSingleWritabilities: nil,
                                                        expectedVectorWritabilities: [
                                                            [(4, firstAddress), (4, secondAddress), (4, firstAddress), (4, secondAddress)],
-                                                           [(4, secondAddress), (4, firstAddress), (4, secondAddress)],
+                                                           [(4, secondAddress), (4, firstAddress), (4, secondAddress)]
                                                        ],
                                                        returns: [.success(.processed(1)), .success(.wouldBlock(0))],
                                                        promiseStates: [[true, false, false, false], [true, false, false, false]])
@@ -347,7 +347,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    promises: ps,
                                                    expectedSingleWritabilities: [(4, secondAddress)],
                                                    expectedVectorWritabilities: [
-                                                       [(4, secondAddress), (4, firstAddress), (4, secondAddress)],
+                                                       [(4, secondAddress), (4, firstAddress), (4, secondAddress)]
                                                    ],
                                                    returns: [.success(.processed(2)), .success(.wouldBlock(0))],
                                                    promiseStates: [[true, true, true, false], [true, true, true, false]])
@@ -499,7 +499,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        returns: [
                                                            .failure(IOError(errnoCode: EMSGSIZE, reason: "")),
                                                            .success(.processed(1)),
-                                                           .success(.processed(1)),
+                                                           .success(.processed(1))
                                                        ],
                                                        promiseStates: [[true, false, false], [true, true, false], [true, true, true]])
 

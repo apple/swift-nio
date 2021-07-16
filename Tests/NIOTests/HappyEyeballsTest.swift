@@ -259,7 +259,7 @@ public final class HappyEyeballsTest: XCTestCase {
         // We should have had queries for AAAA and A.
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         XCTAssertEqual(resolver.events, expectedQueries)
     }
@@ -283,7 +283,7 @@ public final class HappyEyeballsTest: XCTestCase {
         // We should have had queries for AAAA and A.
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         XCTAssertEqual(resolver.events, expectedQueries)
     }
@@ -293,7 +293,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertFalse(channelFuture.isFulfilled)
@@ -329,7 +329,7 @@ public final class HappyEyeballsTest: XCTestCase {
         }
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -361,7 +361,7 @@ public final class HappyEyeballsTest: XCTestCase {
         }
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -403,7 +403,7 @@ public final class HappyEyeballsTest: XCTestCase {
         }
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -437,7 +437,7 @@ public final class HappyEyeballsTest: XCTestCase {
         }
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -471,7 +471,7 @@ public final class HappyEyeballsTest: XCTestCase {
         }
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -501,7 +501,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -531,7 +531,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -575,7 +575,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -644,7 +644,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -714,7 +714,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -754,7 +754,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -797,7 +797,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -842,7 +842,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -897,7 +897,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -943,7 +943,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -988,7 +988,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -1038,7 +1038,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -1075,7 +1075,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -1119,7 +1119,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -1158,7 +1158,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -1202,7 +1202,7 @@ public final class HappyEyeballsTest: XCTestCase {
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)

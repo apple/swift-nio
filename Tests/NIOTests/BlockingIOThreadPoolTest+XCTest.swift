@@ -33,7 +33,7 @@ extension BlockingIOThreadPoolTest {
             ("testDeadLockIfCalledOutWithLockHeld", testDeadLockIfCalledOutWithLockHeld),
             ("testPoolDoesGetReleasedWhenStoppedAndReferencedDropped", testPoolDoesGetReleasedWhenStoppedAndReferencedDropped),
             ("testClosureReferenceDroppedAfterSingleWorkItemExecution", testClosureReferenceDroppedAfterSingleWorkItemExecution),
-            ("testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution", testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution),
+            ("testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution", testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution)
         ]
     }
 }

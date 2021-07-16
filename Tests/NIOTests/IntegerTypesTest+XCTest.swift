@@ -33,7 +33,7 @@ extension IntegerTypesTest {
             ("testNextPowerOfTwoOfFour", testNextPowerOfTwoOfFour),
             ("testNextPowerOfTwoOfFive", testNextPowerOfTwoOfFive),
             ("testDescriptionUInt24", testDescriptionUInt24),
-            ("testDescriptionUInt56", testDescriptionUInt56),
+            ("testDescriptionUInt56", testDescriptionUInt56)
         ]
     }
 }

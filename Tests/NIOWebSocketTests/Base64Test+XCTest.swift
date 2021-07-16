@@ -28,7 +28,7 @@ extension Base64Test {
         [
             ("testEncodeEmptyData", testEncodeEmptyData),
             ("testBase64EncodingArrayOfNulls", testBase64EncodingArrayOfNulls),
-            ("testBase64EncodingAllTheBytesSequentially", testBase64EncodingAllTheBytesSequentially),
+            ("testBase64EncodingAllTheBytesSequentially", testBase64EncodingAllTheBytesSequentially)
         ]
     }
 }

@@ -16,5 +16,5 @@ let crashTestSuites: [String: Any] = [
     "EventLoopCrashTests": EventLoopCrashTests(),
     "ByteBufferCrashTests": ByteBufferCrashTests(),
     "SystemCrashTests": SystemCrashTests(),
-    "HTTPCrashTests": HTTPCrashTests(),
+    "HTTPCrashTests": HTTPCrashTests()
 ]

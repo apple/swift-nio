@@ -29,7 +29,7 @@ extension TimeAmountTests {
             ("testTimeAmountConversion", testTimeAmountConversion),
             ("testTimeAmountIsHashable", testTimeAmountIsHashable),
             ("testTimeAmountDoesAddTime", testTimeAmountDoesAddTime),
-            ("testTimeAmountDoesSubtractTime", testTimeAmountDoesSubtractTime),
+            ("testTimeAmountDoesSubtractTime", testTimeAmountDoesSubtractTime)
         ]
     }
 }

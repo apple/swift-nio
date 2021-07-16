@@ -70,7 +70,7 @@ extension NonBlockingFileIOTest {
             ("testReadFromEOFDeliversExactlyOneChunk", testReadFromEOFDeliversExactlyOneChunk),
             ("testReadChunkedFromOffsetFileRegion", testReadChunkedFromOffsetFileRegion),
             ("testReadManyChunks", testReadManyChunks),
-            ("testThrowsErrorOnUnstartedPool", testThrowsErrorOnUnstartedPool),
+            ("testThrowsErrorOnUnstartedPool", testThrowsErrorOnUnstartedPool)
         ]
     }
 }

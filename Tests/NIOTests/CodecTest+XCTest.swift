@@ -60,7 +60,7 @@ extension ByteToMessageDecoderTest {
             ("testWeAreOkayWithReceivingDataAfterFullClose", testWeAreOkayWithReceivingDataAfterFullClose),
             ("testPayloadTooLarge", testPayloadTooLarge),
             ("testPayloadTooLargeButHandlerOk", testPayloadTooLargeButHandlerOk),
-            ("testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress", testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress),
+            ("testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress", testRemoveHandlerBecauseOfChannelTearDownWhilstUserTriggeredRemovalIsInProgress)
         ]
     }
 }
@@ -72,7 +72,7 @@ extension MessageToByteEncoderTest {
             ("testEncoderOverrideAllocateOutBuffer", testEncoderOverrideAllocateOutBuffer),
             ("testEncoder", testEncoder),
             ("testB2MHIsHappyNeverBeingAddedToAPipeline", testB2MHIsHappyNeverBeingAddedToAPipeline),
-            ("testM2BHIsHappyNeverBeingAddedToAPipeline", testM2BHIsHappyNeverBeingAddedToAPipeline),
+            ("testM2BHIsHappyNeverBeingAddedToAPipeline", testM2BHIsHappyNeverBeingAddedToAPipeline)
         ]
     }
 }
@@ -81,7 +81,7 @@ extension MessageToByteHandlerTest {
     @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
     static var allTests: [(String, (MessageToByteHandlerTest) -> () throws -> Void)] {
         [
-            ("testThrowingEncoderFailsPromises", testThrowingEncoderFailsPromises),
+            ("testThrowingEncoderFailsPromises", testThrowingEncoderFailsPromises)
         ]
     }
 }

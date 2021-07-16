@@ -57,7 +57,7 @@ extension NIOConcurrencyHelpersTests {
             ("testLoadAndExchangeHammering", testLoadAndExchangeHammering),
             ("testLoadAndStoreHammering", testLoadAndStoreHammering),
             ("testLoadAndCASHammering", testLoadAndCASHammering),
-            ("testMultipleLoadsRacingWhilstStoresAreGoingOn", testMultipleLoadsRacingWhilstStoresAreGoingOn),
+            ("testMultipleLoadsRacingWhilstStoresAreGoingOn", testMultipleLoadsRacingWhilstStoresAreGoingOn)
         ]
     }
 }

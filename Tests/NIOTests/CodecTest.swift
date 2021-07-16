@@ -793,7 +793,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 context.fireChannelRead(wrapInboundOut(String(decoding: buffer.readBytes(length: 4) ??
                         [ /* "no bytes" */
                             0x6E, 0x6F, 0x20,
-                            0x62, 0x79, 0x74, 0x65, 0x73,
+                            0x62, 0x79, 0x74, 0x65, 0x73
                         ],
                     as: Unicode.UTF8.self) + "#\(self.callsToDecodeLast)"))
                 return .continue

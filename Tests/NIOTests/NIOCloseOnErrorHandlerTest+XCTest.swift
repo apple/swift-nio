@@ -26,7 +26,7 @@ extension NIOCloseOnErrorHandlerTest {
     @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
     static var allTests: [(String, (NIOCloseOnErrorHandlerTest) -> () throws -> Void)] {
         [
-            ("testChannelCloseOnError", testChannelCloseOnError),
+            ("testChannelCloseOnError", testChannelCloseOnError)
         ]
     }
 }

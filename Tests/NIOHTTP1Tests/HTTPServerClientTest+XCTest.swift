@@ -36,7 +36,7 @@ extension HTTPServerClientTest {
             ("testMassiveResponseFileRegion", testMassiveResponseFileRegion),
             ("testHead", testHead),
             ("test204", test204),
-            ("testNoResponseHeaders", testNoResponseHeaders),
+            ("testNoResponseHeaders", testNoResponseHeaders)
         ]
     }
 }

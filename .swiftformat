@@ -12,6 +12,7 @@
 --ifdef no-indent
 
 --self insert
+--selfrequired
 
 --redundanttype inferred
 
@@ -23,4 +24,4 @@
 
 --ranges no-space
 
---selfrequired
+--commas inline

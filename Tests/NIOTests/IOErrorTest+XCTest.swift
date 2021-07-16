@@ -27,7 +27,7 @@ extension IOErrorTest {
     static var allTests: [(String, (IOErrorTest) -> () throws -> Void)] {
         [
             ("testMemoryLayoutBelowThreshold", testMemoryLayoutBelowThreshold),
-            ("testDeprecatedAPIStillFunctional", testDeprecatedAPIStillFunctional),
+            ("testDeprecatedAPIStillFunctional", testDeprecatedAPIStillFunctional)
         ]
     }
 }

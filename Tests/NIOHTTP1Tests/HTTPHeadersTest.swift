@@ -180,7 +180,7 @@ class HTTPHeadersTest: XCTestCase {
             (":method", "GET"),
             ("foo", "bar"),
             ("foo", "baz"),
-            ("custom-key", "value-1,value-2"),
+            ("custom-key", "value-1,value-2")
         ])
 
         XCTAssertEqual(headers.first(name: ":method"), "GET")

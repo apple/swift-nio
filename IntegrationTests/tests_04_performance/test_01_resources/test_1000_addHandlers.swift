@@ -28,7 +28,7 @@ func run(identifier: String) {
             }
             try! channel.pipeline.addHandlers([
                 SimpleHandler(),
-                SimpleHandler(),
+                SimpleHandler()
             ]).wait()
         }
         return iterations

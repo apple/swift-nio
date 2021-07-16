@@ -49,7 +49,7 @@ extension HTTPServerPipelineHandlerTest {
             ("testRemovingWithPartialResponseOutstandingTriggersRead", testRemovingWithPartialResponseOutstandingTriggersRead),
             ("testRemovingWithBufferedRequestForwards", testRemovingWithBufferedRequestForwards),
             ("testQuiescingInAResponseThenRemovedFiresEventAndReads", testQuiescingInAResponseThenRemovedFiresEventAndReads),
-            ("testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead", testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead),
+            ("testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead", testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead)
         ]
     }
 }
