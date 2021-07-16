@@ -17,11 +17,11 @@ import NIO
 private let maxOneByteSize = 125
 private let maxTwoByteSize = Int(UInt16.max)
 #if arch(arm) || arch(i386)
-// on 32-bit platforms we can't put a whole UInt32 in an Int
-private let maxNIOFrameSize = Int(UInt32.max / 2)
+    // on 32-bit platforms we can't put a whole UInt32 in an Int
+    private let maxNIOFrameSize = Int(UInt32.max / 2)
 #else
-// on 64-bit platforms this works just fine
-private let maxNIOFrameSize = Int(UInt32.max)
+    // on 64-bit platforms this works just fine
+    private let maxNIOFrameSize = Int(UInt32.max)
 #endif
 
 /// An inbound `ChannelHandler` that serializes structured websocket frames into a byte stream
@@ -115,8 +115,8 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     }
 }
 
-private extension ByteBuffer {
-    mutating func prependFrameHeaderIfPossible(_ frameHeader: FrameHeader) -> Bool {
+extension ByteBuffer {
+    fileprivate mutating func prependFrameHeaderIfPossible(_ frameHeader: FrameHeader) -> Bool {
         let written: Int? = modifyIfUniquelyOwned { buffer in
             let startIndex = buffer.readerIndex - frameHeader.requiredBytes
 
@@ -132,14 +132,14 @@ private extension ByteBuffer {
         switch written {
         case .none, .some(0):
             return false
-        case let .some(x):
+        case .some(let x):
             assert(x == frameHeader.requiredBytes)
             return true
         }
     }
 
     @discardableResult
-    mutating func writeFrameHeader(_ frameHeader: FrameHeader) -> Int {
+    fileprivate mutating func writeFrameHeader(_ frameHeader: FrameHeader) -> Int {
         let written = self.setFrameHeader(frameHeader, at: writerIndex)
         moveWriterIndex(forwardBy: written)
         return written

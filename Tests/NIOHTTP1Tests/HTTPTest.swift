@@ -81,19 +81,19 @@ class HTTPTest: XCTestCase {
             var allBodyDatas: [[UInt8]] = []
             try channel.pipeline.addHandler(TestChannelInboundHandler { reqPart in
                 switch reqPart {
-                case var .head(req):
+                case .head(var req):
                     XCTAssertEqual(index * 2, step)
                     req.headers.remove(name: "Content-Length")
                     req.headers.remove(name: "Transfer-Encoding")
                     XCTAssertEqual(expecteds[index], req)
                     step += 1
-                case var .body(buffer):
+                case .body(var buffer):
                     if bodyData == nil {
                         bodyData = buffer.readBytes(length: buffer.readableBytes)!
                     } else {
                         bodyData!.append(contentsOf: buffer.readBytes(length: buffer.readableBytes)!)
                     }
-                case let .end(receivedTrailers):
+                case .end(let receivedTrailers):
                     XCTAssertEqual(trailers, receivedTrailers)
                     step += 1
                     XCTAssertEqual((index + 1) * 2, step)

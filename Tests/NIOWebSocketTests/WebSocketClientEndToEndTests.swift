@@ -17,8 +17,8 @@ import NIOHTTP1
 @testable import NIOWebSocket
 import XCTest
 
-private extension EmbeddedChannel {
-    func readByteBufferOutputAsString() throws -> String? {
+extension EmbeddedChannel {
+    fileprivate func readByteBufferOutputAsString() throws -> String? {
         if let requestBuffer: ByteBuffer = try readOutbound() {
             return requestBuffer.getString(at: 0, length: requestBuffer.readableBytes)
         }
@@ -27,17 +27,17 @@ private extension EmbeddedChannel {
     }
 }
 
-private extension ChannelPipeline {
-    func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
-                                                       file: StaticString = #file,
-                                                       line: UInt = #line) throws
+extension ChannelPipeline {
+    fileprivate func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
+                                                                   file: StaticString = #file,
+                                                                   line: UInt = #line) throws
     {
         XCTAssertThrowsError(try context(handlerType: handlerType).wait(), file: file, line: line) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
 
-    func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
+    fileprivate func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
         do {
             _ = try context(handlerType: handlerType).wait()
         } catch ChannelPipelineError.notFound {
@@ -101,8 +101,8 @@ private final class ExplodingHTTPHandler: ChannelInboundHandler, RemovableChanne
     }
 }
 
-private extension ChannelInboundHandler where OutboundOut == HTTPClientRequestPart {
-    func fireSendRequest(context: ChannelHandlerContext) {
+extension ChannelInboundHandler where OutboundOut == HTTPClientRequestPart {
+    fileprivate func fireSendRequest(context: ChannelHandlerContext) {
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")

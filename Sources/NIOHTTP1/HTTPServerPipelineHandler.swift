@@ -314,7 +314,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         var startReadingAgain = false
 
         switch unwrapOutboundIn(data) {
-        case var .head(head) where self.lifecycleState != .acceptingEvents:
+        case .head(var head) where self.lifecycleState != .acceptingEvents:
             if head.isKeepAlive {
                 head.headers.replaceOrAdd(name: "connection", value: "close")
             }
@@ -383,11 +383,11 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         let bufferedEvents = self.eventBuffer
         for event in bufferedEvents {
             switch event {
-            case let .channelRead(read):
+            case .channelRead(let read):
                 context.fireChannelRead(read)
             case .halfClose:
                 context.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
-            case let .error(error):
+            case .error(let error):
                 context.fireErrorCaught(error)
             }
         }
@@ -444,10 +444,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             self.eventBuffer.removeFirst()
 
             switch event {
-            case let .channelRead(read):
+            case .channelRead(let read):
                 self.deliverOneMessage(context: context, data: read)
                 deliveredRead = true
-            case let .error(error):
+            case .error(let error):
                 self.deliverOneError(context: context, error: error)
             case .halfClose:
                 // When we fire the half-close, we want to forget all prior reads.

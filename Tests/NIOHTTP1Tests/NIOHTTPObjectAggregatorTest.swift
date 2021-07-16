@@ -27,7 +27,7 @@ private final class ReadRecorder<T: Equatable>: ChannelInboundHandler, Removable
 
         static func == (lhs: Event, rhs: Event) -> Bool {
             switch (lhs, rhs) {
-            case let (.channelRead(b1), .channelRead(b2)):
+            case (.channelRead(let b1), .channelRead(let b2)):
                 return b1 == b2
             case (.httpFrameTooLongEvent, .httpFrameTooLongEvent):
                 return true
@@ -78,8 +78,8 @@ private final class WriteRecorder: ChannelOutboundHandler, RemovableChannelHandl
     }
 }
 
-private extension ByteBuffer {
-    func assertContainsOnly(_ string: String) {
+extension ByteBuffer {
+    private func assertContainsOnly(_ string: String) {
         let innerData = getString(at: readerIndex, length: readableBytes)!
         XCTAssertEqual(innerData, string)
     }
@@ -87,7 +87,7 @@ private extension ByteBuffer {
 
 private func asHTTPResponseHead(_ response: HTTPServerResponsePart) -> HTTPResponseHead? {
     switch response {
-    case let .head(resHead):
+    case .head(let resHead):
         return resHead
     default:
         return nil

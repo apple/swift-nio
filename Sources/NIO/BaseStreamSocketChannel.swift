@@ -114,7 +114,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
             // the end of the loop to not do an allocation when the loop exits.
             buffer.clear()
             switch try buffer.withMutableWritePointer(body: { try self.socket.read(pointer: $0) }) {
-            case let .processed(bytesRead):
+            case .processed(let bytesRead):
                 if bytesRead > 0 {
                     let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
 
@@ -145,7 +145,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     // end-of-file
                     throw ChannelError.eof
                 }
-            case let .wouldBlock(bytesRead):
+            case .wouldBlock(let bytesRead):
                 assert(bytesRead == 0)
                 return result
             }

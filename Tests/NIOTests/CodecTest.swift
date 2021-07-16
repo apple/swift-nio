@@ -88,7 +88,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         typealias InboundOut = ByteBuffer
 
         func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
-            guard case let .some(buffer) = buffer.readSlice(length: 512) else {
+            guard case .some(let buffer) = buffer.readSlice(length: 512) else {
                 return .needMoreData
             }
 
@@ -406,7 +406,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         func readOneInboundString() -> String {
             do {
                 switch try channel.readInbound(as: ByteBuffer.self) {
-                case let .some(buffer):
+                case .some(let buffer):
                     return String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self)
                 case .none:
                     XCTFail("expected ByteBuffer found nothing")
@@ -1145,7 +1145,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            if case let .some(ByteToMessageDecoderError.dataReceivedInErrorState(error, receivedBuffer)) =
+            if case .some(ByteToMessageDecoderError.dataReceivedInErrorState(let error, let receivedBuffer)) =
                 error as? ByteToMessageDecoderError
             {
                 XCTAssert(error is Decoder.DecodeError)
@@ -1281,7 +1281,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.writeStaticString("0123456")
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            if case let .some(.leftoverDataWhenDone(buffer)) = error as? ByteToMessageDecoderError {
+            if case .some(.leftoverDataWhenDone(let buffer)) = error as? ByteToMessageDecoderError {
                 XCTAssertEqual("3456", buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes))
             } else {
                 XCTFail("unexpected error: \(error)")
@@ -1332,7 +1332,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.writeStaticString("0123456")
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            if case let .some(.leftoverDataWhenDone(buffer)) = error as? ByteToMessageDecoderError {
+            if case .some(.leftoverDataWhenDone(let buffer)) = error as? ByteToMessageDecoderError {
                 XCTAssertEqual("3456", buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes))
             } else {
                 XCTFail("unexpected error: \(error)")

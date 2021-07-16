@@ -91,7 +91,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        if case let .head(req) = unwrapInboundIn(data) {
+        if case .head(let req) = unwrapInboundIn(data) {
             switch req.uri {
             case "/perf-test-1":
                 var buffer = context.channel.allocator.buffer(capacity: self.cachedBody.count)

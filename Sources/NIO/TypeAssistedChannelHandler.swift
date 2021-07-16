@@ -25,9 +25,9 @@ public protocol _EmittingChannelHandler {
 }
 
 /// Default implementations for `_EmittingChannelHandler`.
-public extension _EmittingChannelHandler {
+extension _EmittingChannelHandler {
     @inlinable
-    func wrapOutboundOut(_ value: OutboundOut) -> NIOAny {
+    public func wrapOutboundOut(_ value: OutboundOut) -> NIOAny {
         NIOAny(value)
     }
 }
@@ -52,14 +52,14 @@ public protocol ChannelInboundHandler: _ChannelInboundHandler, _EmittingChannelH
 }
 
 /// Default implementations for `ChannelInboundHandler`.
-public extension ChannelInboundHandler {
+extension ChannelInboundHandler {
     @inlinable
-    func unwrapInboundIn(_ value: NIOAny) -> InboundIn {
+    public func unwrapInboundIn(_ value: NIOAny) -> InboundIn {
         value.forceAs()
     }
 
     @inlinable
-    func wrapInboundOut(_ value: InboundOut) -> NIOAny {
+    public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
         NIOAny(value)
     }
 }
@@ -77,9 +77,9 @@ public protocol ChannelOutboundHandler: _ChannelOutboundHandler, _EmittingChanne
 }
 
 /// Default implementations for `ChannelOutboundHandler`.
-public extension ChannelOutboundHandler {
+extension ChannelOutboundHandler {
     @inlinable
-    func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn {
+    public func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn {
         value.forceAs()
     }
 }

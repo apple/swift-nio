@@ -44,15 +44,15 @@ private enum InternalSNIErrors: Error {
     case recordIncomplete
 }
 
-private extension ByteBuffer {
-    mutating func moveReaderIndexIfPossible(forwardBy distance: Int) throws {
+extension ByteBuffer {
+    fileprivate mutating func moveReaderIndexIfPossible(forwardBy distance: Int) throws {
         guard readableBytes >= distance else {
             throw InternalSNIErrors.invalidLengthInRecord
         }
         moveReaderIndex(forwardBy: distance)
     }
 
-    mutating func readIntegerIfPossible<T: FixedWidthInteger>() throws -> T {
+    fileprivate mutating func readIntegerIfPossible<T: FixedWidthInteger>() throws -> T {
         guard let integer: T = readInteger() else {
             throw InternalSNIErrors.invalidLengthInRecord
         }
@@ -60,15 +60,15 @@ private extension ByteBuffer {
     }
 }
 
-private extension Sequence where Element == UInt8 {
-    func decodeStringValidatingASCII() -> String? {
+extension Sequence where Element == UInt8 {
+    fileprivate func decodeStringValidatingASCII() -> String? {
         var bytesIterator = makeIterator()
         var scalars: [Unicode.Scalar] = []
         scalars.reserveCapacity(underestimatedCount)
         var decoder = Unicode.ASCII.Parser()
         decode: while true {
             switch decoder.parseScalar(from: &bytesIterator) {
-            case let .valid(v):
+            case .valid(let v):
                 scalars.append(Unicode.Scalar(v[0]))
             case .emptyInput:
                 break decode

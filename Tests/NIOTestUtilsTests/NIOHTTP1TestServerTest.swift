@@ -333,12 +333,12 @@ private final class TestHTTPHandler: ChannelInboundHandler {
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch unwrapInboundIn(data) {
-        case let .head(responseHead):
+        case .head(let responseHead):
             guard case .ok = responseHead.status else {
                 self.responsePromise.fail(ResponseError.badStatus)
                 return
             }
-        case let .body(byteBuffer):
+        case .body(let byteBuffer):
             // We're using AggregateBodyHandler so we see all the body content at once
             let string = String(buffer: byteBuffer)
             responsePromise.succeed(string)
@@ -356,7 +356,7 @@ private final class TestHTTPHandler: ChannelInboundHandler {
 extension HTTPServerRequestPart {
     func assertHead(expectedURI: String, file: StaticString = #file, line: UInt = #line) {
         switch self {
-        case let .head(head):
+        case .head(let head):
             XCTAssertEqual(.GET, head.method)
             XCTAssertEqual(expectedURI, head.uri)
             XCTAssertEqual("text/plain; charset=utf-8", head.headers["Content-Type"].first)
@@ -367,7 +367,7 @@ extension HTTPServerRequestPart {
 
     func assertBody(expectedMessage: String, file: StaticString = #file, line: UInt = #line) {
         switch self {
-        case let .body(buffer):
+        case .body(let buffer):
             // Note that the test server coalesces the body parts for us.
             XCTAssertEqual(expectedMessage,
                            String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
@@ -396,7 +396,7 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
         switch unwrapInboundIn(data) {
         case .head:
             context.fireChannelRead(data)
-        case var .body(buffer):
+        case .body(var buffer):
             self.receivedSoFar.setOrWriteBuffer(&buffer)
         case .end:
             if let receivedSoFar = self.receivedSoFar {

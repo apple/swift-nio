@@ -88,7 +88,7 @@ let datagramChannel = try datagramBootstrap
 
         let provider = channel as! SocketOptionProvider
         switch targetDevice.address {
-        case let .some(.v4(addr)):
+        case .some(.v4(let addr)):
             return provider.setIPMulticastIF(addr.address.sin_addr).map { channel }
         case .some(.v6):
             return provider.setIPv6MulticastIF(CUnsignedInt(targetDevice.interfaceIndex)).map { channel }

@@ -18,12 +18,12 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHan
     let (mW1, mW2, mW3): (EventLoopPromise<Void>?, EventLoopPromise<Void>?, EventLoopPromise<Void>?)
 
     switch (isChunked, promise) {
-    case (true, let .some(p)):
+    case (true, .some(let p)):
         /* chunked encoding and the user's interested: we need three promises and need to cascade into the users promise */
         let (w1, w2, w3) = (context.eventLoop.makePromise() as EventLoopPromise<Void>, context.eventLoop.makePromise() as EventLoopPromise<Void>, context.eventLoop.makePromise() as EventLoopPromise<Void>)
         w1.futureResult.and(w2.futureResult).and(w3.futureResult).map { (_: (((), ()), ())) in }.cascade(to: p)
         (mW1, mW2, mW3) = (w1, w2, w3)
-    case (false, let .some(p)):
+    case (false, .some(let p)):
         /* not chunked, so just use the user's promise for the actual data */
         (mW1, mW2, mW3) = (nil, p, nil)
     case (_, .none):
@@ -64,7 +64,7 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, context: Channel
             buffer.writeStaticString("0\r\n\r\n")
         }
         context.write(wrapOutboundOut(.byteBuffer(buffer)), promise: p)
-    case (false, let .some(p)):
+    case (false, .some(let p)):
         // Not chunked so we have nothing to write. However, we don't want to satisfy this promise out-of-order
         // so we issue a zero-length write down the chain.
         let buf = context.channel.allocator.buffer(capacity: 0)
@@ -141,7 +141,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch unwrapOutboundIn(data) {
-        case var .head(request):
+        case .head(var request):
             assert(!(request.headers.contains(name: "content-length") &&
                        request.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
             "illegal HTTP sent: \(request) contains both a content-length and transfer-encoding:chunked")
@@ -151,7 +151,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             writeHead(wrapOutboundOut: wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(request: request)
             }, context: context, headers: request.headers, promise: promise)
-        case let .body(bodyPart):
+        case .body(let bodyPart):
             guard bodyPart.readableBytes > 0 else {
                 // Empty writes shouldn't send any bytes in chunked or identity encoding.
                 context.write(wrapOutboundOut(bodyPart), promise: promise)
@@ -159,7 +159,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             }
 
             writeChunk(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
-        case let .end(trailers):
+        case .end(let trailers):
             writeTrailers(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
         }
     }
@@ -179,7 +179,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch unwrapOutboundIn(data) {
-        case var .head(response):
+        case .head(var response):
             assert(!(response.headers.contains(name: "content-length") &&
                        response.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
             "illegal HTTP sent: \(response) contains both a content-length and transfer-encoding:chunked")
@@ -189,22 +189,22 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             writeHead(wrapOutboundOut: wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(response: response)
             }, context: context, headers: response.headers, promise: promise)
-        case let .body(bodyPart):
+        case .body(let bodyPart):
             writeChunk(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
-        case let .end(trailers):
+        case .end(let trailers):
             writeTrailers(wrapOutboundOut: wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
         }
     }
 }
 
-private extension ByteBuffer {
+extension ByteBuffer {
     private mutating func write(status: HTTPResponseStatus) {
         writeString(String(status.code))
         self.writeWhitespace()
         writeString(status.reasonPhrase)
     }
 
-    mutating func write(response: HTTPResponseHead) {
+    fileprivate mutating func write(response: HTTPResponseHead) {
         switch (response.version.major, response.version.minor, response.status) {
         // Optimization for HTTP/1.0
         case (1, 0, .custom(_, _)):
@@ -477,7 +477,7 @@ private extension ByteBuffer {
         }
     }
 
-    mutating func write(request: HTTPRequestHead) {
+    fileprivate mutating func write(request: HTTPRequestHead) {
         self.write(method: request.method)
         self.writeWhitespace()
         writeString(request.uri)
@@ -486,7 +486,7 @@ private extension ByteBuffer {
         writeStaticString("\r\n")
     }
 
-    mutating func writeWhitespace() {
+    private mutating func writeWhitespace() {
         writeInteger(32, as: UInt8.self)
     }
 
@@ -560,7 +560,7 @@ private extension ByteBuffer {
             writeStaticString("UNSUBSCRIBE")
         case .SOURCE:
             writeStaticString("SOURCE")
-        case let .RAW(value):
+        case .RAW(let value):
             writeString(value)
         }
     }

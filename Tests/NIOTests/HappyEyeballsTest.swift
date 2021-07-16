@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-import Darwin
+    import Darwin
 #else
-import Glibc
+    import Glibc
 #endif
 @testable import NIO
 import XCTest
@@ -27,8 +27,8 @@ private let SINGLE_IPv4_RESULT = [SocketAddress(host: "example.com", ipAddress: 
 private let MANY_IPv6_RESULTS = (1...10).map { SocketAddress(host: "example.com", ipAddress: "fe80::\($0)", port: 80) }
 private let MANY_IPv4_RESULTS = (1...10).map { SocketAddress(host: "example.com", ipAddress: "10.0.0.\($0)", port: 80) }
 
-private extension Array where Element == Channel {
-    func finishAll() {
+extension Array where Element == Channel {
+    fileprivate func finishAll() {
         forEach {
             do {
                 _ = try ($0 as! EmbeddedChannel).finish()
@@ -91,26 +91,26 @@ private class ConnectionDelayer: ChannelOutboundHandler {
     }
 }
 
-private extension Channel {
-    func connectTarget() -> String? {
+extension Channel {
+    fileprivate func connectTarget() -> String? {
         try! pipeline.context(name: CONNECT_RECORDER).map {
             ($0.handler as! ConnectRecorder).targetHost
         }.wait()
     }
 
-    func succeedConnection() {
+    fileprivate func succeedConnection() {
         try! pipeline.context(name: CONNECT_DELAYER).map {
             ($0.handler as! ConnectionDelayer).connectPromise!.succeed(())
         }.wait()
     }
 
-    func failConnection(error: Error) {
+    fileprivate func failConnection(error: Error) {
         try! pipeline.context(name: CONNECT_DELAYER).map {
             ($0.handler as! ConnectionDelayer).connectPromise!.fail(error)
         }.wait()
     }
 
-    func state() -> ConnectRecorder.State {
+    fileprivate func state() -> ConnectRecorder.State {
         try! pipeline.context(name: CONNECT_RECORDER).map {
             ($0.handler as! ConnectRecorder).state
         }.flatMapErrorThrowing {
@@ -124,8 +124,8 @@ private extension Channel {
     }
 }
 
-private extension SocketAddress {
-    init(host: String, ipAddress: String, port: Int) {
+extension SocketAddress {
+    fileprivate init(host: String, ipAddress: String, port: Int) {
         do {
             var v4addr = in_addr()
             try NIOBSDSocket.inet_pton(af: .inet, src: ipAddress, dst: &v4addr)
@@ -153,13 +153,13 @@ private extension SocketAddress {
         }
     }
 
-    func toString() -> String {
+    fileprivate func toString() -> String {
         let ptr = UnsafeMutableRawPointer.allocate(byteCount: 256, alignment: 1).bindMemory(to: Int8.self, capacity: 256)
         switch self {
-        case let .v4(address):
+        case .v4(let address):
             var baseAddress = address.address
             precondition(try! NIOBSDSocket.inet_ntop(af: .inet, src: &baseAddress.sin_addr, dst: ptr, size: 256) != nil)
-        case let .v6(address):
+        case .v6(let address):
             var baseAddress = address.address
             precondition(try! NIOBSDSocket.inet_ntop(af: .inet6, src: &baseAddress.sin6_addr, dst: ptr, size: 256) != nil)
         case .unixDomainSocket:
@@ -172,8 +172,8 @@ private extension SocketAddress {
     }
 }
 
-private extension EventLoopFuture {
-    func getError() -> Error? {
+extension EventLoopFuture {
+    fileprivate func getError() -> Error? {
         guard isFulfilled else { return nil }
 
         var error: Error?
@@ -306,7 +306,7 @@ public final class HappyEyeballsTest: XCTestCase {
         loop.advanceTime(by: .seconds(1))
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
 
-        if case let .some(ChannelError.connectTimeout(amount)) = channelFuture.getError() {
+        if case .some(ChannelError.connectTimeout(let amount)) = channelFuture.getError() {
             XCTAssertEqual(amount, .seconds(10))
         } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")

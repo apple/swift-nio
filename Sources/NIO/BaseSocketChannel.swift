@@ -1036,9 +1036,9 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                     // we don't have a socket error, this must be connection reset without an error then
                     // this path should only be executed on Linux (EPOLLHUP, no EPOLLERR)
                     #if os(Linux)
-                    let message: String = "connection reset (no error set)"
+                        let message: String = "connection reset (no error set)"
                     #else
-                    let message: String = "BUG IN SwiftNIO (possibly #572), please report! Connection reset (no error set)."
+                        let message: String = "BUG IN SwiftNIO (possibly #572), please report! Connection reset (no error set)."
                     #endif
                     error = IOError(errnoCode: ECONNRESET, reason: message)
                 }
@@ -1123,7 +1123,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         // flushing all pending requests and wait for a fake event result to sync up) which would be awful for performance,
         // so better skip the assert() for io_uring instead.
         #if !SWIFTNIO_USE_IO_URING
-        assert(readResult == .some)
+            assert(readResult == .some)
         #endif
         if self.lifecycleManager.isActive {
             self.pipeline.fireChannelReadComplete0()

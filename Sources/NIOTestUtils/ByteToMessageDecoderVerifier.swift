@@ -142,7 +142,7 @@ public enum ByteToMessageDecoderVerifier {
         try verifyDripFeed(channel: channel)
         try verifyManyAtOnce(channel: channel)
 
-        if case let .leftOvers(inbound: ib, outbound: ob, pendingOutbound: pob) = try channel.finish() {
+        if case .leftOvers(inbound: let ib, outbound: let ob, pendingOutbound: let pob) = try channel.finish() {
             throw VerificationError<Out>(inputs: channel.inboundWrites,
                                          errorCode: .leftOversOnDeconstructingChannel(inbound: ib,
                                                                                       outbound: ob,
@@ -179,9 +179,9 @@ extension ByteToMessageDecoderVerifier {
     }
 }
 
-public extension ByteToMessageDecoderVerifier {
+extension ByteToMessageDecoderVerifier {
     /// A `VerificationError` is thrown when the verification of a `ByteToMessageDecoder` failed.
-    struct VerificationError<OutputType: Equatable>: Error {
+    public struct VerificationError<OutputType: Equatable>: Error {
         /// Contains the `inputs` that were passed to the `ByteToMessageDecoder` at the point where it failed
         /// verification.
         public var inputs: [ByteBuffer]

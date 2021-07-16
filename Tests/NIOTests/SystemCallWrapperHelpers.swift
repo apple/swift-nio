@@ -14,7 +14,7 @@
 
 import Foundation
 #if !RUNNING_INTEGRATION_TESTS
-@testable import NIO
+    @testable import NIO
 #endif
 
 public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {
@@ -106,7 +106,7 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
         var preventCompilerOptimisation: Int = 0
         for _ in 0..<iterations {
             switch try Posix.write(descriptor: fd, pointer: pointer, size: 0) {
-            case let .processed(v):
+            case .processed(let v):
                 preventCompilerOptimisation += v
             case .wouldBlock:
                 throw TestError.wouldBlock

@@ -14,14 +14,14 @@
 
 import NIO
 #if compiler(>=5.1)
-@_implementationOnly import CNIOHTTPParser
+    @_implementationOnly import CNIOHTTPParser
 #else
-import CNIOHTTPParser
+    import CNIOHTTPParser
 #endif
 
-private extension UnsafeMutablePointer where Pointee == http_parser {
+extension UnsafeMutablePointer where Pointee == http_parser {
     /// Returns the `KeepAliveState` for the current message that is parsed.
-    var keepAliveState: KeepAliveState {
+    fileprivate var keepAliveState: KeepAliveState {
         c_nio_http_should_keep_alive(self) == 0 ? .close : .keepAlive
     }
 }
@@ -117,7 +117,7 @@ private class BetterHTTPParser {
                 return 0
             case .skipBody:
                 return 1
-            case let .error(err):
+            case .error(let err):
                 parser.httpErrno = err
                 return -1 // error
             }
@@ -446,7 +446,7 @@ extension HTTPDecoder: WriteObservingByteToMessageDecoder where In == HTTPClient
     public typealias OutboundIn = Out
 
     public func write(data: HTTPClientRequestPart) {
-        if case let .head(head) = data {
+        if case .head(let head) = data {
             self.parser.requestHeads.append(head)
         }
     }
@@ -815,9 +815,9 @@ public struct NIOHTTPDecoderError: Error {
     private let baseError: BaseError
 }
 
-public extension NIOHTTPDecoderError {
+extension NIOHTTPDecoderError {
     /// A response was received from a server without an associated request having been sent.
-    static let unsolicitedResponse: NIOHTTPDecoderError = .init(baseError: .unsolicitedResponse)
+    public static let unsolicitedResponse: NIOHTTPDecoderError = .init(baseError: .unsolicitedResponse)
 }
 
 extension NIOHTTPDecoderError: Hashable {}

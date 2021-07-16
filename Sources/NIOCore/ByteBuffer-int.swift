@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-public extension ByteBuffer {
+extension ByteBuffer {
     @inlinable
     internal func _toEndianness<T: FixedWidthInteger>(value: T, endianness: Endianness) -> T {
         switch endianness {
@@ -30,7 +30,7 @@ public extension ByteBuffer {
     ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
     @inlinable
-    mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big, as _: T.Type = T.self) -> T? {
+    public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big, as _: T.Type = T.self) -> T? {
         self.getInteger(at: readerIndex, endianness: endianness, as: T.self).map {
             self._moveReaderIndex(forwardBy: MemoryLayout<T>.size)
             return $0
@@ -47,7 +47,7 @@ public extension ByteBuffer {
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest are not
     ///            readable.
     @inlinable
-    func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as _: T.Type = T.self) -> T? {
+    public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as _: T.Type = T.self) -> T? {
         guard let range = rangeWithinReadableBytes(index: index, length: MemoryLayout<T>.size) else {
             return nil
         }
@@ -76,9 +76,9 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     @inlinable
-    mutating func writeInteger<T: FixedWidthInteger>(_ integer: T,
-                                                     endianness: Endianness = .big,
-                                                     as _: T.Type = T.self) -> Int
+    public mutating func writeInteger<T: FixedWidthInteger>(_ integer: T,
+                                                            endianness: Endianness = .big,
+                                                            as _: T.Type = T.self) -> Int
     {
         let bytesWritten = self.setInteger(integer, at: writerIndex, endianness: endianness)
         _moveWriterIndex(forwardBy: bytesWritten)
@@ -94,7 +94,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     @inlinable
-    mutating func setInteger<T: FixedWidthInteger>(_ integer: T, at index: Int, endianness: Endianness = .big, as _: T.Type = T.self) -> Int {
+    public mutating func setInteger<T: FixedWidthInteger>(_ integer: T, at index: Int, endianness: Endianness = .big, as _: T.Type = T.self) -> Int {
         var value = self._toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in
             self.setBytes(ptr, at: index)
@@ -135,11 +135,11 @@ extension UInt32 {
         var n = self
 
         #if arch(arm) || arch(i386)
-        // on 32-bit platforms we can't make use of a whole UInt32.max (as it doesn't fit in an Int)
-        let max = UInt32(Int.max)
+            // on 32-bit platforms we can't make use of a whole UInt32.max (as it doesn't fit in an Int)
+            let max = UInt32(Int.max)
         #else
-        // on 64-bit platforms we're good
-        let max = UInt32.max
+            // on 64-bit platforms we're good
+            let max = UInt32.max
         #endif
 
         n -= 1

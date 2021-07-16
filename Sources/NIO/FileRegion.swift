@@ -72,12 +72,12 @@ public struct FileRegion {
     }
 }
 
-public extension FileRegion {
+extension FileRegion {
     /// Create a new `FileRegion` forming a complete file.
     ///
     /// - parameters:
     ///     - fileHandle: An open `NIOFileHandle` to the file.
-    init(fileHandle: NIOFileHandle) throws {
+    public init(fileHandle: NIOFileHandle) throws {
         let eof = try fileHandle.withUnsafeFileDescriptor { (fd: CInt) throws -> off_t in
             let eof = try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)

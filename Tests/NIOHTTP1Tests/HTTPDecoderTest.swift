@@ -168,7 +168,7 @@ class HTTPDecoderTest: XCTestCase {
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                 let part = unwrapInboundIn(data)
                 switch part {
-                case let .head(h):
+                case .head(let h):
                     XCTAssertEqual("/SomeURL", h.uri)
                     for h in h.headers {
                         XCTAssertEqual("X-Header", h.name)
@@ -365,7 +365,7 @@ class HTTPDecoderTest: XCTestCase {
         try self.channel.writeInbound(buffer)
 
         let message: HTTPServerRequestPart? = try channel.readInbound()
-        guard case let .some(.head(head)) = message else {
+        guard case .some(.head(let head)) = message else {
             XCTFail("Invalid message: \(String(describing: message))")
             return
         }
@@ -394,7 +394,7 @@ class HTTPDecoderTest: XCTestCase {
         try self.channel.writeInbound(buffer)
 
         let message: HTTPServerRequestPart? = try channel.readInbound()
-        guard case let .some(.head(head)) = message else {
+        guard case .some(.head(let head)) = message else {
             XCTFail("Invalid message: \(String(describing: message))")
             return
         }
@@ -425,7 +425,7 @@ class HTTPDecoderTest: XCTestCase {
         try self.channel.writeInbound(buffer)
 
         let message: HTTPServerRequestPart? = try channel.readInbound()
-        guard case let .some(.head(head)) = message else {
+        guard case .some(.head(let head)) = message else {
             XCTFail("Invalid message: \(String(describing: message))")
             return
         }
@@ -578,7 +578,7 @@ class HTTPDecoderTest: XCTestCase {
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                 let part = unwrapInboundIn(data)
                 switch part {
-                case let .head(head):
+                case .head(let head):
                     XCTAssertEqual(.OPTIONS, head.method)
                 case .body:
                     XCTFail("unexpected .body part")
@@ -608,7 +608,7 @@ class HTTPDecoderTest: XCTestCase {
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                 let part = unwrapInboundIn(data)
                 switch part {
-                case let .head(head):
+                case .head(let head):
                     XCTAssertEqual(.OPTIONS, head.method)
                 case .body:
                     XCTFail("unexpected .body part")
@@ -645,7 +645,7 @@ class HTTPDecoderTest: XCTestCase {
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                 let part = unwrapInboundIn(data)
                 switch part {
-                case let .head(head):
+                case .head(let head):
                     XCTAssertEqual(.OPTIONS, head.method)
                 case .body:
                     XCTFail("unexpected .body part")
@@ -671,9 +671,9 @@ class HTTPDecoderTest: XCTestCase {
         }
         XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
             switch error as? ByteToMessageDecoderError {
-            case let .some(ByteToMessageDecoderError.leftoverDataWhenDone(buffer)):
+            case .some(ByteToMessageDecoderError.leftoverDataWhenDone(let buffer)):
                 XCTAssertEqual("XXXX", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
-            case let .some(error):
+            case .some(let error):
                 XCTFail("unexpected error: \(error)")
             case .none:
                 XCTFail("unexpected error")
@@ -689,7 +689,7 @@ class HTTPDecoderTest: XCTestCase {
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                 let part = unwrapInboundIn(data)
                 switch part {
-                case let .head(head):
+                case .head(let head):
                     XCTAssertEqual(.OPTIONS, head.method)
                 case .body:
                     XCTFail("unexpected .body part")
@@ -753,7 +753,7 @@ class HTTPDecoderTest: XCTestCase {
 
         // The server sending another response should lead to another error.
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            guard case let .some(.dataReceivedInErrorState(baseError, _)) = error as? ByteToMessageDecoderError else {
+            guard case .some(.dataReceivedInErrorState(let baseError, _)) = error as? ByteToMessageDecoderError else {
                 XCTFail("Unexpected error type: \(error)")
                 return
             }
@@ -817,7 +817,7 @@ class HTTPDecoderTest: XCTestCase {
 
         XCTAssertNoThrow(try self.channel.writeInbound(buffer))
         let request = try assertNoThrowWithValue(channel.readInbound(as: HTTPServerRequestPart.self))
-        guard case let .some(.head(head)) = request else {
+        guard case .some(.head(let head)) = request else {
             XCTFail("Unexpected first message: \(String(describing: request))")
             return
         }
@@ -844,7 +844,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(maybeBodyChunk = try self.channel.readInbound())
         XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
 
-        guard case let .some(.head(head)) = maybeHead, case let .some(.body(body)) = maybeBodyChunk else {
+        guard case .some(.head(let head)) = maybeHead, case .some(.body(let body)) = maybeBodyChunk else {
             XCTFail("didn't receive head & body")
             return
         }

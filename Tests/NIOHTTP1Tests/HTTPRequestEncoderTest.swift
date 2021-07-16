@@ -15,8 +15,8 @@
 //===----------------------------------------------------------------------===//
 import XCTest
 
-private extension ByteBuffer {
-    func assertContainsOnly(_ string: String) {
+extension ByteBuffer {
+    fileprivate func assertContainsOnly(_ string: String) {
         let innerData = getString(at: readerIndex, length: readableBytes)!
         XCTAssertEqual(innerData, string)
     }

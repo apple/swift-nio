@@ -701,8 +701,8 @@ public final class EmbeddedChannel: Channel {
     }
 }
 
-public extension EmbeddedChannel {
-    struct SynchronousOptions: NIOSynchronousChannelOptions {
+extension EmbeddedChannel {
+    public struct SynchronousOptions: NIOSynchronousChannelOptions {
         @usableFromInline
         internal let channel: EmbeddedChannel
 
@@ -721,7 +721,7 @@ public extension EmbeddedChannel {
         }
     }
 
-    final var syncOptions: NIOSynchronousChannelOptions? {
+    public final var syncOptions: NIOSynchronousChannelOptions? {
         SynchronousOptions(channel: self)
     }
 }

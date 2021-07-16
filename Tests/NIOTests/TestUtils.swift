@@ -108,7 +108,7 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.NIOFileHandle, St
             while toWrite > 0 {
                 let res = try Posix.write(descriptor: fd, pointer: start, size: toWrite)
                 switch res {
-                case let .processed(written):
+                case .processed(let written):
                     toWrite -= written
                     start = start + written
                 case .wouldBlock:
@@ -124,19 +124,19 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.NIOFileHandle, St
 
 var temporaryDirectory: String {
     #if targetEnvironment(simulator)
-    // Simulator temp directories are so long (and contain the user name) that they're not usable
-    // for UNIX Domain Socket paths (which are limited to 103 bytes).
-    return "/tmp"
-    #else
-    #if os(Linux)
-    return "/tmp"
-    #else
-    if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {
-        return FileManager.default.temporaryDirectory.path
-    } else {
+        // Simulator temp directories are so long (and contain the user name) that they're not usable
+        // for UNIX Domain Socket paths (which are limited to 103 bytes).
         return "/tmp"
-    }
-    #endif // os
+    #else
+        #if os(Linux)
+            return "/tmp"
+        #else
+            if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {
+                return FileManager.default.temporaryDirectory.path
+            } else {
+                return "/tmp"
+            }
+        #endif // os
     #endif // targetEnvironment
 }
 
@@ -271,10 +271,10 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
         switch socketAddress {
         case .unixDomainSocket:
             return "uds"
-        case let .v4(sa):
+        case .v4(let sa):
             var addr = sa.address
             return addr.addressDescription()
-        case let .v6(sa):
+        case .v6(let sa):
             var addr = sa.address
             return addr.addressDescription()
         }

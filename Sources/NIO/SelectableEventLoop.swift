@@ -19,11 +19,11 @@ import NIOConcurrencyHelpers
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
     #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
-    return try autoreleasepool {
-        try execute()
-    }
+        return try autoreleasepool {
+            try execute()
+        }
     #else
-    return try execute()
+        return try execute()
     #endif
 }
 
@@ -451,13 +451,13 @@ internal final class SelectableEventLoop: EventLoop {
                     onLoopBegin: { self._tasksLock.withLockVoid { self._pendingTaskPop = true } }
                 ) { ev in
                     switch ev.registration.channel {
-                    case let .serverSocketChannel(chan):
+                    case .serverSocketChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
-                    case let .socketChannel(chan):
+                    case .socketChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
-                    case let .datagramChannel(chan):
+                    case .datagramChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
-                    case let .pipeChannel(chan, direction):
+                    case .pipeChannel(let chan, let direction):
                         var ev = ev
                         if ev.io.contains(.reset) {
                             // .reset needs special treatment here because we're dealing with two separate pipes instead
@@ -608,7 +608,7 @@ internal final class SelectableEventLoop: EventLoop {
                 switch result {
                 case .success:
                     callback(nil)
-                case let .failure(error):
+                case .failure(let error):
                     callback(error)
                 }
             }

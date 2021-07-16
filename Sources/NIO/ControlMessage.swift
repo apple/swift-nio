@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-import CNIODarwin
+    import CNIODarwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
-import CNIOLinux
+    import CNIOLinux
 #endif
 
 /// Memory for use as `cmsghdr` and associated data.
@@ -94,7 +94,7 @@ extension UnsafeControlMessageCollection: Collection {
         {
             // nil is high, as that's the end of the collection.
             switch (lhs.cmsgPointer, rhs.cmsgPointer) {
-            case let (.some(lhs), .some(rhs)):
+            case (.some(let lhs), .some(let rhs)):
                 return lhs < rhs
             case (.some, .none):
                 return true
@@ -157,9 +157,9 @@ struct ControlMessageParser {
     }
 
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    private static let ipv4TosType = IP_RECVTOS
+        private static let ipv4TosType = IP_RECVTOS
     #else
-    private static let ipv4TosType = IP_TOS // Linux
+        private static let ipv4TosType = IP_TOS // Linux
     #endif
 
     static func _readCInt(data: UnsafeRawBufferPointer) -> CInt {

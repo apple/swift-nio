@@ -43,7 +43,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
     loop: for i in 0..<count {
         let p = pending[i]
         switch p.data {
-        case let .byteBuffer(buffer):
+        case .byteBuffer(let buffer):
             // Must not write more than Int32.max in one go.
             guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
                 break loop
@@ -161,9 +161,9 @@ private struct PendingStreamWritesState {
     public mutating func append(_ chunk: PendingStreamWrite) {
         self.pendingWrites.append(chunk)
         switch chunk.data {
-        case let .byteBuffer(buffer):
+        case .byteBuffer(let buffer):
             self.bytes += numericCast(buffer.readableBytes)
-        case let .fileRegion(fileRegion):
+        case .fileRegion(let fileRegion):
             self.bytes += numericCast(fileRegion.readableBytes)
         }
     }
@@ -193,7 +193,7 @@ private struct PendingStreamWritesState {
         switch writeResult {
         case .wouldBlock(0):
             return (nil, .wouldBlock)
-        case let .processed(written), let .wouldBlock(written):
+        case .processed(let written), .wouldBlock(let written):
             var promise0: EventLoopPromise<Void>?
             assert(written >= 0, "allegedly written a negative amount of bytes: \(written)")
             var unaccountedWrites = written
@@ -382,7 +382,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
                "single write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
 
         switch self.state[0].data {
-        case let .byteBuffer(buffer):
+        case .byteBuffer(let buffer):
             return self.didWrite(itemCount: 1, result: try buffer.withUnsafeReadableBytes { try operation($0) })
         case .fileRegion:
             preconditionFailure("called \(#function) but first item to write was a FileRegion")
@@ -398,7 +398,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
                "single write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
 
         switch self.state[0].data {
-        case let .fileRegion(file):
+        case .fileRegion(let file):
             let readerIndex = file.readerIndex
             let endIndex = file.endIndex
             return try file.fileHandle.withUnsafeFileDescriptor { fd in

@@ -150,18 +150,18 @@ public typealias HTTPClientResponsePart = HTTPPart<HTTPResponseHead, ByteBuffer>
 /// The components of a HTTP response from the view of a HTTP server.
 public typealias HTTPServerResponsePart = HTTPPart<HTTPResponseHead, IOData>
 
-public extension HTTPRequestHead {
+extension HTTPRequestHead {
     /// Whether this HTTP request is a keep-alive request: that is, whether the
     /// connection should remain open after the request is complete.
-    var isKeepAlive: Bool {
+    public var isKeepAlive: Bool {
         self.headers.isKeepAlive(version: self.version)
     }
 }
 
-public extension HTTPResponseHead {
+extension HTTPResponseHead {
     /// Whether this HTTP response is a keep-alive request: that is, whether the
     /// connection should remain open after the request is complete.
-    var isKeepAlive: Bool {
+    public var isKeepAlive: Bool {
         headers.isKeepAlive(version: version)
     }
 }
@@ -230,8 +230,8 @@ public struct HTTPResponseHead: Equatable {
     }
 }
 
-private extension UInt8 {
-    var isASCII: Bool {
+extension UInt8 {
+    fileprivate var isASCII: Bool {
         self <= 127
     }
 }
@@ -479,16 +479,16 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     }
 }
 
-public extension HTTPHeaders {
+extension HTTPHeaders {
     /// The total number of headers that can be contained without allocating new storage.
-    var capacity: Int {
+    public var capacity: Int {
         self.headers.capacity
     }
 
     /// Reserves enough space to store the specified number of headers.
     ///
     /// - Parameter minimumCapacity: The requested number of headers to store.
-    mutating func reserveCapacity(_ minimumCapacity: Int) {
+    public mutating func reserveCapacity(_ minimumCapacity: Int) {
         self.headers.reserveCapacity(minimumCapacity)
     }
 }
@@ -552,8 +552,8 @@ extension String {
     }
 }
 
-private extension Substring {
-    func trimWhitespace() -> Substring {
+extension Substring {
+    fileprivate func trimWhitespace() -> Substring {
         var me = self
         while me.first?.isASCIIWhitespace == .some(true) {
             me = me.dropFirst()
@@ -778,9 +778,9 @@ public enum HTTPParserError: Error {
     case unknown
 }
 
-public extension HTTPResponseStatus {
+extension HTTPResponseStatus {
     /// The numerical status code for a given HTTP response status.
-    var code: UInt {
+    public var code: UInt {
         switch self {
         case .continue:
             return 100
@@ -908,7 +908,7 @@ public extension HTTPResponseStatus {
     }
 
     /// The string reason phrase for a given HTTP response status.
-    var reasonPhrase: String {
+    public var reasonPhrase: String {
         switch self {
         case .continue:
             return "Continue"
@@ -1265,7 +1265,7 @@ public enum HTTPResponseStatus {
 extension HTTPResponseStatus: Equatable {
     public static func == (lhs: HTTPResponseStatus, rhs: HTTPResponseStatus) -> Bool {
         switch (lhs, rhs) {
-        case let (.custom(lcode, lreason), .custom(rcode, rreason)):
+        case (.custom(let lcode, let lreason), .custom(let rcode, let rreason)):
             return lcode == rcode && lreason == rreason
         case (.custom, _), (_, .custom):
             return false
@@ -1364,7 +1364,7 @@ extension HTTPMethod: RawRepresentable {
             return "UNSUBSCRIBE"
         case .SOURCE:
             return "SOURCE"
-        case let .RAW(value):
+        case .RAW(let value):
             return value
         }
     }

@@ -156,10 +156,10 @@ extension ByteBufferView: RangeReplaceableCollection {
     }
 }
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// A view into the readable bytes of the `ByteBuffer`.
     @inlinable
-    var readableBytesView: ByteBufferView {
+    public var readableBytesView: ByteBufferView {
         ByteBufferView(self)
     }
 
@@ -170,7 +170,7 @@ public extension ByteBuffer {
     ///   - length: The length of the view (in bytes)
     /// - returns: A view into a portion of a `ByteBuffer` or `nil` if the requested bytes were not readable.
     @inlinable
-    func viewBytes(at index: Int, length: Int) -> ByteBufferView? {
+    public func viewBytes(at index: Int, length: Int) -> ByteBufferView? {
         guard length >= 0, index >= readerIndex, index <= writerIndex - length else {
             return nil
         }
@@ -182,7 +182,7 @@ public extension ByteBuffer {
     ///
     /// - parameter view: The `ByteBufferView` which you want to get a `ByteBuffer` from.
     @inlinable
-    init(_ view: ByteBufferView) {
+    public init(_ view: ByteBufferView) {
         self = view._buffer.getSlice(at: view.startIndex, length: view.count)!
     }
 }

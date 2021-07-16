@@ -84,11 +84,11 @@ class HTTPDecoderLengthTest: XCTestCase {
 
             func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
                 switch unwrapInboundIn(data) {
-                case let .head(h):
+                case .head(let h):
                     self.response = h
                 case .end:
                     self.receivedEnd = true
-                case var .body(b):
+                case .body(var b):
                     XCTAssertNil(self.body)
                     self.body = b.readBytes(length: b.readableBytes)!
                 }

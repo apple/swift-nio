@@ -17,10 +17,10 @@ import Dispatch
 @testable import NIOHTTP1
 import XCTest
 
-private extension EmbeddedChannel {
-    func readByteBufferOutputAsString() throws -> String? {
+extension EmbeddedChannel {
+    fileprivate func readByteBufferOutputAsString() throws -> String? {
         if let requestData: IOData = try readOutbound(),
-           case var .byteBuffer(requestBuffer) = requestData
+           case .byteBuffer(var requestBuffer) = requestData
         {
             return requestBuffer.readString(length: requestBuffer.readableBytes)
         }
@@ -206,8 +206,8 @@ private final class SimpleUpgradedHandler: ChannelInboundHandler {
     }
 }
 
-private extension ChannelInboundHandler where OutboundOut == HTTPClientRequestPart {
-    func fireSendRequest(context: ChannelHandlerContext) {
+extension ChannelInboundHandler where OutboundOut == HTTPClientRequestPart {
+    fileprivate func fireSendRequest(context: ChannelHandlerContext) {
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")

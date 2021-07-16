@@ -214,12 +214,12 @@ public final class ChannelPipeline: ChannelInvoker {
                              handler: handler,
                              relativeContext: self.tail!,
                              operation: self.add0(context:before:))
-        case let .before(beforeHandler):
+        case .before(let beforeHandler):
             return self.add0(name: name,
                              handler: handler,
                              relativeHandler: beforeHandler,
                              operation: self.add0(context:before:))
-        case let .after(afterHandler):
+        case .after(let afterHandler):
             return self.add0(name: name,
                              handler: handler,
                              relativeHandler: afterHandler,
@@ -373,9 +373,9 @@ public final class ChannelPipeline: ChannelInvoker {
     public func removeHandler(_ handler: RemovableChannelHandler, promise: EventLoopPromise<Void>?) {
         func removeHandler0() {
             switch self.contextSync(handler: handler) {
-            case let .success(context):
+            case .success(let context):
                 self.removeHandler(context: context, promise: promise)
-            case let .failure(error):
+            case .failure(let error):
                 promise?.fail(error)
             }
         }
@@ -397,9 +397,9 @@ public final class ChannelPipeline: ChannelInvoker {
     public func removeHandler(name: String, promise: EventLoopPromise<Void>?) {
         func removeHandler0() {
             switch self.contextSync(name: name) {
-            case let .success(context):
+            case .success(let context):
                 self.removeHandler(context: context, promise: promise)
-            case let .failure(error):
+            case .failure(let error):
                 promise?.fail(error)
             }
         }
@@ -950,7 +950,7 @@ public final class ChannelPipeline: ChannelInvoker {
     }
 }
 
-public extension ChannelPipeline {
+extension ChannelPipeline {
     /// Adds the provided channel handlers to the pipeline in the order given, taking account
     /// of the behaviour of `ChannelHandler.add(first:)`.
     ///
@@ -959,8 +959,8 @@ public extension ChannelPipeline {
     ///     - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
     ///
     /// - returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
-    func addHandlers(_ handlers: [ChannelHandler],
-                     position: ChannelPipeline.Position = .last) -> EventLoopFuture<Void>
+    public func addHandlers(_ handlers: [ChannelHandler],
+                            position: ChannelPipeline.Position = .last) -> EventLoopFuture<Void>
     {
         let future: EventLoopFuture<Void>
 
@@ -983,8 +983,8 @@ public extension ChannelPipeline {
     ///     - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
     ///
     /// - returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
-    func addHandlers(_ handlers: ChannelHandler...,
-                     position: ChannelPipeline.Position = .last) -> EventLoopFuture<Void>
+    public func addHandlers(_ handlers: ChannelHandler...,
+                            position: ChannelPipeline.Position = .last) -> EventLoopFuture<Void>
     {
         self.addHandlers(handlers, position: position)
     }
@@ -1036,11 +1036,11 @@ public extension ChannelPipeline {
 
 // MARK: - Synchronous View
 
-public extension ChannelPipeline {
+extension ChannelPipeline {
     /// A view of a `ChannelPipeline` which may be used to invoke synchronous operations.
     ///
     /// All functions **must** be called from the pipeline's event loop.
-    struct SynchronousOperations {
+    public struct SynchronousOperations {
         @usableFromInline
         internal let _pipeline: ChannelPipeline
 
@@ -1132,14 +1132,14 @@ public extension ChannelPipeline {
 
     /// Returns a view of operations which can be performed synchronously on this pipeline. All
     /// operations **must** be called on the event loop.
-    var syncOperations: SynchronousOperations {
+    public var syncOperations: SynchronousOperations {
         SynchronousOperations(pipeline: self)
     }
 }
 
-public extension ChannelPipeline {
+extension ChannelPipeline {
     /// A `Position` within the `ChannelPipeline` used to insert handlers into the `ChannelPipeline`.
-    enum Position {
+    public enum Position {
         /// The first `ChannelHandler` -- the front of the `ChannelPipeline`.
         case first
 
@@ -1194,9 +1194,9 @@ public extension ChannelPipeline {
     }
 }
 
-private extension CloseMode {
+extension CloseMode {
     /// Returns the error to fail outstanding operations writes with.
-    var error: ChannelError {
+    fileprivate var error: ChannelError {
         switch self {
         case .all:
             return .ioOnClosedChannel
@@ -1703,11 +1703,11 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 }
 
-public extension ChannelHandlerContext {
+extension ChannelHandlerContext {
     /// A `RemovalToken` is handed to a `RemovableChannelHandler` when its `removeHandler` function is invoked. A
     /// `RemovableChannelHandler` is then required to remove itself from the `ChannelPipeline`. The removal process
     /// is finalized by handing the `RemovalToken` to the `ChannelHandlerContext.leavePipeline` function.
-    struct RemovalToken {
+    public struct RemovalToken {
         internal let promise: EventLoopPromise<Void>?
     }
 
@@ -1718,7 +1718,7 @@ public extension ChannelHandlerContext {
     ///
     /// - parameters:
     ///    - removalToken: The removal token received from `RemovableChannelHandler.removeHandler`
-    func leavePipeline(removalToken: RemovalToken) {
+    public func leavePipeline(removalToken: RemovalToken) {
         self.eventLoop.preconditionInEventLoop()
         self.pipeline.removeHandlerFromPipeline(context: self, promise: removalToken.promise)
     }

@@ -42,13 +42,13 @@ private final class EchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 var bootstrap = DatagramBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR
-    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
-    // Set the handlers that are applied to the bound channel
-    .channelInitializer { channel in
-        // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
-        channel.pipeline.addHandler(EchoHandler())
-    }
+        // Set the handlers that are applied to the bound channel
+        .channelInitializer { channel in
+            // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
+            channel.pipeline.addHandler(EchoHandler())
+        }
 
 defer {
     try! group.syncShutdownGracefully()
@@ -74,13 +74,13 @@ enum BindTo {
 
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case let (.some(h), _, .some(p)):
+case (.some(let h), _, .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)
-case let (.some(portString), .none, _):
+case (.some(let portString), .none, _):
     /* couldn't parse as number, expecting unix domain socket path */
     bindTarget = .unixDomainSocket(path: portString)
-case let (_, .some(p), _):
+case (_, .some(let p), _):
     /* only one argument --> port */
     bindTarget = .ip(host: defaultHost, port: p)
 default:
@@ -89,9 +89,9 @@ default:
 
 let channel = try { () -> Channel in
     switch bindTarget {
-    case let .ip(host, port):
+    case .ip(let host, let port):
         return try bootstrap.bind(host: host, port: port).wait()
-    case let .unixDomainSocket(path):
+    case .unixDomainSocket(let path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
 }()

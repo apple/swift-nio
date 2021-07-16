@@ -59,7 +59,7 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
 
         // We're not interested in request bodies here: we're just serving up GET responses
         // to get the client to initiate a websocket request.
-        guard case let .head(head) = reqPart else {
+        guard case .head(let head) = reqPart else {
             return
         }
 
@@ -207,25 +207,25 @@ let upgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { (channel: Channel, _:
 
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .serverChannelOption(ChannelOptions.backlog, value: 256)
-    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .serverChannelOption(ChannelOptions.backlog, value: 256)
+        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
-    // Set the handlers that are applied to the accepted Channels
-    .childChannelInitializer { channel in
-        let httpHandler = HTTPHandler()
-        let config: NIOHTTPServerUpgradeConfiguration = (
-            upgraders: [upgrader],
-            completionHandler: { _ in
-                channel.pipeline.removeHandler(httpHandler, promise: nil)
+        // Set the handlers that are applied to the accepted Channels
+        .childChannelInitializer { channel in
+            let httpHandler = HTTPHandler()
+            let config: NIOHTTPServerUpgradeConfiguration = (
+                upgraders: [upgrader],
+                completionHandler: { _ in
+                    channel.pipeline.removeHandler(httpHandler, promise: nil)
+                }
+            )
+            return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).flatMap {
+                channel.pipeline.addHandler(httpHandler)
             }
-        )
-        return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).flatMap {
-            channel.pipeline.addHandler(httpHandler)
         }
-    }
 
-    // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        // Enable SO_REUSEADDR for the accepted Channels
+        .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
 defer {
     try! group.syncShutdownGracefully()
@@ -246,15 +246,15 @@ enum BindTo {
 
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case let (.some(h), _, .some(p)):
+case (.some(let h), _, .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)
 
-case let (portString?, .none, _):
+case (let portString?, .none, _):
     // Couldn't parse as number, expecting unix domain socket path.
     bindTarget = .unixDomainSocket(path: portString)
 
-case let (_, p?, _):
+case (_, let p?, _):
     // Only one argument --> port.
     bindTarget = .ip(host: defaultHost, port: p)
 
@@ -264,9 +264,9 @@ default:
 
 let channel = try { () -> Channel in
     switch bindTarget {
-    case let .ip(host, port):
+    case .ip(let host, let port):
         return try bootstrap.bind(host: host, port: port).wait()
-    case let .unixDomainSocket(path):
+    case .unixDomainSocket(let path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
 }()

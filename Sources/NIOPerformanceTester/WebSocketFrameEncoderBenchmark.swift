@@ -102,8 +102,8 @@ extension WebSocketFrameEncoderBenchmark: Benchmark {
     }
 }
 
-private extension ByteBufferAllocator {
-    func buffer(size: Int, dataStrategy: WebSocketFrameEncoderBenchmark.DataStrategy) -> ByteBuffer {
+extension ByteBufferAllocator {
+    fileprivate func buffer(size: Int, dataStrategy: WebSocketFrameEncoderBenchmark.DataStrategy) -> ByteBuffer {
         var data: ByteBuffer
 
         switch dataStrategy {

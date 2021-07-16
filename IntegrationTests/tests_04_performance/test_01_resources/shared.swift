@@ -93,7 +93,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        if case let .head(req) = unwrapInboundIn(data), req.uri == "/allocation-test-1" {
+        if case .head(let req) = unwrapInboundIn(data), req.uri == "/allocation-test-1" {
             context.write(self.wrapOutboundOut(.head(self.responseHead)), promise: nil)
             context.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody(allocator: context.channel.allocator)))), promise: nil)
             context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
@@ -133,11 +133,11 @@ func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> I
 
 func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
     #if os(Linux)
-    return try execute()
+        return try execute()
     #else
-    return try autoreleasepool {
-        try execute()
-    }
+        return try autoreleasepool {
+            try execute()
+        }
     #endif
 }
 
@@ -217,10 +217,10 @@ enum UDPShared {
     static func doUDPRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
         let serverChannel = try DatagramBootstrap(group: group)
             // Set the handlers that are applied to the bound channel
-            .channelInitializer { channel in
-                channel.pipeline.addHandler(EchoHandler())
-            }
-            .bind(to: localhostPickPort).wait()
+                .channelInitializer { channel in
+                    channel.pipeline.addHandler(EchoHandler())
+                }
+                .bind(to: localhostPickPort).wait()
 
         defer {
             try! serverChannel.close().wait()

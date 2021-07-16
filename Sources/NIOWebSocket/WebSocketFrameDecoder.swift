@@ -39,12 +39,12 @@ extension WebSocketErrorCode {
     }
 }
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// Applies the WebSocket unmasking operation.
     ///
     /// - parameters:
     ///     - maskingKey: The masking key.
-    mutating func webSocketUnmask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
+    public mutating func webSocketUnmask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
         /// Shhhh: secretly unmasking and masking are the same operation!
         self.webSocketMask(maskingKey, indexOffset: indexOffset)
     }
@@ -57,7 +57,7 @@ public extension ByteBuffer {
     ///         This is used when masking multiple "contiguous" byte buffers, to ensure that
     ///         the masking key is applied uniformly to the collection rather than from the
     ///         start each time.
-    mutating func webSocketMask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
+    public mutating func webSocketMask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
         withUnsafeMutableReadableBytes {
             for (index, byte) in $0.enumerated() {
                 $0[index] = byte ^ maskingKey[(index + indexOffset) % 4]
@@ -114,7 +114,7 @@ struct WSParser {
             self.state = .firstByteReceived(firstByte: firstByte)
             return .continueParsing
 
-        case let .firstByteReceived(firstByte):
+        case .firstByteReceived(let firstByte):
             // Now we're looking for the length. We begin by finding the length byte to see if we
             // need any more data.
             guard let lengthByte = buffer.readInteger(as: UInt8.self) else {
@@ -137,7 +137,7 @@ struct WSParser {
             }
             return .continueParsing
 
-        case let .waitingForLengthWord(firstByte, masked):
+        case .waitingForLengthWord(let firstByte, let masked):
             // We've got a one-word length here.
             guard let lengthWord = buffer.readInteger(as: UInt16.self) else {
                 return .insufficientData
@@ -150,7 +150,7 @@ struct WSParser {
             }
             return .continueParsing
 
-        case let .waitingForLengthQWord(firstByte, masked):
+        case .waitingForLengthQWord(let firstByte, let masked):
             // We've got a qword of length here.
             guard let lengthQWord = buffer.readInteger(as: UInt64.self) else {
                 return .insufficientData
@@ -163,7 +163,7 @@ struct WSParser {
             }
             return .continueParsing
 
-        case let .waitingForMask(firstByte, length):
+        case .waitingForMask(let firstByte, let length):
             // We're waiting for the masking key.
             guard let maskingKey = buffer.readInteger(as: UInt32.self) else {
                 return .insufficientData
@@ -172,7 +172,7 @@ struct WSParser {
             self.state = .waitingForData(firstByte: firstByte, length: length, maskingKey: WebSocketMaskingKey(networkRepresentation: maskingKey))
             return .continueParsing
 
-        case let .waitingForData(firstByte, length, maskingKey):
+        case .waitingForData(let firstByte, let length, let maskingKey):
             guard let data = buffer.readSlice(length: length) else {
                 return .insufficientData
             }
@@ -187,7 +187,7 @@ struct WSParser {
     /// receiving is valid.
     func validateState(maxFrameSize: Int) throws {
         switch self.state {
-        case let .waitingForMask(firstByte, length), let .waitingForData(firstByte, length, _):
+        case .waitingForMask(let firstByte, let length), .waitingForData(let firstByte, let length, _):
             if length > maxFrameSize {
                 throw NIOWebSocketError.invalidFrameLength
             }
@@ -257,7 +257,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         // guarantee to call us with zero-length bytes.
         while true {
             switch self.parser.parseStep(&buffer) {
-            case let .result(frame):
+            case .result(let frame):
                 context.fireChannelRead(wrapInboundOut(frame))
                 return .continue
             case .continueParsing:

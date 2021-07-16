@@ -52,8 +52,8 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
 
 // MARK: NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder
 
-public extension NIOSingleStepByteToMessageDecoder {
-    mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+extension NIOSingleStepByteToMessageDecoder {
+    public mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         if let message = try decode(buffer: &buffer) {
             context.fireChannelRead(wrapInboundOut(message))
             return .continue
@@ -62,7 +62,7 @@ public extension NIOSingleStepByteToMessageDecoder {
         }
     }
 
-    mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+    public mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
         if let message = try decodeLast(buffer: &buffer, seenEOF: seenEOF) {
             context.fireChannelRead(wrapInboundOut(message))
             return .continue
@@ -273,13 +273,13 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
 
 // MARK: NIOSingleStepByteToMessageProcessor Public API
 
-public extension NIOSingleStepByteToMessageProcessor {
+extension NIOSingleStepByteToMessageProcessor {
     /// Feed data into the `NIOSingleStepByteToMessageProcessor`
     ///
     /// - parameters:
     ///     - buffer: The `ByteBuffer` containing the next data in the stream
     ///     - messageReceiver: A closure called for each message produced by the `Decoder`
-    func process(buffer: ByteBuffer, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
+    public func process(buffer: ByteBuffer, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
         self.append(buffer)
         try self.decodeLoop(decodeMode: .normal, messageReceiver)
     }
@@ -290,7 +290,7 @@ public extension NIOSingleStepByteToMessageProcessor {
     /// - parameters:
     ///     - seenEOF: Whether an EOF was seen on the stream.
     ///     - messageReceiver: A closure called for each message produced by the `Decoder`.
-    func finishProcessing(seenEOF: Bool, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
+    public func finishProcessing(seenEOF: Bool, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
         try self.decodeLoop(decodeMode: .last, seenEOF: seenEOF, messageReceiver)
     }
 }

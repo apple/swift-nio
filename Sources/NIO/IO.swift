@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
-import typealias WinSDK.DWORD
+    import typealias WinSDK.DWORD
 #endif
 
 /// An `Error` for an IO operation.
@@ -34,8 +34,8 @@ public struct IOError: Swift.Error {
 
     private enum Error {
         #if os(Windows)
-        case windows(DWORD)
-        case winsock(CInt)
+            case windows(DWORD)
+            case winsock(CInt)
         #endif
         case errno(CInt)
     }
@@ -45,25 +45,25 @@ public struct IOError: Swift.Error {
     /// The `errno` that was set for the operation.
     public var errnoCode: CInt {
         switch self.error {
-        case let .errno(code):
+        case .errno(let code):
             return code
         #if os(Windows)
-        default:
-            fatalError("IOError domain is not `errno`")
+            default:
+                fatalError("IOError domain is not `errno`")
         #endif
         }
     }
 
     #if os(Windows)
-    public init(windows code: DWORD, reason: String) {
-        self.error = .windows(code)
-        self.failureDescription = reason
-    }
+        public init(windows code: DWORD, reason: String) {
+            self.error = .windows(code)
+            self.failureDescription = reason
+        }
 
-    public init(winsock code: CInt, reason: String) {
-        self.error = .winsock(code)
-        self.failureDescription = reason
-    }
+        public init(winsock code: CInt, reason: String) {
+            self.error = .winsock(code)
+            self.failureDescription = reason
+        }
     #endif
 
     /// Creates a new `IOError``
@@ -102,10 +102,10 @@ private func reasonForError(errnoCode: CInt, reason: String) -> String {
     }
 }
 
-internal extension IOResult where T: FixedWidthInteger {
-    var result: T {
+extension IOResult where T: FixedWidthInteger {
+    internal var result: T {
         switch self {
-        case let .processed(value):
+        case .processed(let value):
             return value
         case .wouldBlock:
             fatalError("cannot unwrap IOResult")

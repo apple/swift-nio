@@ -82,9 +82,9 @@ struct SelectorEventSet: OptionSet, Equatable {
 
 internal let isEarlyEOFDeliveryWorkingOnThisOS: Bool = {
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    return false // rdar://53656794 , once fixed we need to do an OS version check here.
+        return false // rdar://53656794 , once fixed we need to do an OS version check here.
     #else
-    return true
+        return true
     #endif
 }()
 
@@ -131,23 +131,23 @@ internal class Selector<R: Registration> {
 
     // Here we add the stored properties that are used by the specific backends
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    typealias EventType = kevent
+        typealias EventType = kevent
     #elseif os(Linux) || os(Android)
-    #if !SWIFTNIO_USE_IO_URING
-    typealias EventType = Epoll.epoll_event
-    var earliestTimer: NIODeadline = .distantFuture
-    var eventFD: CInt = -1 // -1 == we're closed
-    var timerFD: CInt = -1 // -1 == we're closed
+        #if !SWIFTNIO_USE_IO_URING
+            typealias EventType = Epoll.epoll_event
+            var earliestTimer: NIODeadline = .distantFuture
+            var eventFD: CInt = -1 // -1 == we're closed
+            var timerFD: CInt = -1 // -1 == we're closed
+        #else
+            typealias EventType = URingEvent
+            var eventFD: CInt = -1 // -1 == we're closed
+            var ring = URing()
+            let multishot = URing.io_uring_use_multishot_poll // if true, we run with streaming multishot polls
+            let deferReregistrations = true // if true we only flush once at reentring whenReady() - saves syscalls
+            var deferredReregistrationsPending = false // true if flush needed when reentring whenReady()
+        #endif
     #else
-    typealias EventType = URingEvent
-    var eventFD: CInt = -1 // -1 == we're closed
-    var ring = URing()
-    let multishot = URing.io_uring_use_multishot_poll // if true, we run with streaming multishot polls
-    let deferReregistrations = true // if true we only flush once at reentring whenReady() - saves syscalls
-    var deferredReregistrationsPending = false // true if flush needed when reentring whenReady()
-    #endif
-    #else
-    #error("Unsupported platform, no suitable selector backend (we need kqueue or epoll support)")
+        #error("Unsupported platform, no suitable selector backend (we need kqueue or epoll support)")
     #endif
 
     var events: UnsafeMutablePointer<EventType>
@@ -354,13 +354,13 @@ extension Selector where R == NIORegistration {
             }
 
             switch reg.channel {
-            case let .serverSocketChannel(chan):
+            case .serverSocketChannel(let chan):
                 return closeChannel(chan)
-            case let .socketChannel(chan):
+            case .socketChannel(let chan):
                 return closeChannel(chan)
-            case let .datagramChannel(chan):
+            case .datagramChannel(let chan):
                 return closeChannel(chan)
-            case let .pipeChannel(chan, _):
+            case .pipeChannel(let chan, _):
                 return closeChannel(chan)
             }
         }.map { future in

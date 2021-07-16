@@ -131,10 +131,10 @@ struct DatagramVectorReadManager {
         }
 
         switch result {
-        case let .wouldBlock(messagesProcessed):
+        case .wouldBlock(let messagesProcessed):
             assert(messagesProcessed == 0)
             return .none
-        case let .processed(messagesProcessed):
+        case .processed(let messagesProcessed):
             buffer.moveWriterIndex(to: messageSize * messagesProcessed)
             return self.buildMessages(messageCount: messagesProcessed,
                                       sliceSize: messageSize,
@@ -235,11 +235,11 @@ extension Optional where Wrapped == DatagramVectorReadManager {
     }
 }
 
-private extension UnsafeMutableBufferPointer {
+extension UnsafeMutableBufferPointer {
     /// Safely creates an UnsafeMutableBufferPointer that can be used by the rest of the code. It ensures that
     /// the memory has been bound, allocated, and initialized, such that other Swift code can use it safely without
     /// worrying.
-    static func allocateAndInitialize(repeating element: Element, count: Int) -> UnsafeMutableBufferPointer<Element> {
+    fileprivate static func allocateAndInitialize(repeating element: Element, count: Int) -> UnsafeMutableBufferPointer<Element> {
         let newPointer = UnsafeMutableBufferPointer.allocate(capacity: count)
         newPointer.initialize(repeating: element)
         return newPointer
@@ -249,7 +249,7 @@ private extension UnsafeMutableBufferPointer {
     /// the underlying memory. This ensures that if the pointer contains non-trivial Swift
     /// types that no accidental memory leaks will occur, as can happen if UnsafeMutableBufferPointer.deallocate()
     /// is used.
-    func deinitializeAndDeallocate() {
+    fileprivate func deinitializeAndDeallocate() {
         guard let basePointer = baseAddress else {
             // If there's no base address, who cares?
             return

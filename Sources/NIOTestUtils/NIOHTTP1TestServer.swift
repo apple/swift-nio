@@ -69,7 +69,7 @@ private final class WebServerHandler: ChannelDuplexHandler {
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch unwrapOutboundIn(data) {
-        case var .head(head):
+        case .head(var head):
             head.headers.replaceOrAdd(name: "connection", value: "close")
             head.headers.remove(name: "keep-alive")
             context.write(wrapOutboundOut(.head(head)), promise: promise)
@@ -93,7 +93,7 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
         switch unwrapInboundIn(data) {
         case .head:
             context.fireChannelRead(data)
-        case var .body(buffer):
+        case .body(var buffer):
             self.receivedSoFar.setOrWriteBuffer(&buffer)
         case .end:
             if let receivedSoFar = self.receivedSoFar {
@@ -184,7 +184,7 @@ public final class NIOHTTP1TestServer {
 
         let channel: Channel
         switch self.state {
-        case var .channelsAvailable(channels):
+        case .channelsAvailable(var channels):
             channel = channels.removeFirst()
             if channels.isEmpty {
                 self.state = .idle
@@ -226,10 +226,10 @@ public final class NIOHTTP1TestServer {
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { channel in
                 switch self.state {
-                case var .channelsAvailable(channels):
+                case .channelsAvailable(var channels):
                     channels.append(channel)
                     self.state = .channelsAvailable(channels)
-                case let .waitingForChannel(promise):
+                case .waitingForChannel(let promise):
                     self.state = .channelsAvailable([channel])
                     promise.succeed(())
                 case .idle:
@@ -250,19 +250,19 @@ public final class NIOHTTP1TestServer {
 
 // MARK: - Public API for test driver
 
-public extension NIOHTTP1TestServer {
+extension NIOHTTP1TestServer {
     internal struct NonEmptyInboundBufferOnStop: Error {}
 
-    func stop() throws {
+    public func stop() throws {
         assert(!self.eventLoop.inEventLoop)
         try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             switch self.state {
-            case let .channelsAvailable(channels):
+            case .channelsAvailable(let channels):
                 self.state = .stopped
                 channels.forEach {
                     $0.close(promise: nil)
                 }
-            case let .waitingForChannel(promise):
+            case .waitingForChannel(let promise):
                 self.state = .stopped
                 promise.fail(ChannelError.ioOnClosedChannel)
             case .idle:
@@ -281,14 +281,14 @@ public extension NIOHTTP1TestServer {
         }.wait()
     }
 
-    func readInbound(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPServerRequestPart {
+    public func readInbound(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPServerRequestPart {
         self.eventLoop.assertNotInEventLoop()
         return try self.eventLoop.submit { () -> BlockingQueue<HTTPServerRequestPart> in
             self.inboundBuffer
         }.wait().popFirst(deadline: deadline)
     }
 
-    func writeOutbound(_ data: HTTPServerResponsePart) throws {
+    public func writeOutbound(_ data: HTTPServerResponsePart) throws {
         self.eventLoop.assertNotInEventLoop()
         try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             if let channel = self.currentClientChannel {
@@ -299,7 +299,7 @@ public extension NIOHTTP1TestServer {
         }.wait()
     }
 
-    var serverPort: Int {
+    public var serverPort: Int {
         self.eventLoop.assertNotInEventLoop()
         return self.serverChannel!.localAddress!.port!
     }
@@ -307,19 +307,19 @@ public extension NIOHTTP1TestServer {
 
 // MARK: - API for HTTP server
 
-private extension NIOHTTP1TestServer {
-    func pushChannelRead(_ state: HTTPServerRequestPart) {
+extension NIOHTTP1TestServer {
+    fileprivate func pushChannelRead(_ state: HTTPServerRequestPart) {
         self.eventLoop.assertInEventLoop()
         self.inboundBuffer.append(.success(state))
     }
 
-    func pushError(_ error: Error) {
+    fileprivate func pushError(_ error: Error) {
         self.eventLoop.assertInEventLoop()
         self.inboundBuffer.append(.failure(error))
     }
 }
 
-public extension NIOHTTP1TestServer {
+extension NIOHTTP1TestServer {
     /// Waits for a message part to be received and checks that it was a `.head` before returning
     /// the `HTTPRequestHead` it contained.
     ///
@@ -327,10 +327,10 @@ public extension NIOHTTP1TestServer {
     ///   - deadline: The deadline by which a part must have been received.
     /// - Throws: If the part was not a `.head` or nothing was read before the deadline.
     /// - Returns: The `HTTPRequestHead` from the `.head`.
-    func receiveHead(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPRequestHead {
+    public func receiveHead(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPRequestHead {
         let part = try readInbound(deadline: deadline)
         switch part {
-        case let .head(head):
+        case .head(let head):
             return head
         default:
             throw NIOHTTP1TestServerError(reason: "Expected .head but got '\(part)'")
@@ -344,8 +344,8 @@ public extension NIOHTTP1TestServer {
     ///   - deadline: The deadline by which a part must have been received.
     ///   - verify: A closure which can be used to verify the contents of the `HTTPRequestHead`.
     /// - Throws: If the part was not a `.head` or nothing was read before the deadline.
-    func receiveHeadAndVerify(deadline: NIODeadline = .now() + .seconds(10),
-                              _ verify: (HTTPRequestHead) throws -> Void = { _ in }) throws
+    public func receiveHeadAndVerify(deadline: NIODeadline = .now() + .seconds(10),
+                                     _ verify: (HTTPRequestHead) throws -> Void = { _ in }) throws
     {
         try verify(self.receiveHead(deadline: deadline))
     }
@@ -357,10 +357,10 @@ public extension NIOHTTP1TestServer {
     ///   - deadline: The deadline by which a part must have been received.
     /// - Throws: If the part was not a `.body` or nothing was read before the deadline.
     /// - Returns: The `ByteBuffer` from the `.body`.
-    func receiveBody(deadline: NIODeadline = .now() + .seconds(10)) throws -> ByteBuffer {
+    public func receiveBody(deadline: NIODeadline = .now() + .seconds(10)) throws -> ByteBuffer {
         let part = try readInbound(deadline: deadline)
         switch part {
-        case let .body(buffer):
+        case .body(let buffer):
             return buffer
         default:
             throw NIOHTTP1TestServerError(reason: "Expected .body but got '\(part)'")
@@ -374,8 +374,8 @@ public extension NIOHTTP1TestServer {
     ///   - deadline: The deadline by which a part must have been received.
     ///   - verify: A closure which can be used to verify the contents of the `ByteBuffer`.
     /// - Throws: If the part was not a `.body` or nothing was read before the deadline.
-    func receiveBodyAndVerify(deadline: NIODeadline = .now() + .seconds(10),
-                              _ verify: (ByteBuffer) throws -> Void = { _ in }) throws
+    public func receiveBodyAndVerify(deadline: NIODeadline = .now() + .seconds(10),
+                                     _ verify: (ByteBuffer) throws -> Void = { _ in }) throws
     {
         try verify(self.receiveBody(deadline: deadline))
     }
@@ -387,10 +387,10 @@ public extension NIOHTTP1TestServer {
     ///   - deadline: The deadline by which a part must have been received.
     /// - Throws: If the part was not a `.end` or nothing was read before the deadline.
     /// - Returns: The `HTTPHeaders?` from the `.end`.
-    func receiveEnd(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPHeaders? {
+    public func receiveEnd(deadline: NIODeadline = .now() + .seconds(10)) throws -> HTTPHeaders? {
         let part = try readInbound(deadline: deadline)
         switch part {
-        case let .end(trailers):
+        case .end(let trailers):
             return trailers
         default:
             throw NIOHTTP1TestServerError(reason: "Expected .end but got '\(part)'")
@@ -404,8 +404,8 @@ public extension NIOHTTP1TestServer {
     ///   - deadline: The deadline by which a part must have been received.
     ///   - verify: A closure which can be used to verify the contents of the `HTTPHeaders?`.
     /// - Throws: If the part was not a `.end` or nothing was read before the deadline.
-    func receiveEndAndVerify(deadline _: NIODeadline = .now() + .seconds(10),
-                             _ verify: (HTTPHeaders?) throws -> Void = { _ in }) throws
+    public func receiveEndAndVerify(deadline _: NIODeadline = .now() + .seconds(10),
+                                    _ verify: (HTTPHeaders?) throws -> Void = { _ in }) throws
     {
         try verify(self.receiveEnd())
     }

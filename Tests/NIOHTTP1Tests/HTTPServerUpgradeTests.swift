@@ -624,7 +624,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         // event loop to guarantee thread safety.
         XCTAssertNoThrow(try connectedServer.eventLoop.scheduleTask(deadline: .now()) {
             XCTAssertEqual(eventSaver.events.count, 1)
-            if case let .upgradeComplete(proto, req) = eventSaver.events[0] {
+            if case .upgradeComplete(let proto, let req) = eventSaver.events[0] {
                 XCTAssertEqual(proto, "myproto")
                 XCTAssertEqual(req.method, .OPTIONS)
                 XCTAssertEqual(req.uri, "*")
@@ -1030,7 +1030,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
 
         switch try channel.readInbound(as: HTTPServerRequestPart.self) {
-        case let .some(.head(h)):
+        case .some(.head(let h)):
             XCTAssertEqual(h.method, .OPTIONS)
         case let t:
             XCTFail("Expected .head, got \(String(describing: t))")
@@ -1045,7 +1045,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
 
         switch try channel.readInbound(as: HTTPServerRequestPart.self) {
-        case let .some(.head(h)):
+        case .some(.head(let h)):
             XCTAssertEqual(h.method, .GET)
         case let t:
             XCTFail("Expected .head, got \(String(describing: t))")

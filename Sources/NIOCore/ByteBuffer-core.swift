@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
-import ucrt
+    import ucrt
 #elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-import Darwin
+    import Darwin
 #else
-import Glibc
+    import Glibc
 #endif
 
 let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
@@ -794,18 +794,18 @@ extension ByteBuffer: CustomStringConvertible {
 }
 
 /* change types to the user visible `Int` */
-public extension ByteBuffer {
+extension ByteBuffer {
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`. Does not move the writer index.
     @discardableResult
     @inlinable
-    mutating func setBytes<Bytes: Sequence>(_ bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
+    public mutating func setBytes<Bytes: Sequence>(_ bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
         Int(self._setBytes(bytes, at: _toIndex(index)))
     }
 
     /// Copy `bytes` into the `ByteBuffer` at `index`. Does not move the writer index.
     @discardableResult
     @inlinable
-    mutating func setBytes(_ bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
+    public mutating func setBytes(_ bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
         Int(self._setBytes(bytes, at: _toIndex(index)))
     }
 
@@ -816,7 +816,7 @@ public extension ByteBuffer {
     ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
     /// - parameters:
     ///   - offset: The number of bytes to move the reader index forward by.
-    mutating func moveReaderIndex(forwardBy offset: Int) {
+    public mutating func moveReaderIndex(forwardBy offset: Int) {
         let newIndex = self._readerIndex + _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= self.writerIndex, "new readerIndex: \(newIndex), expected: range(0, \(self.writerIndex))")
         self._moveReaderIndex(to: newIndex)
@@ -829,7 +829,7 @@ public extension ByteBuffer {
     ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
     /// - parameters:
     ///   - offset: The offset in bytes to set the reader index to.
-    mutating func moveReaderIndex(to offset: Int) {
+    public mutating func moveReaderIndex(to offset: Int) {
         let newIndex = _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= self.writerIndex, "new readerIndex: \(newIndex), expected: range(0, \(self.writerIndex))")
         self._moveReaderIndex(to: newIndex)
@@ -842,7 +842,7 @@ public extension ByteBuffer {
     ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
     /// - parameters:
     ///   - offset: The number of bytes to move the writer index forward by.
-    mutating func moveWriterIndex(forwardBy offset: Int) {
+    public mutating func moveWriterIndex(forwardBy offset: Int) {
         let newIndex = self._writerIndex + _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= _toCapacity(self._slice.count), "new writerIndex: \(newIndex), expected: range(0, \(_toCapacity(self._slice.count)))")
         self._moveWriterIndex(to: newIndex)
@@ -855,14 +855,14 @@ public extension ByteBuffer {
     ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
     /// - parameters:
     ///   - offset: The offset in bytes to set the reader index to.
-    mutating func moveWriterIndex(to offset: Int) {
+    public mutating func moveWriterIndex(to offset: Int) {
         let newIndex = _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= _toCapacity(self._slice.count), "new writerIndex: \(newIndex), expected: range(0, \(_toCapacity(self._slice.count)))")
         self._moveWriterIndex(to: newIndex)
     }
 }
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// Copies `length` `bytes` starting at the `fromIndex` to `toIndex`. Does not move the writer index.
     ///
     /// - Note: Overlapping ranges, for example `copyBytes(at: 1, to: 2, length: 5)` are allowed.
@@ -873,7 +873,7 @@ public extension ByteBuffer {
     /// - Parameter length: The number of bytes which should be copied.
     @discardableResult
     @inlinable
-    mutating func copyBytes(at fromIndex: Int, to toIndex: Int, length: Int) throws -> Int {
+    public mutating func copyBytes(at fromIndex: Int, to toIndex: Int, length: Int) throws -> Int {
         switch length {
         case ..<0:
             throw CopyBytesError.negativeLength
@@ -901,7 +901,7 @@ public extension ByteBuffer {
     }
 
     /// Errors thrown when calling `copyBytes`.
-    struct CopyBytesError: Error {
+    public struct CopyBytesError: Error {
         private enum BaseError: Hashable {
             case negativeLength
             case unreadableSourceBytes
@@ -957,7 +957,7 @@ extension ByteBuffer: Hashable {
     }
 }
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// Modify this `ByteBuffer` if this `ByteBuffer` is known to uniquely own its storage.
     ///
     /// In some cases it is possible that code is holding a `ByteBuffer` that has been shared with other
@@ -972,7 +972,7 @@ public extension ByteBuffer {
     ///     - body: The modification operation to execute, with this `ByteBuffer` passed `inout` as an argument.
     /// - returns: The return value of `body`.
     @inlinable
-    mutating func modifyIfUniquelyOwned<T>(_ body: (inout ByteBuffer) throws -> T) rethrows -> T? {
+    public mutating func modifyIfUniquelyOwned<T>(_ body: (inout ByteBuffer) throws -> T) rethrows -> T? {
         if isKnownUniquelyReferenced(&self._storage) {
             return try body(&self)
         } else {

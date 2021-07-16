@@ -14,12 +14,12 @@
 
 import NIO
 
-private extension UInt8 {
-    func isAnyBitSetInMask(_ mask: UInt8) -> Bool {
+extension UInt8 {
+    fileprivate func isAnyBitSetInMask(_ mask: UInt8) -> Bool {
         self & mask != 0
     }
 
-    mutating func changingBitsInMask(_ mask: UInt8, to: Bool) {
+    fileprivate mutating func changingBitsInMask(_ mask: UInt8, to: Bool) {
         if to {
             self |= mask
         } else {
@@ -72,13 +72,13 @@ extension WebSocketMaskingKey: ExpressibleByArrayLiteral {
     }
 }
 
-public extension WebSocketMaskingKey {
+extension WebSocketMaskingKey {
     /// Returns a random masking key, using the given generator as a source for randomness.
     /// - Parameter generator: The random number generator to use when creating the
     ///     new random masking key.
     /// - Returns: A random masking key
     @inlinable
-    static func random<Generator>(
+    public static func random<Generator>(
         using generator: inout Generator
     ) -> WebSocketMaskingKey where Generator: RandomNumberGenerator {
         WebSocketMaskingKey(networkRepresentation: .random(in: UInt32.min...UInt32.max, using: &generator))
@@ -87,7 +87,7 @@ public extension WebSocketMaskingKey {
     /// Returns a random masking key, using the `SystemRandomNumberGenerator` as a source for randomness.
     /// - Returns: A random masking key
     @inlinable
-    static func random() -> WebSocketMaskingKey {
+    public static func random() -> WebSocketMaskingKey {
         var generator = SystemRandomNumberGenerator()
         return .random(using: &generator)
     }
@@ -322,8 +322,8 @@ public struct WebSocketFrame {
 
 extension WebSocketFrame: Equatable {}
 
-private extension WebSocketFrame {
-    class _Storage {
+extension WebSocketFrame {
+    fileprivate class _Storage {
         var data: ByteBuffer
         var extensionData: ByteBuffer?
 

@@ -13,12 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
-import let WinSDK.ECONNABORTED
-import let WinSDK.ECONNREFUSED
-import let WinSDK.EMFILE
-import let WinSDK.ENFILE
-import let WinSDK.ENOBUFS
-import let WinSDK.ENOMEM
+    import let WinSDK.ECONNABORTED
+    import let WinSDK.ECONNREFUSED
+    import let WinSDK.EMFILE
+    import let WinSDK.ENFILE
+    import let WinSDK.ENOBUFS
+    import let WinSDK.ENOMEM
 #endif
 
 extension ByteBuffer {
@@ -28,9 +28,9 @@ extension ByteBuffer {
             let localWriteResult = try body(ptr)
             singleResult = localWriteResult
             switch localWriteResult {
-            case let .processed(written):
+            case .processed(let written):
                 return written
-            case let .wouldBlock(written):
+            case .wouldBlock(let written):
                 return written
             }
         }
@@ -428,9 +428,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         case _ as ChannelOptions.Types.DatagramVectorReadMessageCountOption:
             // We only support vector reads on these OSes. Let us know if there's another OS with this syscall!
             #if os(Linux) || os(FreeBSD) || os(Android)
-            self.vectorReadManager.updateMessageCount(value as! Int)
+                self.vectorReadManager.updateMessageCount(value as! Int)
             #else
-            break
+                break
             #endif
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
             let valueAsInt: CInt = value as! Bool ? 1 : 0
@@ -567,7 +567,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                         controlBytes: &controlBytes)
             }
             switch result {
-            case let .processed(bytesRead):
+            case .processed(let bytesRead):
                 assert(bytesRead > 0)
                 assert(self.isOpen)
                 let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
@@ -591,7 +591,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     buffer = recvAllocator.buffer(allocator: allocator)
                 }
                 readResult = .some
-            case let .wouldBlock(bytesRead):
+            case .wouldBlock(let bytesRead):
                 assert(bytesRead == 0)
                 return readResult
             }
@@ -601,51 +601,51 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     private func vectorReadFromSocket() throws -> ReadResult {
         #if os(Linux) || os(FreeBSD) || os(Android)
-        var buffer = recvAllocator.buffer(allocator: allocator)
-        var readResult = ReadResult.none
+            var buffer = recvAllocator.buffer(allocator: allocator)
+            var readResult = ReadResult.none
 
-        readLoop: for i in 1...maxMessagesPerRead {
-            guard self.isOpen else {
-                throw ChannelError.eof
-            }
-            guard let vectorReadManager = self.vectorReadManager else {
-                // The vector read manager went away. This happens if users unset the vector read manager
-                // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
-                break readLoop
-            }
-            buffer.clear()
-
-            // This force-unwrap is safe, as we checked whether this is nil in the caller.
-            let result = try vectorReadManager.readFromSocket(
-                socket: socket,
-                buffer: &buffer,
-                parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
-            )
-            switch result {
-            case let .some(results, totalRead):
-                assert(self.isOpen)
-                assert(isActive)
-
-                let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
-                readPending = false
-
-                var messageIterator = results.makeIterator()
-                while isActive, let message = messageIterator.next() {
-                    pipeline.fireChannelRead(NIOAny(message))
+            readLoop: for i in 1...maxMessagesPerRead {
+                guard self.isOpen else {
+                    throw ChannelError.eof
                 }
-
-                if mayGrow, i < maxMessagesPerRead {
-                    buffer = recvAllocator.buffer(allocator: allocator)
+                guard let vectorReadManager = self.vectorReadManager else {
+                    // The vector read manager went away. This happens if users unset the vector read manager
+                    // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
+                    break readLoop
                 }
-                readResult = .some
-            case .none:
-                break readLoop
-            }
-        }
+                buffer.clear()
 
-        return readResult
+                // This force-unwrap is safe, as we checked whether this is nil in the caller.
+                let result = try vectorReadManager.readFromSocket(
+                    socket: socket,
+                    buffer: &buffer,
+                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
+                )
+                switch result {
+                case .some(let results, let totalRead):
+                    assert(self.isOpen)
+                    assert(isActive)
+
+                    let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
+                    readPending = false
+
+                    var messageIterator = results.makeIterator()
+                    while isActive, let message = messageIterator.next() {
+                        pipeline.fireChannelRead(NIOAny(message))
+                    }
+
+                    if mayGrow, i < maxMessagesPerRead {
+                        buffer = recvAllocator.buffer(allocator: allocator)
+                    }
+                    readResult = .some
+                case .none:
+                    break readLoop
+                }
+            }
+
+            return readResult
         #else
-        fatalError("Cannot perform vector reads on this operating system")
+            fatalError("Cannot perform vector reads on this operating system")
         #endif
     }
 
@@ -806,27 +806,27 @@ extension DatagramChannel: MulticastChannel {
     }
 
     #if !os(Windows)
-    @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
-    func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
-        if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
-        } else {
-            eventLoop.execute {
+        @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
+        func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+            if eventLoop.inEventLoop {
                 self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
+            } else {
+                eventLoop.execute {
+                    self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
+                }
             }
         }
-    }
 
-    @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
-    func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
-        if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
-        } else {
-            eventLoop.execute {
+        @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
+        func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+            if eventLoop.inEventLoop {
                 self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+            } else {
+                eventLoop.execute {
+                    self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+                }
             }
         }
-    }
     #endif
 
     func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
@@ -895,19 +895,19 @@ extension DatagramChannel: MulticastChannel {
             switch (group, device?.address) {
             case (.unixDomainSocket, _):
                 preconditionFailure("Should not be reachable, UNIX sockets are never multicast addresses")
-            case let (.v4(groupAddress), .some(.v4(interfaceAddress))):
+            case (.v4(let groupAddress), .some(.v4(let interfaceAddress))):
                 // IPv4Binding with specific target interface.
                 let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: interfaceAddress.address.sin_addr)
                 try socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
-            case let (.v4(groupAddress), .none):
+            case (.v4(let groupAddress), .none):
                 // IPv4 binding without target interface.
                 let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: in_addr(s_addr: INADDR_ANY))
                 try socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
-            case let (.v6(groupAddress), .some(.v6)):
+            case (.v6(let groupAddress), .some(.v6)):
                 // IPv6 binding with specific target interface.
                 let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: UInt32(device!.interfaceIndex))
                 try socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)
-            case let (.v6(groupAddress), .none):
+            case (.v6(let groupAddress), .none):
                 // IPv6 binding with no specific interface requested.
                 let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: 0)
                 try socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)

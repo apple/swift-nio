@@ -107,12 +107,12 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     func handleInfo(context: ChannelHandlerContext, request: HTTPServerRequestPart) {
         switch request {
-        case let .head(request):
+        case .head(let request):
             self.infoSavedRequestHead = request
             self.infoSavedBodyBytes = 0
             self.keepAlive = request.isKeepAlive
             self.state.requestReceived()
-        case let .body(buffer: buf):
+        case .body(buffer: let buf):
             self.infoSavedBodyBytes += buf.readableBytes
         case .end:
             self.state.requestComplete()
@@ -140,7 +140,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     func handleEcho(context: ChannelHandlerContext, request: HTTPServerRequestPart, balloonInMemory: Bool = false) {
         switch request {
-        case let .head(request):
+        case .head(let request):
             self.keepAlive = request.isKeepAlive
             self.infoSavedRequestHead = request
             self.state.requestReceived()
@@ -149,7 +149,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             } else {
                 context.writeAndFlush(wrapOutboundOut(.head(httpResponseHead(request: request, status: .ok))), promise: nil)
             }
-        case var .body(buffer: buf):
+        case .body(buffer: var buf):
             if balloonInMemory {
                 self.buffer.writeBuffer(&buf)
             } else {
@@ -171,7 +171,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     func handleJustWrite(context: ChannelHandlerContext, request: HTTPServerRequestPart, statusCode: HTTPResponseStatus = .ok, string: String, trailer: (String, String)? = nil, delay: TimeAmount = .nanoseconds(0)) {
         switch request {
-        case let .head(request):
+        case .head(let request):
             self.keepAlive = request.isKeepAlive
             self.state.requestReceived()
             context.writeAndFlush(wrapOutboundOut(.head(httpResponseHead(request: request, status: statusCode))), promise: nil)
@@ -196,7 +196,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     func handleContinuousWrites(context: ChannelHandlerContext, request: HTTPServerRequestPart) {
         switch request {
-        case let .head(request):
+        case .head(let request):
             self.keepAlive = request.isKeepAlive
             self.continuousCount = 0
             self.state.requestReceived()
@@ -221,7 +221,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     func handleMultipleWrites(context: ChannelHandlerContext, request: HTTPServerRequestPart, strings: [String], delay: TimeAmount) {
         switch request {
-        case let .head(request):
+        case .head(let request):
             self.keepAlive = request.isKeepAlive
             self.continuousCount = 0
             self.state.requestReceived()
@@ -315,7 +315,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         }
 
         switch request {
-        case let .head(request):
+        case .head(let request):
             self.keepAlive = request.isKeepAlive
             self.state.requestReceived()
             guard !request.uri.containsDotDot() else {
@@ -407,7 +407,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         }
 
         switch reqPart {
-        case let .head(request):
+        case .head(let request):
             if request.uri.unicodeScalars.starts(with: "/dynamic".unicodeScalars) {
                 handler = self.dynamicHandler(request: request)
                 handler!(context, reqPart)
@@ -494,15 +494,15 @@ let htdocs: String
 let bindTarget: BindTo
 
 switch (arg1, arg1.flatMap(Int.init), arg2, arg2.flatMap(Int.init), arg3) {
-case let (.some(h), _, _, .some(p), maybeHtdocs):
+case (.some(let h), _, _, .some(let p), let maybeHtdocs):
     /* second arg an integer --> host port [htdocs] */
     bindTarget = .ip(host: h, port: p)
     htdocs = maybeHtdocs ?? defaultHtdocs
-case let (_, .some(p), maybeHtdocs, _, _):
+case (_, .some(let p), let maybeHtdocs, _, _):
     /* first arg an integer --> port [htdocs] */
     bindTarget = .ip(host: defaultHost, port: p)
     htdocs = maybeHtdocs ?? defaultHtdocs
-case let (.some(portString), .none, maybeHtdocs, .none, .none):
+case (.some(let portString), .none, let maybeHtdocs, .none, .none):
     /* couldn't parse as number --> uds-path-or-stdio [htdocs] */
     if portString == "-" {
         bindTarget = .stdio
@@ -528,22 +528,22 @@ func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
 let fileIO = NonBlockingFileIO(threadPool: threadPool)
 let socketBootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .serverChannelOption(ChannelOptions.backlog, value: 256)
-    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .serverChannelOption(ChannelOptions.backlog, value: 256)
+        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
-    // Set the handlers that are applied to the accepted Channels
-    .childChannelInitializer(childChannelInitializer(channel:))
+        // Set the handlers that are applied to the accepted Channels
+        .childChannelInitializer(childChannelInitializer(channel:))
 
-    // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-    .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-    .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
+        // Enable SO_REUSEADDR for the accepted Channels
+        .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+        .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
 let pipeBootstrap = NIOPipeBootstrap(group: group)
     // Set the handlers that are applied to the accepted Channels
-    .channelInitializer(childChannelInitializer(channel:))
+        .channelInitializer(childChannelInitializer(channel:))
 
-    .channelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-    .channelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
+        .channelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+        .channelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
 
 defer {
     try! group.syncShutdownGracefully()
@@ -554,9 +554,9 @@ print("htdocs = \(htdocs)")
 
 let channel = try { () -> Channel in
     switch bindTarget {
-    case let .ip(host, port):
+    case .ip(let host, let port):
         return try socketBootstrap.bind(host: host, port: port).wait()
-    case let .unixDomainSocket(path):
+    case .unixDomainSocket(let path):
         return try socketBootstrap.bind(unixDomainSocketPath: path).wait()
     case .stdio:
         return try pipeBootstrap.withPipes(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO).wait()

@@ -83,7 +83,7 @@ public struct NIOAny {
     /// returns: The wrapped `ByteBuffer` or `nil` if the wrapped message is not a `ByteBuffer`.
     @inlinable
     func tryAsByteBuffer() -> ByteBuffer? {
-        if case let .ioData(.byteBuffer(bb)) = self._storage {
+        if case .ioData(.byteBuffer(let bb)) = self._storage {
             return bb
         } else {
             return nil
@@ -107,7 +107,7 @@ public struct NIOAny {
     /// returns: The wrapped `IOData` or `nil` if the wrapped message is not a `IOData`.
     @inlinable
     func tryAsIOData() -> IOData? {
-        if case let .ioData(data) = self._storage {
+        if case .ioData(let data) = self._storage {
             return data
         } else {
             return nil
@@ -131,7 +131,7 @@ public struct NIOAny {
     /// returns: The wrapped `FileRegion` or `nil` if the wrapped message is not a `FileRegion`.
     @inlinable
     func tryAsFileRegion() -> FileRegion? {
-        if case let .ioData(.fileRegion(f)) = self._storage {
+        if case .ioData(.fileRegion(let f)) = self._storage {
             return f
         } else {
             return nil
@@ -155,7 +155,7 @@ public struct NIOAny {
     /// returns: The wrapped `AddressedEnvelope<ByteBuffer>` or `nil` if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
     @inlinable
     func tryAsByteEnvelope() -> AddressedEnvelope<ByteBuffer>? {
-        if case let .bufferEnvelope(e) = self._storage {
+        if case .bufferEnvelope(let e) = self._storage {
             return e
         } else {
             return nil
@@ -180,11 +180,11 @@ public struct NIOAny {
     @inlinable
     func tryAsOther<T>(type _: T.Type = T.self) -> T? {
         switch self._storage {
-        case let .bufferEnvelope(v):
+        case .bufferEnvelope(let v):
             return v as? T
-        case let .ioData(v):
+        case .ioData(let v):
             return v as? T
-        case let .other(v):
+        case .other(let v):
             return v as? T
         }
     }
@@ -245,13 +245,13 @@ public struct NIOAny {
     @inlinable
     func asAny() -> Any {
         switch self._storage {
-        case let .ioData(.byteBuffer(bb)):
+        case .ioData(.byteBuffer(let bb)):
             return bb
-        case let .ioData(.fileRegion(f)):
+        case .ioData(.fileRegion(let f)):
             return f
-        case let .bufferEnvelope(e):
+        case .bufferEnvelope(let e):
             return e
-        case let .other(o):
+        case .other(let o):
             return o
         }
     }

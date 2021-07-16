@@ -214,48 +214,48 @@ public protocol _ChannelInboundHandler: ChannelHandler {
 }
 
 //  Default implementations for the ChannelHandler protocol
-public extension ChannelHandler {
+extension ChannelHandler {
     /// Do nothing by default.
-    func handlerAdded(context _: ChannelHandlerContext) {}
+    public func handlerAdded(context _: ChannelHandlerContext) {}
 
     /// Do nothing by default.
-    func handlerRemoved(context _: ChannelHandlerContext) {}
+    public func handlerRemoved(context _: ChannelHandlerContext) {}
 }
 
 /// Provides default implementations for all methods defined by `_ChannelOutboundHandler`.
 ///
 /// These default implementations will just call `context.methodName` to forward to the next `_ChannelOutboundHandler` in
 /// the `ChannelPipeline` until the operation is handled by the `Channel` itself.
-public extension _ChannelOutboundHandler {
-    func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+extension _ChannelOutboundHandler {
+    public func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         context.register(promise: promise)
     }
 
-    func bind(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    public func bind(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         context.bind(to: address, promise: promise)
     }
 
-    func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    public func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         context.connect(to: address, promise: promise)
     }
 
-    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         context.write(data, promise: promise)
     }
 
-    func flush(context: ChannelHandlerContext) {
+    public func flush(context: ChannelHandlerContext) {
         context.flush()
     }
 
-    func read(context: ChannelHandlerContext) {
+    public func read(context: ChannelHandlerContext) {
         context.read()
     }
 
-    func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+    public func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         context.close(mode: mode, promise: promise)
     }
 
-    func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
+    public func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
         context.triggerUserOutboundEvent(event, promise: promise)
     }
 }
@@ -264,40 +264,40 @@ public extension _ChannelOutboundHandler {
 ///
 /// These default implementations will just `context.fire*` to forward to the next `_ChannelInboundHandler` in
 /// the `ChannelPipeline` until the operation is handled by the `Channel` itself.
-public extension _ChannelInboundHandler {
-    func channelRegistered(context: ChannelHandlerContext) {
+extension _ChannelInboundHandler {
+    public func channelRegistered(context: ChannelHandlerContext) {
         context.fireChannelRegistered()
     }
 
-    func channelUnregistered(context: ChannelHandlerContext) {
+    public func channelUnregistered(context: ChannelHandlerContext) {
         context.fireChannelUnregistered()
     }
 
-    func channelActive(context: ChannelHandlerContext) {
+    public func channelActive(context: ChannelHandlerContext) {
         context.fireChannelActive()
     }
 
-    func channelInactive(context: ChannelHandlerContext) {
+    public func channelInactive(context: ChannelHandlerContext) {
         context.fireChannelInactive()
     }
 
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         context.fireChannelRead(data)
     }
 
-    func channelReadComplete(context: ChannelHandlerContext) {
+    public func channelReadComplete(context: ChannelHandlerContext) {
         context.fireChannelReadComplete()
     }
 
-    func channelWritabilityChanged(context: ChannelHandlerContext) {
+    public func channelWritabilityChanged(context: ChannelHandlerContext) {
         context.fireChannelWritabilityChanged()
     }
 
-    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         context.fireUserInboundEventTriggered(event)
     }
 
-    func errorCaught(context: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         context.fireErrorCaught(error)
     }
 }
@@ -327,11 +327,11 @@ public protocol RemovableChannelHandler: ChannelHandler {
     func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken)
 }
 
-public extension RemovableChannelHandler {
+extension RemovableChannelHandler {
     // Implements the default behaviour which is to synchronously remove the handler from the pipeline. Thanks to this,
     // stateless `ChannelHandler`s can just use `RemovableChannelHandler` as a marker-protocol and declare themselves
     // as removable without writing any extra code.
-    func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+    public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
         precondition(context.handler === self)
         context.leavePipeline(removalToken: removalToken)
     }

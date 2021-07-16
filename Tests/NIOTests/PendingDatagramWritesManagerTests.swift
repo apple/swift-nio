@@ -16,8 +16,8 @@
 @testable import NIOCore
 import XCTest
 
-private extension SocketAddress {
-    init(_ addr: UnsafePointer<sockaddr>) {
+extension SocketAddress {
+    fileprivate init(_ addr: UnsafePointer<sockaddr>) {
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(addr.pointee.sa_family)) {
         case .unix:
             self = addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
@@ -36,7 +36,7 @@ private extension SocketAddress {
         }
     }
 
-    var expectedSize: socklen_t {
+    fileprivate var expectedSize: socklen_t {
         switch self {
         case .v4:
             return socklen_t(MemoryLayout<sockaddr_in>.size)
@@ -134,9 +134,9 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                         XCTAssertEqual(expected[singleState].1.expectedSize, len, "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].1.expectedSize) socklen expected but \(len) received", file: file, line: line)
 
                         switch returns[everythingState] {
-                        case let .success(r):
+                        case .success(let r):
                             return r
-                        case let .failure(e):
+                        case .failure(let e):
                             throw e
                         }
                     } else {
@@ -168,9 +168,9 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                        file: file, line: line)
 
                         switch returns[everythingState] {
-                        case let .success(r):
+                        case .success(let r):
                             return r
-                        case let .failure(e):
+                        case .failure(let e):
                             throw e
                         }
                     } else {

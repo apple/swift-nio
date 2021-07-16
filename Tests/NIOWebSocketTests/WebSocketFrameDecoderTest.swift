@@ -306,7 +306,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
         buffer.writeBytes(wrongFrame)
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            if case let .some(.dataReceivedInErrorState(innerError, data)) = error as? ByteToMessageDecoderError {
+            if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
                 // ok
                 XCTAssertEqual(.fragmentedControlFrame, innerError as? NIOWebSocketError)
                 XCTAssertEqual(wrongFrame, Array(data.readableBytesView))
@@ -420,7 +420,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
         buffer.writeBytes(wrongFrame)
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            if case let .some(.dataReceivedInErrorState(innerError, data)) = error as? ByteToMessageDecoderError {
+            if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
                 // ok
                 XCTAssertEqual(.fragmentedControlFrame, innerError as? NIOWebSocketError)
                 XCTAssertEqual(wrongFrame, Array(data.readableBytesView))
@@ -512,7 +512,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         let wrongFrame: [UInt8] = [0x81, 0xFE, 0x40, 0x01]
         buffer.writeBytes(wrongFrame)
         XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            if case let .some(.dataReceivedInErrorState(innerError, data)) = error as? ByteToMessageDecoderError {
+            if case .some(.dataReceivedInErrorState(let innerError, let data)) = error as? ByteToMessageDecoderError {
                 // ok
                 XCTAssertEqual(.fragmentedControlFrame, innerError as? NIOWebSocketError)
                 XCTAssertEqual(wrongFrame, Array(data.readableBytesView))

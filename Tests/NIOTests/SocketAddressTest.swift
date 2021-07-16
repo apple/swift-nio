@@ -78,7 +78,7 @@ class SocketAddressTest: XCTestCase {
         var address = sockaddr_in6()
         #if os(Linux) || os(Android) // no sin6_len on Linux/Android
         #else
-        address.sin6_len = UInt8(MemoryLayout<sockaddr_in6>.size)
+            address.sin6_len = UInt8(MemoryLayout<sockaddr_in6>.size)
         #endif
         address.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
         address.sin6_addr = sampleIn6Addr.withUnsafeBytes {
@@ -104,7 +104,7 @@ class SocketAddressTest: XCTestCase {
     func testCanCreateIPv4AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         let expectedAddress: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
-        if case let .v4(address) = sa {
+        if case .v4(let address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
@@ -124,7 +124,7 @@ class SocketAddressTest: XCTestCase {
     func testCanCreateIPv6AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "fe80::5", port: 443)
         let expectedAddress: [UInt8] = [0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
-        if case let .v6(address) = sa {
+        if case .v6(let address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
@@ -159,15 +159,15 @@ class SocketAddressTest: XCTestCase {
         let second = try SocketAddress(ipAddress: "::1", port: 80)
         let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
-        guard case let .v4(firstAddress) = first else {
+        guard case .v4(let firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
             return
         }
-        guard case let .v6(secondAddress) = second else {
+        guard case .v6(let secondAddress) = second else {
             XCTFail("Unable to extract IPv6 address")
             return
         }
-        guard case let .unixDomainSocket(thirdAddress) = third else {
+        guard case .unixDomainSocket(let thirdAddress) = third else {
             XCTFail("Unable to extract UDS address")
             return
         }
@@ -199,15 +199,15 @@ class SocketAddressTest: XCTestCase {
         let second = try SocketAddress(ipAddress: "::1", port: 80)
         let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
-        guard case let .v4(firstAddress) = first else {
+        guard case .v4(let firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
             return
         }
-        guard case let .v6(secondAddress) = second else {
+        guard case .v6(let secondAddress) = second else {
             XCTFail("Unable to extract IPv6 address")
             return
         }
-        guard case let .unixDomainSocket(thirdAddress) = third else {
+        guard case .unixDomainSocket(let thirdAddress) = third else {
             XCTFail("Unable to extract UDS address")
             return
         }
@@ -249,15 +249,15 @@ class SocketAddressTest: XCTestCase {
         let second = try SocketAddress(ipAddress: "::1", port: 80)
         let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
-        guard case let .v4(firstAddress) = first else {
+        guard case .v4(let firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
             return
         }
-        guard case let .v6(secondAddress) = second else {
+        guard case .v6(let secondAddress) = second else {
             XCTFail("Unable to extract IPv6 address")
             return
         }
-        guard case let .unixDomainSocket(thirdAddress) = third else {
+        guard case .unixDomainSocket(let thirdAddress) = third else {
             XCTFail("Unable to extract UDS address")
             return
         }
@@ -296,15 +296,15 @@ class SocketAddressTest: XCTestCase {
         let second = try SocketAddress(ipAddress: "::1", port: 80)
         let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
-        guard case let .v4(firstAddress) = first else {
+        guard case .v4(let firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
             return
         }
-        guard case let .v6(secondAddress) = second else {
+        guard case .v6(let secondAddress) = second else {
             XCTFail("Unable to extract IPv6 address")
             return
         }
-        guard case let .unixDomainSocket(thirdAddress) = third else {
+        guard case .unixDomainSocket(let thirdAddress) = third else {
             XCTFail("Unable to extract UDS address")
             return
         }

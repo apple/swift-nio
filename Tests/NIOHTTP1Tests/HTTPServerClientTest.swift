@@ -19,8 +19,8 @@ import NIOFoundationCompat
 @testable import NIOHTTP1
 import XCTest
 
-public extension Array where Array.Element == ByteBuffer {
-    func allAsBytes() -> [UInt8] {
+extension Array where Array.Element == ByteBuffer {
+    public func allAsBytes() -> [UInt8] {
         var out: [UInt8] = []
         out.reserveCapacity(reduce(0) { $0 + $1.readableBytes })
         forEach { bb in
@@ -31,7 +31,7 @@ public extension Array where Array.Element == ByteBuffer {
         return out
     }
 
-    func allAsString() -> String? {
+    public func allAsString() -> String? {
         String(decoding: self.allAsBytes(), as: Unicode.UTF8.self)
     }
 }
@@ -106,7 +106,7 @@ class HTTPServerClientTest: XCTestCase {
 
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             switch unwrapInboundIn(data) {
-            case let .head(req):
+            case .head(let req):
                 switch req.uri {
                 case "/helloworld":
                     let replyString = "Hello World!\r\n"
@@ -253,7 +253,7 @@ class HTTPServerClientTest: XCTestCase {
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
                 }
-            case let .end(trailers):
+            case .end(let trailers):
                 XCTAssertNil(trailers)
                 self.seenEnd = true
             default:
@@ -292,7 +292,7 @@ class HTTPServerClientTest: XCTestCase {
                     XCTFail("only \(parts.count) parts")
                     return
                 }
-                if case let .head(h) = parts[0] {
+                if case .head(let h) = parts[0] {
                     XCTAssertEqual(expectedVersion, h.version)
                     XCTAssertEqual(expectedStatus, h.status)
                     XCTAssertEqual(expectedHeaders, h.headers)
@@ -303,7 +303,7 @@ class HTTPServerClientTest: XCTestCase {
                 var i = 1
                 var bytes: [UInt8] = []
                 while i < parts.count - 1 {
-                    if case let .body(bb) = parts[i] {
+                    if case .body(let bb) = parts[i] {
                         bb.withUnsafeReadableBytes { ptr in
                             bytes.append(contentsOf: ptr)
                         }
@@ -315,7 +315,7 @@ class HTTPServerClientTest: XCTestCase {
 
                 XCTAssertEqual(expectedBody, String(decoding: bytes, as: Unicode.UTF8.self))
 
-                if case let .end(trailers) = parts[parts.count - 1] {
+                if case .end(let trailers) = parts[parts.count - 1] {
                     XCTAssertEqual(expectedTrailers, trailers)
                 } else {
                     XCTFail("unexpected type on index \(parts.count - 1) \(parts[parts.count - 1])")

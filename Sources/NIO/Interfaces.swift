@@ -19,41 +19,41 @@
 //
 
 #if os(Linux) || os(FreeBSD) || os(Android)
-import CNIOLinux
+    import CNIOLinux
 #endif
 
 #if os(Windows)
-import let WinSDK.AF_INET
-import let WinSDK.AF_INET6
+    import let WinSDK.AF_INET
+    import let WinSDK.AF_INET6
 
-import let WinSDK.INET6_ADDRSTRLEN
-import let WinSDK.INET_ADDRSTRLEN
+    import let WinSDK.INET6_ADDRSTRLEN
+    import let WinSDK.INET_ADDRSTRLEN
 
-import struct WinSDK.ADDRESS_FAMILY
-import struct WinSDK.IP_ADAPTER_ADDRESSES
-import struct WinSDK.IP_ADAPTER_UNICAST_ADDRESS
+    import struct WinSDK.ADDRESS_FAMILY
+    import struct WinSDK.IP_ADAPTER_ADDRESSES
+    import struct WinSDK.IP_ADAPTER_UNICAST_ADDRESS
 
-import typealias WinSDK.UINT8
+    import typealias WinSDK.UINT8
 #endif
 
 #if !os(Windows)
-private extension ifaddrs {
-    var dstaddr: UnsafeMutablePointer<sockaddr>? {
-        #if os(Linux) || os(Android)
-        return self.ifa_ifu.ifu_dstaddr
-        #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-        return self.ifa_dstaddr
-        #endif
-    }
+    extension ifaddrs {
+        fileprivate var dstaddr: UnsafeMutablePointer<sockaddr>? {
+            #if os(Linux) || os(Android)
+                return self.ifa_ifu.ifu_dstaddr
+            #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                return self.ifa_dstaddr
+            #endif
+        }
 
-    var broadaddr: UnsafeMutablePointer<sockaddr>? {
-        #if os(Linux) || os(Android)
-        return self.ifa_ifu.ifu_broadaddr
-        #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-        return self.ifa_dstaddr
-        #endif
+        fileprivate var broadaddr: UnsafeMutablePointer<sockaddr>? {
+            #if os(Linux) || os(Android)
+                return self.ifa_ifu.ifu_broadaddr
+            #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                return self.ifa_dstaddr
+            #endif
+        }
     }
-}
 #endif
 
 /// A representation of a single network device on a system.
@@ -146,39 +146,39 @@ public struct NIONetworkDevice {
     /// socket address family. This is quite common: for example, Linux will return AF_PACKET
     /// addressed interfaces on most platforms, which NIO does not currently understand.
     #if os(Windows)
-    internal init?(_ pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>,
-                   _ pAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>)
-    {
-        guard let backing = Backing(pAdapter, pAddress) else {
-            return nil
+        internal init?(_ pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>,
+                       _ pAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>)
+        {
+            guard let backing = Backing(pAdapter, pAddress) else {
+                return nil
+            }
+            self.backing = backing
         }
-        self.backing = backing
-    }
     #else
-    internal init?(_ caddr: ifaddrs) {
-        guard let backing = Backing(caddr) else {
-            return nil
-        }
+        internal init?(_ caddr: ifaddrs) {
+            guard let backing = Backing(caddr) else {
+                return nil
+            }
 
-        self.backing = backing
-    }
+            self.backing = backing
+        }
     #endif
 
     #if !os(Windows)
-    /// Convert a `NIONetworkInterface` to a `NIONetworkDevice`. As `NIONetworkDevice`s are a superset of `NIONetworkInterface`s,
-    /// it is always possible to perform this conversion.
-    @available(*, deprecated, message: "This is a compatibility helper, and will be removed in a future release")
-    public init(_ interface: NIONetworkInterface) {
-        self.backing = Backing(
-            name: interface.name,
-            address: interface.address,
-            netmask: interface.netmask,
-            broadcastAddress: interface.broadcastAddress,
-            pointToPointDestinationAddress: interface.pointToPointDestinationAddress,
-            multicastSupported: interface.multicastSupported,
-            interfaceIndex: interface.interfaceIndex
-        )
-    }
+        /// Convert a `NIONetworkInterface` to a `NIONetworkDevice`. As `NIONetworkDevice`s are a superset of `NIONetworkInterface`s,
+        /// it is always possible to perform this conversion.
+        @available(*, deprecated, message: "This is a compatibility helper, and will be removed in a future release")
+        public init(_ interface: NIONetworkInterface) {
+            self.backing = Backing(
+                name: interface.name,
+                address: interface.address,
+                netmask: interface.netmask,
+                broadcastAddress: interface.broadcastAddress,
+                pointToPointDestinationAddress: interface.pointToPointDestinationAddress,
+                multicastSupported: interface.multicastSupported,
+                interfaceIndex: interface.interfaceIndex
+            )
+        }
     #endif
 
     public init(name: String,
@@ -207,8 +207,8 @@ public struct NIONetworkDevice {
     }
 }
 
-private extension NIONetworkDevice {
-    final class Backing {
+extension NIONetworkDevice {
+    fileprivate final class Backing {
         /// The name of the network interface.
         var name: String
 
@@ -239,79 +239,79 @@ private extension NIONetworkDevice {
         /// socket address family. This is quite common: for example, Linux will return AF_PACKET
         /// addressed interfaces on most platforms, which NIO does not currently understand.
         #if os(Windows)
-        internal init?(_ pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>,
-                       _ pAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>)
-        {
-            self.name = String(decodingCString: pAdapter.pointee.FriendlyName,
-                               as: UTF16.self)
-            self.address = pAddress.pointee.Address.lpSockaddr.convert()
+            internal init?(_ pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>,
+                           _ pAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>)
+            {
+                self.name = String(decodingCString: pAdapter.pointee.FriendlyName,
+                                   as: UTF16.self)
+                self.address = pAddress.pointee.Address.lpSockaddr.convert()
 
-            // TODO: convert the prefix length to the mask itself
-            let v4mask: (UINT8) -> SocketAddress? = { _ in
-                var buffer =
-                    [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
-                var mask = sockaddr_in()
-                mask.sin_family = ADDRESS_FAMILY(AF_INET)
-                _ = buffer.withUnsafeMutableBufferPointer {
-                    try! NIOBSDSocket.inet_ntop(af: .inet, src: &mask,
-                                                dst: $0.baseAddress!,
-                                                size: INET_ADDRSTRLEN)
+                // TODO: convert the prefix length to the mask itself
+                let v4mask: (UINT8) -> SocketAddress? = { _ in
+                    var buffer =
+                        [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+                    var mask = sockaddr_in()
+                    mask.sin_family = ADDRESS_FAMILY(AF_INET)
+                    _ = buffer.withUnsafeMutableBufferPointer {
+                        try! NIOBSDSocket.inet_ntop(af: .inet, src: &mask,
+                                                    dst: $0.baseAddress!,
+                                                    size: INET_ADDRSTRLEN)
+                    }
+                    return SocketAddress(mask, host: mask.addressDescription())
                 }
-                return SocketAddress(mask, host: mask.addressDescription())
-            }
-            let v6mask: (UINT8) -> SocketAddress? = { _ in
-                var buffer =
-                    [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
-                var mask = sockaddr_in6()
-                mask.sin6_family = ADDRESS_FAMILY(AF_INET6)
-                _ = buffer.withUnsafeMutableBufferPointer {
-                    try! NIOBSDSocket.inet_ntop(af: .inet6, src: &mask,
-                                                dst: $0.baseAddress!,
-                                                size: INET6_ADDRSTRLEN)
+                let v6mask: (UINT8) -> SocketAddress? = { _ in
+                    var buffer =
+                        [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+                    var mask = sockaddr_in6()
+                    mask.sin6_family = ADDRESS_FAMILY(AF_INET6)
+                    _ = buffer.withUnsafeMutableBufferPointer {
+                        try! NIOBSDSocket.inet_ntop(af: .inet6, src: &mask,
+                                                    dst: $0.baseAddress!,
+                                                    size: INET6_ADDRSTRLEN)
+                    }
+                    return SocketAddress(mask, host: mask.addressDescription())
                 }
-                return SocketAddress(mask, host: mask.addressDescription())
-            }
 
-            switch pAddress.pointee.Address.lpSockaddr.pointee.sa_family {
-            case ADDRESS_FAMILY(AF_INET):
-                self.netmask = v4mask(pAddress.pointee.OnLinkPrefixLength)
-                self.interfaceIndex = Int(pAdapter.pointee.IfIndex)
-            case ADDRESS_FAMILY(AF_INET6):
-                self.netmask = v6mask(pAddress.pointee.OnLinkPrefixLength)
-                self.interfaceIndex = Int(pAdapter.pointee.Ipv6IfIndex)
-            default:
-                return nil
-            }
+                switch pAddress.pointee.Address.lpSockaddr.pointee.sa_family {
+                case ADDRESS_FAMILY(AF_INET):
+                    self.netmask = v4mask(pAddress.pointee.OnLinkPrefixLength)
+                    self.interfaceIndex = Int(pAdapter.pointee.IfIndex)
+                case ADDRESS_FAMILY(AF_INET6):
+                    self.netmask = v6mask(pAddress.pointee.OnLinkPrefixLength)
+                    self.interfaceIndex = Int(pAdapter.pointee.Ipv6IfIndex)
+                default:
+                    return nil
+                }
 
-            // TODO(compnerd) handle broadcast/ppp/multicast information
-            self.broadcastAddress = nil
-            self.pointToPointDestinationAddress = nil
-            self.multicastSupported = false
-        }
+                // TODO(compnerd) handle broadcast/ppp/multicast information
+                self.broadcastAddress = nil
+                self.pointToPointDestinationAddress = nil
+                self.multicastSupported = false
+            }
         #else
-        internal init?(_ caddr: ifaddrs) {
-            self.name = String(cString: caddr.ifa_name)
-            self.address = caddr.ifa_addr.flatMap { $0.convert() }
-            self.netmask = caddr.ifa_netmask.flatMap { $0.convert() }
+            internal init?(_ caddr: ifaddrs) {
+                self.name = String(cString: caddr.ifa_name)
+                self.address = caddr.ifa_addr.flatMap { $0.convert() }
+                self.netmask = caddr.ifa_netmask.flatMap { $0.convert() }
 
-            if (caddr.ifa_flags & UInt32(IFF_BROADCAST)) != 0, let addr = caddr.broadaddr {
-                self.broadcastAddress = addr.convert()
-                self.pointToPointDestinationAddress = nil
-            } else if (caddr.ifa_flags & UInt32(IFF_POINTOPOINT)) != 0, let addr = caddr.dstaddr {
-                self.broadcastAddress = nil
-                self.pointToPointDestinationAddress = addr.convert()
-            } else {
-                self.broadcastAddress = nil
-                self.pointToPointDestinationAddress = nil
-            }
+                if (caddr.ifa_flags & UInt32(IFF_BROADCAST)) != 0, let addr = caddr.broadaddr {
+                    self.broadcastAddress = addr.convert()
+                    self.pointToPointDestinationAddress = nil
+                } else if (caddr.ifa_flags & UInt32(IFF_POINTOPOINT)) != 0, let addr = caddr.dstaddr {
+                    self.broadcastAddress = nil
+                    self.pointToPointDestinationAddress = addr.convert()
+                } else {
+                    self.broadcastAddress = nil
+                    self.pointToPointDestinationAddress = nil
+                }
 
-            self.multicastSupported = (caddr.ifa_flags & UInt32(IFF_MULTICAST)) != 0
-            do {
-                self.interfaceIndex = Int(try Posix.if_nametoindex(caddr.ifa_name))
-            } catch {
-                return nil
+                self.multicastSupported = (caddr.ifa_flags & UInt32(IFF_MULTICAST)) != 0
+                do {
+                    self.interfaceIndex = Int(try Posix.if_nametoindex(caddr.ifa_name))
+                } catch {
+                    return nil
+                }
             }
-        }
         #endif
 
         init(copying original: Backing) {
@@ -411,101 +411,101 @@ public final class NIONetworkInterface {
     /// socket address family. This is quite common: for example, Linux will return AF_PACKET
     /// addressed interfaces on most platforms, which NIO does not currently understand.
     #if os(Windows)
-    internal init?(_ pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>,
-                   _ pAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>)
-    {
-        self.name = String(decodingCString: pAdapter.pointee.FriendlyName,
-                           as: UTF16.self)
+        internal init?(_ pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>,
+                       _ pAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>)
+        {
+            self.name = String(decodingCString: pAdapter.pointee.FriendlyName,
+                               as: UTF16.self)
 
-        guard let address = pAddress.pointee.Address.lpSockaddr.convert() else {
-            return nil
-        }
-        self.address = address
-
-        // TODO: convert the prefix length to the mask itself
-        let v4mask: (UINT8) -> SocketAddress? = { _ in
-            var buffer =
-                [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
-            var mask = sockaddr_in()
-            mask.sin_family = ADDRESS_FAMILY(AF_INET)
-            _ = buffer.withUnsafeMutableBufferPointer {
-                try! NIOBSDSocket.inet_ntop(af: .inet, src: &mask,
-                                            dst: $0.baseAddress!,
-                                            size: INET_ADDRSTRLEN)
+            guard let address = pAddress.pointee.Address.lpSockaddr.convert() else {
+                return nil
             }
-            return SocketAddress(mask, host: mask.addressDescription())
-        }
-        let v6mask: (UINT8) -> SocketAddress? = { _ in
-            var buffer =
-                [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
-            var mask = sockaddr_in6()
-            mask.sin6_family = ADDRESS_FAMILY(AF_INET6)
-            _ = buffer.withUnsafeMutableBufferPointer {
-                try! NIOBSDSocket.inet_ntop(af: .inet6, src: &mask,
-                                            dst: $0.baseAddress!,
-                                            size: INET6_ADDRSTRLEN)
+            self.address = address
+
+            // TODO: convert the prefix length to the mask itself
+            let v4mask: (UINT8) -> SocketAddress? = { _ in
+                var buffer =
+                    [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+                var mask = sockaddr_in()
+                mask.sin_family = ADDRESS_FAMILY(AF_INET)
+                _ = buffer.withUnsafeMutableBufferPointer {
+                    try! NIOBSDSocket.inet_ntop(af: .inet, src: &mask,
+                                                dst: $0.baseAddress!,
+                                                size: INET_ADDRSTRLEN)
+                }
+                return SocketAddress(mask, host: mask.addressDescription())
             }
-            return SocketAddress(mask, host: mask.addressDescription())
-        }
+            let v6mask: (UINT8) -> SocketAddress? = { _ in
+                var buffer =
+                    [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+                var mask = sockaddr_in6()
+                mask.sin6_family = ADDRESS_FAMILY(AF_INET6)
+                _ = buffer.withUnsafeMutableBufferPointer {
+                    try! NIOBSDSocket.inet_ntop(af: .inet6, src: &mask,
+                                                dst: $0.baseAddress!,
+                                                size: INET6_ADDRSTRLEN)
+                }
+                return SocketAddress(mask, host: mask.addressDescription())
+            }
 
-        switch pAddress.pointee.Address.lpSockaddr.pointee.sa_family {
-        case ADDRESS_FAMILY(AF_INET):
-            self.netmask = v4mask(pAddress.pointee.OnLinkPrefixLength)
-            self.interfaceIndex = Int(pAdapter.pointee.IfIndex)
-        case ADDRESS_FAMILY(AF_INET6):
-            self.netmask = v6mask(pAddress.pointee.OnLinkPrefixLength)
-            self.interfaceIndex = Int(pAdapter.pointee.Ipv6IfIndex)
-        default:
-            return nil
-        }
+            switch pAddress.pointee.Address.lpSockaddr.pointee.sa_family {
+            case ADDRESS_FAMILY(AF_INET):
+                self.netmask = v4mask(pAddress.pointee.OnLinkPrefixLength)
+                self.interfaceIndex = Int(pAdapter.pointee.IfIndex)
+            case ADDRESS_FAMILY(AF_INET6):
+                self.netmask = v6mask(pAddress.pointee.OnLinkPrefixLength)
+                self.interfaceIndex = Int(pAdapter.pointee.Ipv6IfIndex)
+            default:
+                return nil
+            }
 
-        // TODO(compnerd) handle broadcast/ppp/multicast information
-        self.broadcastAddress = nil
-        self.pointToPointDestinationAddress = nil
-        self.multicastSupported = false
-    }
-    #else
-    internal init?(_ caddr: ifaddrs) {
-        self.name = String(cString: caddr.ifa_name)
-
-        guard caddr.ifa_addr != nil else {
-            return nil
-        }
-
-        guard let address = caddr.ifa_addr!.convert() else {
-            return nil
-        }
-        self.address = address
-
-        if let netmask = caddr.ifa_netmask {
-            self.netmask = netmask.convert()
-        } else {
-            self.netmask = nil
-        }
-
-        if (caddr.ifa_flags & UInt32(IFF_BROADCAST)) != 0, let addr = caddr.broadaddr {
-            self.broadcastAddress = addr.convert()
-            self.pointToPointDestinationAddress = nil
-        } else if (caddr.ifa_flags & UInt32(IFF_POINTOPOINT)) != 0, let addr = caddr.dstaddr {
-            self.broadcastAddress = nil
-            self.pointToPointDestinationAddress = addr.convert()
-        } else {
+            // TODO(compnerd) handle broadcast/ppp/multicast information
             self.broadcastAddress = nil
             self.pointToPointDestinationAddress = nil
-        }
-
-        if (caddr.ifa_flags & UInt32(IFF_MULTICAST)) != 0 {
-            self.multicastSupported = true
-        } else {
             self.multicastSupported = false
         }
+    #else
+        internal init?(_ caddr: ifaddrs) {
+            self.name = String(cString: caddr.ifa_name)
 
-        do {
-            self.interfaceIndex = Int(try Posix.if_nametoindex(caddr.ifa_name))
-        } catch {
-            return nil
+            guard caddr.ifa_addr != nil else {
+                return nil
+            }
+
+            guard let address = caddr.ifa_addr!.convert() else {
+                return nil
+            }
+            self.address = address
+
+            if let netmask = caddr.ifa_netmask {
+                self.netmask = netmask.convert()
+            } else {
+                self.netmask = nil
+            }
+
+            if (caddr.ifa_flags & UInt32(IFF_BROADCAST)) != 0, let addr = caddr.broadaddr {
+                self.broadcastAddress = addr.convert()
+                self.pointToPointDestinationAddress = nil
+            } else if (caddr.ifa_flags & UInt32(IFF_POINTOPOINT)) != 0, let addr = caddr.dstaddr {
+                self.broadcastAddress = nil
+                self.pointToPointDestinationAddress = addr.convert()
+            } else {
+                self.broadcastAddress = nil
+                self.pointToPointDestinationAddress = nil
+            }
+
+            if (caddr.ifa_flags & UInt32(IFF_MULTICAST)) != 0 {
+                self.multicastSupported = true
+            } else {
+                self.multicastSupported = false
+            }
+
+            do {
+                self.interfaceIndex = Int(try Posix.if_nametoindex(caddr.ifa_name))
+            } catch {
+                return nil
+            }
         }
-    }
     #endif
 }
 

@@ -157,7 +157,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
     private func addHeadersToOutboundOut(data: NIOAny) -> NIOAny {
         let interceptedOutgoingRequest = unwrapOutboundIn(data)
 
-        if case var .head(requestHead) = interceptedOutgoingRequest {
+        if case .head(var requestHead) = interceptedOutgoingRequest {
             self.upgradeState = .awaitingConfirmationResponse
 
             self.addConnectionHeaders(to: &requestHead)
@@ -200,7 +200,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
                 // This is the end of the first response. Swallow it, we're buffering the rest.
                 self.seenFirstResponse = true
             }
-        case let .upgraderReady(upgrade):
+        case .upgraderReady(let upgrade):
             if case .end = responsePart {
                 // This is the end of the first response, and we can upgrade. Time to kick it off.
                 self.seenFirstResponse = true
@@ -222,7 +222,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         // We should decide if we're can upgrade based on the first response header: if we aren't upgrading,
         // by the time the body comes in we should be out of the pipeline. That means that if we don't think we're
         // upgrading, the only thing we should see is a response head. Anything else in an error.
-        guard case let .head(response) = responsePart else {
+        guard case .head(let response) = responsePart else {
             self.notUpgrading(context: context, data: responsePart, error: .invalidHTTPOrdering)
             return
         }
@@ -354,9 +354,9 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
     }
 }
 
-private extension NIOHTTPClientUpgradeHandler {
+extension NIOHTTPClientUpgradeHandler {
     /// The state of the upgrade handler.
-    enum UpgradeState {
+    fileprivate enum UpgradeState {
         /// Request not sent. This will need to be sent to initiate the upgrade.
         case requestRequired
 

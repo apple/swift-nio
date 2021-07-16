@@ -1241,7 +1241,7 @@ class EventLoopFutureTest: XCTestCase {
                 switch (expected, actual) {
                 case (.success(()), .success(())):
                     ()
-                case let (.failure(le), .failure(re)):
+                case (.failure(let le), .failure(let re)):
                     XCTAssert(le is Dummy)
                     XCTAssert(re is Dummy)
                 default:

@@ -275,11 +275,11 @@ extension CircularBuffer: RandomAccessCollection {
     }
 }
 
-public extension CircularBuffer {
+extension CircularBuffer {
     /// Allocates a buffer that can hold up to `initialCapacity` elements and initialise an empty ring backed by
     /// the buffer. When the ring grows to more than `initialCapacity` elements the buffer will be expanded.
     @inlinable
-    init(initialCapacity: Int) {
+    public init(initialCapacity: Int) {
         let capacity = Int(UInt32(initialCapacity).nextPowerOf2())
         self.headBackingIndex = 0
         self.tailBackingIndex = 0
@@ -289,7 +289,7 @@ public extension CircularBuffer {
 
     /// Allocates an empty buffer.
     @inlinable
-    init() {
+    public init() {
         self = .init(initialCapacity: 16)
     }
 
@@ -297,7 +297,7 @@ public extension CircularBuffer {
     ///
     /// Amortized *O(1)*
     @inlinable
-    mutating func append(_ value: Element) {
+    public mutating func append(_ value: Element) {
         self._buffer[self.tailBackingIndex] = value
         self.advanceTailIdx(by: 1)
 
@@ -311,7 +311,7 @@ public extension CircularBuffer {
     ///
     /// Amortized *O(1)*
     @inlinable
-    mutating func prepend(_ value: Element) {
+    public mutating func prepend(_ value: Element) {
         let idx = self.indexBeforeHeadIdx()
         self._buffer[idx] = value
         self.advanceHeadIdx(by: -1)
@@ -384,7 +384,7 @@ public extension CircularBuffer {
     ///
     /// *O(1)*
     @inlinable
-    subscript(offset offset: Int) -> Element {
+    public subscript(offset offset: Int) -> Element {
         get {
             self[self.index(self.startIndex, offsetBy: offset)]
         }
@@ -395,13 +395,13 @@ public extension CircularBuffer {
 
     /// Returns whether the ring is empty.
     @inlinable
-    var isEmpty: Bool {
+    public var isEmpty: Bool {
         self.headBackingIndex == self.tailBackingIndex
     }
 
     /// Returns the number of element in the ring.
     @inlinable
-    var count: Int {
+    public var count: Int {
         if self.tailBackingIndex >= self.headBackingIndex {
             return self.tailBackingIndex &- self.headBackingIndex
         } else {
@@ -411,13 +411,13 @@ public extension CircularBuffer {
 
     /// The total number of elements that the ring can contain without allocating new storage.
     @inlinable
-    var capacity: Int {
+    public var capacity: Int {
         self._buffer.count
     }
 
     /// Removes all members from the circular buffer whist keeping the capacity.
     @inlinable
-    mutating func removeAll(keepingCapacity: Bool = false) {
+    public mutating func removeAll(keepingCapacity: Bool = false) {
         if keepingCapacity {
             removeFirst(self.count)
         } else {
@@ -445,14 +445,14 @@ public extension CircularBuffer {
     ///     - index: The index of the object that should be modified. If this index is invalid this function will trap.
     ///     - modifyFunc: The function to apply to the modified object.
     @inlinable
-    mutating func modify<Result>(_ index: Index, _ modifyFunc: (inout Element) throws -> Result) rethrows -> Result {
+    public mutating func modify<Result>(_ index: Index, _ modifyFunc: (inout Element) throws -> Result) rethrows -> Result {
         try modifyFunc(&self._buffer[index.backingIndex]!)
     }
 
     // MARK: CustomStringConvertible implementation
 
     /// Returns a human readable description of the ring.
-    var description: String {
+    public var description: String {
         var desc = "[ "
         for el in self._buffer.enumerated() {
             if el.0 == self.headBackingIndex {

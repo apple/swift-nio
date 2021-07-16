@@ -92,7 +92,7 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
             return
         }
 
-        if case let .handshakeCompleted(p) = tlsEvent {
+        if case .handshakeCompleted(let p) = tlsEvent {
             handshakeCompleted(context: context, negotiatedProtocol: p)
         } else {
             context.fireUserInboundEventTriggered(event)

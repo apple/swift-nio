@@ -1144,7 +1144,7 @@ public final class ChannelTests: XCTestCase {
         let written = try buffer.withUnsafeReadableBytes { p in
             try accepted.write(pointer: UnsafeRawBufferPointer(rebasing: p.prefix(4)))
         }
-        if case let .processed(numBytes) = written {
+        if case .processed(let numBytes) = written {
             XCTAssertEqual(4, numBytes)
         } else {
             XCTFail()
@@ -1204,7 +1204,7 @@ public final class ChannelTests: XCTestCase {
         }
 
         switch written {
-        case let .processed(numBytes):
+        case .processed(let numBytes):
             XCTAssertEqual(4, numBytes)
         default:
             XCTFail()
@@ -1644,9 +1644,9 @@ public final class ChannelTests: XCTestCase {
     func testCloseInSameReadThatEOFGetsDelivered() throws {
         guard isEarlyEOFDeliveryWorkingOnThisOS else {
             #if os(Linux) || os(Android)
-            preconditionFailure("this should only ever be entered on Darwin.")
+                preconditionFailure("this should only ever be entered on Darwin.")
             #else
-            return
+                return
             #endif
         }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -1703,9 +1703,9 @@ public final class ChannelTests: XCTestCase {
     func testEOFReceivedWithoutReadRequests() throws {
         guard isEarlyEOFDeliveryWorkingOnThisOS else {
             #if os(Linux) || os(Android)
-            preconditionFailure("this should only ever be entered on Darwin.")
+                preconditionFailure("this should only ever be entered on Darwin.")
             #else
-            return
+                return
             #endif
         }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)

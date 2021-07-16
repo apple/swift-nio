@@ -45,7 +45,7 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             case let error as VerificationError:
                 XCTAssertEqual(1, error.inputs.count)
                 switch error.errorCode {
-                case let .wrongProduction(actual: actual, expected: expected):
+                case .wrongProduction(actual: let actual, expected: let expected):
                     XCTAssertEqual("Y", actual)
                     XCTAssertEqual("x", expected)
                 default:
@@ -82,7 +82,7 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             case let error as VerificationError:
                 XCTAssertEqual(1, error.inputs.count)
                 switch error.errorCode {
-                case let .underProduction(expected):
+                case .underProduction(let expected):
                     XCTAssertEqual("x", expected)
                 default:
                     XCTFail("unexpected error: \(error)")
@@ -117,7 +117,7 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             switch error {
             case let error as VerificationError:
                 switch error.errorCode {
-                case let .overProduction(actual):
+                case .overProduction(let actual):
                     XCTAssertEqual("Y", actual)
                 default:
                     XCTFail("unexpected error: \(error)")
@@ -154,9 +154,9 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             switch error {
             case let error as VerificationError:
                 switch error.errorCode {
-                case let .leftOversOnDeconstructingChannel(inbound: inbound,
-                                                           outbound: outbound,
-                                                           pendingOutbound: pending):
+                case .leftOversOnDeconstructingChannel(inbound: let inbound,
+                                                       outbound: let outbound,
+                                                       pendingOutbound: let pending):
                     XCTAssertEqual(0, outbound.count)
                     XCTAssertEqual(["leftover"], inbound.map { $0.tryAs(type: String.self) })
                     XCTAssertEqual(0, pending.count)

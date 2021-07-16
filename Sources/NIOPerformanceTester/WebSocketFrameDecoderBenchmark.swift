@@ -49,8 +49,8 @@ extension WebSocketFrameDecoderBenchmark: Benchmark {
     }
 }
 
-private extension ByteBufferAllocator {
-    func webSocketFrame(size: Int, maskingKey: WebSocketMaskingKey?) -> ByteBuffer {
+extension ByteBufferAllocator {
+    fileprivate func webSocketFrame(size: Int, maskingKey: WebSocketMaskingKey?) -> ByteBuffer {
         var data = buffer(capacity: size)
 
         // Calculate some information about the mask.

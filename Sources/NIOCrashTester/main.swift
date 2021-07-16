@@ -167,14 +167,14 @@ func main() throws {
     func runAndEval(_ test: String, suite: String) throws {
         print("running crash test \(suite).\(test)", terminator: " ")
         switch try runCrashTest(test, suite: suite, binary: CommandLine.arguments.first!) {
-        case let .regexDidNotMatch(regex: regex, output: output):
+        case .regexDidNotMatch(regex: let regex, output: let output):
             print("FAILED: regex did not match output", "regex: \(regex)", "output: \(output)",
                   separator: "\n", terminator: "")
             failedTests += 1
-        case let .unexpectedRunResult(runResult):
+        case .unexpectedRunResult(let runResult):
             print("FAILED: unexpected run result: \(runResult)")
             failedTests += 1
-        case let .outputError(description):
+        case .outputError(let description):
             print("FAILED: \(description)")
             failedTests += 1
         case .crashedAsExpected:

@@ -31,7 +31,7 @@ private final class ReadRecorder: ChannelInboundHandler {
 
         static func == (lhs: Event, rhs: Event) -> Bool {
             switch (lhs, rhs) {
-            case let (.channelRead(b1), .channelRead(b2)):
+            case (.channelRead(let b1), .channelRead(let b2)):
                 return b1 == b2
             case (.halfClose, .halfClose):
                 return true
@@ -433,7 +433,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let req = unwrapInboundIn(data)
                 switch req {
-                case let .head(head):
+                case .head(let head):
                     // except for "req_1", we always send the .end straight away
                     var sendEnd = true
                     switch head.uri {

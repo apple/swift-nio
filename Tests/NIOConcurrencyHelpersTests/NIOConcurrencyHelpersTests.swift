@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-import Darwin
+    import Darwin
 #else
-import Glibc
+    import Glibc
 #endif
 import Dispatch
 import NIO

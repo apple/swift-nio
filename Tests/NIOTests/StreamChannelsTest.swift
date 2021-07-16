@@ -894,30 +894,30 @@ private func assertNoSelectorChanges(fd: CInt, selector: NIO.Selector<NIORegistr
     }
 
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(FreeBSD)
-    var ev: kevent = .init()
-    var nothing: timespec = .init()
-    let numberOfEvents = try KQueue.kevent(kq: fd, changelist: nil, nchanges: 0, eventlist: &ev, nevents: 1, timeout: &nothing)
-    guard numberOfEvents == 0 else {
-        throw UnexpectedSelectorChanges(description: "\(ev)")
-    }
+        var ev: kevent = .init()
+        var nothing: timespec = .init()
+        let numberOfEvents = try KQueue.kevent(kq: fd, changelist: nil, nchanges: 0, eventlist: &ev, nevents: 1, timeout: &nothing)
+        guard numberOfEvents == 0 else {
+            throw UnexpectedSelectorChanges(description: "\(ev)")
+        }
     #elseif os(Linux) || os(Android)
-    #if !SWIFTNIO_USE_IO_URING
-    var ev = Epoll.epoll_event()
-    let numberOfEvents = try Epoll.epoll_wait(epfd: fd, events: &ev, maxevents: 1, timeout: 0)
-    guard numberOfEvents == 0 else {
-        throw UnexpectedSelectorChanges(description: "\(ev) [userdata: \(EPollUserData(rawValue: ev.data.u64))]")
-    }
+        #if !SWIFTNIO_USE_IO_URING
+            var ev = Epoll.epoll_event()
+            let numberOfEvents = try Epoll.epoll_wait(epfd: fd, events: &ev, maxevents: 1, timeout: 0)
+            guard numberOfEvents == 0 else {
+                throw UnexpectedSelectorChanges(description: "\(ev) [userdata: \(EPollUserData(rawValue: ev.data.u64))]")
+            }
+        #else
+            let events: UnsafeMutablePointer<URingEvent> = UnsafeMutablePointer.allocate(capacity: 1)
+            events.initialize(to: URingEvent())
+            let numberOfEvents = try selector.ring.io_uring_wait_cqe_timeout(events: events, maxevents: 1, timeout: TimeAmount.seconds(0))
+            events.deinitialize(count: 1)
+            events.deallocate()
+            guard numberOfEvents == 0 else {
+                throw UnexpectedSelectorChanges(description: "\(selector)")
+            }
+        #endif
     #else
-    let events: UnsafeMutablePointer<URingEvent> = UnsafeMutablePointer.allocate(capacity: 1)
-    events.initialize(to: URingEvent())
-    let numberOfEvents = try selector.ring.io_uring_wait_cqe_timeout(events: events, maxevents: 1, timeout: TimeAmount.seconds(0))
-    events.deinitialize(count: 1)
-    events.deallocate()
-    guard numberOfEvents == 0 else {
-        throw UnexpectedSelectorChanges(description: "\(selector)")
-    }
-    #endif
-    #else
-    #warning("assertNoSelectorChanges unsupported on this OS.")
+        #warning("assertNoSelectorChanges unsupported on this OS.")
     #endif
 }

@@ -41,8 +41,8 @@ private final class IndexWritingHandler: ChannelDuplexHandler {
     }
 }
 
-private extension EmbeddedChannel {
-    func assertReadIndexOrder(_ order: [UInt8]) {
+extension EmbeddedChannel {
+    fileprivate func assertReadIndexOrder(_ order: [UInt8]) {
         XCTAssertTrue(try writeInbound(allocator.buffer(capacity: 32)).isFull)
         XCTAssertNoThrow(XCTAssertEqual(order,
                                         try readInbound(as: ByteBuffer.self).flatMap { buffer in
@@ -51,7 +51,7 @@ private extension EmbeddedChannel {
                                         }))
     }
 
-    func assertWriteIndexOrder(_ order: [UInt8]) {
+    fileprivate func assertWriteIndexOrder(_ order: [UInt8]) {
         XCTAssertTrue(try writeOutbound(allocator.buffer(capacity: 32)).isFull)
         XCTAssertNoThrow(XCTAssertEqual(order,
                                         try readOutbound(as: ByteBuffer.self).flatMap { buffer in
@@ -744,7 +744,7 @@ class ChannelPipelineTest: XCTestCase {
         channel.pipeline.removeHandler(context: context, promise: removalPromise)
 
         XCTAssertNoThrow(try removalPromise.futureResult.wait())
-        guard case let .some(.byteBuffer(receivedBuffer)) = try channel.readOutbound(as: IOData.self) else {
+        guard case .some(.byteBuffer(let receivedBuffer)) = try channel.readOutbound(as: IOData.self) else {
             XCTFail("No buffer")
             return
         }
@@ -1237,7 +1237,7 @@ class ChannelPipelineTest: XCTestCase {
             switch try channel.finish() {
             case .clean:
                 XCTFail("expected output")
-            case let .leftOvers(inbound: inbound, outbound: outbound, pendingOutbound: pendingOutbound):
+            case .leftOvers(inbound: let inbound, outbound: let outbound, pendingOutbound: let pendingOutbound):
                 XCTAssertEqual(0, outbound.count)
                 XCTAssertEqual(0, pendingOutbound.count)
                 XCTAssertEqual(1, inbound.count)

@@ -119,7 +119,7 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let (request, responsePromise) = unwrapOutboundIn(data)
         switch self.state {
-        case let .error(error):
+        case .error(let error):
             assert(self.promiseBuffer.count == 0)
             responsePromise.fail(error)
             promise?.fail(error)

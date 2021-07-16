@@ -47,8 +47,8 @@ public final class EventCounterHandler {
 
 // MARK: Public API
 
-public extension EventCounterHandler {
-    struct ValidityError: Error {
+extension EventCounterHandler {
+    public struct ValidityError: Error {
         public var reason: String
 
         init(_ reason: String) {
@@ -57,87 +57,87 @@ public extension EventCounterHandler {
     }
 
     /// Returns the number of `channelRegistered` events seen so far in the `ChannelPipeline`.
-    var channelRegisteredCalls: Int {
+    public var channelRegisteredCalls: Int {
         self._channelRegisteredCalls.load()
     }
 
     /// Returns the number of `channelUnregistered` events seen so far in the `ChannelPipeline`.
-    var channelUnregisteredCalls: Int {
+    public var channelUnregisteredCalls: Int {
         self._channelUnregisteredCalls.load()
     }
 
     /// Returns the number of `channelActive` events seen so far in the `ChannelPipeline`.
-    var channelActiveCalls: Int {
+    public var channelActiveCalls: Int {
         self._channelActiveCalls.load()
     }
 
     /// Returns the number of `channelInactive` events seen so far in the `ChannelPipeline`.
-    var channelInactiveCalls: Int {
+    public var channelInactiveCalls: Int {
         self._channelInactiveCalls.load()
     }
 
     /// Returns the number of `channelRead` events seen so far in the `ChannelPipeline`.
-    var channelReadCalls: Int {
+    public var channelReadCalls: Int {
         self._channelReadCalls.load()
     }
 
     /// Returns the number of `channelReadComplete` events seen so far in the `ChannelPipeline`.
-    var channelReadCompleteCalls: Int {
+    public var channelReadCompleteCalls: Int {
         self._channelReadCompleteCalls.load()
     }
 
     /// Returns the number of `channelWritabilityChanged` events seen so far in the `ChannelPipeline`.
-    var channelWritabilityChangedCalls: Int {
+    public var channelWritabilityChangedCalls: Int {
         self._channelWritabilityChangedCalls.load()
     }
 
     /// Returns the number of `userInboundEventTriggered` events seen so far in the `ChannelPipeline`.
-    var userInboundEventTriggeredCalls: Int {
+    public var userInboundEventTriggeredCalls: Int {
         self._userInboundEventTriggeredCalls.load()
     }
 
     /// Returns the number of `errorCaught` events seen so far in the `ChannelPipeline`.
-    var errorCaughtCalls: Int {
+    public var errorCaughtCalls: Int {
         self._errorCaughtCalls.load()
     }
 
     /// Returns the number of `register` events seen so far in the `ChannelPipeline`.
-    var registerCalls: Int {
+    public var registerCalls: Int {
         self._registerCalls.load()
     }
 
     /// Returns the number of `bind` events seen so far in the `ChannelPipeline`.
-    var bindCalls: Int {
+    public var bindCalls: Int {
         self._bindCalls.load()
     }
 
     /// Returns the number of `connect` events seen so far in the `ChannelPipeline`.
-    var connectCalls: Int {
+    public var connectCalls: Int {
         self._connectCalls.load()
     }
 
     /// Returns the number of `write` events seen so far in the `ChannelPipeline`.
-    var writeCalls: Int {
+    public var writeCalls: Int {
         self._writeCalls.load()
     }
 
     /// Returns the number of `flush` events seen so far in the `ChannelPipeline`.
-    var flushCalls: Int {
+    public var flushCalls: Int {
         self._flushCalls.load()
     }
 
     /// Returns the number of `read` events seen so far in the `ChannelPipeline`.
-    var readCalls: Int {
+    public var readCalls: Int {
         self._readCalls.load()
     }
 
     /// Returns the number of `close` events seen so far in the `ChannelPipeline`.
-    var closeCalls: Int {
+    public var closeCalls: Int {
         self._closeCalls.load()
     }
 
     /// Returns the number of `triggerUserOutboundEvent` events seen so far in the `ChannelPipeline`.
-    var triggerUserOutboundEventCalls: Int {
+    public var triggerUserOutboundEventCalls: Int {
         self._triggerUserOutboundEventCalls.load()
     }
 
@@ -151,7 +151,7 @@ public extension EventCounterHandler {
     ///
     /// - note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
     ///         call it whilst the `Channel` this `ChannelHandler` is in is still in use.
-    func checkValidity() throws {
+    public func checkValidity() throws {
         guard self.channelRegisteredCalls <= 1 else {
             throw ValidityError("channelRegistered should be called no more than once")
         }
@@ -181,7 +181,7 @@ public extension EventCounterHandler {
     ///
     /// - note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
     ///         call it whilst the `Channel` this `ChannelHandler` is in is still in use.
-    func allTriggeredEvents() -> Set<String> {
+    public func allTriggeredEvents() -> Set<String> {
         var allEvents: Set<String> = []
 
         if self.channelRegisteredCalls != 0 {

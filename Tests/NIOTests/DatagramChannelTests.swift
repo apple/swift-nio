@@ -16,8 +16,8 @@
 import NIOConcurrencyHelpers
 import XCTest
 
-private extension Channel {
-    func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
+extension Channel {
+    fileprivate func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
         try pipeline.context(name: "ByteReadRecorder").flatMap { context in
             if let future = (context.handler as? DatagramReadRecorder<ByteBuffer>)?.notifyForDatagrams(count) {
                 return future
@@ -28,13 +28,13 @@ private extension Channel {
         }.wait()
     }
 
-    func readCompleteCount() throws -> Int {
+    fileprivate func readCompleteCount() throws -> Int {
         try pipeline.context(name: "ByteReadRecorder").map { context in
             (context.handler as! DatagramReadRecorder<ByteBuffer>).readCompleteCount
         }.wait()
     }
 
-    func configureForRecvMmsg(messageCount: Int) throws {
+    fileprivate func configureForRecvMmsg(messageCount: Int) throws {
         let totalBufferSize = messageCount * 2048
 
         try setOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: totalBufferSize)).flatMap {
@@ -390,8 +390,7 @@ final class DatagramChannelTests: XCTestCase {
                                   storage _: inout sockaddr_storage,
                                   storageLen _: inout socklen_t,
                                   controlBytes _: inout UnsafeReceivedControlBytes)
-                throws -> IOResult<Int>
-            {
+            throws -> IOResult<Int> {
                 if let err = error {
                     self.error = nil
                     throw IOError(errnoCode: err, reason: "recvfrom")
@@ -434,65 +433,65 @@ final class DatagramChannelTests: XCTestCase {
         // Only run this test on platforms that support recvmmsg: the others won't even
         // try.
         #if os(Linux) || os(FreeBSD) || os(Android)
-        final class RecvMmsgHandler: ChannelInboundHandler {
-            typealias InboundIn = AddressedEnvelope<ByteBuffer>
-            typealias InboundOut = AddressedEnvelope<ByteBuffer>
+            final class RecvMmsgHandler: ChannelInboundHandler {
+                typealias InboundIn = AddressedEnvelope<ByteBuffer>
+                typealias InboundOut = AddressedEnvelope<ByteBuffer>
 
-            private let promise: EventLoopPromise<IOError>
+                private let promise: EventLoopPromise<IOError>
 
-            init(_ promise: EventLoopPromise<IOError>) {
-                self.promise = promise
-            }
+                init(_ promise: EventLoopPromise<IOError>) {
+                    self.promise = promise
+                }
 
-            func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
-                XCTFail("Should not receive data but got \(unwrapInboundIn(data))")
-            }
+                func channelRead(context _: ChannelHandlerContext, data: NIOAny) {
+                    XCTFail("Should not receive data but got \(unwrapInboundIn(data))")
+                }
 
-            func errorCaught(context _: ChannelHandlerContext, error: Error) {
-                if let ioError = error as? IOError {
-                    self.promise.succeed(ioError)
+                func errorCaught(context _: ChannelHandlerContext, error: Error) {
+                    if let ioError = error as? IOError {
+                        self.promise.succeed(ioError)
+                    }
                 }
             }
-        }
 
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try group.syncShutdownGracefully())
-        }
-        class NonRecvMmsgSocket: Socket {
-            private var error: Int32?
-
-            init(error: Int32) throws {
-                self.error = error
-                try super.init(protocolFamily: .inet, type: .datagram)
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            defer {
+                XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
+            class NonRecvMmsgSocket: Socket {
+                private var error: Int32?
 
-            override func recvmmsg(msgs _: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
-                if let err = error {
-                    self.error = nil
-                    throw IOError(errnoCode: err, reason: "recvfrom")
+                init(error: Int32) throws {
+                    self.error = error
+                    try super.init(protocolFamily: .inet, type: .datagram)
                 }
-                return IOResult.wouldBlock(0)
+
+                override func recvmmsg(msgs _: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
+                    if let err = error {
+                        self.error = nil
+                        throw IOError(errnoCode: err, reason: "recvfrom")
+                    }
+                    return IOResult.wouldBlock(0)
+                }
             }
-        }
-        let socket = try NonRecvMmsgSocket(error: error)
-        let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
-        let promise = channel.eventLoop.makePromise(of: IOError.self)
-        XCTAssertNoThrow(try channel.register().wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(RecvMmsgHandler(promise)).wait())
-        XCTAssertNoThrow(try channel.configureForRecvMmsg(messageCount: 10))
-        XCTAssertNoThrow(try channel.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)).wait())
+            let socket = try NonRecvMmsgSocket(error: error)
+            let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
+            let promise = channel.eventLoop.makePromise(of: IOError.self)
+            XCTAssertNoThrow(try channel.register().wait())
+            XCTAssertNoThrow(try channel.pipeline.addHandler(RecvMmsgHandler(promise)).wait())
+            XCTAssertNoThrow(try channel.configureForRecvMmsg(messageCount: 10))
+            XCTAssertNoThrow(try channel.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)).wait())
 
-        XCTAssertEqual(active, try channel.eventLoop.submit {
-            channel.readable()
-            return channel.isActive
-        }.wait())
+            XCTAssertEqual(active, try channel.eventLoop.submit {
+                channel.readable()
+                return channel.isActive
+            }.wait())
 
-        if active {
-            XCTAssertNoThrow(try channel.close().wait())
-        }
-        let ioError = try promise.futureResult.wait()
-        XCTAssertEqual(error, ioError.errnoCode)
+            if active {
+                XCTAssertNoThrow(try channel.close().wait())
+            }
+            let ioError = try promise.futureResult.wait()
+            XCTAssertEqual(error, ioError.errnoCode)
         #endif
     }
 
@@ -596,9 +595,9 @@ final class DatagramChannelTests: XCTestCase {
 
         for (idx, read) in reads.enumerated() {
             #if os(Linux) || os(FreeBSD) || os(Android)
-            XCTAssertEqual(read.data.readableBytes, 3, "index: \(idx)")
+                XCTAssertEqual(read.data.readableBytes, 3, "index: \(idx)")
             #else
-            XCTAssertEqual(read.data.readableBytes, 13, "index: \(idx)")
+                XCTAssertEqual(read.data.readableBytes, 13, "index: \(idx)")
             #endif
             XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!, "index: \(idx)")
         }
@@ -635,10 +634,10 @@ final class DatagramChannelTests: XCTestCase {
         // (as max messages per read is 3). On platforms with recvmmsg, we would expect to see
         // substantially fewer than 10, and potentially as low as 1.
         #if os(Linux) || os(FreeBSD) || os(Android)
-        XCTAssertLessThan(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
-        XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 1)
+            XCTAssertLessThan(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
+            XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 1)
         #else
-        XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
+            XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
         #endif
     }
 

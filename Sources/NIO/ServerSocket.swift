@@ -48,10 +48,10 @@
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if socket is invalid.
     #if !os(Windows)
-    @available(*, deprecated, renamed: "init(socket:setNonBlocking:)")
-    convenience init(descriptor: CInt, setNonBlocking: Bool = false) throws {
-        try self.init(socket: descriptor, setNonBlocking: setNonBlocking)
-    }
+        @available(*, deprecated, renamed: "init(socket:setNonBlocking:)")
+        convenience init(descriptor: CInt, setNonBlocking: Bool = false) throws {
+            try self.init(socket: descriptor, setNonBlocking: setNonBlocking)
+        }
     #endif
 
     /// Create a new instance.
@@ -88,15 +88,15 @@
     func accept(setNonBlocking: Bool = false) throws -> Socket? {
         try withUnsafeHandle { fd in
             #if os(Linux)
-            let flags: Int32
-            if setNonBlocking {
-                flags = Linux.SOCK_NONBLOCK
-            } else {
-                flags = 0
-            }
-            let result = try Linux.accept4(descriptor: fd, addr: nil, len: nil, flags: flags)
+                let flags: Int32
+                if setNonBlocking {
+                    flags = Linux.SOCK_NONBLOCK
+                } else {
+                    flags = 0
+                }
+                let result = try Linux.accept4(descriptor: fd, addr: nil, len: nil, flags: flags)
             #else
-            let result = try NIOBSDSocket.accept(socket: fd, address: nil, address_len: nil)
+                let result = try NIOBSDSocket.accept(socket: fd, address: nil, address_len: nil)
             #endif
 
             guard let fd = result else {
@@ -104,15 +104,15 @@
             }
             let sock = try Socket(socket: fd)
             #if !os(Linux)
-            if setNonBlocking {
-                do {
-                    try sock.setNonBlocking()
-                } catch {
-                    // best effort
-                    try? sock.close()
-                    throw error
+                if setNonBlocking {
+                    do {
+                        try sock.setNonBlocking()
+                    } catch {
+                        // best effort
+                        try? sock.close()
+                        throw error
+                    }
                 }
-            }
             #endif
             return sock
         }

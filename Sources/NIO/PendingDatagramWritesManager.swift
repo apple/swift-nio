@@ -29,12 +29,12 @@ private struct PendingDatagramWrite {
     /// in most cases we're not copying large values here: only for UDS does this become a problem.
     func copySocketAddress(_ target: UnsafeMutablePointer<sockaddr_storage>) -> socklen_t {
         switch self.address {
-        case let .v4(innerAddress):
+        case .v4(let innerAddress):
             return target.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
                 $0.pointee = innerAddress.address
                 return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
             }
-        case let .v6(innerAddress):
+        case .v6(let innerAddress):
             return target.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
                 $0.pointee = innerAddress.address
                 return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
@@ -45,11 +45,11 @@ private struct PendingDatagramWrite {
     }
 }
 
-private extension Error {
+extension Error {
     /// Returns whether the error is "recoverable" from the perspective of datagram sending.
     ///
     /// - returns: `true` if the error is recoverable, `false` otherwise.
-    var isRecoverable: Bool {
+    fileprivate var isRecoverable: Bool {
         switch self {
         case let e as IOError where e.errnoCode == EMSGSIZE,
              let e as IOError where e.errnoCode == EHOSTUNREACH:
@@ -206,7 +206,7 @@ private struct PendingDatagramWritesState {
     /// - returns: A promise and the error that should be sent to it, if any, and a `WriteResult` which indicates if we could write everything or not.
     public mutating func didWrite(_ data: IOResult<Int>, messages: UnsafeMutableBufferPointer<MMsgHdr>?) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
         switch data {
-        case let .processed(written):
+        case .processed(let written):
             if let messages = messages {
                 return self.didVectorWrite(written: written, messages: messages)
             } else {
@@ -247,9 +247,9 @@ private struct PendingDatagramWritesState {
             assert(thisWriteFiller?.1 == nil, "didVectorWrite called with errors on single writes!")
 
             switch (promiseFiller, thisWriteFiller) {
-            case let (.some(all), .some(this)):
+            case (.some(let all), .some(let this)):
                 all.0.futureResult.cascade(to: this.0)
-            case let (.none, .some(this)):
+            case (.none, .some(let this)):
                 promiseFiller = this
             case (.some, .none),
                  (.none, .none):
@@ -304,9 +304,9 @@ private struct PendingDatagramWritesState {
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
         switch self.pendingWrites.markedElementIndex {
-        case let .some(e) where self.pendingWrites.distance(from: self.pendingWrites.startIndex, to: e) > 0:
+        case .some(let e) where self.pendingWrites.distance(from: self.pendingWrites.startIndex, to: e) > 0:
             return .vectorBufferWrite
-        case let .some(e):
+        case .some(let e):
             // The compiler can't prove this, but it must be so.
             assert(self.pendingWrites.distance(from: e, to: self.pendingWrites.startIndex) == 0)
             return .scalarBufferWrite

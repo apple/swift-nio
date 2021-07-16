@@ -15,8 +15,8 @@
 @testable import NIO
 import XCTest
 
-private extension UnsafeControlMessageCollection {
-    init(controlBytes: UnsafeMutableRawBufferPointer) {
+extension UnsafeControlMessageCollection {
+    fileprivate init(controlBytes: UnsafeMutableRawBufferPointer) {
         let msgHdr = msghdr(msg_name: nil,
                             msg_namelen: 0,
                             msg_iov: nil,

@@ -35,9 +35,9 @@ public enum ByteBufferFoundationError: Error {
  *   the platforms OpenSSL in which might cause problems.
  */
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// Controls how bytes are transferred between `ByteBuffer` and other storage types.
-    enum ByteTransferStrategy {
+    public enum ByteTransferStrategy {
         /// Force a copy of the bytes.
         case copy
 
@@ -60,7 +60,7 @@ public extension ByteBuffer {
     /// - parameters:
     ///     - length: The number of bytes to be read from this `ByteBuffer`.
     /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
-    mutating func readData(length: Int) -> Data? {
+    public mutating func readData(length: Int) -> Data? {
         self.readData(length: length, byteTransferStrategy: .automatic)
     }
 
@@ -72,7 +72,7 @@ public extension ByteBuffer {
     ///     - byteTransferStrategy: Controls how to transfer the bytes. See `ByteTransferStrategy` for an explanation
     ///                             of the options.
     /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
-    mutating func readData(length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
+    public mutating func readData(length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
         self.getData(at: readerIndex, length: length, byteTransferStrategy: byteTransferStrategy).map {
             self.moveReaderIndex(forwardBy: length)
             return $0
@@ -90,7 +90,7 @@ public extension ByteBuffer {
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`
     ///     - length: The number of bytes of interest
     /// - returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
-    func getData(at index: Int, length: Int) -> Data? {
+    public func getData(at index: Int, length: Int) -> Data? {
         self.getData(at: index, length: length, byteTransferStrategy: .automatic)
     }
 
@@ -103,7 +103,7 @@ public extension ByteBuffer {
     ///     - byteTransferStrategy: Controls how to transfer the bytes. See `ByteTransferStrategy` for an explanation
     ///                             of the options.
     /// - returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
-    func getData(at index0: Int, length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
+    public func getData(at index0: Int, length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
         let index = index0 - readerIndex
         guard index >= 0, length >= 0, index <= readableBytes - length else {
             return nil
@@ -142,7 +142,7 @@ public extension ByteBuffer {
     ///     - encoding: The `String` encoding to be used.
     /// - returns: A `String` value containing the bytes of interest or `nil` if the selected bytes are not readable or
     ///            cannot be decoded with the given encoding.
-    func getString(at index: Int, length: Int, encoding: String.Encoding) -> String? {
+    public func getString(at index: Int, length: Int, encoding: String.Encoding) -> String? {
         guard let data = getData(at: index, length: length) else {
             return nil
         }
@@ -156,7 +156,7 @@ public extension ByteBuffer {
     ///     - encoding: The `String` encoding to be used.
     /// - returns: A `String` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain enough bytes, or
     ///     if those bytes cannot be decoded with the given encoding.
-    mutating func readString(length: Int, encoding: String.Encoding) -> String? {
+    public mutating func readString(length: Int, encoding: String.Encoding) -> String? {
         guard length <= readableBytes else {
             return nil
         }
@@ -175,7 +175,7 @@ public extension ByteBuffer {
     ///     - encoding: The encoding to use to encode the string.
     /// - returns: The number of bytes written.
     @discardableResult
-    mutating func writeString(_ string: String, encoding: String.Encoding) throws -> Int {
+    public mutating func writeString(_ string: String, encoding: String.Encoding) throws -> Int {
         let written = try setString(string, encoding: encoding, at: writerIndex)
         moveWriterIndex(forwardBy: written)
         return written
@@ -189,14 +189,14 @@ public extension ByteBuffer {
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
     @discardableResult
-    mutating func setString(_ string: String, encoding: String.Encoding, at index: Int) throws -> Int {
+    public mutating func setString(_ string: String, encoding: String.Encoding, at index: Int) throws -> Int {
         guard let data = string.data(using: encoding) else {
             throw ByteBufferFoundationError.failedToEncodeString
         }
         return setBytes(data, at: index)
     }
 
-    init(data: Data) {
+    public init(data: Data) {
         self = ByteBufferAllocator().buffer(data: data)
     }
 
@@ -209,7 +209,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @inlinable
     @discardableResult
-    mutating func writeContiguousBytes<Bytes: ContiguousBytes>(_ bytes: Bytes) -> Int {
+    public mutating func writeContiguousBytes<Bytes: ContiguousBytes>(_ bytes: Bytes) -> Int {
         let written = self.setContiguousBytes(bytes, at: writerIndex)
         moveWriterIndex(forwardBy: written)
         return written
@@ -223,7 +223,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @inlinable
     @discardableResult
-    mutating func setContiguousBytes<Bytes: ContiguousBytes>(_ bytes: Bytes, at index: Int) -> Int {
+    public mutating func setContiguousBytes<Bytes: ContiguousBytes>(_ bytes: Bytes, at index: Int) -> Int {
         bytes.withUnsafeBytes { bufferPointer in
             self.setBytes(bufferPointer, at: index)
         }
@@ -236,7 +236,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @inlinable
     @discardableResult
-    mutating func writeData<D: DataProtocol>(_ data: D) -> Int {
+    public mutating func writeData<D: DataProtocol>(_ data: D) -> Int {
         let written = self.setData(data, at: writerIndex)
         moveWriterIndex(forwardBy: written)
         return written
@@ -250,7 +250,7 @@ public extension ByteBuffer {
     /// - returns: The number of bytes written.
     @inlinable
     @discardableResult
-    mutating func setData<D: DataProtocol>(_ data: D, at index: Int) -> Int {
+    public mutating func setData<D: DataProtocol>(_ data: D, at index: Int) -> Int {
         // DataProtocol refines RandomAccessCollection, so getting `count` must be O(1). This avoids
         // intermediate allocations in the awkward case by ensuring we definitely have sufficient
         // space for these writes.
@@ -264,12 +264,12 @@ public extension ByteBuffer {
     }
 }
 
-public extension ByteBufferAllocator {
+extension ByteBufferAllocator {
     /// Create a fresh `ByteBuffer` containing the bytes contained in the given `Data`.
     ///
     /// This will allocate a new `ByteBuffer` with enough space to fit the bytes of the `Data` and potentially
     /// some extra space using Swift's default allocator.
-    func buffer(data: Data) -> ByteBuffer {
+    public func buffer(data: Data) -> ByteBuffer {
         var buffer = self.buffer(capacity: data.count)
         buffer.writeBytes(data)
         return buffer
@@ -292,10 +292,10 @@ extension ByteBufferView: MutableDataProtocol {}
 
 // MARK: - Data
 
-public extension Data {
+extension Data {
     /// Creates a `Data` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
     /// - parameter buffer: The buffer to read.
-    init(buffer: ByteBuffer, byteTransferStrategy: ByteBuffer.ByteTransferStrategy = .automatic) {
+    public init(buffer: ByteBuffer, byteTransferStrategy: ByteBuffer.ByteTransferStrategy = .automatic) {
         var buffer = buffer
         self = buffer.readData(length: buffer.readableBytes, byteTransferStrategy: byteTransferStrategy)!
     }

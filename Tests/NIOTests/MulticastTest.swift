@@ -124,7 +124,7 @@ final class MulticastTest: XCTestCase {
         let provider = sender as! SocketOptionProvider
 
         switch (sender.localAddress!, multicastInterface.address) {
-        case let (.v4, .v4(addr)):
+        case (.v4, .v4(let addr)):
             return provider.setIPMulticastIF(addr.address.sin_addr)
         case (.v6, .v6):
             return provider.setIPv6MulticastIF(CUnsignedInt(multicastInterface.interfaceIndex))
@@ -138,7 +138,7 @@ final class MulticastTest: XCTestCase {
         let provider = sender as! SocketOptionProvider
 
         switch (sender.localAddress!, multicastDevice.address) {
-        case let (.v4, .some(.v4(addr))):
+        case (.v4, .some(.v4(let addr))):
             return provider.setIPMulticastIF(addr.address.sin_addr)
         case (.v6, .some(.v6)):
             return provider.setIPv6MulticastIF(CUnsignedInt(multicastDevice.interfaceIndex))

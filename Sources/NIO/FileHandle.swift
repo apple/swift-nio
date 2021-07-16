@@ -80,9 +80,9 @@ public final class NIOFileHandle: FileDescriptor {
     }
 }
 
-public extension NIOFileHandle {
+extension NIOFileHandle {
     /// `Mode` represents file access modes.
-    struct Mode: OptionSet {
+    public struct Mode: OptionSet {
         public let rawValue: UInt8
 
         public init(rawValue: UInt8) {
@@ -109,7 +109,7 @@ public extension NIOFileHandle {
     }
 
     /// `Flags` allows to specify additional flags to `Mode`, such as permission for file creation.
-    struct Flags {
+    public struct Flags {
         internal var posixMode: mode_t
         internal var posixFlags: CInt
 
@@ -140,7 +140,7 @@ public extension NIOFileHandle {
     ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
     ///     - mode: Access mode. Default mode is `.read`.
     ///     - flags: Additional POSIX flags.
-    convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
+    public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
         let fd = try Posix.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
@@ -149,7 +149,7 @@ public extension NIOFileHandle {
     ///
     /// - parameters:
     ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
-    convenience init(path: String) throws {
+    public convenience init(path: String) throws {
         // This function is here because we had a function like this in NIO 2.0, and the one above doesn't quite match. Sadly we can't
         // really deprecate this either, because it'll be preferred to the one above in many cases.
         try self.init(path: path, mode: .read, flags: .default)

@@ -192,7 +192,7 @@ public struct NonBlockingFileIO {
                                             eventLoop: eventLoop)
                 readFuture.whenComplete { result in
                     switch result {
-                    case let .success(buffer):
+                    case .success(let buffer):
                         guard buffer.readableBytes > 0 else {
                             // EOF, call `chunkHandler` one more time.
                             let handlerFuture = chunkHandler(buffer)
@@ -206,11 +206,11 @@ public struct NonBlockingFileIO {
                                 eventLoop.assertInEventLoop()
                                 _read(remainingReads: remainingReads - 1,
                                       bytesReadSoFar: bytesReadSoFar + bytesRead)
-                            case let .failure(error):
+                            case .failure(let error):
                                 promise.fail(error)
                             }
                         }
-                    case let .failure(error):
+                    case .failure(let error):
                         promise.fail(error)
                     }
                 }
@@ -338,7 +338,7 @@ public struct NonBlockingFileIO {
                         }
                     }
                     switch res {
-                    case let .processed(n):
+                    case .processed(let n):
                         assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
                         return n
                     case .wouldBlock:
@@ -457,7 +457,7 @@ public struct NonBlockingFileIO {
                         }
                     }
                     switch res {
-                    case let .processed(n):
+                    case .processed(let n):
                         assert(n >= 0, "write claims to have written a negative number of bytes \(n)")
                         return n
                     case .wouldBlock:

@@ -14,7 +14,7 @@
 
 import Dispatch
 
-public extension DispatchQueue {
+extension DispatchQueue {
     /// Schedules a work item for immediate execution and immediately returns with an `EventLoopFuture` providing the
     /// result. For example:
     ///
@@ -28,7 +28,7 @@ public extension DispatchQueue {
     ///     - callbackMayBlock: The scheduled callback for the IO / task.
     /// - returns a new `EventLoopFuture<ReturnType>` with value returned by the `block` parameter.
     @inlinable
-    func asyncWithFuture<NewValue>(
+    public func asyncWithFuture<NewValue>(
         eventLoop: EventLoop,
         _ callbackMayBlock: @escaping () throws -> NewValue
     ) -> EventLoopFuture<NewValue> {

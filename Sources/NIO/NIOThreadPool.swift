@@ -72,7 +72,7 @@ public final class NIOThreadPool {
         let g = DispatchGroup()
         let threadsToJoin = self.lock.withLock { () -> [NIOThread] in
             switch self.state {
-            case let .running(items):
+            case .running(let items):
                 queue.async {
                     items.forEach { $0(.cancelled) }
                 }
@@ -108,7 +108,7 @@ public final class NIOThreadPool {
     public func submit(_ body: @escaping WorkItem) {
         let item = self.lock.withLock { () -> WorkItem? in
             switch self.state {
-            case var .running(items):
+            case .running(var items):
                 items.append(body)
                 self.state = .running(items)
                 self.semaphore.signal()
@@ -138,11 +138,11 @@ public final class NIOThreadPool {
 
             item = self.lock.withLock { () -> (WorkItem)? in
                 switch self.state {
-                case var .running(items):
+                case .running(var items):
                     let item = items.removeFirst()
                     self.state = .running(items)
                     return item
-                case var .shuttingDown(aliveStates):
+                case .shuttingDown(var aliveStates):
                     assert(aliveStates[identifier])
                     aliveStates[identifier] = false
                     self.state = .shuttingDown(aliveStates)
@@ -210,7 +210,7 @@ public final class NIOThreadPool {
     }
 }
 
-public extension NIOThreadPool {
+extension NIOThreadPool {
     /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
     /// The closure will be run on the thread pool so can do blocking work.
     ///
@@ -218,7 +218,7 @@ public extension NIOThreadPool {
     ///     - eventLoop: The `EventLoop` the returned `EventLoopFuture` will fire on.
     ///     - body: The closure which performs some blocking work to be done on the thread pool.
     /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
-    func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
+    public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
             guard case shouldRun = NIOThreadPool.WorkItemState.active else {
@@ -235,12 +235,12 @@ public extension NIOThreadPool {
     }
 }
 
-public extension NIOThreadPool {
-    func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
+extension NIOThreadPool {
+    public func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
         self.shutdownGracefully(queue: .global(), callback)
     }
 
-    func syncShutdownGracefully() throws {
+    public func syncShutdownGracefully() throws {
         let errorStorageLock = Lock()
         var errorStorage: Swift.Error?
         let continuation = DispatchWorkItem {}

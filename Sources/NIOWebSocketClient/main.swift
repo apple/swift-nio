@@ -41,7 +41,7 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
 
         // We are connected. It's time to send the message to the server to initialize the upgrade dance.
         var headers = HTTPHeaders()
-        if case let .ip(host: host, port: port) = self.target {
+        if case .ip(host: let host, port: let port) = self.target {
             headers.add(name: "Host", value: "\(host):\(port)")
         }
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
@@ -66,9 +66,9 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
         print("Upgrade failed")
 
         switch clientResponse {
-        case let .head(responseHead):
+        case .head(let responseHead):
             print("Received status: \(responseHead.status)")
-        case let .body(byteBuffer):
+        case .body(let byteBuffer):
             let string = String(buffer: byteBuffer)
             print("Received: '\(string)' back from the server.")
         case .end:
@@ -176,13 +176,13 @@ let defaultPort: Int = 8888
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case let (.some(h), _, .some(p)):
+case (.some(let h), _, .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)
-case let (.some(portString), .none, _):
+case (.some(let portString), .none, _):
     /* couldn't parse as number, expecting unix domain socket path */
     connectTarget = .unixDomainSocket(path: portString)
-case let (_, .some(p), _):
+case (_, .some(let p), _):
     /* only one argument --> port */
     connectTarget = .ip(host: defaultHost, port: p)
 default:
@@ -192,27 +192,27 @@ default:
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
-    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-    .channelInitializer { channel in
+        .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .channelInitializer { channel in
 
-        let httpHandler = HTTPInitialRequestHandler(target: connectTarget)
+            let httpHandler = HTTPInitialRequestHandler(target: connectTarget)
 
-        let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
-                                                           upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                                                               channel.pipeline.addHandler(WebSocketPingPongHandler())
-                                                           })
+            let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
+                                                               upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
+                                                                   channel.pipeline.addHandler(WebSocketPingPongHandler())
+                                                               })
 
-        let config: NIOHTTPClientUpgradeConfiguration = (
-            upgraders: [websocketUpgrader],
-            completionHandler: { _ in
-                channel.pipeline.removeHandler(httpHandler, promise: nil)
+            let config: NIOHTTPClientUpgradeConfiguration = (
+                upgraders: [websocketUpgrader],
+                completionHandler: { _ in
+                    channel.pipeline.removeHandler(httpHandler, promise: nil)
+                }
+            )
+
+            return channel.pipeline.addHTTPClientHandlers(withClientUpgrade: config).flatMap {
+                channel.pipeline.addHandler(httpHandler)
             }
-        )
-
-        return channel.pipeline.addHTTPClientHandlers(withClientUpgrade: config).flatMap {
-            channel.pipeline.addHandler(httpHandler)
         }
-    }
 
 defer {
     try! group.syncShutdownGracefully()
@@ -220,9 +220,9 @@ defer {
 
 let channel = try { () -> Channel in
     switch connectTarget {
-    case let .ip(host, port):
+    case .ip(let host, let port):
         return try bootstrap.connect(host: host, port: port).wait()
-    case let .unixDomainSocket(path):
+    case .unixDomainSocket(let path):
         return try bootstrap.connect(unixDomainSocketPath: path).wait()
     }
 }()

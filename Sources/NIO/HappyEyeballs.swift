@@ -25,8 +25,8 @@
 // We naturally still use an enum to hold our state, but the FSM is now inside a class, which makes the shared
 // state nature of this FSM a bit clearer.
 
-private extension Array where Element == EventLoopFuture<Channel> {
-    mutating func remove(element: Element) {
+extension Array where Element == EventLoopFuture<Channel> {
+    fileprivate mutating func remove(element: Element) {
         guard let channelIndex = firstIndex(where: { $0 === element }) else {
             return
         }

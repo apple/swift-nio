@@ -90,14 +90,14 @@ enum ConnectTo {
 let connectTarget: ConnectTo
 
 switch (arg1, arg1.flatMap(Int.init), arg2, arg2.flatMap(Int.init), arg3.flatMap(Int.init)) {
-case let (.some(h), .none, _, .some(sp), .some(lp)):
+case (.some(let h), .none, _, .some(let sp), .some(let lp)):
     /* We received three arguments (String Int Int), let's interpret that as a server host with a server port and a local listening port */
     connectTarget = .ip(host: h, sendPort: sp, listeningPort: lp)
-case let (.some(sp), .none, .some(lp), .none, _):
+case (.some(let sp), .none, .some(let lp), .none, _):
     /* We received two arguments (String String), let's interpret that as sending socket path and listening socket path  */
     assert(sp != lp, "The sending and listening sockets should differ.")
     connectTarget = .unixDomainSocket(sendPath: sp, listeningPath: lp)
-case let (_, .some(sp), _, .some(lp), _):
+case (_, .some(let sp), _, .some(let lp), _):
     /* We received two argument (Int Int), let's interpret that as the server port and a listening port on the default host. */
     connectTarget = .ip(host: defaultHost, sendPort: sp, listeningPort: lp)
 default:
@@ -106,9 +106,9 @@ default:
 
 let remoteAddress = { () -> SocketAddress in
     switch connectTarget {
-    case let .ip(host, sendPort, _):
+    case .ip(let host, let sendPort, _):
         return try SocketAddress.makeAddressResolvingHost(host, port: sendPort)
-    case let .unixDomainSocket(sendPath, _):
+    case .unixDomainSocket(let sendPath, _):
         return try SocketAddress(unixDomainSocketPath: sendPath)
     }
 }
@@ -116,10 +116,10 @@ let remoteAddress = { () -> SocketAddress in
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = DatagramBootstrap(group: group)
     // Enable SO_REUSEADDR.
-    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-    .channelInitializer { channel in
-        channel.pipeline.addHandler(EchoHandler(remoteAddressInitializer: remoteAddress))
-    }
+        .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .channelInitializer { channel in
+            channel.pipeline.addHandler(EchoHandler(remoteAddressInitializer: remoteAddress))
+        }
 
 defer {
     try! group.syncShutdownGracefully()
@@ -127,9 +127,9 @@ defer {
 
 let channel = try { () -> Channel in
     switch connectTarget {
-    case let .ip(host, _, listeningPort):
+    case .ip(let host, _, let listeningPort):
         return try bootstrap.bind(host: host, port: listeningPort).wait()
-    case let .unixDomainSocket(_, listeningPath):
+    case .unixDomainSocket(_, let listeningPath):
         return try bootstrap.bind(unixDomainSocketPath: listeningPath).wait()
     }
 }()

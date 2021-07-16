@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Linux) || os(FreeBSD) || os(Android)
-import CNIOLinux
+    import CNIOLinux
 #endif
 
 enum LowLevelThreadOperations {}
@@ -117,15 +117,15 @@ extension NIOThread: CustomStringConvertible {
             // We know the current, actual name and the desired name and they match. This is hopefully the most common
             // situation.
             return "NIOThread(name = \(desiredName))"
-        case let (.some(desiredName), .some(actualName)):
+        case (.some(let desiredName), .some(let actualName)):
             // We know both names but they're not equal. That's odd but not impossible, some misbehaved library might
             // have changed the name.
             return "NIOThread(desiredName = \(desiredName), actualName = \(actualName))"
-        case let (.some(desiredName), .none):
+        case (.some(let desiredName), .none):
             // We only know the desired name and can't get the actual thread name. The OS might not be able to provide
             // the name to us.
             return "NIOThread(desiredName = \(desiredName))"
-        case let (.none, .some(actualName)):
+        case (.none, .some(let actualName)):
             // We only know the actual name. This can happen when we don't have a reference to the actually spawned
             // thread but rather ask for the current thread and then print it.
             return "NIOThread(actualName = \(actualName))"

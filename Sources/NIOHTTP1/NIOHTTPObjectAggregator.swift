@@ -204,13 +204,13 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
 
         do {
             switch msg {
-            case let .head(httpHead):
+            case .head(let httpHead):
                 try self.state.messageHeadReceived()
                 serverResponse = self.beginAggregation(context: context, request: httpHead, message: msg)
-            case var .body(content):
+            case .body(var content):
                 try self.state.messageBodyReceived()
                 serverResponse = self.aggregate(context: context, content: &content, message: msg)
-            case let .end(trailingHeaders):
+            case .end(let trailingHeaders):
                 try self.state.messageEndReceived()
                 self.endAggregation(context: context, trailingHeaders: trailingHeaders)
             }
@@ -282,7 +282,7 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
         )
 
         switch message {
-        case let .head(request):
+        case .head(let request):
             if !request.isKeepAlive {
                 // If keep-alive is off and, no need to leave the connection open.
                 // Send back a 413 and close the connection.
@@ -337,13 +337,13 @@ public final class NIOHTTPClientResponseAggregator: ChannelInboundHandler, Remov
 
         do {
             switch msg {
-            case let .head(httpHead):
+            case .head(let httpHead):
                 try self.state.messageHeadReceived()
                 try self.beginAggregation(context: context, response: httpHead)
-            case var .body(content):
+            case .body(var content):
                 try self.state.messageBodyReceived()
                 try self.aggregate(context: context, content: &content)
-            case let .end(trailingHeaders):
+            case .end(let trailingHeaders):
                 try self.state.messageEndReceived()
                 self.endAggregation(context: context, trailingHeaders: trailingHeaders)
             }

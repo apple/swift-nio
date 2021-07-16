@@ -22,21 +22,21 @@
 ///
 /// This resolver is a single-use object: it can only be used to perform a single host resolution.
 #if os(Linux) || os(FreeBSD) || os(Android)
-import CNIOLinux
+    import CNIOLinux
 #endif
 
 #if os(Windows)
-import let WinSDK.AF_INET
-import let WinSDK.AF_INET6
+    import let WinSDK.AF_INET
+    import let WinSDK.AF_INET6
 
-import func WinSDK.FreeAddrInfoW
-import func WinSDK.gai_strerrorA
-import func WinSDK.GetAddrInfoW
+    import func WinSDK.FreeAddrInfoW
+    import func WinSDK.gai_strerrorA
+    import func WinSDK.GetAddrInfoW
 
-import struct WinSDK.ADDRESS_FAMILY
-import struct WinSDK.ADDRINFOW
-import struct WinSDK.SOCKADDR_IN
-import struct WinSDK.SOCKADDR_IN6
+    import struct WinSDK.ADDRESS_FAMILY
+    import struct WinSDK.ADDRINFOW
+    import struct WinSDK.SOCKADDR_IN
+    import struct WinSDK.SOCKADDR_IN6
 #endif
 
 internal class GetaddrinfoResolver: Resolver {
@@ -102,46 +102,46 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - port: The port we'll be connecting to.
     private func resolve(host: String, port: Int) {
         #if os(Windows)
-        host.withCString(encodedAs: UTF16.self) { wszHost in
-            String(port).withCString(encodedAs: UTF16.self) { wszPort in
-                var pResult: UnsafeMutablePointer<ADDRINFOW>?
+            host.withCString(encodedAs: UTF16.self) { wszHost in
+                String(port).withCString(encodedAs: UTF16.self) { wszPort in
+                    var pResult: UnsafeMutablePointer<ADDRINFOW>?
 
-                var aiHints = ADDRINFOW()
-                aiHints.ai_socktype = self.aiSocktype.rawValue
-                aiHints.ai_protocol = self.aiProtocol
+                    var aiHints = ADDRINFOW()
+                    aiHints.ai_socktype = self.aiSocktype.rawValue
+                    aiHints.ai_protocol = self.aiProtocol
 
-                let iResult = GetAddrInfoW(wszHost, wszPort, &aiHints, &pResult)
-                guard iResult == 0 else {
-                    self.fail(SocketAddressError.unknown(host: host, port: port))
-                    return
-                }
+                    let iResult = GetAddrInfoW(wszHost, wszPort, &aiHints, &pResult)
+                    guard iResult == 0 else {
+                        self.fail(SocketAddressError.unknown(host: host, port: port))
+                        return
+                    }
 
-                if let pResult = pResult {
-                    parseResults(pResult, host: host)
-                    FreeAddrInfoW(pResult)
-                } else {
-                    self.fail(SocketAddressError.unsupported)
+                    if let pResult = pResult {
+                        parseResults(pResult, host: host)
+                        FreeAddrInfoW(pResult)
+                    } else {
+                        self.fail(SocketAddressError.unsupported)
+                    }
                 }
             }
-        }
         #else
-        var info: UnsafeMutablePointer<addrinfo>?
+            var info: UnsafeMutablePointer<addrinfo>?
 
-        var hint = addrinfo()
-        hint.ai_socktype = self.aiSocktype.rawValue
-        hint.ai_protocol = self.aiProtocol
-        guard getaddrinfo(host, String(port), &hint, &info) == 0 else {
-            self.fail(SocketAddressError.unknown(host: host, port: port))
-            return
-        }
+            var hint = addrinfo()
+            hint.ai_socktype = self.aiSocktype.rawValue
+            hint.ai_protocol = self.aiProtocol
+            guard getaddrinfo(host, String(port), &hint, &info) == 0 else {
+                self.fail(SocketAddressError.unknown(host: host, port: port))
+                return
+            }
 
-        if let info = info {
-            parseResults(info, host: host)
-            freeaddrinfo(info)
-        } else {
-            /* this is odd, getaddrinfo returned NULL */
-            self.fail(SocketAddressError.unsupported)
-        }
+            if let info = info {
+                parseResults(info, host: host)
+                freeaddrinfo(info)
+            } else {
+                /* this is odd, getaddrinfo returned NULL */
+                self.fail(SocketAddressError.unsupported)
+            }
         #endif
     }
 
@@ -151,9 +151,9 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - info: The pointer to the first of the `addrinfo` structures in the list.
     ///     - host: The hostname we resolved.
     #if os(Windows)
-    internal typealias CAddrInfo = ADDRINFOW
+        internal typealias CAddrInfo = ADDRINFOW
     #else
-    internal typealias CAddrInfo = addrinfo
+        internal typealias CAddrInfo = addrinfo
     #endif
 
     private func parseResults(_ info: UnsafeMutablePointer<CAddrInfo>, host: String) {

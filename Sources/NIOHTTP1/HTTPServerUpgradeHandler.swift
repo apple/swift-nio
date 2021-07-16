@@ -115,7 +115,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                 // This is the end of the first request. Swallow it, we're buffering the rest.
                 self.seenFirstRequest = true
             }
-        case let .upgraderReady(upgrade):
+        case .upgraderReady(let upgrade):
             if case .end = requestPart {
                 // This is the end of the first request, and we can upgrade. Time to kick it off.
                 self.seenFirstRequest = true
@@ -150,7 +150,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         // We should decide if we're going to upgrade based on the first request header: if we aren't upgrading,
         // by the time the body comes in we should be out of the pipeline. That means that if we don't think we're
         // upgrading, the only thing we should see is a request head. Anything else in an error.
-        guard case let .head(request) = requestPart else {
+        guard case .head(let request) = requestPart else {
             context.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
             self.notUpgrading(context: context, data: requestPart)
             return

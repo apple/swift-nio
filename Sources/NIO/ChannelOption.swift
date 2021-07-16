@@ -20,11 +20,11 @@ public protocol ChannelOption: Equatable {
 
 public typealias SocketOptionName = Int32
 #if os(Linux) || os(Android)
-public typealias SocketOptionLevel = Int
-public typealias SocketOptionValue = Int
+    public typealias SocketOptionLevel = Int
+    public typealias SocketOptionValue = Int
 #else
-public typealias SocketOptionLevel = CInt
-public typealias SocketOptionValue = CInt
+    public typealias SocketOptionLevel = CInt
+    public typealias SocketOptionValue = CInt
 #endif
 
 @available(*, deprecated, renamed: "ChannelOptions.Types.SocketOption")
@@ -63,8 +63,8 @@ public typealias ConnectTimeoutOption = ChannelOptions.Types.ConnectTimeoutOptio
 @available(*, deprecated, renamed: "ChannelOptions.Types.AllowRemoteHalfClosureOption")
 public typealias AllowRemoteHalfClosureOption = ChannelOptions.Types.AllowRemoteHalfClosureOption
 
-public extension ChannelOptions {
-    enum Types {
+extension ChannelOptions {
+    public enum Types {
         /// `SocketOption` allows users to specify configuration settings that are directly applied to the underlying socket file descriptor.
         ///
         /// Valid options are typically found in the various man pages like `man 4 tcp`.
@@ -93,15 +93,15 @@ public extension ChannelOptions {
             }
 
             #if !os(Windows)
-            /// Create a new `SocketOption`.
-            ///
-            /// - parameters:
-            ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
-            ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
-            public init(level: SocketOptionLevel, name: SocketOptionName) {
-                self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
-                self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
-            }
+                /// Create a new `SocketOption`.
+                ///
+                /// - parameters:
+                ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+                ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
+                public init(level: SocketOptionLevel, name: SocketOptionName) {
+                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
+                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
+                }
             #endif
 
             /// Create a new `SocketOption`.
@@ -267,9 +267,9 @@ public extension ChannelOptions {
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public enum ChannelOptions {
     #if !os(Windows)
-    public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
-        .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
-    }
+        public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
+            .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
+        }
     #endif
 
     /// - seealso: `SocketOption`.
@@ -319,10 +319,10 @@ public enum ChannelOptions {
     public static let receivePacketInfo = Types.ReceivePacketInfo()
 }
 
-public extension ChannelOptions {
+extension ChannelOptions {
     /// A type-safe storage facility for `ChannelOption`s. You will only ever need this if you implement your own
     /// `Channel` that needs to store `ChannelOption`s.
-    struct Storage {
+    public struct Storage {
         @usableFromInline
         internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))]
 

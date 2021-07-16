@@ -87,11 +87,11 @@ public protocol ChannelOutboundInvoker {
 ///     - create a new `EventLoopPromise<Void>`
 ///     - call the corresponding method that takes a `EventLoopPromise<Void>`
 ///     - return `EventLoopPromise.futureResult`
-public extension ChannelOutboundInvoker {
+extension ChannelOutboundInvoker {
     /// Register on an `EventLoop` and so have all its IO handled.
     ///
     /// - returns: the future which will be notified once the operation completes.
-    func register(file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
+    public func register(file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = self.makePromise(file: file, line: line)
         self.register(promise: promise)
         return promise.futureResult
@@ -101,7 +101,7 @@ public extension ChannelOutboundInvoker {
     /// - parameters:
     ///     - to: the `SocketAddress` to which we should bind the `Channel`.
     /// - returns: the future which will be notified once the operation completes.
-    func bind(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
+    public func bind(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = self.makePromise(file: file, line: line)
         self.bind(to: address, promise: promise)
         return promise.futureResult
@@ -111,7 +111,7 @@ public extension ChannelOutboundInvoker {
     /// - parameters:
     ///     - to: the `SocketAddress` to which we should connect the `Channel`.
     /// - returns: the future which will be notified once the operation completes.
-    func connect(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
+    public func connect(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = self.makePromise(file: file, line: line)
         self.connect(to: address, promise: promise)
         return promise.futureResult
@@ -125,7 +125,7 @@ public extension ChannelOutboundInvoker {
     /// - parameters:
     ///     - data: the data to write
     /// - returns: the future which will be notified once the operation completes.
-    func write(_ data: NIOAny, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
+    public func write(_ data: NIOAny, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = self.makePromise(file: file, line: line)
         self.write(data, promise: promise)
         return promise.futureResult
@@ -136,7 +136,7 @@ public extension ChannelOutboundInvoker {
     /// - parameters:
     ///     - data: the data to write
     /// - returns: the future which will be notified once the `write` operation completes.
-    func writeAndFlush(_ data: NIOAny, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
+    public func writeAndFlush(_ data: NIOAny, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = self.makePromise(file: file, line: line)
         self.writeAndFlush(data, promise: promise)
         return promise.futureResult
@@ -147,7 +147,7 @@ public extension ChannelOutboundInvoker {
     /// - parameters:
     ///     - mode: the `CloseMode` that is used
     /// - returns: the future which will be notified once the operation completes.
-    func close(mode: CloseMode = .all, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
+    public func close(mode: CloseMode = .all, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = self.makePromise(file: file, line: line)
         self.close(mode: mode, promise: promise)
         return promise.futureResult
@@ -158,7 +158,7 @@ public extension ChannelOutboundInvoker {
     /// - parameters:
     ///     - event: the event itself.
     /// - returns: the future which will be notified once the operation completes.
-    func triggerUserOutboundEvent(_ event: Any, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
+    public func triggerUserOutboundEvent(_ event: Any, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = self.makePromise(file: file, line: line)
         self.triggerUserOutboundEvent(event, promise: promise)
         return promise.futureResult

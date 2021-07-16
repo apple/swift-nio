@@ -29,7 +29,7 @@ public typealias HTTPUpgradeConfiguration = NIOHTTPServerUpgradeConfiguration
 
 public typealias NIOHTTPServerUpgradeConfiguration = (upgraders: [HTTPServerProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
 
-public extension ChannelPipeline {
+extension ChannelPipeline {
     /// Configure a `ChannelPipeline` for use as a HTTP client.
     ///
     /// - parameters:
@@ -37,8 +37,8 @@ public extension ChannelPipeline {
     ///     - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
     ///         from the pipeline.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    func addHTTPClientHandlers(position: Position = .last,
-                               leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void>
+    public func addHTTPClientHandlers(position: Position = .last,
+                                      leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void>
     {
         self.addHTTPClientHandlers(position: position,
                                    leftOverBytesStrategy: leftOverBytesStrategy,
@@ -56,9 +56,9 @@ public extension ChannelPipeline {
     ///         the upgrade completion handler. See the documentation on `HTTPClientUpgradeHandler`
     ///         for more details.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    func addHTTPClientHandlers(position: Position = .last,
-                               leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
-                               withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration?) -> EventLoopFuture<Void>
+    public func addHTTPClientHandlers(position: Position = .last,
+                                      leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
+                                      withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration?) -> EventLoopFuture<Void>
     {
         let future: EventLoopFuture<Void>
 
@@ -105,10 +105,10 @@ public extension ChannelPipeline {
     ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    func configureHTTPServerPipeline(position: ChannelPipeline.Position = .last,
-                                     withPipeliningAssistance pipelining: Bool = true,
-                                     withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
-                                     withErrorHandling errorHandling: Bool = true) -> EventLoopFuture<Void>
+    public func configureHTTPServerPipeline(position: ChannelPipeline.Position = .last,
+                                            withPipeliningAssistance pipelining: Bool = true,
+                                            withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
+                                            withErrorHandling errorHandling: Bool = true) -> EventLoopFuture<Void>
     {
         let future: EventLoopFuture<Void>
 

@@ -285,19 +285,19 @@ public protocol EventLoop: EventLoopGroup {
     func _preconditionSafeToWait(file: StaticString, line: UInt)
 }
 
-public extension EventLoop {
+extension EventLoop {
     /// Default implementation of `makeSucceededVoidFuture`: Return a fresh future (which will allocate).
-    func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
+    public func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
         EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
     }
 
-    func _preconditionSafeToWait(file: StaticString, line: UInt) {
+    public func _preconditionSafeToWait(file: StaticString, line: UInt) {
         preconditionNotInEventLoop(file: file, line: line)
     }
 }
 
-public extension EventLoopGroup {
-    var description: String {
+extension EventLoopGroup {
+    public var description: String {
         String(describing: self)
     }
 }
@@ -474,14 +474,14 @@ extension NIODeadline: CustomStringConvertible {
     }
 }
 
-public extension NIODeadline {
-    static func - (lhs: NIODeadline, rhs: NIODeadline) -> TimeAmount {
+extension NIODeadline {
+    public static func - (lhs: NIODeadline, rhs: NIODeadline) -> TimeAmount {
         // This won't ever crash, NIODeadlines are guaranteed to be within 0 ..< 2^63-1 nanoseconds so the result can
         // definitely be stored in a TimeAmount (which is an Int64).
         .nanoseconds(Int64(lhs.uptimeNanoseconds) - Int64(rhs.uptimeNanoseconds))
     }
 
-    static func + (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
+    public static func + (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
         let partial: Int64
         let overflow: Bool
         (partial, overflow) = Int64(lhs.uptimeNanoseconds).addingReportingOverflow(rhs.nanoseconds)
@@ -495,7 +495,7 @@ public extension NIODeadline {
         return NIODeadline(partial)
     }
 
-    static func - (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
+    public static func - (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
         if rhs.nanoseconds < 0 {
             // The addition won't crash because the worst that could happen is `UInt64(Int64.max) + UInt64(Int64.max)`
             // which fits into an UInt64 (and will then be capped to Int64.max == distantFuture by `uptimeNanoseconds`).
@@ -512,7 +512,7 @@ public extension NIODeadline {
     }
 }
 
-public extension EventLoop {
+extension EventLoop {
     /// Submit `task` to be run on this `EventLoop`.
     ///
     /// The returned `EventLoopFuture` will be completed when `task` has finished running. It will be succeeded with
@@ -522,7 +522,7 @@ public extension EventLoop {
     ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: An `EventLoopFuture` containing the result of `task`'s execution.
     @inlinable
-    func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+    public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = self.makePromise(file: #file, line: #line)
 
         execute {
@@ -545,7 +545,7 @@ public extension EventLoop {
     ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
     /// - returns: An `EventLoopFuture` identical to the `EventLoopFuture` returned from `task`.
     @inlinable
-    func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
+    public func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
         self.submit(task).flatMap { $0 }
     }
 
@@ -559,10 +559,10 @@ public extension EventLoop {
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
     @inlinable
-    func flatScheduleTask<T>(deadline: NIODeadline,
-                             file _: StaticString = #file,
-                             line: UInt = #line,
-                             _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T>
+    public func flatScheduleTask<T>(deadline: NIODeadline,
+                                    file _: StaticString = #file,
+                                    line: UInt = #line,
+                                    _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T>
     {
         let promise: EventLoopPromise<T> = self.makePromise(file: #file, line: line)
         let scheduled = scheduleTask(deadline: deadline, task)
@@ -581,10 +581,10 @@ public extension EventLoop {
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
     @inlinable
-    func flatScheduleTask<T>(in delay: TimeAmount,
-                             file: StaticString = #file,
-                             line: UInt = #line,
-                             _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T>
+    public func flatScheduleTask<T>(in delay: TimeAmount,
+                                    file: StaticString = #file,
+                                    line: UInt = #line,
+                                    _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T>
     {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = scheduleTask(in: delay, task)
@@ -595,7 +595,7 @@ public extension EventLoop {
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.
     @inlinable
-    func makePromise<T>(of _: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
+    public func makePromise<T>(of _: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
         EventLoopPromise<T>(eventLoop: self, file: file, line: line)
     }
 
@@ -605,7 +605,7 @@ public extension EventLoop {
     ///     - error: the `Error` that is used by the `EventLoopFuture`.
     /// - returns: a failed `EventLoopFuture`.
     @inlinable
-    func makeFailedFuture<T>(_ error: Error, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<T> {
+    public func makeFailedFuture<T>(_ error: Error, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<T> {
         EventLoopFuture<T>(eventLoop: self, error: error, file: file, line: line)
     }
 
@@ -615,7 +615,7 @@ public extension EventLoop {
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
     @inlinable
-    func makeSucceededFuture<Success>(_ value: Success, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Success> {
+    public func makeSucceededFuture<Success>(_ value: Success, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Success> {
         if Success.self == Void.self {
             // The as! will always succeed because we previously checked that Success.self == Void.self.
             return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
@@ -630,11 +630,11 @@ public extension EventLoop {
     ///   - result: The value that is used by the `EventLoopFuture`
     /// - Returns: A completed `EventLoopFuture`.
     @inlinable
-    func makeCompletedFuture<Success>(_ result: Result<Success, Error>) -> EventLoopFuture<Success> {
+    public func makeCompletedFuture<Success>(_ result: Result<Success, Error>) -> EventLoopFuture<Success> {
         switch result {
-        case let .success(value):
+        case .success(let value):
             return self.makeSucceededFuture(value)
-        case let .failure(error):
+        case .failure(let error):
             return self.makeFailedFuture(error)
         }
     }
@@ -642,12 +642,12 @@ public extension EventLoop {
     /// An `EventLoop` forms a singular `EventLoopGroup`, returning itself as the 'next' `EventLoop`.
     ///
     /// - returns: Itself, because an `EventLoop` forms a singular `EventLoopGroup`.
-    func next() -> EventLoop {
+    public func next() -> EventLoop {
         self
     }
 
     /// Close this `EventLoop`.
-    func close() throws {
+    public func close() throws {
         // Do nothing
     }
 
@@ -661,7 +661,7 @@ public extension EventLoop {
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, notifying promise: EventLoopPromise<Void>? = nil, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, notifying promise: EventLoopPromise<Void>? = nil, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
         let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
                 try task(repeatedTask)
@@ -690,10 +690,10 @@ public extension EventLoop {
     ///
     /// - return: `RepeatedTask`
     @discardableResult
-    func scheduleRepeatedAsyncTask(initialDelay: TimeAmount,
-                                   delay: TimeAmount,
-                                   notifying promise: EventLoopPromise<Void>? = nil,
-                                   _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask
+    public func scheduleRepeatedAsyncTask(initialDelay: TimeAmount,
+                                          delay: TimeAmount,
+                                          notifying promise: EventLoopPromise<Void>? = nil,
+                                          _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask
     {
         let repeated = RepeatedTask(interval: delay, eventLoop: self, cancellationPromise: promise, task: task)
         repeated.begin(in: initialDelay)
@@ -703,7 +703,7 @@ public extension EventLoop {
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///
     /// - returns: `EventLoopIterator`
-    func makeIterator() -> EventLoopIterator {
+    public func makeIterator() -> EventLoopIterator {
         EventLoopIterator([self])
     }
 
@@ -713,7 +713,7 @@ public extension EventLoop {
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
     @inlinable
-    func assertInEventLoop(file: StaticString = #file, line: UInt = #line) {
+    public func assertInEventLoop(file: StaticString = #file, line: UInt = #line) {
         debugOnly {
             self.preconditionInEventLoop(file: file, line: line)
         }
@@ -725,7 +725,7 @@ public extension EventLoop {
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
     @inlinable
-    func assertNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
+    public func assertNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
         debugOnly {
             self.preconditionNotInEventLoop(file: file, line: line)
         }
@@ -733,13 +733,13 @@ public extension EventLoop {
 
     /// Checks the necessary condition of currently running on the called `EventLoop` for making forward progress.
     @inlinable
-    func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
+    public func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
         precondition(inEventLoop, file: file, line: line)
     }
 
     /// Checks the necessary condition of currently _not_ running on the called `EventLoop` for making forward progress.
     @inlinable
-    func preconditionNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
+    public func preconditionNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
         precondition(!inEventLoop, file: file, line: line)
     }
 }
@@ -788,12 +788,12 @@ public protocol EventLoopGroup: AnyObject {
     func makeIterator() -> EventLoopIterator
 }
 
-public extension EventLoopGroup {
-    func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
+extension EventLoopGroup {
+    public func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
         self.shutdownGracefully(queue: .global(), callback)
     }
 
-    func syncShutdownGracefully() throws {
+    public func syncShutdownGracefully() throws {
         if let eventLoop = MultiThreadedEventLoopGroup.currentEventLoop {
             preconditionFailure("""
             BUG DETECTED: syncShutdownGracefully() must not be called when on an EventLoop.
@@ -1009,13 +1009,13 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                 // has already been initiaited.
                 self.runState = .closing([])
                 return true
-            case var .closing(callbacks):
+            case .closing(var callbacks):
                 // If we are currently closing, we need to register the `handler`
                 // for invocation after the shutdown is completed.
                 callbacks.append((q, handler))
                 self.runState = .closing(callbacks)
                 return false
-            case let .closed(error):
+            case .closed(let error):
                 // If we are already closed, we can directly dispatch the `handler`
                 q.async {
                     handler(error)
@@ -1038,7 +1038,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                 switch closeResult {
                 case .success:
                     ()
-                case let .failure(error):
+                case .failure(let error):
                     result = .failure(error)
                 }
                 g.leave()
@@ -1055,12 +1055,12 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                 switch self.runState {
                 case .closed, .running:
                     preconditionFailure("MultiThreadedEventLoopGroup in illegal state when closing: \(self.runState)")
-                case let .closing(callbacks):
+                case .closing(let callbacks):
                     queueCallbackPairs = callbacks
                     switch result {
                     case .success:
                         overallError = nil
-                    case let .failure(error):
+                    case .failure(let error):
                         overallError = error
                     }
                     self.runState = .closed(overallError)
