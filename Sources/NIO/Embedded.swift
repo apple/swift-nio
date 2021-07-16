@@ -63,6 +63,9 @@ public final class EmbeddedEventLoop: EventLoop {
 
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>()
 
+    /// Keep track of where promises are allocated to ensure we can identify their source if they leak.
+    private var _promiseCreationStore: [_NIOEventLoopFutureIdentifier: (file: StaticString, line: UInt)] = [:]
+
     // The number of the next task to be created. We track the order so that when we execute tasks
     // scheduled at the same time, we may do so in the order in which they were submitted for
     // execution.
@@ -192,6 +195,17 @@ public final class EmbeddedEventLoop: EventLoop {
         // EmbeddedEventLoop always allows a wait, as waiting will essentially always block
         // wait()
         return
+    }
+
+    public func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
+        precondition(_isDebugAssertConfiguration())
+        self._promiseCreationStore[futureIdentifier] = (file: file, line: line)
+    }
+
+    public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
+        precondition(_isDebugAssertConfiguration())
+        // The force-unwrap is safe: we know that we must have tracked all the futures.
+        return self._promiseCreationStore.removeValue(forKey: futureIdentifier)!
     }
 
     deinit {
