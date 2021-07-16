@@ -22,7 +22,7 @@ func run(identifier: String) {
         let dg = DispatchGroup()
 
         try! loop.submit {
-            for _ in 0 ..< 10_000 {
+            for _ in 0..<10_000 {
                 dg.enter()
                 loop.execute { dg.leave() }
             }

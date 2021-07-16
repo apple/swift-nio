@@ -62,7 +62,7 @@ extension WebSocketFrameEncoderBenchmark: Benchmark {
     func setUp() throws {
         // We want the pipeline walk to have some cost.
         try! self.channel.pipeline.addHandler(WriteConsumingHandler()).wait()
-        for _ in 0 ..< 3 {
+        for _ in 0..<3 {
             try! self.channel.pipeline.addHandler(NoOpOutboundHandler()).wait()
         }
         try! self.channel.pipeline.addHandler(WebSocketFrameEncoder()).wait()
@@ -84,14 +84,14 @@ extension WebSocketFrameEncoderBenchmark: Benchmark {
     }
 
     private func runWithCoWs(frame: WebSocketFrame) -> Int {
-        for _ in 0 ..< self.runCount {
+        for _ in 0..<self.runCount {
             self.channel.write(frame, promise: nil)
         }
         return 1
     }
 
     private func runWithoutCoWs() -> Int {
-        for _ in 0 ..< self.runCount {
+        for _ in 0..<self.runCount {
             // To avoid CoWs this has to be a new buffer every time. This is expensive, sadly, so tests using this strategy
             // must do fewer iterations.
             let data = self.channel.allocator.buffer(size: self.dataSize, dataStrategy: self.dataStrategy)

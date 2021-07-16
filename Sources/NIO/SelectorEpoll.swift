@@ -213,7 +213,7 @@ extension Selector: _SelectorBackendProtocol {
 
         loopStart()
 
-        for i in 0 ..< ready {
+        for i in 0..<ready {
             let ev = events[i]
             let epollUserData = EPollUserData(rawValue: ev.data.u64)
             let fd = epollUserData.fileDescriptor

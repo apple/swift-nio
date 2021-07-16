@@ -73,7 +73,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     private var responseHead: HTTPResponseHead {
         var head = HTTPResponseHead(version: .http1_1, status: .ok)
         head.headers.add(name: "Content-Length", value: "\(self.bodyLength)")
-        for i in 0 ..< self.numberOfAdditionalHeaders {
+        for i in 0..<self.numberOfAdditionalHeaders {
             head.headers.add(name: "X-Random-Extra-Header", value: "\(i)")
         }
         return head
@@ -81,7 +81,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
 
     private func responseBody(allocator: ByteBufferAllocator) -> ByteBuffer {
         var buffer = allocator.buffer(capacity: self.bodyLength)
-        for i in 0 ..< self.bodyLength {
+        for i in 0..<self.bodyLength {
             buffer.writeInteger(UInt8(i % Int(UInt8.max)))
         }
         return buffer

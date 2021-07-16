@@ -81,7 +81,7 @@ public extension WebSocketMaskingKey {
     static func random<Generator>(
         using generator: inout Generator
     ) -> WebSocketMaskingKey where Generator: RandomNumberGenerator {
-        WebSocketMaskingKey(networkRepresentation: .random(in: UInt32.min ... UInt32.max, using: &generator))
+        WebSocketMaskingKey(networkRepresentation: .random(in: UInt32.min...UInt32.max, using: &generator))
     }
 
     /// Returns a random masking key, using the `SystemRandomNumberGenerator` as a source for randomness.

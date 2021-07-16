@@ -85,7 +85,7 @@ public final class SocketChannelTest: XCTestCase {
         clientConnectionFutures.reserveCapacity(50)
         let clientBootstrap = ClientBootstrap(group: group)
 
-        for _ in 0 ..< 50 {
+        for _ in 0..<50 {
             let conn = clientBootstrap.connect(to: serverChannel.localAddress!)
             clientConnectionFutures.append(conn)
         }

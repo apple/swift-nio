@@ -17,7 +17,7 @@ import XCTest
 
 final class IntegerBitPackingTests: XCTestCase {
     func testAllUInt8PairsRoundtrip() {
-        for i in UInt16.min ... UInt16.max {
+        for i in UInt16.min...UInt16.max {
             let unpacked = IntegerBitPacking.unpackUInt8UInt8(i)
             XCTAssertEqual(i, IntegerBitPacking.packUInt8UInt8(unpacked.0, unpacked.1))
         }

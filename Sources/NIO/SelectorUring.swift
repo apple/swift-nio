@@ -235,7 +235,7 @@ extension Selector: _SelectorBackendProtocol {
 
         loopStart()
 
-        for i in 0 ..< ready {
+        for i in 0..<ready {
             let event = events[i]
 
             switch event.fd {

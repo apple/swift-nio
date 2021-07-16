@@ -116,10 +116,10 @@ class CodableByteBufferTest: XCTestCase {
         self.buffer.moveReaderIndex(forwardBy: 5)
         var writtenBytes: Int?
         XCTAssertNoThrow(writtenBytes = try self.buffer.writeJSONEncodable(expectedSandI))
-        for _ in 0 ..< 10 {
+        for _ in 0..<10 {
             XCTAssertNoThrow(try self.buffer.writeJSONEncodable(expectedSandI, encoder: JSONEncoder()))
         }
-        for _ in 0 ..< 11 {
+        for _ in 0..<11 {
             XCTAssertNoThrow(try self.buffer.readJSONDecodable(StringAndInt.self, length: writtenBytes ?? -1))
         }
         XCTAssertEqual(0, self.buffer.readableBytes)
@@ -148,7 +148,7 @@ class CodableByteBufferTest: XCTestCase {
         let expectedSandI = StringAndInt(string: "hello", int: 42)
         var writtenBytes: Int?
         XCTAssertNoThrow(writtenBytes = try self.buffer.writeJSONEncodable(expectedSandI))
-        for length in 0 ..< (writtenBytes ?? 0) {
+        for length in 0..<(writtenBytes ?? 0) {
             XCTAssertThrowsError(try self.buffer.readJSONDecodable(StringAndInt.self,
                                                                    length: length)) { error in
                 XCTAssert(error is DecodingError)

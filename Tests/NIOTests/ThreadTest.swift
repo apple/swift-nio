@@ -175,7 +175,7 @@ class ThreadTest: XCTestCase {
             let some = SomeClass(sem: s)
             weakSome = some
             let tsv = ThreadSpecificVariable<SomeClass>()
-            for _ in 0 ..< 10 {
+            for _ in 0..<10 {
                 NIOThread.spawnAndRun { (_: NIO.NIOThread) in
                     tsv.currentValue = some
                 }
@@ -229,7 +229,7 @@ class ThreadTest: XCTestCase {
             }
         }
 
-        for _ in 0 ..< numberOfThreads {
+        for _ in 0..<numberOfThreads {
             NIOThread.spawnAndRun { (_: NIOThread) in
                 let some = SomeClass(sem: s)
                 let tsv = ThreadSpecificVariable<SomeClass>()
@@ -239,7 +239,7 @@ class ThreadTest: XCTestCase {
         }
 
         let timeout: DispatchTime = .now() + .seconds(1)
-        for _ in 0 ..< numberOfThreads {
+        for _ in 0..<numberOfThreads {
             switch s.wait(timeout: timeout) {
             case .success:
                 ()

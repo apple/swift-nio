@@ -364,7 +364,7 @@ public extension CircularBuffer {
         newBacking.reserveCapacity(newCapacity)
 
         if self.tailBackingIndex >= self.headBackingIndex {
-            newBacking.append(contentsOf: self._buffer[self.headBackingIndex ..< self.tailBackingIndex])
+            newBacking.append(contentsOf: self._buffer[self.headBackingIndex..<self.tailBackingIndex])
         } else {
             newBacking.append(contentsOf: self._buffer[self.headBackingIndex...])
             newBacking.append(contentsOf: self._buffer[..<self.tailBackingIndex])
@@ -528,7 +528,7 @@ extension CircularBuffer: RangeReplaceableCollection {
     public mutating func removeLast(_ k: Int) {
         precondition(k <= self.count, "Number of elements to drop bigger than the amount of elements in the buffer.")
         var idx = self.tailBackingIndex
-        for _ in 0 ..< k {
+        for _ in 0..<k {
             idx = self.indexAdvanced(index: idx, by: -1)
             self._buffer[idx] = nil
         }
@@ -550,7 +550,7 @@ extension CircularBuffer: RangeReplaceableCollection {
     public mutating func removeFirst(_ k: Int) {
         precondition(k <= self.count, "Number of elements to drop bigger than the amount of elements in the buffer.")
         var idx = self.headBackingIndex
-        for _ in 0 ..< k {
+        for _ in 0..<k {
             self._buffer[idx] = nil
             idx = self.indexAdvanced(index: idx, by: 1)
         }
@@ -636,9 +636,9 @@ extension CircularBuffer: RangeReplaceableCollection {
             // This mapping is required due to an inconsistent ability to append sequences of non-optional
             // to optional sequences.
             // https://bugs.swift.org/browse/SR-7921
-            newBuffer.append(contentsOf: self[self.startIndex ..< subrange.lowerBound].lazy.map { $0 })
+            newBuffer.append(contentsOf: self[self.startIndex..<subrange.lowerBound].lazy.map { $0 })
             newBuffer.append(contentsOf: newElements.lazy.map { $0 })
-            newBuffer.append(contentsOf: self[subrange.upperBound ..< self.endIndex].lazy.map { $0 })
+            newBuffer.append(contentsOf: self[subrange.upperBound..<self.endIndex].lazy.map { $0 })
 
             let repetitionCount = newCapacity &- newBuffer.count
             if repetitionCount > 0 {

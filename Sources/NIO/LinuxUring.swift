@@ -139,7 +139,7 @@ internal final class URing {
         }
 
         _debugPrintCQE(header + " CQE:s [\(self.cqes)] - ring flags are [\(self.ring.flags)]")
-        for i in 0 ..< count {
+        for i in 0..<count {
             let c = self.cqes[i]!.pointee
 
             let bitPattern = UInt(bitPattern: io_uring_cqe_get_data(cqes[i]))
@@ -419,7 +419,7 @@ internal final class URing {
         assert(currentCqeCount >= 0, "currentCqeCount should never be negative")
         assert(maxevents > 0, "maxevents should be a positive number")
 
-        for cqeIndex in 0 ..< currentCqeCount {
+        for cqeIndex in 0..<currentCqeCount {
             self._process_cqe(events: events, cqeIndex: Int(cqeIndex), multishot: multishot)
 
             if self.fdEvents.count == maxevents // ensure we don't generate more events than maxevents

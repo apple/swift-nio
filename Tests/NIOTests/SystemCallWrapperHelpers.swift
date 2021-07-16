@@ -27,7 +27,7 @@ public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {
 
     _ = try measureOne(body)
     var measurements = Array(repeating: 0.0, count: 10)
-    for i in 0 ..< 10 {
+    for i in 0..<10 {
         measurements[i] = try measureOne(body)
     }
 
@@ -78,7 +78,7 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
     let directCallTime = try measureRunTime { () -> Int in
         /* imitate what the system call wrappers do to have a fair comparison */
         var preventCompilerOptimisation: Int = 0
-        for _ in 0 ..< iterations {
+        for _ in 0..<iterations {
             while true {
                 let r = write(fd, pointer, 0)
                 if r < 0 {
@@ -104,7 +104,7 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
 
     let withSystemCallWrappersTime = try measureRunTime { () -> Int in
         var preventCompilerOptimisation: Int = 0
-        for _ in 0 ..< iterations {
+        for _ in 0..<iterations {
             switch try Posix.write(descriptor: fd, pointer: pointer, size: 0) {
             case let .processed(v):
                 preventCompilerOptimisation += v

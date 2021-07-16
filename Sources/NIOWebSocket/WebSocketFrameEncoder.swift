@@ -155,14 +155,14 @@ private extension ByteBuffer {
 
         // Time to add the extra bytes. To avoid checking this twice, we also start writing stuff out here.
         switch frameLength {
-        case 0 ... maxOneByteSize:
+        case 0...maxOneByteSize:
             writeIndex += setInteger(frameHeader.firstByte, at: writeIndex)
             writeIndex += setInteger(UInt8(frameLength) | maskBitMask, at: writeIndex)
-        case (maxOneByteSize + 1) ... maxTwoByteSize:
+        case (maxOneByteSize + 1)...maxTwoByteSize:
             writeIndex += setInteger(frameHeader.firstByte, at: writeIndex)
             writeIndex += setInteger(UInt8(126) | maskBitMask, at: writeIndex)
             writeIndex += setInteger(UInt16(frameLength), at: writeIndex)
-        case (maxTwoByteSize + 1) ... maxNIOFrameSize:
+        case (maxTwoByteSize + 1)...maxNIOFrameSize:
             writeIndex += setInteger(frameHeader.firstByte, at: writeIndex)
             writeIndex += setInteger(UInt8(127) | maskBitMask, at: writeIndex)
             writeIndex += setInteger(UInt64(frameLength), at: writeIndex)
@@ -194,13 +194,13 @@ private struct FrameHeader {
         var size = 2 // First byte and initial length byte
 
         switch self.length {
-        case 0 ... maxOneByteSize:
+        case 0...maxOneByteSize:
             // Only requires the initial length byte
             break
-        case (maxOneByteSize + 1) ... maxTwoByteSize:
+        case (maxOneByteSize + 1)...maxTwoByteSize:
             // Requires an extra UInt16
             size += MemoryLayout<UInt16>.size
-        case (maxTwoByteSize + 1) ... maxNIOFrameSize:
+        case (maxTwoByteSize + 1)...maxNIOFrameSize:
             size += MemoryLayout<UInt64>.size
         default:
             fatalError("NIO cannot serialize frames longer than \(maxNIOFrameSize)")

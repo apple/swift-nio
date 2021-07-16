@@ -136,7 +136,7 @@ class HTTPServerClientTest: XCTestCase {
                         XCTFail("unexpected error \(error)")
                     }
                     var b = context.channel.allocator.buffer(capacity: 1024)
-                    for i in 1 ... 10 {
+                    for i in 1...10 {
                         b.clear()
                         b.writeString("\(i)")
 
@@ -162,7 +162,7 @@ class HTTPServerClientTest: XCTestCase {
                         XCTFail("unexpected error \(error)")
                     }
                     var b = context.channel.allocator.buffer(capacity: 1024)
-                    for i in 1 ... 10 {
+                    for i in 1...10 {
                         b.clear()
                         b.writeString("\(i)")
 
@@ -505,7 +505,7 @@ class HTTPServerClientTest: XCTestCase {
             let expectedSuffix = HTTPServerClientTest.massiveResponseBytes
             let actual = bbs.allAsBytes()
             XCTAssertGreaterThan(actual.count, expectedSuffix.count)
-            let actualSuffix = actual[(actual.count - expectedSuffix.count) ..< actual.count]
+            let actualSuffix = actual[(actual.count - expectedSuffix.count)..<actual.count]
             XCTAssertEqual(expectedSuffix.count, actualSuffix.count)
             XCTAssert(expectedSuffix.elementsEqual(actualSuffix))
         }

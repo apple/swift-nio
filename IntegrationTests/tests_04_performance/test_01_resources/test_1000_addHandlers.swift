@@ -21,7 +21,7 @@ private final class SimpleHandler: ChannelInboundHandler {
 func run(identifier: String) {
     measure(identifier: identifier) {
         let iterations = 1000
-        for _ in 0 ..< iterations {
+        for _ in 0..<iterations {
             let channel = EmbeddedChannel()
             defer {
                 _ = try! channel.finish()

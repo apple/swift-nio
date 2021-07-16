@@ -36,19 +36,19 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         let ai = NIOConcurrencyHelpers.Atomic<UInt64>(value: 0)
         let everybodyHere = DispatchSemaphore(value: 0)
         let go = DispatchSemaphore(value: 0)
-        for thread in 1 ... noAsyncs {
+        for thread in 1...noAsyncs {
             q.async(group: g) {
                 everybodyHere.signal()
                 go.wait()
-                for _ in 0 ..< noCounts {
+                for _ in 0..<noCounts {
                     _ = ai.add(thread)
                 }
             }
         }
-        for _ in 0 ..< noAsyncs {
+        for _ in 0..<noAsyncs {
             everybodyHere.wait()
         }
-        for _ in 0 ..< noAsyncs {
+        for _ in 0..<noAsyncs {
             go.signal()
         }
         g.wait()
@@ -104,7 +104,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: max))
 
             var counter = max
-            for _ in 0 ..< 255 {
+            for _ in 0..<255 {
                 XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter - 1))
                 counter = counter - 1
             }
@@ -135,7 +135,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: upperBound))
 
             var counter = upperBound
-            for _ in 0 ..< 255 {
+            for _ in 0..<255 {
                 XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter - 1))
                 XCTAssertFalse(ab.compareAndExchange(expected: counter, desired: counter))
                 counter = counter - 1
@@ -248,19 +248,19 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         let ai = NIOConcurrencyHelpers.NIOAtomic<UInt64>.makeAtomic(value: 0)
         let everybodyHere = DispatchSemaphore(value: 0)
         let go = DispatchSemaphore(value: 0)
-        for thread in 1 ... noAsyncs {
+        for thread in 1...noAsyncs {
             q.async(group: g) {
                 everybodyHere.signal()
                 go.wait()
-                for _ in 0 ..< noCounts {
+                for _ in 0..<noCounts {
                     _ = ai.add(thread)
                 }
             }
         }
-        for _ in 0 ..< noAsyncs {
+        for _ in 0..<noAsyncs {
             everybodyHere.wait()
         }
-        for _ in 0 ..< noAsyncs {
+        for _ in 0..<noAsyncs {
             go.signal()
         }
         g.wait()
@@ -313,7 +313,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: max))
 
             var counter = max
-            for _ in 0 ..< 255 {
+            for _ in 0..<255 {
                 XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter - 1))
                 counter = counter - 1
             }
@@ -343,7 +343,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             XCTAssertTrue(ab.compareAndExchange(expected: zero, desired: upperBound))
 
             var counter = upperBound
-            for _ in 0 ..< 255 {
+            for _ in 0..<255 {
                 XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter - 1))
                 XCTAssertFalse(ab.compareAndExchange(expected: counter, desired: counter))
                 counter = counter - 1
@@ -590,7 +590,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     }
 
     func testConditionLockWithDifferentConditions() {
-        for _ in 0 ..< 200 {
+        for _ in 0..<200 {
             let l = ConditionLock(value: 0)
             let q1 = DispatchQueue(label: "q1")
             let q2 = DispatchQueue(label: "q2")
@@ -767,13 +767,13 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             q.async(group: g) {
                 sem1.signal()
                 sem2.wait()
-                for _ in 0 ..< 1000 {
+                for _ in 0..<1000 {
                     XCTAssertTrue(atomic.compareAndExchange(expected: instance, desired: instance))
                 }
             }
             sem2.signal()
             sem1.wait()
-            for _ in 0 ..< 1000 {
+            for _ in 0..<1000 {
                 XCTAssertTrue(atomic.compareAndExchange(expected: instance, desired: instance))
             }
             g.wait()
@@ -811,7 +811,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             writerArrived.signal()
             go.wait()
 
-            for i in 0 ..< iterations {
+            for i in 0..<iterations {
                 box.store(Foo(i))
             }
         }
@@ -820,7 +820,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             readerArrived.signal()
             go.wait()
 
-            for _ in 0 ..< iterations {
+            for _ in 0..<iterations {
                 if box.load().x < 0 {
                     XCTFail("bad")
                 }
@@ -870,7 +870,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             spawnAndJoinRacingThreads(count: 6) { i in
                 switch i {
                 case 0: // writer
-                    for i in 1 ... iterations {
+                    for i in 1...iterations {
                         let nextObject = box.exchange(with: .init(i, allDeallocations: allDeallocations))
                         XCTAssertEqual(nextObject.value, i - 1)
                     }
@@ -903,7 +903,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             spawnAndJoinRacingThreads(count: 6) { i in
                 switch i {
                 case 0: // writer
-                    for i in 1 ... iterations {
+                    for i in 1...iterations {
                         box.store(IntHolderWithDeallocationTracking(i, allDeallocations: allDeallocations))
                     }
                 default: // readers
@@ -935,7 +935,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             spawnAndJoinRacingThreads(count: 6) { i in
                 switch i {
                 case 0: // writer
-                    for i in 1 ... iterations {
+                    for i in 1...iterations {
                         let old = box.load()
                         XCTAssertEqual(i - 1, old.value)
                         if !box.compareAndExchange(expected: old,
@@ -980,7 +980,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
                         last = loaded.value
                     }
                 case 1:
-                    for n in 1 ... iterations {
+                    for n in 1...iterations {
                         box.store(.init(n, allDeallocations: allDeallocations))
                     }
                 case 2:
@@ -1006,7 +1006,7 @@ func spawnAndJoinRacingThreads(count: Int, _ body: @escaping (Int) -> Void) {
     let arrived = Array(repeating: DispatchSemaphore(value: 0), count: count) // waiting for all threads to arrive
 
     let group = DispatchGroup()
-    for i in 0 ..< count {
+    for i in 0..<count {
         DispatchQueue(label: "\(#file):\(#line):\(i)").async(group: group) {
             arrived[i].signal()
             go.wait()
@@ -1018,7 +1018,7 @@ func spawnAndJoinRacingThreads(count: Int, _ body: @escaping (Int) -> Void) {
         sem.wait()
     }
     // all the threads are ready to go
-    for _ in 0 ..< count {
+    for _ in 0..<count {
         go.signal()
     }
 

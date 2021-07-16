@@ -34,7 +34,7 @@ final class ChannelPipelineBenchmark: Benchmark {
     }
 
     func setUp() throws {
-        for _ in 0 ..< self.extraHandlers {
+        for _ in 0..<self.extraHandlers {
             let handler = NoOpHandler()
             handlers.append(handler)
             try self.channel.pipeline.addHandler(handler).wait()
@@ -53,7 +53,7 @@ final class ChannelPipelineBenchmark: Benchmark {
     }
 
     func run() -> Int {
-        for _ in 0 ..< 1_000_000 {
+        for _ in 0..<1_000_000 {
             self.channel.pipeline.fireChannelReadComplete()
         }
         return 1

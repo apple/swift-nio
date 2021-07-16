@@ -261,7 +261,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                                 allocator: self.allocator,
                                                 eventLoop: self.eventLoop)
             do {
-                for i in 0 ..< 10 {
+                for i in 0..<10 {
                     // this construction will cause 'read' to repeatedly return with 1 byte read
                     try self.eventLoop.scheduleTask(in: .milliseconds(50)) {
                         try writeFH.withUnsafeFileDescriptor { writeFD in
@@ -324,7 +324,7 @@ class NonBlockingFileIOTest: XCTestCase {
             }
 
             do {
-                for i in 0 ..< 10 {
+                for i in 0..<10 {
                     // this construction will cause 'read' to repeatedly return with 1 byte read
                     try self.eventLoop.scheduleTask(in: .milliseconds(50)) {
                         try writeFH.withUnsafeFileDescriptor { writeFD in
@@ -464,7 +464,7 @@ class NonBlockingFileIOTest: XCTestCase {
             var buf = try self.fileIO.read(fileRegion: fileRegion,
                                            allocator: allocator,
                                            eventLoop: eventLoop).wait()
-            let zeros = (1 ... 90).map { _ in UInt8(0) }
+            let zeros = (1...90).map { _ in UInt8(0) }
             guard let bytes = buf.readBytes(length: buf.readableBytes)?.suffix(from: 10) else {
                 XCTFail("readBytes(length:) should not be nil")
                 return
@@ -499,7 +499,7 @@ class NonBlockingFileIOTest: XCTestCase {
         buffer.writeStaticString("xxx")
 
         try withTemporaryFile(content: "AAA") { fileHandle, _ in
-            for i in 0 ..< 3 {
+            for i in 0..<3 {
                 buffer.writeString("\(i)")
                 try self.fileIO.write(fileHandle: fileHandle,
                                       buffer: buffer,

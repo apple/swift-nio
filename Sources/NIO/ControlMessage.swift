@@ -52,7 +52,7 @@ struct UnsafeControlMessageStorage: Collection {
     /// Get the part of the buffer for use with a message.
     public subscript(position: Int) -> UnsafeMutableRawBufferPointer {
         UnsafeMutableRawBufferPointer(
-            fastRebase: self.buffer[(position * self.bytesPerMessage) ..< ((position + 1) * self.bytesPerMessage)])
+            fastRebase: self.buffer[(position * self.bytesPerMessage)..<((position + 1) * self.bytesPerMessage)])
     }
 
     var startIndex: Int { 0 }
@@ -299,7 +299,7 @@ struct UnsafeOutboundControlBytes {
         if self.writePosition == 0 {
             return UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
-        return UnsafeMutableRawBufferPointer(fastRebase: self.controlBytes[0 ..< self.writePosition])
+        return UnsafeMutableRawBufferPointer(fastRebase: self.controlBytes[0..<self.writePosition])
     }
 }
 

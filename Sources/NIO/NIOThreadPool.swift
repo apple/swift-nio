@@ -77,7 +77,7 @@ public final class NIOThreadPool {
                     items.forEach { $0(.cancelled) }
                 }
                 self.state = .shuttingDown(Array(repeating: true, count: numberOfThreads))
-                (0 ..< numberOfThreads).forEach { _ in
+                (0..<numberOfThreads).forEach { _ in
                     self.semaphore.signal()
                 }
                 let threads = self.threads!
@@ -183,7 +183,7 @@ public final class NIOThreadPool {
             self.threads?.reserveCapacity(self.numberOfThreads)
         }
 
-        for id in 0 ..< self.numberOfThreads {
+        for id in 0..<self.numberOfThreads {
             group.enter()
             // We should keep thread names under 16 characters because Linux doesn't allow more.
             NIOThread.spawnAndRun(name: "TP-#\(id)", detachThread: false) { thread in

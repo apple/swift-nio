@@ -54,7 +54,7 @@ class PriorityQueueTest: XCTestCase {
     }
 
     func testBuildAndRemoveFromRandomPriorityQueues() {
-        for size in 0 ... 33 {
+        for size in 0...33 {
             var pq = PriorityQueue<UInt8>()
             let randoms = getRandomNumbers(count: size)
             randoms.forEach { pq.push($0) }
@@ -70,7 +70,7 @@ class PriorityQueueTest: XCTestCase {
             }
 
             /* remove up to `n` members and add them back at the end and check that the priority queues are still the same */
-            for n in 1 ... 5 where n <= size {
+            for n in 1...5 where n <= size {
                 var pq2 = pq
                 let deleted = randoms.prefix(n).map { (random: UInt8) -> UInt8 in
                     pq2.remove(random)
@@ -87,7 +87,7 @@ class PriorityQueueTest: XCTestCase {
     func testPartialOrder() {
         let clearlyTheSmallest = SomePartiallyOrderedDataType(width: 0, height: 0)
         let clearlyTheLargest = SomePartiallyOrderedDataType(width: 100, height: 100)
-        let inTheMiddles = zip(1 ... 99, (1 ... 99).reversed()).map { SomePartiallyOrderedDataType(width: $0, height: $1) }
+        let inTheMiddles = zip(1...99, (1...99).reversed()).map { SomePartiallyOrderedDataType(width: $0, height: $1) }
 
         /*
          the four values are only partially ordered (from small (top) to large (bottom)):

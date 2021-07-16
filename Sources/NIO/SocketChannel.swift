@@ -237,7 +237,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     override func readFromSocket() throws -> ReadResult {
         var result = ReadResult.none
-        for _ in 1 ... maxMessagesPerRead {
+        for _ in 1...maxMessagesPerRead {
             guard isOpen else {
                 throw ChannelError.eof
             }
@@ -552,7 +552,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
 
-        for i in 1 ... maxMessagesPerRead {
+        for i in 1...maxMessagesPerRead {
             guard self.isOpen else {
                 throw ChannelError.eof
             }
@@ -604,7 +604,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         var buffer = recvAllocator.buffer(allocator: allocator)
         var readResult = ReadResult.none
 
-        readLoop: for i in 1 ... maxMessagesPerRead {
+        readLoop: for i in 1...maxMessagesPerRead {
             guard self.isOpen else {
                 throw ChannelError.eof
             }

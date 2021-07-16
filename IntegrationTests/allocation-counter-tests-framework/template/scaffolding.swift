@@ -77,7 +77,7 @@ func measureAll(_ fn: () -> Int) -> [[String: Int]] {
     _ = measureOne(throwAway: true, fn) /* pre-heat and throw away */
 
     var measurements: [[String: Int]] = []
-    for _ in 0 ..< 10 {
+    for _ in 0..<10 {
         if let results = measureOne(fn) {
             measurements.append(results)
         }

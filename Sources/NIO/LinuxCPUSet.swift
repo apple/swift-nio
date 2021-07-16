@@ -57,7 +57,7 @@ extension NIOThread {
 
             precondition(res == 0, "pthread_getaffinity_np failed: \(res)")
 
-            let set = Set((CInt(0) ..< CNIOLinux_CPU_SETSIZE()).lazy.filter { CNIOLinux_CPU_ISSET($0, &cpuset) != 0 }.map { Int($0) })
+            let set = Set((CInt(0)..<CNIOLinux_CPU_SETSIZE()).lazy.filter { CNIOLinux_CPU_ISSET($0, &cpuset) != 0 }.map { Int($0) })
             return LinuxCPUSet(cpuIds: set)
         }
         set(cpuSet) {

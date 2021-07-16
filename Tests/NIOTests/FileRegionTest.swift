@@ -25,7 +25,7 @@ class FileRegionTest: XCTestCase {
         let numBytes = 16 * 1024
 
         var content = ""
-        for i in 0 ..< numBytes {
+        for i in 0..<numBytes {
             content.append("\(i)")
         }
         let bytes = Array(content.utf8)
@@ -99,7 +99,7 @@ class FileRegionTest: XCTestCase {
             try "".write(toFile: filePath, atomically: false, encoding: .ascii)
 
             var futures: [EventLoopFuture<Void>] = []
-            for _ in 0 ..< 10 {
+            for _ in 0..<10 {
                 futures.append(clientChannel.write(NIOAny(fr)))
             }
             try clientChannel.writeAndFlush(NIOAny(fr)).wait()
@@ -116,7 +116,7 @@ class FileRegionTest: XCTestCase {
         let numBytes = 16 * 1024
 
         var content = ""
-        for i in 0 ..< numBytes {
+        for i in 0..<numBytes {
             content.append("\(i)")
         }
         let bytes = Array(content.utf8)
@@ -234,7 +234,7 @@ class FileRegionTest: XCTestCase {
             // just in case someone uses 32bit platforms
             let readerIndex = (UInt64(_UInt56.max) < UInt64(Int.max) ? Int(_UInt56.max) : Int.max) - 1000
             var fr = FileRegion(fileHandle: fh, readerIndex: readerIndex, endIndex: Int.max)
-            for i in 0 ..< 1000 {
+            for i in 0..<1000 {
                 XCTAssertEqual(readerIndex + i, fr.readerIndex)
                 XCTAssertEqual(Int.max, fr.endIndex)
                 fr.moveReaderIndex(forwardBy: 1)

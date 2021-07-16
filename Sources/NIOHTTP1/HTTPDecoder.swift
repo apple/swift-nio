@@ -141,7 +141,7 @@ private class BetterHTTPParser {
         let end = start + currentFieldByteLength
         self.firstNonDiscardableOffset = nil
         precondition(start >= self.rawBytesView.startIndex && end <= self.rawBytesView.endIndex)
-        callout(&self.delegate, .init(rebasing: self.rawBytesView[start ..< end]))
+        callout(&self.delegate, .init(rebasing: self.rawBytesView[start..<end]))
     }
 
     private func didReceiveBodyData(_ bytes: UnsafeRawBufferPointer) {

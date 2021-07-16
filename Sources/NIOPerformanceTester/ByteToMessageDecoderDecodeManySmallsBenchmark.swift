@@ -34,7 +34,7 @@ final class ByteToMessageDecoderDecodeManySmallsBenchmark: Benchmark {
     }
 
     func run() -> Int {
-        for _ in 1 ... self.iterations {
+        for _ in 1...self.iterations {
             try! self.channel.writeInbound(self.buffer)
         }
         return Int(self.buffer.readableBytes)

@@ -106,8 +106,8 @@ public extension NIOWebSocketClientUpgrader {
         var buffer = ByteBuffer()
         buffer.reserveCapacity(minimumWritableBytes: 16)
         /// we may want to use `randomBytes(count:)` once the proposal is accepted: https://forums.swift.org/t/pitch-requesting-larger-amounts-of-randomness-from-systemrandomnumbergenerator/27226
-        buffer.writeInteger(UInt64.random(in: UInt64.min ... UInt64.max, using: &generator))
-        buffer.writeInteger(UInt64.random(in: UInt64.min ... UInt64.max, using: &generator))
+        buffer.writeInteger(UInt64.random(in: UInt64.min...UInt64.max, using: &generator))
+        buffer.writeInteger(UInt64.random(in: UInt64.min...UInt64.max, using: &generator))
         return String(base64Encoding: buffer.readableBytesView)
     }
 

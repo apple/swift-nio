@@ -53,7 +53,7 @@ func run(identifier: String) {
             let str = buffer.readString(length: 1)
             precondition(str == "A", "\(str!)")
         }
-        for _ in 0 ..< 1000 {
+        for _ in 0..<1000 {
             doWrites(buffer: &buffer)
             doReads(buffer: &buffer)
         }

@@ -51,7 +51,7 @@ extension ChannelPipeline {
     // Waits up to 1 second for the upgrader to be removed by polling the pipeline
     // every 50ms checking for the handler.
     fileprivate func waitForUpgraderToBeRemoved() throws {
-        for _ in 0 ..< 20 {
+        for _ in 0..<20 {
             do {
                 _ = try context(handlerType: HTTPServerUpgradeHandler.self).wait()
                 // handler present, keep waiting

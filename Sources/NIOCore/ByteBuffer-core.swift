@@ -244,7 +244,7 @@ public struct ByteBuffer {
         }
 
         internal var fullSlice: _ByteBufferSlice {
-            _ByteBufferSlice(0 ..< self.capacity)
+            _ByteBufferSlice(0..<self.capacity)
         }
 
         private static func allocateAndPrepareRawMemory(bytes: _Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
@@ -296,7 +296,7 @@ public struct ByteBuffer {
         public func dumpBytes(slice: Slice, offset: Int, length: Int) -> String {
             var desc = "["
             let bytes = UnsafeRawBufferPointer(start: self.bytes, count: Int(self.capacity))
-            for byte in bytes[Int(slice.lowerBound) + offset ..< Int(slice.lowerBound) + offset + length] {
+            for byte in bytes[Int(slice.lowerBound) + offset..<Int(slice.lowerBound) + offset + length] {
                 let hexByte = String(byte, radix: 16)
                 desc += " \(hexByte.count == 1 ? "0" : "")\(hexByte)"
             }
@@ -308,7 +308,7 @@ public struct ByteBuffer {
     @usableFromInline mutating func _copyStorageAndRebase(capacity: _Capacity, resetIndices: Bool = false) {
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
         let storageRebaseAmount = self._slice.lowerBound + indexRebaseAmount
-        let newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
+        let newSlice = storageRebaseAmount..<min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
         self._storage = self._storage.reallocSlice(newSlice, capacity: capacity)
         self._moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
         self._moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
@@ -332,13 +332,13 @@ public struct ByteBuffer {
                 if self._slice.lowerBound == 0 {
                     self._storage.reallocStorage(capacity: newStorageMinCapacity)
                 } else {
-                    self._storage = self._storage.reallocSlice(self._slice.lowerBound ..< self._slice.upperBound,
+                    self._storage = self._storage.reallocSlice(self._slice.lowerBound..<self._slice.upperBound,
                                                                capacity: newStorageMinCapacity)
                 }
                 self._slice = self._storage.fullSlice
             } else {
                 // yes, let's just extend the slice until the end of the buffer
-                self._slice = _ByteBufferSlice(self._slice.lowerBound ..< self._storage.capacity)
+                self._slice = _ByteBufferSlice(self._slice.lowerBound..<self._storage.capacity)
             }
         }
         assert(self._slice.lowerBound + index + capacity <= self._slice.upperBound)
@@ -397,7 +397,7 @@ public struct ByteBuffer {
     mutating func _setSlowPath<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
         func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
             self._ensureAvailableCapacity(_Capacity(capacity), at: index)
-            let newBytesPtr = UnsafeMutableRawBufferPointer(fastRebase: _slicedStorageBuffer[Int(index) ..< Int(index) + Int(capacity)])
+            let newBytesPtr = UnsafeMutableRawBufferPointer(fastRebase: _slicedStorageBuffer[Int(index)..<Int(index) + Int(capacity)])
             return newBytesPtr.bindMemory(to: UInt8.self).baseAddress!
         }
         let underestimatedByteCount = bytes.underestimatedCount
@@ -521,7 +521,7 @@ public struct ByteBuffer {
     public mutating func withUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
         self._copyStorageAndRebaseIfNeeded()
         let readerIndex = self.readerIndex
-        return try body(.init(fastRebase: self._slicedStorageBuffer[readerIndex ..< readerIndex + self.readableBytes]))
+        return try body(.init(fastRebase: self._slicedStorageBuffer[readerIndex..<readerIndex + self.readableBytes]))
     }
 
     /// Yields the bytes currently writable (`bytesWritable` = `capacity` - `writerIndex`). Before reading those bytes you must first
@@ -595,7 +595,7 @@ public struct ByteBuffer {
     @inlinable
     public func withUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
         let readerIndex = self.readerIndex
-        return try body(.init(fastRebase: self._slicedStorageBuffer[readerIndex ..< readerIndex + self.readableBytes]))
+        return try body(.init(fastRebase: self._slicedStorageBuffer[readerIndex..<readerIndex + self.readableBytes]))
     }
 
     /// Yields a buffer pointer containing this `ByteBuffer`'s readable bytes. You may hold a pointer to those bytes
@@ -613,7 +613,7 @@ public struct ByteBuffer {
     public func withUnsafeReadableBytesWithStorageManagement<T>(_ body: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
         let readerIndex = self.readerIndex
-        return try body(.init(fastRebase: self._slicedStorageBuffer[readerIndex ..< readerIndex + self.readableBytes]),
+        return try body(.init(fastRebase: self._slicedStorageBuffer[readerIndex..<readerIndex + self.readableBytes]),
                         storageReference)
     }
 
@@ -654,7 +654,7 @@ public struct ByteBuffer {
             return new
         }
         var new = self
-        new._slice = _ByteBufferSlice(sliceStartIndex ..< self._slice.lowerBound + index + length)
+        new._slice = _ByteBufferSlice(sliceStartIndex..<self._slice.lowerBound + index + length)
         new._moveReaderIndex(to: 0)
         new._moveWriterIndex(to: length)
         return new
@@ -988,6 +988,6 @@ extension ByteBuffer {
         guard indexFromReaderIndex >= 0, length >= 0, indexFromReaderIndex <= self.readableBytes - length else {
             return nil
         }
-        return indexFromReaderIndex ..< (indexFromReaderIndex + length)
+        return indexFromReaderIndex..<(indexFromReaderIndex + length)
     }
 }

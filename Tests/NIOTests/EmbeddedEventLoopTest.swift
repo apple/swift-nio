@@ -109,13 +109,13 @@ public final class EmbeddedEventLoopTest: XCTestCase {
     func testCanScheduleMultipleTasks() throws {
         var sentinel = 0
         let loop = EmbeddedEventLoop()
-        for index in 1 ... 10 {
+        for index in 1...10 {
             _ = loop.scheduleTask(in: .nanoseconds(Int64(index))) {
                 sentinel = index
             }
         }
 
-        for val in 1 ... 10 {
+        for val in 1...10 {
             XCTAssertEqual(sentinel, val - 1)
             loop.advanceTime(by: .nanoseconds(1))
             XCTAssertEqual(sentinel, val)

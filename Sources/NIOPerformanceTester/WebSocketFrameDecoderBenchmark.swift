@@ -41,7 +41,7 @@ extension WebSocketFrameDecoderBenchmark: Benchmark {
     }
 
     func run() throws -> Int {
-        for _ in 0 ..< self.runCount {
+        for _ in 0..<self.runCount {
             try self.channel.writeInbound(self.data)
             let _: WebSocketFrame? = try channel.readInbound()
         }
@@ -58,10 +58,10 @@ private extension ByteBufferAllocator {
 
         // Time to add the extra bytes. To avoid checking this twice, we also start writing stuff out here.
         switch size {
-        case 0 ... 125:
+        case 0...125:
             data.writeInteger(UInt8(0x81))
             data.writeInteger(UInt8(size) | maskBitMask)
-        case 126 ... Int(UInt16.max):
+        case 126...Int(UInt16.max):
             data.writeInteger(UInt8(0x81))
             data.writeInteger(UInt8(126) | maskBitMask)
             data.writeInteger(UInt16(size))

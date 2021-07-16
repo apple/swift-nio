@@ -37,7 +37,7 @@ private func addRemoveBench(iterations: Int, _ removalOperation: (Channel, Remov
         _ = try! channel.finish()
     }
 
-    for _ in 0 ..< iterations {
+    for _ in 0..<iterations {
         let handler = RemovableHandler()
         try! channel.pipeline.syncOperations.addHandler(handler, name: RemovableHandler.name)
         try! removalOperation(channel, handler).wait()

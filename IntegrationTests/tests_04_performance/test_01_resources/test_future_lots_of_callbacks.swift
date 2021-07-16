@@ -75,7 +75,7 @@ func run(identifier: String) {
             _ = try! f.wait()
         }
         let el = EmbeddedEventLoop()
-        for _ in 0 ..< 1000 {
+        for _ in 0..<1000 {
             doThenAndFriends(loop: el)
             doAnd(loop: el)
         }

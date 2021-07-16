@@ -98,7 +98,7 @@ struct DatagramVectorReadManager {
         let messageSize = buffer.capacity / self.messageCount
 
         let result = try buffer.withVeryUnsafeMutableBytes { bufferPointer -> IOResult<Int> in
-            for i in 0 ..< self.messageCount {
+            for i in 0..<self.messageCount {
                 // TODO(cory): almost all of this except for the iovec could be done at allocation time. Maybe we should?
 
                 // First we set up the iovec and save it off.
@@ -162,7 +162,7 @@ struct DatagramVectorReadManager {
         var results = [AddressedEnvelope<ByteBuffer>]()
         results.reserveCapacity(messageCount)
 
-        for i in 0 ..< messageCount {
+        for i in 0..<messageCount {
             // We force-unwrap here because we should not have been able to write past the end of the buffer.
             var slice = buffer.getSlice(at: sliceOffset, length: sliceSize)!
             sliceOffset += sliceSize

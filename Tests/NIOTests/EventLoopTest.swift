@@ -299,7 +299,7 @@ public final class EventLoopTest: XCTestCase {
             }
             return p.futureResult
         }
-        for _ in 0 ..< 10 {
+        for _ in 0..<10 {
             // just running shouldn't do anything
             eventLoop.run()
         }
@@ -408,13 +408,13 @@ public final class EventLoopTest: XCTestCase {
 
         // We now want to connect to it. To try to slow this stuff down, we're going to use a multiple of the number
         // of event loops.
-        for _ in 0 ..< (threads * 5) {
+        for _ in 0..<(threads * 5) {
             let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
                 .connect(to: serverChannel.localAddress!)
                 .wait())
 
             var buffer = clientChannel.allocator.buffer(capacity: numBytes)
-            for i in 0 ..< numBytes {
+            for i in 0..<numBytes {
                 buffer.writeInteger(UInt8(i % 256))
             }
 

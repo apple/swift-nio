@@ -22,7 +22,7 @@ func run(identifier: String) {
 
     measure(identifier: identifier) {
         loop.execute {
-            for _ in 0 ..< 10_000 {
+            for _ in 0..<10_000 {
                 dg.enter()
                 loop.scheduleTask(in: .nanoseconds(0)) { dg.leave() }
             }

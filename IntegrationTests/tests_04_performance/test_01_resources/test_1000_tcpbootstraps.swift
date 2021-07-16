@@ -23,7 +23,7 @@ func run(identifier: String) {
     measure(identifier: identifier) {
         let numberOfIterations = 1000
         let doNothingHandler = DoNothingHandler()
-        for _ in 0 ..< numberOfIterations {
+        for _ in 0..<numberOfIterations {
             _ = ClientBootstrap(group: group)
                 .channelInitializer { channel in
                     channel.pipeline.addHTTPClientHandlers().flatMap {

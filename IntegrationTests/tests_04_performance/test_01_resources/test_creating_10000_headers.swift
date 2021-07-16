@@ -18,7 +18,7 @@ func run(identifier: String) {
     measure(identifier: identifier) {
         var count = 0
 
-        for _ in 0 ..< 10_000 {
+        for _ in 0..<10_000 {
             let baseHeaders: [(String, String)] = [("Host", "example.com"), ("Content-Length", "4")]
             count += HTTPHeaders(baseHeaders).count
         }

@@ -69,7 +69,7 @@ func run(identifier: String) {
         let buffer = ByteBuffer(integer: 1, as: UInt8.self)
         let el = group.next()
 
-        for _ in 0 ..< numberOfIterations {
+        for _ in 0..<numberOfIterations {
             try! el.flatSubmit {
                 clientBootstrap.connect(to: serverAddress).flatMap { clientChannel -> EventLoopFuture<Void> in
                     writeWaitAndClose(clientChannel: clientChannel, buffer: buffer)

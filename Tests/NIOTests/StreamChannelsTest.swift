@@ -148,7 +148,7 @@ class StreamChannelTest: XCTestCase {
 
                 var buffer = context.channel.allocator.buffer(capacity: chunkSize)
                 buffer.writeBytes(repeatElement(UInt8(ascii: "x"), count: chunkSize))
-                for _ in 0 ..< (totalAmount / chunkSize) {
+                for _ in 0..<(totalAmount / chunkSize) {
                     context.write(wrapOutboundOut(buffer)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
@@ -292,7 +292,7 @@ class StreamChannelTest: XCTestCase {
             XCTAssertNoThrow(chan2.pipeline.addHandler(FulfillOnFirstEventHandler(channelReadPromise: readPromise)))
             var buffer = chan1.allocator.buffer(capacity: 1)
             buffer.writeString("X")
-            for _ in 0 ..< 100 {
+            for _ in 0..<100 {
                 chan1.write(buffer, promise: nil)
             }
             chan1.flush()
@@ -365,7 +365,7 @@ class StreamChannelTest: XCTestCase {
                 send()
             }.wait())
 
-            for _ in 0 ..< 10 {
+            for _ in 0..<10 {
                 // We just spin here for a little while to check that there are no bogus events available on the
                 // selector.
                 let eventLoop = (receiver.eventLoop as! SelectableEventLoop)

@@ -146,7 +146,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
     func testBasicBufferingBehaviour() throws {
         // Send in 3 requests at once.
-        for _ in 0 ..< 3 {
+        for _ in 0..<3 {
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         }
@@ -211,7 +211,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertEqual(self.readCounter.readCount, 1)
 
         // Send in two requests.
-        for _ in 0 ..< 2 {
+        for _ in 0..<2 {
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         }
@@ -268,7 +268,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
     func testPipelineHandlerWillBufferHalfClose() throws {
         // Send in 2 requests at once.
-        for _ in 0 ..< 3 {
+        for _ in 0..<3 {
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         }
@@ -340,7 +340,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertEqual(self.readCounter.readCount, 1)
 
         // Send in two requests and then half-close.
-        for _ in 0 ..< 2 {
+        for _ in 0..<2 {
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         }
@@ -366,7 +366,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
     func testHalfCloseWhileWaitingForResponseIsPassedAlongIfNothingElseBuffered() throws {
         // Send in 2 requests at once.
-        for _ in 0 ..< 2 {
+        for _ in 0..<2 {
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         }
@@ -485,7 +485,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         let handler = VerifyOrderHandler()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
-        for f in 1 ... 3 {
+        for f in 1...3 {
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(makeRequestHead(uri: "/req_\(f)"))))
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         }
@@ -693,7 +693,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
     func testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer() throws {
         // Send through a full request and buffer a few more
-        for _ in 0 ..< 3 {
+        for _ in 0..<3 {
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         }

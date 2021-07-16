@@ -40,7 +40,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
     var numberOfUsedStorageSlots = 0
     var toWrite: Int = 0
 
-    loop: for i in 0 ..< count {
+    loop: for i in 0..<count {
         let p = pending[i]
         switch p.data {
         case let .byteBuffer(buffer):
@@ -63,7 +63,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
         }
     }
     defer {
-        for i in 0 ..< numberOfUsedStorageSlots {
+        for i in 0..<numberOfUsedStorageSlots {
             storageRefs[i].release()
         }
     }
@@ -197,7 +197,7 @@ private struct PendingStreamWritesState {
             var promise0: EventLoopPromise<Void>?
             assert(written >= 0, "allegedly written a negative amount of bytes: \(written)")
             var unaccountedWrites = written
-            for _ in 0 ..< itemCount {
+            for _ in 0..<itemCount {
                 let headItemReadableBytes = self.pendingWrites.first!.data.readableBytes
                 if unaccountedWrites >= headItemReadableBytes {
                     unaccountedWrites -= headItemReadableBytes
@@ -477,7 +477,7 @@ extension PendingWritesManager {
     func triggerWriteOperations(triggerOneWriteOperation: (WriteMechanism) throws -> OneWriteOperationResult) throws -> OverallWriteResult {
         var result = OverallWriteResult(writeResult: .couldNotWriteEverything, writabilityChange: false)
 
-        writeSpinLoop: for _ in 0 ... writeSpinCount {
+        writeSpinLoop: for _ in 0...writeSpinCount {
             var oneResult: OneWriteOperationResult
             repeat {
                 guard isOpen, isFlushPending else {

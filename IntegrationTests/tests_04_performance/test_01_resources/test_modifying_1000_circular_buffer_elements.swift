@@ -16,12 +16,12 @@ import NIO
 
 func run(identifier: String) {
     var buffer = CircularBuffer<[Int]>(initialCapacity: 100)
-    for _ in 0 ..< 100 {
+    for _ in 0..<100 {
         buffer.append([])
     }
 
     measure(identifier: identifier) {
-        for idx in 0 ..< 1000 {
+        for idx in 0..<1000 {
             let index = buffer.index(buffer.startIndex, offsetBy: idx % 100)
             buffer.modify(index) { value in
                 value.append(idx)

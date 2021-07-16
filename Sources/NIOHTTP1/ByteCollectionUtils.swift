@@ -22,9 +22,9 @@ extension ByteBufferView {
               let firstNonWhitespaceIndex = firstIndex(where: { !limitingElements.contains($0) })
         else {
             // This buffer is entirely trimmed elements, so trim it to nothing.
-            return self[startIndex ..< startIndex]
+            return self[startIndex..<startIndex]
         }
-        return self[firstNonWhitespaceIndex ..< index(after: lastNonWhitespaceIndex)]
+        return self[firstNonWhitespaceIndex..<index(after: lastNonWhitespaceIndex)]
     }
 
     func trimSpaces() -> ByteBufferView {
@@ -50,7 +50,7 @@ extension Sequence where Self.Element == UInt8 {
                     return false
                 }
 
-                for idx in 0 ..< lhsBuffer.count {
+                for idx in 0..<lhsBuffer.count {
                     // let's hope this gets vectorised ;)
                     if lhsBuffer[idx] & 0xDF != rhsBuffer[idx] & 0xDF {
                         return false

@@ -113,7 +113,7 @@ extension Selector: _SelectorBackendProtocol {
 
             var ts = timespec(timeAmount: nanoseconds)
             // Check that the timespec tv_nsec field conforms to the definition in the C11 standard (ISO/IEC 9899:2011).
-            assert((0 ..< 1_000_000_000).contains(ts.tv_nsec), "\(ts) is invalid (0 <= tv_nsec < 1_000_000_000)")
+            assert((0..<1_000_000_000).contains(ts.tv_nsec), "\(ts) is invalid (0 <= tv_nsec < 1_000_000_000)")
 
             // The maximum value in seconds supported by the Darwin-kernel interval timer (kern_time.c:itimerfix())
             // (note that - whilst unlikely - this value *could* change).
@@ -216,7 +216,7 @@ extension Selector: _SelectorBackendProtocol {
 
         loopStart()
 
-        for i in 0 ..< ready {
+        for i in 0..<ready {
             let ev = events[i]
             let filter = Int32(ev.filter)
             let eventRegistrationID = SelectorRegistrationID(kqueueUData: ev.udata)

@@ -39,7 +39,7 @@ public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
 
     _ = try measureOne(fn) /* pre-heat and throw away */
     var measurements = Array(repeating: 0.0, count: 10)
-    for i in 0 ..< 10 {
+    for i in 0..<10 {
         measurements[i] = try measureOne(fn)
     }
 
@@ -77,14 +77,14 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     init() {
         var head = HTTPResponseHead(version: .http1_1, status: .ok)
         head.headers.add(name: "Content-Length", value: "\(self.bodyLength)")
-        for i in 0 ..< self.numberOfAdditionalHeaders {
+        for i in 0..<self.numberOfAdditionalHeaders {
             head.headers.add(name: "X-Random-Extra-Header", value: "\(i)")
         }
         self.cachedHead = head
 
         var body: [UInt8] = []
         body.reserveCapacity(self.bodyLength)
-        for i in 0 ..< self.bodyLength {
+        for i in 0..<self.bodyLength {
             body.append(UInt8(i % Int(UInt8.max)))
         }
         self.cachedBody = body
@@ -102,7 +102,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
                 return
             case "/perf-test-2":
                 var req = HTTPResponseHead(version: .http1_1, status: .ok)
-                for i in 1 ... 8 {
+                for i in 1...8 {
                     req.headers.add(name: "X-ResponseHeader-\(i)", value: "foo")
                 }
                 req.headers.add(name: "content-length", value: "0")
@@ -180,7 +180,7 @@ final class RepeatedRequests: ChannelInboundHandler {
 
 private func someString(size: Int) -> String {
     var s = "A"
-    for f in 1 ..< size {
+    for f in 1..<size {
         s += String("\(f)".first!)
     }
     return s
@@ -190,12 +190,12 @@ private func someString(size: Int) -> String {
 
 measureAndPrint(desc: "write_http_headers") {
     var headers: [(String, String)] = []
-    for i in 1 ..< 10 {
+    for i in 1..<10 {
         headers.append(("\(i)", "\(i)"))
     }
 
     var val = 0
-    for _ in 0 ..< 100_000 {
+    for _ in 0..<100_000 {
         let headers = HTTPHeaders(headers)
         val += headers.underestimatedCount
     }
@@ -206,9 +206,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
     let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
 
-    for _ in 0 ..< 5 {
+    for _ in 0..<5 {
         buffer.clear()
-        for _ in 0 ..< (bufferSize / 4) {
+        for _ in 0..<(bufferSize / 4) {
             buffer.writeString("abcd")
         }
     }
@@ -223,9 +223,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_calculated_strings") {
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 4)
 
-    for _ in 0 ..< 5 {
+    for _ in 0..<5 {
         buffer.clear()
-        for _ in 0 ..< (bufferSize / 4) {
+        for _ in 0..<(bufferSize / 4) {
             buffer.writeString(s)
         }
     }
@@ -239,9 +239,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_string_literals") {
     let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
 
-    for _ in 0 ..< 10 {
+    for _ in 0..<10 {
         buffer.clear()
-        for _ in 0 ..< (bufferSize / 24) {
+        for _ in 0..<(bufferSize / 24) {
             buffer.writeString("012345678901234567890123")
         }
     }
@@ -256,9 +256,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_calculated_strings") {
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 24)
 
-    for _ in 0 ..< 10 {
+    for _ in 0..<10 {
         buffer.clear()
-        for _ in 0 ..< (bufferSize / 24) {
+        for _ in 0..<(bufferSize / 24) {
             buffer.writeString(s)
         }
     }
@@ -273,9 +273,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_large_calculated_strings") {
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 1024 * 1024)
 
-    for _ in 0 ..< 10 {
+    for _ in 0..<10 {
         buffer.clear()
-        for _ in 0 ..< 12 {
+        for _ in 0..<12 {
             buffer.writeString(s)
         }
     }
@@ -320,7 +320,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         let str = buffer.readString(length: 1)
         precondition(str == "A", "\(str!)")
     }
-    for _ in 0 ..< 1024 * 1024 {
+    for _ in 0..<1024 * 1024 {
         doWrites(buffer: &buffer)
         doReads(buffer: &buffer)
     }
@@ -451,7 +451,7 @@ func writeExampleHTTPResponseAsStaticString(buffer: inout ByteBuffer) {
 
 measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_string") {
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
-    for _ in 0 ..< 20_000 {
+    for _ in 0..<20_000 {
         writeExampleHTTPResponseAsString(buffer: &buffer)
         buffer.writeString(htmlASCIIOnly)
         buffer.clear()
@@ -461,7 +461,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_string") {
 
 measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_staticstring") {
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
-    for _ in 0 ..< 20_000 {
+    for _ in 0..<20_000 {
         writeExampleHTTPResponseAsStaticString(buffer: &buffer)
         buffer.writeStaticString(htmlASCIIOnlyStaticString)
         buffer.clear()
@@ -471,7 +471,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_staticstring
 
 measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_string") {
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
-    for _ in 0 ..< 20_000 {
+    for _ in 0..<20_000 {
         writeExampleHTTPResponseAsString(buffer: &buffer)
         buffer.writeString(htmlMostlyASCII)
         buffer.clear()
@@ -481,7 +481,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_string") 
 
 measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_staticstring") {
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
-    for _ in 0 ..< 20_000 {
+    for _ in 0..<20_000 {
         writeExampleHTTPResponseAsStaticString(buffer: &buffer)
         buffer.writeStaticString(htmlMostlyASCIIStaticString)
         buffer.clear()
@@ -592,7 +592,7 @@ measureAndPrint(desc: "http1_10k_reqs_100_conns") {
     var reqs: [Int] = []
     let reqsPerConn = 100
     reqs.reserveCapacity(reqsPerConn)
-    for _ in 0 ..< reqsPerConn {
+    for _ in 0..<reqsPerConn {
         let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: 100, eventLoop: group.next())
 
         let clientChannel = try! ClientBootstrap(group: group)
@@ -613,7 +613,7 @@ measureAndPrint(desc: "http1_10k_reqs_100_conns") {
 
 measureAndPrint(desc: "future_whenallsucceed_100k_immediately_succeeded_off_loop") {
     let loop = group.next()
-    let expected = Array(0 ..< 100_000)
+    let expected = Array(0..<100_000)
     let futures = expected.map { loop.makeSucceededFuture($0) }
     let allSucceeded = try! EventLoopFuture.whenAllSucceed(futures, on: loop).wait()
     return allSucceeded.count
@@ -621,7 +621,7 @@ measureAndPrint(desc: "future_whenallsucceed_100k_immediately_succeeded_off_loop
 
 measureAndPrint(desc: "future_whenallsucceed_100k_immediately_succeeded_on_loop") {
     let loop = group.next()
-    let expected = Array(0 ..< 100_000)
+    let expected = Array(0..<100_000)
     let allSucceeded = try! loop.makeSucceededFuture(()).flatMap { _ -> EventLoopFuture<[Int]> in
         let futures = expected.map { loop.makeSucceededFuture($0) }
         return EventLoopFuture.whenAllSucceed(futures, on: loop)
@@ -631,7 +631,7 @@ measureAndPrint(desc: "future_whenallsucceed_100k_immediately_succeeded_on_loop"
 
 measureAndPrint(desc: "future_whenallsucceed_100k_deferred_off_loop") {
     let loop = group.next()
-    let expected = Array(0 ..< 100_000)
+    let expected = Array(0..<100_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
     let allSucceeded = EventLoopFuture.whenAllSucceed(promises.map(\.futureResult), on: loop)
     for (index, promise) in promises.enumerated() {
@@ -642,7 +642,7 @@ measureAndPrint(desc: "future_whenallsucceed_100k_deferred_off_loop") {
 
 measureAndPrint(desc: "future_whenallsucceed_100k_deferred_on_loop") {
     let loop = group.next()
-    let expected = Array(0 ..< 100_000)
+    let expected = Array(0..<100_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
     let allSucceeded = try! loop.makeSucceededFuture(()).flatMap { _ -> EventLoopFuture<[Int]> in
         let result = EventLoopFuture.whenAllSucceed(promises.map(\.futureResult), on: loop)
@@ -656,7 +656,7 @@ measureAndPrint(desc: "future_whenallsucceed_100k_deferred_on_loop") {
 
 measureAndPrint(desc: "future_whenallcomplete_100k_immediately_succeeded_off_loop") {
     let loop = group.next()
-    let expected = Array(0 ..< 100_000)
+    let expected = Array(0..<100_000)
     let futures = expected.map { loop.makeSucceededFuture($0) }
     let allSucceeded = try! EventLoopFuture.whenAllComplete(futures, on: loop).wait()
     return allSucceeded.count
@@ -664,7 +664,7 @@ measureAndPrint(desc: "future_whenallcomplete_100k_immediately_succeeded_off_loo
 
 measureAndPrint(desc: "future_whenallcomplete_100k_immediately_succeeded_on_loop") {
     let loop = group.next()
-    let expected = Array(0 ..< 100_000)
+    let expected = Array(0..<100_000)
     let allSucceeded = try! loop.makeSucceededFuture(()).flatMap { _ -> EventLoopFuture<[Result<Int, Error>]> in
         let futures = expected.map { loop.makeSucceededFuture($0) }
         return EventLoopFuture.whenAllComplete(futures, on: loop)
@@ -674,7 +674,7 @@ measureAndPrint(desc: "future_whenallcomplete_100k_immediately_succeeded_on_loop
 
 measureAndPrint(desc: "future_whenallcomplete_100k_deferred_off_loop") {
     let loop = group.next()
-    let expected = Array(0 ..< 100_000)
+    let expected = Array(0..<100_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
     let allSucceeded = EventLoopFuture.whenAllComplete(promises.map(\.futureResult), on: loop)
     for (index, promise) in promises.enumerated() {
@@ -685,7 +685,7 @@ measureAndPrint(desc: "future_whenallcomplete_100k_deferred_off_loop") {
 
 measureAndPrint(desc: "future_whenallcomplete_100k_deferred_on_loop") {
     let loop = group.next()
-    let expected = Array(0 ..< 100_000)
+    let expected = Array(0..<100_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
     let allSucceeded = try! loop.makeSucceededFuture(()).flatMap { _ -> EventLoopFuture<[Result<Int, Error>]> in
         let result = EventLoopFuture.whenAllComplete(promises.map(\.futureResult), on: loop)
@@ -700,14 +700,14 @@ measureAndPrint(desc: "future_whenallcomplete_100k_deferred_on_loop") {
 measureAndPrint(desc: "future_reduce_10k_futures") {
     let el1 = group.next()
 
-    let oneHundredFutures = (1 ... 10_000).map { i in el1.makeSucceededFuture(i) }
+    let oneHundredFutures = (1...10_000).map { i in el1.makeSucceededFuture(i) }
     return try! EventLoopFuture<Int>.reduce(0, oneHundredFutures, on: el1, +).wait()
 }
 
 measureAndPrint(desc: "future_reduce_into_10k_futures") {
     let el1 = group.next()
 
-    let oneHundredFutures = (1 ... 10_000).map { i in el1.makeSucceededFuture(i) }
+    let oneHundredFutures = (1...10_000).map { i in el1.makeSucceededFuture(i) }
     return try! EventLoopFuture<Int>.reduce(into: 0, oneHundredFutures, on: el1) { $0 += $1 }.wait()
 }
 
@@ -771,5 +771,5 @@ try measureAndPrint(desc: "byte_to_message_decoder_decode_many_small",
                     benchmark: ByteToMessageDecoderDecodeManySmallsBenchmark(iterations: 1000, bufferSize: 16_384))
 
 measureAndPrint(desc: "generate_10k_random_request_keys") {
-    (0 ..< 10_000).reduce(into: 0) { result, _ in result &+= NIOWebSocketClientUpgrader.randomRequestKey().count }
+    (0..<10_000).reduce(into: 0) { result, _ in result &+= NIOWebSocketClientUpgrader.randomRequestKey().count }
 }

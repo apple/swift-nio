@@ -141,7 +141,7 @@ class SystemTest: XCTestCase {
                 let first = NIOBSDSocketControlMessage.firstHeader(inside: pMsgHdr)
                 let firstData = NIOBSDSocketControlMessage.data(for: first!)
                 let expecedFirstData = UnsafeRawBufferPointer(
-                    rebasing: pCmsgHdr[SystemTest.cmsghdr_firstDataStart ..< (
+                    rebasing: pCmsgHdr[SystemTest.cmsghdr_firstDataStart..<(
                         SystemTest.cmsghdr_firstDataStart + SystemTest.cmsghdr_firstDataCount)])
                 XCTAssertEqual(expecedFirstData.baseAddress, firstData?.baseAddress)
                 XCTAssertEqual(expecedFirstData.count, firstData?.count)

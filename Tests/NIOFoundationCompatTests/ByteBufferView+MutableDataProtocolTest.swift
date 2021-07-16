@@ -25,10 +25,10 @@ class ByteBufferViewDataProtocolTests: XCTestCase {
 
         view.replaceSubrange(view.indices, with: [1, 2, 3, 4, 5])
 
-        view.resetBytes(in: 0 ..< 2)
+        view.resetBytes(in: 0..<2)
         XCTAssertTrue(view.elementsEqual([0, 0, 3, 4, 5]))
 
-        view.resetBytes(in: 2 ... 4)
+        view.resetBytes(in: 2...4)
         XCTAssertTrue(view.elementsEqual([0, 0, 0, 0, 0]))
     }
 

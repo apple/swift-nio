@@ -190,7 +190,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         var inputBuffer = dummyAllocator.buffer(capacity: 8)
         inputBuffer.writeStaticString("whatwhat")
 
-        for _ in 0 ..< 10 {
+        for _ in 0..<10 {
             channel.pipeline.fireChannelRead(NIOAny(inputBuffer))
         }
 
@@ -629,7 +629,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 XCTAssertGreaterThan(self.state, 0)
                 if let slice = buffer.readSlice(length: state) {
                     self.state >>= 1
-                    for i in 0 ..< self.state {
+                    for i in 0..<self.state {
                         XCTAssertNoThrow(try (context.channel as! EmbeddedChannel).writeInbound(slice.getSlice(at: i, length: 1)))
                     }
                     context.fireChannelRead(wrapInboundOut(String(decoding: slice.readableBytesView, as: Unicode.UTF8.self)))
@@ -1287,7 +1287,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 XCTFail("unexpected error: \(error)")
             }
         }
-        for i in 0 ..< 3 {
+        for i in 0..<3 {
             buffer.clear()
             buffer.writeString("\(i)")
             XCTAssertNoThrow(XCTAssertEqual(buffer, try channel.readInbound(as: ByteBuffer.self)))
@@ -1338,7 +1338,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 XCTFail("unexpected error: \(error)")
             }
         }
-        for i in 0 ..< 3 {
+        for i in 0..<3 {
             buffer.clear()
             buffer.writeString("\(i)")
             XCTAssertNoThrow(XCTAssertEqual(buffer, try channel.readInbound(as: ByteBuffer.self)))

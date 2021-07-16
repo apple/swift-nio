@@ -120,7 +120,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
         c += 1
     }
     defer {
-        for i in 0 ..< c {
+        for i in 0..<c {
             storageRefs[i].release()
         }
     }
@@ -238,7 +238,7 @@ private struct PendingDatagramWritesState {
         fillers.reserveCapacity(written)
 
         // This was a vector write. We wrote `written` number of messages.
-        let writes = messages[messages.startIndex ... messages.index(messages.startIndex, offsetBy: written - 1)]
+        let writes = messages[messages.startIndex...messages.index(messages.startIndex, offsetBy: written - 1)]
         var promiseFiller: DatagramWritePromiseFiller?
 
         for write in writes {

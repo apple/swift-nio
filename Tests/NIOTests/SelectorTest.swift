@@ -347,7 +347,7 @@ class SelectorTest: XCTestCase {
 
             let everythingWasReadPromise = el.makePromise(of: Void.self)
             XCTAssertNoThrow(try el.submit { () -> [EventLoopFuture<Channel>] in
-                (0 ..< SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map { (_: Int) in
+                (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map { (_: Int) in
                     ClientBootstrap(group: el)
                         .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
                         .channelInitializer { channel in

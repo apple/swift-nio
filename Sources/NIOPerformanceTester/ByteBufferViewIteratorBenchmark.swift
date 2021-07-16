@@ -35,7 +35,7 @@ final class ByteBufferViewIteratorBenchmark: Benchmark {
 
     func run() -> Int {
         var which: UInt8 = 0
-        for _ in 1 ... self.iterations {
+        for _ in 1...self.iterations {
             for byte in self.buffer.readableBytesView {
                 if byte != UInt8(ascii: "A") {
                     which = byte

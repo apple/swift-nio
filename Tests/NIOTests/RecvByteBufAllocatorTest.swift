@@ -61,7 +61,7 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
         self.testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 4096)
 
         // Reads above half never shrink the capacity
-        for _ in 0 ..< 10 {
+        for _ in 0..<10 {
             self.testActualReadBytes(mayGrow: false, actualReadBytes: 2049, expectedCapacity: 4096)
         }
 
@@ -85,7 +85,7 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
         self.testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 64)
 
         // Until the bottom, where it stays forever.
-        for _ in 0 ..< 10 {
+        for _ in 0..<10 {
             self.testActualReadBytes(mayGrow: false, actualReadBytes: 1, expectedCapacity: 64)
         }
     }

@@ -34,7 +34,7 @@ public struct ByteBufferView: RandomAccessCollection {
     /// Creates a `ByteBufferView` from the readable bytes of the given `buffer`.
     @inlinable
     public init(_ buffer: ByteBuffer) {
-        self = ByteBufferView(buffer: buffer, range: buffer.readerIndex ..< buffer.writerIndex)
+        self = ByteBufferView(buffer: buffer, range: buffer.readerIndex..<buffer.writerIndex)
     }
 
     @inlinable
@@ -151,7 +151,7 @@ extension ByteBufferView: RangeReplaceableCollection {
             // Widen the range.
             let additionalByteCount = newElements.count - subrange.count
             self._buffer.moveWriterIndex(forwardBy: additionalByteCount)
-            self._range = self._range.startIndex ..< self._range.endIndex.advanced(by: additionalByteCount)
+            self._range = self._range.startIndex..<self._range.endIndex.advanced(by: additionalByteCount)
         }
     }
 }
@@ -175,7 +175,7 @@ public extension ByteBuffer {
             return nil
         }
 
-        return ByteBufferView(buffer: self, range: index ..< (index + length))
+        return ByteBufferView(buffer: self, range: index..<(index + length))
     }
 
     /// Create a `ByteBuffer` from the given `ByteBufferView`s range.

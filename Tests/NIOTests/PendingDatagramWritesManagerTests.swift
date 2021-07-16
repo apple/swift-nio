@@ -234,7 +234,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
         try self.withPendingDatagramWritesManager { pwm in
             buffer.clear()
-            let ps: [EventLoopPromise<Void>] = (0 ..< 2).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
 
             XCTAssertFalse(pwm.isEmpty)
@@ -289,7 +289,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         _ = buffer.writeString("1234")
 
         try self.withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: firstAddress, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: secondAddress, data: buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -325,7 +325,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         buffer.writeString("1234")
 
         try self.withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 4).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<4).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: firstAddress, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: secondAddress, data: buffer), promise: ps[1])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: firstAddress, data: buffer), promise: ps[2])
@@ -372,7 +372,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         buffer.writeBytes([UInt8](repeating: 0xFF, count: 12))
 
         try self.withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ... pwm.writeSpinCount + 1).map { (_: UInt) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0...pwm.writeSpinCount + 1).map { (_: UInt) in el.makePromise() }
             ps.forEach { _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: $0) }
             let maxVectorWritabilities = ps.map { (_: EventLoopPromise<Void>) in (buffer.readableBytes, address) }
             let actualVectorWritabilities = maxVectorWritabilities.indices.dropLast().map { Array(maxVectorWritabilities[$0...]) }
@@ -411,7 +411,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         buffer.writeString("1234")
 
         try self.withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -446,7 +446,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65_535)
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
@@ -482,7 +482,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         buffer.moveWriterIndex(to: biggerThanWriteV)
 
         try self.withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             buffer.moveReaderIndex(to: 100)
@@ -526,7 +526,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: emptyBuffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: emptyBuffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -560,7 +560,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         buffer.writeString("1234")
 
         try self.withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -591,7 +591,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         buffer.writeString("1234")
 
         try self.withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ... Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
             ps.forEach { p in
                 _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: p)
             }

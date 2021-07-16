@@ -211,7 +211,7 @@ public extension ByteBuffer {
         reserveCapacity(index + allBytesCount)
         withVeryUnsafeMutableBytes { destCompleteStorage in
             assert(destCompleteStorage.count >= index + allBytesCount)
-            let dest = destCompleteStorage[index ..< index + allBytesCount]
+            let dest = destCompleteStorage[index..<index + allBytesCount]
             dispatchData.copyBytes(to: .init(fastRebase: dest), count: dest.count)
         }
         return allBytesCount
@@ -397,7 +397,7 @@ public extension ByteBuffer {
         precondition(count >= 0, "Can't write fewer than 0 bytes")
         reserveCapacity(index + count)
         withVeryUnsafeMutableBytes { pointer in
-            let dest = UnsafeMutableRawBufferPointer(fastRebase: pointer[index ..< index + count])
+            let dest = UnsafeMutableRawBufferPointer(fastRebase: pointer[index..<index + count])
             _ = dest.initializeMemory(as: UInt8.self, repeating: byte)
         }
         return count

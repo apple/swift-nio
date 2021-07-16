@@ -47,7 +47,7 @@ class EchoServerClientTest: XCTestCase {
 
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
 
-        for i in 0 ..< numBytes {
+        for i in 0..<numBytes {
             buffer.writeInteger(UInt8(i % 256))
         }
 
@@ -121,7 +121,7 @@ class EchoServerClientTest: XCTestCase {
 
             var buffer = clientChannel.allocator.buffer(capacity: numBytes)
 
-            for i in 0 ..< numBytes {
+            for i in 0..<numBytes {
                 buffer.writeInteger(UInt8(i % 256))
             }
 
@@ -162,7 +162,7 @@ class EchoServerClientTest: XCTestCase {
 
             var buffer = clientChannel.allocator.buffer(capacity: numBytes)
 
-            for i in 0 ..< numBytes {
+            for i in 0..<numBytes {
                 buffer.writeInteger(UInt8(i % 256))
             }
 
@@ -263,7 +263,7 @@ class EchoServerClientTest: XCTestCase {
         }
 
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
-        for i in 0 ..< numBytes {
+        for i in 0..<numBytes {
             buffer.writeInteger(UInt8(i % 256))
         }
         XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
@@ -339,7 +339,7 @@ class EchoServerClientTest: XCTestCase {
         typealias OutboundOut = ByteBuffer
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-            for _ in 0 ..< 10_000 {
+            for _ in 0..<10_000 {
                 context.write(data, promise: nil)
             }
         }
@@ -841,7 +841,7 @@ class EchoServerClientTest: XCTestCase {
 
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
 
-        for i in 0 ..< numBytes {
+        for i in 0..<numBytes {
             buffer.writeInteger(UInt8(i % 256))
         }
 

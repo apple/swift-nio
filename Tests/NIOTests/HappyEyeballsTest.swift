@@ -24,8 +24,8 @@ private let CONNECT_RECORDER = "connectRecorder"
 private let CONNECT_DELAYER = "connectDelayer"
 private let SINGLE_IPv6_RESULT = [SocketAddress(host: "example.com", ipAddress: "fe80::1", port: 80)]
 private let SINGLE_IPv4_RESULT = [SocketAddress(host: "example.com", ipAddress: "10.0.0.1", port: 80)]
-private let MANY_IPv6_RESULTS = (1 ... 10).map { SocketAddress(host: "example.com", ipAddress: "fe80::\($0)", port: 80) }
-private let MANY_IPv4_RESULTS = (1 ... 10).map { SocketAddress(host: "example.com", ipAddress: "10.0.0.\($0)", port: 80) }
+private let MANY_IPv6_RESULTS = (1...10).map { SocketAddress(host: "example.com", ipAddress: "fe80::\($0)", port: 80) }
+private let MANY_IPv4_RESULTS = (1...10).map { SocketAddress(host: "example.com", ipAddress: "10.0.0.\($0)", port: 80) }
 
 private extension Array where Element == Channel {
     func finishAll() {
@@ -586,7 +586,7 @@ public final class HappyEyeballsTest: XCTestCase {
         resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
         resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
 
-        for connectionCount in 1 ... 20 {
+        for connectionCount in 1...20 {
             XCTAssertEqual(channels.count, connectionCount)
             loop.advanceTime(by: .milliseconds(249))
             XCTAssertEqual(channels.count, connectionCount)
@@ -600,7 +600,7 @@ public final class HappyEyeballsTest: XCTestCase {
         // Check that we attempted to connect to these hosts in the appropriate interleaved
         // order.
         var expectedAddresses = [String]()
-        for endIndex in 1 ... 10 {
+        for endIndex in 1...10 {
             expectedAddresses.append("fe80::\(endIndex)")
             expectedAddresses.append("10.0.0.\(endIndex)")
         }
@@ -656,7 +656,7 @@ public final class HappyEyeballsTest: XCTestCase {
         resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
 
         // Let all the connections fire.
-        for _ in 1 ... 20 {
+        for _ in 1...20 {
             loop.advanceTime(by: .milliseconds(250))
         }
 
@@ -724,7 +724,7 @@ public final class HappyEyeballsTest: XCTestCase {
         resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
         loop.advanceTime(by: .milliseconds(50))
 
-        for connectionCount in 1 ... 4 {
+        for connectionCount in 1...4 {
             XCTAssertEqual(channels.last!.connectTarget()!, "10.0.0.\(connectionCount)")
             loop.advanceTime(by: .milliseconds(250))
         }
@@ -735,7 +735,7 @@ public final class HappyEyeballsTest: XCTestCase {
 
         // The next 10 connection attempts will interleave the IPv6 and IPv4 results,
         // starting with IPv6.
-        for connectionCount in 1 ... 5 {
+        for connectionCount in 1...5 {
             loop.advanceTime(by: .milliseconds(250))
             XCTAssertEqual(channels.last!.connectTarget()!, "fe80::\(connectionCount)")
             loop.advanceTime(by: .milliseconds(250))
@@ -743,7 +743,7 @@ public final class HappyEyeballsTest: XCTestCase {
         }
 
         // We're now out of IPv4 addresses, so the last 5 will be IPv6.
-        for connectionCount in 6 ... 10 {
+        for connectionCount in 6...10 {
             loop.advanceTime(by: .milliseconds(250))
             XCTAssertEqual(channels.last!.connectTarget()!, "fe80::\(connectionCount)")
         }
@@ -906,7 +906,7 @@ public final class HappyEyeballsTest: XCTestCase {
         // Provide the IPv6 results and let all 10 connection attempts play out.
         resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
 
-        for connectionCount in 1 ... 10 {
+        for connectionCount in 1...10 {
             XCTAssertEqual(channels.last!.connectTarget()!, "fe80::\(connectionCount)")
             loop.advanceTime(by: .milliseconds(250))
         }
@@ -919,7 +919,7 @@ public final class HappyEyeballsTest: XCTestCase {
 
         // Now the IPv4 results come in. Let all 10 connection attempts play out.
         resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
-        for connectionCount in 1 ... 10 {
+        for connectionCount in 1...10 {
             XCTAssertEqual(channels.last!.connectTarget()!, "10.0.0.\(connectionCount)")
             loop.advanceTime(by: .milliseconds(250))
         }
@@ -997,7 +997,7 @@ public final class HappyEyeballsTest: XCTestCase {
         // Here the AAAA and A results return. We are going to fail the connections
         // instantly, which should cause all 20 to appear.
         resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
-        for channelCount in 1 ... 10 {
+        for channelCount in 1...10 {
             XCTAssertFalse(channelFuture.isFulfilled)
             XCTAssertEqual(channels.count, channelCount)
             XCTAssertEqual(channels.last!.state(), .idle)
@@ -1005,7 +1005,7 @@ public final class HappyEyeballsTest: XCTestCase {
         }
 
         resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
-        for channelCount in 11 ... 20 {
+        for channelCount in 11...20 {
             XCTAssertFalse(channelFuture.isFulfilled)
             XCTAssertEqual(channels.count, channelCount)
             XCTAssertEqual(channels.last!.state(), .idle)
@@ -1046,7 +1046,7 @@ public final class HappyEyeballsTest: XCTestCase {
 
         // Here the AAAA results return. Let all the connection attempts go out.
         resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
-        for channelCount in 1 ... 10 {
+        for channelCount in 1...10 {
             XCTAssertEqual(channels.count, channelCount)
             loop.advanceTime(by: .milliseconds(250))
         }
@@ -1083,7 +1083,7 @@ public final class HappyEyeballsTest: XCTestCase {
 
         // Return the IPv6 results and observe the channel creation attempts.
         resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
-        for channelCount in 1 ... 10 {
+        for channelCount in 1...10 {
             XCTAssertEqual(ourChannelFutures.count, channelCount)
             loop.advanceTime(by: .milliseconds(250))
         }

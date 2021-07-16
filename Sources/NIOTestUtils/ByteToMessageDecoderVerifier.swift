@@ -79,7 +79,7 @@ public enum ByteToMessageDecoderVerifier {
         }
 
         func verifyDripFeed(channel: RecordingChannel) throws {
-            for _ in 0 ..< 10 {
+            for _ in 0..<10 {
                 for (input, expectedOutputs) in inputOutputPairs.shuffled() {
                     for c in input.readableBytesView {
                         var buffer = channel.allocator.buffer(capacity: 12)
@@ -114,7 +114,7 @@ public enum ByteToMessageDecoderVerifier {
             var overallBuffer = channel.allocator.buffer(capacity: 1024)
             var overallExpecteds: [Out] = []
 
-            for _ in 0 ..< 10 {
+            for _ in 0..<10 {
                 for (var input, expectedOutputs) in inputOutputPairs.shuffled() {
                     overallBuffer.writeBuffer(&input)
                     overallExpecteds.append(contentsOf: expectedOutputs)

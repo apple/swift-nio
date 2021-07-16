@@ -55,7 +55,7 @@ extension WebSocketOpcode: Equatable {}
 extension WebSocketOpcode: Hashable {}
 
 extension WebSocketOpcode: CaseIterable {
-    public static var allCases = (0 ..< 0x10).map { WebSocketOpcode(rawValue: $0) }
+    public static var allCases = (0..<0x10).map { WebSocketOpcode(rawValue: $0) }
 }
 
 extension WebSocketOpcode: CustomStringConvertible {

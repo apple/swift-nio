@@ -106,7 +106,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
         var buffer = recvAllocator.buffer(allocator: allocator)
         var result = ReadResult.none
-        for i in 1 ... maxMessagesPerRead {
+        for i in 1...maxMessagesPerRead {
             guard self.isOpen, !self.inputShutdown else {
                 throw ChannelError.eof
             }

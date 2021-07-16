@@ -27,7 +27,7 @@ func run(identifier: String) {
         }
         try! channel.pipeline.syncOperations.addHandler(SimpleHandler())
 
-        for _ in 0 ..< iterations {
+        for _ in 0..<iterations {
             _ = try! channel.pipeline.syncOperations.handler(type: SimpleHandler.self)
         }
         return iterations

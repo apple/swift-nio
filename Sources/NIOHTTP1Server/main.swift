@@ -271,7 +271,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case "/dynamic/continuous":
             return self.handleContinuousWrites
         case "/dynamic/count-to-ten":
-            return { self.handleMultipleWrites(context: $0, request: $1, strings: (1 ... 10).map { "\($0)" }, delay: .milliseconds(100)) }
+            return { self.handleMultipleWrites(context: $0, request: $1, strings: (1...10).map { "\($0)" }, delay: .milliseconds(100)) }
         case "/dynamic/client-ip":
             return { context, req in self.handleJustWrite(context: context, request: req, string: "\(context.remoteAddress.debugDescription)") }
         default:

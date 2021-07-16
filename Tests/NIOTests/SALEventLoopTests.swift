@@ -58,7 +58,7 @@ final class SALEventLoopTests: XCTestCase, SALTest {
 
                 // Now execute 10 tasks.
                 var i = 0
-                for _ in 0 ..< 10 {
+                for _ in 0..<10 {
                     thisLoop.execute {
                         i &+= 1
                     }

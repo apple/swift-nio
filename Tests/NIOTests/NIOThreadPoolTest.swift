@@ -32,7 +32,7 @@ class NIOThreadPoolTest: XCTestCase {
         let threadBlockingSem = DispatchSemaphore(value: 0)
 
         // let's use up all the threads
-        for i in 0 ..< numberOfThreads {
+        for i in 0..<numberOfThreads {
             pool.submit { s in
                 switch s {
                 case .cancelled:
@@ -48,16 +48,16 @@ class NIOThreadPoolTest: XCTestCase {
         }
 
         // now, let's wait for all the threads to have done their work
-        (0 ..< numberOfThreads).forEach { _ in
+        (0..<numberOfThreads).forEach { _ in
             threadNameCollectionSem.wait()
         }
         // and finally, let them exit
-        (0 ..< numberOfThreads).forEach { _ in
+        (0..<numberOfThreads).forEach { _ in
             threadBlockingSem.signal()
         }
 
         let localAllThreads = lock.withLock { allThreadNames }
-        for threadNumber in 0 ..< numberOfThreads {
+        for threadNumber in 0..<numberOfThreads {
             XCTAssert(localAllThreads.contains("TP-#\(threadNumber)"), "\(localAllThreads)")
         }
     }

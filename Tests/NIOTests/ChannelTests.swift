@@ -128,7 +128,7 @@ public final class ChannelTests: XCTestCase {
         // We're going to try to write loads, and loads, and loads of data. In this case, one more
         // write than the iovecs max.
         var buffer = clientChannel.allocator.buffer(capacity: 1)
-        for _ in 0 ..< Socket.writevLimitIOVectors {
+        for _ in 0..<Socket.writevLimitIOVectors {
             buffer.clear()
             buffer.writeString("a")
             clientChannel.write(NIOAny(buffer), promise: nil)
@@ -156,7 +156,7 @@ public final class ChannelTests: XCTestCase {
 
         let bufferSize = 1024 * 1024 * 2
         var buffer = clientChannel.allocator.buffer(capacity: bufferSize)
-        for _ in 0 ..< bufferSize {
+        for _ in 0..<bufferSize {
             buffer.writeStaticString("a")
         }
 
@@ -373,7 +373,7 @@ public final class ChannelTests: XCTestCase {
 
         try self.withPendingStreamWritesManager { pwm in
             buffer.clear()
-            let ps: [EventLoopPromise<Void>] = (0 ..< 2).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
 
             XCTAssertFalse(pwm.isEmpty)
@@ -429,7 +429,7 @@ public final class ChannelTests: XCTestCase {
         _ = buffer.writeString("1234")
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -465,7 +465,7 @@ public final class ChannelTests: XCTestCase {
         _ = buffer.writeString("1234")
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 4).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<4).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[2])
@@ -511,7 +511,7 @@ public final class ChannelTests: XCTestCase {
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */ )
             buffer.clear()
             buffer.writeBytes([UInt8](repeating: 0xFF, count: numberOfBytes))
-            let ps: [EventLoopPromise<Void>] = (0 ..< 1).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             pwm.markFlushCheckpoint()
 
@@ -520,7 +520,7 @@ public final class ChannelTests: XCTestCase {
              After that, one byte will remain */
             var result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                        promises: ps,
-                                                       expectedSingleWritabilities: Array((2 ... numberOfBytes).reversed()),
+                                                       expectedSingleWritabilities: Array((2...numberOfBytes).reversed()),
                                                        expectedVectorWritabilities: nil,
                                                        expectedFileWritabilities: nil,
                                                        returns: Array(repeating: .processed(1), count: numberOfBytes),
@@ -549,7 +549,7 @@ public final class ChannelTests: XCTestCase {
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */ )
             buffer.clear()
             buffer.writeBytes([0xFF] as [UInt8])
-            let ps: [EventLoopPromise<Void>] = (0 ..< numberOfBytes).map { (_: Int) in
+            let ps: [EventLoopPromise<Void>] = (0..<numberOfBytes).map { (_: Int) in
                 let p = el.makePromise(of: Void.self)
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
                 return p
@@ -559,14 +559,14 @@ public final class ChannelTests: XCTestCase {
             /* this will create an `Array` like this (for `numberOfBytes == 4`)
              `[[1, 1, 1, 1], [1, 1, 1], [1, 1], [1]]`
              */
-            let expectedVectorWrites = Array((2 ... numberOfBytes).reversed()).map { n in
+            let expectedVectorWrites = Array((2...numberOfBytes).reversed()).map { n in
                 Array(repeating: 1, count: n)
             }
 
             /* this will create an `Array` like this (for `numberOfBytes == 4`)
                 `[[true, false, false, false], [true, true, false, false], [true, true, true, false]`
              */
-            let expectedPromiseStates = Array((2 ... numberOfBytes).reversed()).map { n in
+            let expectedPromiseStates = Array((2...numberOfBytes).reversed()).map { n in
                 Array(repeating: true, count: numberOfBytes - n + 1) + Array(repeating: false, count: n - 1)
             }
 
@@ -610,13 +610,13 @@ public final class ChannelTests: XCTestCase {
                 XCTAssertNoThrow(try handle.takeDescriptorOwnership())
             }
             let fileRegion = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 1)
-            let ps: [EventLoopPromise<Void>] = (0 ..< numberOfWrites).map { _ in el.makePromise() }
-            (0 ..< numberOfWrites).forEach { i in
+            let ps: [EventLoopPromise<Void>] = (0..<numberOfWrites).map { _ in el.makePromise() }
+            (0..<numberOfWrites).forEach { i in
                 _ = pwm.add(data: i % 2 == 0 ? .byteBuffer(buffer) : .fileRegion(fileRegion), promise: ps[i])
             }
             pwm.markFlushCheckpoint()
 
-            let expectedPromiseStates = Array((1 ... numberOfWrites).reversed()).map { n in
+            let expectedPromiseStates = Array((1...numberOfWrites).reversed()).map { n in
                 Array(repeating: true, count: numberOfWrites - n + 1) + Array(repeating: false, count: n - 1)
             }
             /* below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
@@ -642,7 +642,7 @@ public final class ChannelTests: XCTestCase {
         _ = buffer.writeString("1234")
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -677,7 +677,7 @@ public final class ChannelTests: XCTestCase {
         buffer.moveWriterIndex(to: halfTheWriteVLimit)
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -713,7 +713,7 @@ public final class ChannelTests: XCTestCase {
         buffer.moveWriterIndex(to: biggerThanWriteV)
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -746,7 +746,7 @@ public final class ChannelTests: XCTestCase {
     func testPendingWritesFileRegion() throws {
         let el = EmbeddedEventLoop()
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 2).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.makePromise() }
 
             let fh1 = NIOFileHandle(descriptor: -1)
             let fh2 = NIOFileHandle(descriptor: -2)
@@ -795,7 +795,7 @@ public final class ChannelTests: XCTestCase {
     func testPendingWritesEmptyFileRegion() throws {
         let el = EmbeddedEventLoop()
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 1).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
 
             let fh = NIOFileHandle(descriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 99, endIndex: 99)
@@ -824,7 +824,7 @@ public final class ChannelTests: XCTestCase {
         _ = buffer.writeString("1234")
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 5).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<5).map { (_: Int) in el.makePromise() }
 
             let fh1 = NIOFileHandle(descriptor: -1)
             let fh2 = NIOFileHandle(descriptor: -1)
@@ -880,7 +880,7 @@ public final class ChannelTests: XCTestCase {
         _ = buffer.writeString("1234")
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
 
             pwm.markFlushCheckpoint()
 
@@ -929,7 +929,7 @@ public final class ChannelTests: XCTestCase {
         let emptyBuffer = alloc.buffer(capacity: 12)
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -964,7 +964,7 @@ public final class ChannelTests: XCTestCase {
         buffer.writeString("1234")
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -995,7 +995,7 @@ public final class ChannelTests: XCTestCase {
         buffer.writeString("1234")
 
         try self.withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ... Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
             ps.forEach { p in
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
             }
@@ -1024,7 +1024,7 @@ public final class ChannelTests: XCTestCase {
     func testPendingWritesIsHappyWhenSendfileReturnsWouldBlockButWroteFully() throws {
         let el = EmbeddedEventLoop()
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0 ..< 1).map { (_: Int) in el.makePromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
 
             let fh = NIOFileHandle(descriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8192)
@@ -1631,7 +1631,7 @@ public final class ChannelTests: XCTestCase {
             .connect(to: serverChannel.localAddress!).wait())
         var buffer = clientChannel.allocator.buffer(capacity: 8)
         buffer.writeString("01234567")
-        for _ in 0 ..< 20 {
+        for _ in 0..<20 {
             XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
         }
         XCTAssertNoThrow(try clientChannel.close().wait())
@@ -1841,7 +1841,7 @@ public final class ChannelTests: XCTestCase {
             }
         }
 
-        for _ in 0 ..< 20 {
+        for _ in 0..<20 {
             XCTAssertNoThrow(try runTest())
         }
     }
@@ -2239,7 +2239,7 @@ public final class ChannelTests: XCTestCase {
 
         // we're just looping here to get a pretty good chance we're hitting both the synchronous and the asynchronous
         // connect path.
-        for _ in 0 ..< 64 {
+        for _ in 0..<64 {
             XCTAssertThrowsError(try ClientBootstrap(group: group).connect(to: serverSockAddress).wait()) { error in
                 XCTAssertEqual(ECONNREFUSED, (error as? IOError).map(\.errnoCode))
             }
@@ -2738,7 +2738,7 @@ public final class ChannelTests: XCTestCase {
             let g = DispatchGroup()
             q.async(group: g) {
                 // we spin here for a bit and read
-                for _ in 0 ..< 10_000 {
+                for _ in 0..<10_000 {
                     // this should trigger TSan if there's an issue.
                     XCTAssert(String(describing: channel).count != 0)
                 }
@@ -2780,7 +2780,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try server.close().wait())
         }
 
-        for _ in 0 ..< 10 {
+        for _ in 0..<10 {
             // 10 times so we get a good chance of an asynchronous connect.
             XCTAssertNoThrow(try ClientBootstrap(group: group).connect(to: server.localAddress!).flatMap { channel in
                 channel.close()
