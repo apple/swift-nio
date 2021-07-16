@@ -109,8 +109,8 @@
             internal static let POLLCANCEL: CUnsignedInt = 0xF000_0000 // Poll cancelled, need to reregister for singleshot polls
 
             private var ring = io_uring()
-            private let ringEntries: CUnsignedInt = 8192
-            private let cqeMaxCount: UInt32 = 8192 // this is the max chunk of CQE we take.
+            private let ringEntries: CUnsignedInt = 8_192
+            private let cqeMaxCount: UInt32 = 8_192 // this is the max chunk of CQE we take.
 
             var cqes: UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>
             var fdEvents = [FDEventKey: UInt32]() // fd, sequence_identifier : merged event_poll_return
@@ -227,7 +227,7 @@
                     // Right nog we just loop with a sleep trying to buy time, but could also possibly fatalError here.
                     // See: https://github.com/axboe/liburing/issues/309
                     case -ENOMEM:
-                        usleep(10000) // let's not busy loop to give the kernel some time to recover if possible
+                        usleep(10_000) // let's not busy loop to give the kernel some time to recover if possible
                         self._debugPrint("io_uring_flush io_uring_submit -ENOMEM \(submissionCount)")
                     case 0:
                         self._debugPrint("io_uring_flush io_uring_submit submitted 0, so far needed submissionCount[\(submissionCount)] waitingSubmissions[\(waitingSubmissions)] submitted [\(retval)] SQE:s this iteration")

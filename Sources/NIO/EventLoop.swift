@@ -331,7 +331,7 @@ public struct TimeAmount: Hashable {
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func microseconds(_ amount: Int64) -> TimeAmount {
-        TimeAmount(amount * 1000)
+        TimeAmount(amount * 1_000)
     }
 
     /// Creates a new `TimeAmount` for the given amount of milliseconds.
@@ -340,7 +340,7 @@ public struct TimeAmount: Hashable {
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func milliseconds(_ amount: Int64) -> TimeAmount {
-        TimeAmount(amount * (1000 * 1000))
+        TimeAmount(amount * (1_000 * 1_000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of seconds.
@@ -349,7 +349,7 @@ public struct TimeAmount: Hashable {
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func seconds(_ amount: Int64) -> TimeAmount {
-        TimeAmount(amount * (1000 * 1000 * 1000))
+        TimeAmount(amount * (1_000 * 1_000 * 1_000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of minutes.
@@ -358,7 +358,7 @@ public struct TimeAmount: Hashable {
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func minutes(_ amount: Int64) -> TimeAmount {
-        TimeAmount(amount * (1000 * 1000 * 1000 * 60))
+        TimeAmount(amount * (1_000 * 1_000 * 1_000 * 60))
     }
 
     /// Creates a new `TimeAmount` for the given amount of hours.
@@ -367,7 +367,7 @@ public struct TimeAmount: Hashable {
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func hours(_ amount: Int64) -> TimeAmount {
-        TimeAmount(amount * (1000 * 1000 * 1000 * 60 * 60))
+        TimeAmount(amount * (1_000 * 1_000 * 1_000 * 60 * 60))
     }
 }
 

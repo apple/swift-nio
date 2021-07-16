@@ -91,7 +91,7 @@ class HTTPHeadersTest: XCTestCase {
 
         let headers = HTTPHeaders(originalHeaders)
         let channel = EmbeddedChannel()
-        var buffer = channel.allocator.buffer(capacity: 1024)
+        var buffer = channel.allocator.buffer(capacity: 1_024)
         buffer.write(headers: headers)
 
         let writtenBytes = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)!

@@ -79,8 +79,8 @@ let arg3 = arguments.dropFirst(3).first
 // If only writing to the destination address, bind to local port 0 and address 0.0.0.0 or ::.
 let defaultHost = "::1"
 // If the server and the client are running on the same computer, these will need to differ from each other.
-let defaultServerPort: Int = 9999
-let defaultListeningPort: Int = 8888
+let defaultServerPort: Int = 9_999
+let defaultListeningPort: Int = 8_888
 
 enum ConnectTo {
     case ip(host: String, sendPort: Int, listeningPort: Int)

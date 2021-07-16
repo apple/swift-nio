@@ -25,8 +25,8 @@ class CodableByteBufferTest: XCTestCase {
 
     override func setUp() {
         self.allocator = ByteBufferAllocator()
-        self.buffer = self.allocator.buffer(capacity: 1024)
-        self.buffer.writeString(String(repeating: "A", count: 1024))
+        self.buffer = self.allocator.buffer(capacity: 1_024)
+        self.buffer.writeString(String(repeating: "A", count: 1_024))
         self.buffer.moveReaderIndex(to: 129)
         self.buffer.moveWriterIndex(to: 129)
         self.decoder = JSONDecoder()
@@ -127,7 +127,7 @@ class CodableByteBufferTest: XCTestCase {
 
     func testGetSetJSONDecodableWorks() {
         let expectedSandI = StringAndInt(string: "hello", int: 42)
-        buffer.writeString(String(repeating: "{", count: 1000))
+        buffer.writeString(String(repeating: "{", count: 1_000))
         var writtenBytes: Int?
         XCTAssertNoThrow(writtenBytes = try self.buffer.setJSONEncodable(expectedSandI,
                                                                          at: self.buffer.readerIndex + 123))
@@ -158,7 +158,7 @@ class CodableByteBufferTest: XCTestCase {
     }
 
     func testCustomEncoderIsRespected() {
-        let expectedDate = Date(timeIntervalSinceReferenceDate: 86400)
+        let expectedDate = Date(timeIntervalSinceReferenceDate: 86_400)
         let strategyExpectation = XCTestExpectation(description: "Custom encoding strategy invoked")
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .custom { date, encoder in
@@ -171,7 +171,7 @@ class CodableByteBufferTest: XCTestCase {
     }
 
     func testCustomDecoderIsRespected() {
-        let expectedDate = Date(timeIntervalSinceReferenceDate: 86400)
+        let expectedDate = Date(timeIntervalSinceReferenceDate: 86_400)
         let strategyExpectation = XCTestExpectation(description: "Custom decoding strategy invoked")
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -190,7 +190,7 @@ class CodableByteBufferTest: XCTestCase {
     }
 
     func testCustomCodersAreRespectedWhenUsingReadWriteJSONDecodable() {
-        let expectedDate = Date(timeIntervalSinceReferenceDate: 86400)
+        let expectedDate = Date(timeIntervalSinceReferenceDate: 86_400)
         let decoderStrategyExpectation = XCTestExpectation(description: "Custom decoding strategy invoked")
         let encoderStrategyExpectation = XCTestExpectation(description: "Custom encoding strategy invoked")
 

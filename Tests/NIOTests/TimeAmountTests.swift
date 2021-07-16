@@ -17,7 +17,7 @@ import XCTest
 class TimeAmountTests: XCTestCase {
     func testTimeAmountConversion() {
         XCTAssertEqual(TimeAmount.nanoseconds(3), .nanoseconds(3))
-        XCTAssertEqual(TimeAmount.microseconds(14), .nanoseconds(14000))
+        XCTAssertEqual(TimeAmount.microseconds(14), .nanoseconds(14_000))
         XCTAssertEqual(TimeAmount.milliseconds(15), .nanoseconds(15_000_000))
         XCTAssertEqual(TimeAmount.seconds(9), .nanoseconds(9_000_000_000))
         XCTAssertEqual(TimeAmount.minutes(2), .nanoseconds(120_000_000_000))

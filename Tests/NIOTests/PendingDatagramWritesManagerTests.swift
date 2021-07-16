@@ -229,7 +229,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
     func testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
-        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
+        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65_535)
         var buffer = alloc.buffer(capacity: 12)
 
         try self.withPendingDatagramWritesManager { pwm in
@@ -282,8 +282,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
     func testPendingWritesUsesVectorWriteOperationAndDoesntWriteTooMuch() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
-        let firstAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
-        let secondAddress = try SocketAddress(ipAddress: "127.0.0.2", port: 65535)
+        let firstAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 65_535)
+        let secondAddress = try SocketAddress(ipAddress: "127.0.0.2", port: 65_535)
         var buffer = alloc.buffer(capacity: 12)
         let emptyBuffer = buffer
         _ = buffer.writeString("1234")
@@ -319,8 +319,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
     func testPendingWritesWorkWithPartialWrites() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
-        let firstAddress = try SocketAddress(ipAddress: "fe80::1", port: 65535)
-        let secondAddress = try SocketAddress(ipAddress: "fe80::2", port: 65535)
+        let firstAddress = try SocketAddress(ipAddress: "fe80::1", port: 65_535)
+        let secondAddress = try SocketAddress(ipAddress: "fe80::2", port: 65_535)
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeString("1234")
 
@@ -367,7 +367,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
     func testPendingWritesSpinCountWorksForSingleWrites() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
-        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
+        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65_535)
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeBytes([UInt8](repeating: 0xFF, count: 12))
 
@@ -406,7 +406,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
     func testPendingWritesCancellationWorksCorrectly() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
-        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
+        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65_535)
         var buffer = alloc.buffer(capacity: 12)
         buffer.writeString("1234")
 
@@ -443,7 +443,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         var buffer = alloc.buffer(capacity: halfTheWriteVLimit)
         buffer.moveReaderIndex(to: 0)
         buffer.moveWriterIndex(to: halfTheWriteVLimit)
-        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
+        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65_535)
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0 ..< 3).map { (_: Int) in el.makePromise() }
@@ -470,7 +470,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         }
 
         let el = EmbeddedEventLoop()
-        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
+        let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65_535)
         let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
                                         hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xDEADBEE)! },
                                         hookedFree: { _ in },

@@ -79,7 +79,7 @@
             internal static let EPOLLIN: CUnsignedInt = 1 // numericCast(CNIOLinux.EPOLLIN)
             internal static let EPOLLOUT: CUnsignedInt = 4 // numericCast(CNIOLinux.EPOLLOUT)
             internal static let EPOLLERR: CUnsignedInt = 8 // numericCast(CNIOLinux.EPOLLERR)
-            internal static let EPOLLRDHUP: CUnsignedInt = 8192 // numericCast(CNIOLinux.EPOLLRDHUP)
+            internal static let EPOLLRDHUP: CUnsignedInt = 8_192 // numericCast(CNIOLinux.EPOLLRDHUP)
             internal static let EPOLLHUP: CUnsignedInt = 16 // numericCast(CNIOLinux.EPOLLHUP)
             internal static let EPOLLET: CUnsignedInt = 2_147_483_648 // numericCast(CNIOLinux.EPOLLET)
         #else
@@ -145,7 +145,7 @@
             let fh = try NIOFileHandle(path: path)
             defer { try! fh.close() }
             // linux doesn't properly report /sys/fs/cgroup/* files lengths so we use a reasonable limit
-            var buf = ByteBufferAllocator().buffer(capacity: 1024)
+            var buf = ByteBufferAllocator().buffer(capacity: 1_024)
             try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: buf.capacity) { ptr in
                 let res = try fh.withUnsafeFileDescriptor { fd -> IOResult<ssize_t> in
                     try Posix.read(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)

@@ -33,7 +33,7 @@ class ControlMessageTests: XCTestCase {
     var encoder: UnsafeOutboundControlBytes!
 
     override func setUp() {
-        self.encoderBytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1000,
+        self.encoderBytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1_000,
                                                                    alignment: MemoryLayout<Int>.alignment)
         self.encoder = UnsafeOutboundControlBytes(controlBytes: self.encoderBytes!)
     }

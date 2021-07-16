@@ -371,7 +371,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     private var state = PendingDatagramWritesState()
 
-    internal var waterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
+    internal var waterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1_024, high: 64 * 1_024)
     internal let channelWritabilityFlag: NIOAtomic<Bool> = .makeAtomic(value: true)
     internal var publishedWritability = true
     internal var writeSpinCount: UInt = 16

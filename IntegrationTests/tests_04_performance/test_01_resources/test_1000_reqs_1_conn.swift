@@ -14,8 +14,8 @@
 
 func run(identifier: String) {
     measure(identifier: identifier) {
-        let numberDone = try! doRequests(group: group, number: 1000)
-        precondition(numberDone == 1000)
+        let numberDone = try! doRequests(group: group, number: 1_000)
+        precondition(numberDone == 1_000)
         return numberDone
     }
 }

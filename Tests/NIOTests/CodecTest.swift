@@ -109,11 +109,11 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         typealias InboundOut = ByteBuffer
 
         func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
-            guard buffer.readableBytes >= 5120 else {
+            guard buffer.readableBytes >= 5_120 else {
                 return .needMoreData
             }
 
-            context.fireChannelRead(wrapInboundOut(buffer.readSlice(length: 2048)!))
+            context.fireChannelRead(wrapInboundOut(buffer.readSlice(length: 2_048)!))
             return .continue
         }
 
@@ -219,7 +219,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 512), try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
-        XCTAssertEqual(decoder.cumulationBuffer!.capacity, 1024)
+        XCTAssertEqual(decoder.cumulationBuffer!.capacity, 1_024)
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 1)
         XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 512)
 
@@ -236,9 +236,9 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 512), try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
-        XCTAssertEqual(decoder.cumulationBuffer!.capacity, 2048)
+        XCTAssertEqual(decoder.cumulationBuffer!.capacity, 2_048)
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 2)
-        XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 1024)
+        XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 1_024)
 
         // Finally we're going to send in another 513 bytes. This will cause another chunk to be
         // passed into our decoder buffer, which has a capacity of 2048 bytes. Since the buffer has
@@ -251,7 +251,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 512), try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
-        XCTAssertEqual(decoder.cumulationBuffer!.capacity, 2048)
+        XCTAssertEqual(decoder.cumulationBuffer!.capacity, 2_048)
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 3)
         XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 0)
     }
@@ -266,20 +266,20 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(decoder).wait())
 
         // We're going to send in 5119 bytes. This will be held.
-        var buffer = channel.allocator.buffer(capacity: 5119)
-        buffer.writeBytes(Array(repeating: 0x04, count: 5119))
+        var buffer = channel.allocator.buffer(capacity: 5_119)
+        buffer.writeBytes(Array(repeating: 0x04, count: 5_119))
         XCTAssertNoThrow(XCTAssertTrue(try channel.writeInbound(buffer).isEmpty))
 
-        XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 5119)
+        XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 5_119)
         XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 0)
 
         // Now we're going to send in one more byte. This will cause a chunk to be passed on,
         // shrinking the held memory to 3072 bytes. However, memory will be reclaimed.
         XCTAssertNoThrow(XCTAssertTrue(try channel.writeInbound(buffer.getSlice(at: 0, length: 1)).isFull))
-        XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 2048), try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertEqual(ByteBuffer(repeating: 0x04, count: 2_048), try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
-        XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 3072)
+        XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 3_072)
         XCTAssertEqual(decoder.cumulationBuffer!.readerIndex, 0)
     }
 
@@ -293,7 +293,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             func decode(context _: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 self.numberOfDecodeCalls += 1
 
-                guard buffer.readSlice(length: [2048, 1024, 512, 256,
+                guard buffer.readSlice(length: [2_048, 1_024, 512, 256,
                                                 128, 64, .max][self.numberOfDecodeCalls - 1]) != nil
                 else {
                     return .needMoreData
@@ -327,8 +327,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
         }
 
-        let buffer = ByteBuffer(repeating: 0, count: 4096)
-        XCTAssertEqual(4096, buffer.storageCapacity)
+        let buffer = ByteBuffer(repeating: 0, count: 4_096)
+        XCTAssertEqual(4_096, buffer.storageCapacity)
 
         // We're sending 4096 bytes. The decoder will do:
         // 1. read 2048 -> .continue
@@ -455,7 +455,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
         let decoder = HandItThroughDecoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         XCTAssertTrue(channel.isActive)
 
         var buffer = channel.allocator.buffer(capacity: 16)
@@ -843,7 +843,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         let decoder = Decoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
 
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         XCTAssertNoThrow(try channel.close().wait())
@@ -876,7 +876,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         let decoder = Decoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
 
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
@@ -912,7 +912,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
         let decoder = Decoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         var buffer = channel.allocator.buffer(capacity: 1)
         buffer.writeString("x")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
@@ -945,7 +945,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
         let decoder = Decoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         let removalFuture = channel.pipeline.context(handlerType: ByteToMessageHandler<Decoder>.self).flatMap {
             channel.pipeline.removeHandler(context: $0)
         }
@@ -975,7 +975,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
         let decoder = Decoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         var buffer = channel.allocator.buffer(capacity: 1)
         buffer.writeString("x")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
@@ -1011,7 +1011,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
         let decoder = Decoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         var buffer = channel.allocator.buffer(capacity: 3)
         buffer.writeStaticString("abc")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
@@ -1081,7 +1081,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         let decoder = Decoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
         XCTAssertNoThrow(try channel.pipeline.addHandler(CheckStateOfDecoderHandler(decoder: decoder), position: .first).wait())
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         var buffer = channel.allocator.buffer(capacity: 3)
         XCTAssertNoThrow(try channel.writeOutbound("before"))
         buffer.writeStaticString("ab")
@@ -1238,7 +1238,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
         let decoder = Decoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         var buffer = channel.allocator.buffer(capacity: 1)
         buffer.writeString("x")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
@@ -1277,7 +1277,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         defer {
             XCTAssertFalse(channel.isActive)
         }
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.writeStaticString("0123456")
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
@@ -1328,7 +1328,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         defer {
             XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
         }
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.writeStaticString("0123456")
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
@@ -1391,7 +1391,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         let checker = CheckThingsAreOkayHandler()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
         XCTAssertNoThrow(try channel.pipeline.addHandler(checker).wait())
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5_678)).wait())
         channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
         XCTAssertEqual(1, decoder.decodeLastCalls)
         XCTAssertEqual(0, checker.channelInactiveEvents)

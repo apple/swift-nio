@@ -24,7 +24,7 @@ class EchoServerClientTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let numBytes = 16 * 1024
+        let numBytes = 16 * 1_024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -76,7 +76,7 @@ class EchoServerClientTest: XCTestCase {
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(WriteOnConnectHandler(toWrite: "X")).flatMap { _ in
-                    channel.pipeline.addHandler(ByteCountingHandler(numBytes: 10000, promise: promise))
+                    channel.pipeline.addHandler(ByteCountingHandler(numBytes: 10_000, promise: promise))
                 }
             }
             .connect(to: serverChannel.localAddress!).wait())
@@ -85,7 +85,7 @@ class EchoServerClientTest: XCTestCase {
         }
 
         let bytes = try promise.futureResult.wait()
-        let expected = String(decoding: Array(repeating: "X".utf8.first!, count: 10000), as: Unicode.UTF8.self)
+        let expected = String(decoding: Array(repeating: "X".utf8.first!, count: 10_000), as: Unicode.UTF8.self)
         XCTAssertEqual(expected, bytes.getString(at: bytes.readerIndex, length: bytes.readableBytes))
     }
 
@@ -96,7 +96,7 @@ class EchoServerClientTest: XCTestCase {
         }
 
         try withTemporaryUnixDomainSocketPathName { udsPath in
-            let numBytes = 16 * 1024
+            let numBytes = 16 * 1_024
             let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -138,7 +138,7 @@ class EchoServerClientTest: XCTestCase {
         }
 
         try withTemporaryUnixDomainSocketPathName { udsPath in
-            let numBytes = 16 * 1024
+            let numBytes = 16 * 1_024
             let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -252,7 +252,7 @@ class EchoServerClientTest: XCTestCase {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let numBytes = 16 * 1024
+        let numBytes = 16 * 1_024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { $0.pipeline.addHandler(countingHandler) }
@@ -339,7 +339,7 @@ class EchoServerClientTest: XCTestCase {
         typealias OutboundOut = ByteBuffer
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-            for _ in 0 ..< 10000 {
+            for _ in 0 ..< 10_000 {
                 context.write(data, promise: nil)
             }
         }
@@ -809,7 +809,7 @@ class EchoServerClientTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let numBytes = 16 * 1024
+        let numBytes = 16 * 1_024
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: promise)
 

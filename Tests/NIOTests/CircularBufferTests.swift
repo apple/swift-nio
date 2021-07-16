@@ -29,7 +29,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertTrue(ring.isEmpty)
         XCTAssertEqual(0, ring.count)
 
-        for f in 0 ..< 1000 {
+        for f in 0 ..< 1_000 {
             ring.append(f)
             XCTAssertEqual(f, ring.removeFirst())
             XCTAssertTrue(ring.isEmpty)
@@ -531,11 +531,11 @@ class CircularBufferTests: XCTestCase {
 
     func testPrependExpandBuffer() {
         var ring = CircularBuffer<Int>(initialCapacity: 3)
-        for f in 1 ..< 1000 {
+        for f in 1 ..< 1_000 {
             ring.prepend(f)
             XCTAssertEqual(f, ring.count)
         }
-        for f in 1 ..< 1000 {
+        for f in 1 ..< 1_000 {
             XCTAssertEqual(f, ring.removeLast())
             XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }

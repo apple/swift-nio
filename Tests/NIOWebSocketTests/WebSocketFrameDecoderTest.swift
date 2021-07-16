@@ -178,9 +178,9 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         // We need a new decoder channel here, because the max length would otherwise trigger an error.
         _ = try! self.decoderChannel.finish()
         self.decoderChannel = EmbeddedChannel()
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: 80000))).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: 80_000))).wait())
 
-        self.buffer.writeBytes(Array(repeating: UInt8(4), count: 66000))
+        self.buffer.writeBytes(Array(repeating: UInt8(4), count: 66_000))
         let frame = WebSocketFrame(fin: true,
                                    opcode: .binary,
                                    data: buffer)

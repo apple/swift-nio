@@ -789,7 +789,7 @@ extension ByteBuffer: CustomStringConvertible {
     ///
     /// - returns: A description of this `ByteBuffer` useful for debugging.
     public var debugDescription: String {
-        "\(self.description)\nreadable bytes (max 1k): \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes)))"
+        "\(self.description)\nreadable bytes (max 1k): \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1_024, self.readableBytes)))"
     }
 }
 

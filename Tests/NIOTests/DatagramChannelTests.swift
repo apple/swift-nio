@@ -35,7 +35,7 @@ private extension Channel {
     }
 
     func configureForRecvMmsg(messageCount: Int) throws {
-        let totalBufferSize = messageCount * 2048
+        let totalBufferSize = messageCount * 2_048
 
         try setOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: totalBufferSize)).flatMap {
             self.setOption(ChannelOptions.datagramVectorReadMessageCount, value: messageCount)
@@ -179,7 +179,7 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     func testDatagramChannelHasWatermark() throws {
-        _ = try self.firstChannel.setOption(ChannelOptions.writeBufferWaterMark, value: ChannelOptions.Types.WriteBufferWaterMark(low: 1, high: 1024)).wait()
+        _ = try self.firstChannel.setOption(ChannelOptions.writeBufferWaterMark, value: ChannelOptions.Types.WriteBufferWaterMark(low: 1, high: 1_024)).wait()
 
         var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeBytes([UInt8](repeating: 5, count: 256))
@@ -256,7 +256,7 @@ final class DatagramChannelTests: XCTestCase {
             let myPromise = self.firstChannel.eventLoop.makePromise(of: Void.self)
             // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
-            let bufferSize = 1024 * 5
+            let bufferSize = 1_024 * 5
             var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
             buffer.writeRepeatingByte(4, count: bufferSize)
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
@@ -277,7 +277,7 @@ final class DatagramChannelTests: XCTestCase {
 
     func testLargeWritesFail() throws {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
-        let bufferSize = 1024 * 1024 * 10
+        let bufferSize = 1_024 * 1_024 * 10
         var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
         buffer.writeRepeatingByte(4, count: bufferSize)
         let envelope = AddressedEnvelope(remoteAddress: secondChannel.localAddress!, data: buffer)
@@ -292,7 +292,7 @@ final class DatagramChannelTests: XCTestCase {
 
     func testOneLargeWriteDoesntPreventOthersWriting() throws {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
-        let bufferSize = 1024 * 1024 * 10
+        let bufferSize = 1_024 * 1_024 * 10
         var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
         buffer.writeRepeatingByte(4, count: bufferSize)
 
@@ -317,7 +317,7 @@ final class DatagramChannelTests: XCTestCase {
 
     func testClosingBeforeFlushFailsAllWrites() throws {
         // We want to try to trigger EMSGSIZE. To be safe, we're going to allocate a 10MB buffer here and fill it.
-        let bufferSize = 1024 * 1024 * 10
+        let bufferSize = 1_024 * 1_024 * 10
         var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
         buffer.writeRepeatingByte(4, count: bufferSize)
 

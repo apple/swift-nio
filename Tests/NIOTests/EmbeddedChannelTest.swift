@@ -61,7 +61,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testWriteOutboundByteBuffer() throws {
         let channel = EmbeddedChannel()
-        var buf = channel.allocator.buffer(capacity: 1024)
+        var buf = channel.allocator.buffer(capacity: 1_024)
         buf.writeString("hello")
 
         XCTAssertTrue(try channel.writeOutbound(buf).isFull)
@@ -73,7 +73,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testWriteOutboundByteBufferMultipleTimes() throws {
         let channel = EmbeddedChannel()
-        var buf = channel.allocator.buffer(capacity: 1024)
+        var buf = channel.allocator.buffer(capacity: 1_024)
         buf.writeString("hello")
 
         XCTAssertTrue(try channel.writeOutbound(buf).isFull)
@@ -81,7 +81,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
-        var bufB = channel.allocator.buffer(capacity: 1024)
+        var bufB = channel.allocator.buffer(capacity: 1_024)
         bufB.writeString("again")
 
         XCTAssertTrue(try channel.writeOutbound(bufB).isFull)
@@ -93,7 +93,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testWriteInboundByteBuffer() throws {
         let channel = EmbeddedChannel()
-        var buf = channel.allocator.buffer(capacity: 1024)
+        var buf = channel.allocator.buffer(capacity: 1_024)
         buf.writeString("hello")
 
         XCTAssertTrue(try channel.writeInbound(buf).isFull)
@@ -105,7 +105,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testWriteInboundByteBufferMultipleTimes() throws {
         let channel = EmbeddedChannel()
-        var buf = channel.allocator.buffer(capacity: 1024)
+        var buf = channel.allocator.buffer(capacity: 1_024)
         buf.writeString("hello")
 
         XCTAssertTrue(try channel.writeInbound(buf).isFull)
@@ -113,7 +113,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
 
-        var bufB = channel.allocator.buffer(capacity: 1024)
+        var bufB = channel.allocator.buffer(capacity: 1_024)
         bufB.writeString("again")
 
         XCTAssertTrue(try channel.writeInbound(bufB).isFull)
@@ -188,7 +188,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertTrue(try channel.writeOutbound(fileHandle).isFull)
         XCTAssertTrue(try channel.writeOutbound(fileRegion).isFull)
         XCTAssertTrue(try channel.writeOutbound(
-            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
+            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5_678),
                                           data: buffer)).isFull)
         XCTAssertTrue(try channel.writeOutbound(buffer).isFull)
         XCTAssertTrue(try channel.writeOutbound(ioData).isFull)
@@ -199,7 +199,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertTrue(try channel.writeInbound(fileHandle).isFull)
         XCTAssertTrue(try channel.writeInbound(fileRegion).isFull)
         XCTAssertTrue(try channel.writeInbound(
-            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
+            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5_678),
                                           data: buffer)).isFull)
         XCTAssertTrue(try channel.writeInbound(buffer).isFull)
         XCTAssertTrue(try channel.writeInbound(ioData).isFull)

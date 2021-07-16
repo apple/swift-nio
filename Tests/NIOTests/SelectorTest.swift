@@ -416,7 +416,7 @@ class SelectorTest: XCTestCase {
             }
             workaroundSR9815()
         }.wait())
-        usleep(10000) // this makes this repro very stable
+        usleep(10_000) // this makes this repro very stable
         el.execute {
             // EL tick 2: this is used to
             //   - close one end of the socketpair so that in EL tick 3, we'll see a EPOLLHUP

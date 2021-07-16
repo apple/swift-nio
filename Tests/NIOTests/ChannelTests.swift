@@ -154,7 +154,7 @@ public final class ChannelTests: XCTestCase {
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait())
 
-        let bufferSize = 1024 * 1024 * 2
+        let bufferSize = 1_024 * 1_024 * 2
         var buffer = clientChannel.allocator.buffer(capacity: bufferSize)
         for _ in 0 ..< bufferSize {
             buffer.writeStaticString("a")
@@ -1027,7 +1027,7 @@ public final class ChannelTests: XCTestCase {
             let ps: [EventLoopPromise<Void>] = (0 ..< 1).map { (_: Int) in el.makePromise() }
 
             let fh = NIOFileHandle(descriptor: -1)
-            let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8192)
+            let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8_192)
             defer {
                 // fake descriptor, so shouldn't be closed.
                 XCTAssertNoThrow(try fh.takeDescriptorOwnership())
@@ -1040,8 +1040,8 @@ public final class ChannelTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: nil,
                                                        expectedVectorWritabilities: nil,
-                                                       expectedFileWritabilities: [(0, 8192)],
-                                                       returns: [.wouldBlock(8192)],
+                                                       expectedFileWritabilities: [(0, 8_192)],
+                                                       returns: [.wouldBlock(8_192)],
                                                        promiseStates: [[true]])
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
@@ -1057,7 +1057,7 @@ public final class ChannelTests: XCTestCase {
             // This must throw as 198.51.100.254 is reserved for documentation only
             _ = try ClientBootstrap(group: group)
                 .channelOption(ChannelOptions.connectTimeout, value: .milliseconds(10))
-                .connect(to: SocketAddress.makeAddressResolvingHost("198.51.100.254", port: 65535)).wait()
+                .connect(to: SocketAddress.makeAddressResolvingHost("198.51.100.254", port: 65_535)).wait()
             XCTFail()
         } catch let err as ChannelError {
             if case .connectTimeout = err {
@@ -1083,7 +1083,7 @@ public final class ChannelTests: XCTestCase {
             // This must throw as 198.51.100.254 is reserved for documentation only
             _ = try ClientBootstrap(group: group)
                 .connectTimeout(.milliseconds(10))
-                .connect(to: SocketAddress.makeAddressResolvingHost("198.51.100.254", port: 65535)).wait()
+                .connect(to: SocketAddress.makeAddressResolvingHost("198.51.100.254", port: 65_535)).wait()
             XCTFail()
         } catch let err as ChannelError {
             if case .connectTimeout = err {
@@ -1576,7 +1576,7 @@ public final class ChannelTests: XCTestCase {
         try clientChannel.writeAndFlush(buffer).wait()
 
         // Wait for 100 ms. No data should be delivered.
-        usleep(100 * 1000)
+        usleep(100 * 1_000)
 
         // Now we send close. This should deliver data.
         try clientChannel.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
@@ -1637,7 +1637,7 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try clientChannel.close().wait())
 
         // Wait for 100 ms.
-        usleep(100 * 1000)
+        usleep(100 * 1_000)
         XCTAssertNoThrow(try serverChannel.close().wait())
     }
 
@@ -1986,7 +1986,7 @@ public final class ChannelTests: XCTestCase {
         }
         withChannel { channel in
             checkThatItThrowsInappropriateOperationForState {
-                try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 1234)).wait()
+                try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 1_234)).wait()
             }
         }
         withChannel { channel in
@@ -2738,7 +2738,7 @@ public final class ChannelTests: XCTestCase {
             let g = DispatchGroup()
             q.async(group: g) {
                 // we spin here for a bit and read
-                for _ in 0 ..< 10000 {
+                for _ in 0 ..< 10_000 {
                     // this should trigger TSan if there's an issue.
                     XCTAssert(String(describing: channel).count != 0)
                 }
@@ -2754,7 +2754,7 @@ public final class ChannelTests: XCTestCase {
         let actualAllocator = ByteBufferAllocator()
         var allocator = FixedSizeRecvByteBufferAllocator(capacity: 1)
         let b1 = allocator.buffer(allocator: actualAllocator)
-        XCTAssertFalse(allocator.record(actualReadBytes: 1024))
+        XCTAssertFalse(allocator.record(actualReadBytes: 1_024))
         let b2 = allocator.buffer(allocator: actualAllocator)
         XCTAssertEqual(1, b1.capacity)
         XCTAssertEqual(1, b2.capacity)

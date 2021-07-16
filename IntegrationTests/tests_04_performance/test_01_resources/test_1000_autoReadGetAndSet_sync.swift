@@ -18,7 +18,7 @@ func run(identifier: String) {
     MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { loop in
         ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).map { server in
             measure(identifier: identifier) {
-                let iterations = 1000
+                let iterations = 1_000
 
                 let syncOptions = server.syncOptions!
 

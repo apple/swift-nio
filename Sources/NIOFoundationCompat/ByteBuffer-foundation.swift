@@ -115,7 +115,7 @@ public extension ByteBuffer {
         case .noCopy:
             doCopy = false
         case .automatic:
-            doCopy = length <= 256 * 1024
+            doCopy = length <= 256 * 1_024
         }
 
         return withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in

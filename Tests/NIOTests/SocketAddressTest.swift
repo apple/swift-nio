@@ -22,41 +22,41 @@ class SocketAddressTest: XCTestCase {
             inet_pton(NIOBSDSocket.AddressFamily.inet.rawValue, p, &ipv4SocketAddress.sin_addr)
         }
         XCTAssertEqual(res, 1)
-        ipv4SocketAddress.sin_port = (12345 as in_port_t).bigEndian
+        ipv4SocketAddress.sin_port = (12_345 as in_port_t).bigEndian
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
         XCTAssertEqual("[IPv4]foobar.com/10.0.0.1:12345", sa.description)
     }
 
     func testDescriptionWorksWithoutIP() throws {
         var ipv4SocketAddress = sockaddr_in()
-        ipv4SocketAddress.sin_port = (12345 as in_port_t).bigEndian
+        ipv4SocketAddress.sin_port = (12_345 as in_port_t).bigEndian
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
         XCTAssertEqual("[IPv4]foobar.com/0.0.0.0:12345", sa.description)
     }
 
     func testDescriptionWorksWithIPOnly() throws {
-        let sa = try! SocketAddress(ipAddress: "10.0.0.2", port: 12345)
+        let sa = try! SocketAddress(ipAddress: "10.0.0.2", port: 12_345)
         XCTAssertEqual("[IPv4]10.0.0.2:12345", sa.description)
     }
 
     func testDescriptionWorksWithByteBufferIPv4IP() throws {
         let IPv4: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
         let ipv4Address = ByteBuffer(bytes: IPv4)
-        let sa = try! SocketAddress(packedIPAddress: ipv4Address, port: 12345)
+        let sa = try! SocketAddress(packedIPAddress: ipv4Address, port: 12_345)
         XCTAssertEqual("[IPv4]127.0.0.1:12345", sa.description)
     }
 
     func testDescriptionWorksWithByteBufferIPv6IP() throws {
         let IPv6: [UInt8] = [0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
         let ipv6Address = ByteBuffer(bytes: IPv6)
-        let sa = try! SocketAddress(packedIPAddress: ipv6Address, port: 12345)
+        let sa = try! SocketAddress(packedIPAddress: ipv6Address, port: 12_345)
         XCTAssertEqual("[IPv6]fe80::5:12345", sa.description)
     }
 
     func testRejectsWrongIPByteBufferLength() {
         let wrongIP: [UInt8] = [0x01, 0x7F, 0x00]
         let ipAddress = ByteBuffer(bytes: wrongIP)
-        XCTAssertThrowsError(try SocketAddress(packedIPAddress: ipAddress, port: 12345)) { error in
+        XCTAssertThrowsError(try SocketAddress(packedIPAddress: ipAddress, port: 12_345)) { error in
             switch error {
             case is SocketAddressError.FailedToParseIPByteBuffer:
                 XCTAssertEqual(ipAddress, (error as! SocketAddressError.FailedToParseIPByteBuffer).address)
@@ -93,9 +93,9 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testIPAddressWorks() throws {
-        let sa = try! SocketAddress(ipAddress: "127.0.0.1", port: 12345)
+        let sa = try! SocketAddress(ipAddress: "127.0.0.1", port: 12_345)
         XCTAssertEqual("127.0.0.1", sa.ipAddress)
-        let sa6 = try! SocketAddress(ipAddress: "::1", port: 12345)
+        let sa6 = try! SocketAddress(ipAddress: "::1", port: 12_345)
         XCTAssertEqual("::1", sa6.ipAddress)
         let unix = try! SocketAddress(unixDomainSocketPath: "/definitely/a/path")
         XCTAssertEqual(nil, unix.ipAddress)

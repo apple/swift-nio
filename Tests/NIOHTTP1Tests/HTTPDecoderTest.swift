@@ -195,7 +195,7 @@ class HTTPDecoderTest: XCTestCase {
 
             written += buffer2.writeStaticString("X-Header: value\r\n")
             try self.channel.writeInbound(buffer2)
-        } while written < 8192 // Use a value that w
+        } while written < 8_192 // Use a value that w
 
         var buffer3 = self.channel.allocator.buffer(capacity: 2)
         buffer3.writeStaticString("\r\n")
@@ -281,7 +281,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(Receiver()).wait())
 
         // This connect call is semantically wrong, but it's how you active embedded channels properly right now.
-        XCTAssertNoThrow(try self.channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
+        XCTAssertNoThrow(try self.channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8_888)).wait())
 
         var buffer = self.channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\nXXXX")
@@ -344,7 +344,7 @@ class HTTPDecoderTest: XCTestCase {
                                                               name: "decoder").wait())
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(Receiver()).wait())
 
-        XCTAssertNoThrow(try self.channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
+        XCTAssertNoThrow(try self.channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8_888)).wait())
 
         var buffer = self.channel.allocator.buffer(capacity: 32)
         buffer.writeStaticString("HTTP/1.1 101 Switching Protocols\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\nXXXX")

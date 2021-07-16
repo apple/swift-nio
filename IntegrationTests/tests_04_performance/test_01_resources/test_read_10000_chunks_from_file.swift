@@ -30,7 +30,7 @@ func run(identifier: String) {
     }
     let fileIO = NonBlockingFileIO(threadPool: threadPool)
 
-    let numberOfChunks = 10000
+    let numberOfChunks = 10_000
 
     let allocator = ByteBufferAllocator()
     var fileBuffer = allocator.buffer(capacity: numberOfChunks)

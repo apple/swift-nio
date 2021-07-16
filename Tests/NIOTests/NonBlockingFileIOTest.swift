@@ -71,7 +71,7 @@ class NonBlockingFileIOTest: XCTestCase {
     func testOffsetBeyondEOF() throws {
         let content = "hello"
         try withTemporaryFile(content: content) { fileHandle, _ -> Void in
-            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 3000, endIndex: 3001)
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 3_000, endIndex: 3_001)
             var buf = try self.fileIO.read(fileRegion: fr,
                                            allocator: self.allocator,
                                            eventLoop: self.eventLoop).wait()
@@ -213,7 +213,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testChunkReadingWorksForIncrediblyLongChain() throws {
-        let content = String(repeating: "X", count: 20 * 1024)
+        let content = String(repeating: "X", count: 20 * 1_024)
         var numCalls = 0
         let expectedByte = content.utf8.first!
         try withTemporaryFile(content: content) { fileHandle, _ -> Void in
@@ -897,7 +897,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testReadManyChunks() {
-        let numberOfChunks = 2000
+        let numberOfChunks = 2_000
         XCTAssertNoThrow(try withTemporaryFile(content: String(repeating: "X",
                                                                count: numberOfChunks)) { fileHandle, _ in
             let numberOfCalls = NIOAtomic<Int>.makeAtomic(value: 0)

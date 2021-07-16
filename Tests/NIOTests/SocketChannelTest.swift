@@ -243,7 +243,7 @@ public final class SocketChannelTest: XCTestCase {
             channel.pipeline.addHandler(ActiveVerificationHandler(promise)).flatMap {
                 channel.register()
             }.flatMap {
-                channel.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 9999))
+                channel.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 9_999))
             }.flatMap {
                 channel.close()
             }

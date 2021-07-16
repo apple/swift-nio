@@ -32,7 +32,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(CloseOnHTTPErrorHandler()).wait())
 
-        var buffer = channel.allocator.buffer(capacity: 1024)
+        var buffer = channel.allocator.buffer(capacity: 1_024)
         buffer.writeStaticString("GET / HTTP/1.1\r\nContent-Length: -4\r\n\r\n")
         do {
             try channel.writeInbound(buffer)
@@ -128,7 +128,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
             channel.pipeline.addHandler(DelayWriteHandler())
         }.wait())
 
-        var buffer = channel.allocator.buffer(capacity: 1024)
+        var buffer = channel.allocator.buffer(capacity: 1_024)
         buffer.writeStaticString("GET / HTTP/1.1\r\n\r\nGET / HTTP/1.1\r\n\r\nGET / HT")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertNoThrow(try channel.close().wait())

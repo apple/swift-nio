@@ -4,6 +4,10 @@
 --enable duplicateImports
 --enable emptyBraces
 
+--disable redundantNilInit
+--disable unusedArguments
+--disable sortedImports
+
 --self insert
 
 --redundanttype inferred
@@ -11,3 +15,5 @@
 --semicolons never
 
 --operatorfunc spaced
+
+--decimalgrouping 3,4

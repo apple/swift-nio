@@ -206,7 +206,7 @@ public final class ConditionLock<T: Equatable> {
         precondition(timeoutSeconds >= 0)
 
         #if os(Windows)
-            var dwMilliseconds = DWORD(timeoutSeconds * 1000)
+            var dwMilliseconds = DWORD(timeoutSeconds * 1_000)
 
             lock()
             while true {
@@ -238,7 +238,7 @@ public final class ConditionLock<T: Equatable> {
             var curTime = timeval()
             gettimeofday(&curTime, nil)
 
-            let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_usec) * 1000
+            let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_usec) * 1_000
             var timeoutAbs = timespec(tv_sec: curTime.tv_sec + Int(allNSecs / nsecPerSec),
                                       tv_nsec: Int(allNSecs % nsecPerSec))
             assert(timeoutAbs.tv_nsec >= 0 && timeoutAbs.tv_nsec < Int(nsecPerSec))

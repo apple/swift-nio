@@ -29,7 +29,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testLargeContendedAtomicSum() {
         let noAsyncs: UInt64 = 50
-        let noCounts: UInt64 = 2000
+        let noCounts: UInt64 = 2_000
 
         let q = DispatchQueue(label: "q", attributes: .concurrent)
         let g = DispatchGroup()
@@ -241,7 +241,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
     func testLargeContendedNIOAtomicSum() {
         let noAsyncs: UInt64 = 50
-        let noCounts: UInt64 = 2000
+        let noCounts: UInt64 = 2_000
 
         let q = DispatchQueue(label: "q", attributes: .concurrent)
         let g = DispatchGroup()
@@ -767,13 +767,13 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             q.async(group: g) {
                 sem1.signal()
                 sem2.wait()
-                for _ in 0 ..< 1000 {
+                for _ in 0 ..< 1_000 {
                     XCTAssertTrue(atomic.compareAndExchange(expected: instance, desired: instance))
                 }
             }
             sem2.signal()
             sem1.wait()
-            for _ in 0 ..< 1000 {
+            for _ in 0 ..< 1_000 {
                 XCTAssertTrue(atomic.compareAndExchange(expected: instance, desired: instance))
             }
             g.wait()
@@ -861,7 +861,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testLoadAndExchangeHammering() {
         let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
-        let iterations = 10000
+        let iterations = 10_000
 
         @inline(never)
         func doIt() {
@@ -894,7 +894,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testLoadAndStoreHammering() {
         let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
-        let iterations = 10000
+        let iterations = 10_000
 
         @inline(never)
         func doIt() {
@@ -926,7 +926,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     @available(*, deprecated, message: "AtomicBox is deprecated, this is a test for the deprecated functionality")
     func testLoadAndCASHammering() {
         let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
-        let iterations = 1000
+        let iterations = 1_000
 
         @inline(never)
         func doIt() {
@@ -965,7 +965,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testMultipleLoadsRacingWhilstStoresAreGoingOn() {
         // regression test for https://github.com/apple/swift-nio/pull/1287#discussion_r353932225
         let allDeallocations = NIOAtomic<Int>.makeAtomic(value: 0)
-        let iterations = 10000
+        let iterations = 10_000
 
         @inline(never)
         func doIt() {
@@ -1031,7 +1031,7 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
 
     repeat {
         if condition() { return }
-        usleep(UInt32(testInterval.nanoseconds / 1000))
+        usleep(UInt32(testInterval.nanoseconds / 1_000))
     } while NIODeadline.now() < endTime
 
     if !condition() {

@@ -880,7 +880,7 @@ class EventLoopFutureTest: XCTestCase {
         }
 
         func doTest(promise: EventLoopPromise<[Int]>?) throws {
-            let expected = Array(0 ..< 1000)
+            let expected = Array(0 ..< 1_000)
             let promises = expected.map { _ in group.next().makePromise(of: Int.self) }
             let futures = promises.map(\.futureResult)
 

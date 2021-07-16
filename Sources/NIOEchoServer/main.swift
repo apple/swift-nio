@@ -65,7 +65,7 @@ let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
-let defaultPort = 9999
+let defaultPort = 9_999
 
 enum BindTo {
     case ip(host: String, port: Int)

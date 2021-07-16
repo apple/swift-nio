@@ -81,7 +81,7 @@ final class PipeChannelTest: XCTestCase {
         XCTAssertTrue(self.channel.isActive)
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(Handler()).wait())
         let longArray = Array(repeating: UInt8(ascii: "x"), count: 200_000)
-        for length in [1, 10000, 100_000, 200_000] {
+        for length in [1, 10_000, 100_000, 200_000] {
             let fromChannel = self.fromChannel!
 
             XCTAssertNoThrow(try self.toChannel.writeBytes(longArray[0 ..< length]))

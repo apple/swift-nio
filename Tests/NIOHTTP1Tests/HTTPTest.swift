@@ -129,7 +129,7 @@ class HTTPTest: XCTestCase {
 
         /* send all bytes in one go */
         let bd1 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { reqString, chan in
-            var buf = chan.allocator.buffer(capacity: 1024)
+            var buf = chan.allocator.buffer(capacity: 1_024)
             buf.writeString(reqString)
             return chan.eventLoop.makeSucceededFuture(()).flatMapThrowing {
                 try chan.writeInbound(buf)
@@ -140,7 +140,7 @@ class HTTPTest: XCTestCase {
         let bd2 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { reqString, chan in
             var writeFutures: [EventLoopFuture<Void>] = []
             for c in reqString {
-                var buf = chan.allocator.buffer(capacity: 1024)
+                var buf = chan.allocator.buffer(capacity: 1_024)
 
                 buf.writeString("\(c)")
                 writeFutures.append(chan.eventLoop.makeSucceededFuture(()).flatMapThrowing {

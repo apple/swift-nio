@@ -23,13 +23,13 @@ class GetaddrinfoResolverTest: XCTestCase {
         }
 
         let resolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: CInt(IPPROTO_TCP))
-        let v4Future = resolver.initiateAQuery(host: "127.0.0.1", port: 12345)
-        let v6Future = resolver.initiateAAAAQuery(host: "127.0.0.1", port: 12345)
+        let v4Future = resolver.initiateAQuery(host: "127.0.0.1", port: 12_345)
+        let v6Future = resolver.initiateAAAAQuery(host: "127.0.0.1", port: 12_345)
 
         let addressV4 = try v4Future.wait()
         let addressV6 = try v6Future.wait()
         XCTAssertEqual(1, addressV4.count)
-        XCTAssertEqual(try SocketAddress(ipAddress: "127.0.0.1", port: 12345), addressV4[0])
+        XCTAssertEqual(try SocketAddress(ipAddress: "127.0.0.1", port: 12_345), addressV4[0])
         XCTAssertTrue(addressV6.isEmpty)
     }
 
@@ -40,13 +40,13 @@ class GetaddrinfoResolverTest: XCTestCase {
         }
 
         let resolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: CInt(IPPROTO_TCP))
-        let v4Future = resolver.initiateAQuery(host: "::1", port: 12345)
-        let v6Future = resolver.initiateAAAAQuery(host: "::1", port: 12345)
+        let v4Future = resolver.initiateAQuery(host: "::1", port: 12_345)
+        let v6Future = resolver.initiateAAAAQuery(host: "::1", port: 12_345)
 
         let addressV4 = try v4Future.wait()
         let addressV6 = try v6Future.wait()
         XCTAssertEqual(1, addressV6.count)
-        XCTAssertEqual(try SocketAddress(ipAddress: "::1", port: 12345), addressV6[0])
+        XCTAssertEqual(try SocketAddress(ipAddress: "::1", port: 12_345), addressV6[0])
         XCTAssertTrue(addressV4.isEmpty)
     }
 }

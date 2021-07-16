@@ -31,9 +31,9 @@ func run(identifier: String) {
         }
 
         let el = EmbeddedEventLoop()
-        for _ in 0 ..< 1000 {
+        for _ in 0 ..< 1_000 {
             doEraseResult(loop: el)
         }
-        return 1000
+        return 1_000
     }
 }
