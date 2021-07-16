@@ -94,13 +94,15 @@
 
         static func recvmsg(socket: NIOBSDSocket.Handle,
                             msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt)
-        throws -> IOResult<size_t> {
+            throws -> IOResult<size_t>
+        {
             try Posix.recvmsg(descriptor: socket, msgHdr: msgHdr, flags: flags)
         }
 
         static func sendmsg(socket: NIOBSDSocket.Handle,
                             msgHdr: UnsafePointer<msghdr>, flags: CInt)
-        throws -> IOResult<size_t> {
+            throws -> IOResult<size_t>
+        {
             try Posix.sendmsg(descriptor: socket, msgHdr: msgHdr, flags: flags)
         }
 

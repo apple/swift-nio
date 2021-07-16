@@ -25,12 +25,10 @@
 --enable redundantBackticks
 --enable redundantBreak
 --enable redundantExtensionACL
---enable redundantFileprivate
 --enable redundantGet
 --enable redundantInit
 --enable redundantLet
 --enable redundantLetError
---enable redundantNilInit
 --enable redundantObjc
 --enable redundantParens
 --enable redundantPattern
@@ -67,6 +65,8 @@
 --enable wrapMultilineStatementBraces
 --enable yodaConditions
 
+--disable redundantNilInit
+--disable redundantFileprivate
 --disable isEmpty
 --disable markTypes
 --disable organizeDeclarations
@@ -99,8 +99,6 @@
 --indent           4
 --indentcase       false
 --linebreaks       lf
---markextensions   never
---marktypes        never
 --maxwidth         none
 --octalgrouping    4,8
 --operatorfunc     spaced
@@ -112,7 +110,7 @@
 --semicolons       never
 --shortoptionals   always
 --smarttabs        disabled
---stripunusedargs  unnamed-only
+--stripunusedargs  closure-only
 --structthreshold  0
 --trimwhitespace   always
 --typeattributes   preserve
@@ -123,5 +121,5 @@
 --wrapconditions   preserve
 --wrapparameters   preserve
 --wrapreturntype   preserve
---xcodeindentation enabled
+--xcodeindentation disabled
 --yodaswap         literals-only

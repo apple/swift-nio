@@ -40,21 +40,21 @@ private final class EchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-        .serverChannelOption(ChannelOptions.backlog, value: 256)
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .serverChannelOption(ChannelOptions.backlog, value: 256)
+    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
-        // Set the handlers that are appled to the accepted Channels
-        .childChannelInitializer { channel in
-            // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
-            channel.pipeline.addHandler(BackPressureHandler()).flatMap { _ in
-                channel.pipeline.addHandler(EchoHandler())
-            }
+    // Set the handlers that are appled to the accepted Channels
+    .childChannelInitializer { channel in
+        // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
+        channel.pipeline.addHandler(BackPressureHandler()).flatMap { _ in
+            channel.pipeline.addHandler(EchoHandler())
         }
+    }
 
-        // Enable SO_REUSEADDR for the accepted Channels
-        .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
-        .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
+    // Enable SO_REUSEADDR for the accepted Channels
+    .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
+    .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
 defer {
     try! group.syncShutdownGracefully()
 }

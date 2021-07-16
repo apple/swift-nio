@@ -115,22 +115,22 @@ let chatHandler = ChatHandler()
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-        .serverChannelOption(ChannelOptions.backlog, value: 256)
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .serverChannelOption(ChannelOptions.backlog, value: 256)
+    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
-        // Set the handlers that are applied to the accepted Channels
-        .childChannelInitializer { channel in
-            // Add handler that will buffer data until a \n is received
-            channel.pipeline.addHandler(ByteToMessageHandler(LineDelimiterCodec())).flatMap { _ in
-                // It's important we use the same handler for all accepted channels. The ChatHandler is thread-safe!
-                channel.pipeline.addHandler(chatHandler)
-            }
+    // Set the handlers that are applied to the accepted Channels
+    .childChannelInitializer { channel in
+        // Add handler that will buffer data until a \n is received
+        channel.pipeline.addHandler(ByteToMessageHandler(LineDelimiterCodec())).flatMap { _ in
+            // It's important we use the same handler for all accepted channels. The ChatHandler is thread-safe!
+            channel.pipeline.addHandler(chatHandler)
         }
+    }
 
-        // Enable SO_REUSEADDR for the accepted Channels
-        .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
-        .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
+    // Enable SO_REUSEADDR for the accepted Channels
+    .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
+    .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
 defer {
     try! group.syncShutdownGracefully()
 }

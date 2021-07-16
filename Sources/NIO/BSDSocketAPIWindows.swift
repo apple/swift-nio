@@ -269,7 +269,8 @@
         static func recvmsg(socket s: NIOBSDSocket.Handle,
                             msgHdr lpMsg: UnsafeMutablePointer<msghdr>,
                             flags _: CInt)
-        throws -> IOResult<size_t> {
+            throws -> IOResult<size_t>
+        {
             // TODO(compnerd) see comment above
             var InBuffer = WSAID_WSARECVMSG
             var pfnWSARecvMsg: LPFN_WSARECVMSG?
@@ -380,7 +381,8 @@
                              msgvec: UnsafeMutablePointer<MMsgHdr>,
                              vlen: CUnsignedInt, flags: CInt,
                              timeout: UnsafeMutablePointer<timespec>?)
-        throws -> IOResult<Int> {
+            throws -> IOResult<Int>
+        {
             .processed(Int(CNIOWindows_recvmmsg(socket, msgvec, vlen, flags, timeout)))
         }
 
@@ -388,7 +390,8 @@
         static func sendmmsg(socket: NIOBSDSocket.Handle,
                              msgvec: UnsafeMutablePointer<MMsgHdr>,
                              vlen: CUnsignedInt, flags: CInt)
-        throws -> IOResult<Int> {
+            throws -> IOResult<Int>
+        {
             .processed(Int(CNIOWindows_sendmmsg(socket, msgvec, vlen, flags)))
         }
 
@@ -463,7 +466,8 @@
         @inline(never)
         static func sendfile(socket s: NIOBSDSocket.Handle, fd: CInt, offset: off_t,
                              len nNumberOfBytesToWrite: off_t)
-        throws -> IOResult<Int> {
+            throws -> IOResult<Int>
+        {
             let hFile = HANDLE(bitPattern: ucrt._get_osfhandle(fd))!
             if hFile == INVALID_HANDLE_VALUE {
                 throw IOError(errnoCode: EBADF, reason: "_get_osfhandle")

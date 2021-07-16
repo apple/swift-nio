@@ -45,10 +45,10 @@ func run(identifier: String) {
                                           completionPromise: group.next().makePromise())
     let serverChannel = try! DatagramBootstrap(group: group)
         // Set the handlers that are applied to the bound channel
-            .channelInitializer { channel in
-                channel.pipeline.addHandler(serverHandler)
-            }
-            .bind(to: localhostPickPort).wait()
+        .channelInitializer { channel in
+            channel.pipeline.addHandler(serverHandler)
+        }
+        .bind(to: localhostPickPort).wait()
     defer {
         try! serverChannel.close().wait()
     }

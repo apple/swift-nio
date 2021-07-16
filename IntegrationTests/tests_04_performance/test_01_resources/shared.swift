@@ -217,10 +217,10 @@ enum UDPShared {
     static func doUDPRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
         let serverChannel = try DatagramBootstrap(group: group)
             // Set the handlers that are applied to the bound channel
-                .channelInitializer { channel in
-                    channel.pipeline.addHandler(EchoHandler())
-                }
-                .bind(to: localhostPickPort).wait()
+            .channelInitializer { channel in
+                channel.pipeline.addHandler(EchoHandler())
+            }
+            .bind(to: localhostPickPort).wait()
 
         defer {
             try! serverChannel.close().wait()

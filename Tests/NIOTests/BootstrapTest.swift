@@ -534,7 +534,8 @@ class BootstrapTest: XCTestCase {
 
     func testConvenienceOptionsAreEquivalentUniversalClient() throws {
         func setAndGetOption<Option>(option: Option, _ applyOptions: (NIOClientTCPBootstrap) -> NIOClientTCPBootstrap) throws
-        -> Option.Value where Option: ChannelOption {
+            -> Option.Value where Option: ChannelOption
+        {
             var optionRead: EventLoopFuture<Option.Value>?
             XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
                 var channel: Channel?
@@ -555,7 +556,8 @@ class BootstrapTest: XCTestCase {
 
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
                                             shortOption: ChannelOptions.TCPConvenienceOption) throws
-        where Option: ChannelOption, Option.Value: Equatable {
+            where Option: ChannelOption, Option.Value: Equatable
+        {
             let longSetValue = try setAndGetOption(option: longOption) { bs in
                 bs.channelOption(longOption, value: setValue)
             }

@@ -685,12 +685,12 @@ class EchoServerClientTest: XCTestCase {
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             // We will only start reading once we wrote all data on the accepted channel.
             // .channelOption(ChannelOptions.autoRead, value: false)
-                .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
-                .channelInitializer { channel in
-                    channel.pipeline.addHandler(WriteHandler()).flatMap {
-                        channel.pipeline.addHandler(countingHandler)
-                    }
-                }.connect(to: serverChannel.localAddress!).wait())
+            .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
+            .channelInitializer { channel in
+                channel.pipeline.addHandler(WriteHandler()).flatMap {
+                    channel.pipeline.addHandler(countingHandler)
+                }
+            }.connect(to: serverChannel.localAddress!).wait())
         defer {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }

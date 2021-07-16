@@ -390,7 +390,8 @@ final class DatagramChannelTests: XCTestCase {
                                   storage _: inout sockaddr_storage,
                                   storageLen _: inout socklen_t,
                                   controlBytes _: inout UnsafeReceivedControlBytes)
-            throws -> IOResult<Int> {
+                throws -> IOResult<Int>
+            {
                 if let err = error {
                     self.error = nil
                     throw IOError(errnoCode: err, reason: "recvfrom")

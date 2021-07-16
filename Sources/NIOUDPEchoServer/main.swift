@@ -42,13 +42,13 @@ private final class EchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 var bootstrap = DatagramBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR
-        .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
 
-        // Set the handlers that are applied to the bound channel
-        .channelInitializer { channel in
-            // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
-            channel.pipeline.addHandler(EchoHandler())
-        }
+    // Set the handlers that are applied to the bound channel
+    .channelInitializer { channel in
+        // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
+        channel.pipeline.addHandler(EchoHandler())
+    }
 
 defer {
     try! group.syncShutdownGracefully()
