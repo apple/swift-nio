@@ -13,6 +13,10 @@
 //===----------------------------------------------------------------------===//
 import NIOConcurrencyHelpers
 
+#if os(Windows)
+import typealias WinSDK.CHAR
+#endif
+
 private struct PendingStreamWrite {
     var data: IOData
     var promise: Optional<EventLoopPromise<Void>>
@@ -52,7 +56,17 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
 
             buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
                 storageRefs[i] = storageRef.retain()
-                iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
+
+                let buffer: UnsafeMutableRawPointer =
+                    UnsafeMutableRawPointer(mutating: ptr.baseAddress!)
+#if os(Windows)
+                iovecs[i] = IOVector(len: numericCast(toWriteForThisBuffer),
+                                     buf: buffer.bindMemory(to: CHAR.self,
+                                                            capacity: toWriteForThisBuffer))
+#else
+                iovecs[i] = iovec(iov_base: buffer,
+                                  iov_len: numericCast(toWriteForThisBuffer))
+#endif
             }
             numberOfUsedStorageSlots += 1
         case .fileRegion:
