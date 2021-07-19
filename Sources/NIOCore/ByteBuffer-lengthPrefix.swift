@@ -15,11 +15,11 @@
 extension ByteBuffer {
     public struct LengthPrefixError: Swift.Error {
         private enum BaseError {
-            case lengthDoesNotFitExactlyIntoRequiredIntegerFormat
+            case messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat
         }
         private var baseError: BaseError
         
-        public static let messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat: LengthPrefixError = .init(baseError: .lengthDoesNotFitExactlyIntoRequiredIntegerFormat)
+        public static let messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat: LengthPrefixError = .init(baseError: .messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat)
     }
 }
 
