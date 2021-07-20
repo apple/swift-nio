@@ -19,6 +19,7 @@
 #
 #   Created by Tony Stone on 5/4/16.
 #
+require 'date'
 require 'getoptlong'
 require 'fileutils'
 require 'pathname'
@@ -34,6 +35,11 @@ def extractCopyright(log)
 
   indices = log.enum_for(:scan, /(?=Date:)/).map do
     Regexp.last_match.offset(0).first
+  end
+
+  # If there are no years, assume this year.
+  if indices.count == 0
+    return "#{Date.today.year}"
   end
 
   # Return one year if there is only one year
