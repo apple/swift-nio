@@ -27,13 +27,21 @@ extension ByteBufferLengthPrefixTests {
    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
    static var allTests : [(String, (ByteBufferLengthPrefixTests) -> () throws -> Void)] {
       return [
-                ("testMessageLengthOfZero", testMessageLengthOfZero),
-                ("testMessageLengthOfOne", testMessageLengthOfOne),
-                ("testMessageWithMultipleWrites", testMessageWithMultipleWrites),
-                ("testMessageWithMaxLength", testMessageWithMaxLength),
-                ("testTooLongMessage", testTooLongMessage),
-                ("testMessageWithBigEndianInteger", testMessageWithBigEndianInteger),
-                ("testMessageWithLittleEndianInteger", testMessageWithLittleEndianInteger),
+                ("testWriteMessageWithLengthOfZero", testWriteMessageWithLengthOfZero),
+                ("testWriteMessageWithLengthOfOne", testWriteMessageWithLengthOfOne),
+                ("testWriteMessageWithMultipleWrites", testWriteMessageWithMultipleWrites),
+                ("testWriteMessageWithMaxLength", testWriteMessageWithMaxLength),
+                ("testWriteTooLongMessage", testWriteTooLongMessage),
+                ("testWriteMessageWithBigEndianInteger", testWriteMessageWithBigEndianInteger),
+                ("testWriteMessageWithLittleEndianInteger", testWriteMessageWithLittleEndianInteger),
+                ("testReadMessageWithLengthOfZero", testReadMessageWithLengthOfZero),
+                ("testReadMessageWithLengthOfOne", testReadMessageWithLengthOfOne),
+                ("testReadMessageWithLengthOfTen", testReadMessageWithLengthOfTen),
+                ("testReadMessageWithMaxLength", testReadMessageWithMaxLength),
+                ("testReadOneByteTooMuch", testReadOneByteTooMuch),
+                ("testReadOneByteTooFew", testReadOneByteTooFew),
+                ("testReadMessageWithBigEndianInteger", testReadMessageWithBigEndianInteger),
+                ("testReadMessageWithLittleEndianInteger", testReadMessageWithLittleEndianInteger),
            ]
    }
 }
