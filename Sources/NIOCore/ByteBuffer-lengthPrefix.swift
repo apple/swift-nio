@@ -29,27 +29,36 @@ extension ByteBuffer {
     /// - Returns: Number of total bytes written
     @discardableResult
     @inlinable
-    public mutating func writeLengthPrefix<Integer: FixedWidthInteger>(
+    public mutating func writeLengthPrefixed<Integer: FixedWidthInteger>(
         endianness: Endianness = .big,
-        as integer: Integer.Type = Integer.self,
-        message writeMessage: (inout ByteBuffer) throws -> ()
+        as integer: Integer.Type,
+        message writeMessage: (inout ByteBuffer) throws -> Int
     ) throws -> Int {
-        let lengthPrefixIndex = writerIndex
+        let lengthPrefixIndex = self.writerIndex
         // Write a zero as a placeholder which will later be overwritten by the actual number of bytes written
-        var totalBytesWritten = writeInteger(.zero, endianness: endianness, as: Integer.self)
+        self.writeInteger(.zero, endianness: endianness, as: Integer.self)
         
-        let messageStartIndex = writerIndex
-        try writeMessage(&self)
-        let messageEndIndex = writerIndex
-        
-        let messageLength = messageEndIndex - messageStartIndex
-        totalBytesWritten += messageLength
+        return try self.setLengthPrefixed(at: lengthPrefixIndex, endianness: endianness, as: Integer.self, message: writeMessage)
+    }
+    
+    /// Prefixes a message with the number returned by `setMessage` as an `Integer`.
+    /// - Throws: If the number of bytes returned by `setMessage` can not be exactly represented as the given `Integer` i.e. if the number is greater than `Integer.max`
+    /// - Returns: Number of total bytes written i.e. size of the integer plus the number returned by `setMessage`
+    @discardableResult
+    @inlinable
+    public mutating func setLengthPrefixed<Integer: FixedWidthInteger>(
+        at index: Int,
+        endianness: Endianness = .big,
+        as integer: Integer.Type,
+        message setMessage: (inout ByteBuffer) throws -> Int
+    ) throws -> Int {
+        let messageLength = try setMessage(&self)
         
         guard let lengthPrefix = Integer(exactly: messageLength) else {
             throw LengthPrefixError.messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat
         }
-        setInteger(lengthPrefix, at: lengthPrefixIndex, endianness: endianness, as: Integer.self)
+        let lengthPrefixByteCount = self.setInteger(lengthPrefix, at: index, endianness: endianness, as: Integer.self)
         
-        return totalBytesWritten
+        return messageLength + lengthPrefixByteCount
     }
 }
