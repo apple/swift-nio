@@ -817,6 +817,14 @@ public protocol EventLoopGroup: AnyObject {
     ///
     /// - returns: `EventLoopIterator`
     func makeIterator() -> EventLoopIterator
+
+    /// Must crash if it's not safe to call `syncShutdownGracefully` in the current context.
+    ///
+    /// This method is a debug hook that can be used to override the behaviour of `syncShutdownGracefully`
+    /// when called. By default it iterates the `EventLoopIterator` returned by `makeIterator` and calls
+    /// `preconditionNotInEventLoop`, but implementations may extend this with other logic if they can detect
+    /// more complex failure cases.
+    func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt)
 }
 
 extension EventLoopGroup {
@@ -825,13 +833,8 @@ extension EventLoopGroup {
     }
 
     public func syncShutdownGracefully() throws {
-        if let eventLoop = MultiThreadedEventLoopGroup.currentEventLoop {
-            preconditionFailure("""
-            BUG DETECTED: syncShutdownGracefully() must not be called when on an EventLoop.
-            Calling syncShutdownGracefully() on any EventLoop can lead to deadlocks.
-            Current eventLoop: \(eventLoop)
-            """)
-        }
+        self._preconditionSafeToSyncShutdown(file: #file, line: #line)
+
         let errorStorageLock = Lock()
         var errorStorage: Error? = nil
         let continuation = DispatchWorkItem {}
@@ -848,6 +851,12 @@ extension EventLoopGroup {
             if let error = errorStorage {
                 throw error
             }
+        }
+    }
+
+    public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {
+        for loop in self.makeIterator() {
+            loop.preconditionNotInEventLoop(file: file, line: line)
         }
     }
 }
@@ -1122,6 +1131,16 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                                                initializer: { _ in }) { loop in
             loop.assertInEventLoop()
             callback(loop)
+        }
+    }
+
+    public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {
+        if let eventLoop = MultiThreadedEventLoopGroup.currentEventLoop {
+            preconditionFailure("""
+            BUG DETECTED: syncShutdownGracefully() must not be called when on an EventLoop.
+            Calling syncShutdownGracefully() on any EventLoop can lead to deadlocks.
+            Current eventLoop: \(eventLoop)
+            """, file: file, line: line)
         }
     }
 }

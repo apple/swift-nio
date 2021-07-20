@@ -1447,6 +1447,10 @@ fileprivate class EventLoopWithPreSucceededFuture: EventLoop {
             callback(nil)
         }
     }
+
+    func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {
+        return
+    }
 }
 
 fileprivate class EventLoopWithoutPreSucceededFuture: EventLoop {
@@ -1484,5 +1488,9 @@ fileprivate class EventLoopWithoutPreSucceededFuture: EventLoop {
         queue.async {
             callback(nil)
         }
+    }
+
+    func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {
+        return
     }
 }
