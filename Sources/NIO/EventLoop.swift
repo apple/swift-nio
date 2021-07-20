@@ -821,9 +821,7 @@ public protocol EventLoopGroup: AnyObject {
     /// Must crash if it's not safe to call `syncShutdownGracefully` in the current context.
     ///
     /// This method is a debug hook that can be used to override the behaviour of `syncShutdownGracefully`
-    /// when called. By default it iterates the `EventLoopIterator` returned by `makeIterator` and calls
-    /// `preconditionNotInEventLoop`, but implementations may extend this with other logic if they can detect
-    /// more complex failure cases.
+    /// when called. By default it does nothing.
     func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt)
 }
 
@@ -855,9 +853,7 @@ extension EventLoopGroup {
     }
 
     public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {
-        for loop in self.makeIterator() {
-            loop.preconditionNotInEventLoop(file: file, line: line)
-        }
+        return
     }
 }
 
