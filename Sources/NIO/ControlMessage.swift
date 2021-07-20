@@ -148,6 +148,7 @@ struct UnsafeReceivedControlBytes {
 /// Extract information from a collection of control messages.
 struct ControlMessageParser {
     var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable // Default
+    var packetInfo: NIOPacketInfo? = nil
 
     init(parsing controlMessagesReceived: UnsafeControlMessageCollection) {
         for controlMessage in controlMessagesReceived {
@@ -171,18 +172,53 @@ struct ControlMessageParser {
         return readValue
     }
     
-    mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
-        if controlMessage.level == IPPROTO_IP && controlMessage.type == ControlMessageParser.ipv4TosType {
+    private mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
+        if controlMessage.level == IPPROTO_IP {
+            self.receiveIPv4Message(controlMessage)
+        } else if controlMessage.level == IPPROTO_IPV6 {
+            self.receiveIPv6Message(controlMessage)
+        }
+    }
+
+    private mutating func receiveIPv4Message(_ controlMessage: UnsafeControlMessage) {
+        if controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
                 assert(data.count == 1)
                 precondition(data.count >= 1)
                 let readValue = CInt(data[0])
                 self.ecnValue = .init(receivedValue: readValue)
             }
-        } else if controlMessage.level == IPPROTO_IPV6 && controlMessage.type == IPV6_TCLASS {
+        } else if controlMessage.type == Posix.IP_PKTINFO {
+            if let data = controlMessage.data {
+                let info = data.load(as: in_pktinfo.self)
+                var addr = sockaddr_in()
+                addr.sin_family = sa_family_t(NIOBSDSocket.AddressFamily.inet.rawValue)
+                addr.sin_port = in_port_t(0)
+                addr.sin_addr = info.ipi_addr
+                self.packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""),
+                                                interfaceIndex: Int(info.ipi_ifindex))
+            }
+
+        }
+    }
+
+    private mutating func receiveIPv6Message(_ controlMessage: UnsafeControlMessage) {
+        if controlMessage.type == IPV6_TCLASS {
             if let data = controlMessage.data {
                 let readValue = ControlMessageParser._readCInt(data: data)
                 self.ecnValue = .init(receivedValue: readValue)
+            }
+        } else if controlMessage.type == Posix.IPV6_PKTINFO {
+            if let data = controlMessage.data {
+                let info = data.load(as: in6_pktinfo.self)
+                var addr = sockaddr_in6()
+                addr.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
+                addr.sin6_port = in_port_t(0)
+                addr.sin6_flowinfo = 0
+                addr.sin6_addr = info.ipi6_addr
+                addr.sin6_scope_id = 0
+                self.packetInfo = NIOPacketInfo(destinationAddress: SocketAddress(addr, host: ""),
+                                                interfaceIndex: Int(info.ipi6_ifindex))
             }
         }
     }
@@ -297,6 +333,6 @@ extension AddressedEnvelope.Metadata {
     /// It's assumed the caller has checked that congestion information is required before calling.
     internal init(from controlMessagesReceived: UnsafeControlMessageCollection) {
         let controlMessageReceiver = ControlMessageParser(parsing: controlMessagesReceived)
-        self.init(ecnState: controlMessageReceiver.ecnValue)
+        self.init(ecnState: controlMessageReceiver.ecnValue, packetInfo: controlMessageReceiver.packetInfo)
     }
 }

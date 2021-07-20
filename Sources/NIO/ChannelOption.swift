@@ -255,6 +255,12 @@ extension ChannelOptions {
 
             public init() {}
         }
+
+        /// When set to true IP level Packet Info information will be reported through `AddressedEnvelope.Metadata` for UDP packets.
+        public struct ReceivePacketInfo: ChannelOption {
+            public typealias Value = Bool
+            public init() {}
+        }
     }
 }
 
@@ -308,6 +314,9 @@ public struct ChannelOptions {
     
     /// - seealso: `ExplicitCongestionNotificationsOption`
     public static let explicitCongestionNotification = Types.ExplicitCongestionNotificationsOption()
+
+    /// - seealso: `ReceivePacketInfo`
+    public static let receivePacketInfo = Types.ReceivePacketInfo()
 }
 
 extension ChannelOptions {

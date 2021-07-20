@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2018-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -58,6 +58,15 @@ extension DatagramChannelTests {
                 ("testEcnSendReceiveIPV4VectorReadVectorWrite", testEcnSendReceiveIPV4VectorReadVectorWrite),
                 ("testEcnSendReceiveIPV6VectorReadVectorWrite", testEcnSendReceiveIPV6VectorReadVectorWrite),
                 ("testWritabilityChangeDuringReentrantFlushNow", testWritabilityChangeDuringReentrantFlushNow),
+                ("testSetGetPktInfoOption", testSetGetPktInfoOption),
+                ("testSimpleReceivePacketInfoIPV4", testSimpleReceivePacketInfoIPV4),
+                ("testSimpleReceivePacketInfoIPV6", testSimpleReceivePacketInfoIPV6),
+                ("testReceiveEcnAndPacketInfoIPV4", testReceiveEcnAndPacketInfoIPV4),
+                ("testReceiveEcnAndPacketInfoIPV6", testReceiveEcnAndPacketInfoIPV6),
+                ("testReceiveEcnAndPacketInfoIPV4VectorRead", testReceiveEcnAndPacketInfoIPV4VectorRead),
+                ("testReceiveEcnAndPacketInfoIPV6VectorRead", testReceiveEcnAndPacketInfoIPV6VectorRead),
+                ("testReceiveEcnAndPacketInfoIPV4VectorReadVectorWrite", testReceiveEcnAndPacketInfoIPV4VectorReadVectorWrite),
+                ("testReceiveEcnAndPacketInfoIPV6VectorReadVectorWrite", testReceiveEcnAndPacketInfoIPV6VectorReadVectorWrite),
            ]
    }
 }

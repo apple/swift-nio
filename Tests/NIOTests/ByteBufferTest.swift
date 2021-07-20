@@ -14,7 +14,7 @@
 
 import struct Foundation.Data
 import XCTest
-@testable import NIO
+@testable import NIOCore
 import NIOFoundationCompat
 
 class ByteBufferTest: XCTestCase {

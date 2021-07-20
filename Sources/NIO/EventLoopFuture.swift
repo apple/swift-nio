@@ -392,9 +392,7 @@ public final class EventLoopFuture<Value> {
         self._callbacks = .init()
 
         debugOnly {
-            if let me = eventLoop as? SelectableEventLoop {
-                me.promiseCreationStoreAdd(future: self, file: file, line: line)
-            }
+            eventLoop._promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier(self), file: file, line: line)
         }
     }
 
@@ -417,8 +415,7 @@ public final class EventLoopFuture<Value> {
 
     deinit {
         debugOnly {
-            if let eventLoop = self.eventLoop as? SelectableEventLoop {
-                let creation = eventLoop.promiseCreationStoreRemove(future: self)
+            if let creation = eventLoop._promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier(self)) {
                 if self._value == nil {
                     fatalError("leaking promise created at \(creation)", file: creation.file, line: creation.line)
                 }
@@ -922,21 +919,7 @@ extension EventLoopFuture {
     /// - throws: The error value of the `EventLoopFuture` if it errors.
     @inlinable
     public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value {
-        if !(self.eventLoop is EmbeddedEventLoop) {
-            let explainer: () -> String = { """
-BUG DETECTED: wait() must not be called when on an EventLoop.
-Calling wait() on any EventLoop can lead to
-- deadlocks
-- stalling processing of other connections (Channels) that are handled on the EventLoop that wait was called on
-
-Further information:
-- current eventLoop: \(MultiThreadedEventLoopGroup.currentEventLoop.debugDescription)
-- event loop associated to future: \(self.eventLoop)
-"""
-            }
-            precondition(!eventLoop.inEventLoop, explainer(), file: file, line: line)
-            precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil, explainer(), file: file, line: line)
-        }
+        self.eventLoop._preconditionSafeToWait(file: file, line: line)
 
         var v: Result<Value, Error>? = nil
         let lock = ConditionLock(value: 0)
@@ -1572,5 +1555,29 @@ extension EventLoopFuture {
         self.whenComplete { value in
             queue.async { callbackMayBlock(value) }
         }
+    }
+}
+
+
+/// An opaque identifier for a specific `EventLoopFuture`.
+///
+/// This is used only when attempting to provide high-fidelity diagnostics of leaked
+/// `EventLoopFuture`s. It is entirely opaque and can only be stored in a simple
+/// tracking data structure.
+public struct _NIOEventLoopFutureIdentifier: Hashable {
+    private var opaqueID: UInt
+
+    @usableFromInline
+    internal init<T>(_ future: EventLoopFuture<T>) {
+        self.opaqueID = _NIOEventLoopFutureIdentifier.obfuscatePointerValue(future: future)
+    }
+
+
+    private static func obfuscatePointerValue<T>(future: EventLoopFuture<T>) -> UInt {
+        // Note:
+        // 1. 0xbf15ca5d is randomly picked such that it fits into both 32 and 64 bit address spaces
+        // 2. XOR with 0xbf15ca5d so that Memory Graph Debugger and other memory debugging tools
+        // won't see it as a reference.
+        return UInt(bitPattern: ObjectIdentifier(future)) ^ 0xbf15ca5d
     }
 }

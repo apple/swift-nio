@@ -273,12 +273,60 @@ public protocol EventLoop: EventLoopGroup {
     /// Contrary to `makeSucceededFuture`, `makeSucceededVoidFuture` is a customization point for `EventLoop`s which
     /// allows `EventLoop`s to cache a pre-succeded `Void` future to prevent superfluous allocations.
     func makeSucceededVoidFuture() -> EventLoopFuture<Void>
+
+    /// Must crash if it is not safe to call `wait()` on an `EventLoopFuture`.
+    ///
+    /// This method is a debugging hook that can be used to override the behaviour of `EventLoopFuture.wait()` when called.
+    /// By default this simply becomes `preconditionNotInEventLoop`, but some `EventLoop`s are capable of more exhaustive
+    /// checking and can validate that the wait is not occuring on an entire `EventLoopGroup`, or even more broadly.
+    ///
+    /// This method should not be called by users directly, it should only be implemented by `EventLoop` implementers that
+    /// need to customise the behaviour.
+    func _preconditionSafeToWait(file: StaticString, line: UInt)
+
+    /// Debug hook: track a promise creation and its location.
+    ///
+    /// This debug hook is called by EventLoopFutures and EventLoopPromises when they are created, and tracks the location
+    /// of their creation. It combines with `_promiseCompleted` to provide high-fidelity diagnostics for debugging leaked
+    /// promises.
+    ///
+    /// In release mode, this function will never be called.
+    ///
+    /// It is valid for an `EventLoop` not to implement any of the two `_promise` functions. If either of them are implemented,
+    /// however, both of them should be implemented.
+    func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt)
+
+    /// Debug hook: complete a specific promise and return its creation location.
+    ///
+    /// This debug hook is called by EventLoopFutures and EventLoopPromises when they are deinited, and removes the data from
+    /// the promise tracking map and, if available, provides that data as its return value. It combines with `_promiseCreated`
+    /// to provide high-fidelity diagnostics for debugging leaked promises.
+    ///
+    /// In release mode, this function will never be called.
+    ///
+    /// It is valid for an `EventLoop` not to implement any of the two `_promise` functions. If either of them are implemented,
+    /// however, both of them should be implemented.
+    func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
 }
 
 extension EventLoop {
     /// Default implementation of `makeSucceededVoidFuture`: Return a fresh future (which will allocate).
     public func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
         return EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+    }
+
+    public func _preconditionSafeToWait(file: StaticString, line: UInt) {
+        self.preconditionNotInEventLoop(file: file, line: line)
+    }
+
+    /// Default implementation of `_promiseCreated`: does nothing.
+    public func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
+        return
+    }
+
+    /// Default implementation of `_promiseCompleted`: does nothing.
+    public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
+        return nil
     }
 }
 
@@ -769,6 +817,12 @@ public protocol EventLoopGroup: AnyObject {
     ///
     /// - returns: `EventLoopIterator`
     func makeIterator() -> EventLoopIterator
+
+    /// Must crash if it's not safe to call `syncShutdownGracefully` in the current context.
+    ///
+    /// This method is a debug hook that can be used to override the behaviour of `syncShutdownGracefully`
+    /// when called. By default it does nothing.
+    func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt)
 }
 
 extension EventLoopGroup {
@@ -777,13 +831,8 @@ extension EventLoopGroup {
     }
 
     public func syncShutdownGracefully() throws {
-        if let eventLoop = MultiThreadedEventLoopGroup.currentEventLoop {
-            preconditionFailure("""
-            BUG DETECTED: syncShutdownGracefully() must not be called when on an EventLoop.
-            Calling syncShutdownGracefully() on any EventLoop can lead to deadlocks.
-            Current eventLoop: \(eventLoop)
-            """)
-        }
+        self._preconditionSafeToSyncShutdown(file: #file, line: #line)
+
         let errorStorageLock = Lock()
         var errorStorage: Error? = nil
         let continuation = DispatchWorkItem {}
@@ -801,6 +850,10 @@ extension EventLoopGroup {
                 throw error
             }
         }
+    }
+
+    public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {
+        return
     }
 }
 
@@ -1074,6 +1127,16 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                                                initializer: { _ in }) { loop in
             loop.assertInEventLoop()
             callback(loop)
+        }
+    }
+
+    public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {
+        if let eventLoop = MultiThreadedEventLoopGroup.currentEventLoop {
+            preconditionFailure("""
+            BUG DETECTED: syncShutdownGracefully() must not be called when on an EventLoop.
+            Calling syncShutdownGracefully() on any EventLoop can lead to deadlocks.
+            Current eventLoop: \(eventLoop)
+            """, file: file, line: line)
         }
     }
 }
