@@ -208,6 +208,11 @@ public final class EmbeddedEventLoop: EventLoop {
         return self._promiseCreationStore.removeValue(forKey: futureIdentifier)!
     }
 
+    public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {
+        // EmbeddedEventLoop always allows a sync shutdown.
+        return
+    }
+
     deinit {
         precondition(scheduledTasks.isEmpty, "Embedded event loop freed with unexecuted scheduled tasks!")
     }
