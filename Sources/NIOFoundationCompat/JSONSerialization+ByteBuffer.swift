@@ -17,10 +17,10 @@ import Foundation
 
 extension JSONSerialization {
     
-    /// Attempts to derive a Foundation object from a ByteBuffer and return it  as `T`.
+    /// Attempts to derive a Foundation object from a ByteBuffer and return it as `T`.
     ///
     /// - parameters:
-    ///    - type: The Founation type that is attempting to be derived from the ByteBuffer.
+    ///    - type: The Foundation type that is attempting to be derived from the ByteBuffer.
     ///    - buffer: The ByteBuffer being used to derive the Foundation type.
     /// - returns: The Foundation value if successful or `nil` if there was an issue creating the Foundation type.
     @inlinable

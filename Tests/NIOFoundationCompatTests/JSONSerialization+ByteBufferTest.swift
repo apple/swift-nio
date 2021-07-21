@@ -33,15 +33,11 @@ class JSONSerializationByteBufferTest: XCTestCase {
         XCTAssertNoThrow(dataArray = try JSONSerialization.data(withJSONObject: array, options: .prettyPrinted))
         XCTAssertNoThrow(dataDictionary = try JSONSerialization.data(withJSONObject: dictionary, options: .prettyPrinted))
         
-        let arrayDispatchData = dataArray.withUnsafeBytes { DispatchData(bytes: $0) }
-        let dictDispatchData = dataDictionary.withUnsafeBytes { DispatchData(bytes: $0) }
-        
-        let arrayByteBuffer = ByteBuffer(dispatchData: arrayDispatchData)
-        let dictByteBuffer = ByteBuffer(dispatchData: dictDispatchData)
+        let arrayByteBuffer = ByteBuffer(data: Data(dataArray))
+        let dictByteBuffer = ByteBuffer(data: Data(dataDictionary))
         
         var foundationArray: [String] = []
         var foundationDict: [String: String] = [:]
-        
         
         XCTAssertNoThrow(foundationArray = try JSONSerialization.jsonObject(Array<String>.self, buffer: arrayByteBuffer)!)
         XCTAssertEqual(foundationArray, array)
