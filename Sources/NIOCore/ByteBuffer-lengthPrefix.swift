@@ -111,7 +111,7 @@ extension ByteBuffer {
         endianness: Endianness = .big,
         as integer: Integer.Type
     ) -> ByteBuffer? where Integer: FixedWidthInteger {
-        getLengthPrefixedSlice(at: self.readerIndex, endianness: endianness, as: Integer.self).map {
+        self.getLengthPrefixedSlice(at: self.readerIndex, endianness: endianness, as: Integer.self).map {
             self._moveReaderIndex(forwardBy: MemoryLayout<Integer>.size + $0.readableBytes)
             return $0
         }
