@@ -179,7 +179,11 @@ Further information:
         self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
-        self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+        // note: We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
+        //       fairly dumb, but it's the only option we have.
+        let voidPromise = self.makePromise(of: Void.self)
+        voidPromise.succeed(())
+        self._succeededVoidFuture = voidPromise.futureResult
     }
 
     deinit {
@@ -271,7 +275,7 @@ Further information:
         do {
             try self._schedule0(task)
         } catch {
-            scheduled._promise.fail(error)
+            promise.fail(error)
         }
 
         return scheduled
@@ -616,7 +620,11 @@ Further information:
     @inlinable
     public func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
         guard self.inEventLoop, let voidFuture = self._succeededVoidFuture else {
-            return EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+            // We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
+            // fairly dumb, but it's the only option we have. This one can only happen after the loop is shut down, or when calling from off the loop.
+            let voidPromise = self.makePromise(of: Void.self)
+            voidPromise.succeed(())
+            return voidPromise.futureResult
         }
         return voidFuture
     }
