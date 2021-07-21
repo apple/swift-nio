@@ -16,14 +16,10 @@ extension ByteBuffer {
     public struct LengthPrefixError: Swift.Error {
         private enum BaseError {
             case messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat
-            case readMoreBytesThanSpecifiedInLengthPrefix
-            case readLessBytesThanSpecifiedInLengthPrefix
         }
         private var baseError: BaseError
         
         public static let messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat: LengthPrefixError = .init(baseError: .messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat)
-        public static let readMoreBytesThanSpecifiedInLengthPrefix: LengthPrefixError = .init(baseError: .readMoreBytesThanSpecifiedInLengthPrefix)
-        public static let readLessBytesThanSpecifiedInLengthPrefix: LengthPrefixError = .init(baseError: .readLessBytesThanSpecifiedInLengthPrefix)
     }
 }
 
@@ -32,7 +28,7 @@ extension ByteBuffer {
     /// - Parameters:
     ///     - endianness: The endianness of the length prefix `Integer` in this `ByteBuffer` (defaults to big endian).
     ///     - integer: the desired `Integer` type used to write the length prefix
-    ///     - writeMessage:
+    ///     - writeMessage: A closure that takes a buffer, writes a message to it and returns the number of bytes written
     /// - Throws: If the number of bytes written during `writeMessage` can not be exactly represented as the given `Integer` i.e. if the number of bytes written is greater than `Integer.max`
     /// - Returns: Number of total bytes written
     @discardableResult
@@ -41,15 +37,24 @@ extension ByteBuffer {
         endianness: Endianness = .big,
         as integer: Integer.Type,
         writeMessage: (inout ByteBuffer) throws -> Int
-    ) throws -> Int  where Integer: FixedWidthInteger {
+    ) throws -> Int where Integer: FixedWidthInteger {
         var totalBytesWritten = 0
         
         let lengthPrefixIndex = self.writerIndex
         // Write a zero as a placeholder which will later be overwritten by the actual number of bytes written
         totalBytesWritten += self.writeInteger(.zero, endianness: endianness, as: Integer.self)
         
+        let startWriterIndex = writerIndex
         let messageLength = try writeMessage(&self)
+        let endWriterIndex = writerIndex
+        
         totalBytesWritten += messageLength
+        
+        let actualBytesWritten = endWriterIndex - startWriterIndex
+        assert(
+            actualBytesWritten == messageLength, 
+            "writeMessage returned \(messageLength) bytes, but actually \(actualBytesWritten) bytes were written, but they should be the same"
+        )
         
         guard let lengthPrefix = Integer(exactly: messageLength) else {
             throw LengthPrefixError.messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat
@@ -63,12 +68,13 @@ extension ByteBuffer {
 
 extension ByteBuffer {
     /// Reads an `integer` from `self` and passes it to `readMessage`. 
-    /// It is checked that exactly the number of bytes specified in the length prefix is read during the call to `readMessage`.
+    /// It is checked that exactly the number of bytes specified in the length prefix is read during the call to `readMessage`. 
+    /// 
+    /// If nil is returned, `readerIndex` is **not** moved forward.
     /// - Parameters:
     ///     - endianness: The endianness of the length prefix `Integer` in this `ByteBuffer` (defaults to big endian).
     ///     - integer: the desired `Integer` type used to read the length prefix
-    ///     - readMessage: A closure that takes the length prefix, reads exactly that number of bytes from the given `ByteBuffer` and returns the result.
-    /// - Throws: if `readMessage` returns a non-nil value and does not read exactly the number of bytes passed to it.
+    ///     - readMessage: A closure that takes the message length, reads exactly that number of bytes from the given `ByteBuffer` and returns the result.
     /// - Returns: `nil` if the length prefix could not be read, 
     ///            the length prefix is negative or
     ///            the buffer does not contain enough bytes to read a message of this length.
@@ -77,30 +83,22 @@ extension ByteBuffer {
     public mutating func readLengthPrefixed<Integer, Result>(
         endianness: Endianness = .big,
         as integer: Integer.Type,
-        readMessage: (Integer, inout ByteBuffer) throws -> Result?
-    ) throws -> Result? where Integer: FixedWidthInteger {
-        guard let messageLength = self.readInteger(endianness: endianness, as: Integer.self) else {
-            return nil
-        }
-        guard messageLength >= 0,
-              messageLength <= readableBytes else {
+        readMessage: (Int, inout ByteBuffer) throws -> Result?
+    ) rethrows -> Result? where Integer: FixedWidthInteger {
+        let prefixSize = MemoryLayout<Integer>.size
+        
+        guard let lengthPrefix = self.getInteger(at: readerIndex, endianness: endianness, as: Integer.self),
+              let messageLength = Int(exactly: lengthPrefix),
+              var messageBuffer = self.getSlice(at: readerIndex + prefixSize, length: messageLength)
+        else {
             return nil
         }
         
-        let readStartIndex = self.readerIndex
-        guard let result = try readMessage(messageLength, &self) else {
+        guard let result = try readMessage(messageLength, &messageBuffer) else {
             return nil
         }
-        let readEndIndex = self.readerIndex
         
-        let readBytes = readEndIndex - readStartIndex
-        let expectedReadBytes = Int(messageLength)
-        if readBytes < expectedReadBytes {
-            throw LengthPrefixError.readLessBytesThanSpecifiedInLengthPrefix
-        }
-        if readBytes > expectedReadBytes {
-            throw LengthPrefixError.readMoreBytesThanSpecifiedInLengthPrefix
-        }
+        _moveReaderIndex(forwardBy: prefixSize + messageLength)
         
         return result
     }
