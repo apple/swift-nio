@@ -42,6 +42,7 @@ extension ByteBufferLengthPrefixTests {
                 ("testReadOneByteTooFew", testReadOneByteTooFew),
                 ("testReadMessageWithBigEndianInteger", testReadMessageWithBigEndianInteger),
                 ("testReadMessageWithLittleEndianInteger", testReadMessageWithLittleEndianInteger),
+                ("testReadMessageWithMaliciousLength", testReadMessageWithMaliciousLength),
            ]
    }
 }
