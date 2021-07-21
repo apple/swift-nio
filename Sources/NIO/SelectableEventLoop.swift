@@ -102,21 +102,39 @@ internal final class SelectableEventLoop: EventLoop {
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
 
     private let promiseCreationStoreLock = Lock()
-    private var _promiseCreationStore: [UInt: (file: StaticString, line: UInt)] = [:]
+    private var _promiseCreationStore: [_NIOEventLoopFutureIdentifier: (file: StaticString, line: UInt)] = [:]
 
     @usableFromInline
-    internal func promiseCreationStoreAdd<T>(future: EventLoopFuture<T>, file: StaticString, line: UInt) {
+    internal func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore[self.obfuscatePointerValue(future)] = (file: file, line: line)
+            self._promiseCreationStore[futureIdentifier] = (file: file, line: line)
         }
     }
 
-    internal func promiseCreationStoreRemove<T>(future: EventLoopFuture<T>) -> (file: StaticString, line: UInt) {
+    @usableFromInline
+    internal func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
         precondition(_isDebugAssertConfiguration())
         return self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore.removeValue(forKey: self.obfuscatePointerValue(future))!
+            self._promiseCreationStore.removeValue(forKey: futureIdentifier)!
         }
+    }
+
+    @usableFromInline
+    internal func _preconditionSafeToWait(file: StaticString, line: UInt) {
+        let explainer: () -> String = { """
+BUG DETECTED: wait() must not be called when on an EventLoop.
+Calling wait() on any EventLoop can lead to
+- deadlocks
+- stalling processing of other connections (Channels) that are handled on the EventLoop that wait was called on
+
+Further information:
+- current eventLoop: \(MultiThreadedEventLoopGroup.currentEventLoop.debugDescription)
+- event loop associated to future: \(self)
+"""
+        }
+        precondition(!self.inEventLoop, explainer(), file: file, line: line)
+        precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil, explainer(), file: file, line: line)
     }
 
     @usableFromInline
@@ -161,7 +179,11 @@ internal final class SelectableEventLoop: EventLoop {
         self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
-        self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+        // note: We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
+        //       fairly dumb, but it's the only option we have.
+        let voidPromise = self.makePromise(of: Void.self)
+        voidPromise.succeed(())
+        self._succeededVoidFuture = voidPromise.futureResult
     }
 
     deinit {
@@ -253,7 +275,7 @@ internal final class SelectableEventLoop: EventLoop {
         do {
             try self._schedule0(task)
         } catch {
-            scheduled._promise.fail(error)
+            promise.fail(error)
         }
 
         return scheduled
@@ -372,14 +394,6 @@ internal final class SelectableEventLoop: EventLoop {
         } else {
             return .blockUntilTimeout(nextReady)
         }
-    }
-    
-    private func obfuscatePointerValue<T>(_ future: EventLoopFuture<T>) -> UInt {
-        // Note:
-        // 1. 0xbf15ca5d is randomly picked such that it fits into both 32 and 64 bit address spaces
-        // 2. XOR with 0xbf15ca5d so that Memory Graph Debugger and other memory debugging tools
-        // won't see it as a reference.
-        return UInt(bitPattern: ObjectIdentifier(future)) ^ 0xbf15ca5d
     }
 
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
@@ -606,7 +620,11 @@ internal final class SelectableEventLoop: EventLoop {
     @inlinable
     public func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
         guard self.inEventLoop, let voidFuture = self._succeededVoidFuture else {
-            return EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+            // We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
+            // fairly dumb, but it's the only option we have. This one can only happen after the loop is shut down, or when calling from off the loop.
+            let voidPromise = self.makePromise(of: Void.self)
+            voidPromise.succeed(())
+            return voidPromise.futureResult
         }
         return voidFuture
     }

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -31,7 +31,7 @@ import XCTest
    @testable import NIOTests
    @testable import NIOWebSocketTests
 
-// This protocol is necessary to we can call the 'run' method (on an existential of this protocol)
+// This protocol is necessary so we can call the 'run' method (on an existential of this protocol)
 // without the compiler noticing that we're calling a deprecated function.
 // This hack exists so we can deprecate individual tests which test deprecated functionality without
 // getting a compiler warning...

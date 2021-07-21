@@ -346,6 +346,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 /// Currently, it does not support connected mode which is well worth adding.
 final class DatagramChannel: BaseSocketChannel<Socket> {
     private var reportExplicitCongestionNotifications = false
+    private var receivePacketInfo = false
 
     // Guard against re-entrance of flushNow() method.
     private let pendingWrites: PendingDatagramWritesManager
@@ -435,7 +436,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             break
             #endif
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
-            let valueAsInt: Int32 = value as! Bool ? 1 : 0
+            let valueAsInt: CInt = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
                 self.reportExplicitCongestionNotifications = true
@@ -451,6 +452,24 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // Explicit congestion notification is only supported for IP
                 throw ChannelError.operationUnsupported
             }
+        case _ as ChannelOptions.Types.ReceivePacketInfo:
+            let valueAsInt: CInt = value as! Bool ? 1 : 0
+            switch self.localAddress?.protocol {
+            case .some(.inet):
+                self.receivePacketInfo = true
+                try self.socket.setOption(level: .ip,
+                                          name: .ip_recv_pktinfo,
+                                          value: valueAsInt)
+            case .some(.inet6):
+                self.receivePacketInfo = true
+                try self.socket.setOption(level: .ipv6,
+                                          name: .ipv6_recv_pktinfo,
+                                          value: valueAsInt)
+            default:
+                // Receiving packet info is only supported for IP
+                throw ChannelError.operationUnsupported
+            }
+            break
         default:
             try super.setOption0(option, value: value)
         }
@@ -480,6 +499,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                   name: .ipv6_recv_tclass) != 0) as! Option.Value
             default:
                 // Explicit congestion notification is only supported for IP
+                throw ChannelError.operationUnsupported
+            }
+        case _ as ChannelOptions.Types.ReceivePacketInfo:
+            switch self.localAddress?.protocol {
+            case .some(.inet):
+                return try (self.socket.getOption(level: .ip,
+                                                  name: .ip_recv_pktinfo) != 0) as! Option.Value
+            case .some(.inet6):
+                return try (self.socket.getOption(level: .ipv6,
+                                                  name: .ipv6_recv_pktinfo) != 0) as! Option.Value
+            default:
+                // Receiving packet info is only supported for IP
                 throw ChannelError.operationUnsupported
             }
         default:
@@ -519,7 +550,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         // These control bytes must not escape the current call stack
         let controlBytesBuffer: UnsafeMutableRawBufferPointer
-        if self.reportExplicitCongestionNotifications {
+        if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
             controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
         } else {
             controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
@@ -547,7 +578,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                if self.reportExplicitCongestionNotifications,
+                if self.reportExplicitCongestionNotifications || self.receivePacketInfo,
                    let controlMessagesReceived = controlBytes.receivedControlMessages {
                     metadata = .init(from: controlMessagesReceived)
                 } else {
@@ -591,7 +622,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let result = try vectorReadManager.readFromSocket(
                 socket: self.socket,
                 buffer: &buffer,
-                reportExplicitCongestionNotifications: self.reportExplicitCongestionNotifications)
+                parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo)
             switch result {
             case .some(let results, let totalRead):
                 assert(self.isOpen)

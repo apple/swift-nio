@@ -62,10 +62,6 @@ echo "Building podspecs in $tmpfile"
 targets=( $("${here}/list_topsorted_dependencies.sh" -l -r | grep -v "NIOPriorityQueue" | sed 's/^NIO/SwiftNIO/') )
 
 for target in "${targets[@]}"; do
-  if [[ "$target" == "_NIO1APIShims" ]]; then
-    continue
-  fi
-
   if [[ -n "$skip_until" && "$target" != "$skip_until" ]]; then
     echo "Skipping $target"
     continue

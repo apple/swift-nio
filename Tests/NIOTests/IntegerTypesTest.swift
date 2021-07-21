@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import NIO
+@testable import NIOCore
 
 public final class IntegerTypesTest: XCTestCase {
     func testNextPowerOfOfTwoZero() {

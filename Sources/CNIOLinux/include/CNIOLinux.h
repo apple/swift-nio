@@ -48,6 +48,11 @@ typedef struct {
     unsigned int msg_len;
 } CNIOLinux_mmsghdr;
 
+typedef struct {
+    struct in6_addr ipi6_addr;
+    unsigned int ipi6_ifindex;
+} CNIOLinux_in6_pktinfo;
+
 int CNIOLinux_sendmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen, int flags);
 int CNIOLinux_recvmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen, int flags, struct timespec *timeout);
 

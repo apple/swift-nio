@@ -187,3 +187,36 @@ extension ByteBuffer {
         self = view._buffer.getSlice(at: view.startIndex, length: view.count)!
     }
 }
+
+extension ByteBufferView: Equatable {
+    /// required by `Equatable`
+    public static func == (lhs: ByteBufferView, rhs: ByteBufferView) -> Bool {
+
+        guard lhs._range.count == rhs._range.count else {
+            return false 
+        }
+
+        // A well-formed ByteBufferView can never have a range that is out-of-bounds of the backing ByteBuffer.
+        // As a result, these getSlice calls can never fail, and we'd like to know it if they do.
+        let leftBufferSlice = lhs._buffer.getSlice(at: lhs._range.startIndex, length: lhs._range.count)!
+        let rightBufferSlice = rhs._buffer.getSlice(at: rhs._range.startIndex, length: rhs._range.count)!
+        
+        return leftBufferSlice == rightBufferSlice
+    }
+}
+
+extension ByteBufferView: Hashable {
+    /// required by `Hashable`
+    public func hash(into hasher: inout Hasher) {
+        // A well-formed ByteBufferView can never have a range that is out-of-bounds of the backing ByteBuffer.
+        // As a result, this getSlice call can never fail, and we'd like to know it if it does.
+        hasher.combine(self._buffer.getSlice(at: self._range.startIndex, length: self._range.count)!)
+    }
+}
+
+extension ByteBufferView: ExpressibleByArrayLiteral {
+    /// required by `ExpressibleByArrayLiteral`
+    public init(arrayLiteral elements: Element...) {
+        self.init(elements)
+    }
+}

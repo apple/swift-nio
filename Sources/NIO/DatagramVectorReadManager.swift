@@ -87,10 +87,10 @@ struct DatagramVectorReadManager {
     /// - parameters:
     ///     - socket: The underlying socket from which to read.
     ///     - buffer: The single large buffer into which reads will be written.
-    ///     - reportExplicitCongestionNotifications: Should explicit congestion notifications be reported up using metadata.
+    ///     - parseControlMessages: Should control messages be reported up using metadata.
     func readFromSocket(socket: Socket,
                         buffer: inout ByteBuffer,
-                        reportExplicitCongestionNotifications: Bool) throws -> ReadResult {
+                        parseControlMessages: Bool) throws -> ReadResult {
         assert(buffer.readerIndex == 0, "Buffer was not cleared between calls to readFromSocket!")
 
         let messageSize = buffer.capacity / self.messageCount
@@ -103,7 +103,7 @@ struct DatagramVectorReadManager {
                 self.ioVector[i] = IOVector(iov_base: bufferPointer.baseAddress! + (i * messageSize), iov_len: numericCast(messageSize))
                 
                 let controlBytes: UnsafeMutableRawBufferPointer
-                if reportExplicitCongestionNotifications {
+                if parseControlMessages {
                     // This will be used in buildMessages below but should not be used beyond return of this function.
                     controlBytes = self.controlMessageStorage[i]
                 } else {
@@ -137,7 +137,7 @@ struct DatagramVectorReadManager {
             return self.buildMessages(messageCount: messagesProcessed,
                                       sliceSize: messageSize,
                                       buffer: &buffer,
-                                      reportExplicitCongestionNotifications: reportExplicitCongestionNotifications)
+                                      parseControlMessages: parseControlMessages)
         }
     }
 
@@ -152,7 +152,7 @@ struct DatagramVectorReadManager {
     private func buildMessages(messageCount: Int,
                                sliceSize: Int,
                                buffer: inout ByteBuffer,
-                               reportExplicitCongestionNotifications: Bool) -> ReadResult {
+                               parseControlMessages: Bool) -> ReadResult {
         var sliceOffset = buffer.readerIndex
         var totalReadSize = 0
 
@@ -176,7 +176,7 @@ struct DatagramVectorReadManager {
             
             // Extract congestion information if requested.
             let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-            if reportExplicitCongestionNotifications {
+            if parseControlMessages {
                 let controlMessagesReceived =
                     UnsafeControlMessageCollection(messageHeader: self.messageVector[i].msg_hdr)
                 metadata = .init(from: controlMessagesReceived)

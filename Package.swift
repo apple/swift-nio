@@ -16,20 +16,21 @@
 import PackageDescription
 
 var targets: [PackageDescription.Target] = [
-    .target(name: "_NIO1APIShims",
-            dependencies: ["NIO", "NIOHTTP1", "NIOTLS", "NIOFoundationCompat", "NIOWebSocket"]),
+    .target(name: "NIOCore",
+            dependencies: ["NIOConcurrencyHelpers"]),
     .target(name: "NIO",
             dependencies: ["CNIOLinux",
                            "CNIODarwin",
                            "CNIOWindows",
-                           "NIOConcurrencyHelpers"]),
+                           "NIOConcurrencyHelpers",
+                           "NIOCore"]),
     .target(name: "_NIOConcurrency",
             dependencies: ["NIO"]),
     .target(name: "NIOFoundationCompat", dependencies: ["NIO"]),
     .target(name: "CNIOAtomics", dependencies: []),
     .target(name: "CNIOSHA1", dependencies: []),
     .target(name: "CNIOLinux", dependencies: []),
-    .target(name: "CNIODarwin", dependencies: []),
+    .target(name: "CNIODarwin", dependencies: [], cSettings: [.define("__APPLE_USE_RFC_3542")]),
     .target(name: "CNIOWindows", dependencies: []),
     .target(name: "NIOConcurrencyHelpers",
             dependencies: ["CNIOAtomics"]),
@@ -88,8 +89,8 @@ var targets: [PackageDescription.Target] = [
 let package = Package(
     name: "swift-nio",
     products: [
+        .library(name: "NIOCore", targets: ["NIOCore"]),
         .library(name: "NIO", targets: ["NIO"]),
-        .library(name: "_NIO1APIShims", targets: ["_NIO1APIShims"]),
         .library(name: "_NIOConcurrency", targets: ["_NIOConcurrency"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
