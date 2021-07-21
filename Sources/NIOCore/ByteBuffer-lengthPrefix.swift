@@ -16,10 +16,12 @@ extension ByteBuffer {
     public struct LengthPrefixError: Swift.Error {
         private enum BaseError {
             case messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat
+            case messageCouldNotBeReadSuccessfully
         }
         private var baseError: BaseError
         
         public static let messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat: LengthPrefixError = .init(baseError: .messageLengthDoesNotFitExactlyIntoRequiredIntegerFormat)
+        public static let messageCouldNotBeReadSuccessfully: LengthPrefixError = .init(baseError: .messageCouldNotBeReadSuccessfully)
     }
 }
 
@@ -44,9 +46,9 @@ extension ByteBuffer {
         // Write a zero as a placeholder which will later be overwritten by the actual number of bytes written
         totalBytesWritten += self.writeInteger(.zero, endianness: endianness, as: Integer.self)
         
-        let startWriterIndex = writerIndex
+        let startWriterIndex = self.writerIndex
         let messageLength = try writeMessage(&self)
-        let endWriterIndex = writerIndex
+        let endWriterIndex = self.writerIndex
         
         totalBytesWritten += messageLength
         
@@ -67,14 +69,15 @@ extension ByteBuffer {
 }
 
 extension ByteBuffer {
-    /// Reads an `integer` from `self` and passes it to `readMessage`. 
-    /// It is checked that exactly the number of bytes specified in the length prefix is read during the call to `readMessage`. 
+    /// Reads an `Integer` from `self` and passes it to `readMessage`. 
+    /// It is checked that `readMessage` returns a non-nil value.
     /// 
     /// If nil is returned, `readerIndex` is **not** moved forward.
     /// - Parameters:
     ///     - endianness: The endianness of the length prefix `Integer` in this `ByteBuffer` (defaults to big endian).
     ///     - integer: the desired `Integer` type used to read the length prefix
-    ///     - readMessage: A closure that takes the message length, reads exactly that number of bytes from the given `ByteBuffer` and returns the result.
+    ///     - readMessage: A closure that takes a `ByteBuffer` slice which contains the message after the length prefix
+    /// - Throws: if `readMessage` returns nil
     /// - Returns: `nil` if the length prefix could not be read, 
     ///            the length prefix is negative or
     ///            the buffer does not contain enough bytes to read a message of this length.
@@ -83,23 +86,59 @@ extension ByteBuffer {
     public mutating func readLengthPrefixed<Integer, Result>(
         endianness: Endianness = .big,
         as integer: Integer.Type,
-        readMessage: (Int, inout ByteBuffer) throws -> Result?
-    ) rethrows -> Result? where Integer: FixedWidthInteger {
-        let prefixSize = MemoryLayout<Integer>.size
-        
-        guard let lengthPrefix = self.getInteger(at: readerIndex, endianness: endianness, as: Integer.self),
+        readMessage: (ByteBuffer) throws -> Result?
+    ) throws -> Result? where Integer: FixedWidthInteger {
+        guard let buffer = self.readLengthPrefixedSlice(endianness: endianness, as: Integer.self) else {
+            return nil
+        }
+        guard let result = try readMessage(buffer) else {
+            throw LengthPrefixError.messageCouldNotBeReadSuccessfully
+        }
+        return result
+    }
+    /// Reads an `Integer` from `self` and reads a slice of that length from `self`
+    /// 
+    /// If nil is returned, `readerIndex` is **not** moved forward.
+    /// - Parameters:
+    ///     - endianness: The endianness of the length prefix `Integer` in this `ByteBuffer` (defaults to big endian).
+    ///     - integer: the desired `Integer` type used to read the length prefix
+    /// - Returns: `nil` if the length prefix could not be read, 
+    ///            the length prefix is negative or
+    ///            the buffer does not contain enough bytes to read a message of this length.
+    ///            Otherwise the message after the length prefix.
+    @inlinable
+    public mutating func readLengthPrefixedSlice<Integer>(
+        endianness: Endianness = .big,
+        as integer: Integer.Type
+    ) -> ByteBuffer? where Integer: FixedWidthInteger {
+        getLengthPrefixedSlice(at: self.readerIndex, endianness: endianness, as: Integer.self).map {
+            self._moveReaderIndex(forwardBy: MemoryLayout<Integer>.size + $0.readableBytes)
+            return $0
+        }
+    }
+    
+    /// Gets an `Integer` from `self` and gets a slice of that length from `self`
+    /// 
+    /// - Parameters:
+    ///     - endianness: The endianness of the length prefix `Integer` in this `ByteBuffer` (defaults to big endian).
+    ///     - integer: the desired `Integer` type used to get the length prefix
+    /// - Returns: `nil` if the length prefix could not be read, 
+    ///            the length prefix is negative or
+    ///            the buffer does not contain enough bytes to read a message of this length.
+    ///            Otherwise the message after the length prefix.
+    @inlinable
+    public func getLengthPrefixedSlice<Integer>(
+        at index: Int,
+        endianness: Endianness = .big,
+        as integer: Integer.Type
+    ) -> ByteBuffer? where Integer: FixedWidthInteger {
+        guard let lengthPrefix = self.getInteger(at: index, endianness: endianness, as: Integer.self),
               let messageLength = Int(exactly: lengthPrefix),
-              var messageBuffer = self.getSlice(at: readerIndex + prefixSize, length: messageLength)
+              let messageBuffer = self.getSlice(at: index + MemoryLayout<Integer>.size, length: messageLength)
         else {
             return nil
         }
         
-        guard let result = try readMessage(messageLength, &messageBuffer) else {
-            return nil
-        }
-        
-        _moveReaderIndex(forwardBy: prefixSize + messageLength)
-        
-        return result
+        return messageBuffer
     }
 }

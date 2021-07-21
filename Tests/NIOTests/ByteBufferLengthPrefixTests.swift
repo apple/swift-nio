@@ -91,18 +91,19 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
     func testReadMessageWithLengthOfZero() {
         buffer.writeInteger(UInt8(0))
         XCTAssertEqual(
-            buffer.readLengthPrefixed(as: UInt8.self) { length, buffer in
-                return length
+            try buffer.readLengthPrefixed(as: UInt8.self) { buffer in
+                buffer
             }, 
-            0
+            ByteBuffer()
         )
     }
     func testReadMessageWithLengthOfOne() {
         buffer.writeInteger(UInt8(1))
         buffer.writeString("A")
         XCTAssertEqual(
-            buffer.readLengthPrefixed(as: UInt8.self) { length, buffer in
-                buffer.readString(length: length)
+            try buffer.readLengthPrefixed(as: UInt8.self) { buffer in
+                var buffer = buffer
+                return buffer.readString(length: buffer.readableBytes)
             },
             "A"
         )
@@ -111,8 +112,9 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
         buffer.writeInteger(UInt8(11))
         buffer.writeString("Hello World")
         XCTAssertEqual(
-            buffer.readLengthPrefixed(as: UInt8.self) { length, buffer in
-                buffer.readString(length: length)
+            try buffer.readLengthPrefixed(as: UInt8.self) { buffer in
+                var buffer = buffer
+                return buffer.readString(length: buffer.readableBytes)
             },
             "Hello World"
         )
@@ -121,8 +123,9 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
         buffer.writeInteger(UInt8(255))
         buffer.writeString(String(repeating: "A", count: 255))
         XCTAssertEqual(
-            buffer.readLengthPrefixed(as: UInt8.self) { length, buffer in
-                buffer.readString(length: length)
+            try buffer.readLengthPrefixed(as: UInt8.self) { buffer in
+                var buffer = buffer
+                return buffer.readString(length: buffer.readableBytes)
             },
             String(repeating: "A", count: 255)
         )
@@ -130,20 +133,21 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
     func testReadOneByteTooMuch() {
         buffer.writeInteger(UInt8(1))
         buffer.writeString("AB")
-        XCTAssertEqual(
-            buffer.readLengthPrefixed(as: UInt8.self) { length, buffer -> String? in
-                XCTAssertEqual(buffer.readString(length: length), "A")
+        XCTAssertThrowsError(
+            try buffer.readLengthPrefixed(as: UInt8.self) { buffer -> String? in
+                var buffer = buffer
+                XCTAssertEqual(buffer.readString(length: buffer.readableBytes), "A")
                 return buffer.readString(length: 1)
-            },
-            nil
+            }
         )
     }
     func testReadOneByteTooFew() {
         buffer.writeInteger(UInt8(2))
         buffer.writeString("AB")
         XCTAssertEqual(
-        buffer.readLengthPrefixed(as: UInt8.self) { length, buffer -> String? in
-                buffer.readString(length: length - 1)
+            try buffer.readLengthPrefixed(as: UInt8.self) { buffer -> String? in
+                var buffer = buffer
+                return buffer.readString(length: buffer.readableBytes - 1)
             },
             "A"
         )
@@ -152,8 +156,9 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
         buffer.writeInteger(UInt16(256), endianness: .big)
         buffer.writeString(String(repeating: "A", count: 256))
         XCTAssertEqual(
-            buffer.readLengthPrefixed(endianness: .big, as: UInt16.self) { length, buffer in
-                buffer.readString(length: length)
+            try buffer.readLengthPrefixed(endianness: .big, as: UInt16.self) { buffer in
+                var buffer = buffer
+                return buffer.readString(length: buffer.readableBytes)
             },
             String(repeating: "A", count: 256)
         )
@@ -162,8 +167,9 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
         buffer.writeInteger(UInt16(256), endianness: .little)
         buffer.writeString(String(repeating: "A", count: 256))
         XCTAssertEqual(
-            buffer.readLengthPrefixed(endianness: .little, as: UInt16.self) { length, buffer in
-                buffer.readString(length: length)
+            try buffer.readLengthPrefixed(endianness: .little, as: UInt16.self) { buffer in
+                var buffer = buffer
+                return buffer.readString(length: buffer.readableBytes)
             },
             String(repeating: "A", count: 256)
         )
@@ -172,11 +178,53 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
         buffer.writeInteger(UInt64(Int.max) + 1)
         buffer.writeString("A")
         XCTAssertEqual(
-            buffer.readLengthPrefixed(as: UInt64.self) { length, buffer -> Int in
+            try buffer.readLengthPrefixed(as: UInt64.self) { buffer -> ByteBuffer in
                 XCTFail("should never be called")
-                return 0
+                return buffer
             },
             nil
         )
+    }
+    
+    // MARK: - readLengthPrefixedSlice
+    func testReadSliceWithBigEndianInteger() {
+        buffer.writeInteger(UInt16(256), endianness: .big)
+        buffer.writeString(String(repeating: "A", count: 256))
+        XCTAssertEqual(
+            buffer.readLengthPrefixedSlice(endianness: .big, as: UInt16.self),
+            ByteBuffer(string: String(repeating: "A", count: 256))
+        )
+        XCTAssertTrue(buffer.readableBytes == 0)
+    }
+    func testReadSliceWithLittleEndianInteger() {
+        buffer.writeInteger(UInt16(256), endianness: .little)
+        buffer.writeString(String(repeating: "A", count: 256))
+        XCTAssertEqual(
+            buffer.readLengthPrefixedSlice(endianness: .little, as: UInt16.self),
+            ByteBuffer(string: String(repeating: "A", count: 256))
+        )
+        XCTAssertTrue(buffer.readableBytes == 0)
+    }
+    
+    // MARK: - getLengthPrefixedSlice
+    func testGetSliceWithBigEndianInteger() {
+        buffer.writeString("some data before the length prefix")
+        buffer.writeInteger(UInt16(256), endianness: .big)
+        buffer.writeString(String(repeating: "A", count: 256))
+        XCTAssertEqual(
+            buffer.getLengthPrefixedSlice(at: 34, endianness: .big, as: UInt16.self),
+            ByteBuffer(string: String(repeating: "A", count: 256))
+        )
+        XCTAssertTrue(buffer.readerIndex == 0)
+    }
+    func testGetSliceWithLittleEndianInteger() {
+        buffer.writeString("some data before the length prefix")
+        buffer.writeInteger(UInt16(256), endianness: .little)
+        buffer.writeString(String(repeating: "A", count: 256))
+        XCTAssertEqual(
+            buffer.getLengthPrefixedSlice(at: 34, endianness: .little, as: UInt16.self),
+            ByteBuffer(string: String(repeating: "A", count: 256))
+        )
+        XCTAssertTrue(buffer.readerIndex == 0)
     }
 }
