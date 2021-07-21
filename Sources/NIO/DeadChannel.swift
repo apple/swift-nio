@@ -104,7 +104,7 @@ internal final class DeadChannel: Channel {
     let parent: Channel? = nil
 
     func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        return EventLoopFuture(eventLoop: self.pipeline.eventLoop, error: ChannelError.ioOnClosedChannel, file: #file, line: #line)
+        return self.pipeline.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
     }
 
     func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {

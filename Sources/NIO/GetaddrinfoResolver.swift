@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -16,11 +16,15 @@
 ///
 /// This is the lowest-common-denominator resolver available to NIO. It's not really a very good
 /// solution because the `getaddrinfo` call blocks during the DNS resolution, meaning that this resolver
-/// will block an event loop thread for as long as it takes to perform the getaddrinfo call. However, it
-/// does have the advantage of automatically conforming to RFC 6724, which removes some of the work
+/// will block a thread for as long as it takes to perform the getaddrinfo call. To prevent it from blocking `EventLoop`
+/// threads, it will offload the blocking `getaddrinfo` calls to a `DispatchQueue`.
+/// One advantage from leveraging `getaddrinfo` is the automatic conformance to RFC 6724, which removes some of the work
 /// needed to implement it.
 ///
 /// This resolver is a single-use object: it can only be used to perform a single host resolution.
+
+import Dispatch
+
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
 #endif
@@ -38,6 +42,9 @@ import struct WinSDK.ADDRINFOW
 import struct WinSDK.SOCKADDR_IN
 import struct WinSDK.SOCKADDR_IN6
 #endif
+
+// A thread-specific variable where we store the offload queue if we're on an `SelectableEventLoop`.
+let offloadQueueTSV = ThreadSpecificVariable<DispatchQueue>()
 
 
 internal class GetaddrinfoResolver: Resolver {
@@ -83,8 +90,25 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - port: The port we'll be connecting to.
     /// - returns: An `EventLoopFuture` that fires with the result of the lookup.
     func initiateAAAAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
-        resolve(host: host, port: port)
+        self.offloadQueue().async {
+            self.resolveBlocking(host: host, port: port)
+        }
         return v6Future.futureResult
+    }
+
+    private func offloadQueue() -> DispatchQueue {
+        if let offloadQueue = offloadQueueTSV.currentValue {
+            return offloadQueue
+        } else {
+            if MultiThreadedEventLoopGroup.currentEventLoop != nil {
+                // Okay, we're on an SelectableEL thread. Let's stuff our queue into the thread local.
+                let offloadQueue = DispatchQueue(label: "io.swiftnio.GetaddrinfoResolver.offloadQueue")
+                offloadQueueTSV.currentValue = offloadQueue
+                return offloadQueue
+            } else {
+                return DispatchQueue.global()
+            }
+        }
     }
 
     /// Cancel all outstanding DNS queries.
@@ -101,7 +125,7 @@ internal class GetaddrinfoResolver: Resolver {
     /// - parameters:
     ///     - host: The hostname to do the DNS queries on.
     ///     - port: The port we'll be connecting to.
-    private func resolve(host: String, port: Int) {
+    private func resolveBlocking(host: String, port: Int) {
 #if os(Windows)
         host.withCString(encodedAs: UTF16.self) { wszHost in
             String(port).withCString(encodedAs: UTF16.self) { wszPort in
@@ -118,7 +142,7 @@ internal class GetaddrinfoResolver: Resolver {
                 }
 
                 if let pResult = pResult {
-                    parseResults(pResult, host: host)
+                    self.parseAndPublishResults(pResult, host: host)
                     FreeAddrInfoW(pResult)
                 } else {
                     self.fail(SocketAddressError.unsupported)
@@ -137,7 +161,7 @@ internal class GetaddrinfoResolver: Resolver {
         }
 
         if let info = info {
-            parseResults(info, host: host)
+            self.parseAndPublishResults(info, host: host)
             freeaddrinfo(info)
         } else {
             /* this is odd, getaddrinfo returned NULL */
@@ -157,7 +181,7 @@ internal class GetaddrinfoResolver: Resolver {
     internal typealias CAddrInfo = addrinfo
 #endif
 
-    private func parseResults(_ info: UnsafeMutablePointer<CAddrInfo>, host: String) {
+    private func parseAndPublishResults(_ info: UnsafeMutablePointer<CAddrInfo>, host: String) {
         var v4Results: [SocketAddress] = []
         var v6Results: [SocketAddress] = []
 
