@@ -77,8 +77,6 @@ import func WinSDK.closesocket
 import func WinSDK.connect
 import func WinSDK.getpeername
 import func WinSDK.getsockname
-import func WinSDK.inet_ntop
-import func WinSDK.inet_pton
 import func WinSDK.ioctlsocket
 import func WinSDK.listen
 import func WinSDK.shutdown
@@ -408,32 +406,6 @@ extension NIOBSDSocket {
             throw IOError(windows: GetLastError(), reason: "WriteFile")
         }
         return .processed(size_t(nNumberOfBytesWritten))
-    }
-
-    @discardableResult
-    @inline(never)
-    static func inet_ntop(af family: NIOBSDSocket.AddressFamily,
-                          src addr: UnsafeRawPointer,
-                          dst dstBuf: UnsafeMutablePointer<CChar>,
-                          size dstSize: socklen_t) throws -> UnsafePointer<CChar>? {
-        // TODO(compnerd) use `InetNtopW` to ensure that we handle unicode properly
-        guard let result = WinSDK.inet_ntop(family.rawValue, addr, dstBuf,
-                                            Int(dstSize)) else {
-            throw IOError(windows: GetLastError(), reason: "inet_ntop")
-        }
-        return result
-    }
-
-    @inline(never)
-    static func inet_pton(af family: NIOBSDSocket.AddressFamily,
-                          src description: UnsafePointer<CChar>,
-                          dst address: UnsafeMutableRawPointer) throws {
-        // TODO(compnerd) use `InetPtonW` to ensure that we handle unicode properly
-         switch WinSDK.inet_pton(family.rawValue, description, address) {
-         case 0: throw IOError(errnoCode: EINVAL, reason: "inet_pton")
-         case 1: return
-         default: throw IOError(winsock: WSAGetLastError(), reason: "inet_pton")
-         }
     }
 
     @inline(never)

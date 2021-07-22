@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+@testable import NIOCore
 @testable import NIO
 
 class SocketAddressTest: XCTestCase {
@@ -153,96 +154,6 @@ class SocketAddressTest: XCTestCase {
                 XCTFail("unexpected error: \(error)")
             }
         }
-    }
-
-    func testWithMutableAddressCopiesFaithfully() throws {
-        let first = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
-        let second = try SocketAddress(ipAddress: "::1", port: 80)
-        let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
-
-        guard case .v4(let firstAddress) = first else {
-            XCTFail("Unable to extract IPv4 address")
-            return
-        }
-        guard case .v6(let secondAddress) = second else {
-            XCTFail("Unable to extract IPv6 address")
-            return
-        }
-        guard case .unixDomainSocket(let thirdAddress) = third else {
-            XCTFail("Unable to extract UDS address")
-            return
-        }
-
-        var firstIPAddress = firstAddress.address
-        var secondIPAddress = secondAddress.address
-        var thirdIPAddress = thirdAddress.address
-
-        var firstCopy = firstIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_in in
-            XCTAssertEqual(size, MemoryLayout<sockaddr_in>.size)
-            return addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
-        }
-        var secondCopy = secondIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_in6 in
-            XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
-            return addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
-        }
-        var thirdCopy = thirdIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_un in
-            XCTAssertEqual(size, MemoryLayout<sockaddr_un>.size)
-            return addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { $0.pointee }
-        }
-
-        XCTAssertEqual(memcmp(&firstIPAddress, &firstCopy, MemoryLayout<sockaddr_in>.size), 0)
-        XCTAssertEqual(memcmp(&secondIPAddress, &secondCopy, MemoryLayout<sockaddr_in6>.size), 0)
-        XCTAssertEqual(memcmp(&thirdIPAddress, &thirdCopy, MemoryLayout<sockaddr_un>.size), 0)
-    }
-
-    func testWithMutableAddressAllowsMutationWithoutPersistence() throws {
-        let first = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
-        let second = try SocketAddress(ipAddress: "::1", port: 80)
-        let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
-
-        guard case .v4(let firstAddress) = first else {
-            XCTFail("Unable to extract IPv4 address")
-            return
-        }
-        guard case .v6(let secondAddress) = second else {
-            XCTFail("Unable to extract IPv6 address")
-            return
-        }
-        guard case .unixDomainSocket(let thirdAddress) = third else {
-            XCTFail("Unable to extract UDS address")
-            return
-        }
-
-        var firstIPAddress = firstAddress.address
-        var secondIPAddress = secondAddress.address
-        var thirdIPAddress = thirdAddress.address
-
-        // Copy the original values.
-        var firstCopy = firstIPAddress
-        var secondCopy = secondIPAddress
-        var thirdCopy = thirdIPAddress
-
-        firstIPAddress.withMutableSockAddr { (addr, size) -> Void in
-            addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                $0.pointee.sin_port = 5
-            }
-        }
-        secondIPAddress.withMutableSockAddr { (addr, size) -> Void in
-            XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
-            addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                $0.pointee.sin6_port = in_port_t(5).bigEndian
-            }
-        }
-        thirdIPAddress.withMutableSockAddr { (addr, size) -> Void in
-            XCTAssertEqual(size, MemoryLayout<sockaddr_un>.size)
-            addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
-                $0.pointee.sun_path.2 = 50
-            }
-        }
-
-        XCTAssertEqual(memcmp(&firstIPAddress, &firstCopy, MemoryLayout<sockaddr_in>.size), 0)
-        XCTAssertEqual(memcmp(&secondIPAddress, &secondCopy, MemoryLayout<sockaddr_in6>.size), 0)
-        XCTAssertEqual(memcmp(&thirdIPAddress, &thirdCopy, MemoryLayout<sockaddr_un>.size), 0)
     }
 
     func testConvertingStorage() throws {

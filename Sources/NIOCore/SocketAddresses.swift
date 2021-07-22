@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -11,11 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-
-/// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
-#if os(Linux) || os(FreeBSD) || os(Android)
-import CNIOLinux
-#endif
 
 #if os(Windows)
 import let WinSDK.AF_INET
@@ -29,8 +24,14 @@ import struct WinSDK.ADDRINFOW
 import struct WinSDK.in_addr_t
 
 import typealias WinSDK.u_short
+#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+import Darwin
+#elseif os(Linux) || os(FreeBSD) || os(Android)
+import Glibc
+import CNIOLinux
 #endif
 
+/// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 public enum SocketAddressError: Error {
     /// The host is unknown (could not be resolved).
     case unknown(host: String, port: Int)
@@ -258,6 +259,24 @@ public enum SocketAddress: CustomStringConvertible {
         self = .v6(.init(address: addr, host: host))
     }
 
+    /// Creates a new IPv4 `SocketAddress`.
+    ///
+    /// - parameters:
+    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
+    public init(_ addr: sockaddr_in) {
+        var addr = addr
+        self = .v4(.init(address: addr, host: addr.addressDescription()))
+    }
+
+    /// Creates a new IPv6 `SocketAddress`.
+    ///
+    /// - parameters:
+    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
+    public init(_ addr: sockaddr_in6) {
+        var addr = addr
+        self = .v6(.init(address: addr, host: addr.addressDescription()))
+    }
+
     /// Creates a new Unix Domain Socket `SocketAddress`.
     ///
     /// - parameters:
@@ -302,7 +321,7 @@ public enum SocketAddress: CustomStringConvertible {
         self = try ipAddress.withCString {
             do {
                 var ipv4Addr = in_addr()
-                try NIOBSDSocket.inet_pton(af: .inet, src: $0, dst: &ipv4Addr)
+                try NIOBSDSocket.inet_pton(addressFamily: .inet, addressDescription: $0, address: &ipv4Addr)
 
                 var addr = sockaddr_in()
                 addr.sin_family = sa_family_t(NIOBSDSocket.AddressFamily.inet.rawValue)
@@ -317,7 +336,7 @@ public enum SocketAddress: CustomStringConvertible {
 
             do {
                 var ipv6Addr = in6_addr()
-                try NIOBSDSocket.inet_pton(af: .inet6, src: $0, dst: &ipv6Addr)
+                try NIOBSDSocket.inet_pton(addressFamily: .inet6, addressDescription: $0, address: &ipv6Addr)
 
                 var addr = sockaddr_in6()
                 addr.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
@@ -546,6 +565,75 @@ extension SocketAddress {
             // so we can just ask for equality on the top byte.
             var v6WireAddress = v6Addr.address.sin6_addr
             return withUnsafeBytes(of: &v6WireAddress) { $0[0] == 0xff }
+        }
+    }
+}
+
+protocol SockAddrProtocol {
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R
+}
+
+/// Returns a description for the given address.
+internal func descriptionForAddress(family: NIOBSDSocket.AddressFamily, bytes: UnsafeRawPointer, length byteCount: Int) throws -> String {
+    var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
+    return try addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
+        try NIOBSDSocket.inet_ntop(addressFamily: family, addressBytes: bytes,
+                                   addressDescription: addressBytesPtr.baseAddress!,
+                                   addressDescriptionLength: socklen_t(byteCount))
+        return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) { addressBytesPtr -> String in
+            String(cString: addressBytesPtr)
+        }
+    }
+}
+
+extension sockaddr_in: SockAddrProtocol {
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeBytes(of: &me) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+
+    /// Returns a description of the `sockaddr_in`.
+    mutating func addressDescription() -> String {
+        return withUnsafePointer(to: &self.sin_addr) { addrPtr in
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            try! descriptionForAddress(family: .inet, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
+        }
+    }
+}
+
+extension sockaddr_in6: SockAddrProtocol {
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeBytes(of: &me) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+
+    /// Returns a description of the `sockaddr_in6`.
+    mutating func addressDescription() -> String {
+        return withUnsafePointer(to: &self.sin6_addr) { addrPtr in
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            try! descriptionForAddress(family: .inet6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
+        }
+    }
+}
+
+extension sockaddr_un: SockAddrProtocol {
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeBytes(of: &me) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+}
+
+extension sockaddr_storage: SockAddrProtocol {
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeBytes(of: &me) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 }
