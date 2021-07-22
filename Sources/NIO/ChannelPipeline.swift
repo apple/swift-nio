@@ -800,7 +800,7 @@ public final class ChannelPipeline: ChannelInvoker {
         return self.head?.next
     }
 
-    func close0(mode: CloseMode, promise: EventLoopPromise<Void>?) {
+    private func close0(mode: CloseMode, promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeClose(mode: mode, promise: promise)
         } else {
@@ -808,19 +808,19 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    func flush0() {
+    private func flush0() {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeFlush()
         }
     }
 
-    func read0() {
+    private func read0() {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeRead()
         }
     }
 
-    func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+    private func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeWrite(data, promise: promise)
         } else {
@@ -828,7 +828,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    func writeAndFlush0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+    private func writeAndFlush0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeWriteAndFlush(data, promise: promise)
         } else {
@@ -836,7 +836,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    private func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeBind(to: address, promise: promise)
         } else {
@@ -844,7 +844,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    private func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeConnect(to: address, promise: promise)
         } else {
@@ -852,7 +852,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    func register0(promise: EventLoopPromise<Void>?) {
+    private func register0(promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeRegister(promise: promise)
         } else {
@@ -860,7 +860,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
+    private func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeTriggerUserOutboundEvent(event, promise: promise)
         } else {
@@ -868,55 +868,55 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    func fireChannelRegistered0() {
+    private func fireChannelRegistered0() {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeChannelRegistered()
         }
     }
 
-    func fireChannelUnregistered0() {
+    private func fireChannelUnregistered0() {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeChannelUnregistered()
         }
     }
 
-    func fireChannelInactive0() {
+    private func fireChannelInactive0() {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeChannelInactive()
         }
     }
 
-    func fireChannelActive0() {
+    private func fireChannelActive0() {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeChannelActive()
         }
     }
 
-    func fireChannelRead0(_ data: NIOAny) {
+    private func fireChannelRead0(_ data: NIOAny) {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeChannelRead(data)
         }
     }
 
-    func fireChannelReadComplete0() {
+    private func fireChannelReadComplete0() {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeChannelReadComplete()
         }
     }
 
-    func fireChannelWritabilityChanged0() {
+    private func fireChannelWritabilityChanged0() {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeChannelWritabilityChanged()
         }
     }
 
-    func fireUserInboundEventTriggered0(_ event: Any) {
+    private func fireUserInboundEventTriggered0(_ event: Any) {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeUserInboundEventTriggered(event)
         }
     }
 
-    func fireErrorCaught0(error: Error) {
+    private func fireErrorCaught0(error: Error) {
         assert((error as? ChannelError).map { $0 != .eof } ?? true)
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeErrorCaught(error)
@@ -1116,6 +1116,150 @@ extension ChannelPipeline {
         @inlinable
         public func handler<Handler: ChannelHandler>(type _: Handler.Type) throws -> Handler {
             return try self._pipeline._handlerSync(type: Handler.self).get()
+        }
+
+        /// Fires `channelRegistered` from the head to the tail.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func fireChannelRegistered() {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.fireChannelRegistered0()
+        }
+
+        /// Fires `channelUnregistered` from the head to the tail.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func fireChannelUnregistered() {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.fireChannelUnregistered0()
+        }
+
+        /// Fires `channelInactive` from the head to the tail.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func fireChannelInactive() {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.fireChannelInactive0()
+        }
+
+        /// Fires `channelActive` from the head to the tail.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func fireChannelActive() {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.fireChannelActive0()
+        }
+
+        /// Fires `channelRead` from the head to the tail.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func fireChannelRead(_ data: NIOAny) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.fireChannelRead0(data)
+        }
+
+        /// Fires `channelReadComplete` from the head to the tail.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func fireChannelReadComplete() {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.fireChannelReadComplete0()
+        }
+
+        /// Fires `channelWritabilityChanged` from the head to the tail.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func fireChannelWritabilityChanged() {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.fireChannelWritabilityChanged0()
+        }
+
+        /// Fires `userInboundEventTriggered` from the head to the tail.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func fireUserInboundEventTriggered(_ event: Any) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.fireUserInboundEventTriggered0(event)
+        }
+
+        /// Fires `errorCaught` from the head to the tail.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func fireErrorCaught(_ error: Error) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.fireErrorCaught0(error: error)
+        }
+
+        /// Fires `close` from the tail to the head.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func close(mode: CloseMode = .all, promise: EventLoopPromise<Void>?) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.close0(mode: mode, promise: promise)
+        }
+
+        /// Fires `flush` from the tail to the head.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func flush() {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.flush0()
+        }
+
+        /// Fires `flush` from the tail to the head.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func read() {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.read0()
+        }
+
+        /// Fires `write` from the tail to the head.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.write0(data, promise: promise)
+        }
+
+        /// Fires `writeAndFlush` from the tail to the head.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.writeAndFlush0(data, promise: promise)
+        }
+
+        /// Fires `bind` from the tail to the head.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.bind0(to: address, promise: promise)
+        }
+
+        /// Fires `connect` from the tail to the head.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.connect0(to: address, promise: promise)
+        }
+
+        /// Fires `register` from the tail to the head.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func register(promise: EventLoopPromise<Void>?) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.register0(promise: promise)
+        }
+
+        /// Fires `triggerUserOutboundEvent` from the tail to the head.
+        ///
+        /// This method should typically only be called by `Channel` implementations directly.
+        public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
+            self.eventLoop.assertInEventLoop()
+            self._pipeline.triggerUserOutboundEvent0(event, promise: promise)
         }
     }
 

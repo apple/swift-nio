@@ -251,7 +251,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
                                                  parent: self,
                                                  eventLoop: group.next() as! SelectableEventLoop)
                     assert(self.isActive)
-                    pipeline.fireChannelRead0(NIOAny(chan))
+                    self.pipeline.syncOperations.fireChannelRead(NIOAny(chan))
                 } catch {
                     try? accepted.close()
                     throw error
@@ -589,7 +589,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                             data: buffer,
                                             metadata: metadata)
                 assert(self.isActive)
-                pipeline.fireChannelRead0(NIOAny(msg))
+                self.pipeline.syncOperations.fireChannelRead(NIOAny(msg))
                 if mayGrow && i < maxMessagesPerRead {
                     buffer = recvAllocator.buffer(allocator: allocator)
                 }
@@ -673,7 +673,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {
             assert(self.isActive)
-            pipeline.fireChannelWritabilityChanged0()
+            self.pipeline.syncOperations.fireChannelWritabilityChanged()
         }
     }
 

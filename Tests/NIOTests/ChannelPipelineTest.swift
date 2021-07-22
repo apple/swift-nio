@@ -15,6 +15,7 @@
 import XCTest
 import NIOConcurrencyHelpers
 @testable import NIO
+import NIOTestUtils
 
 private final class IndexWritingHandler: ChannelDuplexHandler {
     typealias InboundIn = ByteBuffer
@@ -1380,6 +1381,76 @@ class ChannelPipelineTest: XCTestCase {
 
         let handler2 = try assertNoThrowWithValue(try operations.handler(type: SimpleTypedHandler2.self))
         XCTAssertTrue(handler2 === simpleTypedHandler2)
+    }
+
+    func testSynchronousViewPerformOperations() throws {
+        struct MyError: Error { }
+
+        let eventCounter = EventCounterHandler()
+        let channel = EmbeddedChannel(handler: eventCounter)
+
+        let operations = channel.pipeline.syncOperations
+        XCTAssertEqual(eventCounter.allTriggeredEvents(), ["register", "channelRegistered"])
+
+        // First do all the outbounds except close().
+        operations.register(promise: nil)
+        operations.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 80), promise: nil)
+        operations.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 80), promise: nil)
+        operations.triggerUserOutboundEvent("event", promise: nil)
+        operations.write(NIOAny(ByteBuffer()), promise: nil)
+        operations.flush()
+        operations.writeAndFlush(NIOAny(ByteBuffer()), promise: nil)
+        operations.read()
+
+        XCTAssertEqual(eventCounter.bindCalls, 1)
+        XCTAssertEqual(eventCounter.channelActiveCalls, 1)
+        XCTAssertEqual(eventCounter.channelInactiveCalls, 0)
+        XCTAssertEqual(eventCounter.channelReadCalls, 0)
+        XCTAssertEqual(eventCounter.channelReadCompleteCalls, 0)
+        XCTAssertEqual(eventCounter.channelRegisteredCalls, 2) // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.channelUnregisteredCalls, 0)
+        XCTAssertEqual(eventCounter.channelWritabilityChangedCalls, 0)
+        XCTAssertEqual(eventCounter.closeCalls, 0)
+        XCTAssertEqual(eventCounter.connectCalls, 1)
+        XCTAssertEqual(eventCounter.errorCaughtCalls, 0)
+        XCTAssertEqual(eventCounter.flushCalls, 2)  // flush, and writeAndFlush
+        XCTAssertEqual(eventCounter.readCalls, 1)
+        XCTAssertEqual(eventCounter.registerCalls, 2) // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.triggerUserOutboundEventCalls, 1)
+        XCTAssertEqual(eventCounter.userInboundEventTriggeredCalls, 0)
+        XCTAssertEqual(eventCounter.writeCalls, 2)  // write, and writeAndFlush
+
+        // Now the inbound methods.
+        operations.fireChannelRegistered()
+        operations.fireChannelUnregistered()
+        operations.fireUserInboundEventTriggered("event")
+        operations.fireChannelActive()
+        operations.fireChannelInactive()
+        operations.fireChannelRead(NIOAny(ByteBuffer()))
+        operations.fireChannelReadComplete()
+        operations.fireChannelWritabilityChanged()
+        operations.fireErrorCaught(MyError())
+
+        // And now close
+        operations.close(promise: nil)
+
+        XCTAssertEqual(eventCounter.bindCalls, 1)
+        XCTAssertEqual(eventCounter.channelActiveCalls, 2)
+        XCTAssertEqual(eventCounter.channelInactiveCalls, 2)  // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.channelReadCalls, 1)
+        XCTAssertEqual(eventCounter.channelReadCompleteCalls, 1)
+        XCTAssertEqual(eventCounter.channelRegisteredCalls, 3)  // EmbeddedChannel itself does one, we did the other two.
+        XCTAssertEqual(eventCounter.channelUnregisteredCalls, 2)  // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.channelWritabilityChangedCalls, 1)
+        XCTAssertEqual(eventCounter.closeCalls, 1)
+        XCTAssertEqual(eventCounter.connectCalls, 1)
+        XCTAssertEqual(eventCounter.errorCaughtCalls, 1)
+        XCTAssertEqual(eventCounter.flushCalls, 2)   // flush, and writeAndFlush
+        XCTAssertEqual(eventCounter.readCalls, 1)
+        XCTAssertEqual(eventCounter.registerCalls, 2)  // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.triggerUserOutboundEventCalls, 1)
+        XCTAssertEqual(eventCounter.userInboundEventTriggeredCalls, 1)
+        XCTAssertEqual(eventCounter.writeCalls, 2)  // write, and writeAndFlush
     }
 }
 
