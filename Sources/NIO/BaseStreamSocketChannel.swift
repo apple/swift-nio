@@ -118,7 +118,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     self.readPending = false
 
                     assert(self.isActive)
-                    self.pipeline.fireChannelRead0(NIOAny(buffer))
+                    self.pipeline.syncOperations.fireChannelRead(NIOAny(buffer))
                     result = .some
 
                     if buffer.writableBytes > 0 {
@@ -250,7 +250,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         let data = data.forceAsIOData()
 
         if !self.pendingWrites.add(data: data, promise: promise) {
-            self.pipeline.fireChannelWritabilityChanged0()
+            self.pipeline.syncOperations.fireChannelWritabilityChanged()
         }
     }
 }

@@ -276,8 +276,8 @@ class EmbeddedChannelCore: ChannelCore {
         promise?.succeed(())
 
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
-        pipeline.fireChannelInactive0()
-        pipeline.fireChannelUnregistered0()
+        self.pipeline.syncOperations.fireChannelInactive()
+        self.pipeline.syncOperations.fireChannelUnregistered()
 
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
@@ -295,20 +295,20 @@ class EmbeddedChannelCore: ChannelCore {
     func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         isActive = true
         promise?.succeed(())
-        pipeline.fireChannelActive0()
+        self.pipeline.syncOperations.fireChannelActive()
     }
 
     @usableFromInline
     func register0(promise: EventLoopPromise<Void>?) {
         promise?.succeed(())
-        pipeline.fireChannelRegistered0()
+        self.pipeline.syncOperations.fireChannelRegistered()
     }
 
     @usableFromInline
     func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
         isActive = true
         register0(promise: promise)
-        pipeline.fireChannelActive0()
+        self.pipeline.syncOperations.fireChannelActive()
     }
 
     @usableFromInline

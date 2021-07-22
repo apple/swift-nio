@@ -98,7 +98,7 @@ private struct SocketChannelLifecycleManager {
             self.currentState = .preRegistered
             return { promise, pipeline in
                 promise?.succeed(())
-                pipeline.fireChannelRegistered0()
+                pipeline.syncOperations.fireChannelRegistered()
             }
 
         case (.fresh, .close):
@@ -119,7 +119,7 @@ private struct SocketChannelLifecycleManager {
             self.currentState = .activated
             return { promise, pipeline in
                 promise?.succeed(())
-                pipeline.fireChannelActive0()
+                pipeline.syncOperations.fireChannelActive()
             }
 
         // origin: .preRegistered || .fullyRegistered
@@ -127,7 +127,7 @@ private struct SocketChannelLifecycleManager {
             self.currentState = .closed
             return { promise, pipeline in
                 promise?.succeed(())
-                pipeline.fireChannelUnregistered0()
+                pipeline.syncOperations.fireChannelUnregistered()
             }
 
         // origin: .activated
@@ -135,8 +135,8 @@ private struct SocketChannelLifecycleManager {
             self.currentState = .closed
             return { promise, pipeline in
                 promise?.succeed(())
-                pipeline.fireChannelInactive0()
-                pipeline.fireChannelUnregistered0()
+                pipeline.syncOperations.fireChannelInactive()
+                pipeline.syncOperations.fireChannelUnregistered()
             }
 
         // bad transitions
@@ -511,7 +511,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
                 if writeResult.writabilityChange {
                     // We went from not writable to writable.
-                    self.pipeline.fireChannelWritabilityChanged0()
+                    self.pipeline.syncOperations.fireChannelWritabilityChanged()
                 }
             }
         } catch let err {
@@ -632,7 +632,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
 
         if !readPending && autoRead {
-            pipeline.read0()
+            self.pipeline.syncOperations.read()
         }
         return readPending
     }
@@ -803,7 +803,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             try selectableEventLoop.deregister(channel: self)
         } catch let err {
             errorCallouts.append { pipeline in
-                pipeline.fireErrorCaught0(error: err)
+                pipeline.syncOperations.fireErrorCaught(err)
             }
         }
 
@@ -867,7 +867,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
         guard self.selectableEventLoop.isOpen else {
             let error = EventLoopError.shutdown
-            self.pipeline.fireErrorCaught0(error: error)
+            self.pipeline.syncOperations.fireErrorCaught(error)
             // `close0`'s error is about the result of the `close` operation, ...
             self.close0(error: error, mode: .all, promise: nil)
             // ... therefore we need to fail the registration `promise` separately.
@@ -1072,7 +1072,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                     // If we want to allow half closure we will just mark the input side of the Channel
                     // as closed.
                     assert(self.lifecycleManager.isActive)
-                    self.pipeline.fireChannelReadComplete0()
+                    self.pipeline.syncOperations.fireChannelReadComplete()
                     if self.shouldCloseOnReadError(err) {
                         self.close0(error: err, mode: .input, promise: nil)
                     }
@@ -1081,12 +1081,12 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 }
             } else {
                 readStreamState = .error
-                self.pipeline.fireErrorCaught0(error: err)
+                self.pipeline.syncOperations.fireErrorCaught(err)
             }
 
             // Call before triggering the close of the Channel.
             if readStreamState != .error, self.lifecycleManager.isActive {
-                self.pipeline.fireChannelReadComplete0()
+                self.pipeline.syncOperations.fireChannelReadComplete()
             }
 
             if self.shouldCloseOnReadError(err) {
@@ -1114,7 +1114,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         assert(readResult == .some)
         #endif
         if self.lifecycleManager.isActive {
-            self.pipeline.fireChannelReadComplete0()
+            self.pipeline.syncOperations.fireChannelReadComplete()
         }
         self.readIfNeeded0()
         return .normal(readResult)
@@ -1216,7 +1216,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         do {
             try selectableEventLoop.reregister(channel: self)
         } catch let err {
-            self.pipeline.fireErrorCaught0(error: err)
+            self.pipeline.syncOperations.fireErrorCaught(err)
             self.close0(error: err, mode: .all, promise: nil)
         }
     }
@@ -1233,7 +1233,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         do {
             try self.selectableEventLoop.register(channel: self)
         } catch {
-            self.pipeline.fireErrorCaught0(error: error)
+            self.pipeline.syncOperations.fireErrorCaught(error)
             self.close0(error: error, mode: .all, promise: nil)
             throw error
         }

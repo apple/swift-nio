@@ -68,6 +68,7 @@ extension ChannelPipelineTest {
                 ("testSynchronousViewAddHandlers", testSynchronousViewAddHandlers),
                 ("testSynchronousViewContext", testSynchronousViewContext),
                 ("testSynchronousViewGetTypedHandler", testSynchronousViewGetTypedHandler),
+                ("testSynchronousViewPerformOperations", testSynchronousViewPerformOperations),
            ]
    }
 }
