@@ -96,6 +96,7 @@ extension ByteBuffer {
         }
         return result
     }
+    
     /// Reads an `Integer` from `self` and reads a slice of that length from `self`
     /// 
     /// If nil is returned, `readerIndex` is **not** moved forward.

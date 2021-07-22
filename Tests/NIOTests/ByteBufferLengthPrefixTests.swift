@@ -185,6 +185,17 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
             nil
         )
     }
+    func testReadMessageWithNegativeLength() {
+        buffer.writeInteger(Int8(-1))
+        buffer.writeString("A")
+        XCTAssertEqual(
+            try buffer.readLengthPrefixed(as: Int8.self) { buffer -> ByteBuffer in
+                XCTFail("should never be called")
+                return buffer
+            },
+            nil
+        )
+    }
     
     // MARK: - readLengthPrefixedSlice
     func testReadSliceWithBigEndianInteger() {
