@@ -1206,7 +1206,7 @@ extension ChannelPipeline {
             self._pipeline.flush0()
         }
 
-        /// Fires `flush` from the tail to the head.
+        /// Fires `read` from the tail to the head.
         ///
         /// This method should typically only be called by `Channel` implementations directly.
         public func read() {
