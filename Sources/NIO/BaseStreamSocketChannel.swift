@@ -247,7 +247,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
             return
         }
 
-        let data = data.forceAsIOData()
+        let data = self.unwrapData(data, as: IOData.self)
 
         if !self.pendingWrites.add(data: data, promise: promise) {
             self.pipeline.syncOperations.fireChannelWritabilityChanged()
