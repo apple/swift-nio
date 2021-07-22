@@ -20,12 +20,13 @@ extension JSONSerialization {
     /// Attempts to derive a Foundation object from a ByteBuffer and return it as `T`.
     ///
     /// - parameters:
-    ///    - type: The Foundation type that is attempting to be derived from the ByteBuffer.
+    ///    - type: The Founation type that is attempting to be derived from the ByteBuffer.
     ///    - buffer: The ByteBuffer being used to derive the Foundation type.
+    ///    - readingOption: The reading option used when the parser derives the Foundation type from a ByteBuffer.
     /// - returns: The Foundation value if successful or `nil` if there was an issue creating the Foundation type.
     @inlinable
-    public static func jsonObject<T>(_ type: T.Type, buffer: ByteBuffer) throws -> T? {
-        guard let t = try JSONSerialization.jsonObject(with: Data(buffer: buffer), options: .mutableContainers) as? T else {
+    public static func jsonObject<T>(_ type: T.Type, buffer: ByteBuffer, readingOption: ReadingOptions) throws -> T? {
+        guard let t = try JSONSerialization.jsonObject(with: Data(buffer: buffer), options: readingOption) as? T else {
             return nil
         }
         return t

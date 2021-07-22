@@ -33,16 +33,24 @@ class JSONSerializationByteBufferTest: XCTestCase {
         XCTAssertNoThrow(dataArray = try JSONSerialization.data(withJSONObject: array, options: .prettyPrinted))
         XCTAssertNoThrow(dataDictionary = try JSONSerialization.data(withJSONObject: dictionary, options: .prettyPrinted))
         
-        let arrayByteBuffer = ByteBuffer(data: Data(dataArray))
-        let dictByteBuffer = ByteBuffer(data: Data(dataDictionary))
+        let arrayByteBuffer = ByteBuffer(data: dataArray)
+        let dictByteBuffer = ByteBuffer(data: dataDictionary)
         
         var foundationArray: [String] = []
         var foundationDict: [String: String] = [:]
         
-        XCTAssertNoThrow(foundationArray = try JSONSerialization.jsonObject(Array<String>.self, buffer: arrayByteBuffer)!)
+        // Mutable containers comparison.
+        XCTAssertNoThrow(foundationArray = try JSONSerialization.jsonObject(Array<String>.self, buffer: arrayByteBuffer, readingOption: .mutableContainers)!)
         XCTAssertEqual(foundationArray, array)
         
-        XCTAssertNoThrow(foundationDict = try JSONSerialization.jsonObject(Dictionary<String, String>.self, buffer: dictByteBuffer)!)
+        XCTAssertNoThrow(foundationDict = try JSONSerialization.jsonObject(Dictionary<String, String>.self, buffer: dictByteBuffer, readingOption: .mutableContainers)!)
         XCTAssertEqual(foundationDict, dictionary)
+        
+        // Mutable leaves comparison.
+        XCTAssertNoThrow(foundationArray = try JSONSerialization.jsonObject(Array<String>.self, buffer: arrayByteBuffer, readingOption: .mutableLeaves)!)
+        XCTAssertEqual(foundationArray, array)
+        
+        XCTAssertNoThrow(foundationDict = try JSONSerialization.jsonObject(Dictionary<String, String>.self, buffer: dictByteBuffer, readingOption: .mutableLeaves)!)
+        XCTAssertEqual(foundationDict, dictionary)    
     }
 }
