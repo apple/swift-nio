@@ -69,10 +69,10 @@ extension ByteBuffer {
 }
 
 extension ByteBuffer {
-    /// Reads an `Integer` from `self` and passes it to `readMessage`. 
+    /// Reads an `Integer` from `self`, reads a slice of that length and passes it to `readMessage`. 
     /// It is checked that `readMessage` returns a non-nil value.
     /// 
-    /// If nil is returned, `readerIndex` is **not** moved forward.
+    /// The `readerIndex` is **not** moved forward if the length prefix could not be read or `self` does not contain enough bytes. Otherwise `readerIndex` is moved forward even if `readMessage` throws or returns nil.
     /// - Parameters:
     ///     - endianness: The endianness of the length prefix `Integer` in this `ByteBuffer` (defaults to big endian).
     ///     - integer: the desired `Integer` type used to read the length prefix
@@ -97,7 +97,7 @@ extension ByteBuffer {
         return result
     }
     
-    /// Reads an `Integer` from `self` and reads a slice of that length from `self`
+    /// Reads an `Integer` from `self` and reads a slice of that length from `self` and returns it.
     /// 
     /// If nil is returned, `readerIndex` is **not** moved forward.
     /// - Parameters:
@@ -118,7 +118,7 @@ extension ByteBuffer {
         }
     }
     
-    /// Gets an `Integer` from `self` and gets a slice of that length from `self`
+    /// Gets an `Integer` from `self` and gets a slice of that length from `self` and returns it.
     /// 
     /// - Parameters:
     ///     - endianness: The endianness of the length prefix `Integer` in this `ByteBuffer` (defaults to big endian).
