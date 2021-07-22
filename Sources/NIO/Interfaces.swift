@@ -254,7 +254,7 @@ extension NIONetworkDevice {
                                                 dst: $0.baseAddress!,
                                                 size: INET_ADDRSTRLEN)
                 }
-                return SocketAddress(mask, host: mask.addressDescription())
+                return SocketAddress(mask)
             }
             let v6mask: (UINT8) -> SocketAddress? = { _ in
                 var buffer: [CChar] =
@@ -266,7 +266,7 @@ extension NIONetworkDevice {
                                                 dst: $0.baseAddress!,
                                                 size: INET6_ADDRSTRLEN)
                 }
-                return SocketAddress(mask, host: mask.addressDescription())
+                return SocketAddress(mask)
             }
 
             switch pAddress.pointee.Address.lpSockaddr.pointee.sa_family {
@@ -430,7 +430,7 @@ public final class NIONetworkInterface {
                                             dst: $0.baseAddress!,
                                             size: INET_ADDRSTRLEN)
             }
-            return SocketAddress(mask, host: mask.addressDescription())
+            return SocketAddress(mask)
         }
         let v6mask: (UINT8) -> SocketAddress? = { _ in
             var buffer: [CChar] =
@@ -442,7 +442,7 @@ public final class NIONetworkInterface {
                                             dst: $0.baseAddress!,
                                             size: INET6_ADDRSTRLEN)
             }
-            return SocketAddress(mask, host: mask.addressDescription())
+            return SocketAddress(mask)
         }
 
         switch pAddress.pointee.Address.lpSockaddr.pointee.sa_family {

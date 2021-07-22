@@ -38,8 +38,6 @@ extension SocketAddressTest {
                 ("testCanCreateIPv4AddressFromString", testCanCreateIPv4AddressFromString),
                 ("testCanCreateIPv6AddressFromString", testCanCreateIPv6AddressFromString),
                 ("testRejectsNonIPStrings", testRejectsNonIPStrings),
-                ("testWithMutableAddressCopiesFaithfully", testWithMutableAddressCopiesFaithfully),
-                ("testWithMutableAddressAllowsMutationWithoutPersistence", testWithMutableAddressAllowsMutationWithoutPersistence),
                 ("testConvertingStorage", testConvertingStorage),
                 ("testComparingSockaddrs", testComparingSockaddrs),
                 ("testEqualSocketAddresses", testEqualSocketAddresses),

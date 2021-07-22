@@ -18,6 +18,7 @@
     import Glibc
 #endif
 import XCTest
+@testable import NIOCore
 @testable import NIO
 
 private let CONNECT_RECORDER = "connectRecorder"
@@ -128,7 +129,7 @@ private extension SocketAddress {
     init(host: String, ipAddress: String, port: Int) {
         do {
             var v4addr = in_addr()
-            try NIOBSDSocket.inet_pton(af: .inet, src: ipAddress, dst: &v4addr)
+            try NIOBSDSocket.inet_pton(addressFamily: .inet, addressDescription: ipAddress, address: &v4addr)
 
             var sockaddr = sockaddr_in()
             sockaddr.sin_family = sa_family_t(NIOBSDSocket.AddressFamily.inet.rawValue)
@@ -138,7 +139,7 @@ private extension SocketAddress {
         } catch {
             do {
                 var v6addr = in6_addr()
-                try NIOBSDSocket.inet_pton(af: .inet6, src: ipAddress, dst: &v6addr)
+                try NIOBSDSocket.inet_pton(addressFamily: .inet6, addressDescription: ipAddress, address: &v6addr)
 
                 var sockaddr = sockaddr_in6()
                 sockaddr.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
@@ -158,10 +159,10 @@ private extension SocketAddress {
         switch self {
         case .v4(let address):
             var baseAddress = address.address
-            precondition(try! NIOBSDSocket.inet_ntop(af: .inet, src: &baseAddress.sin_addr, dst: ptr, size: 256) != nil)
+            try! NIOBSDSocket.inet_ntop(addressFamily: .inet, addressBytes: &baseAddress.sin_addr, addressDescription: ptr, addressDescriptionLength: 256)
         case .v6(let address):
             var baseAddress = address.address
-            precondition(try! NIOBSDSocket.inet_ntop(af: .inet6, src: &baseAddress.sin6_addr, dst: ptr, size: 256) != nil)
+            try! NIOBSDSocket.inet_ntop(addressFamily: .inet6, addressBytes: &baseAddress.sin6_addr, addressDescription: ptr, addressDescriptionLength: 256)
         case .unixDomainSocket:
             fatalError("No UDS support in happy eyeballs.")
         }
