@@ -112,8 +112,6 @@ private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePoi
 private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 #if !os(Windows)
-private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
-private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 #endif
 
@@ -438,23 +436,6 @@ internal enum Posix {
     }
 
 #if !os(Windows)
-    @discardableResult
-    @inline(never)
-    internal static func inet_ntop(addressFamily: sa_family_t, addressBytes: UnsafeRawPointer, addressDescription: UnsafeMutablePointer<CChar>, addressDescriptionLength: socklen_t) throws -> UnsafePointer<CChar> {
-        return try wrapErrorIsNullReturnCall {
-            sysInet_ntop(CInt(addressFamily), addressBytes, addressDescription, addressDescriptionLength)
-        }
-    }
-
-    @inline(never)
-    internal static func inet_pton(addressFamily: sa_family_t, addressDescription: UnsafePointer<CChar>, address: UnsafeMutableRawPointer) throws {
-        switch sysInet_pton(CInt(addressFamily), addressDescription, address) {
-        case 0: throw IOError(errnoCode: EINVAL, reason: #function)
-        case 1: return
-        default: throw IOError(errnoCode: errno, reason: #function)
-        }
-    }
-
     // It's not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
     @inline(never)
     internal static func sendfile(descriptor: CInt, fd: CInt, offset: off_t, count: size_t) throws -> IOResult<Int> {

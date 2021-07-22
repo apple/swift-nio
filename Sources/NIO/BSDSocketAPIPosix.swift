@@ -175,25 +175,6 @@ extension NIOBSDSocket {
         return try Posix.poll(fds: fds, nfds: nfds, timeout: timeout)
     }
 
-    @discardableResult
-    static func inet_ntop(af family: NIOBSDSocket.AddressFamily,
-                          src addr: UnsafeRawPointer,
-                          dst dstBuf: UnsafeMutablePointer<CChar>,
-                          size dstSize: socklen_t) throws -> UnsafePointer<CChar>? {
-        return try Posix.inet_ntop(addressFamily: sa_family_t(family.rawValue),
-                                   addressBytes: addr,
-                                   addressDescription: dstBuf,
-                                   addressDescriptionLength: dstSize)
-    }
-
-    static func inet_pton(af family: NIOBSDSocket.AddressFamily,
-                          src description: UnsafePointer<CChar>,
-                          dst address: UnsafeMutableRawPointer) throws {
-        return try Posix.inet_pton(addressFamily: sa_family_t(family.rawValue),
-                                   addressDescription: description,
-                                   address: address)
-    }
-
     static func sendfile(socket s: NIOBSDSocket.Handle,
                          fd: CInt,
                          offset: off_t,

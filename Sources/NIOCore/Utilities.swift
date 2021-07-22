@@ -22,3 +22,11 @@ internal func debugOnly(_ body: () -> Void) {
     // FIXME: duplicated with NIO.
     assert({ body(); return true }())
 }
+
+/// Allows to "box" another value.
+final class Box<T> {
+    // FIXME: Duplicated with NIO.
+    let value: T
+    init(_ value: T) { self.value = value }
+}
+

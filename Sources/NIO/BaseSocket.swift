@@ -63,126 +63,6 @@ protocol Registration {
     var registrationID: SelectorRegistrationID { get set }
 }
 
-protocol SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R
-    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R
-}
-
-/// Returns a description for the given address.
-internal func descriptionForAddress(family: NIOBSDSocket.AddressFamily, bytes: UnsafeRawPointer, length byteCount: Int) throws -> String {
-    var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
-    return try addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
-        try NIOBSDSocket.inet_ntop(af: family, src: bytes,
-                                   dst: addressBytesPtr.baseAddress!,
-                                   size: socklen_t(byteCount))
-        return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) { addressBytesPtr -> String in
-            String(cString: addressBytesPtr)
-        }
-    }
-}
-
-/// A helper extension for working with sockaddr pointers.
-extension UnsafeMutablePointer where Pointee == sockaddr {
-    /// Converts the `sockaddr` to a `SocketAddress`.
-    func convert() -> SocketAddress? {
-        switch NIOBSDSocket.AddressFamily(rawValue: CInt(pointee.sa_family)) {
-        case .inet:
-            return self.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                SocketAddress($0.pointee, host: $0.pointee.addressDescription())
-            }
-        case .inet6:
-            return self.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                SocketAddress($0.pointee, host: $0.pointee.addressDescription())
-            }
-        case .unix:
-            return self.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
-        default:
-            return nil
-        }
-    }
-}
-
-extension sockaddr_in: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeBytes(of: &me) { p in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
-        }
-    }
-
-    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeMutableBytes(of: &me) { p in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
-        }
-    }
-
-    /// Returns a description of the `sockaddr_in`.
-    mutating func addressDescription() -> String {
-        return withUnsafePointer(to: &self.sin_addr) { addrPtr in
-            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            try! descriptionForAddress(family: .inet, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
-        }
-    }
-}
-
-extension sockaddr_in6: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeBytes(of: &me) { p in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
-        }
-    }
-
-    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeMutableBytes(of: &me) { p in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
-        }
-    }
-
-    /// Returns a description of the `sockaddr_in6`.
-    mutating func addressDescription() -> String {
-        return withUnsafePointer(to: &self.sin6_addr) { addrPtr in
-            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
-            try! descriptionForAddress(family: .inet6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
-        }
-    }
-}
-
-extension sockaddr_un: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeBytes(of: &me) { p in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
-        }
-    }
-
-    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeMutableBytes(of: &me) { p in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
-        }
-    }
-}
-
-extension sockaddr_storage: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeBytes(of: &me) { p in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
-        }
-    }
-
-    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        return try withUnsafeMutableBytes(of: &self) { p in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
-        }
-    }
-}
-
 // sockaddr_storage is basically just a boring data structure that we can
 // convert to being something sensible. These functions copy the data as
 // needed.
@@ -192,6 +72,12 @@ extension sockaddr_storage: SockAddrProtocol {
 // avoid getting the Swift compiler to copy the sockaddr_storage for any reason:
 // only our rebinding copy here is allowed.
 extension sockaddr_storage {
+    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        return try withUnsafeMutableBytes(of: &self) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+
     /// Converts the `socketaddr_storage` to a `sockaddr_in`.
     ///
     /// This will crash if `ss_family` != AF_INET!
@@ -232,15 +118,38 @@ extension sockaddr_storage {
     mutating func convert() -> SocketAddress {
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(self.ss_family)) {
         case .inet:
-            var sockAddr: sockaddr_in = self.convert()
-            return SocketAddress(sockAddr, host: sockAddr.addressDescription())
+            let sockAddr: sockaddr_in = self.convert()
+            return SocketAddress(sockAddr)
         case .inet6:
-            var sockAddr: sockaddr_in6 = self.convert()
-            return SocketAddress(sockAddr, host: sockAddr.addressDescription())
+            let sockAddr: sockaddr_in6 = self.convert()
+            return SocketAddress(sockAddr)
         case .unix:
             return SocketAddress(self.convert() as sockaddr_un)
         default:
             fatalError("unknown sockaddr family \(self.ss_family)")
+        }
+    }
+}
+
+/// A helper extension for working with sockaddr pointers.
+extension UnsafeMutablePointer where Pointee == sockaddr {
+    /// Converts the `sockaddr` to a `SocketAddress`.
+    func convert() -> SocketAddress? {
+        switch NIOBSDSocket.AddressFamily(rawValue: CInt(pointee.sa_family)) {
+        case .inet:
+            return self.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                SocketAddress($0.pointee)
+            }
+        case .inet6:
+            return self.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
+                SocketAddress($0.pointee)
+            }
+        case .unix:
+            return self.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
+                SocketAddress($0.pointee)
+            }
+        default:
+            return nil
         }
     }
 }
@@ -458,16 +367,8 @@ class BaseSocket: BaseSocketProtocol {
                 try NIOBSDSocket.bind(socket: fd, address: ptr, address_len: socklen_t(bytes))
             }
 
-            switch address {
-            case .v4(let address):
-                var addr = address.address
-                try addr.withSockAddr({ try doBind(ptr: $0, bytes: $1) })
-            case .v6(let address):
-                var addr = address.address
-                try addr.withSockAddr({ try doBind(ptr: $0, bytes: $1) })
-            case .unixDomainSocket(let address):
-                var addr = address.address
-                try addr.withSockAddr({ try doBind(ptr: $0, bytes: $1) })
+            try address.withSockAddr {
+                try NIOBSDSocket.bind(socket: fd, address: $0, address_len: socklen_t($1))
             }
         }
     }
