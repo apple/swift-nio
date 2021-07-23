@@ -63,7 +63,7 @@ def extractCopyright(log)
     if Integer(year) < startYear
         startYear = Integer(year)
     end
-        
+
   end
 
   # If the years end up being the same
@@ -76,7 +76,7 @@ end
 
 def header(fileName)
   log = %x(git log --follow -p #{fileName})
-  copyrightYears = extractCopyright(log)
+  copyrightYears = extractCopyright(log).strip
 
   string = <<-eos
 //===----------------------------------------------------------------------===//

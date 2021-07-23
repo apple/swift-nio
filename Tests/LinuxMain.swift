@@ -48,6 +48,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(BlockingIOThreadPoolTest.allTests),
              testCase(BootstrapTest.allTests),
              testCase(ByteBufferDataProtocolTests.allTests),
+             testCase(ByteBufferLengthPrefixTests.allTests),
              testCase(ByteBufferTest.allTests),
              testCase(ByteBufferUtilsTest.allTests),
              testCase(ByteBufferViewDataProtocolTests.allTests),
