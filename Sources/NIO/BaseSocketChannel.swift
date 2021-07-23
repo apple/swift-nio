@@ -842,7 +842,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
-            self.pipeline.removeHandlers()
+            self.removeHandlers(pipeline: self.pipeline)
 
             self.closePromise.succeed(())
 
