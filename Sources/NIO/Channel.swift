@@ -310,8 +310,22 @@ extension ChannelCore {
     ///
     /// - parameters:
     ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
+    @available(*, deprecated, renamed: "removeHandlers(pipeline:)")
     public func removeHandlers(channel: Channel) {
-        channel.pipeline.removeHandlers()
+        self.removeHandlers(pipeline: channel.pipeline)
+    }
+
+    /// Removes the `ChannelHandler`s from the `ChannelPipeline` `pipeline`, and
+    /// closes that `ChannelPipeline`.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can be called from `close0` to tear down the `ChannelPipeline` when closure is
+    /// complete.
+    ///
+    /// - parameters:
+    ///     - pipeline: The `ChannelPipline` to be closed.
+    public func removeHandlers(pipeline: ChannelPipeline) {
+        pipeline.removeHandlers()
     }
 }
 
