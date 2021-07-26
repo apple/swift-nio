@@ -56,6 +56,7 @@ import func WinSDK.inet_ntop
 import func WinSDK.inet_pton
 #elseif os(Linux) || os(Android)
 import Glibc
+import CNIOLinux
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
