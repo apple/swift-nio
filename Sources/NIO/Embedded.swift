@@ -630,7 +630,7 @@ public final class EmbeddedChannel: Channel {
             return nil
         }
         let elem = buffer.removeFirst()
-        guard let t = elem.tryAs(type: T.self) else {
+        guard let t = self._channelCore.tryUnwrapData(elem, as: T.self) else {
             throw WrongTypeError(expected: T.self, actual: type(of: elem.forceAs(type: Any.self)))
         }
         return t
