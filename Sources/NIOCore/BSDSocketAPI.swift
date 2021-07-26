@@ -56,6 +56,7 @@ import func WinSDK.inet_ntop
 import func WinSDK.inet_pton
 #elseif os(Linux) || os(Android)
 import Glibc
+import CNIOLinux
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
@@ -64,6 +65,15 @@ import Darwin
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
+#endif
+
+// Work around SO_TIMESTAMP/SO_RCVTIMEO being awkwardly defined in glibc.
+#if os(Android) && arch(arm)
+let SO_RCVTIMEO = SO_RCVTIMEO_OLD
+let SO_TIMESTAMP = SO_TIMESTAMP_OLD
+#elseif os(Linux)
+let SO_TIMESTAMP = CNIOLinux_SO_TIMESTAMP
+let SO_RCVTIMEO = CNIOLinux_SO_RCVTIMEO
 #endif
 
 public enum NIOBSDSocket {
