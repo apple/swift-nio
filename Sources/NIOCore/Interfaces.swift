@@ -126,7 +126,7 @@ public final class NIONetworkInterface {
     // This is public just so we can avoid needing to pull over any of the System helpers: they can
     // construct this type directly. Ideally, we'd have avoided even needing this in NIOCore.
     public static func _construct(from caddr: ifaddrs) -> NIONetworkInterface? {
-        return .init(caddr)
+        return NIONetworkInterface(caddr)
     }
 }
 
