@@ -118,7 +118,7 @@ extension IOError: CustomStringConvertible {
 
 // FIXME: Duplicated with NIO.
 /// An result for an IO operation that was done on a non-blocking resource.
-enum IOResult<T: Equatable>: Equatable {
+enum CoreIOResult<T: Equatable>: Equatable {
 
     /// Signals that the IO operation could not be completed as otherwise we would need to block.
     case wouldBlock(T)
@@ -127,13 +127,13 @@ enum IOResult<T: Equatable>: Equatable {
     case processed(T)
 }
 
-internal extension IOResult where T: FixedWidthInteger {
+internal extension CoreIOResult where T: FixedWidthInteger {
     var result: T {
         switch self {
         case .processed(let value):
             return value
         case .wouldBlock(_):
-            fatalError("cannot unwrap IOResult")
+            fatalError("cannot unwrap CoreIOResult")
         }
     }
 }

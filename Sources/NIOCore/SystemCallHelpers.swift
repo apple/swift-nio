@@ -59,7 +59,7 @@ private func preconditionIsNotUnacceptableErrno(err: CInt, where function: Strin
 internal func syscall<T: FixedWidthInteger>(blocking: Bool,
                                             where function: String = #function,
                                             _ body: () throws -> T)
-        throws -> IOResult<T> {
+        throws -> CoreIOResult<T> {
     while true {
         let res = try body()
         if res == -1 {
