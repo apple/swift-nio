@@ -48,8 +48,6 @@ extension ipv6_mreq { // http://lkml.iu.edu/hypermail/linux/kernel/0106.1/0080.h
     }
 }
 #if arch(arm)
-let SO_RCVTIMEO = SO_RCVTIMEO_OLD
-let SO_TIMESTAMP = SO_TIMESTAMP_OLD
 let S_IFSOCK = UInt32(SwiftGlibc.S_IFSOCK)
 let S_IFMT = UInt32(SwiftGlibc.S_IFMT)
 let S_IFREG = UInt32(SwiftGlibc.S_IFREG)
@@ -57,12 +55,6 @@ let S_IFDIR = UInt32(SwiftGlibc.S_IFDIR)
 let S_IFLNK = UInt32(SwiftGlibc.S_IFLNK)
 let S_IFBLK = UInt32(SwiftGlibc.S_IFBLK)
 #endif
-#endif
-
-// Work around SO_TIMESTAMP/SO_RCVTIMEO being awkwardly defined in glibc.
-#if os(Linux)
-let SO_TIMESTAMP = CNIOLinux_SO_TIMESTAMP
-let SO_RCVTIMEO = CNIOLinux_SO_RCVTIMEO
 #endif
 
 // Declare aliases to share more code and not need to repeat #if #else blocks

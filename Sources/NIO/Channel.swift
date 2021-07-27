@@ -301,6 +301,28 @@ extension ChannelCore {
         return data.forceAs()
     }
 
+    /// Attempts to unwrap the given `NIOAny` as a specific concrete type.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can safely be called in methods like `write0` to extract data from the `NIOAny`
+    /// provided in those cases.
+    ///
+    /// If the unwrap fails, this will return `nil`. `ChannelCore` implementations should almost
+    /// always support only one runtime type, so in general they should avoid using this and prefer
+    /// using `unwrapData` instead. This method exists for rare use-cases where tolerating type
+    /// mismatches is acceptable.
+    ///
+    /// - parameters:
+    ///     - data: The `NIOAny` to unwrap.
+    ///     - as: The type to extract from the `NIOAny`.
+    /// - returns: The content of the `NIOAny`, or `nil` if the type is incorrect.
+    /// - warning: If you are implementing a `ChannelCore`, you should use `unwrapData` unless you
+    ///     are doing something _extremely_ unusual.
+    @inlinable
+    public func tryUnwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T? {
+        return data.tryAs()
+    }
+
     /// Removes the `ChannelHandler`s from the `ChannelPipeline` belonging to `channel`, and
     /// closes that `ChannelPipeline`.
     ///
@@ -310,8 +332,22 @@ extension ChannelCore {
     ///
     /// - parameters:
     ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
+    @available(*, deprecated, renamed: "removeHandlers(pipeline:)")
     public func removeHandlers(channel: Channel) {
-        channel.pipeline.removeHandlers()
+        self.removeHandlers(pipeline: channel.pipeline)
+    }
+
+    /// Removes the `ChannelHandler`s from the `ChannelPipeline` `pipeline`, and
+    /// closes that `ChannelPipeline`.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can be called from `close0` to tear down the `ChannelPipeline` when closure is
+    /// complete.
+    ///
+    /// - parameters:
+    ///     - pipeline: The `ChannelPipline` to be closed.
+    public func removeHandlers(pipeline: ChannelPipeline) {
+        pipeline.removeHandlers()
     }
 }
 

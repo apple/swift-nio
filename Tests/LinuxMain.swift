@@ -91,6 +91,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(IdleStateHandlerTest.allTests),
              testCase(IntegerBitPackingTests.allTests),
              testCase(IntegerTypesTest.allTests),
+             testCase(JSONSerializationByteBufferTest.allTests),
              testCase(LinuxTest.allTests),
              testCase(MarkedCircularBufferTests.allTests),
              testCase(MessageToByteEncoderTest.allTests),
