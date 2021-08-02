@@ -123,7 +123,7 @@ public enum System {
         }
 
         while let concreteInterface = interface {
-            if let nioInterface = NIONetworkInterface(concreteInterface.pointee) {
+            if let nioInterface = NIONetworkInterface._construct(from: concreteInterface.pointee) {
                 interfaces.append(nioInterface)
             }
             interface = concreteInterface.pointee.ifa_next

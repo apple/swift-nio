@@ -237,7 +237,8 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     deinit {
-        assert(self.pipeline.destroyed, "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?")
+        assert(!self.isOpen && !self.isActive,
+               "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?")
         isOpen = false
         closePromise.succeed(())
     }
@@ -631,7 +632,7 @@ public final class EmbeddedChannel: Channel {
         }
         let elem = buffer.removeFirst()
         guard let t = self._channelCore.tryUnwrapData(elem, as: T.self) else {
-            throw WrongTypeError(expected: T.self, actual: type(of: elem.forceAs(type: Any.self)))
+            throw WrongTypeError(expected: T.self, actual: type(of: self._channelCore.tryUnwrapData(elem, as: Any.self)!))
         }
         return t
     }

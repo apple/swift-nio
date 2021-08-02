@@ -11,6 +11,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+#if os(Windows)
+import ucrt
+#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+import Darwin
+#elseif os(Linux) || os(Android)
+import Glibc
+#endif
 
 /// A `NIOFileHandle` is a handle to an open file.
 ///
@@ -45,7 +52,7 @@ public final class NIOFileHandle: FileDescriptor {
     /// - returns: A new `NIOFileHandle` with a fresh underlying file descriptor but shared seek pointer.
     public func duplicate() throws -> NIOFileHandle {
         return try withUnsafeFileDescriptor { fd in
-            NIOFileHandle(descriptor: try Posix.dup(descriptor: fd))
+            NIOFileHandle(descriptor: try SystemCalls.dup(descriptor: fd))
         }
     }
 
@@ -66,7 +73,7 @@ public final class NIOFileHandle: FileDescriptor {
 
     public func close() throws {
         try withUnsafeFileDescriptor { fd in
-            try Posix.close(descriptor: fd)
+            try SystemCalls.close(descriptor: fd)
         }
 
         self.isOpen = false
@@ -141,7 +148,7 @@ extension NIOFileHandle {
     ///     - mode: Access mode. Default mode is `.read`.
     ///     - flags: Additional POSIX flags.
     public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
-        let fd = try Posix.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
+        let fd = try SystemCalls.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
 

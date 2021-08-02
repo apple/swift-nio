@@ -254,7 +254,7 @@ public final class ChannelTests: XCTestCase {
                                    expectedSingleWritabilities: [Int]?,
                                    expectedVectorWritabilities: [[Int]]?,
                                    expectedFileWritabilities: [(Int, Int)]?,
-                                   returns: [IOResult<Int>],
+                                   returns: [NIO.IOResult<Int>],
                                    promiseStates: [[Bool]],
                                    file: StaticString = #file,
                                    line: UInt = #line) throws -> OverallWriteResult {
@@ -2028,7 +2028,7 @@ public final class ChannelTests: XCTestCase {
             init(protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
                 try super.init(protocolFamily: protocolFamily, type: .stream, setNonBlocking: true)
             }
-            override func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
+            override func read(pointer: UnsafeMutableRawBufferPointer) throws -> NIO.IOResult<Int> {
                 defer {
                     self.firstReadHappened = true
                 }
@@ -2443,11 +2443,11 @@ public final class ChannelTests: XCTestCase {
                 try super.init(protocolFamily: .inet, type: .stream, setNonBlocking: true)
             }
 
-            override func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
+            override func write(pointer: UnsafeRawBufferPointer) throws -> NIO.IOResult<Int> {
                 throw IOError(errnoCode: ETXTBSY, reason: "WriteAlwaysFailingSocket.write fake error")
             }
 
-            override func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
+            override func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> NIO.IOResult<Int> {
                 throw IOError(errnoCode: ETXTBSY, reason: "WriteAlwaysFailingSocket.writev fake error")
             }
         }

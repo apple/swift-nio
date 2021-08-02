@@ -296,7 +296,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     override public func channelRead0(_ data: NIOAny) {
         self.eventLoop.assertInEventLoop()
 
-        let ch = data.forceAsOther() as SocketChannel
+        let ch = self.unwrapData(data, as: SocketChannel.self)
         ch.eventLoop.execute {
             ch.register().flatMapThrowing {
                 guard ch.isOpen else {
@@ -669,7 +669,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
     /// Buffer a write in preparation for a flush.
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let data = data.forceAsByteEnvelope()
+        let data = self.unwrapData(data, as: AddressedEnvelope<ByteBuffer>.self)
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {
             assert(self.isActive)

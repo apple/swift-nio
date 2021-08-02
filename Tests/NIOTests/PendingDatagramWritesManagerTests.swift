@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -109,7 +109,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                            promises: [EventLoopPromise<Void>],
                                            expectedSingleWritabilities: [(Int, SocketAddress)]?,
                                            expectedVectorWritabilities: [[(Int, SocketAddress)]]?,
-                                           returns: [Result<IOResult<Int>, Error>],
+                                           returns: [Result<NIO.IOResult<Int>, Error>],
                                            promiseStates: [[Bool]],
                                            file: StaticString = #file,
                                            line: UInt = #line) throws -> OverallWriteResult {
