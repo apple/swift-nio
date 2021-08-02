@@ -362,7 +362,7 @@ public final class ServerBootstrap {
                 ctxEventLoop.assertInEventLoop()
                 future.flatMap { (_) -> EventLoopFuture<Void> in
                     ctxEventLoop.assertInEventLoop()
-                    guard !context.pipeline.destroyed else {
+                    guard context.channel.isActive else {
                         return context.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
                     }
                     context.fireChannelRead(data)

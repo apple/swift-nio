@@ -11,6 +11,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+#if os(Windows)
+import ucrt
+#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+import Darwin
+#elseif os(Linux) || os(Android)
+import Glibc
+#endif
+
 
 /// A `FileRegion` represent a readable portion usually created to be sent over the network.
 ///
@@ -80,8 +88,8 @@ extension FileRegion {
     ///     - fileHandle: An open `NIOFileHandle` to the file.
     public init(fileHandle: NIOFileHandle) throws {
         let eof = try fileHandle.withUnsafeFileDescriptor { (fd: CInt) throws -> off_t in
-            let eof = try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
-            try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
+            let eof = try SystemCalls.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
+            try SystemCalls.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
             return eof
         }
         self.init(fileHandle: fileHandle, readerIndex: 0, endIndex: Int(eof))
