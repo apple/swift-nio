@@ -35,6 +35,7 @@ extension MarkedCircularBufferTests {
                 ("testFirst", testFirst),
                 ("testCount", testCount),
                 ("testSubscript", testSubscript),
+                ("testRangeSubscript", testRangeSubscript),
                 ("testIsEmpty", testIsEmpty),
                 ("testPopFirst", testPopFirst),
            ]

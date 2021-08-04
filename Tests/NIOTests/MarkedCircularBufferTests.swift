@@ -117,6 +117,18 @@ class MarkedCircularBufferTests: XCTestCase {
         XCTAssertEqual(buf[buf.index(buf.startIndex, offsetBy: 3)], 4)
     }
 
+    func testRangeSubscript() throws {
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 4)
+        for i in 1...4 {
+            buf.append(i)
+        }
+        let range = buf.startIndex..<buf.index(buf.startIndex, offsetBy: 2)
+        XCTAssertEqual(buf[range].count, 2)
+        buf[range] = [0,1]
+        XCTAssertEqual(buf.firstIndex(of: 2), nil)
+        XCTAssertEqual(buf.count, 4)
+    }
+
     func testIsEmpty() throws {
         var buf = MarkedCircularBuffer<Int>(initialCapacity: 4)
         for i in 1...4 {
