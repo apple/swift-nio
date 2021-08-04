@@ -42,6 +42,7 @@ extension CircularBufferTests {
                 ("testReplaceSubrangeWithSubrangeLargerThanTargetRange", testReplaceSubrangeWithSubrangeLargerThanTargetRange),
                 ("testReplaceSubrangeSameSize", testReplaceSubrangeSameSize),
                 ("testReplaceSubrangeReplaceBufferWithEmptyArray", testReplaceSubrangeReplaceBufferWithEmptyArray),
+                ("testRangeSubscriptExpanding", testRangeSubscriptExpanding),
                 ("testWeCanDistinguishBetweenEmptyAndFull", testWeCanDistinguishBetweenEmptyAndFull),
                 ("testExpandZeroBasedRingWorks", testExpandZeroBasedRingWorks),
                 ("testExpandNonZeroBasedRingWorks", testExpandNonZeroBasedRingWorks),
