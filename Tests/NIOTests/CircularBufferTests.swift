@@ -325,6 +325,23 @@ class CircularBufferTests: XCTestCase {
         XCTAssertTrue(ring.isEmpty)
     }
 
+    func testRangeSubscriptExpanding() {
+        var ring = CircularBuffer<Int>(initialCapacity: 4)
+        for idx in 0..<5 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(5, ring.count)
+
+        let index = ring.firstIndex(of: 1)!
+        let originalCount = ring.count
+        XCTAssertEqual(ring[index..<ring.endIndex].count, 2)
+        ring[index..<ring.endIndex] = [10,11,12,13,14,15,16,17,18,19]
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
+        XCTAssertEqual(originalCount + 8, ring.count)
+        XCTAssertEqual(4, ring.first)
+        XCTAssertEqual(19, ring.last)
+    }
+
     func testWeCanDistinguishBetweenEmptyAndFull() {
         var ring = CircularBuffer<Int>(initialCapacity: 4)
         XCTAssertTrue(ring.isEmpty)

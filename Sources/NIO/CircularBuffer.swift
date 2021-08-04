@@ -227,14 +227,6 @@ extension CircularBuffer: Collection, MutableCollection {
 // MARK: RandomAccessCollection implementation
 extension CircularBuffer: RandomAccessCollection {
     /// Returns the index offset by `distance` from `index`.
-    @inlinable
-    public func index(_ i: Index, offsetBy distance: Int) -> Index {
-        return .init(backingIndex: (i.backingIndex &+ distance) & self.mask,
-                     backingCount: self.count,
-                     backingIndexOfHead: self.headBackingIndex)
-    }
-
-    /// Returns an index that is the specified distance from the given index.
     ///
     /// The following example obtains an index advanced four positions from a
     /// string's starting index and then prints the character at that position.
@@ -262,14 +254,29 @@ extension CircularBuffer: RandomAccessCollection {
     ///   `RandomAccessCollection`; otherwise, O(*k*), where *k* is the absolute
     ///   value of `distance`.
     @inlinable
-    public subscript(bounds: Range<Index>) -> SubSequence {
-        precondition(self.distance(from: self.startIndex, to: bounds.lowerBound) >= 0)
-        precondition(self.distance(from: bounds.upperBound, to: self.endIndex) >= 0)
+    public func index(_ i: Index, offsetBy distance: Int) -> Index {
+        return .init(backingIndex: (i.backingIndex &+ distance) & self.mask,
+                     backingCount: self.count,
+                     backingIndexOfHead: self.headBackingIndex)
+    }
 
-        var newRing = self
-        newRing.headBackingIndex = bounds.lowerBound.backingIndex
-        newRing.tailBackingIndex = bounds.upperBound.backingIndex
-        return newRing
+    @inlinable
+    public subscript(bounds: Range<Index>) -> SubSequence {
+        get {
+            precondition(self.distance(from: self.startIndex, to: bounds.lowerBound) >= 0)
+            precondition(self.distance(from: bounds.upperBound, to: self.endIndex) >= 0)
+
+            var newRing = self
+            newRing.headBackingIndex = bounds.lowerBound.backingIndex
+            newRing.tailBackingIndex = bounds.upperBound.backingIndex
+            return newRing
+        }
+        set {
+            precondition(self.distance(from: self.startIndex, to: bounds.lowerBound) >= 0)
+            precondition(self.distance(from: bounds.upperBound, to: self.endIndex) >= 0)
+
+            self.replaceSubrange(bounds, with: newValue)
+        }
     }
 }
 
