@@ -184,3 +184,11 @@ extension ChannelOptions {
         }
     }
 }
+
+#if compiler(>=5.5)
+// ConvenienceOptionValue is Sendable if its ValueType is Sendable.
+extension ChannelOptions.Types.ConvenienceOptionValue: Sendable where ValueType: Sendable { }
+
+// TCPConvenienceOption is a trivial ValueType and it's Sendable.
+extension ChannelOptions.TCPConvenienceOption: Sendable { }
+#endif

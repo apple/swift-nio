@@ -353,3 +353,9 @@ extension ScheduledTask: Comparable {
         return lhs === rhs
     }
 }
+
+#if compiler(>=5.5)
+// EventLoopGroups are required to be thread-safe and Sendable. MTELG is, but the compiler
+// can't prove it.
+extension MultiThreadedEventLoopGroup: @unchecked Sendable { }
+#endif

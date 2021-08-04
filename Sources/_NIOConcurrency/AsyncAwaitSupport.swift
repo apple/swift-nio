@@ -64,7 +64,7 @@ extension EventLoopPromise {
     ///   - body: The `async` function to run.
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     @inlinable
-    public func completeWithAsync(_ body: @escaping () async throws -> Value) {
+    public func completeWithAsync(_ body: @escaping @Sendable () async throws -> Value) {
         Task {
             do {
                 let value = try await body()

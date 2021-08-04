@@ -365,3 +365,9 @@ extension NIONetworkDevice: Hashable {
         hasher.combine(self.interfaceIndex)
     }
 }
+
+#if compiler(>=5.5)
+// NIONetworkDevice is a value type and so is always Sendable. However, as it uses
+// the CoW pattern the compiler cannot prove this, and so we use unchecked.
+extension NIONetworkDevice: @unchecked Sendable { }
+#endif

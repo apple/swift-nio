@@ -1977,3 +1977,16 @@ extension ChannelPipeline: CustomDebugStringConvertible {
         return handlers
     }
 }
+
+#if compiler(>=5.5)
+// ChannelPipeline's API surface is almost entirely thread-safe, though a few of it's computed properties are not.
+// For this reason, it's safe to pass it across thread boundaries.
+extension ChannelPipeline: @unchecked Sendable { }
+
+// ChannelPipeline.Position is a trivial value type, so it's Sendable. The compiler can't
+// see this because we're holding ChannelHandlers, but it remains true.
+extension ChannelPipeline.Position: @unchecked Sendable { }
+
+// RemovalTokens are trivially Sendable.
+extension ChannelHandlerContext.RemovalToken: Sendable { }
+#endif

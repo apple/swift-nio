@@ -784,3 +784,11 @@ extension CircularBuffer: ExpressibleByArrayLiteral {
         self.init(elements)
     }
 }
+
+#if compiler(>=5.5)
+// CircularBuffer is a value type, so it's Sendable when its elements are.
+extension CircularBuffer: Sendable where Element: Sendable { }
+
+// CircularBuffer.Index is a value type and always Sendable.
+extension CircularBuffer.Index: Sendable { }
+#endif

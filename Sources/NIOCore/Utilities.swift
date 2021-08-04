@@ -30,3 +30,6 @@ final class Box<T> {
     init(_ value: T) { self.value = value }
 }
 
+#if compiler(>=5.5)
+extension Box: Sendable where T: Sendable { }
+#endif

@@ -775,7 +775,6 @@ extension EventLoop {
     }
 }
 
-/// Provides an endless stream of `EventLoop`s to use.
 public protocol EventLoopGroup: AnyObject {
     /// Returns the next `EventLoop` to use.
     ///
@@ -875,3 +874,27 @@ extension EventLoopError: CustomStringConvertible {
         }
     }
 }
+
+#if compiler(>=5.5)
+// Scheduled is a reference type, but safe to use across concurrency boundaries.
+extension Scheduled: Sendable { }
+
+// RepeatedTask is a reference type implemented as a class. It uses EventLoop to
+// make itself thread-safe, but the compiler cannot prove this, and so we are
+// forced to assert that it's true.
+extension RepeatedTask: @unchecked Sendable { }
+
+// EventLoopIterator should be trivially Sendable. However, as we can't make
+// EventLoop require Sendable, we have to tell the compiler this, it cannot prove it.
+extension EventLoopIterator: @unchecked Sendable { }
+
+// TimeAmount is trivially Sendable.
+extension TimeAmount: Sendable { }
+
+// NIODeadline is trivially Sendable.
+extension NIODeadline: Sendable { }
+
+/// NIOEventLoopGroupProvider is trivially Sendable. However, as we can't make
+// EventLoop require Sendable, we have to tell the compiler this, it cannot prove it.
+extension NIOEventLoopGroupProvider: @unchecked Sendable { }
+#endif

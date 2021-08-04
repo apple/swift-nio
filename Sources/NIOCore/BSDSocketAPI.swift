@@ -378,3 +378,14 @@ extension NIOBSDSocket {
         #endif
     }
 }
+
+#if compiler(>=5.5)
+// The various components of NIOBSDSocket are all trivial value types, and so are Sendable.
+extension NIOBSDSocket.AddressFamily: Sendable { }
+
+extension NIOBSDSocket.ProtocolFamily: Sendable { }
+
+extension NIOBSDSocket.OptionLevel: Sendable { }
+
+extension NIOBSDSocket.Option: Sendable { }
+#endif

@@ -746,3 +746,13 @@ extension EmbeddedChannel {
         return SynchronousOptions(channel: self)
     }
 }
+
+#if compiler(>=5.5)
+// EmbeddedEventLoop is _not_ sendable, but the EventLoop protocol requires that it is.
+// As this is a testing-only tool, we allow this escape hatch.
+extension EmbeddedEventLoop: @unchecked Sendable { }
+
+// EmbeddedChannel is _not_ sendable, but the Channel protocol requires that it is.
+// As this is a testing-only tool, we allow this escape hatch.
+extension EmbeddedChannel: @unchecked Sendable { }
+#endif

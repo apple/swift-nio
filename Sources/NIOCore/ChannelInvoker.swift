@@ -243,3 +243,8 @@ public enum CloseMode {
     /// Close the whole `Channel (file descriptor).
     case all
 }
+
+#if compiler(>=5.5)
+// CloseMode is a trivial enum, and so it's Sendable.
+extension CloseMode: Sendable { }
+#endif

@@ -1570,3 +1570,16 @@ public struct _NIOEventLoopFutureIdentifier: Hashable {
         return UInt(bitPattern: ObjectIdentifier(future)) ^ 0xbf15ca5d
     }
 }
+
+#if compiler(>=5.5)
+// EventLoopPromise is a reference type, but by its very nature is Sendable.
+extension EventLoopPromise: Sendable { }
+
+// EventLoopFuture is a reference type, but it is Sendable. However, we enforce
+// that by way of the guarantees of the EventLoop protocol, so the compiler cannot
+// check it.
+extension EventLoopFuture: @unchecked Sendable { }
+
+// _NIOEventLoopFutureIdentifier is required to be Sendable.
+extension _NIOEventLoopFutureIdentifier: Sendable { }
+#endif

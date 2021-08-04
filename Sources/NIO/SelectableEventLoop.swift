@@ -643,3 +643,9 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
         }
     }
 }
+
+#if compiler(>=5.5)
+// EventLoop requires that SelectableEventLoop be thread-safe, and it is. However, the
+// compiler can't prove it.
+extension SelectableEventLoop: @unchecked Sendable { }
+#endif

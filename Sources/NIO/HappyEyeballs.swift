@@ -639,3 +639,8 @@ internal class HappyEyeballsConnector {
         processInput(.resolutionDelayElapsed)
     }
 }
+
+#if compiler(>=5.5)
+// SingleConnectionFailure is a value type and so is always Sendable.
+extension SingleConnectionFailure: Sendable { }
+#endif

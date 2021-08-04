@@ -987,3 +987,16 @@ extension ByteBuffer {
         return indexFromReaderIndex ..< (indexFromReaderIndex+length)
     }
 }
+
+#if compiler(>=5.5)
+// ByteBuffer is a value type and so is always Sendable. However,
+// as we implement this using the CoW-pattern the compiler cannot
+// verify this, so we mark this unchecked.
+extension ByteBuffer: @unchecked Sendable { }
+
+// _ByteBufferSlice is a value type and so is always Sendable.
+extension _ByteBufferSlice: Sendable { }
+
+// ByteBufferAllocator is a value type and so is always Sendable.
+extension ByteBufferAllocator: Sendable { }
+#endif

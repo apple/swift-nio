@@ -638,3 +638,22 @@ extension sockaddr_storage: SockAddrProtocol {
     }
 }
 
+#if compiler(>=5.5)
+// SocketAddress is Sendable because it's a value type.
+extension SocketAddress: Sendable { }
+
+// IPv4Address is Sendable because it's a value type. However,
+// due to https://bugs.swift.org/browse/SR-15017 we have to disable compiler
+// checking.
+extension SocketAddress.IPv4Address: @unchecked Sendable { }
+
+// IPv6Address is Sendable because it's a value type. However,
+// due to https://bugs.swift.org/browse/SR-15017 we have to disable compiler
+// checking.
+extension SocketAddress.IPv6Address: @unchecked Sendable { }
+
+// UnixSocketAddress is Sendable because it's a value type. However,
+// due to https://bugs.swift.org/browse/SR-15017 we have to disable compiler
+// checking.
+extension SocketAddress.UnixSocketAddress: @unchecked Sendable { }
+#endif

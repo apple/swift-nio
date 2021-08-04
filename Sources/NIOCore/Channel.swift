@@ -395,3 +395,11 @@ public struct ChannelShouldQuiesceEvent {
     public init() {
     }
 }
+
+#if compiler(>=5.5)
+// ChannelEvent is a trivial enum, and so it's Sendable.
+extension ChannelEvent: Sendable { }
+
+// ChannelShouldQuiesceEvent is a trivial empty struct, so it's Sendable.
+extension ChannelShouldQuiesceEvent: Sendable { }
+#endif

@@ -385,3 +385,46 @@ extension ChannelOptions {
         }
     }
 }
+
+#if compiler(>=5.5)
+// SocketOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.SocketOption: Sendable { }
+
+// AllocatorOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.AllocatorOption: Sendable { }
+
+// RecvAllocatorOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.RecvAllocatorOption: Sendable { }
+
+// AutoRead is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.AutoReadOption: Sendable { }
+
+// WriteSpinOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.WriteSpinOption: Sendable { }
+
+// MaxMessagesPerReadOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.MaxMessagesPerReadOption: Sendable { }
+
+// BacklogOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.BacklogOption: Sendable { }
+
+// DatagramVectorReadMessageCountOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.DatagramVectorReadMessageCountOption: Sendable { }
+
+// ExplicitCongestionNotificationsOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.ExplicitCongestionNotificationsOption: Sendable { }
+
+// ConnectTimeoutOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.ConnectTimeoutOption: Sendable { }
+
+// AllowRemoteHalfClosureOption is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.AllowRemoteHalfClosureOption: Sendable { }
+
+// ReceivePacketInfo is a trivial value type, so it's Sendable.
+extension ChannelOptions.Types.ReceivePacketInfo: Sendable { }
+
+// ChannelOptions.Storage is a value type, so it's Sendable. However, the compiler
+// can't prove this because it relies on Channel, which we cannot require to be Sendable
+// yet, so we just assert that this is true.
+extension ChannelOptions.Storage: @unchecked Sendable { }
+#endif

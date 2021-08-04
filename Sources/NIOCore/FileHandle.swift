@@ -168,3 +168,11 @@ extension NIOFileHandle: CustomStringConvertible {
         return "FileHandle { descriptor: \(self.descriptor) }"
     }
 }
+
+#if compiler(>=5.5)
+// Mode is a straightforward value type, so it's always Sendable.
+extension NIOFileHandle.Mode: Sendable { }
+
+// Flags is a straightforward value type, so it's always Sendable.
+extension NIOFileHandle.Flags: Sendable { }
+#endif

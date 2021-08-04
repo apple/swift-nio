@@ -114,3 +114,11 @@ extension _UInt56: CustomStringConvertible {
         return UInt64(self).description
     }
 }
+
+#if compiler(>=5.5)
+// _UInt24 is a value type and so is always Sendable.
+extension _UInt24: Sendable { }
+
+// _UInt56 is a value type and so is always Sendable.
+extension _UInt56: Sendable { }
+#endif

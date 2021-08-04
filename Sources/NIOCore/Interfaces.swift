@@ -173,3 +173,9 @@ extension UnsafeMutablePointer where Pointee == sockaddr {
         }
     }
 }
+
+#if compiler(>=5.5)
+// NIONetworkInterface is a value type and so is always Sendable.
+@available(*, deprecated, renamed: "NIONetworkDevice")
+extension NIONetworkInterface: Sendable { }
+#endif

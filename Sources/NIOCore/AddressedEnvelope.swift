@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -79,3 +79,17 @@ public struct NIOPacketInfo: Hashable {
         self.interfaceIndex = interfaceIndex
     }
 }
+
+#if compiler(>=5.5)
+// AddressedEnvelope is a value type, so when the data within it is Sendable, it is too.
+extension AddressedEnvelope: Sendable where DataType: Sendable { }
+
+// AddressedEnvelope.Metadata is a value type, and so it's Sendable.
+extension AddressedEnvelope.Metadata: Sendable { }
+
+// NIOExplicitCongestionNotificationState is a trivial enum, and so it's Sendable.
+extension NIOExplicitCongestionNotificationState: Sendable { }
+
+// NIOPacketInfo is a value type, and so it's Sendable.
+extension NIOPacketInfo: Sendable { }
+#endif
