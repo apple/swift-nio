@@ -161,6 +161,15 @@ extension MarkedCircularBuffer: Collection, MutableCollection {
         get {
             return self._buffer[bounds]
         }
+        set {
+            var index = bounds.lowerBound
+            var iterator = newValue.makeIterator()
+            while let newElement = iterator.next(), index != bounds.upperBound {
+                self._buffer[index] = newElement
+                formIndex(after: &index)
+            }
+            precondition(iterator.next() == nil && index == bounds.upperBound)
+        }
     }
 }
 
