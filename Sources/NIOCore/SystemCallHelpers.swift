@@ -33,7 +33,12 @@ private let sysDup: @convention(c) (CInt) -> CInt = dup
 private let sysClose: @convention(c) (CInt) -> CInt = close
 private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
+private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t) -> size_t = read
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
+
+#if !os(Windows)
+private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
+#endif
 
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
     switch code {
@@ -122,9 +127,25 @@ enum SystemCalls {
     }
 
     @inline(never)
+    internal static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> CoreIOResult<ssize_t> {
+        return try syscall(blocking: true) {
+            sysRead(descriptor, pointer, size)
+        }
+    }
+
+    @inline(never)
     internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
         return try syscall(blocking: false) {
             sysIfNameToIndex(name)
         }.result
     }
+
+    #if !os(Windows)
+    @inline(never)
+    internal static func getifaddrs(_ addrs: UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) throws {
+        _ = try syscall(blocking: false) {
+            sysGetifaddrs(addrs)
+        }
+    }
+    #endif
 }

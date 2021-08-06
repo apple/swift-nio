@@ -162,3 +162,18 @@ extension MulticastChannel {
         promise?.fail(NIOMulticastNotImplementedError())
     }
 }
+
+/// Multicast is not supported on this interface.
+public struct NIOMulticastNotSupportedError: Error {
+    public var device: NIONetworkDevice
+
+    public init(device: NIONetworkDevice) {
+        self.device = device
+    }
+}
+
+/// Multicast has not been properly implemented on this channel.
+public struct NIOMulticastNotImplementedError: Error {
+    public init() {}
+}
+
