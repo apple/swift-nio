@@ -14,6 +14,7 @@
 
 import Dispatch
 import NIOConcurrencyHelpers
+import _NIODataStructures
 
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
