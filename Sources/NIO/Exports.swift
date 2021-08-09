@@ -12,3 +12,4 @@
 //
 //===----------------------------------------------------------------------===//
 @_exported import NIOCore
+@_exported import NIOEmbedded

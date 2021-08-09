@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,7 +13,60 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import NIO
+import NIOCore
+@testable import NIOEmbedded
+
+class ChannelLifecycleHandler: ChannelInboundHandler {
+    public typealias InboundIn = Any
+
+    public enum ChannelState {
+        case unregistered
+        case registered
+        case inactive
+        case active
+    }
+
+    public var currentState: ChannelState
+    public var stateHistory: [ChannelState]
+
+    public init() {
+        currentState = .unregistered
+        stateHistory = [.unregistered]
+    }
+
+    private func updateState(_ state: ChannelState) {
+        currentState = state
+        stateHistory.append(state)
+    }
+
+    public func channelRegistered(context: ChannelHandlerContext) {
+        XCTAssertEqual(currentState, .unregistered)
+        XCTAssertFalse(context.channel.isActive)
+        updateState(.registered)
+        context.fireChannelRegistered()
+    }
+
+    public func channelActive(context: ChannelHandlerContext) {
+        XCTAssertEqual(currentState, .registered)
+        XCTAssertTrue(context.channel.isActive)
+        updateState(.active)
+        context.fireChannelActive()
+    }
+
+    public func channelInactive(context: ChannelHandlerContext) {
+        XCTAssertEqual(currentState, .active)
+        XCTAssertFalse(context.channel.isActive)
+        updateState(.inactive)
+        context.fireChannelInactive()
+    }
+
+    public func channelUnregistered(context: ChannelHandlerContext) {
+        XCTAssertEqual(currentState, .inactive)
+        XCTAssertFalse(context.channel.isActive)
+        updateState(.unregistered)
+        context.fireChannelUnregistered()
+    }
+}
 
 class EmbeddedChannelTest: XCTestCase {
     
