@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import NIO
+@testable import _NIODataStructures
 
 public func getRandomNumbers(count: Int) -> [UInt8] {
     return (0..<count).map { _ in

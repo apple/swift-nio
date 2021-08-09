@@ -24,6 +24,7 @@ import XCTest
 
 #if os(Linux) || os(FreeBSD) || os(Android)
    @testable import NIOConcurrencyHelpersTests
+   @testable import NIODataStructuresTests
    @testable import NIOFoundationCompatTests
    @testable import NIOHTTP1Tests
    @testable import NIOTLSTests

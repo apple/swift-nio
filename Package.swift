@@ -3,7 +3,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -18,12 +18,14 @@ import PackageDescription
 var targets: [PackageDescription.Target] = [
     .target(name: "NIOCore",
             dependencies: ["NIOConcurrencyHelpers", "CNIOLinux"]),
+    .target(name: "_NIODataStructures"),
     .target(name: "NIO",
             dependencies: ["CNIOLinux",
                            "CNIODarwin",
                            "CNIOWindows",
                            "NIOConcurrencyHelpers",
-                           "NIOCore"]),
+                           "NIOCore",
+                           "_NIODataStructures"]),
     .target(name: "_NIOConcurrency",
             dependencies: ["NIO"]),
     .target(name: "NIOFoundationCompat", dependencies: ["NIO"]),
@@ -74,6 +76,8 @@ var targets: [PackageDescription.Target] = [
                 dependencies: ["NIO", "NIOFoundationCompat", "NIOTestUtils", "NIOConcurrencyHelpers"]),
     .testTarget(name: "NIOConcurrencyHelpersTests",
                 dependencies: ["NIOConcurrencyHelpers", "NIO"]),
+    .testTarget(name: "NIODataStructuresTests",
+                dependencies: ["_NIODataStructures"]),
     .testTarget(name: "NIOHTTP1Tests",
                 dependencies: ["NIOHTTP1", "NIOFoundationCompat", "NIOTestUtils"]),
     .testTarget(name: "NIOTLSTests",

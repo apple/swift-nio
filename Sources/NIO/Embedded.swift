@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import _NIODataStructures
 
 private final class EmbeddedScheduledTask {
     let task: () -> Void

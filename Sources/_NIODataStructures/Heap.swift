@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -11,37 +11,49 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+import Darwin.C
+#elseif os(Linux) || os(FreeBSD) || os(Android)
+import Glibc
+#endif
 
 @usableFromInline
 internal struct Heap<Element: Comparable> {
     @usableFromInline
-    internal private(set) var storage: ContiguousArray<Element> = []
+    internal private(set) var storage: ContiguousArray<Element>
 
-    @usableFromInline
-    internal init() {}
+    @inlinable
+    internal init() {
+        self.storage = []
+    }
 
+    @inlinable
     internal func comparator(_ lhs: Element, _ rhs: Element) -> Bool {
         // This heap is always a min-heap.
         return lhs < rhs
     }
 
     // named `PARENT` in CLRS
-    private func parentIndex(_ i: Int) -> Int {
+    @inlinable
+    internal func parentIndex(_ i: Int) -> Int {
         return (i-1) / 2
     }
 
     // named `LEFT` in CLRS
+    @inlinable
     internal func leftIndex(_ i: Int) -> Int {
         return 2*i + 1
     }
 
     // named `RIGHT` in CLRS
+    @inlinable
     internal func rightIndex(_ i: Int) -> Int {
         return 2*i + 2
     }
 
     // named `MAX-HEAPIFY` in CLRS
-    private mutating func heapify(_ index: Int) {
+    /* private but */ @inlinable
+    mutating func _heapify(_ index: Int) {
         let left = self.leftIndex(index)
         let right = self.rightIndex(index)
 
@@ -58,12 +70,13 @@ internal struct Heap<Element: Comparable> {
 
         if root != index {
             self.storage.swapAt(index, root)
-            self.heapify(root)
+            self._heapify(root)
         }
     }
 
     // named `HEAP-INCREASE-KEY` in CRLS
-    private mutating func heapRootify(index: Int, key: Element) {
+    /* private but */ @inlinable
+    mutating func _heapRootify(index: Int, key: Element) {
         var index = index
         if self.comparator(storage[index], key) {
             fatalError("New key must be closer to the root than current key")
@@ -76,7 +89,7 @@ internal struct Heap<Element: Comparable> {
         }
     }
 
-    @usableFromInline
+    @inlinable
     internal mutating func append(_ value: Element) {
         var i = self.storage.count
         self.storage.append(value)
@@ -87,16 +100,16 @@ internal struct Heap<Element: Comparable> {
     }
 
     @discardableResult
-    @usableFromInline
+    @inlinable
     internal mutating func removeRoot() -> Element? {
-        return self.remove(index: 0)
+        return self._remove(index: 0)
     }
 
     @discardableResult
-    @usableFromInline
+    @inlinable
     internal mutating func remove(value: Element) -> Bool {
         if let idx = self.storage.firstIndex(of: value) {
-            self.remove(index: idx)
+            self._remove(index: idx)
             return true
         } else {
             return false
@@ -104,7 +117,8 @@ internal struct Heap<Element: Comparable> {
     }
 
     @discardableResult
-    private mutating func remove(index: Int) -> Element? {
+    /* private but */ @inlinable
+    mutating func _remove(index: Int) -> Element? {
         guard self.storage.count > 0 else {
             return nil
         }
@@ -112,19 +126,19 @@ internal struct Heap<Element: Comparable> {
         if self.storage.count == 1 || self.storage[index] == self.storage[self.storage.count - 1] {
             self.storage.removeLast()
         } else if !self.comparator(self.storage[index], self.storage[self.storage.count - 1]) {
-            self.heapRootify(index: index, key: self.storage[self.storage.count - 1])
+            self._heapRootify(index: index, key: self.storage[self.storage.count - 1])
             self.storage.removeLast()
         } else {
             self.storage[index] = self.storage[self.storage.count - 1]
             self.storage.removeLast()
-            self.heapify(index)
+            self._heapify(index)
         }
         return element
     }
 }
 
 extension Heap: CustomDebugStringConvertible {
-    @usableFromInline
+    @inlinable
     var debugDescription: String {
         guard self.storage.count > 0 else {
             return "<empty heap>"
@@ -184,40 +198,52 @@ extension Heap: CustomDebugStringConvertible {
 
 @usableFromInline
 struct HeapIterator<Element: Comparable>: IteratorProtocol {
-    private var heap: Heap<Element>
+    /* private but */ @usableFromInline
+    var _heap: Heap<Element>
 
+    @inlinable
     init(heap: Heap<Element>) {
-        self.heap = heap
+        self._heap = heap
     }
 
-    @usableFromInline
+    @inlinable
     mutating func next() -> Element? {
-        return self.heap.removeRoot()
+        return self._heap.removeRoot()
     }
 }
 
 extension Heap: Sequence {
-    var startIndex: Int { return self.storage.startIndex }
-    var endIndex: Int { return self.storage.endIndex }
+    @inlinable
+    var startIndex: Int {
+        return self.storage.startIndex
+    }
 
-    @usableFromInline
+    @inlinable
+    var endIndex: Int {
+        return self.storage.endIndex
+    }
+
+    @inlinable
     var underestimatedCount: Int {
         return self.storage.count
     }
 
-    @usableFromInline
+    @inlinable
     func makeIterator() -> HeapIterator<Element> {
         return HeapIterator(heap: self)
     }
 
+    @inlinable
     subscript(position: Int) -> Element {
         return self.storage[position]
     }
 
+    @inlinable
     func index(after i: Int) -> Int {
         return i + 1
     }
 
+    @inlinable
     var count: Int {
         return self.storage.count
     }
