@@ -14,7 +14,7 @@
 
 // THIS FILE IS MOSTLY COPIED FROM swift-nio-extras
 
-import NIO
+import NIOCore
 import NIOHTTP1
 
 public final class MakeFullRequestHandler: ChannelOutboundHandler {

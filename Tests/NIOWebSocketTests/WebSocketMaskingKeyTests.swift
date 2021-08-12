@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIO
+import NIOCore
 import NIOWebSocket
 
 final class WebSocketMaskingKeyTests: XCTestCase {
