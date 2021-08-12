@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -11,15 +11,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-//
-//  HTTPServerPipelineHandlerTest.swift
-//  NIOHTTP1Tests
-//
-//  Created by Cory Benfield on 02/03/2018.
-//
 
 import XCTest
-import NIO
+import NIOCore
+import NIOEmbedded
 @testable import NIOHTTP1
 
 private final class ReadRecorder: ChannelInboundHandler {

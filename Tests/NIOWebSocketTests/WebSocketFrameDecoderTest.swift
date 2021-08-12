@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIO
+import NIOCore
+import NIOEmbedded
 import NIOWebSocket
 
 private class CloseSwallower: ChannelOutboundHandler, RemovableChannelHandler {

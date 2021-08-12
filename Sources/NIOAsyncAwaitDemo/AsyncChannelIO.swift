@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 import NIOHTTP1
 
 #if compiler(>=5.5) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
