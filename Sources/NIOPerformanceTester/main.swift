@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIO
+import NIOPosix
 import NIOEmbedded
 import NIOHTTP1
 import NIOFoundationCompat

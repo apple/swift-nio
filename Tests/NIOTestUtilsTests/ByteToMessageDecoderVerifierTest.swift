@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 @testable import NIOCore
-import NIO
+import NIOPosix
 import NIOTestUtils
 import XCTest
 

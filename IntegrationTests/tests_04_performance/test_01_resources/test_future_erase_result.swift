@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
+import NIOEmbedded
 
 func run(identifier: String) {
     measure(identifier: identifier) {

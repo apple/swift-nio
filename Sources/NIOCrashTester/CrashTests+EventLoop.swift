@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIO
+import NIOPosix
 
 fileprivate let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
 

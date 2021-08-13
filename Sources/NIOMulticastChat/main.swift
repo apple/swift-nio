@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIO
+import NIOPosix
 
 /// Implements a simple chat protocol.
 private final class ChatMessageDecoder: ChannelInboundHandler {

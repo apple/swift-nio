@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIO
+import NIOPosix
 import NIOHTTP1
 
 print("Please enter line to send to the server")

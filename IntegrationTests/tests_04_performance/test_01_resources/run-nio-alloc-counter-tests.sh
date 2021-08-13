@@ -39,7 +39,7 @@ fi
 
 "$here/../../allocation-counter-tests-framework/run-allocation-counter.sh" \
     -p "$here/../../.." \
-    -m NIO -m NIOHTTP1 -m NIOWebSocket \
+    -m NIOCore -m NIOEmbedded -m NIOPosix -m NIOHTTP1 -m NIOWebSocket \
     -s "$here/shared.swift" \
     -t "$tmp_dir" \
     "${tests_to_run[@]}"

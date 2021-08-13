@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIO
+import NIOPosix
 
 private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
