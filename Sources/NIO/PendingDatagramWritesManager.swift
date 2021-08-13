@@ -13,6 +13,18 @@
 //===----------------------------------------------------------------------===//
 import NIOConcurrencyHelpers
 
+#if os(Windows)
+import let WinSDK.EHOSTUNREACH
+import let WinSDK.EMSGSIZE
+
+import struct WinSDK.CHAR
+import struct WinSDK.SOCKADDR
+import struct WinSDK.ULONG
+import struct WinSDK.WSABUF
+import struct WinSDK.WSAMSG
+import struct WinSDK.socklen_t
+#endif
+
 private struct PendingDatagramWrite {
     var data: ByteBuffer
     var promise: Optional<EventLoopPromise<Void>>
@@ -101,19 +113,45 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
         p.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
             storageRefs[c] = storageRef.retain()
             let addressLen = p.copySocketAddress(addresses.baseAddress! + c)
-            iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
+
+            let buffer: UnsafeMutablePointer<IOVector> = iovecs.baseAddress! + c
+            let address: UnsafeMutablePointer<sockaddr_storage> =
+                addresses.baseAddress! + c
+
+            let iovBuffer: UnsafeMutableRawPointer =
+                UnsafeMutableRawPointer(mutating: ptr.baseAddress!)
+
+#if os(Windows)
+            iovecs[c] = IOVector(len: numericCast(toWriteForThisBuffer),
+                                 buf: iovBuffer.bindMemory(to: CHAR.self,
+                                                           capacity: toWriteForThisBuffer))
+#else
+            iovecs[c] = IOVector(iov_base: iovBuffer,
+                                 iov_len: numericCast(toWriteForThisBuffer))
+#endif
 
             var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[c])
             controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: p.address.protocol)
             let controlMessageBytePointer = controlBytes.validControlBytes
 
-            let msg = msghdr(msg_name: addresses.baseAddress! + c,
+#if os(Windows)
+            let msg = address.withMemoryRebound(to: SOCKADDR.self, capacity: 1) {
+              WSAMSG(name: $0, namelen: addressLen, lpBuffers: buffer,
+                     dwBufferCount: 1,
+                     Control: WSABUF(len: ULONG(controlMessageBytePointer.count),
+                                     buf: controlMessageBytePointer.baseAddress?
+                                              .assumingMemoryBound(to: CHAR.self)),
+                     dwFlags: 0)
+            }
+#else
+            let msg = msghdr(msg_name: address,
                              msg_namelen: addressLen,
-                             msg_iov: iovecs.baseAddress! + c,
+                             msg_iov: buffer,
                              msg_iovlen: 1,
                              msg_control: controlMessageBytePointer.baseAddress,
                              msg_controllen: .init(controlMessageBytePointer.count),
                              msg_flags: 0)
+#endif
             msgs[c] = MMsgHdr(msg_hdr: msg, msg_len: CUnsignedInt(toWriteForThisBuffer))
         }
         c += 1
