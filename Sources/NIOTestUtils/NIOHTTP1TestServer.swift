@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIO
+import NIOPosix
 import NIOHTTP1
 import NIOConcurrencyHelpers
 

@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIO
+import NIOPosix
 
 private final class ChatHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer

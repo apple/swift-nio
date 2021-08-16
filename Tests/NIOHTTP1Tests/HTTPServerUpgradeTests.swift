@@ -16,7 +16,7 @@ import XCTest
 import Dispatch
 import NIOCore
 import NIOEmbedded
-@testable import NIO
+@testable import NIOPosix
 @testable import NIOHTTP1
 
 extension ChannelPipeline {

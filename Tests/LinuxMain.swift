@@ -28,6 +28,7 @@ import XCTest
    @testable import NIOEmbeddedTests
    @testable import NIOFoundationCompatTests
    @testable import NIOHTTP1Tests
+   @testable import NIOPosixTests
    @testable import NIOTLSTests
    @testable import NIOTestUtilsTests
    @testable import NIOTests
@@ -106,6 +107,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(NIOHTTPClientResponseAggregatorTest.allTests),
              testCase(NIOHTTPServerRequestAggregatorTest.allTests),
              testCase(NIOSingleStepByteToMessageDecoderTest.allTests),
+             testCase(NIOTests.allTests),
              testCase(NIOThreadPoolTest.allTests),
              testCase(NIOWebSocketClientUpgraderTests.allTests),
              testCase(NIOWebSocketFrameAggregatorTests.allTests),

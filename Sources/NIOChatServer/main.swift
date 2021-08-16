@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIO
+import NIOPosix
 import Dispatch
 
 private let newLine = "\n".utf8.first!
