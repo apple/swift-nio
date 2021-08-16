@@ -16,9 +16,22 @@
 import struct NIO.ByteBuffer
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public struct ByteBufferToUInt8AsyncSequence<Upstream: AsyncSequence>: AsyncSequence where Upstream.Element == ByteBuffer {
+public struct NIOByteBufferToUInt8AsyncSequence<Upstream: AsyncSequence>: AsyncSequence where Upstream.Element == ByteBuffer {
     public typealias Element = UInt8
     public typealias AsyncIterator = Iterator
+    
+    @usableFromInline
+    let upstream: Upstream
+    
+    @inlinable
+    init(_ upstream: Upstream) {
+        self.upstream = upstream
+    }
+    
+    @inlinable
+    public func makeAsyncIterator() -> Iterator {
+        Iterator(self.upstream.makeAsyncIterator())
+    }
     
     public struct Iterator: AsyncIteratorProtocol {
         /*private but*/ @usableFromInline var state: State
@@ -28,10 +41,18 @@ public struct ByteBufferToUInt8AsyncSequence<Upstream: AsyncSequence>: AsyncSequ
             case hasBuffer(ByteBuffer, Upstream.AsyncIterator)
             case askForMore(Upstream.AsyncIterator)
             case finished
-            case modifying
+            
+            @inlinable
+            init(buffer: ByteBuffer, upstream: Upstream.AsyncIterator) {
+                if buffer.readableBytes > 0 {
+                    self = .hasBuffer(buffer, upstream)
+                } else {
+                    self = .askForMore(upstream)
+                }
+            }
         }
         
-        @usableFromInline
+        @inlinable
         init(_ upstream: Upstream.AsyncIterator) {
             self.state = .askForMore(upstream)
         }
@@ -40,21 +61,17 @@ public struct ByteBufferToUInt8AsyncSequence<Upstream: AsyncSequence>: AsyncSequ
         public mutating func next() async throws -> Element? {
             switch self.state {
             case .askForMore(var upstream):
-                self.state = .modifying
-                
                 while true {
                     switch try await upstream.next() {
                     case .some(let nextBuffer) where nextBuffer.readableBytes == 0:
-                        break
+                        // we received an empty buffer. for this reason, let's continue and get the
+                        // next buffer fro, the sequence
+                        continue
                         
                     case .some(var nextBuffer):
                         assert(nextBuffer.readableBytes > 0)
                         let result = nextBuffer.readInteger(as: UInt8.self)
-                        if nextBuffer.readableBytes > 0 {
-                            self.state = .hasBuffer(nextBuffer, upstream)
-                        } else {
-                            self.state = .askForMore(upstream)
-                        }
+                        self.state = .init(buffer: nextBuffer, upstream: upstream)
                         return result
                         
                     case .none:
@@ -65,50 +82,28 @@ public struct ByteBufferToUInt8AsyncSequence<Upstream: AsyncSequence>: AsyncSequ
                 
             case .hasBuffer(var buffer, let upstream):
                 assert(buffer.readableBytes > 0)
-                self.state = .modifying
-                
                 let result = buffer.readInteger(as: UInt8.self)
-                if buffer.readableBytes > 0 {
-                    self.state = .hasBuffer(buffer, upstream)
-                } else {
-                    self.state = .askForMore(upstream)
-                }
+                self.state = .init(buffer: buffer, upstream: upstream)
                 return result
                 
             case .finished:
                 return nil
-                
-            case .modifying:
-                preconditionFailure("Invalid state: \(self.state)")
             }
         }
     }
     
-    @inlinable
-    public func makeAsyncIterator() -> Iterator {
-        Iterator(self.upstream.makeAsyncIterator())
-    }
-    
-    @usableFromInline
-    let upstream: Upstream
-    
-    /*private but*/ @usableFromInline init(_ upstream: Upstream) {
-        self.upstream = upstream
-    }
 }
 
-@usableFromInline
-struct TooManyBytesError: Error {
-    @usableFromInline
-    init() {}
+public struct NIOTooManyBytesError: Error {
+    public init() {}
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AsyncSequence where Element == ByteBuffer {
     /// Transform an AsyncSequence of ByteBuffers into an AsyncSequence of single bytes.
     @inlinable
-    public func toBytes() -> ByteBufferToUInt8AsyncSequence<Self> {
-        ByteBufferToUInt8AsyncSequence(self)
+    public func toBytes() -> NIOByteBufferToUInt8AsyncSequence<Self> {
+        NIOByteBufferToUInt8AsyncSequence(self)
     }
     
     /// Consume an ``Swift/AsyncSequence`` of ``NIO/ByteBuffer``s into a single `ByteBuffer`.
@@ -124,13 +119,13 @@ extension AsyncSequence where Element == ByteBuffer {
         
         var receivedBytes = buffer.readableBytes
         if receivedBytes > maxBytes {
-            throw TooManyBytesError()
+            throw NIOTooManyBytesError()
         }
         
         while var next = try await iterator.next() {
             receivedBytes += next.readableBytes
             if receivedBytes > maxBytes {
-                throw TooManyBytesError()
+                throw NIOTooManyBytesError()
             }
             
             buffer.writeBuffer(&next)
