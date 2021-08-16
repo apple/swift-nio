@@ -13,3 +13,4 @@
 //===----------------------------------------------------------------------===//
 @_exported import NIOCore
 @_exported import NIOEmbedded
+@_exported import NIOPosix

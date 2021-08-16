@@ -14,7 +14,7 @@
 
 import XCTest
 import NIOCore
-import NIO
+import NIOPosix
 import NIOConcurrencyHelpers
 import NIOFoundationCompat
 import Dispatch

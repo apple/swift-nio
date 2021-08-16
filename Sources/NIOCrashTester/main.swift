@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIO
+import NIOPosix
 import class Foundation.Process
 import struct Foundation.URL
 import class Foundation.FileHandle

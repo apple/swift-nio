@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
+import NIOEmbedded
 
 fileprivate final class RemovableHandler: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = NIOAny
