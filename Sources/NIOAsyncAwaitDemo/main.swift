@@ -17,12 +17,10 @@ import _NIOConcurrency
 import NIOHTTP1
 import Dispatch
 
-#if compiler(>=5.5) // we cannot write this on one line with `&&` because Swift 5.0 doesn't like it...
-#if compiler(>=5.5) && $AsyncAwait
-
+#if compiler(>=5.5)
 import _Concurrency
 
-@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
     let channel = try await ClientBootstrap(group: group).connect(host: host, port: port).get()
     try await channel.pipeline.addHTTPClientHandlers().get()
@@ -31,7 +29,7 @@ func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throw
     return try await AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull>(channel).start()
 }
 
-@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 func main() async {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     do {
@@ -71,7 +69,7 @@ func main() async {
 
 let dg = DispatchGroup()
 dg.enter()
-if #available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *) {
+if #available(macOS 12, iOS 15, tvOS 15, watchOS 8, *) {
     Task {
         await main()
         dg.leave()
@@ -81,9 +79,5 @@ if #available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *) {
 }
 dg.wait()
 #else
-print("ERROR: This demo only works with async/await enabled (NIO.System.hasAsyncAwaitSupport = \(NIO.System.hasAsyncAwaitSupport))")
-print("Try:   swift run -Xswiftc -Xfrontend -Xswiftc -enable-experimental-concurrency NIOAsyncAwaitDemo")
-#endif
-#else
-print("ERROR: Concurrency only supported on Swift > 5.4.")
+print("ERROR: Concurrency only supported on Swift > 5.5.")
 #endif
