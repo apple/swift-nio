@@ -24,8 +24,9 @@ NIO 2.29.0 and older support Swift 5.0+.
 
 Within this repository we have a number of products that provide different functionality. This package contains the following products:
 
+- `NIO`. This is an umbrella module exporting `NIOCore`, `NIOEmbedded` and `NIOPosix`.
 - `NIOCore`. This provides the core abstractions and types for using SwiftNIO (see ["Conceptual Overview"](#conceptual-overview) for more details). Most NIO extension projects that provide things like new [`EventLoop`s][el] and [`Channel`s][c] or new protocol implementations should only need to depend on `NIOCore`.
-- `NIO`. This provides the primary [`EventLoopGroup`], [`EventLoop`][el], and [`Channel`s][c] for use on POSIX-based systems. This is our high performance core I/O layer. In general, this should only be imported by projects that plan to do some actual I/O, such as high-level protocol implementations or applications.
+- `NIOPosix`. This provides the primary [`EventLoopGroup`], [`EventLoop`][el], and [`Channel`s][c] for use on POSIX-based systems. This is our high performance core I/O layer. In general, this should only be imported by projects that plan to do some actual I/O, such as high-level protocol implementations or applications.
 - `NIOEmbedded`. This provides [`EmbeddedChannel`][ec] and [`EmbeddedEventLoop`][eel], implementations of the `NIOCore` abstractions that provide fine-grained control over their execution. These are most often used for testing, but can also be used to drive protocol implementations in a way that is decoupled from networking altogether.
 - `NIOConcurrencyHelpers`. This provides a few low-level concurrency primitives that are used by NIO implementations, such as locks and atomics.
 - `NIOFoundationCompat`. This extends a number of NIO types for better interoperation with Foundation data types. If you are working with Foundation data types such as `Data`, you should import this.
