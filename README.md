@@ -109,7 +109,7 @@ The basic building blocks of SwiftNIO are the following 8 types of objects:
 - [`EventLoop`][el], a protocol, provided by `NIOCore`.
 - [`Channel`][c], a protocol, provided by `NIOCore`.
 - [`ChannelHandler`][ch], a protocol, provided by `NIOCore`.
-- `Bootstrap`, several related structures, provided by `NIO`.
+- `Bootstrap`, several related structures, provided by `NIOCore`.
 - [`ByteBuffer`][bb], a struct, provided by `NIOCore`.
 - [`EventLoopFuture`][elf], a generic class, provided by `NIOCore`.
 - [`EventLoopPromise`][elp], a generic struct, provided by `NIOCore`.
@@ -122,7 +122,7 @@ The basic I/O primitive of SwiftNIO is the event loop. The event loop is an obje
 
 Event loops are gathered together into event loop *groups*. These groups provide a mechanism to distribute work around the event loops. For example, when listening for inbound connections the listening socket will be registered on one event loop. However, we don't want all connections that are accepted on that listening socket to be registered with the same event loop, as that would potentially overload one event loop while leaving the others empty. For that reason, the event loop group provides the ability to spread load across multiple event loops.
 
-In SwiftNIO today there is one [`EventLoopGroup`][elg] implementation, and two [`EventLoop`][el] implementations. For production applications there is the [`MultiThreadedEventLoopGroup`][mtelg], an [`EventLoopGroup`][elg] that creates a number of threads (using the POSIX [`pthreads`][pthreads] library) and places one `SelectableEventLoop` on each one. The `SelectableEventLoop` is an event loop that uses a selector (either [`kqueue`][kqueue] or [`epoll`][epoll] depending on the target system) to manage I/O events from file descriptors and to dispatch work. These [`EventLoop`s][el] and [`EventLoopGroup`s][elg] are provided by the `NIO` module. Additionally, there is the [`EmbeddedEventLoop`][eel], which is a dummy event loop that is used primarily for testing purposes, provided by the `NIOEmbedded` module.
+In SwiftNIO today there is one [`EventLoopGroup`][elg] implementation, and two [`EventLoop`][el] implementations. For production applications there is the [`MultiThreadedEventLoopGroup`][mtelg], an [`EventLoopGroup`][elg] that creates a number of threads (using the POSIX [`pthreads`][pthreads] library) and places one `SelectableEventLoop` on each one. The `SelectableEventLoop` is an event loop that uses a selector (either [`kqueue`][kqueue] or [`epoll`][epoll] depending on the target system) to manage I/O events from file descriptors and to dispatch work. These [`EventLoop`s][el] and [`EventLoopGroup`s][elg] are provided by the `NIOCore` module. Additionally, there is the [`EmbeddedEventLoop`][eel], which is a dummy event loop that is used primarily for testing purposes, provided by the `NIOEmbedded` module.
 
 [`EventLoop`][el]s have a number of important properties. Most vitally, they are the way all work gets done in SwiftNIO applications. In order to ensure thread-safety, any work that wants to be done on almost any of the other objects in SwiftNIO must be dispatched via an [`EventLoop`][el]. [`EventLoop`][el] objects own almost all the other objects in a SwiftNIO application, and understanding their execution model is critical for building high-performance SwiftNIO applications.
 
@@ -146,7 +146,7 @@ In general, [`ChannelHandler`][ch]s are designed to be highly re-usable componen
 
 SwiftNIO ships with many [`ChannelHandler`][ch]s built in that provide useful functionality, such as HTTP parsing. In addition, high-performance applications will want to provide as much of their logic as possible in [`ChannelHandler`][ch]s, as it helps avoid problems with context switching.
 
-Additionally, SwiftNIO ships with a few [`Channel`][c] implementations. In particular, it ships with `ServerSocketChannel`, a [`Channel`][c] for sockets that accept inbound connections; `SocketChannel`, a [`Channel`][c] for TCP connections; and `DatagramChannel`, a [`Channel`][c] for UDP sockets. All of these are provided by the `NIO` module. It also provides[`EmbeddedChannel`][ec], a [`Channel`][c] primarily used for testing, provided by the `NIOEmbedded` module.
+Additionally, SwiftNIO ships with a few [`Channel`][c] implementations. In particular, it ships with `ServerSocketChannel`, a [`Channel`][c] for sockets that accept inbound connections; `SocketChannel`, a [`Channel`][c] for TCP connections; and `DatagramChannel`, a [`Channel`][c] for UDP sockets. All of these are provided by the `NIOPosix` module. It also provides[`EmbeddedChannel`][ec], a [`Channel`][c] primarily used for testing, provided by the `NIOEmbedded` module.
 
 ##### A Note on Blocking
 
@@ -162,7 +162,7 @@ While it is possible to configure and register [`Channel`][c]s with [`EventLoop`
 
 For this reason, SwiftNIO ships a number of `Bootstrap` objects whose purpose is to streamline the creation of channels. Some `Bootstrap` objects also provide other functionality, such as support for Happy Eyeballs for making TCP connection attempts.
 
-Currently SwiftNIO ships with three `Bootstrap` objects in the `NIO` module: [`ServerBootstrap`](https://apple.github.io/swift-nio/docs/current/NIO/Classes/ServerBootstrap.html), for bootstrapping listening channels; [`ClientBootstrap`](https://apple.github.io/swift-nio/docs/current/NIO/Classes/ClientBootstrap.html), for bootstrapping client TCP channels; and [`DatagramBootstrap`](https://apple.github.io/swift-nio/docs/current/NIO/Classes/DatagramBootstrap.html) for bootstrapping UDP channels.
+Currently SwiftNIO ships with three `Bootstrap` objects in the `NIOPosix` module: [`ServerBootstrap`](https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/ServerBootstrap.html), for bootstrapping listening channels; [`ClientBootstrap`](https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/ClientBootstrap.html), for bootstrapping client TCP channels; and [`DatagramBootstrap`](https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/DatagramBootstrap.html) for bootstrapping UDP channels.
 
 #### ByteBuffer
 
@@ -347,18 +347,18 @@ apt-get install -y git curl libatomic1 libxml2 netcat-openbsd lsof perl
 dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 ```
 
-[ch]: https://apple.github.io/swift-nio/docs/current/NIO/Protocols/ChannelHandler.html
-[c]: https://apple.github.io/swift-nio/docs/current/NIO/Protocols/Channel.html
-[chc]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/ChannelHandlerContext.html
-[ec]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/EmbeddedChannel.html
-[el]: https://apple.github.io/swift-nio/docs/current/NIO/Protocols/EventLoop.html
-[eel]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/EmbeddedEventLoop.html
-[elg]: https://apple.github.io/swift-nio/docs/current/NIO/Protocols/EventLoopGroup.html
-[bb]: https://apple.github.io/swift-nio/docs/current/NIO/Structs/ByteBuffer.html
-[elf]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/EventLoopFuture.html
-[elp]: https://apple.github.io/swift-nio/docs/current/NIO/Structs/EventLoopPromise.html
-[cp]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/ChannelPipeline.html
-[mtelg]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/MultiThreadedEventLoopGroup.html
+[ch]: https://apple.github.io/swift-nio/docs/current/NIOCore/Protocols/ChannelHandler.html
+[c]: https://apple.github.io/swift-nio/docs/current/NIOCore/Protocols/Channel.html
+[chc]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/ChannelHandlerContext.html
+[ec]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/EmbeddedChannel.html
+[el]: https://apple.github.io/swift-nio/docs/current/NIOCore/Protocols/EventLoop.html
+[eel]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/EmbeddedEventLoop.html
+[elg]: https://apple.github.io/swift-nio/docs/current/NIOCore/Protocols/EventLoopGroup.html
+[bb]: https://apple.github.io/swift-nio/docs/current/NIOCore/Structs/ByteBuffer.html
+[elf]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/EventLoopFuture.html
+[elp]: https://apple.github.io/swift-nio/docs/current/NIOCore/Structs/EventLoopPromise.html
+[cp]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/ChannelPipeline.html
+[mtelg]: https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/MultiThreadedEventLoopGroup.html
 [pthreads]: https://en.wikipedia.org/wiki/POSIX_Threads
 [kqueue]: https://en.wikipedia.org/wiki/Kqueue
 [epoll]: https://en.wikipedia.org/wiki/Epoll
