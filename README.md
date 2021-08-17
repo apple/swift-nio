@@ -239,16 +239,13 @@ dependencies: [
 
 and then adding the appropriate SwiftNIO module(s) to your target dependencies.
 The syntax for adding target dependencies differs slightly between Swift
-versions. For example, if you want to depend on the `NIO` and `NIOHTTP1`
-modules, specify the following dependencies:
-
-#### Swift 5.0 and 5.1 (`swift-tools-version:5.[01]`)
-
-    dependencies: ["NIO", "NIOHTTP1"]
+versions. For example, if you want to depend on the `NIOCore`, `NIOPosix` and 
+`NIOHTTP1` modules, specify the following dependencies:
 
 #### Swift 5.2 and newer (`swift-tools-version:5.2`)
 
-    dependencies: [.product(name: "NIO", package: "swift-nio"),
+    dependencies: [.product(name: "NIOCore", package: "swift-nio"),
+                   .product(name: "NIOPosix", package: "swift-nio"),
                    .product(name: "NIOHTTP1", package: "swift-nio")]
 
 ### Using Xcode Package support
@@ -256,7 +253,7 @@ modules, specify the following dependencies:
 If your project is set up as an Xcode project and you're using Xcode 11+, you can add SwiftNIO as a dependency to your
 Xcode project by clicking File -> Swift Packages -> Add Package Dependency. In the upcoming dialog, please enter
 `https://github.com/apple/swift-nio.git` and click Next twice. Finally, select the targets you are planning to use (for
-example `NIO`, `NIOHTTP1`, and `NIOFoundationCompat`) and click finish. Now will be able to `import NIO` (as well as all
+example `NIOCore`, `NIOHTTP1`, and `NIOFoundationCompat`) and click finish. Now will be able to `import NIOCore` (as well as all
 the other targets you have selected) in your project.
 
 To work on SwiftNIO itself, or to investigate some of the demonstration applications, you can clone the repository directly and use SwiftPM to help build it. For example, you can run the following commands to compile and run the example echo server:
