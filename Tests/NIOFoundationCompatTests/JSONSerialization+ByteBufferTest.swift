@@ -14,7 +14,7 @@
 
 import Foundation
 import XCTest
-import NIO
+import NIOCore
 import NIOFoundationCompat
 
 class JSONSerializationByteBufferTest: XCTestCase {

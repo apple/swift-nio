@@ -11,8 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-
-import NIO
+import NIOCore
+import NIOPosix
 import _NIOConcurrency
 import NIOHTTP1
 import Dispatch

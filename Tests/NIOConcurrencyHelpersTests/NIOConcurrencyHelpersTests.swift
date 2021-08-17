@@ -18,7 +18,7 @@ import Glibc
 #endif
 import Dispatch
 import XCTest
-import NIO
+import NIOCore
 @testable import NIOConcurrencyHelpers
 
 class NIOConcurrencyHelpersTests: XCTestCase {

@@ -14,7 +14,7 @@
 
 import XCTest
 @testable import NIOCore
-import NIO
+import NIOEmbedded
 import NIOHTTP1
 @testable import NIOWebSocket
 

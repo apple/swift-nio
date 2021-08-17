@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOSHA1
-import NIO
+import NIOCore
 import NIOHTTP1
 
 let magicWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"

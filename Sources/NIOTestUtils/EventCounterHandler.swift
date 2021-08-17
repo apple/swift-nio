@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 import NIOConcurrencyHelpers
 
 /// `EventCounterHandler` is a `ChannelHandler` that counts and forwards all the events that it sees coming through

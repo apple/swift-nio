@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 
 #if compiler(>=5.5)
 fileprivate let hasAsyncAwait = true
@@ -20,7 +20,7 @@ fileprivate let hasAsyncAwait = true
 fileprivate let hasAsyncAwait = false
 #endif
 
-extension NIO.System {
+extension NIOCore.System {
     public static var hasAsyncAwaitSupport: Bool {
         return hasAsyncAwait
     }

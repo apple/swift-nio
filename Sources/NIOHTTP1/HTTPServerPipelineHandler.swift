@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -11,14 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-//
-//  HTTPServerPipelineHandler.swift
-//  NIOHTTP1
-//
-//  Created by Cory Benfield on 01/03/2018.
-//
-
-import NIO
+import NIOCore
 
 /// A utility function that runs the body code only in debug builds, without
 /// emitting compiler warnings.

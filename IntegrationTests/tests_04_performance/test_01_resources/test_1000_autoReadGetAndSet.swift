@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
+import NIOPosix
 
 func run(identifier: String) {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
