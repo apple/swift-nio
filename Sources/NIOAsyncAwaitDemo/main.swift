@@ -79,5 +79,5 @@ if #available(macOS 12, iOS 15, tvOS 15, watchOS 8, *) {
 }
 dg.wait()
 #else
-print("ERROR: Concurrency only supported on Swift > 5.5.")
+print("ERROR: Concurrency only supported on Swift >= 5.5.")
 #endif
