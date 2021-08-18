@@ -66,7 +66,7 @@ extension EventLoopPromise {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     @discardableResult
     @inlinable
-    public func completeWithTask(_ body: @escaping () async throws -> Value) -> Task<Void, Never> {
+    public func completeWithTask(_ body: @escaping @Sendable () async throws -> Value) -> Task<Void, Never> {
         Task {
             do {
                 let value = try await body()
