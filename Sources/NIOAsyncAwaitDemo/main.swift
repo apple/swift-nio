@@ -18,7 +18,6 @@ import NIOHTTP1
 import Dispatch
 
 #if compiler(>=5.5)
-import _Concurrency
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
