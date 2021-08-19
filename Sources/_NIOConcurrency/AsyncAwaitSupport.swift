@@ -15,7 +15,6 @@
 import NIOCore
 
 #if compiler(>=5.5)
-import _Concurrency
 
 extension EventLoopFuture {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
