@@ -20,7 +20,6 @@ public protocol ContiguousCollection: Collection {
 
 extension StaticString: Collection {
     public typealias Element = UInt8
-    public typealias SubSequence = ArraySlice<UInt8>
     
     public typealias _Index = Int
     

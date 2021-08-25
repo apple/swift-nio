@@ -1036,7 +1036,10 @@ class ByteBufferTest: XCTestCase {
             buf.write(bytes: ptr.dropFirst(0)) + buf.write(bytes: ptr.dropFirst(4 /* drop all of them */))
         }
 
-        let expected = Array(1...16) + Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345".utf8)
+        // StaticString.SubSequence
+        written += buf.write(bytes: ("0123456789" as StaticString).dropFirst(6))
+
+        let expected = Array(1...16) + Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".utf8)
 
         XCTAssertEqual(expected, buf.readBytes(length: written)!)
     }
