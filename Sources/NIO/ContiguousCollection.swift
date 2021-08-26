@@ -32,6 +32,14 @@ extension StaticString: Collection {
         precondition(position < self.utf8CodeUnitCount, "index \(position) out of bounds")
         return self.utf8Start.advanced(by: position).pointee
     }
+    
+    public subscript(bounds: Range<Int>) -> SubSequence {
+        precondition(startIndex <= bounds.lowerBound &&
+                        bounds.lowerBound <= bounds.upperBound &&
+                        bounds.upperBound <= endIndex,
+                     "indices out of bounds")
+        return withUTF8Buffer { return ArraySlice($0[bounds]) }
+    }
 }
 extension UnsafeRawBufferPointer: ContiguousCollection {
     @_inlineable
