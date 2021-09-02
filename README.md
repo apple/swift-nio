@@ -66,17 +66,17 @@ Redis | ✅ | ❌ | [mordil/swift-redi-stack](https://gitlab.com/Mordil/swift-re
 
 ### Supported Versions
 
+### SwiftNIO 2
+This is the current version of SwiftNIO and will be supported for the forseeable future.
+
+The latest released SwiftNIO 2 version supports Swift 5.2+. NIO 2.29.0 and older support Swift 5.0+.
+
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.
 
 If you have a SwiftNIO 1 application or library that you would like to migrate to SwiftNIO 2, please check out the [migration guide](docs/migration-guide-NIO1-to-NIO2.md) we prepared for you.
 
 The latest released SwiftNIO 1 version supports Swift 4.0, 4.1, 4.2, and 5.0.
-
-### SwiftNIO 2
-This is the current version of SwiftNIO and will be supported for the forseeable future.
-
-The latest released SwiftNIO 2 version supports Swift 5.2, 5.3, and 5.4. NIO 2.29.0 and older support Swift 5.0+.
 
 ### Supported Platforms
 
