@@ -67,29 +67,24 @@ extension KQueueEventFilterSet {
                                         registrationID: SelectorRegistrationID,
                                          _ body: (UnsafeMutableBufferPointer<kevent>) throws -> Void) rethrows {
         // we only use three filters (EVFILT_READ, EVFILT_WRITE and EVFILT_EXCEPT) so the number of changes would be 3.
-        var keventsHopefullyOnStack = (kevent(), kevent(), kevent())
-        try withUnsafeMutableBytes(of: &keventsHopefullyOnStack) { rawPtr in
-            assert(MemoryLayout<kevent>.size * 3 == rawPtr.count)
-            let keventBuffer = rawPtr.baseAddress!.bindMemory(to: kevent.self, capacity: 3)
+        var kevents = KeventTriple()
 
-            let differences = previousKQueueFilterSet.symmetricDifference(self) // contains all the events that need a change (either need to be added or removed)
+        let differences = previousKQueueFilterSet.symmetricDifference(self) // contains all the events that need a change (either need to be added or removed)
 
-            func calculateKQueueChange(event: KQueueEventFilterSet) -> UInt16? {
-                guard differences.contains(event) else {
-                    return nil
-                }
-                return UInt16(self.contains(event) ? EV_ADD : EV_DELETE)
+        func calculateKQueueChange(event: KQueueEventFilterSet) -> UInt16? {
+            guard differences.contains(event) else {
+                return nil
             }
-
-            var index: Int = 0
-            for (event, filter) in [(KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT)] {
-                if let flags = calculateKQueueChange(event: event) {
-                    keventBuffer[index].setEvent(fileDescriptor: fileDescriptor, filter: filter, flags: flags, registrationID: registrationID)
-                    index += 1
-                }
-            }
-            try body(UnsafeMutableBufferPointer(start: keventBuffer, count: index))
+            return UInt16(self.contains(event) ? EV_ADD : EV_DELETE)
         }
+
+        for (event, filter) in [(KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT)] {
+            if let flags = calculateKQueueChange(event: event) {
+                kevents.appendEvent(fileDescriptor: fileDescriptor, filter: filter, flags: flags, registrationID: registrationID)
+            }
+        }
+
+        try kevents.withUnsafeBufferPointer(body)
     }
 }
 
@@ -328,6 +323,64 @@ extension kevent {
         } else {
             self.fflags = 0
             self.data = 0
+        }
+    }
+}
+
+/// This structure encapsulates our need to create up to three kevent entries when calculating kevent filter
+/// set changes. We want to be able to store these kevent objects on the stack, which we historically did with
+/// unsafe pointers. This object replaces that unsafe code with safe code, and attempts to achieve the same
+/// performance constraints.
+fileprivate struct KeventTriple {
+    // We need to store this in a tuple to achieve C-style memory layout.
+    private var kevents = (kevent(), kevent(), kevent())
+
+    private var initialized = 0
+
+    private subscript(_ event: Int) -> kevent {
+        get {
+            switch event {
+            case 0:
+                return kevents.0
+            case 1:
+                return kevents.1
+            case 2:
+                return kevents.2
+            default:
+                preconditionFailure()
+            }
+        }
+        set {
+            switch event {
+            case 0:
+                kevents.0 = newValue
+            case 1:
+                kevents.1 = newValue
+            case 2:
+                kevents.2 = newValue
+            default:
+                preconditionFailure()
+            }
+        }
+    }
+
+    mutating func appendEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16, registrationID: SelectorRegistrationID) {
+        defer {
+            // Unchecked math is safe here: we access through the subscript, which will trap on out-of-bounds value, so we'd trap
+            // well before we overflow.
+            self.initialized &+= 1
+        }
+
+        self[self.initialized].setEvent(fileDescriptor: fd, filter: filter, flags: flags, registrationID: registrationID)
+    }
+
+    mutating func withUnsafeBufferPointer(_ body: (UnsafeMutableBufferPointer<kevent>) throws -> Void) rethrows {
+        try withUnsafeMutablePointer(to: &self.kevents) { keventPtr in
+            // Pointer to a homogeneous tupe of a given type is also implicitly bound to the element type, so
+            // we can safely pun this here.
+            let typedPointer = UnsafeMutableRawPointer(keventPtr).assumingMemoryBound(to: kevent.self)
+            let typedBufferPointer = UnsafeMutableBufferPointer(start: typedPointer, count: self.initialized)
+            try body(typedBufferPointer)
         }
     }
 }
