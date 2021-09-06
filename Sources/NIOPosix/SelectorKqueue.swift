@@ -376,7 +376,7 @@ fileprivate struct KeventTriple {
 
     mutating func withUnsafeBufferPointer(_ body: (UnsafeMutableBufferPointer<kevent>) throws -> Void) rethrows {
         try withUnsafeMutablePointer(to: &self.kevents) { keventPtr in
-            // Pointer to a homogeneous tupe of a given type is also implicitly bound to the element type, so
+            // Pointer to a homogeneous tuple of a given type is also implicitly bound to the element type, so
             // we can safely pun this here.
             let typedPointer = UnsafeMutableRawPointer(keventPtr).assumingMemoryBound(to: kevent.self)
             let typedBufferPointer = UnsafeMutableBufferPointer(start: typedPointer, count: self.initialized)
