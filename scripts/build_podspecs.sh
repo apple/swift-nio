@@ -83,6 +83,11 @@ for target in "${targets[@]}"; do
     libraries="s.libraries = 'z'"
   fi
 
+  compiler_flags=""
+  if [[ "$target" == "CNIODarwin" ]]; then
+    compiler_flags="s.compiler_flags = '-D__APPLE_USE_RFC_3542=1'"
+  fi
+
   cat > "${tmpfile}/${target}.podspec" <<- EOF
 Pod::Spec.new do |s|
   s.name = '$target'
@@ -105,6 +110,7 @@ Pod::Spec.new do |s|
   s.source_files = 'Sources/${target#Swift}/**/*.{swift,c,h}'
   ${dependencies[*]-}
   $libraries
+  $compiler_flags
 end
 EOF
 
