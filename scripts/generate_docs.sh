@@ -40,7 +40,7 @@ if [[ "$(uname -s)" == "Linux" ]]; then
   mkdir -p "$root_path/.build/sourcekitten"
   for module in "${modules[@]}"; do
     if [[ ! -f "$root_path/.build/sourcekitten/$module.json" ]]; then
-      "$source_kitten_path/sourcekitten" doc --spm-module $module > "$root_path/.build/sourcekitten/$module.json"
+      "$source_kitten_path/sourcekitten" doc --module-name $module > "$root_path/.build/sourcekitten/$module.json"
     fi
   done
 fi
