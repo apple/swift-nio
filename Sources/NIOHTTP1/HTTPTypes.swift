@@ -115,7 +115,7 @@ public struct HTTPRequestHead: Equatable {
     public static func ==(lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
         return lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version && lhs.headers == rhs.headers
     }
-    
+
     private mutating func copyStorageIfNotUniquelyReferenced () {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.copy()
@@ -220,7 +220,7 @@ public struct HTTPResponseHead: Equatable {
     public static func ==(lhs: HTTPResponseHead, rhs: HTTPResponseHead) -> Bool {
         return lhs.status == rhs.status && lhs.version == rhs.version && lhs.headers == rhs.headers
     }
-    
+
     private mutating func copyStorageIfNotUniquelyReferenced () {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.copy()
@@ -310,7 +310,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
         // Otherwise we'd only have the one below with a default argument for `allocator`.
         self.init(headers, keepAliveState: .unknown)
     }
-    
+
     /// Construct a `HTTPHeaders` structure.
     ///
     /// - parameters
@@ -511,7 +511,7 @@ extension ByteBuffer {
 
 extension HTTPHeaders: RandomAccessCollection {
     public typealias Element = (name: String, value: String)
-    
+
     public struct Index: Comparable {
         fileprivate let base: Array<(String, String)>.Index
         public static func < (lhs: Index, rhs: Index) -> Bool {
@@ -544,9 +544,7 @@ extension UTF8.CodeUnit {
     var isASCIIWhitespace: Bool {
         switch self {
         case UInt8(ascii: " "),
-             UInt8(ascii: "\t"),
-             UInt8(ascii: "\r"),
-             UInt8(ascii: "\n"):
+             UInt8(ascii: "\t"):
           return true
 
         default:
@@ -1381,7 +1379,7 @@ extension HTTPMethod: RawRepresentable {
                 return value
         }
     }
-        
+
     public init(rawValue: String) {
         switch rawValue {
             case "GET":

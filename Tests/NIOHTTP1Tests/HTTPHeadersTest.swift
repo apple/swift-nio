@@ -153,7 +153,7 @@ class HTTPHeadersTest : XCTestCase {
 
     func testTrimWhitespaceWorksOnOnlyWhitespace() {
         let expected = ""
-        for wsString in [" ", "\t", "\r", "\n", "\r\n", "\n\r", "  \r\n \n\r\t\r\t\n"] {
+        for wsString in [" ", "\t", "  \t\t \t  "] {
             let actual = String(wsString.trimASCIIWhitespace())
             XCTAssertEqual(expected, actual)
         }
@@ -161,7 +161,7 @@ class HTTPHeadersTest : XCTestCase {
 
     func testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround() {
         let expected = "x"
-        let actual = String("         x\n\n\n".trimASCIIWhitespace())
+        let actual = String("         x\t  ".trimASCIIWhitespace())
         XCTAssertEqual(expected, actual)
     }
 
@@ -189,7 +189,7 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertEqual(headers.first(name: "custom-key"), "value-1,value-2")
         XCTAssertNil(headers.first(name: "not-present"))
     }
-    
+
     func testKeepAliveStateStartsWithClose() {
         var headers = HTTPHeaders([("Connection", "close")])
 
@@ -226,7 +226,7 @@ class HTTPHeadersTest : XCTestCase {
         let headers = HTTPHeaders([("Connection", "other, keEP-alive"),
                                    ("Content-Type", "text/html"),
                                    ("Connection", "server, x-options")])
-        
+
         XCTAssertTrue(headers.isKeepAlive(version: .http1_1))
     }
 
@@ -234,24 +234,24 @@ class HTTPHeadersTest : XCTestCase {
         let headers = HTTPHeaders([("Connection", "x-options,  other"),
                                    ("Content-Type", "text/html"),
                                    ("Connection", "server,     clOse")])
-        
+
         XCTAssertFalse(headers.isKeepAlive(version: .http1_1))
     }
-        
+
     func testRandomAccess() {
         let originalHeaders = [ ("X-first", "one"),
                                 ("X-second", "two")]
         let headers = HTTPHeaders(originalHeaders)
-        
+
         XCTAssertEqual(headers[headers.startIndex].name, originalHeaders.first?.0)
         XCTAssertEqual(headers[headers.startIndex].value, originalHeaders.first?.1)
         XCTAssertEqual(headers[headers.index(before: headers.endIndex)].name, originalHeaders.last?.0)
         XCTAssertEqual(headers[headers.index(before: headers.endIndex)].value, originalHeaders.last?.1)
-        
+
         let beforeLast = headers[headers.index(before: headers.endIndex)]
         XCTAssertEqual(beforeLast.name, originalHeaders[originalHeaders.endIndex - 1].0)
         XCTAssertEqual(beforeLast.value, originalHeaders[originalHeaders.endIndex - 1].1)
-        
+
         let afterFirst = headers[headers.index(after: headers.startIndex)]
         XCTAssertEqual(afterFirst.name, originalHeaders[originalHeaders.startIndex + 1].0)
         XCTAssertEqual(afterFirst.value, originalHeaders[originalHeaders.startIndex + 1].1)
