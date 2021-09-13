@@ -43,6 +43,10 @@ services:
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_space=3050
       - MAX_ALLOCS_ALLOWED_future_erase_result=4050
       - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=60050
+      - MAX_ALLOCS_ALLOWED_get_100000_headers_canonical_form=700050
+      - MAX_ALLOCS_ALLOWED_get_100000_headers_canonical_form_trimming_whitespace=700050
+      - MAX_ALLOCS_ALLOWED_get_100000_headers_canonical_form_trimming_whitespace_from_long_string=700050
+      - MAX_ALLOCS_ALLOWED_get_100000_headers_canonical_form_trimming_whitespace_from_short_string=700050
       - MAX_ALLOCS_ALLOWED_modifying_1000_circular_buffer_elements=0
       - MAX_ALLOCS_ALLOWED_modifying_byte_buffer_view=2050
       - MAX_ALLOCS_ALLOWED_ping_pong_1000_reqs_1_conn=4400

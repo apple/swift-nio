@@ -204,6 +204,42 @@ measureAndPrint(desc: "write_http_headers") {
     return val
 }
 
+measureAndPrint(desc: "http_headers_canonical_form") {
+    let headers: HTTPHeaders = ["key": "no,trimming"]
+    var count = 0
+    for _ in 0..<100_000 {
+        count &+= headers[canonicalForm: "key"].count
+    }
+    return count
+}
+
+measureAndPrint(desc: "http_headers_canonical_form_trimming_whitespace") {
+    let headers: HTTPHeaders = ["key": "         some   ,   trimming     "]
+    var count = 0
+    for _ in 0..<100_000 {
+        count &+= headers[canonicalForm: "key"].count
+    }
+    return count
+}
+
+measureAndPrint(desc: "http_headers_canonical_form_trimming_whitespace_from_short_string") {
+    let headers: HTTPHeaders = ["key": "   smallString   ,whenStripped"]
+    var count = 0
+    for _ in 0..<100_000 {
+        count &+= headers[canonicalForm: "key"].count
+    }
+    return count
+}
+
+measureAndPrint(desc: "http_headers_canonical_form_trimming_whitespace_from_long_string") {
+    let headers: HTTPHeaders = ["key": " moreThan15CharactersWithAndWithoutWhitespace ,anotherValue"]
+    var count = 0
+    for _ in 0..<100_000 {
+        count &+= headers[canonicalForm: "key"].count
+    }
+    return count
+}
+
 measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
     let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
