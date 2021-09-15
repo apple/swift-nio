@@ -23,7 +23,7 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlercontext=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlername=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlertype=9050
-      - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet=29050
+      - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet=28050
       - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet_sync=0
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=9050
       - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=37
