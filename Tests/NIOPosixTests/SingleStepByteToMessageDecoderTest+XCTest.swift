@@ -36,6 +36,7 @@ extension NIOSingleStepByteToMessageDecoderTest {
                 ("testPayloadTooLarge", testPayloadTooLarge),
                 ("testPayloadTooLargeButHandlerOk", testPayloadTooLargeButHandlerOk),
                 ("testReentrancy", testReentrancy),
+                ("testWeDoNotCallShouldReclaimMemoryAsLongAsFramesAreProduced", testWeDoNotCallShouldReclaimMemoryAsLongAsFramesAreProduced),
            ]
    }
 }

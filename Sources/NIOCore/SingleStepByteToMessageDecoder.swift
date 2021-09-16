@@ -244,13 +244,6 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         assert(self._buffer != nil)
 
         func decodeOnce(buffer: inout ByteBuffer) throws -> Decoder.InboundOut? {
-            defer {
-                if buffer.readableBytes > 0 {
-                    if self.decoder.shouldReclaimBytes(buffer: buffer) {
-                        buffer.discardReadBytes()
-                    }
-                }
-            }
             if decodeMode == .normal {
                 return try self.decoder.decode(buffer: &buffer)
             } else {
@@ -267,7 +260,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         }
 
         // force unwrapping is safe because nil case is handled already and asserted above
-        if self._buffer!.readableBytes == 0 {
+        if self._buffer!.readerIndex > 0, self.decoder.shouldReclaimBytes(buffer: self._buffer!) {
             self._buffer!.discardReadBytes()
         }
     }
