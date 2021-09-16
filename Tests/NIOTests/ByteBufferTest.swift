@@ -2989,7 +2989,7 @@ private func testAllocationOfReallyBigByteBuffer_memcpyHook(_ dst: UnsafeMutable
 
 private var testReserveCapacityLarger_reallocCount = 0
 private var testReserveCapacityLarger_mallocCount = 0
-private func testReserveCapacityLarger_freeHook( _ ptr: UnsafeMutableRawPointer?) -> Void {
+private func testReserveCapacityLarger_freeHook( _ ptr: UnsafeMutableRawPointer) -> Void {
     free(ptr)
 }
 
