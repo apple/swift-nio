@@ -205,13 +205,14 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     /// - parameters:
     ///     - decoder: The `NIOSingleStepByteToMessageDecoder` to decode the bytes into message.
     ///     - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
+    @inlinable
     public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.decoder = decoder
         self.maximumBufferSize = maximumBufferSize
     }
 
-    @usableFromInline
-    func append(_ buffer: ByteBuffer) {
+    @inlinable
+    func _append(_ buffer: ByteBuffer) {
         if self._buffer == nil || self._buffer!.readableBytes == 0 {
             self._buffer = buffer
         } else {
@@ -221,7 +222,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     }
 
     @inlinable
-    func withNonCoWBuffer(_ body: (inout ByteBuffer) throws -> Decoder.InboundOut?) throws -> Decoder.InboundOut? {
+    func _withNonCoWBuffer(_ body: (inout ByteBuffer) throws -> Decoder.InboundOut?) throws -> Decoder.InboundOut? {
         guard var buffer = self._buffer else {
             return nil
         }
@@ -237,7 +238,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     }
 
     @inlinable
-    func decodeLoop(decodeMode: DecodeMode, seenEOF: Bool = false, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
+    func _decodeLoop(decodeMode: DecodeMode, seenEOF: Bool = false, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
         // we want to call decodeLast once with an empty buffer if we have nothing
         if decodeMode == .last && (self._buffer == nil || self._buffer!.readableBytes == 0) {
             var emptyBuffer = self._buffer == nil ? ByteBuffer() : self._buffer!
@@ -265,7 +266,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
             }
         }
 
-        while let message = try self.withNonCoWBuffer(decodeOnce) {
+        while let message = try self._withNonCoWBuffer(decodeOnce) {
             try messageReceiver(message)
         }
 
@@ -290,8 +291,8 @@ extension NIOSingleStepByteToMessageProcessor {
     ///     - messageReceiver: A closure called for each message produced by the `Decoder`
     @inlinable
     public func process(buffer: ByteBuffer, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
-        self.append(buffer)
-        try self.decodeLoop(decodeMode: .normal, messageReceiver)
+        self._append(buffer)
+        try self._decodeLoop(decodeMode: .normal, messageReceiver)
     }
 
     /// Call when there is no data left in the stream. Calls `Decoder`.`decodeLast` one or more times. If there is no data left
@@ -302,6 +303,6 @@ extension NIOSingleStepByteToMessageProcessor {
     ///     - messageReceiver: A closure called for each message produced by the `Decoder`.
     @inlinable
     public func finishProcessing(seenEOF: Bool, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
-        try self.decodeLoop(decodeMode: .last, seenEOF: seenEOF, messageReceiver)
+        try self._decodeLoop(decodeMode: .last, seenEOF: seenEOF, messageReceiver)
     }
 }
