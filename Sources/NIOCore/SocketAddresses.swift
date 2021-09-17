@@ -638,3 +638,26 @@ extension sockaddr_storage: SockAddrProtocol {
     }
 }
 
+// MARK: Workarounds for SR-14268
+// We need these free functions to expose our extension methods, because otherwise
+// the compiler falls over when we try to access them from test code. As these functions
+// exist purely to make the behaviours accessible from test code, we name them truly awfully.
+func __testOnly_addressDescription(_ addr: inout sockaddr_in) -> String {
+    return addr.addressDescription()
+}
+
+func __testOnly_addressDescription(_ addr: inout sockaddr_in6) -> String {
+    return addr.addressDescription()
+}
+
+func __testOnly_withSockAddr<ReturnType>(
+    _ addr: inout sockaddr_in, _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
+) rethrows -> ReturnType {
+    return try addr.withSockAddr(body)
+}
+
+func __testOnly_withSockAddr<ReturnType>(
+    _ addr: inout sockaddr_in6, _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
+) rethrows -> ReturnType {
+    return try addr.withSockAddr(body)
+}
