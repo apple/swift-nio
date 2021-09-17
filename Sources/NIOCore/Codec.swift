@@ -38,7 +38,9 @@ public enum ByteToMessageDecoderError: Error {
 extension ByteToMessageDecoderError {
     // TODO: For NIO 3, make this an enum case (or whatever best way for Errors we have come up with).
     /// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max specified.
-    public struct PayloadTooLargeError: Error {}
+    public struct PayloadTooLargeError: Error {
+        public init() {}
+    }
 }
 
 
