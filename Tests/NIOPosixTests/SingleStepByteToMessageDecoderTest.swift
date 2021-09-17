@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIOPosix
 @testable import NIOCore
 import NIOEmbedded
 
@@ -448,5 +447,52 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual("X", try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertEqual("a", try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+    
+    func testWeDoNotCallShouldReclaimMemoryAsLongAsFramesAreProduced() {
+        struct TestByteToMessageDecoder: NIOSingleStepByteToMessageDecoder {
+            typealias InboundOut = TestMessage
+            
+            enum TestMessage: Equatable {
+                case foo
+            }
+            
+            var lastByteBuffer: ByteBuffer?
+            var decodeHits = 0
+            var reclaimHits = 0
+            
+            mutating func decode(buffer: inout ByteBuffer) throws -> TestMessage? {
+                XCTAssertEqual(self.decodeHits * 3, buffer.readerIndex)
+                self.decodeHits += 1
+                guard buffer.readableBytes >= 3 else {
+                    return nil
+                }
+                buffer.moveReaderIndex(forwardBy: 3)
+                return .foo
+            }
+            
+            mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> TestMessage? {
+                try self.decode(buffer: &buffer)
+            }
+            
+            mutating func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
+                self.reclaimHits += 1
+                return true
+            }
+        }
+        
+        let decoder = TestByteToMessageDecoder()
+        let processor = NIOSingleStepByteToMessageProcessor(decoder, maximumBufferSize: nil)
+        
+        let buffer = ByteBuffer(repeating: 0, count: 3001)
+        var callbackCount = 0
+        XCTAssertNoThrow(try processor.process(buffer: buffer) { _ in
+            callbackCount += 1
+        })
+        
+        XCTAssertEqual(callbackCount, 1000)
+        XCTAssertEqual(processor.decoder.decodeHits, 1001)
+        XCTAssertEqual(processor.decoder.reclaimHits, 1)
+        XCTAssertEqual(processor._buffer!.readableBytes, 1)
     }
 }
