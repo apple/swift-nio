@@ -87,7 +87,7 @@ class SocketAddressTest: XCTestCase {
             $0.baseAddress!.bindMemory(to: in6_addr.self, capacity: 1).pointee
         }
 
-        let s = address.addressDescription()
+        let s = __testOnly_addressDescription(&address)
         XCTAssertEqual(s.count, sampleString.count,
                        "Address description has unexpected length 😱")
         XCTAssertEqual(s, sampleString,
@@ -183,19 +183,19 @@ class SocketAddressTest: XCTestCase {
             _ = withUnsafeMutableBytes(of: &storage) { temp in
                 memcpy(temp.baseAddress!, outer.baseAddress!, MemoryLayout<sockaddr_in>.size)
             }
-            return storage.convert()
+            return __testOnly_convertSockAddr(&storage)
         }
         var secondCopy: sockaddr_in6 = withUnsafeBytes(of: &secondIPAddress) { outer in
             _ = withUnsafeMutableBytes(of: &storage) { temp in
                 memcpy(temp.baseAddress!, outer.baseAddress!, MemoryLayout<sockaddr_in6>.size)
             }
-            return storage.convert()
+            return __testOnly_convertSockAddr(&storage)
         }
         var thirdCopy: sockaddr_un = withUnsafeBytes(of: &thirdIPAddress) { outer in
             _ = withUnsafeMutableBytes(of: &storage) { temp in
                 memcpy(temp.baseAddress!, outer.baseAddress!, MemoryLayout<sockaddr_un>.size)
             }
-            return storage.convert()
+            return __testOnly_convertSockAddr(&storage)
         }
 
         XCTAssertEqual(memcmp(&firstIPAddress, &firstCopy, MemoryLayout<sockaddr_in>.size), 0)
@@ -226,14 +226,14 @@ class SocketAddressTest: XCTestCase {
         var thirdIPAddress = thirdAddress.address
 
         first.withSockAddr { outerAddr, outerSize in
-            firstIPAddress.withSockAddr { innerAddr, innerSize in
+            __testOnly_withSockAddr(&firstIPAddress) { innerAddr, innerSize in
                 XCTAssertEqual(outerSize, innerSize)
                 XCTAssertEqual(memcmp(innerAddr, outerAddr, min(outerSize, innerSize)), 0)
                 XCTAssertNotEqual(outerAddr, innerAddr)
             }
         }
         second.withSockAddr { outerAddr, outerSize in
-            secondIPAddress.withSockAddr { innerAddr, innerSize in
+            __testOnly_withSockAddr(&secondIPAddress) { innerAddr, innerSize in
                 XCTAssertEqual(outerSize, innerSize)
                 XCTAssertEqual(memcmp(innerAddr, outerAddr, min(outerSize, innerSize)), 0)
                 XCTAssertNotEqual(outerAddr, innerAddr)
@@ -363,7 +363,7 @@ class SocketAddressTest: XCTestCase {
     func testCanMutateSockaddrStorage() throws {
         var storage = sockaddr_storage()
         XCTAssertEqual(storage.ss_family, 0)
-        storage.withMutableSockAddr { (addr, _) in
+        __testOnly_withMutableSockAddr(&storage) { (addr, _) in
             addr.pointee.sa_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
         }
         XCTAssertEqual(storage.ss_family, sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue))

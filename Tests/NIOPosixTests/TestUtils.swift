@@ -274,10 +274,10 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
             return "uds"
         case .v4(let sa):
             var addr = sa.address
-            return addr.addressDescription()
+            return __testOnly_addressDescription(&addr)
         case .v6(let sa):
             var addr = sa.address
-            return addr.addressDescription()
+            return __testOnly_addressDescription(&addr)
         }
     }
     let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: .stream, aiProtocol: CInt(IPPROTO_TCP))

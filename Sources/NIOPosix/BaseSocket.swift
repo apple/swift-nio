@@ -411,3 +411,25 @@ extension BaseSocket: CustomStringConvertible {
         return "BaseSocket { fd=\(self.descriptor) }"
     }
 }
+
+// MARK: Workarounds for SR-14268
+// We need these free functions to expose our extension methods, because otherwise
+// the compiler falls over when we try to access them from test code. As these functions
+// exist purely to make the behaviours accessible from test code, we name them truly awfully.
+func __testOnly_convertSockAddr(_ addr: inout sockaddr_storage) -> sockaddr_in {
+    return addr.convert()
+}
+
+func __testOnly_convertSockAddr(_ addr: inout sockaddr_storage) -> sockaddr_in6 {
+    return addr.convert()
+}
+
+func __testOnly_convertSockAddr(_ addr: inout sockaddr_storage) -> sockaddr_un {
+    return addr.convert()
+}
+
+func __testOnly_withMutableSockAddr<ReturnType>(
+    _ addr: inout sockaddr_storage, _ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> ReturnType
+) rethrows -> ReturnType {
+    return try addr.withMutableSockAddr(body)
+}
