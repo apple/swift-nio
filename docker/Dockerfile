@@ -41,12 +41,10 @@ RUN [ -z $install_curl_from_source ] || ( cd $HOME/.curl && ./configure --with-s
 RUN [ -z $install_curl_from_source ] || ldconfig
 
 # ruby and jazzy for docs generation
-ARG skip_ruby_from_ppa
-RUN [ -n "$skip_ruby_from_ppa" ] || apt-add-repository -y ppa:brightbox/ruby-ng
-RUN [ -n "$skip_ruby_from_ppa" ] || { apt-get update && apt-get install -y ruby2.4 ruby2.4-dev; }
-RUN [ -z "$skip_ruby_from_ppa" ] || { apt-get update && apt-get install -y ruby ruby-dev; }
+RUN apt-add-repository -y ppa:brightbox/ruby-ng
+RUN apt-get update && apt-get install -y ruby2.6 ruby2.6-dev;
 RUN apt-get update && apt-get install -y libsqlite3-dev
-RUN gem install jazzy --no-ri --no-rdoc
+RUN gem install jazzy -v 0.13.7 --no-document
 
 # swift
 ARG swift_version=4.0.3
