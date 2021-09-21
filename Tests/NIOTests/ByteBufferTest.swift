@@ -1646,11 +1646,11 @@ private enum AllocationExpectationState: Int {
 }
 
 private var testAllocationOfReallyBigByteBuffer_state = AllocationExpectationState.begin
-private func testAllocationOfReallyBigByteBuffer_freeHook(_ ptr: UnsafeMutableRawPointer?) -> Void {
+private func testAllocationOfReallyBigByteBuffer_freeHook(_ ptr: UnsafeMutableRawPointer) -> Void {
     precondition(AllocationExpectationState.reallocDone == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .freeDone
     /* free the pointer initially produced by malloc and then rebased by realloc offsetting it back */
-    free(ptr?.advanced(by: Int(Int32.max)))
+    free(ptr.advanced(by: Int(Int32.max)))
 }
 
 private func testAllocationOfReallyBigByteBuffer_mallocHook(_ size: Int) -> UnsafeMutableRawPointer? {
@@ -1674,7 +1674,7 @@ private func testAllocationOfReallyBigByteBuffer_memcpyHook(_ dst: UnsafeMutable
 
 private var testReserveCapacityLarger_reallocCount = 0
 private var testReserveCapacityLarger_mallocCount = 0
-private func testReserveCapacityLarger_freeHook( _ ptr: UnsafeMutableRawPointer?) -> Void {
+private func testReserveCapacityLarger_freeHook( _ ptr: UnsafeMutableRawPointer) -> Void {
     free(ptr)
 }
 
