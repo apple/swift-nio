@@ -8,7 +8,6 @@ services:
       args:
         ubuntu_version: "18.04"
         swift_version: "5.0"
-        skip_ruby_from_ppa: "true"
 
   unit-tests:
     image: swift-nio:18.04-5.0
