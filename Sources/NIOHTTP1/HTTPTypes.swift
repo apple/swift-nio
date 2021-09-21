@@ -128,7 +128,7 @@ public struct HTTPRequestHead: Equatable {
 /// A HTTP message is made up of a request or status line with several headers,
 /// encoded by `.head`, zero or more body parts, and optionally some trailers. To
 /// indicate that a complete HTTP message has been sent or received, we use `.end`,
-/// which may also contain any trailers that make up the mssage.
+/// which may also contain any trailers that make up the message.
 public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
     case head(HeadT)
     case body(BodyT)
