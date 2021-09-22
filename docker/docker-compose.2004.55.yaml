@@ -6,8 +6,8 @@ services:
     image: swift-nio:20.04-5.5
     build:
       args:
-        base_image: "swiftlang/swift:nightly-5.5-focal"
         ubuntu_version: "focal"
+        swift_version: "5.5"
 
   unit-tests:
     image: swift-nio:20.04-5.5
@@ -55,7 +55,6 @@ services:
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=12200
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=190050
       # - SANITIZER_ARG=--sanitize=thread # TSan broken still
-      - SWIFT_TEST_VERB=build # WARNING: THIS DISABLES ALL TESTS. Please remove (workaround https://bugs.swift.org/browse/SR-14268)
 
   performance-test:
     image: swift-nio:20.04-5.5
