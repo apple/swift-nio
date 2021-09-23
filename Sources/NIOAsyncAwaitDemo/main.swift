@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 import NIOPosix
-import _NIOConcurrency
 import NIOHTTP1
 import Dispatch
 
