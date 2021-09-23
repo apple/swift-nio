@@ -2965,7 +2965,7 @@ private func testAllocationOfReallyBigByteBuffer_freeHook(_ ptr: UnsafeMutableRa
     precondition(AllocationExpectationState.reallocDone == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .freeDone
     /* free the pointer initially produced by malloc and then rebased by realloc offsetting it back */
-    free(ptr?.advanced(by: Int(Int32.max)))
+    free(ptr!.advanced(by: Int(Int32.max)))
 }
 
 private func testAllocationOfReallyBigByteBuffer_mallocHook(_ size: Int) -> UnsafeMutableRawPointer? {
