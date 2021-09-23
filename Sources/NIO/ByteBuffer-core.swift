@@ -18,7 +18,11 @@ import ucrt
 
 let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
 let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer? = realloc
-let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
+
+/// Xcode 13 GM shipped with a bug in the SDK that caused `free`'s first argument to be annotated as
+/// non-nullable. To that end, we define a thunk through to `free` that matches that constraint, as we
+/// never pass a `nil` pointer to it.
+let sysFree: @convention(c) (UnsafeMutableRawPointer) -> Void = { free($0) }
 
 extension _ByteBufferSlice: Equatable {}
 
@@ -78,7 +82,7 @@ public struct ByteBufferAllocator {
 
     internal init(hookedMalloc: @escaping @convention(c) (size_t) -> UnsafeMutableRawPointer?,
                   hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer?,
-                  hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer?) -> Void,
+                  hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer) -> Void,
                   hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void) {
         self.malloc = hookedMalloc
         self.realloc = hookedRealloc
@@ -108,7 +112,7 @@ public struct ByteBufferAllocator {
 
     internal let malloc: @convention(c) (size_t) -> UnsafeMutableRawPointer?
     internal let realloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer?
-    internal let free: @convention(c) (UnsafeMutableRawPointer?) -> Void
+    internal let free: @convention(c) (UnsafeMutableRawPointer) -> Void
     internal let memcpy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void
 }
 
