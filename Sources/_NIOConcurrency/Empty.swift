@@ -12,16 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// NOTE: All the helper methods that where located here, have been moved to NIOCore. This module
+//       only exists to not break adopters code for now. Please remove all your dependencies on
+//       `_NIOConcurrency`. We want to remove this module soon.
+
 import NIOCore
-
-#if compiler(>=5.5)
-fileprivate let hasAsyncAwait = true
-#else
-fileprivate let hasAsyncAwait = false
-#endif
-
-extension NIOCore.System {
-    public static var hasAsyncAwaitSupport: Bool {
-        return hasAsyncAwait
-    }
-}
