@@ -36,6 +36,7 @@ for test in "${all_tests[@]}"; do
         total_allocations=$(grep "^test_$test_case.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
         not_freed_allocations=$(grep "^test_$test_case.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
         max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test_case"
+        slack_allowed_env_name="SLACK_ALLOCS_ALLOWED_$test_case"
 
         info "$test_case: allocations not freed: $not_freed_allocations"
         info "$test_case: total number of mallocs: $total_allocations"
@@ -50,8 +51,9 @@ for test in "${all_tests[@]}"; do
             fi
         else
             max_allowed=${!max_allowed_env_name}
+            slack_allowed=${!slack_allowed_env_name:-1000}
             assert_less_than_or_equal "$total_allocations" "$max_allowed"
-            assert_greater_than "$total_allocations" "$(( max_allowed - 1000))"
+            assert_greater_than "$total_allocations" "$(( max_allowed - slack_allowed ))"
         fi
     done < <(grep "^test_$test[^\W]*.total_allocations:" "$tmp/output" | cut -d: -f1 | cut -d. -f1 | sort | uniq)
 done
