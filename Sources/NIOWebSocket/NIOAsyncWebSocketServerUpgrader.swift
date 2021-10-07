@@ -18,6 +18,16 @@ import CNIOSHA1
 import NIOCore
 import NIOHTTP1
 
+fileprivate extension HTTPHeaders {
+    func nonListHeader(_ name: String) throws -> String {
+        let fields = self[canonicalForm: name]
+        guard fields.count == 1 else {
+            throw NIOWebSocketUpgradeError.invalidUpgradeHeader
+        }
+        return String(fields.first!)
+    }
+}
+
 /// A `HTTPServerProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// Users may frequently want to offer multiple websocket endpoints on the same port. For this

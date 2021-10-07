@@ -34,18 +34,18 @@ public protocol AsyncHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AsyncHTTPServerProtocolUpgrader {
-    func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         let promise = channel.eventLoop.makePromise(of: HTTPHeaders.self)
         promise.completeWithTask {
-            try await buildUpgradeResponse(channel: channel, upgradeRequest: upgradeRequest, initialResponseHeaders: initialResponseHeaders)
+            try await self.buildUpgradeResponse(channel: channel, upgradeRequest: upgradeRequest, initialResponseHeaders: initialResponseHeaders)
         }
         return promise.futureResult
     }
 
-    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         let promise = context.eventLoop.makePromise(of: Void.self)
         promise.completeWithTask {
-            try await upgrade(context: context, upgradeRequest: upgradeRequest)
+            try await self.upgrade(context: context, upgradeRequest: upgradeRequest)
         }
         return promise.futureResult
     }
