@@ -54,7 +54,7 @@ fileprivate extension HTTPHeaders {
 /// A `HTTPServerProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// Users may frequently want to offer multiple websocket endpoints on the same port. For this
-/// reason, this `WebServerSocketUpgrader` only knows how to do the required parts of the upgrade and to
+/// reason, this `NIOWebSocketServerUpgrader` only knows how to do the required parts of the upgrade and to
 /// complete the handshake. Users are expected to provide a callback that examines the HTTP headers
 /// (including the path) and determines whether this is a websocket upgrade request that is acceptable
 /// to them.
