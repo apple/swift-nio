@@ -43,7 +43,7 @@ extension AsyncHTTPServerProtocolUpgrader {
     }
 
     func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
-        let promise = channel.eventLoop.makePromise(of: Void.self)
+        let promise = context.eventLoop.makePromise(of: Void.self)
         promise.completeWithTask {
             try await upgrade(context: context, upgradeRequest: upgradeRequest)
         }
