@@ -29,7 +29,7 @@ import NIOHTTP1
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
 @available(macOS 12, iOS 15, watchOS 8, tvOS 15, *)
-public final class NIOAsyncWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
+public final class NIOAsyncWebSocketServerUpgrader: AsyncHTTPServerProtocolUpgrader {
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
 
