@@ -24,7 +24,7 @@ public protocol AsyncHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader {
     /// Builds the upgrade response headers. Should return any headers that need to be supplied to the client
     /// in the 101 Switching Protocols response. If upgrade cannot proceed for any reason, this function should
     /// fail the future.
-    func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) async throws HTTPHeaders
+    func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) async throws -> HTTPHeaders
 
     /// Called when the upgrade response has been flushed. At this time it is safe to mutate the channel pipeline
     /// to add whatever channel handlers are required. Until the function returns, all received
@@ -35,7 +35,7 @@ public protocol AsyncHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AsyncHTTPServerProtocolUpgrader {
     func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
-        let promise = request.eventLoop.makePromise(of: HTTPHeaders.self)
+        let promise = channel.eventLoop.makePromise(of: HTTPHeaders.self)
         promise.completeWithTask {
             try await buildUpgradeResponse(channel: channel, upgradeRequest: upgradeRequest, initialResponseHeaders: initialResponseHeaders)
         }
@@ -43,7 +43,7 @@ extension AsyncHTTPServerProtocolUpgrader {
     }
 
     func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
-        let promise = request.eventLoop.makePromise(of: Void.self)
+        let promise = channel.eventLoop.makePromise(of: Void.self)
         promise.completeWithTask {
             try await upgrade(context: context, upgradeRequest: upgradeRequest)
         }
