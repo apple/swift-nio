@@ -105,17 +105,17 @@ public final class NIOAsyncWebSocketServerUpgrader: AsyncHTTPServerProtocolUpgra
         return extraHeaders
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) async throws {
+    public func upgrade(channel: Channel, upgradeRequest: HTTPRequestHead) async throws {
         /// We never use the automatic error handling feature of the WebSocketFrameDecoder: we always use the separate channel
         /// handler.
-        try await context.pipeline.addHandler(WebSocketFrameEncoder())
-        try await context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
+        try await channel.pipeline.addHandler(WebSocketFrameEncoder())
+        try await channel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
 
         if self.automaticErrorHandling {
-            try await context.pipeline.addHandler(WebSocketProtocolErrorHandler())
+            try await channel.pipeline.addHandler(WebSocketProtocolErrorHandler())
         }
         
-        return try await self.upgradePipelineHandler(context.channel, upgradeRequest)
+        return try await self.upgradePipelineHandler(channel, upgradeRequest)
     }
 }
 

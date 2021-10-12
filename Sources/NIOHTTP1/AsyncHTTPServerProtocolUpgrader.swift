@@ -29,7 +29,7 @@ public protocol AsyncHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader {
     /// Called when the upgrade response has been flushed. At this time it is safe to mutate the channel pipeline
     /// to add whatever channel handlers are required. Until the function returns, all received
     /// data will be buffered.
-    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) async throws
+    func upgrade(channel: Channel, upgradeRequest: HTTPRequestHead) async throws
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -45,7 +45,7 @@ extension AsyncHTTPServerProtocolUpgrader {
     public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         let promise = context.eventLoop.makePromise(of: Void.self)
         promise.completeWithTask {
-            try await self.upgrade(context: context, upgradeRequest: upgradeRequest)
+            try await self.upgrade(channel: context.channel, upgradeRequest: upgradeRequest)
         }
         return promise.futureResult
     }
