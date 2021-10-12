@@ -1,0 +1,256 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOWebSocketServer",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOWebSocketServer",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOWebSocketServer"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOWebSocketServer",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOWebSocketServer",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOWebSocketServer"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOWebSocketClient",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOWebSocketClient",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOWebSocketClient"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOWebSocketClient",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOWebSocketClient",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOWebSocketClient"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOUDPEchoServer",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOUDPEchoServer",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOUDPEchoServer"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOUDPEchoServer",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOUDPEchoServer",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOUDPEchoServer"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOUDPEchoClient",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOUDPEchoClient",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOUDPEchoClient"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOUDPEchoClient",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOUDPEchoClient",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOUDPEchoClient"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOPerformanceTester",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOPerformanceTester",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOPerformanceTester"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOPerformanceTester",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOPerformanceTester",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOPerformanceTester"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOMulticastChat",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOMulticastChat",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOMulticastChat"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOMulticastChat",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOMulticastChat",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOMulticastChat"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOHTTP1Server",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOHTTP1Server",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOHTTP1Server"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOHTTP1Server",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOHTTP1Server",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOHTTP1Server"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOHTTP1Client",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOHTTP1Client",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOHTTP1Client"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOHTTP1Client",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOHTTP1Client",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOHTTP1Client"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOEchoServer",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOEchoServer",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOEchoServer"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOEchoServer",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOEchoServer",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOEchoServer"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOEchoClient",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOEchoClient",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOEchoClient"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOEchoClient",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOEchoClient",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOEchoClient"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOCrashTester",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOCrashTester",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOCrashTester"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOCrashTester",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOCrashTester",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOCrashTester"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOChatServer",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOChatServer",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOChatServer"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOChatServer",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOChatServer",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOChatServer"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOChatClient",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOChatClient",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOChatClient"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOChatClient",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOChatClient",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOChatClient"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug NIOAsyncAwaitDemo",
+            "program": "${workspaceFolder:swift-nio}/.build/debug/NIOAsyncAwaitDemo",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Debug NIOAsyncAwaitDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release NIOAsyncAwaitDemo",
+            "program": "${workspaceFolder:swift-nio}/.build/release/NIOAsyncAwaitDemo",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-nio}",
+            "preLaunchTask": "swift: Build Release NIOAsyncAwaitDemo"
+        }
+    ]
+}
