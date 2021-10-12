@@ -224,8 +224,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
         let version: String
 
         do {
-            key = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Key")
-            version = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Version")
+            (key, version) = try NIOWebsocketServerUpgraderLogic.getWebsocketKeyVersion(from: upgradeRequest)
         } catch {
             return channel.eventLoop.makeFailedFuture(error)
         }
@@ -243,19 +242,8 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
         }.map { (extraHeaders: HTTPHeaders) in
             var extraHeaders = extraHeaders
 
-            // Cool, we're good to go! Let's do our upgrade. We do this by concatenating the magic
-            // GUID to the base64-encoded key and taking a SHA1 hash of the result.
-            let acceptValue: String
-            do {
-                var hasher = SHA1()
-                hasher.update(string: key)
-                hasher.update(string: magicWebSocketGUID)
-                acceptValue = String(base64Encoding: hasher.finish())
-            }
-
-            extraHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")
-            extraHeaders.add(name: "Sec-WebSocket-Accept", value: acceptValue)
-            extraHeaders.replaceOrAdd(name: "Connection", value: "upgrade")
+            // Cool, we're good to go! Let's do our upgrade
+            NIOWebsocketServerUpgraderLogic.generateUpgradeHeaders(key: key, headers: &extraHeaders)
 
             return extraHeaders
         }
