@@ -14,7 +14,6 @@
 
 #if compiler(>=5.5) && canImport(_Concurrency)
 
-import CNIOSHA1
 import NIOCore
 import NIOHTTP1
 
@@ -96,8 +95,7 @@ public final class NIOAsyncWebSocketServerUpgrader: AsyncHTTPServerProtocolUpgra
     }
 
     public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) async throws -> HTTPHeaders {
-        let key = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Key")
-        let version = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Version")
+        let (key, version) = try NIOWebsocketServerUpgraderLogic.getWebsocketKeyVersion(from: upgradeRequest)
 
         // The version must be 13.
         guard version == "13" else {
@@ -108,20 +106,7 @@ public final class NIOAsyncWebSocketServerUpgrader: AsyncHTTPServerProtocolUpgra
             throw NIOWebSocketUpgradeError.unsupportedWebSocketTarget
         }
 
-        // Cool, we're good to go! Let's do our upgrade. We do this by concatenating the magic
-        // GUID to the base64-encoded key and taking a SHA1 hash of the result.
-        let acceptValue: String
-        do {
-            var hasher = SHA1()
-            hasher.update(string: key)
-            hasher.update(string: magicWebSocketGUID)
-            acceptValue = String(base64Encoding: hasher.finish())
-        }
-
-        extraHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")
-        extraHeaders.add(name: "Sec-WebSocket-Accept", value: acceptValue)
-        extraHeaders.replaceOrAdd(name: "Connection", value: "upgrade")
-
+        NIOWebsocketServerUpgraderLogic.generateUpgradeHeaders(key: key, headers: &extraHeaders)
         return extraHeaders
     }
 
