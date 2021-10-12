@@ -41,7 +41,7 @@ public struct NIOWebSocketUpgradeError: Error, Equatable {
     public static let unsupportedWebSocketTarget = NIOWebSocketUpgradeError(actualError: .unsupportedWebSocketTarget)
 }
 
-fileprivate extension HTTPHeaders {
+internal extension HTTPHeaders {
     func nonListHeader(_ name: String) throws -> String {
         let fields = self[canonicalForm: name]
         guard fields.count == 1 else {
