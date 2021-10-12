@@ -221,17 +221,11 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
 
     public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         let key: String
-        let version: String
 
         do {
-            (key, version) = try NIOWebsocketServerUpgraderLogic.getWebsocketKeyVersion(from: upgradeRequest)
+            key = try NIOWebsocketServerUpgraderLogic.getWebsocketKeyAndCheckVersion(from: upgradeRequest)
         } catch {
             return channel.eventLoop.makeFailedFuture(error)
-        }
-
-        // The version must be 13.
-        guard version == "13" else {
-            return channel.eventLoop.makeFailedFuture(NIOWebSocketUpgradeError.invalidUpgradeHeader)
         }
 
         return self.shouldUpgrade(channel, upgradeRequest).flatMapThrowing { extraHeaders in

@@ -95,12 +95,7 @@ public final class NIOAsyncWebSocketServerUpgrader: AsyncHTTPServerProtocolUpgra
     }
 
     public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) async throws -> HTTPHeaders {
-        let (key, version) = try NIOWebsocketServerUpgraderLogic.getWebsocketKeyVersion(from: upgradeRequest)
-
-        // The version must be 13.
-        guard version == "13" else {
-            throw NIOWebSocketUpgradeError.invalidUpgradeHeader
-        }
+        let key = try NIOWebsocketServerUpgraderLogic.getWebsocketKeyAndCheckVersion(from: upgradeRequest)
 
         guard var extraHeaders = try await self.shouldUpgrade(channel, upgradeRequest) else {
             throw NIOWebSocketUpgradeError.unsupportedWebSocketTarget

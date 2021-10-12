@@ -32,9 +32,14 @@ struct NIOWebsocketServerUpgraderLogic {
         headers.replaceOrAdd(name: "Connection", value: "upgrade")
     }
     
-    static func getWebsocketKeyVersion(from upgradeRequest: HTTPRequestHead) throws -> (String, String) {
+    static func getWebsocketKeyAndCheckVersion(from upgradeRequest: HTTPRequestHead) throws -> String {
         let key = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Key")
         let version = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Version")
-        return (key, version)
+        
+        // The version must be 13.
+        guard version == "13" else {
+            throw NIOWebSocketUpgradeError.invalidUpgradeHeader
+        }
+        return key
     }
 }
