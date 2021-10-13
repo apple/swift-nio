@@ -328,8 +328,9 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         DispatchData(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(ptr.baseAddress), count: ptr.count))
     }
     var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1024 * 1024)
+    let substring = Substring("A")
     @inline(never)
-    func doWrites(buffer: inout ByteBuffer) {
+    func doWrites(buffer: inout ByteBuffer, dispatchData: DispatchData, substring: Substring) {
         /* all of those should be 0 allocations */
 
         // buffer.writeBytes(foundationData) // see SR-7542
@@ -339,6 +340,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         buffer.writeString("A")
         buffer.writeStaticString("A")
         buffer.writeInteger(0x41, as: UInt8.self)
+        buffer.writeSubstring(substring)
     }
     @inline(never)
     func doReads(buffer: inout ByteBuffer) {
@@ -359,7 +361,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         precondition("A" == str, "\(str!)")
     }
     for _ in 0 ..< 1024*1024 {
-        doWrites(buffer: &buffer)
+        doWrites(buffer: &buffer, dispatchData: dispatchData, substring: substring)
         doReads(buffer: &buffer)
     }
     return buffer.readableBytes

@@ -22,8 +22,9 @@ func run(identifier: String) {
         }
         var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1000)
         let foundationData = "A".data(using: .utf8)!
+        let substring = Substring("A")
         @inline(never)
-        func doWrites(buffer: inout ByteBuffer) {
+        func doWrites(buffer: inout ByteBuffer, dispatchData: DispatchData, substring: Substring) {
             /* these ones are zero allocations */
             // buffer.writeBytes(foundationData) // see SR-7542
             buffer.writeBytes([0x41])
@@ -34,6 +35,9 @@ func run(identifier: String) {
 
             /* those down here should be one allocation each (on Linux) */
             buffer.writeBytes(dispatchData) // see https://bugs.swift.org/browse/SR-9597
+
+            /* these here are one allocation on all platforms */
+            buffer.writeSubstring(substring)
         }
         @inline(never)
         func doReads(buffer: inout ByteBuffer) {
@@ -54,7 +58,7 @@ func run(identifier: String) {
             precondition("A" == str, "\(str!)")
         }
         for _ in 0..<1000  {
-            doWrites(buffer: &buffer)
+            doWrites(buffer: &buffer, dispatchData: dispatchData, substring: substring)
             doReads(buffer: &buffer)
         }
         return buffer.readableBytes
