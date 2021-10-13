@@ -56,6 +56,7 @@ private func interactInMemory(_ first: EmbeddedChannel,
     var operated: Bool
     
     repeat {
+        RunLoop.main.run()
         eventLoop.run()
         operated = false
         
