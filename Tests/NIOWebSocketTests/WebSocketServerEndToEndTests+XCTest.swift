@@ -44,6 +44,7 @@ extension WebSocketServerEndToEndTests {
    }
 }
 
+@available(macOS 12, iOS 15, watchOS 8, tvOS 15, *)
 extension AsyncWebSocketServerEndToEndTests {
 
    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")

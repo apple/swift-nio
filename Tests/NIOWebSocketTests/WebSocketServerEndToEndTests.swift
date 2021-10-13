@@ -518,9 +518,15 @@ class AsyncWebSocketServerEndToEndTests: XCTestCase {
     }
     
     func testBasicUpgradeDance() throws {
+        @MainActor func shouldUpgrade(_ channel: Channel, _ header: HTTPRequestHead) async throws -> HTTPHeaders? {
+            await MainActor.run { HTTPHeaders() }
+        }
+        @MainActor func upgradePipelineHandler(_ channel: Channel, _ header: HTTPRequestHead) async throws {
+            await MainActor.run {}
+        }
         let basicUpgrader = NIOAsyncWebSocketServerUpgrader(
-            shouldUpgrade: { (channel, head) in HTTPHeaders() },
-            upgradePipelineHandler: { (channel, req) in return })
+            shouldUpgrade: shouldUpgrade,
+            upgradePipelineHandler: upgradePipelineHandler)
         let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
