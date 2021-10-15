@@ -1023,8 +1023,6 @@ public final class NIOPipeBootstrap {
     }
 
     private func validateFileDescriptorIsNotAFile(_ descriptor: CInt) throws {
-        precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil,
-                     "limitation in SwiftNIO: cannot bootstrap PipeChannel on EventLoop")
         var s: stat = .init()
         try withUnsafeMutablePointer(to: &s) { ptr in
             try Posix.fstat(descriptor: descriptor, outStat: ptr)
