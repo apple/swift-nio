@@ -389,7 +389,7 @@ class BootstrapTest: XCTestCase {
         })
     }
 
-    func testBoostrapInEventLoop() {
+    func testPipeBootstrapInEventLoop() {
         let testGrp = DispatchGroup()
         testGrp.enter()
 
