@@ -39,6 +39,7 @@ extension BootstrapTest {
                 ("testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer", testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer),
                 ("testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer", testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer),
                 ("testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer", testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer),
+                ("testPipeBootstrapInEventLoop", testPipeBootstrapInEventLoop),
                 ("testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser", testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser),
                 ("testClientBootstrapValidatesWorkingELGsCorrectly", testClientBootstrapValidatesWorkingELGsCorrectly),
                 ("testClientBootstrapRejectsNotWorkingELGsCorrectly", testClientBootstrapRejectsNotWorkingELGsCorrectly),
