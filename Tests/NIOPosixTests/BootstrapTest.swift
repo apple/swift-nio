@@ -389,6 +389,32 @@ class BootstrapTest: XCTestCase {
         })
     }
 
+    func testPipeBootstrapInEventLoop() {
+        let testGrp = DispatchGroup()
+        testGrp.enter()
+
+        let eventLoop = self.group.next()
+
+        eventLoop.execute {
+            do {
+                let pipe = Pipe()
+                let readHandle = NIOFileHandle(descriptor: pipe.fileHandleForReading.fileDescriptor)
+                let writeHandle = NIOFileHandle(descriptor: pipe.fileHandleForWriting.fileDescriptor)
+                _ = NIOPipeBootstrap(group: self.group)
+                    .withPipes(inputDescriptor: try readHandle.takeDescriptorOwnership(), outputDescriptor: try writeHandle.takeDescriptorOwnership())
+                    .flatMap({ channel in
+                        channel.close()
+                    }).always({ _ in
+                        testGrp.leave()
+                    })
+            } catch {
+                XCTFail("Failed to bootstrap pipechannel in eventloop: \(error)")
+                testGrp.leave()
+            }
+        }
+        testGrp.wait()
+    }
+
     func testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser() {
         // It's unclear if this is the right solution, see https://github.com/apple/swift-nio/issues/1392
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
