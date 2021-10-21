@@ -45,10 +45,11 @@ extension ByteBuffer {
     ///     - length: The number of bytes to be read from this `ByteBuffer`.
     /// - returns: A `[UInt8]` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     public mutating func readBytes(length: Int) -> [UInt8]? {
-        return self.getBytes(at: self.readerIndex, length: length).map {
-            self._moveReaderIndex(forwardBy: length)
-            return $0
+        guard let result = self.getBytes(at: self.readerIndex, length: length) else {
+            return nil
         }
+        self._moveReaderIndex(forwardBy: length)
+        return result
     }
 
     // MARK: StaticString APIs
@@ -149,10 +150,11 @@ extension ByteBuffer {
     ///     - length: The number of bytes making up the string.
     /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     public mutating func readString(length: Int) -> String? {
-        return self.getString(at: self.readerIndex, length: length).map {
-            self._moveReaderIndex(forwardBy: length)
-            return $0
+        guard let result = self.getString(at: self.readerIndex, length: length) else {
+            return nil
         }
+        self._moveReaderIndex(forwardBy: length)
+        return result
     }
 
     // MARK: Substring APIs
@@ -238,10 +240,11 @@ extension ByteBuffer {
     ///     - length: The number of bytes.
     /// - returns: A `DispatchData` value containing the bytes from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     public mutating func readDispatchData(length: Int) -> DispatchData? {
-        return self.getDispatchData(at: self.readerIndex, length: length).map {
-            self._moveReaderIndex(forwardBy: length)
-            return $0
+        guard let result = self.getDispatchData(at: self.readerIndex, length: length) else {
+            return nil
         }
+        self._moveReaderIndex(forwardBy: length)
+        return result
     }
 
 
@@ -426,10 +429,11 @@ extension ByteBuffer {
     ///     - length: The number of bytes to slice off.
     /// - returns: A `ByteBuffer` sharing storage containing `length` bytes or `nil` if the not enough bytes were readable.
     public mutating func readSlice(length: Int) -> ByteBuffer? {
-        return self.getSlice(at: self.readerIndex, length: length).map {
-            self._moveReaderIndex(forwardBy: length)
-            return $0
+        guard let result = self.getSlice(at: self.readerIndex, length: length) else {
+            return nil
         }
+        self._moveReaderIndex(forwardBy: length)
+        return result
     }
 
     @discardableResult
