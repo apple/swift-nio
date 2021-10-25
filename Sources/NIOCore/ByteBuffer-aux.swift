@@ -429,7 +429,7 @@ extension ByteBuffer {
     ///     - length: The number of bytes to slice off.
     /// - returns: A `ByteBuffer` sharing storage containing `length` bytes or `nil` if the not enough bytes were readable.
     public mutating func readSlice(length: Int) -> ByteBuffer? {
-        guard let result = self.getSlice(at: self.readerIndex, length: length) else {
+        guard let result = self.getSlice_inlineAlways(at: self.readerIndex, length: length) else {
             return nil
         }
         self._moveReaderIndex(forwardBy: length)
