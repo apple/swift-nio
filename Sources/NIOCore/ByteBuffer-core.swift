@@ -54,8 +54,6 @@ struct _ByteBufferSlice {
 
 extension _ByteBufferSlice {
     init(_ range: Range<UInt32>) {
-        self = _ByteBufferSlice()
-
         self._begin = _UInt24(range.lowerBound)
         self.upperBound = range.upperBound
     }
@@ -624,6 +622,15 @@ public struct ByteBuffer {
         return try body(.init(self._slicedStorageBuffer), storageReference)
     }
 
+    @inline(never)
+    private func copyIntoByteBufferWithSliceIndex0_slowPath(index: _Index, length: _Capacity) -> ByteBuffer {
+        var new = self
+        new._moveWriterIndex(to: index + length)
+        new._moveReaderIndex(to: index)
+        new._copyStorageAndRebase(capacity: length, resetIndices: true)
+        return new
+    }
+
     /// Returns a slice of size `length` bytes, starting at `index`. The `ByteBuffer` this is invoked on and the
     /// `ByteBuffer` returned will share the same underlying storage. However, the byte at `index` in this `ByteBuffer`
     /// will correspond to index `0` in the returned `ByteBuffer`.
@@ -637,24 +644,37 @@ public struct ByteBuffer {
     /// - returns: A `ByteBuffer` containing the selected bytes as readable bytes or `nil` if the selected bytes were
     ///            not readable in the initial `ByteBuffer`.
     public func getSlice(at index: Int, length: Int) -> ByteBuffer? {
-        guard index >= 0 && length >= 0 && index >= self.readerIndex && index <= self.writerIndex - length else {
+        guard index >= 0 && length >= 0 && index >= self.readerIndex && length <= self.writerIndex && index <= self.writerIndex &- length else {
             return nil
         }
         let index = _toIndex(index)
         let length = _toCapacity(length)
-        let sliceStartIndex = self._slice.lowerBound + index
+
+        // The arithmetic below is safe because:
+        // 1. maximum `writerIndex` <= self._slice.count (see `_moveWriterIndex`)
+        // 2. `self._slice.lowerBound + self._slice.count` is always safe (because it's `self._slice.upperBound`)
+        // 3. `index` is inside the range `self.readerIndex ... self.writerIndex` (the `guard` above)
+        //
+        // This means that the largest number that `index` could have is equal to
+        // `self._slice_.upperBound = self._slice.lowerBound + self._slice.count` and that
+        // is guaranteed to be expressible as a `UInt32` (because it's actually stored as such).
+        let sliceStartIndex: UInt32 = self._slice.lowerBound + index
 
         guard sliceStartIndex <= ByteBuffer.Slice.maxSupportedLowerBound else {
             // the slice's begin is past the maximum supported slice begin value (16 MiB) so the only option we have
             // is copy the slice into a fresh buffer. The slice begin will then be at index 0.
-            var new = self
-            new._moveWriterIndex(to: index + length)
-            new._moveReaderIndex(to: index)
-            new._copyStorageAndRebase(capacity: length, resetIndices: true)
-            return new
+            return self.copyIntoByteBufferWithSliceIndex0_slowPath(index: index, length: length)
         }
         var new = self
-        new._slice = _ByteBufferSlice(sliceStartIndex ..< self._slice.lowerBound + index+length)
+        assert(sliceStartIndex == self._slice.lowerBound &+ index)
+
+        // - The arithmetic below is safe because
+        //   1. `writerIndex` <= `self._slice.count` (see `_moveWriterIndex`)
+        //   2. `length` <= `self.writerIndex` (see `guard`s)
+        //   3. `sliceStartIndex` + `self._slice.count` is always safe (because that's `self._slice.upperBound`.
+        // - The range construction is safe because `length` >= 0 (see `guard` at the beginning of the function).
+        new._slice = _ByteBufferSlice(Range(uncheckedBounds: (lower: sliceStartIndex,
+                                                              upper: sliceStartIndex &+ length)))
         new._moveReaderIndex(to: 0)
         new._moveWriterIndex(to: length)
         return new
