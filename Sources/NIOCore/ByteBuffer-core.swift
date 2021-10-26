@@ -644,6 +644,11 @@ public struct ByteBuffer {
     /// - returns: A `ByteBuffer` containing the selected bytes as readable bytes or `nil` if the selected bytes were
     ///            not readable in the initial `ByteBuffer`.
     public func getSlice(at index: Int, length: Int) -> ByteBuffer? {
+        return self.getSlice_inlineAlways(at: index, length: length)
+    }
+
+    @inline(__always)
+    internal func getSlice_inlineAlways(at index: Int, length: Int) -> ByteBuffer? {
         guard index >= 0 && length >= 0 && index >= self.readerIndex && length <= self.writerIndex && index <= self.writerIndex &- length else {
             return nil
         }
