@@ -151,7 +151,7 @@ internal struct OperationPlaceholderError: Error {
 ///     or `eventLoop.newFailedFuture(error:)`.
 ///
 /// - note: `EventLoopPromise` has reference semantics.
-public struct EventLoopPromise<Value> {
+public struct EventLoopPromise<Value>: Sendable {
     /// The `EventLoopFuture` which is used by the `EventLoopPromise`. You can use it to add callbacks which are notified once the
     /// `EventLoopPromise` is completed.
     public let futureResult: EventLoopFuture<Value>
@@ -370,7 +370,7 @@ public struct EventLoopPromise<Value> {
 /// or `EventLoopFuture` callbacks need to invoke a lock (either directly or in the form of `DispatchQueue`) this
 /// should be considered a code smell worth investigating: the `EventLoop`-based synchronization guarantees of
 /// `EventLoopFuture` should be sufficient to guarantee thread-safety.
-public final class EventLoopFuture<Value> {
+public final class EventLoopFuture<Value>: @unchecked Sendable {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
     @usableFromInline
     internal var _value: Optional<Result<Value, Error>>
