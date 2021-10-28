@@ -151,7 +151,7 @@ internal struct OperationPlaceholderError: Error {
 ///     or `eventLoop.newFailedFuture(error:)`.
 ///
 /// - note: `EventLoopPromise` has reference semantics.
-public struct EventLoopPromise<Value>: Sendable {
+public struct EventLoopPromise<Value> {
     /// The `EventLoopFuture` which is used by the `EventLoopPromise`. You can use it to add callbacks which are notified once the
     /// `EventLoopPromise` is completed.
     public let futureResult: EventLoopFuture<Value>
@@ -370,7 +370,7 @@ public struct EventLoopPromise<Value>: Sendable {
 /// or `EventLoopFuture` callbacks need to invoke a lock (either directly or in the form of `DispatchQueue`) this
 /// should be considered a code smell worth investigating: the `EventLoop`-based synchronization guarantees of
 /// `EventLoopFuture` should be sufficient to guarantee thread-safety.
-public final class EventLoopFuture<Value>: @unchecked Sendable {
+public final class EventLoopFuture<Value> {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
     @usableFromInline
     internal var _value: Optional<Result<Value, Error>>
@@ -1570,3 +1570,14 @@ public struct _NIOEventLoopFutureIdentifier: Hashable {
         return UInt(bitPattern: ObjectIdentifier(future)) ^ 0xbf15ca5d
     }
 }
+
+#if compiler(>=5.5) && canImport(_Concurrency)
+// EventLoopPromise is a reference type, but by its very nature is Sendable.
+extension EventLoopPromise: Sendable { }
+
+// EventLoopFuture is a reference type, but it is Sendable. However, we enforce
+// that by way of the guarantees of the EventLoop protocol, so the compiler cannot
+// check it.
+extension EventLoopFuture: @unchecked Sendable { }
+
+#endif // compiler(>=5.5) && canImport(_Concurrency)
