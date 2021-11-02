@@ -166,7 +166,7 @@ While it is possible to configure and register [`Channel`][c]s with [`EventLoop`
 
 For this reason, SwiftNIO ships a number of `Bootstrap` objects whose purpose is to streamline the creation of channels. Some `Bootstrap` objects also provide other functionality, such as support for Happy Eyeballs for making TCP connection attempts.
 
-Currently SwiftNIO ships with three `Bootstrap` objects in the `NIOPosix` module: [`ServerBootstrap`](https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/ServerBootstrap.html), for bootstrapping listening channels; [`ClientBootstrap`](https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/ClientBootstrap.html), for bootstrapping client TCP channels; and [`DatagramBootstrap`](https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/DatagramBootstrap.html) for bootstrapping UDP channels.
+Currently SwiftNIO ships with three `Bootstrap` objects in the `NIOPosix` module: [`ServerBootstrap`][sboot], for bootstrapping listening channels; [`ClientBootstrap`][cboot], for bootstrapping client TCP channels; and [`DatagramBootstrap`][dboot] for bootstrapping UDP channels.
 
 #### ByteBuffer
 
@@ -359,6 +359,9 @@ dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 [elf]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/EventLoopFuture.html
 [elp]: https://apple.github.io/swift-nio/docs/current/NIO/Structs/EventLoopPromise.html
 [cp]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/ChannelPipeline.html
+[sboot]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/ServerBootstrap.html
+[cboot]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/ClientBootstrap.html
+[dboot]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/DatagramBootstrap.html
 [mtelg]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/MultiThreadedEventLoopGroup.html
 [pthreads]: https://en.wikipedia.org/wiki/POSIX_Threads
 [kqueue]: https://en.wikipedia.org/wiki/Kqueue
