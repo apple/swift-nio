@@ -793,7 +793,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
     }
     
-    func testForwardContinueThanResponse() {
+    func testForwardContinueThenResponse() {
         let eventCounter = EventCounterHandler()
         let decoder = HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informationalResponseStrategy: .forward)
         let responseDecoder = ByteToMessageHandler(decoder)
