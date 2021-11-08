@@ -795,7 +795,8 @@ class HTTPDecoderTest: XCTestCase {
     
     func testForwardContinueThanResponse() {
         let eventCounter = EventCounterHandler()
-        let responseDecoder = ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informalResponseStrategy: .forward))
+        let decoder = HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informationalResponseStrategy: .forward)
+        let responseDecoder = ByteToMessageHandler(decoder)
         let channel = EmbeddedChannel(handler: responseDecoder)
         XCTAssertNoThrow(try channel.pipeline.addHandler(eventCounter).wait())
 
@@ -821,7 +822,8 @@ class HTTPDecoderTest: XCTestCase {
     
     func testDropContinueThanForwardResponse() {
         let eventCounter = EventCounterHandler()
-        let responseDecoder = ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informalResponseStrategy: .drop))
+        let decoder = HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informationalResponseStrategy: .drop)
+        let responseDecoder = ByteToMessageHandler(decoder)
         let channel = EmbeddedChannel(handler: responseDecoder)
         XCTAssertNoThrow(try channel.pipeline.addHandler(eventCounter).wait())
 

@@ -298,8 +298,7 @@ private class BetterHTTPParser {
                 return .error(HPE_UNKNOWN)
             }
             
-            if (HTTPResponseStatus.continue.code <= statusCode && statusCode < HTTPResponseStatus.ok.code)
-                && statusCode != HTTPResponseStatus.switchingProtocols.code {
+            if 100 <= statusCode && statusCode < 200 && statusCode != 101 {
                 // if the response status is in the range of 100..<200 but not 101 we don't want to
                 // pop the request method. The actual request head is expected with the next HTTP
                 // head.
@@ -482,10 +481,10 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     // the actual state
     private let parser: BetterHTTPParser
     private let leftOverBytesStrategy: RemoveAfterUpgradeStrategy
-    private let informalResponseStrategy: InformalResponseStrategy
+    private let informationalResponseStrategy: NIOInformationalResponseStrategy
     private let kind: HTTPDecoderKind
     private var stopParsing = false // set on upgrade or HTTP version error
-    private var lastHeaderWasInformal = false
+    private var lastResponseHeaderWasInformational = false
 
     /// Creates a new instance of `HTTPDecoder`.
     ///
@@ -493,25 +492,17 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     ///     - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
     ///                              detected. Note that this does not affect what happens on EOF.
     public convenience init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) {
-        self.init(leftOverBytesStrategy: leftOverBytesStrategy, informalResponseStrategy: .drop)
+        self.init(leftOverBytesStrategy: leftOverBytesStrategy, informationalResponseStrategy: .drop)
     }
-    
-    /// Strategy to use when a HTTPDecoder receives an informal HTTP response (1xx except 101)
-    public enum InformalResponseStrategy {
-        /// Drop the informal response and only forward the "real" response
-        case drop
-        /// Forward the informal response and then forward the "real" response
-        case forward
-    }
-    
+        
     /// Creates a new instance of `HTTPDecoder`.
     ///
     /// - parameters:
     ///     - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
     ///                              detected. Note that this does not affect what happens on EOF.
-    ///     - supportInformalResponses: Should informal responses (like http status 100) be forwarded or dropped. Default is `.drop`
-    ///                              This property is only respected when decoding responses.
-    public init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes, informalResponseStrategy: InformalResponseStrategy = .drop) {
+    ///     - informationalResponseStrategy: Should informational responses (like http status 100) be forwarded or dropped.
+    ///                              Default is `.drop`. This property is only respected when decoding responses.
+    public init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes, informationalResponseStrategy: NIOInformationalResponseStrategy = .drop) {
         self.headers.reserveCapacity(16)
         if In.self == HTTPServerRequestPart.self {
             self.kind = .request
@@ -522,7 +513,7 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         }
         self.parser = BetterHTTPParser(kind: kind)
         self.leftOverBytesStrategy = leftOverBytesStrategy
-        self.informalResponseStrategy = informalResponseStrategy
+        self.informationalResponseStrategy = informationalResponseStrategy
     }
 
     func didReceiveBody(_ bytes: UnsafeRawBufferPointer) {
@@ -594,26 +585,31 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
             message = NIOAny(HTTPServerRequestPart.head(reqHead))
             
         case .response where (100..<200).contains(statusCode) && statusCode != 101:
-            self.lastHeaderWasInformal = true
-            
-            switch self.informalResponseStrategy {
+            self.lastResponseHeaderWasInformational = true
+            switch self.informationalResponseStrategy.base {
             case .forward:
-                let resHead: HTTPResponseHead = HTTPResponseHead(version: .init(major: versionMajor, minor: versionMinor),
-                                                                 status: .init(statusCode: statusCode),
-                                                                 headers: HTTPHeaders(self.headers,
-                                                                                      keepAliveState: keepAliveState))
-                message = NIOAny(HTTPClientResponsePart.head(resHead))
+                let resHeadPart = HTTPClientResponsePart.head(
+                    versionMajor: versionMajor,
+                    versionMinor: versionMinor,
+                    statusCode: statusCode,
+                    keepAliveState: keepAliveState,
+                    headers: self.headers
+                )
+                message = NIOAny(resHeadPart)
             case .drop:
                 message = nil
             }
             
         case .response:
-            self.lastHeaderWasInformal = false
-            let resHead: HTTPResponseHead = HTTPResponseHead(version: .init(major: versionMajor, minor: versionMinor),
-                                                             status: .init(statusCode: statusCode),
-                                                             headers: HTTPHeaders(self.headers,
-                                                                                  keepAliveState: keepAliveState))
-            message = NIOAny(HTTPClientResponsePart.head(resHead))
+            self.lastResponseHeaderWasInformational = false
+            let resHeadPart = HTTPClientResponsePart.head(
+                versionMajor: versionMajor,
+                versionMinor: versionMinor,
+                statusCode: statusCode,
+                keepAliveState: keepAliveState,
+                headers: self.headers
+            )
+            message = NIOAny(resHeadPart)
         }
         self.url = nil
         self.headers.removeAll(keepingCapacity: true)
@@ -631,7 +627,7 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         case .request:
             self.context!.fireChannelRead(NIOAny(HTTPServerRequestPart.end(trailers.map(HTTPHeaders.init))))
         case .response:
-            if !self.lastHeaderWasInformal {
+            if !self.lastResponseHeaderWasInformational {
                 self.context!.fireChannelRead(NIOAny(HTTPClientResponsePart.end(trailers.map(HTTPHeaders.init))))
             }
         }
@@ -709,6 +705,25 @@ public enum RemoveAfterUpgradeStrategy {
     case fireError
     /// Discard all the remaining bytes that are currently buffered in the decoder.
     case dropBytes
+}
+
+/// Strategy to use when a HTTPDecoder receives an informational HTTP response (1xx except 101)
+public struct NIOInformationalResponseStrategy: Hashable {
+    enum Base {
+        case drop
+        case forward
+    }
+    
+    var base: Base
+    private init(_ base: Base) {
+        self.base = base
+    }
+    
+    /// Drop the informational response and only forward the "real" response
+    public static let drop = Self(.drop)
+    /// Forward the informational response and then forward the "real" response. This will result in
+    /// multiple `head` before an `end` is emitted.
+    public static let forward = Self(.forward)
 }
 
 extension HTTPParserError {
@@ -877,5 +892,21 @@ extension NIOHTTPDecoderError: Hashable { }
 extension NIOHTTPDecoderError: CustomDebugStringConvertible {
     public var debugDescription: String {
         return String(describing: self.baseError)
+    }
+}
+
+extension HTTPClientResponsePart {
+    fileprivate static func head(
+        versionMajor: Int,
+        versionMinor: Int,
+        statusCode: Int,
+        keepAliveState: KeepAliveState,
+        headers: [(String, String)]
+    ) -> HTTPClientResponsePart {
+        HTTPClientResponsePart.head(HTTPResponseHead(
+            version: .init(major: versionMajor, minor: versionMinor),
+            status: .init(statusCode: statusCode),
+            headers: HTTPHeaders(headers, keepAliveState: keepAliveState)
+        ))
     }
 }

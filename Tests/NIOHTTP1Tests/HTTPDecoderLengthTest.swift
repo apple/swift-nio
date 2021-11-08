@@ -184,7 +184,7 @@ class HTTPDecoderLengthTest: XCTestCase {
                                            responseStatus: HTTPResponseStatus,
                                            responseFramingField: FramingField) throws {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
-        let decoder = HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informalResponseStrategy: .forward)
+        let decoder = HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informationalResponseStrategy: .forward)
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(decoder)).wait())
 
         let handler = MessageEndHandler<HTTPResponseHead, ByteBuffer>()
@@ -217,8 +217,8 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssert(handler.seenHead)
         switch responseStatus.code {
         case 100, 102..<200:
-            // If an informal header is tested, we expect another "real" header to follow. For this
-            // reason, we don't expect an `.end` here.
+            // If an informational response header is tested, we expect another "real" header to
+            // follow. For this reason, we don't expect an `.end` here.
             XCTAssertFalse(handler.seenBody)
             XCTAssertFalse(handler.seenEnd)
             
