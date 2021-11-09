@@ -973,4 +973,69 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 1)
         XCTAssertEqual(self.readCounter.readCount, 3)
     }
+    
+    func testServerCanRespondContinue() throws {
+        // Send in the first part of a request.
+        var expect100ContinueHead = self.requestHead!
+        expect100ContinueHead.headers.replaceOrAdd(name: "expect", value: "100-continue")
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(expect100ContinueHead)))
+
+        var continueResponse = self.responseHead
+        continueResponse!.status = .continue
+
+        // Now the server sends a continue response.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(continueResponse!)).wait())
+
+        // The client response completes.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Now the server sends the final response.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
+     }
+
+     func testServerCanRespondProcessingMultipleTimes() throws {
+         // Send in a request.
+         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+         // We haven't completed our response, so no more reading
+         XCTAssertEqual(self.readCounter.readCount, 0)
+         self.channel.read()
+         XCTAssertEqual(self.readCounter.readCount, 0)
+
+         var processResponse: HTTPResponseHead = self.responseHead!
+         processResponse.status = .processing
+
+         // Now the server sends multiple processing responses.
+         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
+
+         // We are processing... Reading not allowed
+         XCTAssertEqual(self.readCounter.readCount, 0)
+         self.channel.read()
+         XCTAssertEqual(self.readCounter.readCount, 0)
+
+         // Continue processing...
+         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
+
+         // We are processing... Reading not allowed
+         XCTAssertEqual(self.readCounter.readCount, 0)
+         self.channel.read()
+         XCTAssertEqual(self.readCounter.readCount, 0)
+
+         // Continue processing...
+         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
+
+         // We are processing... Reading not allowed
+         XCTAssertEqual(self.readCounter.readCount, 0)
+         self.channel.read()
+         XCTAssertEqual(self.readCounter.readCount, 0)
+
+         // Now send the actual response!
+         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
+         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
+
+         // This should have triggered a read
+         XCTAssertEqual(self.readCounter.readCount, 1)
+    }
 }

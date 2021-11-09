@@ -228,6 +228,14 @@ public struct HTTPResponseHead: Equatable {
     }
 }
 
+extension HTTPResponseHead {
+    /// Determines if the head is purely informational. If a head is informational another head will follow this
+    /// head eventually.
+    var isInformational: Bool {
+        100 <= self.status.code && self.status.code < 200 && self.status.code != 101
+    }
+}
+
 private extension UInt8 {
     var isASCII: Bool {
         return self <= 127

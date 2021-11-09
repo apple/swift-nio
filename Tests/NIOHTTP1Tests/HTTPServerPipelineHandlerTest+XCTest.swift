@@ -51,6 +51,8 @@ extension HTTPServerPipelineHandlerTest {
                 ("testRemovingWithBufferedRequestForwards", testRemovingWithBufferedRequestForwards),
                 ("testQuiescingInAResponseThenRemovedFiresEventAndReads", testQuiescingInAResponseThenRemovedFiresEventAndReads),
                 ("testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead", testQuiescingInAResponseThenRemovedFiresEventAndDoesntRead),
+                ("testServerCanRespondContinue", testServerCanRespondContinue),
+                ("testServerCanRespondProcessingMultipleTimes", testServerCanRespondProcessingMultipleTimes),
            ]
    }
 }
