@@ -292,6 +292,8 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         debugOnly {
             let res = self.unwrapOutboundIn(data)
             switch res {
+            case .head(let head) where head.isInformational:
+                assert(self.nextExpectedOutboundMessage == .head)
             case .head:
                 assert(self.nextExpectedOutboundMessage == .head)
                 self.nextExpectedOutboundMessage = .bodyOrEnd

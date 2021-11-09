@@ -153,4 +153,66 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
                          expectedResponseLine: "HTTP/1.1 200 OK",
                          expectedResponseHeaders: ["Content-Length: 0"])
     }
+    
+    func testDoesSendAResponseIfInformationalHeaderWasSent() throws {
+        let channel = EmbeddedChannel()
+        defer { XCTAssertNoThrow(try channel.finish(acceptAlreadyClosed: false)) }
+        
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false, withErrorHandling: true).wait())
+        XCTAssertNoThrow(try channel.connect(to: .makeAddressResolvingHost("127.0.0.1", port: 0)).wait())
+        
+        // Send an head that expects a continue informational response
+        let reqHeadBytes = "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nExpect: 100-continue\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: reqHeadBytes)))
+        let expectedHead = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/", headers: ["Transfer-Encoding":"chunked", "Expect":"100-continue"])
+        XCTAssertEqual(try channel.readInbound(as: HTTPServerRequestPart.self), .head(expectedHead))
+        
+        // Respond with continue informational response
+        let continueResponse = HTTPResponseHead(version: .http1_1, status: .continue)
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(continueResponse)))
+        XCTAssertEqual(try channel.readOutbound(as: ByteBuffer.self), ByteBuffer(string: "HTTP/1.1 100 Continue\r\n\r\n"))
+        
+        // Expects a hex digit... But receives garbage
+        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: "xyz"))) {
+            XCTAssertEqual($0 as? HTTPParserError, .invalidChunkSize)
+        }
+        
+        // Receive a bad request
+        XCTAssertEqual(try channel.readOutbound(as: ByteBuffer.self), ByteBuffer(string: "HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"))
+    }
+    
+    func testDoesNotSendAResponseIfRealHeaderWasSentAfterInformationalHeader() throws {
+        let channel = EmbeddedChannel()
+        defer { XCTAssertNoThrow(try channel.finish(acceptAlreadyClosed: false)) }
+        
+        XCTAssertNoThrow(try channel.connect(to: .makeAddressResolvingHost("127.0.0.1", port: 0)).wait())
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false, withErrorHandling: true).wait())
+        
+        // Send an head that expects a continue informational response
+        let reqHeadBytes = "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nExpect: 100-continue\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: reqHeadBytes)))
+        let expectedHead = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/", headers: ["Transfer-Encoding":"chunked", "Expect":"100-continue"])
+        XCTAssertEqual(try channel.readInbound(as: HTTPServerRequestPart.self), .head(expectedHead))
+        
+        // Respond with continue informational response
+        let continueResponse = HTTPResponseHead(version: .http1_1, status: .continue)
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(continueResponse)))
+        XCTAssertEqual(try channel.readOutbound(as: ByteBuffer.self), ByteBuffer(string: "HTTP/1.1 100 Continue\r\n\r\n"))
+        
+        // Send a a chunk
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer(string: "6\r\nfoobar\r\n")))
+        
+        // Server responds with an actual head, even though request has not finished yet
+        let acceptedResponse = HTTPResponseHead(version: .http1_1, status: .accepted, headers: ["Content-Length": "20"])
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(acceptedResponse)))
+        XCTAssertEqual(try channel.readOutbound(as: ByteBuffer.self), ByteBuffer(string: "HTTP/1.1 202 Accepted\r\nContent-Length: 20\r\n\r\n"))
+        
+        // Client sends garbage chunk
+        XCTAssertThrowsError(try channel.writeInbound(ByteBuffer(string: "xyz"))) {
+            XCTAssertEqual($0 as? HTTPParserError, .invalidChunkSize)
+        }
+        
+        XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
+    }
+
 }

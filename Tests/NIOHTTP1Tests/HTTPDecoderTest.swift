@@ -820,6 +820,39 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
     }
     
+    func testForwardMultipleContinuesThenResponse() {
+        let eventCounter = EventCounterHandler()
+        let decoder = HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informationalResponseStrategy: .forward)
+        let responseDecoder = ByteToMessageHandler(decoder)
+        let channel = EmbeddedChannel(handler: responseDecoder)
+        XCTAssertNoThrow(try channel.pipeline.addHandler(eventCounter).wait())
+
+        let requestHead: HTTPClientRequestPart = .head(.init(version: .http1_1, method: .POST, uri: "/"))
+        XCTAssertNoThrow(try channel.writeOutbound(requestHead))
+        var buffer = channel.allocator.buffer(capacity: 128)
+        let continueCount = (3...10).randomElement()!
+        for _ in 0..<continueCount {
+            buffer.writeString("HTTP/1.1 100 continue\r\n\r\n")
+            XCTAssertNoThrow(try channel.writeInbound(buffer))
+            XCTAssertEqual(try channel.readInbound(as: HTTPClientResponsePart.self), .head(.init(version: .http1_1, status: .continue)))
+            buffer.clear()
+        }
+        
+        buffer.writeString("HTTP/1.1 200 ok\r\ncontent-length: 0\r\n\r\n")
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertEqual(try channel.readInbound(as: HTTPClientResponsePart.self), .head(.init(version: .http1_1, status: .ok, headers: ["content-length": "0"])))
+        XCTAssertEqual(.end(nil), try channel.readInbound(as: HTTPClientResponsePart.self))
+        XCTAssertNil(try channel.readInbound(as: HTTPClientResponsePart.self))
+        XCTAssertNotNil(try channel.readOutbound())
+        
+        XCTAssertEqual(1, eventCounter.writeCalls)
+        XCTAssertEqual(1, eventCounter.flushCalls)
+        XCTAssertEqual(continueCount + 2, eventCounter.channelReadCalls) // continues + .head & .end
+        XCTAssertEqual(continueCount + 1, eventCounter.channelReadCompleteCalls)
+        XCTAssertEqual(["channelReadComplete", "channelRead", "write", "flush"], eventCounter.allTriggeredEvents())
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+    
     func testDropContinueThanForwardResponse() {
         let eventCounter = EventCounterHandler()
         let decoder = HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informationalResponseStrategy: .drop)

@@ -55,6 +55,7 @@ extension HTTPDecoderTest {
                 ("testAppropriateErrorWhenReceivingUnsolicitedResponseDoesNotRecover", testAppropriateErrorWhenReceivingUnsolicitedResponseDoesNotRecover),
                 ("testOneRequestTwoResponses", testOneRequestTwoResponses),
                 ("testForwardContinueThenResponse", testForwardContinueThenResponse),
+                ("testForwardMultipleContinuesThenResponse", testForwardMultipleContinuesThenResponse),
                 ("testDropContinueThanForwardResponse", testDropContinueThanForwardResponse),
                 ("testRefusesRequestSmugglingAttempt", testRefusesRequestSmugglingAttempt),
                 ("testTrimsTrailingOWS", testTrimsTrailingOWS),
