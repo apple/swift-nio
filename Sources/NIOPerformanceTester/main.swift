@@ -814,3 +814,9 @@ try measureAndPrint(desc: "byte_to_message_decoder_decode_many_small",
 measureAndPrint(desc: "generate_10k_random_request_keys") {
     return (0 ..< 10_000).reduce(into: 0, { result, _ in result &+= NIOWebSocketClientUpgrader.randomRequestKey().count })
 }
+
+try measureAndPrint(desc: "bytebuffer_rw_10_uint32s",
+                    benchmark: ByteBufferReadWriteMultipleIntegersBenchmark<UInt32>(iterations: 1_000_000, numberOfInts: 10))
+
+try measureAndPrint(desc: "bytebuffer_multi_rw_10_uint32s",
+                    benchmark: ByteBufferMultiReadWriteTenIntegersBenchmark<UInt32>(iterations: 1_000_000))
