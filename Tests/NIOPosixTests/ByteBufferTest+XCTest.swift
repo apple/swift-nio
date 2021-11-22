@@ -221,6 +221,9 @@ extension ByteBufferTest {
                 ("testHashableConformance", testHashableConformance),
                 ("testInvalidHash", testInvalidHash),
                 ("testValidHashFromSlice", testValidHashFromSlice),
+                ("testWritingMultipleIntegers", testWritingMultipleIntegers),
+                ("testReadAndWriteMultipleIntegers", testReadAndWriteMultipleIntegers),
+                ("testAllByteBufferMultiByteVersions", testAllByteBufferMultiByteVersions),
            ]
    }
 }
