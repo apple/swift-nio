@@ -440,10 +440,16 @@ public struct ByteBuffer {
 
     /// The number of bytes writable until `ByteBuffer` will need to grow its underlying storage which will likely
     /// trigger a copy of the bytes.
-    @inlinable public var writableBytes: Int { return Int(_toCapacity(self._slice.count) - self._writerIndex) }
+    @inlinable public var writableBytes: Int {
+        // this cannot over/overflow because both values are positive and writerIndex<=slice.count, checked on ingestion
+        return Int(_toCapacity(self._slice.count) &- self._writerIndex)
+    }
 
     /// The number of bytes readable (`readableBytes` = `writerIndex` - `readerIndex`).
-    @inlinable public var readableBytes: Int { return Int(self._writerIndex - self._readerIndex) }
+    @inlinable public var readableBytes: Int {
+        // this cannot under/overflow because both are positive and writer >= reader (checked on ingestion of bytes).
+        return Int(self._writerIndex &- self._readerIndex)
+    }
 
     /// The current capacity of the storage of this `ByteBuffer`, this is not constant and does _not_ signify the number
     /// of bytes that have been written to this `ByteBuffer`.
@@ -518,8 +524,9 @@ public struct ByteBuffer {
     @inlinable
     public mutating func withUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
         self._copyStorageAndRebaseIfNeeded()
-        let readerIndex = self.readerIndex
-        return try body(.init(fastRebase: self._slicedStorageBuffer[readerIndex ..< readerIndex + self.readableBytes]))
+        // this is safe because we always know that readerIndex >= writerIndex
+        let range = Range<Int>(uncheckedBounds: (lower: self.readerIndex, upper: self.writerIndex))
+        return try body(.init(fastRebase: self._slicedStorageBuffer[range]))
     }
 
     /// Yields the bytes currently writable (`bytesWritable` = `capacity` - `writerIndex`). Before reading those bytes you must first
@@ -592,8 +599,9 @@ public struct ByteBuffer {
     /// - returns: The value returned by `body`.
     @inlinable
     public func withUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
-        let readerIndex = self.readerIndex
-        return try body(.init(fastRebase: self._slicedStorageBuffer[readerIndex ..< readerIndex + self.readableBytes]))
+        // This is safe, writerIndex >= readerIndex
+        let range = Range<Int>(uncheckedBounds: (lower: self.readerIndex, upper: self.writerIndex))
+        return try body(.init(fastRebase: self._slicedStorageBuffer[range]))
     }
 
     /// Yields a buffer pointer containing this `ByteBuffer`'s readable bytes. You may hold a pointer to those bytes
@@ -610,9 +618,9 @@ public struct ByteBuffer {
     @inlinable
     public func withUnsafeReadableBytesWithStorageManagement<T>(_ body: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
-        let readerIndex = self.readerIndex
-        return try body(.init(fastRebase: self._slicedStorageBuffer[readerIndex ..< readerIndex + self.readableBytes]),
-                        storageReference)
+        // This is safe, writerIndex >= readerIndex
+        let range = Range<Int>(uncheckedBounds: (lower: self.readerIndex, upper: self.writerIndex))
+        return try body(.init(fastRebase: self._slicedStorageBuffer[range]), storageReference)
     }
 
     /// See `withUnsafeReadableBytesWithStorageManagement` and `withVeryUnsafeBytes`.
@@ -1009,10 +1017,20 @@ extension ByteBuffer {
 extension ByteBuffer {
     @inlinable
     func rangeWithinReadableBytes(index: Int, length: Int) -> Range<Int>? {
-        let indexFromReaderIndex = index - self.readerIndex
-        guard indexFromReaderIndex >= 0 && length >= 0 && indexFromReaderIndex <= self.readableBytes - length else {
+        guard index >= self.readerIndex && length >= 0 else {
             return nil
         }
-        return indexFromReaderIndex ..< (indexFromReaderIndex+length)
+
+        // both these &-s are safe, they can't underflow because both left & right side are >= 0 (and index >= readerIndex)
+        let indexFromReaderIndex = index &- self.readerIndex
+        assert(indexFromReaderIndex >= 0)
+        guard indexFromReaderIndex <= self.readableBytes &- length else {
+            return nil
+        }
+
+        let upperBound = indexFromReaderIndex &+ length // safe, can't overflow, we checked it above.
+
+        // uncheckedBounds is safe because `length` is >= 0, so the lower bound will always be lower/equal to upper
+        return Range<Int>(uncheckedBounds: (lower: indexFromReaderIndex, upper: upperBound))
     }
 }
