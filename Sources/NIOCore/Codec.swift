@@ -63,7 +63,7 @@ extension ByteToMessageDecoderError {
 /// ### Implementing ByteToMessageDecoder
 ///
 /// A type that implements `ByteToMessageDecoder` may implement two methods: decode and decodeLast. Implementations
-/// must implement decode: if they do not implement decodeLast, a default implementation will be used that 
+/// must implement decode: if they do not implement decodeLast, a default implementation will be used that
 /// simply calls decode.
 ///
 /// `decode` is the main decoding method, and is the one that will be called most often. `decode` is invoked
@@ -238,7 +238,7 @@ extension ByteToMessageDecoder {
     public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
         return NIOAny(value)
     }
-    
+
     public mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws  -> DecodingState {
         while try self.decode(context: context, buffer: &buffer) == .continue {}
         return .needMoreData
@@ -703,20 +703,7 @@ extension ByteToMessageHandler: ChannelOutboundHandler, _ChannelOutboundHandler 
     }
 }
 
-/// A protocol for straightforward encoders which encode custom messages to `ByteBuffer`s.
-/// To add a `MessageToByteEncoder` to a `ChannelPipeline`, use
-/// `channel.pipeline.addHandler(MessageToByteHandler(myEncoder)`.
-public protocol MessageToByteEncoder {
-    associatedtype OutboundIn
-
-    /// Called once there is data to encode.
-    ///
-    /// - parameters:
-    ///     - data: The data to encode into a `ByteBuffer`.
-    ///     - out: The `ByteBuffer` into which we want to encode.
-    func encode(data: OutboundIn, out: inout ByteBuffer) throws
-}
-
+// MARK: ByteToMessageHandler: RemovableChannelHandler
 extension ByteToMessageHandler: RemovableChannelHandler {
     public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
         precondition(self.removalState == .notBeingRemoved)
@@ -740,11 +727,76 @@ extension ByteToMessageHandler: RemovableChannelHandler {
     }
 }
 
+/// A protocol for straightforward encoders which encode custom messages to `ByteBuffer`s.
+/// To add a `MessageToByteEncoder` to a `ChannelPipeline`, use
+/// `channel.pipeline.addHandler(MessageToByteHandler(myEncoder)`.
+public protocol MessageToByteEncoder {
+    associatedtype OutboundIn
+
+    /// Called once there is data to encode.
+    ///
+    /// - parameters:
+    ///     - data: The data to encode into a `ByteBuffer`.
+    ///     - out: The `ByteBuffer` into which we want to encode.
+    func encode(data: OutboundIn, out: inout ByteBuffer) throws
+
+    /// Called once there is data to encode and  the `MessageToByteDecoder` is about to leave
+    ///
+    /// - parameters:
+    ///     - data: The data to encode into a `ByteBuffer`.
+    ///     - out: The `ByteBuffer` into which we want to encode.
+    func encodeLast(data: OutboundIn, out: inout ByteBuffer) throws
+
+    /// Called once this `MessageToByteEncoder` is removed from the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    mutating func encoderRemoved(context: ChannelHandlerContext)
+
+    /// Called when this `MessageToByteEncoder` is added to the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - context: The `ChannelHandlerContext` which this `MessageToByteEncoder` belongs to.
+    mutating func encoderAdded(context: ChannelHandlerContext)
+}
+
+extension MessageToByteEncoder {
+
+    public mutating func encoderRemoved(context: ChannelHandlerContext) {
+    }
+
+    public mutating func encoderAdded(context: ChannelHandlerContext) {
+    }
+
+    public func encodeLast(data: OutboundIn, out: inout ByteBuffer) throws {
+        try self.encode(data: data, out: &out)
+    }
+}
+
 /// A handler which turns a given `MessageToByteEncoder` into a `ChannelOutboundHandler` that can then be added to a
 /// `ChannelPipeline`.
 public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelOutboundHandler {
     public typealias OutboundOut = ByteBuffer
     public typealias OutboundIn = Encoder.OutboundIn
+
+    private enum RemovalState {
+        /// Not added to any `ChannelPipeline` yet.
+        case notAddedToPipeline
+
+        /// No one tried to remove this handler.
+        case notBeingRemoved
+
+        /// The user-triggered removal has been started but isn't complete yet. This state will not be entered if the
+        /// removal is triggered by Channel teardown.
+        case removalStarted
+
+        /// The user-triggered removal is complete. This state will not be entered if the removal is triggered by
+        /// Channel teardown.
+        case removalCompleted
+
+        /// This handler has been removed from the pipeline.
+        case handlerRemovedCalled
+    }
 
     private enum State {
         case notInChannelYet
@@ -760,10 +812,29 @@ public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelO
                 return false
             }
         }
+
+        var isOperational: Bool {
+            switch self {
+            case .operational:
+                return true
+            case .notInChannelYet, .error, .done:
+                return false
+            }
+        }
+
+        var isDone: Bool {
+            switch self {
+            case .done:
+                return true
+            case .operational, .error, .notInChannelYet:
+                return false
+            }
+        }
     }
 
+    private var removalState: RemovalState = .notAddedToPipeline
     private var state: State = .notInChannelYet
-    private let encoder: Encoder
+    private var encoder: Encoder
     private var buffer: ByteBuffer? = nil
 
     public init(_ encoder: Encoder) {
@@ -773,15 +844,27 @@ public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelO
 
 extension MessageToByteHandler {
     public func handlerAdded(context: ChannelHandlerContext) {
+        guard self.removalState == .notAddedToPipeline else {
+            preconditionFailure("\(self) got readded to a ChannelPipeline but ByteToMessageHandler is single-use")
+        }
+        self.removalState = .notBeingRemoved
         precondition(self.state.readyToBeAddedToChannel,
                      "illegal state when adding to Channel: \(self.state)")
         self.state = .operational
         self.buffer = context.channel.allocator.buffer(capacity: 256)
+        self.encoder.encoderAdded(context: context)
     }
 
     public func handlerRemoved(context: ChannelHandlerContext) {
+        self.removalState = .handlerRemovedCalled
+        if !self.state.isDone {
+            self.state = .done
+        }
+
         self.state = .done
         self.buffer = nil
+
+        self.encoder.encoderRemoved(context: context)
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
@@ -803,12 +886,39 @@ extension MessageToByteHandler {
 
         do {
             self.buffer!.clear()
-            try self.encoder.encode(data: data, out: &self.buffer!)
+            if removalState == .removalStarted {
+                try self.encoder.encodeLast(data: data, out: &self.buffer!)
+            } else {
+                try self.encoder.encode(data: data, out: &self.buffer!)
+            }
             context.write(self.wrapOutboundOut(self.buffer!), promise: promise)
         } catch {
             self.state = .error(error)
             promise?.fail(error)
             context.fireErrorCaught(error)
+        }
+    }
+}
+
+// MARK: ByteToMessageHandler: RemovableChannelHandler
+extension MessageToByteHandler: RemovableChannelHandler {
+    public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+        precondition(self.removalState == .notBeingRemoved)
+        self.removalState = .removalStarted
+        context.eventLoop.execute {
+            assert(!self.state.isOperational, "illegal state: \(self.state)")
+            switch self.removalState {
+            case .removalStarted:
+                self.removalState = .removalCompleted
+            case .handlerRemovedCalled:
+                // if we're here, then the channel has also been torn down between the start and the completion of
+                // the user-triggered removal. That's okay.
+                ()
+            default:
+                assertionFailure("illegal removal state: \(self.removalState)")
+            }
+            // this is necessary as it'll complete the promise.
+            context.leavePipeline(removalToken: removalToken)
         }
     }
 }
