@@ -204,6 +204,48 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("Hello", string)
     }
     
+    func testNullTerminatedString() {
+        let writtenHello = buf.writeNullTerminatedString("Hello")
+        XCTAssertEqual(writtenHello, 6)
+        XCTAssertEqual(buf.readableBytes, 6)
+        
+        let writtenEmpty = buf.writeNullTerminatedString("")
+        XCTAssertEqual(writtenEmpty, 1)
+        XCTAssertEqual(buf.readableBytes, 7)
+        
+        let writtenFoo = buf.writeNullTerminatedString("foo")
+        XCTAssertEqual(writtenFoo, 4)
+        XCTAssertEqual(buf.readableBytes, 11)
+        
+        XCTAssertEqual(buf.getNullTerminatedString(at: 0), "Hello")
+        XCTAssertEqual(buf.getNullTerminatedString(at: 6), "")
+        XCTAssertEqual(buf.getNullTerminatedString(at: 7), "foo")
+        
+        XCTAssertEqual(buf.readNullTerminatedString(), "Hello")
+        XCTAssertEqual(buf.readerIndex, 6)
+        
+        XCTAssertEqual(buf.readNullTerminatedString(), "")
+        XCTAssertEqual(buf.readerIndex, 7)
+        
+        XCTAssertEqual(buf.readNullTerminatedString(), "foo")
+        XCTAssertEqual(buf.readerIndex, 11)
+    }
+    
+    func testReadNullTerminatedStringWithoutNullTermination() {
+        buf.writeString("Hello")
+        XCTAssertNil(buf.readNullTerminatedString())
+    }
+    
+    func testGetNullTerminatedStringOutOfRangeTests() {
+        buf.writeNullTerminatedString("Hello")
+        XCTAssertNil(buf.getNullTerminatedString(at: 100))
+        buf.moveReaderIndex(forwardBy: 6)
+        XCTAssertNil(buf.readNullTerminatedString())
+        XCTAssertNil(buf.getNullTerminatedString(at: 0))
+        buf.writeInteger(UInt8(0))
+        XCTAssertEqual(buf.readNullTerminatedString(), "")
+    }
+    
     func testWriteSubstring() {
         var text = "Hello"
         let written = buf.writeSubstring(text[...])
