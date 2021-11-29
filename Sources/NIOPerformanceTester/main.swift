@@ -820,3 +820,17 @@ try measureAndPrint(desc: "bytebuffer_rw_10_uint32s",
 
 try measureAndPrint(desc: "bytebuffer_multi_rw_10_uint32s",
                     benchmark: ByteBufferMultiReadWriteTenIntegersBenchmark<UInt32>(iterations: 1_000_000))
+
+try measureAndPrint(desc: "lock_1_thread_10M_ops",
+                    benchmark: LockBenchmark(numberOfThreads: 1, lockOperationsPerThread: 10_000_000))
+
+try measureAndPrint(desc: "lock_2_threads_10M_ops",
+                    benchmark: LockBenchmark(numberOfThreads: 2, lockOperationsPerThread: 5_000_000))
+
+try measureAndPrint(desc: "lock_4_threads_10M_ops",
+                    benchmark: LockBenchmark(numberOfThreads: 4, lockOperationsPerThread: 2_500_000))
+
+try measureAndPrint(desc: "lock_8_threads_10M_ops",
+                    benchmark: LockBenchmark(numberOfThreads: 8, lockOperationsPerThread: 1_250_000))
+
+
