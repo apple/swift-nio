@@ -25,13 +25,13 @@ enum EventLoopFutureTestError : Error {
 class EventLoopFutureTest : XCTestCase {
     func testFutureFulfilledIfHasResult() throws {
         let eventLoop = EmbeddedEventLoop()
-        let f = EventLoopFuture(eventLoop: eventLoop, value: 5, file: #file, line: #line)
+        let f = EventLoopFuture(eventLoop: eventLoop, value: 5)
         XCTAssertTrue(f.isFulfilled)
     }
 
     func testFutureFulfilledIfHasError() throws {
         let eventLoop = EmbeddedEventLoop()
-        let f = EventLoopFuture<Void>(eventLoop: eventLoop, error: EventLoopFutureTestError.example, file: #file, line: #line)
+        let f = EventLoopFuture<Void>(eventLoop: eventLoop, error: EventLoopFutureTestError.example)
         XCTAssertTrue(f.isFulfilled)
     }
 

@@ -1440,7 +1440,7 @@ fileprivate class EventLoopWithPreSucceededFuture: EventLoop {
     }
 
     init() {
-        self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+        self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: ())
     }
 
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {

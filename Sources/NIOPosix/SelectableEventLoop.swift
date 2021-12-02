@@ -118,7 +118,7 @@ internal final class SelectableEventLoop: EventLoop {
     internal func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
         precondition(_isDebugAssertConfiguration())
         return self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore.removeValue(forKey: futureIdentifier)!
+            self._promiseCreationStore.removeValue(forKey: futureIdentifier)
         }
     }
 

@@ -312,7 +312,7 @@ public protocol EventLoop: EventLoopGroup {
 extension EventLoop {
     /// Default implementation of `makeSucceededVoidFuture`: Return a fresh future (which will allocate).
     public func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
-        return EventLoopFuture(eventLoop: self, value: (), file: "n/a", line: 0)
+        return EventLoopFuture(eventLoop: self, value: ())
     }
 
     public func _preconditionSafeToWait(file: StaticString, line: UInt) {
@@ -637,8 +637,8 @@ extension EventLoop {
     ///     - error: the `Error` that is used by the `EventLoopFuture`.
     /// - returns: a failed `EventLoopFuture`.
     @inlinable
-    public func makeFailedFuture<T>(_ error: Error, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<T> {
-        return EventLoopFuture<T>(eventLoop: self, error: error, file: file, line: line)
+    public func makeFailedFuture<T>(_ error: Error) -> EventLoopFuture<T> {
+        return EventLoopFuture<T>(eventLoop: self, error: error)
     }
 
     /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `NIOThread`.
@@ -647,12 +647,12 @@ extension EventLoop {
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
     @inlinable
-    public func makeSucceededFuture<Success>(_ value: Success, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Success> {
+    public func makeSucceededFuture<Success>(_ value: Success) -> EventLoopFuture<Success> {
         if Success.self == Void.self {
             // The as! will always succeed because we previously checked that Success.self == Void.self.
             return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
         } else {
-            return EventLoopFuture<Success>(eventLoop: self, value: value, file: file, line: line)
+            return EventLoopFuture<Success>(eventLoop: self, value: value)
         }
     }
 
