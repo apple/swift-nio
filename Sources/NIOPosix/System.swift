@@ -124,12 +124,21 @@ private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_m
 #endif
 
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
+    #if os(iOS)
+    switch code {
+    case EFAULT:
+        return true
+    default:
+        return false
+    }
+    #else
     switch code {
     case EFAULT, EBADF:
         return true
     default:
         return false
     }
+    #endif
 }
 
 private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
