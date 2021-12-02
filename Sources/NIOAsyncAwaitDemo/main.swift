@@ -18,7 +18,7 @@ import Dispatch
 
 #if compiler(>=5.5) && canImport(_Concurrency)
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
     let channel = try await ClientBootstrap(group: group).connect(host: host, port: port).get()
     try await channel.pipeline.addHTTPClientHandlers().get()
@@ -27,7 +27,7 @@ func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throw
     return try await AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull>(channel).start()
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 func main() async {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     do {
