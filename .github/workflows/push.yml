@@ -8,7 +8,7 @@ on:
 
 jobs:
   macos:
-    name: macOS ${{ matrix.configuration }}
+    name: macOS ${{ matrix.configuration }} ${{ matrix.xcode }}
     runs-on: macos-11
     strategy:
       fail-fast: false
