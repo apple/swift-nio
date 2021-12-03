@@ -101,6 +101,10 @@ internal final class SelectableEventLoop: EventLoop {
     // Used for UDP control messages.
     private(set) var controlMessageStorage: UnsafeControlMessageStorage
 
+    // The `_parentGroup` will always be set unless this is a thread takeover or we shut down.
+    @usableFromInline
+    internal var _parentGroup: Optional<MultiThreadedEventLoopGroup>
+
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
 
     private let promiseCreationStoreLock = Lock()
@@ -165,7 +169,11 @@ Further information:
         }
     }
 
-    internal init(thread: NIOThread, selector: NIOPosix.Selector<NIORegistration>, canBeShutdownIndividually: Bool) {
+    internal init(thread: NIOThread,
+                  parentGroup: MultiThreadedEventLoopGroup?, /* nil iff thread take-over */
+                  selector: NIOPosix.Selector<NIORegistration>,
+                  canBeShutdownIndividually: Bool) {
+        self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
@@ -524,6 +532,7 @@ Further information:
     internal func initiateClose(queue: DispatchQueue, completionHandler: @escaping (Result<Void, Error>) -> Void) {
         func doClose() {
             self.assertInEventLoop()
+            self._parentGroup = nil // break the cycle
             // There should only ever be one call into this function so we need to be up and running, ...
             assert(self.internalState == .runningAndAcceptingNewRegistrations)
             self.internalState = .runningButNotAcceptingNewRegistrations
@@ -629,6 +638,12 @@ Further information:
             return voidPromise.futureResult
         }
         return voidFuture
+    }
+
+    @inlinable
+    internal func parentGroupCallableFromThisEventLoopOnly() -> MultiThreadedEventLoopGroup? {
+        self.assertInEventLoop()
+        return self._parentGroup
     }
 }
 

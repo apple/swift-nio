@@ -84,6 +84,9 @@ extension EventLoopTest {
                 ("testSelectableEventLoopHasPreSucceededFuturesOnlyOnTheEventLoop", testSelectableEventLoopHasPreSucceededFuturesOnlyOnTheEventLoop),
                 ("testMakeCompletedFuture", testMakeCompletedFuture),
                 ("testMakeCompletedVoidFuture", testMakeCompletedVoidFuture),
+                ("testEventLoopGroupsWithoutAnyImplementationAreValid", testEventLoopGroupsWithoutAnyImplementationAreValid),
+                ("testCallingAnyOnAnMTELGThatIsNotSelfDoesNotReturnItself", testCallingAnyOnAnMTELGThatIsNotSelfDoesNotReturnItself),
+                ("testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation", testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation),
            ]
    }
 }

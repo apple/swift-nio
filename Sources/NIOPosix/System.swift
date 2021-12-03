@@ -129,7 +129,7 @@ private func isUnacceptableErrno(_ code: Int32) -> Bool {
     // is valid but the accepted one is not. The right solution here is to perform a check for
     // SO_ISDEFUNCT when we see this happen, but we haven't yet invested the time to do that.
     // In the meantime, we just tolerate EBADF on iOS.
-    #if os(iOS)
+    #if os(iOS) || os(watchOS) || os(tvOS)
     switch code {
     case EFAULT:
         return true
@@ -146,9 +146,24 @@ private func isUnacceptableErrno(_ code: Int32) -> Bool {
     #endif
 }
 
+private func isUnacceptableErrnoOnClose(_ code: Int32) -> Bool {
+    // We treat close() differently to all other FDs: we still want to catch EBADF here.
+    switch code {
+    case EFAULT, EBADF:
+        return true
+    default:
+        return false
+    }
+}
+
 private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+}
+
+private func preconditionIsNotUnacceptableErrnoOnClose(err: CInt, where function: String) -> Void {
+    // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
+    precondition(!isUnacceptableErrnoOnClose(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
 }
 
 /*
@@ -266,7 +281,7 @@ internal enum Posix {
             //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
             //     - https://lwn.net/Articles/576478/
             if err != EINTR {
-                preconditionIsNotUnacceptableErrno(err: err, where: #function)
+                preconditionIsNotUnacceptableErrnoOnClose(err: err, where: #function)
                 throw IOError(errnoCode: err, reason: "close")
             }
         }
