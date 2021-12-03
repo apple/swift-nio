@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) && compiler(>=5.5) && !compiler(>=5.5.2)
+#if compiler(>=5.5) && !compiler(>=5.5.2)
 
 extension EventLoopFuture {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.

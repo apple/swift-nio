@@ -16,7 +16,7 @@ import NIOPosix
 import NIOHTTP1
 import Dispatch
 
-#if canImport(_Concurrency) && compiler(>=5.5.2) || (!os(macOS) && compiler(>=5.5))
+#if canImport(_Concurrency) && compiler(>=5.5.2)
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
@@ -77,5 +77,5 @@ if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {
 }
 dg.wait()
 #else
-print("ERROR: The NIO Async Await Demo supports Swift >= 5.5.2 (>= Xcode 13.2) on macOS 10.15 and newer, or Swift >= 5.5 on other platforms.")
+print("ERROR: The NIO Async Await Demo supports Swift >= 5.5.2.")
 #endif
