@@ -1398,6 +1398,60 @@ public final class EventLoopTest : XCTestCase {
         XCTAssert(future1 === future2)
         XCTAssert(future2 === future3)
     }
+
+    func testEventLoopGroupsWithoutAnyImplementationAreValid() {
+        let group = EventLoopGroupOf3WithoutAnAnyImplementation()
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let submitDone = group.any().submit {
+            let el1 = group.any()
+            let el2 = group.any()
+            XCTAssert(el1 !== el2) // our group doesn't support `any()` and will fall back to `next()`.
+        }
+        group.makeIterator().forEach { el in
+            (el as! EmbeddedEventLoop).run()
+        }
+        XCTAssertNoThrow(try submitDone.wait())
+    }
+
+    func testCallingAnyOnAnMTELGThatIsNotSelfDoesNotReturnItself() {
+        let group1 = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        let group2 = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            XCTAssertNoThrow(try group2.syncShutdownGracefully())
+            XCTAssertNoThrow(try group1.syncShutdownGracefully())
+        }
+
+        XCTAssertNoThrow(try group1.any().submit {
+            let el1_1 = group1.any()
+            let el1_2 = group1.any()
+            let el2_1 = group2.any()
+            let el2_2 = group2.any()
+
+            XCTAssert(el1_1 === el1_2) // MTELG _does_ supprt `any()` so all these `EventLoop`s should be the same.
+            XCTAssert(el2_1 !== el2_2) // MTELG _does_ supprt `any()` but this `any()` call went across `group`s.
+            XCTAssert(el1_1 !== el2_1) // different groups...
+            XCTAssert(el1_1 !== el2_2) // different groups...
+
+            XCTAssert(el1_1 === MultiThreadedEventLoopGroup.currentEventLoop!)
+        }.wait())
+    }
+
+    func testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        XCTAssertNoThrow(try group.any().submit {
+            let el1 = group.any()
+            let el2 = group.any()
+            XCTAssert(el1 === el2) // MTELG _does_ supprt `any()` so all these `EventLoop`s should be the same.
+            XCTAssert(el1 === MultiThreadedEventLoopGroup.currentEventLoop!)
+        }.wait())
+    }
 }
 
 fileprivate class EventLoopWithPreSucceededFuture: EventLoop {
@@ -1486,5 +1540,35 @@ fileprivate class EventLoopWithoutPreSucceededFuture: EventLoop {
         queue.async {
             callback(nil)
         }
+    }
+}
+
+final class EventLoopGroupOf3WithoutAnAnyImplementation: EventLoopGroup {
+    private let eventloops = [EmbeddedEventLoop(), EmbeddedEventLoop(), EmbeddedEventLoop()]
+    private let nextID = NIOAtomic<UInt64>.makeAtomic(value: 0)
+
+    func next() -> EventLoop {
+        return self.eventloops[Int(self.nextID.add(1) % UInt64(self.eventloops.count))]
+    }
+
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        let g = DispatchGroup()
+
+
+        self.eventloops.forEach { el in
+            g.enter()
+            el.shutdownGracefully(queue: queue) { error in
+                XCTAssertNil(error)
+                g.leave()
+            }
+        }
+
+        g.notify(queue: queue) {
+            callback(nil)
+        }
+    }
+
+    func makeIterator() -> EventLoopIterator {
+        return .init(self.eventloops)
     }
 }
