@@ -15,7 +15,7 @@
 import NIOCore
 import NIOHTTP1
 
-#if compiler(>=5.5) && canImport(_Concurrency)
+#if canImport(_Concurrency) && compiler(>=5.5.2) || (!os(macOS) && compiler(>=5.5))
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 struct AsyncChannelIO<Request, Response> {
     let channel: Channel
