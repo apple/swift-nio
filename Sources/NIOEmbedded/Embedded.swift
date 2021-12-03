@@ -206,8 +206,7 @@ public final class EmbeddedEventLoop: EventLoop {
 
     public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
         precondition(_isDebugAssertConfiguration())
-        // The force-unwrap is safe: we know that we must have tracked all the futures.
-        return self._promiseCreationStore.removeValue(forKey: futureIdentifier)!
+        return self._promiseCreationStore.removeValue(forKey: futureIdentifier)
     }
 
     public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {

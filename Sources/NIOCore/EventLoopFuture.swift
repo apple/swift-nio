@@ -156,6 +156,13 @@ public struct EventLoopPromise<Value> {
     /// `EventLoopPromise` is completed.
     public let futureResult: EventLoopFuture<Value>
 
+    @inlinable
+    internal static func makeUnleakablePromise(eventLoop: EventLoop, line: UInt = #line) -> EventLoopPromise<Value> {
+        return EventLoopPromise<Value>(eventLoop: eventLoop,
+                                       file: "BUG in SwiftNIO (please report), unleakable promise leaked.",
+                                       line: line)
+    }
+
     /// General initializer
     ///
     /// - parameters:
@@ -386,9 +393,9 @@ public final class EventLoopFuture<Value> {
     internal var _callbacks: CallbackList
 
     @inlinable
-    internal init(_eventLoop eventLoop: EventLoop, value: Result<Value, Error>?, file: StaticString, line: UInt) {
+    internal init(_eventLoop eventLoop: EventLoop, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
-        self._value = value
+        self._value = nil
         self._callbacks = .init()
 
         debugOnly {
@@ -396,21 +403,20 @@ public final class EventLoopFuture<Value> {
         }
     }
 
-    @inlinable
-    internal convenience init(_eventLoop eventLoop: EventLoop, file: StaticString, line: UInt) {
-        self.init(_eventLoop: eventLoop, value: nil, file: file, line: line)
-    }
-
     /// A EventLoopFuture<Value> that has already succeeded
     @inlinable
-    internal convenience init(eventLoop: EventLoop, value: Value, file: StaticString, line: UInt) {
-        self.init(_eventLoop: eventLoop, value: .success(value), file: file, line: line)
+    internal init(eventLoop: EventLoop, value: Value) {
+        self.eventLoop = eventLoop
+        self._value = .success(value)
+        self._callbacks = .init()
     }
 
     /// A EventLoopFuture<Value> that has already failed
     @inlinable
-    internal convenience init(eventLoop: EventLoop, error: Error, file: StaticString, line: UInt) {
-        self.init(_eventLoop: eventLoop, value: .failure(error), file: file, line: line)
+    internal init(eventLoop: EventLoop, error: Error) {
+        self.eventLoop = eventLoop
+        self._value = .failure(error)
+        self._callbacks = .init()
     }
 
     deinit {
@@ -464,8 +470,8 @@ extension EventLoopFuture {
     ///         a new `EventLoopFuture`.
     /// - returns: A future that will receive the eventual value.
     @inlinable
-    public func flatMap<NewValue>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Value) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
-        let next = EventLoopPromise<NewValue>(eventLoop: eventLoop, file: file, line: line)
+    public func flatMap<NewValue>(_ callback: @escaping (Value) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
+        let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete {
             switch self._value! {
             case .success(let t):
@@ -500,10 +506,8 @@ extension EventLoopFuture {
     ///         a new value lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the eventual value.
     @inlinable
-    public func flatMapThrowing<NewValue>(file: StaticString = #file,
-                                line: UInt = #line,
-                                _ callback: @escaping (Value) throws -> NewValue) -> EventLoopFuture<NewValue> {
-        let next = EventLoopPromise<NewValue>(eventLoop: eventLoop, file: file, line: line)
+    public func flatMapThrowing<NewValue>(_ callback: @escaping (Value) throws -> NewValue) -> EventLoopFuture<NewValue> {
+        let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete {
             switch self._value! {
             case .success(let t):
@@ -535,8 +539,8 @@ extension EventLoopFuture {
     ///         a new value lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the eventual value or a rethrown error.
     @inlinable
-    public func flatMapErrorThrowing(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) throws -> Value) -> EventLoopFuture<Value> {
-        let next = EventLoopPromise<Value>(eventLoop: eventLoop, file: file, line: line)
+    public func flatMapErrorThrowing(_ callback: @escaping (Error) throws -> Value) -> EventLoopFuture<Value> {
+        let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete {
             switch self._value! {
             case .success(let t):
@@ -580,12 +584,12 @@ extension EventLoopFuture {
     ///         a new value lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the eventual value.
     @inlinable
-    public func map<NewValue>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Value) -> (NewValue)) -> EventLoopFuture<NewValue> {
+    public func map<NewValue>(_ callback: @escaping (Value) -> (NewValue)) -> EventLoopFuture<NewValue> {
         if NewValue.self == Value.self && NewValue.self == Void.self {
             self.whenSuccess(callback as! (Value) -> Void)
             return self as! EventLoopFuture<NewValue>
         } else {
-            let next = EventLoopPromise<NewValue>(eventLoop: eventLoop, file: file, line: line)
+            let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
             self._whenComplete {
                 return next._setValue(value: self._value!.map(callback))
             }
@@ -605,8 +609,8 @@ extension EventLoopFuture {
     ///         a new value lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the recovered value.
     @inlinable
-    public func flatMapError(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> EventLoopFuture<Value>) -> EventLoopFuture<Value> {
-        let next = EventLoopPromise<Value>(eventLoop: eventLoop, file: file, line: line)
+    public func flatMapError(_ callback: @escaping (Error) -> EventLoopFuture<Value>) -> EventLoopFuture<Value> {
+        let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete {
             switch self._value! {
             case .success(let t):
@@ -640,10 +644,8 @@ extension EventLoopFuture {
     ///         a new value or error lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the eventual value.
     @inlinable
-    public func flatMapResult<NewValue, SomeError: Error>(file: StaticString = #file,
-                                                          line: UInt = #line,
-                                                          _ body: @escaping (Value) -> Result<NewValue, SomeError>) -> EventLoopFuture<NewValue> {
-        let next = EventLoopPromise<NewValue>(eventLoop: eventLoop, file: file, line: line)
+    public func flatMapResult<NewValue, SomeError: Error>(_ body: @escaping (Value) -> Result<NewValue, SomeError>) -> EventLoopFuture<NewValue> {
+        let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete {
             switch self._value! {
             case .success(let value):
@@ -673,8 +675,8 @@ extension EventLoopFuture {
     ///         a new value lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the recovered value.
     @inlinable
-    public func recover(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> Value) -> EventLoopFuture<Value> {
-        let next = EventLoopPromise<Value>(eventLoop: eventLoop, file: file, line: line)
+    public func recover(_ callback: @escaping (Error) -> Value) -> EventLoopFuture<Value> {
+        let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete {
             switch self._value! {
             case .success(let t):
@@ -786,10 +788,8 @@ extension EventLoopFuture {
     /// of results. If either one fails, the combined `EventLoopFuture` will fail with
     /// the first error encountered.
     @inlinable
-    public func and<OtherValue>(_ other: EventLoopFuture<OtherValue>,
-                                file: StaticString = #file,
-                                line: UInt = #line) -> EventLoopFuture<(Value, OtherValue)> {
-        let promise = EventLoopPromise<(Value, OtherValue)>(eventLoop: eventLoop, file: file, line: line)
+    public func and<OtherValue>(_ other: EventLoopFuture<OtherValue>) -> EventLoopFuture<(Value, OtherValue)> {
+        let promise = EventLoopPromise<(Value, OtherValue)>.makeUnleakablePromise(eventLoop: self.eventLoop)
         var tvalue: Value?
         var uvalue: OtherValue?
 
@@ -830,10 +830,8 @@ extension EventLoopFuture {
     /// Return a new EventLoopFuture that contains this "and" another value.
     /// This is just syntactic sugar for `future.and(loop.makeSucceedFuture(value))`.
     @inlinable
-    public func and<OtherValue>(value: OtherValue,
-                                file: StaticString = #file,
-                                line: UInt = #line) -> EventLoopFuture<(Value, OtherValue)> {
-        return and(EventLoopFuture<OtherValue>(eventLoop: self.eventLoop, value: value, file: file, line: line))
+    public func and<OtherValue>(value: OtherValue) -> EventLoopFuture<(Value, OtherValue)> {
+        return self.and(EventLoopFuture<OtherValue>(eventLoop: self.eventLoop, value: value))
     }
 }
 
