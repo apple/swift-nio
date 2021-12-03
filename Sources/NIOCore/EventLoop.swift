@@ -678,6 +678,13 @@ extension EventLoop {
         return self
     }
 
+    /// An `EventLoop` forms a singular `EventLoopGroup`, returning itself as 'any' `EventLoop`.
+    ///
+    /// - returns: Itself, because an `EventLoop` forms a singular `EventLoopGroup`.
+    public func any() -> EventLoop {
+        return self
+    }
+
     /// Close this `EventLoop`.
     public func close() throws {
         // Do nothing
@@ -777,11 +784,41 @@ extension EventLoop {
 
 /// Provides an endless stream of `EventLoop`s to use.
 public protocol EventLoopGroup: AnyObject {
-    /// Returns the next `EventLoop` to use.
+    /// Returns the next `EventLoop` to use, this is useful for load balancing.
     ///
     /// The algorithm that is used to select the next `EventLoop` is specific to each `EventLoopGroup`. A common choice
     /// is _round robin_.
+    ///
+    /// Please note that you should only be using `next()` if you want to load balance over all `EventLoop`s of the
+    /// `EventLoopGroup`. If the actual `EventLoop` does not matter much, `any()` should be preferred because it can
+    /// try to return you the _current_ `EventLoop` which usually is faster because the number of thread switches can
+    /// be reduced.
+    ///
+    /// The rule of thumb is: If you are trying to do _load balancing_, use `next()`. If you just want to create a new
+    /// future or kick off some operation, use `any()`.
+
     func next() -> EventLoop
+
+    /// Returns any `EventLoop` from the `EventLoopGroup`, a common choice is the current `EventLoop`.
+    ///
+    /// - warning: You cannot rely on the returned `EventLoop` being the current one, not all `EventLoopGroup`s support
+    ///            choosing the current one. Use this method only if you are truly happy with _any_ `EventLoop` of this
+    ///            `EventLoopGroup` instance.
+    ///
+    /// - note: You will only receive the current `EventLoop` here iff the current `EventLoop` belongs to the
+    ///         `EventLoopGroup` you call `any()` on.
+    ///
+    /// This method is useful having access to an `EventLoopGroup` without the knowledge of which `EventLoop` would be
+    /// the best one to select to create a new `EventLoopFuture`. This commonly happens in libraries where the user
+    /// cannot indicate what `EventLoop` they would like their futures on.
+    ///
+    /// Typically, it is faster to kick off a new operation on the _current_ `EventLoop` because that minimised thread
+    /// switches. Hence, if situations where you don't need precise knowledge of what `EventLoop` some code is running
+    /// on, use `any()` to indicate this.
+    ///
+    /// The rule of thumb is: If you are trying to do _load balancing_, use `next()`. If you just want to create a new
+    /// future or kick off some operation, use `any()`.
+    func any() -> EventLoop
 
     /// Shuts down the eventloop gracefully. This function is clearly an outlier in that it uses a completion
     /// callback instead of an EventLoopFuture. The reason for that is that NIO's EventLoopFutures will call back on an event loop.
@@ -799,6 +836,14 @@ public protocol EventLoopGroup: AnyObject {
     /// This method is a debug hook that can be used to override the behaviour of `syncShutdownGracefully`
     /// when called. By default it does nothing.
     func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt)
+}
+
+extension EventLoopGroup {
+    /// The default implementation of `any()` just returns the `next()` EventLoop but it's highly recommended to
+    /// override this and return the current `EventLoop` if possible.
+    public func any() -> EventLoop {
+        return self.next()
+    }
 }
 
 extension EventLoopGroup {
