@@ -124,12 +124,26 @@ private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_m
 #endif
 
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
+    // On iOS, EBADF is a possible result when a file descriptor has been reaped in the background.
+    // In particular, it's possible to get EBADF from accept(), where the underlying accept() FD
+    // is valid but the accepted one is not. The right solution here is to perform a check for
+    // SO_ISDEFUNCT when we see this happen, but we haven't yet invested the time to do that.
+    // In the meantime, we just tolerate EBADF on iOS.
+    #if os(iOS)
+    switch code {
+    case EFAULT:
+        return true
+    default:
+        return false
+    }
+    #else
     switch code {
     case EFAULT, EBADF:
         return true
     default:
         return false
     }
+    #endif
 }
 
 private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
