@@ -66,7 +66,7 @@ internal final class SelectableEventLoop: EventLoop {
     internal var scheduledTaskCounter = NIOAtomic.makeAtomic(value: UInt64(0))
     @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
-    private var tasksCopy = ContiguousArray<() -> Void>()
+    private var tasksCopy = ContiguousArray<(ScheduledTask.Action) -> Void>()
     @usableFromInline
     internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
         didSet {
@@ -263,14 +263,17 @@ Further information:
     @inlinable
     internal func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise()
-        let task = ScheduledTask(id: self.scheduledTaskCounter.add(1), {
-            do {
-                promise.succeed(try task())
-            } catch let err {
-                promise.fail(err)
+        let task = ScheduledTask(id: self.scheduledTaskCounter.add(1), { action in
+            switch action {
+            case .run:
+                do {
+                    promise.succeed(try task())
+                } catch {
+                    promise.fail(error)
+                }
+            case .fail(let error):
+                promise.fail(error)
             }
-        }, { error in
-            promise.fail(error)
         }, deadline)
 
         let taskId = task.id
@@ -304,9 +307,7 @@ Further information:
     @inlinable
     internal func execute(_ task: @escaping () -> Void) {
         // nothing we can do if we fail enqueuing here.
-        try? self._schedule0(ScheduledTask(id: self.scheduledTaskCounter.add(1), task, { error in
-            // do nothing
-        }, .now()))
+        try? self._schedule0(ScheduledTask(id: self.scheduledTaskCounter.add(1), { _ in task() }, .now()))
     }
 
     /// Add the `ScheduledTask` to be executed.
@@ -431,7 +432,7 @@ Further information:
 
                 // Fail all the scheduled tasks.
                 for task in scheduledTasksCopy {
-                    task.fail(EventLoopError.shutdown)
+                    task.task(.fail(EventLoopError.shutdown))
                 }
                 iterations += 1
             } while scheduledTasksCopy.count > 0 && iterations < 1000
@@ -517,7 +518,7 @@ Further information:
                 for task in self.tasksCopy {
                     /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
                     withAutoReleasePool {
-                        task()
+                        task(.run)
                     }
                 }
                 // Drop everything (but keep the capacity) so we can fill it again on the next iteration.

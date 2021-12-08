@@ -340,17 +340,20 @@ extension MultiThreadedEventLoopGroup: CustomStringConvertible {
 @usableFromInline
 internal struct ScheduledTask {
     @usableFromInline
+    enum Action {
+        case run
+        case fail(Error)
+    }
+    @usableFromInline
     let id: UInt64
-    let task: () -> Void
-    private let failFn: (Error) ->()
+    let task: (Action) -> Void
     @usableFromInline
     internal let _readyTime: NIODeadline
 
     @usableFromInline
-    init(id: UInt64, _ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
+    init(id: UInt64, _ task: @escaping (Action) -> Void, _ time: NIODeadline) {
         self.id = id
         self.task = task
-        self.failFn = failFn
         self._readyTime = time
     }
 
@@ -359,10 +362,6 @@ internal struct ScheduledTask {
             return .nanoseconds(0)
         }
         return _readyTime - t
-    }
-
-    func fail(_ error: Error) {
-        failFn(error)
     }
 }
 
