@@ -20,14 +20,20 @@ import NIOCore
 private struct EmbeddedScheduledTask {
     let id: UInt64
     let task: () -> Void
+    let failFn: (Error) -> ()
     let readyTime: NIODeadline
     let insertOrder: UInt64
 
-    init(id: UInt64, readyTime: NIODeadline, insertOrder: UInt64, task: @escaping () -> Void) {
+    init(id: UInt64, readyTime: NIODeadline, insertOrder: UInt64, task: @escaping () -> Void, _ failFn: @escaping (Error) -> ()) {
         self.id = id
         self.readyTime = readyTime
         self.insertOrder = insertOrder
         self.task = task
+        self.failFn = failFn
+    }
+
+    func fail(_ error: Error) {
+        self.failFn(error)
     }
 }
 
@@ -103,7 +109,7 @@ public final class EmbeddedEventLoop: EventLoop {
             } catch let err {
                 promise.fail(err)
             }
-        })
+        }, promise.fail)
 
         let taskId = task.id
         let scheduled = Scheduled(promise: promise, cancellationTask: {
@@ -180,10 +186,12 @@ public final class EmbeddedEventLoop: EventLoop {
             self._now = nextTask.readyTime
             nextTask.task()
         }
-        // Just drop all the remaining scheduled tasks. Despite having run all the tasks that were
+        // Just fail all the remaining scheduled tasks. Despite having run all the tasks that were
         // scheduled when we entered the method this may still contain tasks as running the tasks
         // may have enqueued more tasks.
-        while self.scheduledTasks.pop() != nil {}
+        while let task = self.scheduledTasks.pop() {
+            task.fail(EventLoopError.shutdown)
+        }
     }
 
     /// - see: `EventLoop.close`
