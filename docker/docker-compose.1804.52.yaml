@@ -18,22 +18,22 @@ services:
   test:
     image: swift-nio:18.04-5.2
     environment:
-      - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
-      - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
+      - MAX_ALLOCS_ALLOWED_1000_addHandlers=46050
+      - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=39050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlercontext=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlername=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlertype=9050
-      - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet=32050
+      - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet=28050
       - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet_sync=0
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=9050
-      - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=37
+      - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=36
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=30450
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=4050
-      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=171050
       - MAX_ALLOCS_ALLOWED_1000_udp_reqs=12050
+      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=164050
       - MAX_ALLOCS_ALLOWED_1000_udpbootstraps=2050
-      - MAX_ALLOCS_ALLOWED_1000_udpconnections=96050
-      - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=455000
+      - MAX_ALLOCS_ALLOWED_1000_udpconnections=90500
+      - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=433000
       - MAX_ALLOCS_ALLOWED_bytebuffer_lots_of_rw=2050
       - MAX_ALLOCS_ALLOWED_creating_10000_headers=0
       - MAX_ALLOCS_ALLOWED_decode_1000_ws_frames=2050
@@ -50,12 +50,12 @@ services:
       - MAX_ALLOCS_ALLOWED_modifying_1000_circular_buffer_elements=0
       - MAX_ALLOCS_ALLOWED_modifying_byte_buffer_view=2050
       - MAX_ALLOCS_ALLOWED_ping_pong_1000_reqs_1_conn=4400
-      - MAX_ALLOCS_ALLOWED_read_10000_chunks_from_file=200050
-      - MAX_ALLOCS_ALLOWED_schedule_10000_tasks=90150
-      - MAX_ALLOCS_ALLOWED_schedule_and_run_10000_tasks=100050
-      - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=20150
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=12200
-      - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=188050
+      - MAX_ALLOCS_ALLOWED_read_10000_chunks_from_file=190050
+      - MAX_ALLOCS_ALLOWED_schedule_10000_tasks=80150
+      - MAX_ALLOCS_ALLOWED_schedule_and_run_10000_tasks=90050
+      - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=10150
+      - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=177050
       # - SANITIZER_ARG=--sanitize=thread broken on 18.04
       - INTEGRATION_TESTS_ARG=-f tests_0[013-9]
 

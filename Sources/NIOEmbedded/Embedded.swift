@@ -16,12 +16,15 @@ import Dispatch
 import _NIODataStructures
 import NIOCore
 
-private final class EmbeddedScheduledTask {
+
+private struct EmbeddedScheduledTask {
+    let id: UInt64
     let task: () -> Void
     let readyTime: NIODeadline
     let insertOrder: UInt64
 
-    init(readyTime: NIODeadline, insertOrder: UInt64, task: @escaping () -> Void) {
+    init(id: UInt64, readyTime: NIODeadline, insertOrder: UInt64, task: @escaping () -> Void) {
+        self.id = id
         self.readyTime = readyTime
         self.insertOrder = insertOrder
         self.task = task
@@ -38,7 +41,7 @@ extension EmbeddedScheduledTask: Comparable {
     }
 
     static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
-        return lhs === rhs
+        return lhs.id == rhs.id
     }
 }
 
@@ -63,6 +66,7 @@ public final class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     /* private but tests */ internal var _now: NIODeadline = .uptimeNanoseconds(0)
 
+    private var scheduledTaskCounter: UInt64 = 0
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>()
 
     /// Keep track of where promises are allocated to ensure we can identify their source if they leak.
@@ -92,16 +96,18 @@ public final class EmbeddedEventLoop: EventLoop {
     @discardableResult
     public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
-        let task = EmbeddedScheduledTask(readyTime: deadline, insertOrder: self.nextTaskNumber()) {
+        self.scheduledTaskCounter += 1
+        let task = EmbeddedScheduledTask(id: self.scheduledTaskCounter, readyTime: deadline, insertOrder: self.nextTaskNumber(), task: {
             do {
                 promise.succeed(try task())
             } catch let err {
                 promise.fail(err)
             }
-        }
+        })
 
+        let taskId = task.id
         let scheduled = Scheduled(promise: promise, cancellationTask: {
-            self.scheduledTasks.remove(task)
+            self.scheduledTasks.removeFirst { $0.id == taskId }
         })
         scheduledTasks.push(task)
         return scheduled

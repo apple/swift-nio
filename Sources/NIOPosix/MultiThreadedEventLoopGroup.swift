@@ -338,14 +338,17 @@ extension MultiThreadedEventLoopGroup: CustomStringConvertible {
 }
 
 @usableFromInline
-internal final class ScheduledTask {
+internal struct ScheduledTask {
+    @usableFromInline
+    let id: UInt64
     let task: () -> Void
     private let failFn: (Error) ->()
     @usableFromInline
     internal let _readyTime: NIODeadline
 
     @usableFromInline
-    init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
+    init(id: UInt64, _ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
+        self.id = id
         self.task = task
         self.failFn = failFn
         self._readyTime = time
@@ -378,6 +381,6 @@ extension ScheduledTask: Comparable {
 
     @usableFromInline
     static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
-        return lhs === rhs
+        return lhs.id == rhs.id
     }
 }
