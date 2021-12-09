@@ -16,6 +16,7 @@
 #if os(Linux)
 
 import CNIOLinux
+import NIOCore
 
 @usableFromInline
 enum CQEEventType: UInt8 {
@@ -274,14 +275,12 @@ final internal class URing {
         let userbitPattern = UInt64(URingUserData(registrationID: registrationID,
                                                   fileDescriptor: fileDescriptor,
                                                   eventType:CQEEventType.pollDelete))
-        let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(bitPattern))
-        let userBitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(userbitPattern))
 
-        _debugPrint("io_uring_prep_poll_remove fileDescriptor[\(fileDescriptor)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))] submitNow[\(submitNow)] link[\(link)]")
+        _debugPrint("io_uring_prep_poll_remove fileDescriptor[\(fileDescriptor)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing: bitPattern))] userBitpatternAsPointer[\(String(describing: userbitPattern))] submitNow[\(submitNow)] link[\(link)]")
 
         self.withSQE { sqe in
-            CNIOLinux.io_uring_prep_poll_remove(sqe, bitpatternAsPointer)
-            CNIOLinux.io_uring_sqe_set_data(sqe, userBitpatternAsPointer) // must be done after prep_poll_add, otherwise zeroed out.
+            CNIOLinux.io_uring_prep_poll_remove(sqe, .init(userData: bitPattern))
+            CNIOLinux.io_uring_sqe_set_data(sqe, .init(userData: userbitPattern)) // must be done after prep_poll_add, otherwise zeroed out.
 
             if link {
                 CNIOLinux_io_uring_set_link_flag(sqe)
@@ -302,10 +301,8 @@ final internal class URing {
         let userbitPattern = UInt64(URingUserData(registrationID: registrationID,
                                               fileDescriptor: fileDescriptor,
                                               eventType:CQEEventType.pollModify))
-        let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(bitpattern))
-        let userBitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(userbitPattern))
 
-        _debugPrint("io_uring_poll_update fileDescriptor[\(fileDescriptor)] oldPollmask[\(oldPollmask)] newPollmask[\(newPollmask)]  userBitpatternAsPointer[\(String(describing:userBitpatternAsPointer))]")
+        _debugPrint("io_uring_poll_update fileDescriptor[\(fileDescriptor)] oldPollmask[\(oldPollmask)] newPollmask[\(newPollmask)]  userBitpatternAsPointer[\(String(describing: userbitPattern))]")
 
         self.withSQE { sqe in
             // "Documentation" for multishot polls and updates here:
@@ -315,8 +312,8 @@ final internal class URing {
                 flags |= IORING_POLL_ADD_MULTI       // ask for multiple updates
             }
 
-            CNIOLinux.io_uring_prep_poll_update(sqe, bitpatternAsPointer, bitpatternAsPointer, newPollmask, flags)
-            CNIOLinux.io_uring_sqe_set_data(sqe, userBitpatternAsPointer)
+            CNIOLinux.io_uring_prep_poll_update(sqe, .init(userData: bitpattern), .init(userData: bitpattern), newPollmask, flags)
+            CNIOLinux.io_uring_sqe_set_data(sqe, .init(userData: userbitPattern))
         }
         
         if submitNow {
@@ -526,6 +523,25 @@ final internal class URing {
         let error = CNIOLinux.io_uring_wait_cqe_timeout(&ring, cqes, &ts)
 
         return try self._io_uring_wait_cqe_shared(events: events, error: error, multishot:multishot)
+    }
+}
+
+// MARK: Conversion helpers
+// Newer versions of liburing changed one of the method arguments from UnsafeMutableRawPointer
+// to UInt64 in order to allow 32-bit systems to work properly. We therefore need a way to
+// transform a UInt64 into either of these types. These two initializers help us do that in
+// a way that supports both the old and new format in source.
+extension UInt64 {
+    init(userData: UInt64) {
+        self = userData
+    }
+}
+
+extension Optional where Wrapped == UnsafeMutableRawPointer {
+    init(userData: UInt64) {
+        // This will crash on 32-bit systems: that's fine, our liburing support
+        // never worked on 32-bit for older libraries anyway.
+        self = .init(bitPattern: UInt(userData))
     }
 }
 
