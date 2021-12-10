@@ -17,4 +17,16 @@ _[anything to help us reproducing the issue]_
 
 _[the SwiftNIO tag/commit hash]_
 
-### Swift & OS version (output of `swift --version && uname -a`)
+### System & version information
+
+Please provide at the very least your operating system and Swift version
+information.
+
+Ideally, run
+
+```
+scripts/nio-diagnose -o nio-diagnose.md PID_OF_YOUR_NIO_PROGRAM
+```
+
+and attach (or paste) the resulting file `nio-diagnose.md` into this bug report
+or send it to the SwiftNIO maintainers privately.
