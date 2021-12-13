@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2019-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -16,22 +16,27 @@ import Dispatch
 import NIOPosix
 
 func run(identifier: String) {
-    measure(identifier: identifier) {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let loop = group.next()
-        let counter = try! loop.submit { () -> Int in
-            var counter: Int = 0
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    let loop = group.next()
+    let dg = DispatchGroup()
 
+    measure(identifier: identifier) {
+        var counter = 0
+
+        try! loop.submit {
             for _ in 0..<10000 {
-                loop.scheduleTask(in: .hours(1)) {
+                dg.enter()
+
+                loop.scheduleTask(in: .nanoseconds(0)) {
                     counter &+= 1
+                    dg.leave()
                 }
             }
-
-            return counter
         }.wait()
+        dg.wait()
 
-        try! group.syncShutdownGracefully()
         return counter
     }
+
+    try! group.syncShutdownGracefully()
 }

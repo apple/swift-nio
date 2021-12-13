@@ -833,4 +833,11 @@ try measureAndPrint(desc: "lock_4_threads_10M_ops",
 try measureAndPrint(desc: "lock_8_threads_10M_ops",
                     benchmark: LockBenchmark(numberOfThreads: 8, lockOperationsPerThread: 1_250_000))
 
+try measureAndPrint(desc: "schedule_10000_tasks",
+                    benchmark: SchedulingBenchmark())
 
+try measureAndPrint(desc: "schedule_and_run_10000_tasks",
+                    benchmark: SchedulingAndRunningBenchmark())
+
+try measureAndPrint(desc: "execute_10000",
+                    benchmark: ExecuteBenchmark())
