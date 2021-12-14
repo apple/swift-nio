@@ -63,6 +63,8 @@ internal final class SelectableEventLoop: EventLoop {
     // This may only be read/written while holding the _tasksLock.
     internal var _pendingTaskPop = false
     @usableFromInline
+    internal var scheduledTaskCounter = NIOAtomic.makeAtomic(value: UInt64(0))
+    @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
     private var tasksCopy = ContiguousArray<() -> Void>()
     @usableFromInline
@@ -261,7 +263,7 @@ Further information:
     @inlinable
     internal func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise()
-        let task = ScheduledTask({
+        let task = ScheduledTask(id: self.scheduledTaskCounter.add(1), {
             do {
                 promise.succeed(try task())
             } catch let err {
@@ -271,9 +273,10 @@ Further information:
             promise.fail(error)
         }, deadline)
 
+        let taskId = task.id
         let scheduled = Scheduled(promise: promise, cancellationTask: {
             self._tasksLock.withLockVoid {
-                self._scheduledTasks.remove(task)
+                self._scheduledTasks.removeFirst(where: { $0.id == taskId })
             }
             // We don't need to wake up the selector here, the scheduled task will never be picked up. Waking up the
             // selector would mean that we may be able to recalculate the shutdown to a later date. The cost of not
@@ -301,7 +304,7 @@ Further information:
     @inlinable
     internal func execute(_ task: @escaping () -> Void) {
         // nothing we can do if we fail enqueuing here.
-        try? self._schedule0(ScheduledTask(task, { error in
+        try? self._schedule0(ScheduledTask(id: self.scheduledTaskCounter.add(1), task, { error in
             // do nothing
         }, .now()))
     }

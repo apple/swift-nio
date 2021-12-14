@@ -20,7 +20,7 @@ import Glibc
 @usableFromInline
 internal struct Heap<Element: Comparable> {
     @usableFromInline
-    internal private(set) var storage: ContiguousArray<Element>
+    internal private(set) var storage: Array<Element>
 
     @inlinable
     internal init() {
@@ -114,6 +114,19 @@ internal struct Heap<Element: Comparable> {
         } else {
             return false
         }
+    }
+    
+    @inlinable
+    internal mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows {
+        guard self.storage.count > 0 else {
+            return
+        }
+
+        guard let index = try self.storage.firstIndex(where: shouldBeRemoved) else {
+            return
+        }
+        
+        self._remove(index: index)
     }
 
     @discardableResult
