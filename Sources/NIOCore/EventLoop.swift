@@ -21,18 +21,12 @@ import Dispatch
 /// will be notified once the execution is complete.
 public struct Scheduled<T> {
     /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
+    /* private but usableFromInline */ @usableFromInline let _cancellationTask: (() -> Void)
 
     @inlinable
     public init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> Void) {
         self._promise = promise
-        promise.futureResult.whenFailure { error in
-            guard let err = error as? EventLoopError else {
-                return
-            }
-            if err == .cancelled {
-                cancellationTask()
-            }
-        }
+        self._cancellationTask = cancellationTask
     }
 
     /// Try to cancel the execution of the scheduled task.
@@ -42,6 +36,7 @@ public struct Scheduled<T> {
     @inlinable
     public func cancel() {
         self._promise.fail(EventLoopError.cancelled)
+        self._cancellationTask()
     }
 
     /// Returns the `EventLoopFuture` which will be notified once the execution of the scheduled task completes.
