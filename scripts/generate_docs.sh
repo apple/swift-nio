@@ -18,8 +18,7 @@ set -ex
 my_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 root_path="$my_path/.."
 version=$(git describe --abbrev=0 --tags || echo "0.0.0")
-modules=( NIO NIOHTTP1 NIOFoundationCompat NIOWebSocket NIOConcurrencyHelpers NIOTLS NIOTestUtils )
-
+modules=( NIOCore NIOEmbedded NIOPosix NIOHTTP1 NIOFoundationCompat NIOWebSocket NIOConcurrencyHelpers NIOTLS NIOTestUtils )
 
 if [[ "$(uname -s)" == "Linux" ]]; then
   # build code if required
@@ -27,7 +26,8 @@ if [[ "$(uname -s)" == "Linux" ]]; then
     swift build
   fi
   # setup source-kitten if required
-  source_kitten_source_path="$root_path/.SourceKitten"
+  mkdir -p "$root_path/.build/sourcekitten"
+  source_kitten_source_path="$root_path/.build/sourcekitten/source"
   if [[ ! -d "$source_kitten_source_path" ]]; then
     git clone https://github.com/jpsim/SourceKitten.git "$source_kitten_source_path"
   fi
@@ -37,10 +37,9 @@ if [[ "$(uname -s)" == "Linux" ]]; then
     cd "$source_kitten_source_path" && swift build && cd "$root_path"
   fi
   # generate
-  mkdir -p "$root_path/.build/sourcekitten"
   for module in "${modules[@]}"; do
     if [[ ! -f "$root_path/.build/sourcekitten/$module.json" ]]; then
-      "$source_kitten_path/sourcekitten" doc --module-name $module > "$root_path/.build/sourcekitten/$module.json"
+      "$source_kitten_path/sourcekitten" doc --spm --module-name $module > "$root_path/.build/sourcekitten/$module.json"
     fi
   done
 fi
@@ -83,7 +82,7 @@ cat >> "$module_switcher" <<"EOF"
 
 For the API documentation of the other repositories in the SwiftNIO family check:
 
-- [`swift-nio` API docs](https://apple.github.io/swift-nio/docs/current/NIO/index.html)
+- [`swift-nio` API docs](https://apple.github.io/swift-nio/docs/current/NIOCore/index.html)
 - [`swift-nio-ssl` API docs](https://apple.github.io/swift-nio-ssl/docs/current/NIOSSL/index.html)
 - [`swift-nio-http2` API docs](https://apple.github.io/swift-nio-http2/docs/current/NIOHTTP2/index.html)
 - [`swift-nio-extras` API docs](https://apple.github.io/swift-nio-extras/docs/current/NIOExtras/index.html)
@@ -111,7 +110,7 @@ if [[ $PUSH == true ]]; then
   cp -r "$jazzy_dir/docs/$version" docs/
   cp -r "docs/$version" docs/current
   git add --all docs
-  echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current/NIO/index.html" /></head></html>' > index.html
+  echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current/NIOCore/index.html" /></head></html>' > index.html
   git add index.html
   touch .nojekyll
   git add .nojekyll
