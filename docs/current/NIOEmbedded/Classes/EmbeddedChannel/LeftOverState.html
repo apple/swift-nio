@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>LeftOverState Enumeration Reference</title>
+    <link rel="stylesheet" type="text/css" href="../../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../../js/jquery.min.js" defer></script>
+    <script src="../../js/jazzy.js" defer></script>
+    
+    <script src="../../js/lunr.min.js" defer></script>
+    <script src="../../js/typeahead.jquery.js" defer></script>
+    <script src="../../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Enum/LeftOverState" class="dashAnchor"></a>
+
+    <a title="LeftOverState Enumeration Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../../index.html">
+          NIOEmbedded 2.36.0 Docs
+        </a>
+         (93% documented)
+      </p>
+    
+      <div class="header-col--secondary">
+        <form role="search" action="../../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </div>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../../img/gh.png" alt="GitHub"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple.github.io%2Fswift-nio%2Fdocs%2F2.36.0%2FNIOEmbedded%2Fdocsets%2FNIOEmbedded.xml">
+            <img class="header-icon" src="../../img/dash.png" alt="Dash"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../../index.html">NIOEmbedded Reference</a>
+      <img class="carat" src="../../img/carat.png" alt=""/>
+      LeftOverState Enumeration Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../../Classes/EmbeddedChannel.html">EmbeddedChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../../Classes/EmbeddedChannel/LeftOverState.html">– LeftOverState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../../Classes/EmbeddedChannel/BufferState.html">– BufferState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../../Classes/EmbeddedChannel/WrongTypeError.html">– WrongTypeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../../Classes/EmbeddedChannel/SynchronousOptions.html">– SynchronousOptions</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../../Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content top-matter">
+            <h1>LeftOverState</h1>
+              <div class="declaration">
+                <div class="language">
+                  
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">enum</span> <span class="kt">LeftOverState</span></code></pre>
+
+                </div>
+              </div>
+            <p><code>LeftOverState</code> represents any left-over inbound, outbound, and pending outbound events that hit the
+<code><a href="../../Classes/EmbeddedChannel.html">EmbeddedChannel</a></code> and were not consumed when <code>finish</code> was called on the <code><a href="../../Classes/EmbeddedChannel.html">EmbeddedChannel</a></code>.</p>
+
+<p><code><a href="../../Classes/EmbeddedChannel.html">EmbeddedChannel</a></code> is most useful in testing and usually in unit tests, you want to consume all inbound and
+outbound data to verify they are what you expect. Therefore, when you <code>finish</code> an <code><a href="../../Classes/EmbeddedChannel.html">EmbeddedChannel</a></code> it will
+return if it&rsquo;s either <code>.clean</code> (no left overs) or that it has <code>.leftOvers</code>.</p>
+
+              <div class="slightly-smaller">
+                <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOEmbedded/Embedded.swift#L403-L425">Show on GitHub</a>
+              </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:11NIOEmbedded15EmbeddedChannelC13LeftOverStateO5cleanyA2EmF"></a>
+                    <a name="//apple_ref/swift/Element/clean" class="dashAnchor"></a>
+                    <a class="token" href="#/s:11NIOEmbedded15EmbeddedChannelC13LeftOverStateO5cleanyA2EmF">clean</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The <code><a href="../../Classes/EmbeddedChannel.html">EmbeddedChannel</a></code> is clean, ie. no inbound, outbound, or pending outbound data left on <code>finish</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="k">case</span> <span class="n">clean</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOEmbedded/Embedded.swift#L405">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:11NIOEmbedded15EmbeddedChannelC13LeftOverStateO9leftOversyAESay7NIOCore6NIOAnyVG_A2JtcAEmF"></a>
+                    <a name="//apple_ref/swift/Element/leftOvers(inbound:outbound:pendingOutbound:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:11NIOEmbedded15EmbeddedChannelC13LeftOverStateO9leftOversyAESay7NIOCore6NIOAnyVG_A2JtcAEmF">leftOvers(inbound:<wbr>outbound:<wbr>pendingOutbound:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The <code><a href="../../Classes/EmbeddedChannel.html">EmbeddedChannel</a></code> has inbound, outbound, or pending outbound data left on <code>finish</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="k">case</span> <span class="nf">leftOvers</span><span class="p">(</span><span class="nv">inbound</span><span class="p">:</span> <span class="p">[</span><span class="kt">NIOAny</span><span class="p">],</span> <span class="nv">outbound</span><span class="p">:</span> <span class="p">[</span><span class="kt">NIOAny</span><span class="p">],</span> <span class="nv">pendingOutbound</span><span class="p">:</span> <span class="p">[</span><span class="kt">NIOAny</span><span class="p">])</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOEmbedded/Embedded.swift#L408">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:11NIOEmbedded15EmbeddedChannelC13LeftOverStateO7isCleanSbvp"></a>
+                    <a name="//apple_ref/swift/Property/isClean" class="dashAnchor"></a>
+                    <a class="token" href="#/s:11NIOEmbedded15EmbeddedChannelC13LeftOverStateO7isCleanSbvp">isClean</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p><code>true</code> if the <code><a href="../../Classes/EmbeddedChannel.html">EmbeddedChannel</a></code> was <code><a href="../../Classes/EmbeddedChannel/LeftOverState.html#/s:11NIOEmbedded15EmbeddedChannelC13LeftOverStateO5cleanyA2EmF">clean</a></code> on <code>finish</code>, ie. there is no unconsumed inbound, outbound, or
+pending outbound data left on the <code>Channel</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">isClean</span><span class="p">:</span> <span class="kt">Bool</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOEmbedded/Embedded.swift#L412-L418">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:11NIOEmbedded15EmbeddedChannelC13LeftOverStateO03hasD5OversSbvp"></a>
+                    <a name="//apple_ref/swift/Property/hasLeftOvers" class="dashAnchor"></a>
+                    <a class="token" href="#/s:11NIOEmbedded15EmbeddedChannelC13LeftOverStateO03hasD5OversSbvp">hasLeftOvers</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p><code>true</code> if the <code><a href="../../Classes/EmbeddedChannel.html">EmbeddedChannel</a></code> if there was unconsumed inbound, outbound, or pending outbound data left
+on the <code>Channel</code> when it was <code>finish</code>ed.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">hasLeftOvers</span><span class="p">:</span> <span class="kt">Bool</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOEmbedded/Embedded.swift#L422-L424">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2021 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external noopener">SwiftNIO Team</a>. All rights reserved. (Last updated: 2021-12-16)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external noopener">jazzy ♪♫ v0.14.1</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external noopener">Realm</a> project.</p>
+    </section>
+  </body>
+</html>

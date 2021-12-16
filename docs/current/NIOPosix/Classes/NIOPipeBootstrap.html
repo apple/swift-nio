@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>NIOPipeBootstrap Class Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Class/NIOPipeBootstrap" class="dashAnchor"></a>
+
+    <a title="NIOPipeBootstrap Class Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIOPosix 2.36.0 Docs
+        </a>
+         (97% documented)
+      </p>
+    
+      <div class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </div>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png" alt="GitHub"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple.github.io%2Fswift-nio%2Fdocs%2F2.36.0%2FNIOPosix%2Fdocsets%2FNIOPosix.xml">
+            <img class="header-icon" src="../img/dash.png" alt="Dash"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIOPosix Reference</a>
+      <img class="carat" src="../img/carat.png" alt=""/>
+      NIOPipeBootstrap Class Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ClientBootstrap.html">ClientBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/DatagramBootstrap.html">DatagramBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOPipeBootstrap.html">NIOPipeBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool.html">NIOThreadPool</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool/WorkItemState.html">– WorkItemState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ServerBootstrap.html">ServerBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ThreadSpecificVariable.html">ThreadSpecificVariable</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/NIOThreadPoolError.html">NIOThreadPoolError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/NIOThreadPoolError.html#/s:8NIOPosix18NIOThreadPoolErrorO06ThreadC8InactiveV">– ThreadPoolInactive</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Selector.html">Selector</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Resolver.html">Resolver</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:8NIOPosix36NIOFailedToSetSocketNonBlockingErrorV">NIOFailedToSetSocketNonBlockingError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:8NIOPosix19NIOFcntlFailedErrorV">NIOFcntlFailedError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:8NIOPosix29UnixDomainSocketPathWrongTypeV">UnixDomainSocketPathWrongType</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/linger">linger</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content top-matter">
+            <h1>NIOPipeBootstrap</h1>
+              <div class="declaration">
+                <div class="language">
+                  
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">NIOPipeBootstrap</span></code></pre>
+
+                </div>
+              </div>
+            <p>A <code>NIOPipeBootstrap</code> is an easy way to bootstrap a <code>PipeChannel</code> which uses two (uni-directional) UNIX pipes
+and makes a <code>Channel</code> out of them.</p>
+
+<p>Example bootstrapping a <code>Channel</code> using <code>stdin</code> and <code>stdout</code>:</p>
+<pre class="highlight swift"><code><span class="k">let</span> <span class="nv">channel</span> <span class="o">=</span> <span class="k">try</span> <span class="kt">NIOPipeBootstrap</span><span class="p">(</span><span class="nv">group</span><span class="p">:</span> <span class="n">group</span><span class="p">)</span>
+                  <span class="o">.</span><span class="n">channelInitializer</span> <span class="p">{</span> <span class="n">channel</span> <span class="k">in</span>
+                      <span class="n">channel</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="nf">addHandler</span><span class="p">(</span><span class="kt">MyChannelHandler</span><span class="p">())</span>
+                  <span class="p">}</span>
+                  <span class="o">.</span><span class="nf">withPipes</span><span class="p">(</span><span class="nv">inputDescriptor</span><span class="p">:</span> <span class="kt">STDIN_FILENO</span><span class="p">,</span> <span class="nv">outputDescriptor</span><span class="p">:</span> <span class="kt">STDOUT_FILENO</span><span class="p">)</span>
+</code></pre>
+
+              <div class="slightly-smaller">
+                <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L964-L1125">Show on GitHub</a>
+              </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix16NIOPipeBootstrapC5groupAC7NIOCore14EventLoopGroup_p_tcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(group:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix16NIOPipeBootstrapC5groupAC7NIOCore14EventLoopGroup_p_tcfc">init(group:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Create a <code>NIOPipeBootstrap</code> on the <code>EventLoopGroup</code> <code>group</code>.</p>
+
+<p>The <code>EventLoopGroup</code> <code>group</code> must be compatible, otherwise the program will crash. <code>NIOPipeBootstrap</code> is
+compatible only with <code><a href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a></code> as well as the <code>EventLoop</code>s returned by
+<code>MultiThreadedEventLoopGroup.next</code>. See <code><a href="../Classes/NIOPipeBootstrap.html#/s:8NIOPosix16NIOPipeBootstrapC15validatingGroupACSg7NIOCore09EventLoopE0_p_tcfc">init(validatingGroup:)</a></code> for a fallible initializer for
+situations where it&rsquo;s impossible to tell ahead of time if the <code>EventLoopGroup</code>s are compatible or not.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">convenience</span> <span class="nf">init</span><span class="p">(</span><span class="nv">group</span><span class="p">:</span> <span class="kt">EventLoopGroup</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>group</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>EventLoopGroup</code> to use.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L979-L985">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix16NIOPipeBootstrapC15validatingGroupACSg7NIOCore09EventLoopE0_p_tcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(validatingGroup:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix16NIOPipeBootstrapC15validatingGroupACSg7NIOCore09EventLoopE0_p_tcfc">init(validatingGroup:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Create a <code>NIOPipeBootstrap</code> on the <code>EventLoopGroup</code> <code>group</code>, validating that <code>group</code> is compatible.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">?(</span><span class="n">validatingGroup</span> <span class="nv">group</span><span class="p">:</span> <span class="kt">EventLoopGroup</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>group</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>EventLoopGroup</code> to use.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L991-L999">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix16NIOPipeBootstrapC18channelInitializeryACXD7NIOCore15EventLoopFutureCyytGAE7Channel_pcF"></a>
+                    <a name="//apple_ref/swift/Method/channelInitializer(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix16NIOPipeBootstrapC18channelInitializeryACXD7NIOCore15EventLoopFutureCyytGAE7Channel_pcF">channelInitializer(_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Initialize the connected <code>PipeChannel</code> with <code>initializer</code>. The most common task in initializer is to add
+<code>ChannelHandler</code>s to the <code>ChannelPipeline</code>.</p>
+
+<p>The connected <code>Channel</code> will operate on <code>ByteBuffer</code> as inbound and outbound messages. Please note that
+<code>IOData.fileRegion</code> is <em>not</em> supported for <code>PipeChannel</code>s because <code>sendfile</code> only works on sockets.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">channelInitializer</span><span class="p">(</span><span class="n">_</span> <span class="nv">handler</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Channel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">Self</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>handler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A closure that initializes the provided <code>Channel</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L1009-L1012">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix16NIOPipeBootstrapC13channelOption_5valueACXDx_5ValueQzt7NIOCore07ChannelE0RzlF"></a>
+                    <a name="//apple_ref/swift/Method/channelOption(_:value:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix16NIOPipeBootstrapC13channelOption_5valueACXDx_5ValueQzt7NIOCore07ChannelE0RzlF">channelOption(_:<wbr>value:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Specifies a <code>ChannelOption</code> to be applied to the <code>PipeChannel</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">channelOption</span><span class="o">&lt;</span><span class="kt">Option</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">option</span><span class="p">:</span> <span class="kt">Option</span><span class="p">,</span> <span class="nv">value</span><span class="p">:</span> <span class="kt">Option</span><span class="o">.</span><span class="kt">Value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">Self</span> <span class="k">where</span> <span class="kt">Option</span> <span class="p">:</span> <span class="kt">ChannelOption</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>option</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The option to be applied.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>value</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The value for the option.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L1020-L1023">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix16NIOPipeBootstrapC25withInputOutputDescriptory7NIOCore15EventLoopFutureCyAE7Channel_pGs5Int32VF"></a>
+                    <a name="//apple_ref/swift/Method/withInputOutputDescriptor(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix16NIOPipeBootstrapC25withInputOutputDescriptory7NIOCore15EventLoopFutureCyAE7Channel_pGs5Int32VF">withInputOutputDescriptor(_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Create the <code>PipeChannel</code> with the provided file descriptor which is used for both input &amp; output.</p>
+
+<p>This method is useful for specialilsed use-cases where you want to use <code>NIOPipeBootstrap</code> for say a serial line.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>If this method returns a succeeded future, SwiftNIO will close <code>fileDescriptor</code> when the <code>Channel</code>
+    becomes inactive. You <em>must not</em> do any further operations with <code>fileDescriptor</code>, including <code>close</code>.
+    If this method returns a failed future, you still own the file descriptor and are responsible for
+    closing it.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">withInputOutputDescriptor</span><span class="p">(</span><span class="n">_</span> <span class="nv">fileDescriptor</span><span class="p">:</span> <span class="kt">CInt</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Channel</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>fileDescriptor</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <em>Unix file descriptor</em> for the input &amp; output.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>an <code>EventLoopFuture&lt;Channel&gt;</code> to deliver the <code>Channel</code>.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L1050-L1058">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix16NIOPipeBootstrapC9withPipes15inputDescriptor06outputG07NIOCore15EventLoopFutureCyAG7Channel_pGs5Int32V_AMtF"></a>
+                    <a name="//apple_ref/swift/Method/withPipes(inputDescriptor:outputDescriptor:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix16NIOPipeBootstrapC9withPipes15inputDescriptor06outputG07NIOCore15EventLoopFutureCyAG7Channel_pGs5Int32V_AMtF">withPipes(inputDescriptor:<wbr>outputDescriptor:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Create the <code>PipeChannel</code> with the provided input and output file descriptors.</p>
+
+<p>The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
+<code><a href="../Classes/ClientBootstrap.html#/s:8NIOPosix15ClientBootstrapC19withConnectedSocket10descriptor7NIOCore15EventLoopFutureCyAF7Channel_pGs5Int32V_tF">ClientBootstrap.withConnectedSocket(descriptor:)</a></code> if it&rsquo;s a socket or
+<code>NIOPipeBootstrap.withInputOutputDescriptor</code> if it is not a socket.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>If this method returns a succeeded future, SwiftNIO will close <code>inputDescriptor</code> and <code>outputDescriptor</code>
+    when the <code>Channel</code> becomes inactive. You <em>must not</em> do any further operations <code>inputDescriptor</code> or
+    <code>outputDescriptor</code>, including <code>close</code>.
+    If this method returns a failed future, you still own the file descriptors and are responsible for
+    closing them.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">withPipes</span><span class="p">(</span><span class="nv">inputDescriptor</span><span class="p">:</span> <span class="kt">CInt</span><span class="p">,</span> <span class="nv">outputDescriptor</span><span class="p">:</span> <span class="kt">CInt</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Channel</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>inputDescriptor</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <em>Unix file descriptor</em> for the input (ie. the read side).</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>outputDescriptor</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <em>Unix file descriptor</em> for the output (ie. the write side).</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>an <code>EventLoopFuture&lt;Channel&gt;</code> to deliver the <code>Channel</code>.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L1076-L1124">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2021 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external noopener">SwiftNIO Team</a>. All rights reserved. (Last updated: 2021-12-16)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external noopener">jazzy ♪♫ v0.14.1</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external noopener">Realm</a> project.</p>
+    </section>
+  </body>
+</html>

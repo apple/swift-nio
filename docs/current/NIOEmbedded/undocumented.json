@@ -1,0 +1,33 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOEmbedded/Embedded.swift",
+      "line": 465,
+      "symbol": "EmbeddedChannel.WrongTypeError.init(expected:actual:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOEmbedded/Embedded.swift",
+      "line": 610,
+      "symbol": "EmbeddedChannel.writeInbound(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOEmbedded/Embedded.swift",
+      "line": 628,
+      "symbol": "EmbeddedChannel.writeOutbound(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOEmbedded/Embedded.swift",
+      "line": 741,
+      "symbol": "EmbeddedChannel.SynchronousOptions",
+      "symbol_kind": "source.lang.swift.decl.struct",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}

@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>ClientBootstrap Class Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Class/ClientBootstrap" class="dashAnchor"></a>
+
+    <a title="ClientBootstrap Class Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIOPosix 2.36.0 Docs
+        </a>
+         (97% documented)
+      </p>
+    
+      <div class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </div>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png" alt="GitHub"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple.github.io%2Fswift-nio%2Fdocs%2F2.36.0%2FNIOPosix%2Fdocsets%2FNIOPosix.xml">
+            <img class="header-icon" src="../img/dash.png" alt="Dash"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIOPosix Reference</a>
+      <img class="carat" src="../img/carat.png" alt=""/>
+      ClientBootstrap Class Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ClientBootstrap.html">ClientBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/DatagramBootstrap.html">DatagramBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOPipeBootstrap.html">NIOPipeBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool.html">NIOThreadPool</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool/WorkItemState.html">– WorkItemState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ServerBootstrap.html">ServerBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ThreadSpecificVariable.html">ThreadSpecificVariable</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/NIOThreadPoolError.html">NIOThreadPoolError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/NIOThreadPoolError.html#/s:8NIOPosix18NIOThreadPoolErrorO06ThreadC8InactiveV">– ThreadPoolInactive</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Selector.html">Selector</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Resolver.html">Resolver</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:8NIOPosix36NIOFailedToSetSocketNonBlockingErrorV">NIOFailedToSetSocketNonBlockingError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:8NIOPosix19NIOFcntlFailedErrorV">NIOFcntlFailedError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:8NIOPosix29UnixDomainSocketPathWrongTypeV">UnixDomainSocketPathWrongType</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/linger">linger</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content top-matter">
+            <h1>ClientBootstrap</h1>
+              <div class="declaration">
+                <div class="language">
+                  
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">ClientBootstrap</span> <span class="p">:</span> <span class="kt">NIOClientTCPBootstrapProtocol</span></code></pre>
+
+                </div>
+              </div>
+            <p>A <code>ClientBootstrap</code> is an easy way to bootstrap a <code>SocketChannel</code> when creating network clients.</p>
+
+<p>Usually you re-use a <code>ClientBootstrap</code> once you set it up and called <code>connect</code> multiple times on it.
+This way you ensure that the same <code>EventLoop</code>s will be shared across all your connections.</p>
+
+<p>Example:</p>
+<pre class="highlight swift"><code>    <span class="k">let</span> <span class="nv">group</span> <span class="o">=</span> <span class="kt">MultiThreadedEventLoopGroup</span><span class="p">(</span><span class="nv">numberOfThreads</span><span class="p">:</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">defer</span> <span class="p">{</span>
+        <span class="k">try!</span> <span class="n">group</span><span class="o">.</span><span class="nf">syncShutdownGracefully</span><span class="p">()</span>
+    <span class="p">}</span>
+    <span class="k">let</span> <span class="nv">bootstrap</span> <span class="o">=</span> <span class="kt">ClientBootstrap</span><span class="p">(</span><span class="nv">group</span><span class="p">:</span> <span class="n">group</span><span class="p">)</span>
+        <span class="c1">// Enable SO_REUSEADDR.</span>
+        <span class="o">.</span><span class="nf">channelOption</span><span class="p">(</span><span class="kt">ChannelOptions</span><span class="o">.</span><span class="nf">socketOption</span><span class="p">(</span><span class="o">.</span><span class="n">so_reuseaddr</span><span class="p">),</span> <span class="nv">value</span><span class="p">:</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">channelInitializer</span> <span class="p">{</span> <span class="n">channel</span> <span class="k">in</span>
+            <span class="c1">// always instantiate the handler _within_ the closure as</span>
+            <span class="c1">// it may be called multiple times (for example if the hostname</span>
+            <span class="c1">// resolves to both IPv4 and IPv6 addresses, cf. Happy Eyeballs).</span>
+            <span class="n">channel</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="nf">addHandler</span><span class="p">(</span><span class="kt">MyChannelHandler</span><span class="p">())</span>
+        <span class="p">}</span>
+    <span class="k">try!</span> <span class="n">bootstrap</span><span class="o">.</span><span class="nf">connect</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="s">"example.org"</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="mi">12345</span><span class="p">)</span><span class="o">.</span><span class="nf">wait</span><span class="p">()</span>
+    <span class="cm">/* the Channel is now connected */</span>
+</code></pre>
+
+<p>The connected <code>SocketChannel</code> will operate on <code>ByteBuffer</code> as inbound and on <code>IOData</code> as outbound messages.</p>
+
+              <div class="slightly-smaller">
+                <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L439-L744">Show on GitHub</a>
+              </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC5groupAC7NIOCore14EventLoopGroup_p_tcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(group:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC5groupAC7NIOCore14EventLoopGroup_p_tcfc">init(group:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Create a <code>ClientBootstrap</code> on the <code>EventLoopGroup</code> <code>group</code>.</p>
+
+<p>The <code>EventLoopGroup</code> <code>group</code> must be compatible, otherwise the program will crash. <code>ClientBootstrap</code> is
+compatible only with <code><a href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a></code> as well as the <code>EventLoop</code>s returned by
+<code>MultiThreadedEventLoopGroup.next</code>. See <code><a href="../Classes/ClientBootstrap.html#/s:8NIOPosix15ClientBootstrapC15validatingGroupACSg7NIOCore09EventLoopE0_p_tcfc">init(validatingGroup:)</a></code> for a fallible initializer for
+situations where it&rsquo;s impossible to tell ahead of time if the <code>EventLoopGroup</code> is compatible or not.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">convenience</span> <span class="nf">init</span><span class="p">(</span><span class="nv">group</span><span class="p">:</span> <span class="kt">EventLoopGroup</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>group</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>EventLoopGroup</code> to use.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L469-L475">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC15validatingGroupACSg7NIOCore09EventLoopE0_p_tcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(validatingGroup:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC15validatingGroupACSg7NIOCore09EventLoopE0_p_tcfc">init(validatingGroup:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Create a <code>ClientBootstrap</code> on the <code>EventLoopGroup</code> <code>group</code>, validating that <code>group</code> is compatible.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">?(</span><span class="n">validatingGroup</span> <span class="nv">group</span><span class="p">:</span> <span class="kt">EventLoopGroup</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>group</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>EventLoopGroup</code> to use.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L481-L492">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC18channelInitializeryACXD7NIOCore15EventLoopFutureCyytGAE7Channel_pcF"></a>
+                    <a name="//apple_ref/swift/Method/channelInitializer(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC18channelInitializeryACXD7NIOCore15EventLoopFutureCyytGAE7Channel_pcF">channelInitializer(_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Initialize the connected <code>SocketChannel</code> with <code>initializer</code>. The most common task in initializer is to add
+<code>ChannelHandler</code>s to the <code>ChannelPipeline</code>.</p>
+
+<p>The connected <code>Channel</code> will operate on <code>ByteBuffer</code> as inbound and <code>IOData</code> as outbound messages.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    <p>The <code>handler</code> closure may be invoked <em>multiple times</em> so it&rsquo;s usually the right choice to instantiate
+       <code>ChannelHandler</code>s within <code>handler</code>. The reason <code>handler</code> may be invoked multiple times is that to
+       successfully set up a connection multiple connections might be setup in the process. Assuming a
+       hostname that resolves to both IPv4 and IPv6 addresses, NIO will follow
+       <a href="https://en.wikipedia.org/wiki/Happy_Eyeballs"><em>Happy Eyeballs</em></a> and race both an IPv4 and an IPv6
+       connection. It is possible that both connections get fully established before the IPv4 connection
+       will be closed again because the IPv6 connection &lsquo;won the race&rsquo;. Therefore the <code>channelInitializer</code>
+       might be called multiple times and it&rsquo;s important not to share stateful <code>ChannelHandler</code>s in more
+       than one <code>Channel</code>.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">channelInitializer</span><span class="p">(</span><span class="n">_</span> <span class="nv">handler</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Channel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">Self</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>handler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A closure that initializes the provided <code>Channel</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L511-L514">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC16protocolHandlersyACXDSay7NIOCore14ChannelHandler_pGycF"></a>
+                    <a name="//apple_ref/swift/Method/protocolHandlers(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC16protocolHandlersyACXDSay7NIOCore14ChannelHandler_pGycF">protocolHandlers(_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Sets the protocol handlers that will be added to the front of the <code>ChannelPipeline</code> right after the
+<code>channelInitializer</code> has been called.</p>
+
+<p>Per bootstrap, you can only set the <code>protocolHandlers</code> once. Typically, <code>protocolHandlers</code> are used for the TLS
+implementation. Most notably, <code>NIOClientTCPBootstrap</code>, NIO&rsquo;s &ldquo;universal bootstrap&rdquo; abstraction, uses
+<code>protocolHandlers</code> to add the required <code>ChannelHandler</code>s for many TLS implementations.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">protocolHandlers</span><span class="p">(</span><span class="n">_</span> <span class="nv">handlers</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="kt">ChannelHandler</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="k">Self</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L522-L526">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC13channelOption_5valueACXDx_5ValueQzt7NIOCore07ChannelE0RzlF"></a>
+                    <a name="//apple_ref/swift/Method/channelOption(_:value:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC13channelOption_5valueACXDx_5ValueQzt7NIOCore07ChannelE0RzlF">channelOption(_:<wbr>value:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Specifies a <code>ChannelOption</code> to be applied to the <code>SocketChannel</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@inlinable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">channelOption</span><span class="o">&lt;</span><span class="kt">Option</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">option</span><span class="p">:</span> <span class="kt">Option</span><span class="p">,</span> <span class="nv">value</span><span class="p">:</span> <span class="kt">Option</span><span class="o">.</span><span class="kt">Value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">Self</span> <span class="k">where</span> <span class="kt">Option</span> <span class="p">:</span> <span class="kt">ChannelOption</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>option</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The option to be applied.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>value</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The value for the option.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L534-L537">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC14connectTimeoutyACXD7NIOCore10TimeAmountVF"></a>
+                    <a name="//apple_ref/swift/Method/connectTimeout(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC14connectTimeoutyACXD7NIOCore10TimeAmountVF">connectTimeout(_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Specifies a timeout to apply to a connection attempt.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">connectTimeout</span><span class="p">(</span><span class="n">_</span> <span class="nv">timeout</span><span class="p">:</span> <span class="kt">TimeAmount</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">Self</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>timeout</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The timeout that will apply to the connection attempt.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L543-L546">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC8resolveryACXDAA8Resolver_pSgF"></a>
+                    <a name="//apple_ref/swift/Method/resolver(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC8resolveryACXDAA8Resolver_pSgF">resolver(_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Specifies the <code><a href="../Protocols/Resolver.html">Resolver</a></code> to use or <code>nil</code> if the default should be used.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">resolver</span><span class="p">(</span><span class="n">_</span> <span class="nv">resolver</span><span class="p">:</span> <span class="kt"><a href="../Protocols/Resolver.html">Resolver</a></span><span class="p">?)</span> <span class="o">-&gt;</span> <span class="k">Self</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>resolver</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The resolver that will be used during the connection attempt.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L552-L555">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC4bind2toAC7NIOCore13SocketAddressO_tF"></a>
+                    <a name="//apple_ref/swift/Method/bind(to:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC4bind2toAC7NIOCore13SocketAddressO_tF">bind(to:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Bind the <code>SocketChannel</code> to <code>address</code>.</p>
+
+<p>Using <code>bind</code> is not necessary unless you need the local address to be bound to a specific address.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>Using <code>bind</code> will disable Happy Eyeballs on this <code>Channel</code>.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">bind</span><span class="p">(</span><span class="n">to</span> <span class="nv">address</span><span class="p">:</span> <span class="kt">SocketAddress</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">ClientBootstrap</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>address</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>SocketAddress</code> to bind on.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L565-L568">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC7connect4host4port7NIOCore15EventLoopFutureCyAG7Channel_pGSS_SitF"></a>
+                    <a name="//apple_ref/swift/Method/connect(host:port:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC7connect4host4port7NIOCore15EventLoopFutureCyAG7Channel_pGSS_SitF">connect(host:<wbr>port:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Specify the <code>host</code> and <code>port</code> to connect to for the TCP <code>Channel</code> that will be established.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">connect</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="kt">String</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Channel</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>host</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The host to connect to.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>port</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The port to connect to.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An <code>EventLoopFuture&lt;Channel&gt;</code> to deliver the <code>Channel</code> when connected.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L581-L596">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC7connect2to7NIOCore15EventLoopFutureCyAF7Channel_pGAF13SocketAddressO_tF"></a>
+                    <a name="//apple_ref/swift/Method/connect(to:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC7connect2to7NIOCore15EventLoopFutureCyAF7Channel_pGAF13SocketAddressO_tF">connect(to:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Specify the <code>address</code> to connect to for the TCP <code>Channel</code> that will be established.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">connect</span><span class="p">(</span><span class="n">to</span> <span class="nv">address</span><span class="p">:</span> <span class="kt">SocketAddress</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Channel</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>address</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The address to connect to.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An <code>EventLoopFuture&lt;Channel&gt;</code> to deliver the <code>Channel</code> when connected.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L624-L629">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC7connect20unixDomainSocketPath7NIOCore15EventLoopFutureCyAF7Channel_pGSS_tF"></a>
+                    <a name="//apple_ref/swift/Method/connect(unixDomainSocketPath:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC7connect20unixDomainSocketPath7NIOCore15EventLoopFutureCyAF7Channel_pGSS_tF">connect(unixDomainSocketPath:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Specify the <code>unixDomainSocket</code> path to connect to for the UDS <code>Channel</code> that will be established.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">connect</span><span class="p">(</span><span class="nv">unixDomainSocketPath</span><span class="p">:</span> <span class="kt">String</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Channel</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>unixDomainSocketPath</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <em>Unix domain socket</em> path to connect to.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An <code>EventLoopFuture&lt;Channel&gt;</code> to deliver the <code>Channel</code> when connected.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L636-L643">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC19withConnectedSocket10descriptor7NIOCore15EventLoopFutureCyAF7Channel_pGs5Int32V_tF"></a>
+                    <a name="//apple_ref/swift/Method/withConnectedSocket(descriptor:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC19withConnectedSocket10descriptor7NIOCore15EventLoopFutureCyAF7Channel_pGs5Int32V_tF">withConnectedSocket(descriptor:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Use the existing connected socket file descriptor.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@available</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">deprecated</span><span class="p">,</span> <span class="nv">renamed</span><span class="p">:</span> <span class="s">"withConnectedSocket(_:﹚"</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="nf">withConnectedSocket</span><span class="p">(</span><span class="nv">descriptor</span><span class="p">:</span> <span class="kt">CInt</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Channel</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>descriptor</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <em>Unix file descriptor</em> representing the connected stream socket.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>an <code>EventLoopFuture&lt;Channel&gt;</code> to deliver the <code>Channel</code>.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L652-L654">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix15ClientBootstrapC19withConnectedSockety7NIOCore15EventLoopFutureCyAE7Channel_pGs5Int32VF"></a>
+                    <a name="//apple_ref/swift/Method/withConnectedSocket(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix15ClientBootstrapC19withConnectedSockety7NIOCore15EventLoopFutureCyAE7Channel_pGs5Int32VF">withConnectedSocket(_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Use the existing connected socket file descriptor.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">withConnectedSocket</span><span class="p">(</span><span class="n">_</span> <span class="nv">socket</span><span class="p">:</span> <span class="kt">NIOBSDSocket</span><span class="o">.</span><span class="kt">Handle</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Channel</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>descriptor</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <em>Unix file descriptor</em> representing the connected stream socket.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>an <code>EventLoopFuture&lt;Channel&gt;</code> to deliver the <code>Channel</code>.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/Bootstrap.swift#L662-L694">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2021 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external noopener">SwiftNIO Team</a>. All rights reserved. (Last updated: 2021-12-16)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external noopener">jazzy ♪♫ v0.14.1</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external noopener">Realm</a> project.</p>
+    </section>
+  </body>
+</html>

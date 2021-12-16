@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>MultiThreadedEventLoopGroup Class Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Class/MultiThreadedEventLoopGroup" class="dashAnchor"></a>
+
+    <a title="MultiThreadedEventLoopGroup Class Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIOPosix 2.36.0 Docs
+        </a>
+         (97% documented)
+      </p>
+    
+      <div class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </div>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png" alt="GitHub"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple.github.io%2Fswift-nio%2Fdocs%2F2.36.0%2FNIOPosix%2Fdocsets%2FNIOPosix.xml">
+            <img class="header-icon" src="../img/dash.png" alt="Dash"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIOPosix Reference</a>
+      <img class="carat" src="../img/carat.png" alt=""/>
+      MultiThreadedEventLoopGroup Class Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ClientBootstrap.html">ClientBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/DatagramBootstrap.html">DatagramBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOPipeBootstrap.html">NIOPipeBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool.html">NIOThreadPool</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/NIOThreadPool/WorkItemState.html">– WorkItemState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ServerBootstrap.html">ServerBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ThreadSpecificVariable.html">ThreadSpecificVariable</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/NIOThreadPoolError.html">NIOThreadPoolError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/NIOThreadPoolError.html#/s:8NIOPosix18NIOThreadPoolErrorO06ThreadC8InactiveV">– ThreadPoolInactive</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Selector.html">Selector</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Resolver.html">Resolver</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:8NIOPosix36NIOFailedToSetSocketNonBlockingErrorV">NIOFailedToSetSocketNonBlockingError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:8NIOPosix19NIOFcntlFailedErrorV">NIOFcntlFailedError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs.html#/s:8NIOPosix29UnixDomainSocketPathWrongTypeV">UnixDomainSocketPathWrongType</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/linger">linger</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content top-matter">
+            <h1>MultiThreadedEventLoopGroup</h1>
+              <div class="declaration">
+                <div class="language">
+                  
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">MultiThreadedEventLoopGroup</span> <span class="p">:</span> <span class="kt">EventLoopGroup</span></code></pre>
+<pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">MultiThreadedEventLoopGroup</span><span class="p">:</span> <span class="kt">CustomStringConvertible</span></code></pre>
+
+                </div>
+              </div>
+            <p>An <code>EventLoopGroup</code> which will create multiple <code>EventLoop</code>s, each tied to its own <code>NIOThread</code>.</p>
+
+<p>The effect of initializing a <code>MultiThreadedEventLoopGroup</code> is to spawn <code>numberOfThreads</code> fresh threads which will
+all run their own <code>EventLoop</code>. Those threads will not be shut down until <code>shutdownGracefully</code> or
+<code>syncShutdownGracefully</code> is called.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    It&rsquo;s good style to call <code>MultiThreadedEventLoopGroup.shutdownGracefully</code> or
+    <code>MultiThreadedEventLoopGroup.syncShutdownGracefully</code> when you no longer need this <code>EventLoopGroup</code>. In
+    many cases that is just before your program exits.
+
+</div><div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    Unit tests often spawn one <code>MultiThreadedEventLoopGroup</code> per unit test to force isolation between the
+       tests. In those cases it&rsquo;s important to shut the <code>MultiThreadedEventLoopGroup</code> down at the end of the
+       test. A good place to start a <code>MultiThreadedEventLoopGroup</code> is the <code>setUp</code> method of your <code>XCTestCase</code>
+       subclass, a good place to shut it down is the <code>tearDown</code> method.
+
+</div>
+
+              <div class="slightly-smaller">
+                <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L54-L332">Show on GitHub</a>
+              </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix27MultiThreadedEventLoopGroupC15numberOfThreadsACSi_tcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(numberOfThreads:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix27MultiThreadedEventLoopGroupC15numberOfThreadsACSi_tcfc">init(numberOfThreads:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates a <code>MultiThreadedEventLoopGroup</code> instance which uses <code>numberOfThreads</code>.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>Don&rsquo;t forget to call <code>shutdownGracefully</code> or <code>syncShutdownGracefully</code> when you no longer need this
+    <code>EventLoopGroup</code>. If you forget to shut the <code>EventLoopGroup</code> down you will leak <code>numberOfThreads</code>
+    (kernel) threads which are costly resources. This is especially important in unit tests where one
+    <code>MultiThreadedEventLoopGroup</code> is started per test case.</p>
+
+</div><ul>
+<li><p>arguments:</p>
+
+<ul>
+<li>numberOfThreads: The number of <code>Threads</code> to use.</li>
+</ul></li>
+</ul>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">convenience</span> <span class="nf">init</span><span class="p">(</span><span class="nv">numberOfThreads</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L134-L136">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix27MultiThreadedEventLoopGroupC07currentdE07NIOCore0dE0_pSgvpZ"></a>
+                    <a name="//apple_ref/swift/Variable/currentEventLoop" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix27MultiThreadedEventLoopGroupC07currentdE07NIOCore0dE0_pSgvpZ">currentEventLoop</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Returns the <code>EventLoop</code> for the calling thread.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">var</span> <span class="nv">currentEventLoop</span><span class="p">:</span> <span class="kt">EventLoop</span><span class="p">?</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The current <code>EventLoop</code> for the calling thread or <code>nil</code> if none is assigned to the thread.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L169-L171">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix27MultiThreadedEventLoopGroupC12makeIterator7NIOCore0deH0VyF"></a>
+                    <a name="//apple_ref/swift/Method/makeIterator()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix27MultiThreadedEventLoopGroupC12makeIterator7NIOCore0deH0VyF">makeIterator()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Returns an <code>EventLoopIterator</code> over the <code>EventLoop</code>s in this <code>MultiThreadedEventLoopGroup</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">makeIterator</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">EventLoopIterator</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p><code>EventLoopIterator</code></p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L180-L182">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix27MultiThreadedEventLoopGroupC4next7NIOCore0dE0_pyF"></a>
+                    <a name="//apple_ref/swift/Method/next()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix27MultiThreadedEventLoopGroupC4next7NIOCore0dE0_pyF">next()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Returns the next <code>EventLoop</code> from this <code>MultiThreadedEventLoopGroup</code>.</p>
+
+<p><code>MultiThreadedEventLoopGroup</code> uses <em>round robin</em> across all its <code>EventLoop</code>s to select the next one.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">next</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">EventLoop</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The next <code>EventLoop</code> to use.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L189-L191">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix27MultiThreadedEventLoopGroupC3any7NIOCore0dE0_pyF"></a>
+                    <a name="//apple_ref/swift/Method/any()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix27MultiThreadedEventLoopGroupC3any7NIOCore0dE0_pyF">any()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Returns the current <code>EventLoop</code> if we are on an <code>EventLoop</code> of this <code>MultiThreadedEventLoopGroup</code> instance.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">any</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">EventLoop</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The <code>EventLoop</code>.</p>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L196-L207">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix27MultiThreadedEventLoopGroupC18shutdownGracefully5queue_y8Dispatch0J5QueueC_ys5Error_pSgctF"></a>
+                    <a name="//apple_ref/swift/Method/shutdownGracefully(queue:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix27MultiThreadedEventLoopGroupC18shutdownGracefully5queue_y8Dispatch0J5QueueC_ys5Error_pSgctF">shutdownGracefully(queue:<wbr>_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Shut this <code>MultiThreadedEventLoopGroup</code> down which causes the <code>EventLoop</code>s and their associated threads to be
+shut down and release their resources.</p>
+
+<p>Even though calling <code>shutdownGracefully</code> more than once should be avoided, it is safe to do so and execution
+of the <code>handler</code> is guaranteed.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">shutdownGracefully</span><span class="p">(</span><span class="nv">queue</span><span class="p">:</span> <span class="kt">DispatchQueue</span><span class="p">,</span> <span class="n">_</span> <span class="nv">handler</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">?)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>queue</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code>DispatchQueue</code> to run <code>handler</code> on when the shutdown operation completes.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>handler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The handler which is called after the shutdown operation completes. The parameter will be <code>nil</code>
+      on success and contain the <code>Error</code> otherwise.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L219-L301">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOPosix27MultiThreadedEventLoopGroupC019withCurrentThreadAsdE0yyy7NIOCore0dE0_pcFZ"></a>
+                    <a name="//apple_ref/swift/Method/withCurrentThreadAsEventLoop(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOPosix27MultiThreadedEventLoopGroupC019withCurrentThreadAsdE0yyy7NIOCore0dE0_pcFZ">withCurrentThreadAsEventLoop(_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Convert the calling thread into an <code>EventLoop</code>.</p>
+
+<p>This function will not return until the <code>EventLoop</code> has stopped. You can initiate stopping the <code>EventLoop</code> by
+calling <code>eventLoop.shutdownGracefully</code> which will eventually make this function return.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">withCurrentThreadAsEventLoop</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">EventLoop</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Called <em>on</em> the <code>EventLoop</code> that the calling thread was converted to, providing you the
+        <code>EventLoop</code> reference. Just like usually on the <code>EventLoop</code>, do not block in <code>callback</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L311-L321">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:7NIOCore14EventLoopGroupP31_preconditionSafeToSyncShutdown4file4lineys12StaticStringV_SutF"></a>
+                    <a name="//apple_ref/swift/Method/_preconditionSafeToSyncShutdown(file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:7NIOCore14EventLoopGroupP31_preconditionSafeToSyncShutdown4file4lineys12StaticStringV_SutF">_preconditionSafeToSyncShutdown(file:<wbr>line:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">_preconditionSafeToSyncShutdown</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L323-L331">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:s23CustomStringConvertibleP11descriptionSSvp"></a>
+                    <a name="//apple_ref/swift/Property/description" class="dashAnchor"></a>
+                    <a class="token" href="#/s:s23CustomStringConvertibleP11descriptionSSvp">description</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">description</span><span class="p">:</span> <span class="kt">String</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOPosix/MultiThreadedEventLoopGroup.swift#L335-L337">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2021 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external noopener">SwiftNIO Team</a>. All rights reserved. (Last updated: 2021-12-16)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external noopener">jazzy ♪♫ v0.14.1</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external noopener">Realm</a> project.</p>
+    </section>
+  </body>
+</html>

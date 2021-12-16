@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Classes  Reference</title>
+    <link rel="stylesheet" type="text/css" href="css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="js/jquery.min.js" defer></script>
+    <script src="js/jazzy.js" defer></script>
+    
+    <script src="js/lunr.min.js" defer></script>
+    <script src="js/typeahead.jquery.js" defer></script>
+    <script src="js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Section/Classes" class="dashAnchor"></a>
+
+    <a title="Classes  Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="index.html">
+          NIOEmbedded 2.36.0 Docs
+        </a>
+         (93% documented)
+      </p>
+    
+      <div class="header-col--secondary">
+        <form role="search" action="search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </div>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="img/gh.png" alt="GitHub"/>
+            View on GitHub
+          </a>
+        </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="dash-feed://https%3A%2F%2Fapple.github.io%2Fswift-nio%2Fdocs%2F2.36.0%2FNIOEmbedded%2Fdocsets%2FNIOEmbedded.xml">
+            <img class="header-icon" src="img/dash.png" alt="Dash"/>
+            Install in Dash
+          </a>
+        </p>
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="index.html">NIOEmbedded Reference</a>
+      <img class="carat" src="img/carat.png" alt=""/>
+      Classes  Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedChannel.html">EmbeddedChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedChannel/LeftOverState.html">– LeftOverState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedChannel/BufferState.html">– BufferState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedChannel/WrongTypeError.html">– WrongTypeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedChannel/SynchronousOptions.html">– SynchronousOptions</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content top-matter">
+            <h1>Classes</h1>
+            <p>The following classes are available globally.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:11NIOEmbedded17EmbeddedEventLoopC"></a>
+                    <a name="//apple_ref/swift/Class/EmbeddedEventLoop" class="dashAnchor"></a>
+                    <a class="token" href="#/s:11NIOEmbedded17EmbeddedEventLoopC">EmbeddedEventLoop</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>An <code>EventLoop</code> that is embedded in the current running context with no external
+control.</p>
+
+<p>Unlike more complex <code>EventLoop</code>s, such as <code>SelectableEventLoop</code>, the <code>EmbeddedEventLoop</code>
+has no proper eventing mechanism. Instead, reads and writes are fully controlled by the
+entity that instantiates the <code>EmbeddedEventLoop</code>. This property makes <code>EmbeddedEventLoop</code>
+of limited use for many application purposes, but highly valuable for testing and other
+kinds of mocking.</p>
+
+<p>Time is controllable on an <code>EmbeddedEventLoop</code>. It begins at <code>NIODeadline.uptimeNanoseconds(0)</code>
+and may be advanced by a fixed amount by using <code>advanceTime(by:)</code>, or advanced to a point in
+time with <code>advanceTime(to:)</code>.</p>
+<div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    Unlike <code>SelectableEventLoop</code>, <code>EmbeddedEventLoop</code> <strong>is not thread-safe</strong>. This
+is because it is intended to be run in the thread that instantiated it. Users are
+responsible for ensuring they never call into the <code>EmbeddedEventLoop</code> in an
+unsynchronized fashion.
+
+</div>
+
+                        <a href="Classes/EmbeddedEventLoop.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">EmbeddedEventLoop</span> <span class="p">:</span> <span class="kt">EventLoop</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOEmbedded/Embedded.swift#L71-L234">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:11NIOEmbedded15EmbeddedChannelC"></a>
+                    <a name="//apple_ref/swift/Class/EmbeddedChannel" class="dashAnchor"></a>
+                    <a class="token" href="#/s:11NIOEmbedded15EmbeddedChannelC">EmbeddedChannel</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p><code>EmbeddedChannel</code> is a <code>Channel</code> implementation that does neither any
+actual IO nor has a proper eventing mechanism. The prime use-case for
+<code>EmbeddedChannel</code> is in unit tests when you want to feed the inbound events
+and check the outbound events manually.</p>
+
+<p>Please remember to call <code>finish()</code> when you are no longer using this
+<code>EmbeddedChannel</code>.</p>
+
+<p>To feed events through an <code>EmbeddedChannel</code>&lsquo;s <code>ChannelPipeline</code> use
+<code>EmbeddedChannel.writeInbound</code> which accepts data of any type. It will then
+forward that data through the <code>ChannelPipeline</code> and the subsequent
+<code>ChannelInboundHandler</code> will receive it through the usual <code>channelRead</code>
+event. The user is responsible for making sure the first
+<code>ChannelInboundHandler</code> expects data of that type.</p>
+
+<p><code>EmbeddedChannel</code> automatically collects arriving outbound data and makes it
+available one-by-one through <code>readOutbound</code>.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <code>EmbeddedChannel</code> is currently only compatible with
+<code><a href="Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a></code>s and cannot be used with <code>SelectableEventLoop</code>s from
+for example <code>MultiThreadedEventLoopGroup</code>.
+
+</div><div class="aside aside-warning">
+    <p class="aside-title">Warning</p>
+    Unlike other <code>Channel</code>s, <code>EmbeddedChannel</code> <strong>is not thread-safe</strong>. This
+is because it is intended to be run in the thread that instantiated it. Users are
+responsible for ensuring they never call into an <code>EmbeddedChannel</code> in an
+unsynchronized fashion. <code><a href="Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a></code>s notes also apply as
+<code>EmbeddedChannel</code> uses an <code><a href="Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a></code> as its <code>EventLoop</code>.
+
+</div>
+
+                        <a href="Classes/EmbeddedChannel.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">EmbeddedChannel</span> <span class="p">:</span> <span class="kt">Channel</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div class="slightly-smaller">
+                        <a href="https://github.com/apple/swift-nio/tree/2.36.0/Sources/NIOEmbedded/Embedded.swift#L396-L738">Show on GitHub</a>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2021 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external noopener">SwiftNIO Team</a>. All rights reserved. (Last updated: 2021-12-16)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external noopener">jazzy ♪♫ v0.14.1</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external noopener">Realm</a> project.</p>
+    </section>
+  </body>
+</html>
