@@ -43,6 +43,9 @@ public final class Lock {
 #else
         var attr = pthread_mutexattr_t()
         pthread_mutexattr_init(&attr)
+#if os(Linux)
+        pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ADAPTIVE_NP))
+#endif
         debugOnly {
             pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
         }
