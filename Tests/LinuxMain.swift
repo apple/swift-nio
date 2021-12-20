@@ -24,6 +24,7 @@ import XCTest
 
 #if os(Linux) || os(FreeBSD) || os(Android)
    @testable import NIOConcurrencyHelpersTests
+   @testable import NIOCoreTests
    @testable import NIODataStructuresTests
    @testable import NIOEmbeddedTests
    @testable import NIOFoundationCompatTests
@@ -45,6 +46,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
        XCTMain([
              testCase(AcceptBackoffHandlerTest.allTests),
              testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
+             testCase(AddressedEnvelopeTests.allTests),
              testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
              testCase(Base64Test.allTests),
              testCase(BaseObjectTest.allTests),
