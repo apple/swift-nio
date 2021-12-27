@@ -184,6 +184,26 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertEqual(error as? EventLoopError, .cancelled)
     }
 
+    public func testScheduledTasksAreOrdered() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let eventLoop = eventLoopGroup.next()
+        let now = NIODeadline.now()
+
+        var result = [Int]()
+        var lastScheduled: Scheduled<Void>?
+        for i in 0...100 {
+            lastScheduled = eventLoop.scheduleTask(deadline: now) {
+                result.append(i)
+            }
+        }
+        try lastScheduled?.futureResult.wait()
+        XCTAssertEqual(result, Array(0...100))
+    }
+
     public func testFlatScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
         let eventLoop = EmbeddedEventLoop()
         let scheduled = eventLoop.flatScheduleTask(in: .seconds(1)) {
