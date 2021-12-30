@@ -156,6 +156,25 @@ private func isUnacceptableErrnoOnClose(_ code: Int32) -> Bool {
     }
 }
 
+private func isUnacceptableErrnoForbiddingEINVAL(_ code: Int32) -> Bool {
+    // We treat read() and pread() differently since we also want to catch EINVAL.
+    #if os(iOS) || os(watchOS) || os(tvOS)
+    switch code {
+    case EFAULT, EINVAL:
+        return true
+    default:
+        return false
+    }
+    #else
+    switch code {
+    case EFAULT, EBADF, EINVAL:
+        return true
+    default:
+        return false
+    }
+    #endif
+}
+
 private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
@@ -165,6 +184,12 @@ private func preconditionIsNotUnacceptableErrnoOnClose(err: CInt, where function
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     precondition(!isUnacceptableErrnoOnClose(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
 }
+
+private func preconditionIsNotUnacceptableErrnoForbiddingEINVAL(err: CInt, where function: String) -> Void {
+    // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
+    precondition(!isUnacceptableErrnoForbiddingEINVAL(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+}
+
 
 /*
  * Sorry, we really try hard to not use underscored attributes. In this case
@@ -195,19 +220,32 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
     }
 }
 
-/* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
+
+/*
+ * Sorry, we really try hard to not use underscored attributes. In this case
+ * however we seem to break the inlining threshold which makes a system call
+ * take twice the time, ie. we need this exception.
+ */
 @inline(__always)
-internal func wrapErrorIsNullReturnCall<T>(where function: String = #function, _ body: () throws -> T?) throws -> T {
+@discardableResult
+internal func syscallForbiddingEINVAL<T: FixedWidthInteger>(where function: String = #function,
+                                            _ body: () throws -> T)
+        throws -> IOResult<T> {
     while true {
-        guard let res = try body() else {
+        let res = try body()
+        if res == -1 {
             let err = errno
-            if err == EINTR {
+            switch err {
+            case EINTR:
                 continue
+            case EWOULDBLOCK:
+                return .wouldBlock(0)
+            default:
+                preconditionIsNotUnacceptableErrnoForbiddingEINVAL(err: err, where: function)
+                throw IOError(errnoCode: err, reason: function)
             }
-            preconditionIsNotUnacceptableErrno(err: err, where: function)
-            throw IOError(errnoCode: err, reason: function)
         }
-        return res
+        return .processed(res)
     }
 }
 
@@ -411,14 +449,14 @@ internal enum Posix {
 
     @inline(never)
     internal static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> IOResult<ssize_t> {
-        return try syscall(blocking: true) {
+        return try syscallForbiddingEINVAL {
             sysRead(descriptor, pointer, size)
         }
     }
 
     @inline(never)
     internal static func pread(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t, offset: off_t) throws -> IOResult<ssize_t> {
-        return try syscall(blocking: true) {
+        return try syscallForbiddingEINVAL {
             sysPread(descriptor, pointer, size, offset)
         }
     }
