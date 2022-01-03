@@ -67,7 +67,7 @@ Redis | ✅ | ❌ | [mordil/swift-redi-stack](https://gitlab.com/Mordil/swift-re
 ### Supported Versions
 
 ### SwiftNIO 2
-This is the current version of SwiftNIO and will be supported for the forseeable future.
+This is the current version of SwiftNIO and will be supported for the foreseeable future.
 
 The latest released SwiftNIO 2 version supports Swift 5.2+. NIO 2.29.0 and older support Swift 5.0+.
 
