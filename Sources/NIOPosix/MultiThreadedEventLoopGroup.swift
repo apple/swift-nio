@@ -339,6 +339,11 @@ extension MultiThreadedEventLoopGroup: CustomStringConvertible {
 
 @usableFromInline
 internal struct ScheduledTask {
+    /// The id of the scheduled task.
+    ///
+    /// - Important: This id has two purposes. First, it is used to give this struct an identity so that we can implement ``Equatable``
+    ///     Second, it is used to give the tasks an order which we use to execute them.
+    ///     This means, the ids need to be unique for a given ``SelectableEventLoop`` and they need to be in ascending order.
     @usableFromInline
     let id: UInt64
     let task: () -> Void
@@ -376,7 +381,11 @@ extension ScheduledTask: CustomStringConvertible {
 extension ScheduledTask: Comparable {
     @usableFromInline
     static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
-        return lhs._readyTime < rhs._readyTime
+        if lhs._readyTime == rhs._readyTime {
+            return lhs.id < rhs.id
+        } else {
+            return lhs._readyTime < rhs._readyTime
+        }
     }
 
     @usableFromInline

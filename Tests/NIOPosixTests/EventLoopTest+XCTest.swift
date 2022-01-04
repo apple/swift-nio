@@ -34,6 +34,7 @@ extension EventLoopTest {
                 ("testFlatScheduleCancelled", testFlatScheduleCancelled),
                 ("testScheduleRepeatedTask", testScheduleRepeatedTask),
                 ("testScheduledTaskThatIsImmediatelyCancelledNeverFires", testScheduledTaskThatIsImmediatelyCancelledNeverFires),
+                ("testScheduledTasksAreOrdered", testScheduledTasksAreOrdered),
                 ("testFlatScheduledTaskThatIsImmediatelyCancelledNeverFires", testFlatScheduledTaskThatIsImmediatelyCancelledNeverFires),
                 ("testRepeatedTaskThatIsImmediatelyCancelledNeverFires", testRepeatedTaskThatIsImmediatelyCancelledNeverFires),
                 ("testScheduleRepeatedTaskCancelFromDifferentThread", testScheduleRepeatedTaskCancelFromDifferentThread),
