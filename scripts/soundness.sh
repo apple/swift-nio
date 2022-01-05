@@ -3,7 +3,7 @@
 ##
 ## This source file is part of the SwiftNIO open source project
 ##
-## Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
+## Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -18,7 +18,7 @@ here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 function replace_acceptable_years() {
     # this needs to replace all acceptable forms with 'YEARS'
-    sed -e 's/20[12][78901]-20[12][8901]/YEARS/' -e 's/20[12][8901]/YEARS/'
+    sed -e 's/20[12][789012]-20[12][89012]/YEARS/' -e 's/20[12][89012]/YEARS/'
 }
 
 printf "=> Checking linux tests... "
