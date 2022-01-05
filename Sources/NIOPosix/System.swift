@@ -36,9 +36,9 @@ let badOS = { fatalError("unsupported OS") }()
 
 #if os(Android)
 let INADDR_ANY = UInt32(0) // #define INADDR_ANY ((unsigned long int) 0x00000000)
-let IFF_BROADCAST: CUnsignedInt = numericCast(CNIOLinux.IFF_BROADCAST.rawValue)
-let IFF_POINTOPOINT: CUnsignedInt = numericCast(CNIOLinux.IFF_POINTOPOINT.rawValue)
-let IFF_MULTICAST: CUnsignedInt = numericCast(CNIOLinux.IFF_MULTICAST.rawValue)
+let IFF_BROADCAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_BROADCAST.rawValue)
+let IFF_POINTOPOINT: CUnsignedInt = numericCast(SwiftGlibc.IFF_POINTOPOINT.rawValue)
+let IFF_MULTICAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_MULTICAST.rawValue)
 internal typealias in_port_t = UInt16
 extension ipv6_mreq { // http://lkml.iu.edu/hypermail/linux/kernel/0106.1/0080.html
     init (ipv6mr_multiaddr: in6_addr, ipv6mr_interface: UInt32) {
