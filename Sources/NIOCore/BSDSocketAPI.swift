@@ -67,16 +67,16 @@ private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutable
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 #endif
 
-// Work around SO_TIMESTAMP/SO_RCVTIMEO being awkwardly defined in glibc.
 #if os(Android)
-let IFF_BROADCAST: CUnsignedInt = numericCast(CNIOLinux.IFF_BROADCAST.rawValue)
-let IFF_POINTOPOINT: CUnsignedInt = numericCast(CNIOLinux.IFF_POINTOPOINT.rawValue)
-let IFF_MULTICAST: CUnsignedInt = numericCast(CNIOLinux.IFF_MULTICAST.rawValue)
+let IFF_BROADCAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_BROADCAST.rawValue)
+let IFF_POINTOPOINT: CUnsignedInt = numericCast(SwiftGlibc.IFF_POINTOPOINT.rawValue)
+let IFF_MULTICAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_MULTICAST.rawValue)
 #if arch(arm)
 let SO_RCVTIMEO = SO_RCVTIMEO_OLD
 let SO_TIMESTAMP = SO_TIMESTAMP_OLD
 #endif
 #elseif os(Linux)
+// Work around SO_TIMESTAMP/SO_RCVTIMEO being awkwardly defined in glibc.
 let SO_TIMESTAMP = CNIOLinux_SO_TIMESTAMP
 let SO_RCVTIMEO = CNIOLinux_SO_RCVTIMEO
 #endif
