@@ -1,5 +1,6 @@
 [![sswg:graduated|104x20](https://img.shields.io/badge/sswg-graduated-green.svg)](https://github.com/swift-server/sswg/blob/main/process/incubation.md#graduated-level)
 
+
 # SwiftNIO
 
 SwiftNIO is a cross-platform asynchronous event-driven network application framework
@@ -243,7 +244,7 @@ dependencies: [
 
 and then adding the appropriate SwiftNIO module(s) to your target dependencies.
 The syntax for adding target dependencies differs slightly between Swift
-versions. For example, if you want to depend on the `NIOCore`, `NIOPosix` and 
+versions. For example, if you want to depend on the `NIOCore`, `NIOPosix` and
 `NIOHTTP1` modules, specify the following dependencies:
 
 #### Swift 5.2 and newer (`swift-tools-version:5.2`)
