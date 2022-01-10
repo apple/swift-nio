@@ -291,6 +291,20 @@ function analyse_syscalls() {
     run_and_print "${command[@]}"
 }
 
+function analyse_thread_names() {
+    declare -a command
+
+    if is_linux; then
+        command=( grep -H ^ "/proc/$pid/task"/*/comm )
+    else
+        command=( echo "Unsupported on Darwin" )
+    fi
+
+    output "### Thread names"
+    output
+    run_and_print "${command[@]}"
+}
+
 function analyse_tcp_conns() {
     declare -a command
 
@@ -348,6 +362,7 @@ function analyse_process() {
 
     analyse_open_fds "$pid"
     analyse_eventing_fds "$pid"
+    analyse_thread_names "$pid"
     analyse_syscalls "$pid"
 }
 
