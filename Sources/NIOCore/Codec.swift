@@ -786,15 +786,6 @@ public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelO
                 return false
             }
         }
-
-        var isOperational: Bool {
-            switch self {
-            case .operational:
-                return true
-            case .notInChannelYet, .error, .done:
-                return false
-            }
-        }
     }
 
     private var state: State = .notInChannelYet
@@ -853,14 +844,25 @@ extension MessageToByteHandler {
 // MARK: ByteToMessageHandler: RemovableChannelHandler
 extension MessageToByteHandler: RemovableChannelHandler {
     public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-        do {
-            self.buffer!.clear()
-            try self.encoder.encodeLast(out: &self.buffer!)
-            context.write(self.wrapOutboundOut(self.buffer!), promise: nil)
-        } catch {
-            self.state = .error(error)
+        switch self.state {
+        case .notInChannelYet:
+            preconditionFailure("MessageToByteHandler.removeHandler called before it was added to a Channel")
+        case .error(let error):
             context.fireErrorCaught(error)
+            return
+        case .done:
+            context.leavePipeline(removalToken: removalToken)
+            return
+        case .operational:
+            do {
+                self.buffer!.clear()
+                try self.encoder.encodeLast(out: &self.buffer!)
+                context.write(self.wrapOutboundOut(self.buffer!), promise: nil)
+                context.leavePipeline(removalToken: removalToken)
+            } catch {
+                self.state = .error(error)
+                context.fireErrorCaught(error)
+            }
         }
-        context.leavePipeline(removalToken: removalToken)
     }
 }
