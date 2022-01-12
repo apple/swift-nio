@@ -1,0 +1,103 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOTestUtils/ByteToMessageDecoderVerifier.swift",
+      "line": 17,
+      "symbol": "ByteToMessageDecoderVerifier",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/ByteToMessageDecoderVerifier.swift",
+      "line": 180,
+      "symbol": "ByteToMessageDecoderVerifier",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/ByteToMessageDecoderVerifier.swift",
+      "line": 190,
+      "symbol": "ByteToMessageDecoderVerifier.VerificationError.ErrorCode",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/EventCounterHandler.swift",
+      "line": 45,
+      "symbol": "EventCounterHandler.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/EventCounterHandler.swift",
+      "line": 50,
+      "symbol": "EventCounterHandler.ValidityError",
+      "symbol_kind": "source.lang.swift.decl.struct",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/EventCounterHandler.swift",
+      "line": 51,
+      "symbol": "EventCounterHandler.ValidityError.reason",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/NIOHTTP1TestServer.swift",
+      "line": 221,
+      "symbol": "NIOHTTP1TestServer.init(group:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/NIOHTTP1TestServer.swift",
+      "line": 254,
+      "symbol": "NIOHTTP1TestServer.stop()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/NIOHTTP1TestServer.swift",
+      "line": 282,
+      "symbol": "NIOHTTP1TestServer.readInbound(deadline:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/NIOHTTP1TestServer.swift",
+      "line": 289,
+      "symbol": "NIOHTTP1TestServer.writeOutbound(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/NIOHTTP1TestServer.swift",
+      "line": 300,
+      "symbol": "NIOHTTP1TestServer.serverPort",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/NIOHTTP1TestServer.swift",
+      "line": 409,
+      "symbol": "NIOHTTP1TestServerError",
+      "symbol_kind": "source.lang.swift.decl.struct",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/NIOHTTP1TestServer.swift",
+      "line": 410,
+      "symbol": "NIOHTTP1TestServerError.reason",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTestUtils/NIOHTTP1TestServer.swift",
+      "line": 412,
+      "symbol": "NIOHTTP1TestServerError.init(reason:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}
