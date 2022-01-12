@@ -190,29 +190,6 @@ class NonBlockingFileIOTest: XCTestCase {
         XCTAssertEqual(1, numCalls)
     }
 
-    func testFailedIO() throws {
-        enum DummyError: Error { case dummy }
-        let unconnectedSockFH =
-            NIOFileHandle(descriptor: try! NIOBSDSocket.socket(domain: .unix, type: .stream, protocol: 0))
-        defer {
-            XCTAssertNoThrow(try unconnectedSockFH.close())
-        }
-        XCTAssertThrowsError(try self.fileIO.readChunked(fileHandle: unconnectedSockFH,
-                                        byteCount: 5,
-                                        chunkSize: 1,
-                                        allocator: self.allocator,
-                                        eventLoop: self.eventLoop) { buf in
-                                            XCTFail("shouldn't have been called")
-                                            return self.eventLoop.makeSucceededFuture(())
-        }.wait()) { error in
-            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-                XCTAssertEqual(ENOTCONN, (error as? IOError)?.errnoCode)
-            #else
-                XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
-            #endif
-        }
-    }
-
     func testChunkReadingWorksForIncrediblyLongChain() throws {
         let content = String(repeating: "X", count: 20*1024)
         var numCalls = 0
@@ -801,22 +778,6 @@ class NonBlockingFileIOTest: XCTestCase {
                 return self.eventLoop.makeSucceededFuture(())
             }.wait()
         })
-    }
-
-    func testReadChunkedFromNegativeOffsetFails() {
-        XCTAssertThrowsError(try withTemporaryFile(content: "hello world") { (fileHandle, path) in
-            try self.fileIO.readChunked(fileHandle: fileHandle,
-                                        fromOffset: -1,
-                                        byteCount: 5,
-                                        chunkSize: 2,
-                                        allocator: .init(),
-                                        eventLoop: self.eventLoop) { _ in
-                XCTFail("shouldn't be called")
-                return self.eventLoop.makeSucceededFuture(())
-            }.wait()
-        }) { error in
-            XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
-        }
     }
 
     func testReadChunkedFromOffsetAfterEOFDeliversExactlyOneChunk() {
