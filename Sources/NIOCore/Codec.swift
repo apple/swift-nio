@@ -743,9 +743,8 @@ public protocol MessageToByteEncoder {
     /// Called once there is data to encode and  the `MessageToByteDecoder` is about to leave
     ///
     /// - parameters:
-    ///     - data: The data to encode into a `ByteBuffer`.
     ///     - out: The `ByteBuffer` into which we want to encode.
-    func encodeLast(data: OutboundIn, out: inout ByteBuffer) throws
+    func encodeLast(out: inout ByteBuffer) throws
 
     /// Called once this `MessageToByteEncoder` is removed from the `ChannelPipeline`.
     mutating func encoderRemoved()
