@@ -844,6 +844,7 @@ extension MessageToByteHandler {
 // MARK: ByteToMessageHandler: RemovableChannelHandler
 extension MessageToByteHandler: RemovableChannelHandler {
     public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+        defer { context.leavePipeline(removalToken: removalToken) }
         switch self.state {
         case .notInChannelYet:
             preconditionFailure("MessageToByteHandler.removeHandler called before it was added to a Channel")
@@ -851,14 +852,12 @@ extension MessageToByteHandler: RemovableChannelHandler {
             context.fireErrorCaught(error)
             return
         case .done:
-            context.leavePipeline(removalToken: removalToken)
             return
         case .operational:
             do {
                 self.buffer!.clear()
                 try self.encoder.encodeLast(out: &self.buffer!)
                 context.write(self.wrapOutboundOut(self.buffer!), promise: nil)
-                context.leavePipeline(removalToken: removalToken)
             } catch {
                 self.state = .error(error)
                 context.fireErrorCaught(error)
