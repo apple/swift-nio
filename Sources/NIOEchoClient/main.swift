@@ -21,6 +21,7 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
     private var numBytes = 0
+    private var byteBuffer: ByteBuffer?
     
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress!)")
@@ -30,13 +31,24 @@ private final class EchoHandler: ChannelInboundHandler {
         self.numBytes = buffer.readableBytes
         context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }
-
+    
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let byteBuffer = self.unwrapInboundIn(data)
-        self.numBytes -= byteBuffer.readableBytes
-
+        var unwrappedInboundData = self.unwrapInboundIn(data)
+        self.numBytes -= unwrappedInboundData.readableBytes
+        
+        if var byteBuffer = byteBuffer {
+            byteBuffer.writeBuffer(&unwrappedInboundData)
+            self.byteBuffer = byteBuffer
+        } else {
+            self.byteBuffer = unwrappedInboundData
+        }
+    }
+    
+    public func channelReadComplete(context: ChannelHandlerContext) {
         if self.numBytes == 0 {
-            let string = String(buffer: byteBuffer)
+            let string = String(buffer: byteBuffer!)
+            self.byteBuffer = nil
+            self.numBytes = 0
             print("Received: '\(string)' back from the server, closing channel.")
             context.close(promise: nil)
         }
