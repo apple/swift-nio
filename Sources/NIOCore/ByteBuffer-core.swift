@@ -35,13 +35,15 @@ extension _ByteBufferSlice: Equatable {}
 /// fits within 24 bits, otherwise the behaviour is undefined.
 @usableFromInline
 struct _ByteBufferSlice {
-    @usableFromInline var upperBound: ByteBuffer._Index
-    @usableFromInline var _begin: _UInt24
+    @usableFromInline private(set) var upperBound: ByteBuffer._Index
+    @usableFromInline private(set) var _begin: _UInt24
     @inlinable var lowerBound: ByteBuffer._Index {
         return UInt32(self._begin)
     }
     @inlinable var count: Int {
-        return Int(self.upperBound - self.lowerBound)
+        // Safe: the only constructors that set this enforce that upperBound > lowerBound, so
+        // this cannot underflow.
+        return Int(self.upperBound &- self.lowerBound)
     }
     init() {
         self._begin = .init(0)
@@ -453,6 +455,7 @@ public struct ByteBuffer {
 
     /// The current capacity of the storage of this `ByteBuffer`, this is not constant and does _not_ signify the number
     /// of bytes that have been written to this `ByteBuffer`.
+    @inlinable
     public var capacity: Int {
         return self._slice.count
     }
