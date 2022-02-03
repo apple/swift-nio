@@ -233,8 +233,8 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
     /// Note that previous elements of `self` might already be write to `accumulationBuffer`.
     @inlinable
     public func collect(
-        into accumulationBuffer: inout ByteBuffer,
-        maxBytes: Int
+        upTo maxBytes: Int,
+        into accumulationBuffer: inout ByteBuffer
     ) async throws {
         precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
         var bytesRead = 0
@@ -254,12 +254,12 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
     /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
     @inlinable
     public func collect(
-        maxBytes: Int,
+        upTo maxBytes: Int,
         using allocator: ByteBufferAllocator
     ) async throws -> ByteBuffer {
         precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
         var accumulationBuffer = allocator.buffer(capacity: Swift.min(maxBytes, 512))
-        try await self.collect(into: &accumulationBuffer, maxBytes: maxBytes)
+        try await self.collect(upTo: maxBytes, into: &accumulationBuffer)
         return accumulationBuffer
     }
 }
@@ -276,8 +276,8 @@ extension AsyncSequence where Element == ByteBuffer {
     /// Note that previous elements of `self` might be already write to `accumulationBuffer`.
     @inlinable
     public func collect(
-        into accumulationBuffer: inout ByteBuffer,
-        maxBytes: Int
+        upTo maxBytes: Int,
+        into accumulationBuffer: inout ByteBuffer
     ) async throws {
         precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
         var bytesRead = 0
@@ -296,7 +296,7 @@ extension AsyncSequence where Element == ByteBuffer {
     /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
     @inlinable
     public func collect(
-        maxBytes: Int
+        upTo maxBytes: Int
     ) async throws -> ByteBuffer {
         precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
         // we use the first `ByteBuffer` to accumulate all subsequent `ByteBuffer`s into.
@@ -314,7 +314,7 @@ extension AsyncSequence where Element == ByteBuffer {
         // it is guaranteed that maxBytes >= 0 and ByteBuffer.readableBytes >= 0
         // This implies that `maxBytes - ByteBuffer.readableBytes` can't underflow because
         // Int.zero - Int.max == Int.min + 1
-        try await tail.collect(into: &head, maxBytes: maxBytes &- head.readableBytes)
+        try await tail.collect(upTo: maxBytes &- head.readableBytes, into: &head)
         return head
     }
 }
