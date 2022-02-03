@@ -311,9 +311,10 @@ extension AsyncSequence where Element == ByteBuffer {
         }
         
         let tail = AsyncSequenceFromIterator(iterator)
-        // it is guaranteed that maxBytes >= 0 and ByteBuffer.readableBytes >= 0
-        // This implies that `maxBytes - ByteBuffer.readableBytes` can't underflow because
-        // Int.zero - Int.max == Int.min + 1
+        // it is guaranteed that
+        // `maxBytes >= 0 && head.readableBytes >= 0 && head.readableBytes <= maxBytes`
+        // This implies that `maxBytes - head.readableBytes >= 0`
+        // we can therefore use wrapping subtraction
         try await tail.collect(upTo: maxBytes &- head.readableBytes, into: &head)
         return head
     }
