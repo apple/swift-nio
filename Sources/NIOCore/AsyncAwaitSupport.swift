@@ -236,6 +236,7 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
         into accumulationBuffer: inout ByteBuffer,
         maxBytes: Int
     ) async throws {
+        precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
         var bytesRead = 0
         for try await fragment in self {
             bytesRead += fragment.count
@@ -256,6 +257,7 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
         maxBytes: Int,
         using allocator: ByteBufferAllocator
     ) async throws -> ByteBuffer {
+        precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
         var accumulationBuffer = allocator.buffer(capacity: Swift.min(maxBytes, 512))
         try await self.collect(into: &accumulationBuffer, maxBytes: maxBytes)
         return accumulationBuffer
@@ -277,6 +279,7 @@ extension AsyncSequence where Element == ByteBuffer {
         into accumulationBuffer: inout ByteBuffer,
         maxBytes: Int
     ) async throws {
+        precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
         var bytesRead = 0
         for try await fragment in self {
             bytesRead += fragment.readableBytes
@@ -295,6 +298,7 @@ extension AsyncSequence where Element == ByteBuffer {
     public func collect(
         maxBytes: Int
     ) async throws -> ByteBuffer {
+        precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
         // we use the first `ByteBuffer` to accumulate all subsequent `ByteBuffer`s into.
         // this has also the benefit of not copying at all,
         // if the async sequence contains only one element.
@@ -307,10 +311,7 @@ extension AsyncSequence where Element == ByteBuffer {
         }
         
         let tail = AsyncSequenceFromIterator(iterator)
-        // maxBytes is guaranteed to be greater than or equal to zero because we just checked that
-        // ByteBuffer.readableBytes <= maxBytes and ByteBuffer.readableBytes is guaranteed to be
-        // greater than or equal to zero.
-        // To summaries, it is guaranteed that maxBytes >= 0 and ByteBuffer.readableBytes >= 0
+        // it is guaranteed that maxBytes >= 0 and ByteBuffer.readableBytes >= 0
         // This implies that `maxBytes - ByteBuffer.readableBytes` can't underflow because
         // Int.zero - Int.max == Int.min + 1
         try await tail.collect(into: &head, maxBytes: maxBytes &- head.readableBytes)
@@ -330,7 +331,7 @@ struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSeq
     }
     
     @inlinable func makeAsyncIterator() -> AsyncIterator {
-        iterator
+        self.iterator
     }
 }
 
