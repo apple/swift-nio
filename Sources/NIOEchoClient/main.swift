@@ -20,35 +20,25 @@ let line = readLine(strippingNewline: true)!
 private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
-    private var numBytes = 0
-    private var byteBuffer: ByteBuffer?
+    private var sendBytes = 0
+    private var receiveBuffer: ByteBuffer = ByteBuffer()
     
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress!)")
         
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
         let buffer = context.channel.allocator.buffer(string: line)
-        self.numBytes = buffer.readableBytes
+        self.sendBytes = buffer.readableBytes
         context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }
     
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var unwrappedInboundData = self.unwrapInboundIn(data)
-        self.numBytes -= unwrappedInboundData.readableBytes
+        self.sendBytes -= unwrappedInboundData.readableBytes
+        receiveBuffer.writeBuffer(&unwrappedInboundData)
         
-        if var byteBuffer = byteBuffer {
-            byteBuffer.writeBuffer(&unwrappedInboundData)
-            self.byteBuffer = byteBuffer
-        } else {
-            self.byteBuffer = unwrappedInboundData
-        }
-    }
-    
-    public func channelReadComplete(context: ChannelHandlerContext) {
-        if self.numBytes == 0 {
-            let string = String(buffer: byteBuffer!)
-            self.byteBuffer = nil
-            self.numBytes = 0
+        if self.sendBytes == 0 {
+            let string = String(buffer: receiveBuffer)
             print("Received: '\(string)' back from the server, closing channel.")
             context.close(promise: nil)
         }
