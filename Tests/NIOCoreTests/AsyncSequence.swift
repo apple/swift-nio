@@ -102,7 +102,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 // test for the generic version
                 let accumulatedBytes1 = try await testCase.buffers
                     .asAsyncSequence()
-                    .collect(maxBytes: expectedBytes.count)
+                    .collect(maxBytes: expectedBytes.count, using: .init())
                 XCTAssertEqual(
                     accumulatedBytes1,
                     ByteBuffer(bytes: expectedBytes),
@@ -131,7 +131,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 await XCTAssertThrowsError(
                     try await testCase.buffers
                         .asAsyncSequence()
-                        .collect(maxBytes: max(expectedBytes.count - 1, 0)),
+                        .collect(maxBytes: max(expectedBytes.count - 1, 0), using: .init()),
                     file: testCase.file,
                     line: testCase.line
                 ) { error in
