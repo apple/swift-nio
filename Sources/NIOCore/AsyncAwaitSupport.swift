@@ -258,7 +258,7 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
         using allocator: ByteBufferAllocator
     ) async throws -> ByteBuffer {
         precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
-        var accumulationBuffer = allocator.buffer(capacity: Swift.min(maxBytes, 512))
+        var accumulationBuffer = allocator.buffer(capacity: Swift.min(maxBytes, 1024))
         try await self.collect(upTo: maxBytes, into: &accumulationBuffer)
         return accumulationBuffer
     }
