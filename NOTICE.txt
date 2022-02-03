@@ -78,3 +78,10 @@ This product contains a derivation of Fabian Fett's 'Base64.swift'.
     * https://github.com/fabianfett/swift-base64-kit/blob/master/LICENSE
   * HOMEPAGE:
     * https://github.com/fabianfett/swift-base64-kit
+    
+This product contains a derivation of "XCTest+AsyncAwait.swift" from AsyncHTTPClient.
+
+  * LICENSE (Apache License 2.0):
+    * https://www.apache.org/licenses/LICENSE-2.0
+  * HOMEPAGE:
+    * https://github.com/swift-server/async-http-client

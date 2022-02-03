@@ -218,4 +218,77 @@ extension ChannelPipeline {
         try await self.addHandlers(handlers, position: position)
     }
 }
+
+public struct NIOTooManyBytesError: Error {
+     public init() {}
+ }
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension AsyncSequence where Element: RandomAccessCollection, Element.Element == UInt8 {
+    /// Consumes an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single ``accumulationBuffer``.
+    /// - Parameters:
+    ///   - accumulationBuffer: buffer to write all the elements of `self` into
+    ///   - maxBytes: The maximum number of bytes this method is allowed to write into `accumulationBuffer`
+    /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
+    /// Note that previous elements of `self` might be already write to `accumulationBuffer`.
+    @inlinable
+    public func collect(
+        into accumulationBuffer: inout ByteBuffer,
+        maxBytes: Int
+    ) async throws {
+        var bytesRead = 0
+        for try await fragment in self {
+            let fragmentSize = fragment.count
+            bytesRead += fragmentSize
+            guard bytesRead <= maxBytes else {
+                throw NIOTooManyBytesError()
+            }
+            accumulationBuffer.writeBytes(fragment)
+        }
+    }
+    
+    /// Consumes an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single ``NIO/ByteBuffer``.
+    /// - Parameters:
+    ///   - maxBytes: The maximum number of bytes this method is allowed to write into `accumulationBuffer`
+    /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
+    @inlinable
+    public func collect(
+        maxBytes: Int
+    ) async throws -> ByteBuffer {
+        var accumulationBuffer = ByteBuffer()
+        try await self.collect(into: &accumulationBuffer, maxBytes: maxBytes)
+        return accumulationBuffer
+    }
+}
+
+// MARK: convenience methods for ByteBuffer
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension AsyncSequence where Element == ByteBuffer {
+    /// Consumes an ``Swift/AsyncSequence`` of ``NIOCore/ByteBuffer``s into a single ``accumulationBuffer``.
+    /// - Parameters:
+    ///   - accumulationBuffer: buffer to write all the elements of `self` into
+    ///   - maxBytes: The maximum number of bytes this method is allowed to write into `accumulationBuffer`
+    /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
+    /// Note that previous elements of `self` might be already write to `accumulationBuffer`.
+    @inlinable
+    public func collect(
+        into accumulationBuffer: inout ByteBuffer,
+        maxBytes: Int
+    ) async throws {
+        try await self.map(\.readableBytesView).collect(into: &accumulationBuffer, maxBytes: maxBytes)
+    }
+    
+    /// Consumes an ``Swift/AsyncSequence`` of ```NIOCore/ByteBuffer``s into a single ``NIO/ByteBuffer``.
+    /// - Parameters:
+    ///   - maxBytes: The maximum number of bytes this method is allowed to write into `accumulationBuffer`
+    /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
+    @inlinable
+    public func collect(
+        maxBytes: Int
+    ) async throws -> ByteBuffer {
+        try await self.map(\.readableBytesView).collect(maxBytes: maxBytes)
+    }
+}
+
 #endif
