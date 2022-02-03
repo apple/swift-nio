@@ -261,7 +261,7 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
     }
 }
 
-// MARK: convenience methods for ByteBuffer
+// MARK: optimised methods for ByteBuffer
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension AsyncSequence where Element == ByteBuffer {
@@ -279,15 +279,40 @@ extension AsyncSequence where Element == ByteBuffer {
         try await self.map(\.readableBytesView).collect(into: &accumulationBuffer, maxBytes: maxBytes)
     }
     
-    /// Consumes an ``Swift/AsyncSequence`` of ```NIOCore/ByteBuffer``s into a single ``NIO/ByteBuffer``.
-    /// - Parameters:
-    ///   - maxBytes: The maximum number of bytes this method is allowed to write into `accumulationBuffer`
-    /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
     @inlinable
     public func collect(
         maxBytes: Int
     ) async throws -> ByteBuffer {
-        try await self.map(\.readableBytesView).collect(maxBytes: maxBytes)
+        // we use the first `ByteBuffer` to accumulate the changes into.
+        // this has also the benefit of not copying at all,
+        // if the async sequence contains only one element.
+        var iterator = self.makeAsyncIterator()
+        guard var head = try await iterator.next() else {
+            return ByteBuffer()
+        }
+        guard head.readableBytes <= maxBytes else {
+            throw NIOTooManyBytesError()
+        }
+        
+        let tail = AsyncSequenceFromIterator(iterator: iterator)
+        try await tail.collect(into: &head, maxBytes: maxBytes - head.readableBytes)
+        return head
+    }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@usableFromInline
+struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSequence {
+    @usableFromInline typealias Element = AsyncIterator.Element
+    
+    @usableFromInline var iterator: AsyncIterator
+    
+    @inlinable init(iterator: AsyncIterator) {
+        self.iterator = iterator
+    }
+    
+    @inlinable func makeAsyncIterator() -> AsyncIterator {
+        iterator
     }
 }
 

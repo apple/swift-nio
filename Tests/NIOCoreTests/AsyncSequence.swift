@@ -77,6 +77,9 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 ]),
                 TestCase([
                     Array(0..<10),
+                ]),
+                TestCase([
+                    Array(0..<10),
                     Array(10..<20),
                 ]),
                 TestCase([
@@ -95,11 +98,25 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 let expectedBytes = testCase.buffers.flatMap({ $0 })
                 
                 // happy case where maxBytes is exactly the same as number of buffers received
-                let accumulatedBytes = try await testCase.buffers
+                
+                // test for the generic version
+                let accumulatedBytes1 = try await testCase.buffers
                     .asAsyncSequence()
                     .collect(maxBytes: expectedBytes.count)
                 XCTAssertEqual(
-                    accumulatedBytes,
+                    accumulatedBytes1,
+                    ByteBuffer(bytes: expectedBytes),
+                    file: testCase.file,
+                    line: testCase.line
+                )
+                
+                // test for the `ByteBuffer` optimised version
+                let accumulatedBytes2 = try await testCase.buffers
+                    .map(ByteBuffer.init(bytes:))
+                    .asAsyncSequence()
+                    .collect(maxBytes: expectedBytes.count)
+                XCTAssertEqual(
+                    accumulatedBytes2,
                     ByteBuffer(bytes: expectedBytes),
                     file: testCase.file,
                     line: testCase.line
@@ -109,8 +126,26 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 guard expectedBytes.count >= 1 else {
                     continue
                 }
+                
+                // test for the generic version
                 await XCTAssertThrowsError(
                     try await testCase.buffers
+                        .asAsyncSequence()
+                        .collect(maxBytes: max(expectedBytes.count - 1, 0)),
+                    file: testCase.file,
+                    line: testCase.line
+                ) { error in
+                    XCTAssertTrue(
+                        error is NIOTooManyBytesError,
+                        file: testCase.file,
+                        line: testCase.line
+                    )
+                }
+                
+                // test for the `ByteBuffer` optimised version
+                await XCTAssertThrowsError(
+                    try await testCase.buffers
+                        .map(ByteBuffer.init(bytes:))
                         .asAsyncSequence()
                         .collect(maxBytes: max(expectedBytes.count - 1, 0)),
                     file: testCase.file,
