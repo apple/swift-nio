@@ -63,11 +63,12 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private let myGroupID: Int
     private let index = NIOAtomic<Int>.makeAtomic(value: 0)
-    private let eventLoops: [SelectableEventLoop]
+    private var eventLoops: [SelectableEventLoop]
     private let shutdownLock: Lock = Lock()
     private var runState: RunState = .running
 
     private static func runTheLoop(thread: NIOThread,
+                                   parentGroup: MultiThreadedEventLoopGroup? /* nil iff thread take-over */,
                                    canEventLoopBeShutdownIndividually: Bool,
                                    selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
                                    initializer: @escaping ThreadInitializer,
@@ -77,6 +78,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
         do {
             let loop = SelectableEventLoop(thread: thread,
+                                           parentGroup: parentGroup,
                                            selector: try selectorFactory(),
                                            canBeShutdownIndividually: canEventLoopBeShutdownIndividually)
             threadSpecificEventLoop.currentValue = loop
@@ -93,6 +95,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     }
 
     private static func setupThreadAndEventLoop(name: String,
+                                                parentGroup: MultiThreadedEventLoopGroup,
                                                 selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
                                                 initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
         let lock = Lock()
@@ -105,6 +108,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         loopUpAndRunningGroup.enter()
         NIOThread.spawnAndRun(name: name, detachThread: false) { t in
             MultiThreadedEventLoopGroup.runTheLoop(thread: t,
+                                                   parentGroup: parentGroup,
                                                    canEventLoopBeShutdownIndividually: false, // part of MTELG
                                                    selectorFactory: selectorFactory,
                                                    initializer: initializer) { l in
@@ -147,9 +151,11 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         let myGroupID = nextEventLoopGroupID.add(1)
         self.myGroupID = myGroupID
         var idx = 0
+        self.eventLoops = [] // Just so we're fully initialised and can vend `self` to the `SelectableEventLoop`.
         self.eventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
             let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-\(myGroupID)-#\(idx)",
+                                                                         parentGroup: self,
                                                                          selectorFactory: selectorFactory,
                                                                          initializer: initializer)
             idx += 1
@@ -161,6 +167,10 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///
     /// - returns: The current `EventLoop` for the calling thread or `nil` if none is assigned to the thread.
     public static var currentEventLoop: EventLoop? {
+        return self.currentSelectableEventLoop
+    }
+
+    internal static var currentSelectableEventLoop: SelectableEventLoop? {
         return threadSpecificEventLoop.currentValue
     }
 
@@ -178,6 +188,22 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - returns: The next `EventLoop` to use.
     public func next() -> EventLoop {
         return eventLoops[abs(index.add(1) % eventLoops.count)]
+    }
+
+    /// Returns the current `EventLoop` if we are on an `EventLoop` of this `MultiThreadedEventLoopGroup` instance.
+    ///
+    /// - returns: The `EventLoop`.
+    public func any() -> EventLoop {
+        if let loop = Self.currentSelectableEventLoop,
+           // We are on `loop`'s thread, so we may ask for the its parent group.
+           loop.parentGroupCallableFromThisEventLoopOnly() === self {
+            // Nice, we can return this.
+            loop.assertInEventLoop()
+            return loop
+        } else {
+            // Oh well, let's just vend the next one then.
+            return self.next()
+        }
     }
 
     /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
@@ -285,6 +311,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     public static func withCurrentThreadAsEventLoop(_ callback: @escaping (EventLoop) -> Void) {
         let callingThread = NIOThread.current
         MultiThreadedEventLoopGroup.runTheLoop(thread: callingThread,
+                                               parentGroup: nil,
                                                canEventLoopBeShutdownIndividually: true,
                                                selectorFactory: NIOPosix.Selector<NIORegistration>.init,
                                                initializer: { _ in }) { loop in
@@ -311,14 +338,22 @@ extension MultiThreadedEventLoopGroup: CustomStringConvertible {
 }
 
 @usableFromInline
-internal final class ScheduledTask {
+internal struct ScheduledTask {
+    /// The id of the scheduled task.
+    ///
+    /// - Important: This id has two purposes. First, it is used to give this struct an identity so that we can implement ``Equatable``
+    ///     Second, it is used to give the tasks an order which we use to execute them.
+    ///     This means, the ids need to be unique for a given ``SelectableEventLoop`` and they need to be in ascending order.
+    @usableFromInline
+    let id: UInt64
     let task: () -> Void
     private let failFn: (Error) ->()
     @usableFromInline
     internal let _readyTime: NIODeadline
 
     @usableFromInline
-    init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
+    init(id: UInt64, _ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
+        self.id = id
         self.task = task
         self.failFn = failFn
         self._readyTime = time
@@ -346,11 +381,15 @@ extension ScheduledTask: CustomStringConvertible {
 extension ScheduledTask: Comparable {
     @usableFromInline
     static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
-        return lhs._readyTime < rhs._readyTime
+        if lhs._readyTime == rhs._readyTime {
+            return lhs.id < rhs.id
+        } else {
+            return lhs._readyTime < rhs._readyTime
+        }
     }
 
     @usableFromInline
     static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
-        return lhs === rhs
+        return lhs.id == rhs.id
     }
 }

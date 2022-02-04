@@ -43,7 +43,9 @@ public final class Lock {
 #else
         var attr = pthread_mutexattr_t()
         pthread_mutexattr_init(&attr)
-        pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
+        debugOnly {
+            pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
+        }
 
         let err = pthread_mutex_init(self.mutex, &attr)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
@@ -273,4 +275,14 @@ public final class ConditionLock<T: Equatable> {
         precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
 #endif
     }
+}
+
+/// A utility function that runs the body code only in debug builds, without
+/// emitting compiler warnings.
+///
+/// This is currently the only way to do this in Swift: see
+/// https://forums.swift.org/t/support-debug-only-code/11037 for a discussion.
+@inlinable
+internal func debugOnly(_ body: () -> Void) {
+    assert({ body(); return true }())
 }

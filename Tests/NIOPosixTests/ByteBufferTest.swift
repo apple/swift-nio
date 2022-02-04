@@ -204,6 +204,48 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("Hello", string)
     }
     
+    func testNullTerminatedString() {
+        let writtenHello = buf.writeNullTerminatedString("Hello")
+        XCTAssertEqual(writtenHello, 6)
+        XCTAssertEqual(buf.readableBytes, 6)
+        
+        let writtenEmpty = buf.writeNullTerminatedString("")
+        XCTAssertEqual(writtenEmpty, 1)
+        XCTAssertEqual(buf.readableBytes, 7)
+        
+        let writtenFoo = buf.writeNullTerminatedString("foo")
+        XCTAssertEqual(writtenFoo, 4)
+        XCTAssertEqual(buf.readableBytes, 11)
+        
+        XCTAssertEqual(buf.getNullTerminatedString(at: 0), "Hello")
+        XCTAssertEqual(buf.getNullTerminatedString(at: 6), "")
+        XCTAssertEqual(buf.getNullTerminatedString(at: 7), "foo")
+        
+        XCTAssertEqual(buf.readNullTerminatedString(), "Hello")
+        XCTAssertEqual(buf.readerIndex, 6)
+        
+        XCTAssertEqual(buf.readNullTerminatedString(), "")
+        XCTAssertEqual(buf.readerIndex, 7)
+        
+        XCTAssertEqual(buf.readNullTerminatedString(), "foo")
+        XCTAssertEqual(buf.readerIndex, 11)
+    }
+    
+    func testReadNullTerminatedStringWithoutNullTermination() {
+        buf.writeString("Hello")
+        XCTAssertNil(buf.readNullTerminatedString())
+    }
+    
+    func testGetNullTerminatedStringOutOfRangeTests() {
+        buf.writeNullTerminatedString("Hello")
+        XCTAssertNil(buf.getNullTerminatedString(at: 100))
+        buf.moveReaderIndex(forwardBy: 6)
+        XCTAssertNil(buf.readNullTerminatedString())
+        XCTAssertNil(buf.getNullTerminatedString(at: 0))
+        buf.writeInteger(UInt8(0))
+        XCTAssertEqual(buf.readNullTerminatedString(), "")
+    }
+    
     func testWriteSubstring() {
         var text = "Hello"
         let written = buf.writeSubstring(text[...])
@@ -3128,4 +3170,123 @@ extension ByteBufferTest {
         XCTAssertEqual(bufferView.hashValue, comparisonBufferView.hashValue)
     }
 
+    func testWritingMultipleIntegers() {
+        let w1 = self.buf.writeMultipleIntegers(UInt32(1), UInt8(2), UInt16(3), UInt64(4), UInt16(5), endianness: .big)
+        let w2 = self.buf.writeMultipleIntegers(UInt32(1), UInt8(2), UInt16(3), UInt64(4), UInt16(5), endianness: .little)
+        XCTAssertEqual(17, w1)
+        XCTAssertEqual(17, w2)
+
+        let one1 = self.buf.readInteger(endianness: .big, as: UInt32.self)
+        let two1 = self.buf.readInteger(endianness: .big, as: UInt8.self)
+        let three1 = self.buf.readInteger(endianness: .big, as: UInt16.self)
+        let four1 = self.buf.readInteger(endianness: .big, as: UInt64.self)
+        let five1 = self.buf.readInteger(endianness: .big, as: UInt16.self)
+        let one2 = self.buf.readInteger(endianness: .little, as: UInt32.self)
+        let two2 = self.buf.readInteger(endianness: .little, as: UInt8.self)
+        let three2 = self.buf.readInteger(endianness: .little, as: UInt16.self)
+        let four2 = self.buf.readInteger(endianness: .little, as: UInt64.self)
+        let five2 = self.buf.readInteger(endianness: .little, as: UInt16.self)
+
+        XCTAssertEqual(1, one1)
+        XCTAssertEqual(1, one2)
+        XCTAssertEqual(2, two1)
+        XCTAssertEqual(2, two2)
+        XCTAssertEqual(3, three1)
+        XCTAssertEqual(3, three2)
+        XCTAssertEqual(4, four1)
+        XCTAssertEqual(4, four2)
+        XCTAssertEqual(5, five1)
+        XCTAssertEqual(5, five2)
+
+        XCTAssertEqual(self.buf.readableBytes, 0)
+    }
+
+    func testReadAndWriteMultipleIntegers() {
+        for endianness in [Endianness.little, .big] {
+            let v1: UInt8 = .random(in: .min ... .max)
+            let v2: UInt16 = .random(in: .min ... .max)
+            let v3: UInt32 = .random(in: .min ... .max)
+            let v4: UInt64 = .random(in: .min ... .max)
+            let v5: UInt64 = .random(in: .min ... .max)
+            let v6: UInt32 = .random(in: .min ... .max)
+            let v7: UInt16 = .random(in: .min ... .max)
+            let v8: UInt8 = .random(in: .min ... .max)
+            let v9: UInt16 = .random(in: .min ... .max)
+            let v10: UInt32 = .random(in: .min ... .max)
+
+            let startWriterIndex = self.buf.writerIndex
+            let written = self.buf.writeMultipleIntegers(
+                v1, v2, v3, v4, v5, v6, v7, v8, v9, v10,
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self)
+            XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+            XCTAssertEqual(written, self.buf.readableBytes)
+
+            let result = self.buf.readMultipleIntegers(endianness: endianness,
+                                                       as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self)
+            XCTAssertNotNil(result)
+            XCTAssertEqual(0, self.buf.readableBytes)
+
+            XCTAssertEqual(v1, result?.0, "endianness: \(endianness)")
+            XCTAssertEqual(v2, result?.1, "endianness: \(endianness)")
+            XCTAssertEqual(v3, result?.2, "endianness: \(endianness)")
+            XCTAssertEqual(v4, result?.3, "endianness: \(endianness)")
+            XCTAssertEqual(v5, result?.4, "endianness: \(endianness)")
+            XCTAssertEqual(v6, result?.5, "endianness: \(endianness)")
+            XCTAssertEqual(v7, result?.6, "endianness: \(endianness)")
+            XCTAssertEqual(v8, result?.7, "endianness: \(endianness)")
+            XCTAssertEqual(v9, result?.8, "endianness: \(endianness)")
+            XCTAssertEqual(v10, result?.9, "endianness: \(endianness)")
+        }
+    }
+
+    func testAllByteBufferMultiByteVersions() {
+        let i = UInt8(86)
+        self.buf.writeMultipleIntegers(i, i)
+        self.buf.writeMultipleIntegers(i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i, i, i)
+        XCTAssertEqual(Array(repeating: UInt8(86), count: 119), Array(self.buf.readableBytesView))
+        var values2 = self.buf.readMultipleIntegers(as: (UInt8, UInt8).self)!
+        var values3 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8).self)!
+        var values4 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8).self)!
+        var values5 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values6 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values7 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values8 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values9 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values10 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values11 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values12 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values13 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values14 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values15 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+
+        XCTAssertEqual([i, i], withUnsafeBytes(of: &values2, { Array($0) }))
+        XCTAssertEqual([i, i, i], withUnsafeBytes(of: &values3, { Array($0) }))
+        XCTAssertEqual([i, i, i, i], withUnsafeBytes(of: &values4, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i], withUnsafeBytes(of: &values5, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i], withUnsafeBytes(of: &values6, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i], withUnsafeBytes(of: &values7, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values8, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values9, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values10, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values11, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values12, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values13, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values14, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values15, { Array($0) }))
+
+        XCTAssertEqual(0, self.buf.readableBytes)
+    }
 }

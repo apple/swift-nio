@@ -16,15 +16,24 @@ import Dispatch
 import _NIODataStructures
 import NIOCore
 
-private final class EmbeddedScheduledTask {
+
+private struct EmbeddedScheduledTask {
+    let id: UInt64
     let task: () -> Void
+    let failFn: (Error) -> ()
     let readyTime: NIODeadline
     let insertOrder: UInt64
 
-    init(readyTime: NIODeadline, insertOrder: UInt64, task: @escaping () -> Void) {
+    init(id: UInt64, readyTime: NIODeadline, insertOrder: UInt64, task: @escaping () -> Void, _ failFn: @escaping (Error) -> ()) {
+        self.id = id
         self.readyTime = readyTime
         self.insertOrder = insertOrder
         self.task = task
+        self.failFn = failFn
+    }
+
+    func fail(_ error: Error) {
+        self.failFn(error)
     }
 }
 
@@ -38,7 +47,7 @@ extension EmbeddedScheduledTask: Comparable {
     }
 
     static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
-        return lhs === rhs
+        return lhs.id == rhs.id
     }
 }
 
@@ -63,6 +72,7 @@ public final class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     /* private but tests */ internal var _now: NIODeadline = .uptimeNanoseconds(0)
 
+    private var scheduledTaskCounter: UInt64 = 0
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>()
 
     /// Keep track of where promises are allocated to ensure we can identify their source if they leak.
@@ -92,16 +102,18 @@ public final class EmbeddedEventLoop: EventLoop {
     @discardableResult
     public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
-        let task = EmbeddedScheduledTask(readyTime: deadline, insertOrder: self.nextTaskNumber()) {
+        self.scheduledTaskCounter += 1
+        let task = EmbeddedScheduledTask(id: self.scheduledTaskCounter, readyTime: deadline, insertOrder: self.nextTaskNumber(), task: {
             do {
                 promise.succeed(try task())
             } catch let err {
                 promise.fail(err)
             }
-        }
+        }, promise.fail)
 
+        let taskId = task.id
         let scheduled = Scheduled(promise: promise, cancellationTask: {
-            self.scheduledTasks.remove(task)
+            self.scheduledTasks.removeFirst { $0.id == taskId }
         })
         scheduledTasks.push(task)
         return scheduled
@@ -174,10 +186,12 @@ public final class EmbeddedEventLoop: EventLoop {
             self._now = nextTask.readyTime
             nextTask.task()
         }
-        // Just drop all the remaining scheduled tasks. Despite having run all the tasks that were
+        // Just fail all the remaining scheduled tasks. Despite having run all the tasks that were
         // scheduled when we entered the method this may still contain tasks as running the tasks
         // may have enqueued more tasks.
-        while self.scheduledTasks.pop() != nil {}
+        while let task = self.scheduledTasks.pop() {
+            task.fail(EventLoopError.shutdown)
+        }
     }
 
     /// - see: `EventLoop.close`
@@ -206,8 +220,7 @@ public final class EmbeddedEventLoop: EventLoop {
 
     public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
         precondition(_isDebugAssertConfiguration())
-        // The force-unwrap is safe: we know that we must have tracked all the futures.
-        return self._promiseCreationStore.removeValue(forKey: futureIdentifier)!
+        return self._promiseCreationStore.removeValue(forKey: futureIdentifier)
     }
 
     public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {

@@ -45,10 +45,11 @@ extension ByteBuffer {
     ///     - length: The number of bytes to be read from this `ByteBuffer`.
     /// - returns: A `[UInt8]` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     public mutating func readBytes(length: Int) -> [UInt8]? {
-        return self.getBytes(at: self.readerIndex, length: length).map {
-            self._moveReaderIndex(forwardBy: length)
-            return $0
+        guard let result = self.getBytes(at: self.readerIndex, length: length) else {
+            return nil
         }
+        self._moveReaderIndex(forwardBy: length)
+        return result
     }
 
     // MARK: StaticString APIs
@@ -89,6 +90,18 @@ extension ByteBuffer {
         self._moveWriterIndex(forwardBy: written)
         return written
     }
+    
+    /// Write `string` into this `ByteBuffer` null terminated using UTF-8 encoding, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - string: The string to write.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    public mutating func writeNullTerminatedString(_ string: String) -> Int {
+        let written = self.setNullTerminatedString(string, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
+    }
 
     @inline(never)
     @usableFromInline
@@ -124,6 +137,18 @@ extension ByteBuffer {
             return self._setStringSlowpath(string, at: index)
         }
     }
+    
+    /// Write `string` null terminated into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
+    ///
+    /// - parameters:
+    ///     - string: The string to write.
+    ///     - index: The index for the first serialized byte.
+    /// - returns: The number of bytes written.
+    public mutating func setNullTerminatedString(_ string: String, at index: Int) -> Int {
+        let length = self.setString(string, at: index)
+        self.setInteger(UInt8(0), at: index &+ length)
+        return length &+ 1
+    }
 
     /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
     /// The selected bytes must be readable or else `nil` will be returned.
@@ -142,6 +167,30 @@ extension ByteBuffer {
             return String(decoding: UnsafeRawBufferPointer(fastRebase: pointer[range]), as: Unicode.UTF8.self)
         }
     }
+    
+    /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
+    ///
+    /// - parameters:
+    ///     - index: The starting index into `ByteBuffer` containing the null terminated string of interest.
+    /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there isn't a complete null-terminated string,
+    ///            including null-terminator, in the readable bytes after `index` in the buffer
+    public func getNullTerminatedString(at index: Int) -> String? {
+        guard let stringLength = self.getNullTerminatedStringLength(at: index) else {
+            return nil
+        }
+        return self.getString(at: index, length: stringLength)
+    }
+    
+    private func getNullTerminatedStringLength(at index: Int) -> Int? {
+        guard self.readerIndex <= index && index < self.writerIndex else {
+            return nil
+        }
+        guard let endIndex = self.readableBytesView[index...].firstIndex(of: 0) else {
+            return nil
+        }
+        return endIndex &- index
+    }
 
     /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Move the reader index forward by `length`.
     ///
@@ -149,10 +198,25 @@ extension ByteBuffer {
     ///     - length: The number of bytes making up the string.
     /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     public mutating func readString(length: Int) -> String? {
-        return self.getString(at: self.readerIndex, length: length).map {
-            self._moveReaderIndex(forwardBy: length)
-            return $0
+        guard let result = self.getString(at: self.readerIndex, length: length) else {
+            return nil
         }
+        self._moveReaderIndex(forwardBy: length)
+        return result
+    }
+    
+    /// Read a null terminated string off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Move the reader index
+    /// forward by the string's length and its null terminator.
+    ///
+    /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there isn't a complete null-terminated string,
+    ///            including null-terminator, in the readable bytes of the buffer
+    public mutating func readNullTerminatedString() -> String? {
+        guard let stringLength = self.getNullTerminatedStringLength(at: self.readerIndex) else {
+            return nil
+        }
+        let result = self.readString(length: stringLength)
+        self.moveReaderIndex(forwardBy: 1) // move forward by null terminator
+        return result
     }
 
     // MARK: Substring APIs
@@ -244,10 +308,11 @@ extension ByteBuffer {
     ///     - length: The number of bytes.
     /// - returns: A `DispatchData` value containing the bytes from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     public mutating func readDispatchData(length: Int) -> DispatchData? {
-        return self.getDispatchData(at: self.readerIndex, length: length).map {
-            self._moveReaderIndex(forwardBy: length)
-            return $0
+        guard let result = self.getDispatchData(at: self.readerIndex, length: length) else {
+            return nil
         }
+        self._moveReaderIndex(forwardBy: length)
+        return result
     }
 
 
@@ -432,10 +497,11 @@ extension ByteBuffer {
     ///     - length: The number of bytes to slice off.
     /// - returns: A `ByteBuffer` sharing storage containing `length` bytes or `nil` if the not enough bytes were readable.
     public mutating func readSlice(length: Int) -> ByteBuffer? {
-        return self.getSlice(at: self.readerIndex, length: length).map {
-            self._moveReaderIndex(forwardBy: length)
-            return $0
+        guard let result = self.getSlice_inlineAlways(at: self.readerIndex, length: length) else {
+            return nil
         }
+        self._moveReaderIndex(forwardBy: length)
+        return result
     }
 
     @discardableResult

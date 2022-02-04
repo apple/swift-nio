@@ -76,10 +76,11 @@ extension ByteBuffer {
     ///                             of the options.
     /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     public mutating func readData(length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
-        return self.getData(at: self.readerIndex, length: length, byteTransferStrategy: byteTransferStrategy).map {
-            self.moveReaderIndex(forwardBy: length)
-            return $0
+        guard let result = self.getData(at: self.readerIndex, length: length, byteTransferStrategy: byteTransferStrategy) else {
+            return nil
         }
+        self.moveReaderIndex(forwardBy: length)
+        return result
     }
 
     /// Return `length` bytes starting at `index` and return the result as `Data`. This will not change the reader index.

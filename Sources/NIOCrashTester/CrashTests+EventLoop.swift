@@ -91,4 +91,17 @@ struct EventLoopCrashTests {
             f()
         }
     }
+
+    let testLeakingAPromiseCrashes = CrashTest(
+        regex: #"Fatal error: leaking promise created at"#
+    ) {
+        @inline(never)
+        func leaker() {
+            _ = group.next().makePromise(of: Void.self)
+        }
+        leaker()
+        for el in group.makeIterator() {
+            try! el.submit {}.wait()
+        }
+    }
 }

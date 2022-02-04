@@ -31,6 +31,8 @@ extension HTTPServerProtocolErrorHandlerTest {
                 ("testIgnoresNonParserErrors", testIgnoresNonParserErrors),
                 ("testDoesNotSendAResponseIfResponseHasAlreadyStarted", testDoesNotSendAResponseIfResponseHasAlreadyStarted),
                 ("testCanHandleErrorsWhenResponseHasStarted", testCanHandleErrorsWhenResponseHasStarted),
+                ("testDoesSendAResponseIfInformationalHeaderWasSent", testDoesSendAResponseIfInformationalHeaderWasSent),
+                ("testDoesNotSendAResponseIfRealHeaderWasSentAfterInformationalHeader", testDoesNotSendAResponseIfRealHeaderWasSentAfterInformationalHeader),
            ]
    }
 }

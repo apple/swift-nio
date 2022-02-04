@@ -66,12 +66,13 @@ final class SALEventLoopTests: XCTestCase, SALTest {
                 }
 
                 // Now enqueue a "last" task.
-                let lastTask = thisLoop.submit { i &+= 1 }
+                thisLoop.execute {
+                    i &+= 1
+                    promise.succeed(())
+                }
 
                 // Now we can unblock the semaphore.
                 semaphore.signal()
-
-                lastTask.cascade(to: promise)
             }
             
             return promise.futureResult

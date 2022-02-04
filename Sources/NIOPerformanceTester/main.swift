@@ -328,8 +328,9 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         DispatchData(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(ptr.baseAddress), count: ptr.count))
     }
     var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1024 * 1024)
+    let substring = Substring("A")
     @inline(never)
-    func doWrites(buffer: inout ByteBuffer) {
+    func doWrites(buffer: inout ByteBuffer, dispatchData: DispatchData, substring: Substring) {
         /* all of those should be 0 allocations */
 
         // buffer.writeBytes(foundationData) // see SR-7542
@@ -339,6 +340,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         buffer.writeString("A")
         buffer.writeStaticString("A")
         buffer.writeInteger(0x41, as: UInt8.self)
+        buffer.writeSubstring(substring)
     }
     @inline(never)
     func doReads(buffer: inout ByteBuffer) {
@@ -359,7 +361,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         precondition("A" == str, "\(str!)")
     }
     for _ in 0 ..< 1024*1024 {
-        doWrites(buffer: &buffer)
+        doWrites(buffer: &buffer, dispatchData: dispatchData, substring: substring)
         doReads(buffer: &buffer)
     }
     return buffer.readableBytes
@@ -812,3 +814,33 @@ try measureAndPrint(desc: "byte_to_message_decoder_decode_many_small",
 measureAndPrint(desc: "generate_10k_random_request_keys") {
     return (0 ..< 10_000).reduce(into: 0, { result, _ in result &+= NIOWebSocketClientUpgrader.randomRequestKey().count })
 }
+
+try measureAndPrint(desc: "bytebuffer_rw_10_uint32s",
+                    benchmark: ByteBufferReadWriteMultipleIntegersBenchmark<UInt32>(iterations: 1_000_000, numberOfInts: 10))
+
+try measureAndPrint(desc: "bytebuffer_multi_rw_10_uint32s",
+                    benchmark: ByteBufferMultiReadWriteTenIntegersBenchmark<UInt32>(iterations: 1_000_000))
+
+try measureAndPrint(desc: "lock_1_thread_10M_ops",
+                    benchmark: LockBenchmark(numberOfThreads: 1, lockOperationsPerThread: 10_000_000))
+
+try measureAndPrint(desc: "lock_2_threads_10M_ops",
+                    benchmark: LockBenchmark(numberOfThreads: 2, lockOperationsPerThread: 5_000_000))
+
+try measureAndPrint(desc: "lock_4_threads_10M_ops",
+                    benchmark: LockBenchmark(numberOfThreads: 4, lockOperationsPerThread: 2_500_000))
+
+try measureAndPrint(desc: "lock_8_threads_10M_ops",
+                    benchmark: LockBenchmark(numberOfThreads: 8, lockOperationsPerThread: 1_250_000))
+
+try measureAndPrint(desc: "schedule_10000_tasks",
+                    benchmark: SchedulingBenchmark())
+
+try measureAndPrint(desc: "schedule_and_run_10000_tasks",
+                    benchmark: SchedulingAndRunningBenchmark())
+
+try measureAndPrint(desc: "execute_10000",
+                    benchmark: ExecuteBenchmark())
+
+try measureAndPrint(desc: "bytebufferview_copy_to_array_1000_times_1kb",
+                    benchmark: ByteBufferViewCopyToArrayBenchmark(iterations: 1000, size: 1024))

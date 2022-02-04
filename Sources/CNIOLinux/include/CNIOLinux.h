@@ -15,6 +15,7 @@
 #define C_NIO_LINUX_H
 
 #ifdef __linux__
+#include <poll.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/timerfd.h>

@@ -112,10 +112,11 @@ extension ByteBuffer {
         endianness: Endianness = .big,
         as integer: Integer.Type
     ) -> ByteBuffer? where Integer: FixedWidthInteger {
-        self.getLengthPrefixedSlice(at: self.readerIndex, endianness: endianness, as: Integer.self).map {
-            self._moveReaderIndex(forwardBy: MemoryLayout<Integer>.size + $0.readableBytes)
-            return $0
+        guard let result = self.getLengthPrefixedSlice(at: self.readerIndex, endianness: endianness, as: Integer.self) else {
+            return nil
         }
+        self._moveReaderIndex(forwardBy: MemoryLayout<Integer>.size + result.readableBytes)
+        return result
     }
     
     /// Gets an `Integer` from `self` and gets a slice of that length from `self` and returns it.

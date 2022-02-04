@@ -37,6 +37,9 @@ extension ByteBufferTest {
                 ("testReadWrite", testReadWrite),
                 ("testStaticStringReadTests", testStaticStringReadTests),
                 ("testString", testString),
+                ("testNullTerminatedString", testNullTerminatedString),
+                ("testReadNullTerminatedStringWithoutNullTermination", testReadNullTerminatedStringWithoutNullTermination),
+                ("testGetNullTerminatedStringOutOfRangeTests", testGetNullTerminatedStringOutOfRangeTests),
                 ("testWriteSubstring", testWriteSubstring),
                 ("testSetSubstring", testSetSubstring),
                 ("testSliceEasy", testSliceEasy),
@@ -221,6 +224,9 @@ extension ByteBufferTest {
                 ("testHashableConformance", testHashableConformance),
                 ("testInvalidHash", testInvalidHash),
                 ("testValidHashFromSlice", testValidHashFromSlice),
+                ("testWritingMultipleIntegers", testWritingMultipleIntegers),
+                ("testReadAndWriteMultipleIntegers", testReadAndWriteMultipleIntegers),
+                ("testAllByteBufferMultiByteVersions", testAllByteBufferMultiByteVersions),
            ]
    }
 }

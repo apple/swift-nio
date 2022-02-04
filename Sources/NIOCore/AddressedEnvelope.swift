@@ -58,6 +58,10 @@ extension AddressedEnvelope: CustomStringConvertible {
     }
 }
 
+extension AddressedEnvelope: Equatable where DataType: Equatable {}
+
+extension AddressedEnvelope: Hashable where DataType: Hashable {}
+
 /// Possible Explicit Congestion Notification States
 public enum NIOExplicitCongestionNotificationState: Hashable {
     /// Non-ECN Capable Transport.

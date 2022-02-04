@@ -16,20 +16,22 @@ import Dispatch
 import NIOPosix
 
 func run(identifier: String) {
-    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-    let loop = group.next()
-    let dg = DispatchGroup()
-
     measure(identifier: identifier) {
-        loop.execute {
-            for _ in 0..<10_000 {
-                dg.enter()
-                loop.scheduleTask(in: .nanoseconds(0)) { dg.leave() }
-            }
-        }
-        dg.wait()
-        return 10_000
-    }
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let loop = group.next()
+        let counter = try! loop.submit { () -> Int in
+            var counter: Int = 0
 
-    try! group.syncShutdownGracefully()
+            for _ in 0..<10000 {
+                loop.scheduleTask(in: .hours(1)) {
+                    counter &+= 1
+                }
+            }
+
+            return counter
+        }.wait()
+
+        try! group.syncShutdownGracefully()
+        return counter
+    }
 }

@@ -184,7 +184,8 @@ class HTTPDecoderLengthTest: XCTestCase {
                                            responseStatus: HTTPResponseStatus,
                                            responseFramingField: FramingField) throws {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
+        let decoder = HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informationalResponseStrategy: .forward)
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(decoder)).wait())
 
         let handler = MessageEndHandler<HTTPResponseHead, ByteBuffer>()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
@@ -214,9 +215,18 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // We should have a response, no body, and immediately see EOF.
         XCTAssert(handler.seenHead)
-        XCTAssertFalse(handler.seenBody)
-        XCTAssert(handler.seenEnd)
-
+        switch responseStatus.code {
+        case 100, 102..<200:
+            // If an informational response header is tested, we expect another "real" header to
+            // follow. For this reason, we don't expect an `.end` here.
+            XCTAssertFalse(handler.seenBody)
+            XCTAssertFalse(handler.seenEnd)
+            
+        default:
+            XCTAssertFalse(handler.seenBody)
+            XCTAssert(handler.seenEnd)
+        }
+        
         XCTAssertTrue(try channel.finish().isClean)
     }
 

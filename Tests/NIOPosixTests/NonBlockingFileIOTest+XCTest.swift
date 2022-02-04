@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2018-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2018-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -36,7 +36,6 @@ extension NonBlockingFileIOTest {
                 ("testGettingErrorWhenEventLoopGroupIsShutdown", testGettingErrorWhenEventLoopGroupIsShutdown),
                 ("testChunkReadingWorks", testChunkReadingWorks),
                 ("testChunkReadingCanBeAborted", testChunkReadingCanBeAborted),
-                ("testFailedIO", testFailedIO),
                 ("testChunkReadingWorksForIncrediblyLongChain", testChunkReadingWorksForIncrediblyLongChain),
                 ("testReadingDifferentChunkSize", testReadingDifferentChunkSize),
                 ("testReadDoesNotReadShort", testReadDoesNotReadShort),
@@ -64,7 +63,6 @@ extension NonBlockingFileIOTest {
                 ("testOpeningFilesForWritingCanUseTruncation", testOpeningFilesForWritingCanUseTruncation),
                 ("testReadFromOffset", testReadFromOffset),
                 ("testReadChunkedFromOffset", testReadChunkedFromOffset),
-                ("testReadChunkedFromNegativeOffsetFails", testReadChunkedFromNegativeOffsetFails),
                 ("testReadChunkedFromOffsetAfterEOFDeliversExactlyOneChunk", testReadChunkedFromOffsetAfterEOFDeliversExactlyOneChunk),
                 ("testReadChunkedFromEOFDeliversExactlyOneChunk", testReadChunkedFromEOFDeliversExactlyOneChunk),
                 ("testReadFromOffsetAfterEOFDeliversExactlyOneChunk", testReadFromOffsetAfterEOFDeliversExactlyOneChunk),

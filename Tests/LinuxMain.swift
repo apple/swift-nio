@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -24,6 +24,7 @@ import XCTest
 
 #if os(Linux) || os(FreeBSD) || os(Android)
    @testable import NIOConcurrencyHelpersTests
+   @testable import NIOCoreTests
    @testable import NIODataStructuresTests
    @testable import NIOEmbeddedTests
    @testable import NIOFoundationCompatTests
@@ -45,7 +46,9 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
        XCTMain([
              testCase(AcceptBackoffHandlerTest.allTests),
              testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
+             testCase(AddressedEnvelopeTests.allTests),
              testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
+             testCase(AsyncSequenceCollectTests.allTests),
              testCase(Base64Test.allTests),
              testCase(BaseObjectTest.allTests),
              testCase(BlockingIOThreadPoolTest.allTests),

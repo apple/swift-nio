@@ -361,9 +361,10 @@ public final class EmbeddedEventLoopTest: XCTestCase {
     func testDrainScheduledTasksDoesNotRunNewlyScheduledTasks() {
         let eventLoop = EmbeddedEventLoop()
         var tasksRun = 0
+        var lastScheduled: Scheduled<Void>?
 
         func scheduleNowAndIncrement() {
-            eventLoop.scheduleTask(in: .nanoseconds(0)) {
+            lastScheduled = eventLoop.scheduleTask(in: .nanoseconds(0)) {
                 tasksRun += 1
                 scheduleNowAndIncrement()
             }
@@ -372,6 +373,9 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         scheduleNowAndIncrement()
         eventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
         XCTAssertEqual(tasksRun, 1)
+        XCTAssertThrowsError(try lastScheduled!.futureResult.wait()) { error in
+            XCTAssertEqual(error as! EventLoopError, EventLoopError.shutdown)
+        }
     }
 
     func testAdvanceTimeToDeadline() {
