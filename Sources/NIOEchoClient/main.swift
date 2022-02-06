@@ -31,7 +31,7 @@ private final class EchoHandler: ChannelInboundHandler {
         self.sendBytes = buffer.readableBytes
         context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }
-    
+
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var unwrappedInboundData = self.unwrapInboundIn(data)
         self.sendBytes -= unwrappedInboundData.readableBytes
