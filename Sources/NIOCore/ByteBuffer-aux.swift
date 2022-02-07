@@ -125,9 +125,9 @@ extension ByteBuffer {
     @discardableResult
     @inlinable
     public mutating func setString(_ string: String, at index: Int) -> Int {
-        // Do not implement setString via setSubstring. As of Swift version 5.1.3,
-        // Substring.UTF8View does not implement withContiguousStorageIfAvailable
-        // and therefore has no fast access to the backing storage.
+        // Do not implement setString via setSubstring. Before Swift version 5.3,
+        // Substring.UTF8View did not implement withContiguousStorageIfAvailable
+        // and therefore had no fast access to the backing storage.
         if let written = string.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
             self.setBytes(utf8Bytes, at: index)
         }) {
@@ -236,16 +236,22 @@ extension ByteBuffer {
     ///
     /// - parameters:
     ///     - substring: The substring to write.
-    ///     - index: The index for the first serilized byte.
+    ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written
     @discardableResult
     @inlinable
     public mutating func setSubstring(_ substring: Substring, at index: Int) -> Int {
-        // As of Swift 5.1.3, Substring.UTF8View does not implement
-        // withContiguousStorageIfAvailable and therefore has no fast access
-        // to the backing storage. For now, convert to a String and call
-        // setString instead.
-        return self.setString(String(substring), at: index)
+        // Substring.UTF8View implements withContiguousStorageIfAvailable starting with
+        // Swift version 5.3.
+        if let written = substring.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+            self.setBytes(utf8Bytes, at: index)
+        }) {
+            // fast path, directly available
+            return written
+        } else {
+            // slow path, convert to string
+            return self.setString(String(substring), at: index)
+        }
     }
     
     // MARK: DispatchData APIs
