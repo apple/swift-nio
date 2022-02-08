@@ -843,3 +843,6 @@ try measureAndPrint(desc: "schedule_and_run_10000_tasks",
 
 try measureAndPrint(desc: "execute_10000",
                     benchmark: ExecuteBenchmark())
+
+try measureAndPrint(desc: "bytebufferview_copy_to_array_1000_times_1kb",
+                    benchmark: ByteBufferViewCopyToArrayBenchmark(iterations: 1000, size: 1024))

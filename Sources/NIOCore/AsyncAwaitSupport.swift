@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2021-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -218,4 +218,122 @@ extension ChannelPipeline {
         try await self.addHandlers(handlers, position: position)
     }
 }
+
+public struct NIOTooManyBytesError: Error {
+     public init() {}
+ }
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension AsyncSequence where Element: RandomAccessCollection, Element.Element == UInt8 {
+    /// Accumulates an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single `accumulationBuffer`.
+    /// - Parameters:
+    ///   - accumulationBuffer: buffer to write all the elements of `self` into
+    ///   - maxBytes: The maximum number of bytes this method is allowed to write into `accumulationBuffer`
+    /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
+    /// Note that previous elements of `self` might already be write to `accumulationBuffer`.
+    @inlinable
+    public func collect(
+        upTo maxBytes: Int,
+        into accumulationBuffer: inout ByteBuffer
+    ) async throws {
+        precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
+        var bytesRead = 0
+        for try await fragment in self {
+            bytesRead += fragment.count
+            guard bytesRead <= maxBytes else {
+                throw NIOTooManyBytesError()
+            }
+            accumulationBuffer.writeBytes(fragment)
+        }
+    }
+    
+    /// Accumulates an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single ``NIO/ByteBuffer``.
+    /// - Parameters:
+    ///   - maxBytes: The maximum number of bytes this method is allowed to accumulate
+    ///   - allocator: Allocator used for allocating the result `ByteBuffer`
+    /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
+    @inlinable
+    public func collect(
+        upTo maxBytes: Int,
+        using allocator: ByteBufferAllocator
+    ) async throws -> ByteBuffer {
+        precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
+        var accumulationBuffer = allocator.buffer(capacity: Swift.min(maxBytes, 1024))
+        try await self.collect(upTo: maxBytes, into: &accumulationBuffer)
+        return accumulationBuffer
+    }
+}
+
+// MARK: optimised methods for ByteBuffer
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension AsyncSequence where Element == ByteBuffer {
+    /// Accumulates an ``Swift/AsyncSequence`` of ``ByteBuffer``s into a single `accumulationBuffer`.
+    /// - Parameters:
+    ///   - accumulationBuffer: buffer to write all the elements of `self` into
+    ///   - maxBytes: The maximum number of bytes this method is allowed to write into `accumulationBuffer`
+    /// - Throws: ``NIOTooManyBytesError`` if the the sequence contains more than `maxBytes`.
+    /// Note that previous elements of `self` might be already write to `accumulationBuffer`.
+    @inlinable
+    public func collect(
+        upTo maxBytes: Int,
+        into accumulationBuffer: inout ByteBuffer
+    ) async throws {
+        precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
+        var bytesRead = 0
+        for try await fragment in self {
+            bytesRead += fragment.readableBytes
+            guard bytesRead <= maxBytes else {
+                throw NIOTooManyBytesError()
+            }
+            accumulationBuffer.writeImmutableBuffer(fragment)
+        }
+    }
+    
+    /// Accumulates an ``Swift/AsyncSequence`` of ``ByteBuffer``s into a single ``ByteBuffer``.
+    /// - Parameters:
+    ///   - maxBytes: The maximum number of bytes this method is allowed to accumulate
+    /// - Throws: `NIOTooManyBytesError` if the the sequence contains more than `maxBytes`.
+    @inlinable
+    public func collect(
+        upTo maxBytes: Int
+    ) async throws -> ByteBuffer {
+        precondition(maxBytes >= 0, "`maxBytes` must be greater than or equal to zero")
+        // we use the first `ByteBuffer` to accumulate all subsequent `ByteBuffer`s into.
+        // this has also the benefit of not copying at all,
+        // if the async sequence contains only one element.
+        var iterator = self.makeAsyncIterator()
+        guard var head = try await iterator.next() else {
+            return ByteBuffer()
+        }
+        guard head.readableBytes <= maxBytes else {
+            throw NIOTooManyBytesError()
+        }
+        
+        let tail = AsyncSequenceFromIterator(iterator)
+        // it is guaranteed that
+        // `maxBytes >= 0 && head.readableBytes >= 0 && head.readableBytes <= maxBytes`
+        // This implies that `maxBytes - head.readableBytes >= 0`
+        // we can therefore use wrapping subtraction
+        try await tail.collect(upTo: maxBytes &- head.readableBytes, into: &head)
+        return head
+    }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@usableFromInline
+struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSequence {
+    @usableFromInline typealias Element = AsyncIterator.Element
+    
+    @usableFromInline var iterator: AsyncIterator
+    
+    @inlinable init(_ iterator: AsyncIterator) {
+        self.iterator = iterator
+    }
+    
+    @inlinable func makeAsyncIterator() -> AsyncIterator {
+        self.iterator
+    }
+}
+
 #endif
