@@ -133,7 +133,7 @@ extension JSONEncoder {
     public func encodeAsByteBuffer<T: Encodable>(_ value: T, allocator: ByteBufferAllocator) throws -> ByteBuffer {
         let data = try self.encode(value)
         var buffer = allocator.buffer(capacity: data.count)
-        try buffer.writeJSONEncodable(value, encoder: self)
+        buffer.writeBytes(data)
         return buffer
     }
 }
