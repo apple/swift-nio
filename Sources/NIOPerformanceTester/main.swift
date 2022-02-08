@@ -190,6 +190,9 @@ private func someString(size: Int) -> String {
 
 // MARK: Performance Tests
 
+try measureAndPrint(desc: "byte_buffer_view_contains_1kb", benchmark: ByteBufferViewContainsBenchmark(iterations: 2, bufferSize: 1024))
+
+/*
 measureAndPrint(desc: "write_http_headers") {
     var headers: [(String, String)] = []
     for i in 1..<10 {
@@ -841,3 +844,4 @@ try measureAndPrint(desc: "schedule_and_run_10000_tasks",
 
 try measureAndPrint(desc: "execute_10000",
                     benchmark: ExecuteBenchmark())
+*/
