@@ -190,9 +190,6 @@ private func someString(size: Int) -> String {
 
 // MARK: Performance Tests
 
-try measureAndPrint(desc: "byte_buffer_view_contains_1kb", benchmark: ByteBufferViewContainsBenchmark(iterations: 2, bufferSize: 1024))
-
-/*
 measureAndPrint(desc: "write_http_headers") {
     var headers: [(String, String)] = []
     for i in 1..<10 {
@@ -811,6 +808,8 @@ try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1mb", benchmark: Cir
 
 try measureAndPrint(desc: "byte_buffer_view_iterator_1mb", benchmark: ByteBufferViewIteratorBenchmark(iterations: 20, bufferSize: 1024*1024))
 
+try measureAndPrint(desc: "byte_buffer_view_contains_10mb", benchmark: ByteBufferViewContainsBenchmark(iterations: 20, bufferSize: 1024*1024*10))
+
 try measureAndPrint(desc: "byte_to_message_decoder_decode_many_small",
                     benchmark: ByteToMessageDecoderDecodeManySmallsBenchmark(iterations: 1_000, bufferSize: 16384))
 
@@ -844,4 +843,3 @@ try measureAndPrint(desc: "schedule_and_run_10000_tasks",
 
 try measureAndPrint(desc: "execute_10000",
                     benchmark: ExecuteBenchmark())
-*/
