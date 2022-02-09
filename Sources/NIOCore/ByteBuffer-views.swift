@@ -113,6 +113,13 @@ public struct ByteBufferView: RandomAccessCollection {
             return ptr.lastIndex(of: element).map { $0 + self._range.lowerBound }
         })
     }
+    
+    @inlinable
+    public func _customContainsEquatableElement(_ element: Element) -> Bool? {
+        return .some(self.withUnsafeBytes { ptr -> Bool in
+            return ptr.contains(element)
+        })
+    }
 
     @inlinable
     public func _copyContents(
