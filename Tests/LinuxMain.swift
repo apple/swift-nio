@@ -55,6 +55,7 @@ class LinuxMainRunner {
              testCase(ByteBufferDataProtocolTests.allTests),
              testCase(ByteBufferLengthPrefixTests.allTests),
              testCase(ByteBufferTest.allTests),
+             testCase(ByteBufferUUIDTests.allTests),
              testCase(ByteBufferUtilsTest.allTests),
              testCase(ByteBufferViewDataProtocolTests.allTests),
              testCase(ByteToMessageDecoderTest.allTests),

@@ -265,6 +265,101 @@ extension ByteBuffer {
         }
         return written
     }
+
+    // MARK: - UUID
+
+    /// Get a `UUID` from the 16 bytes starting at `index`. This will not change the reader index.
+    /// If there are less than 16 bytes starting at `index` then `nil` will be returned.
+    ///
+    /// - Parameters:
+    ///   - index: The starting index of the bytes of interest into the `ByteBuffer`.
+    /// - Returns: A `UUID` value containing the bytes of interest or `nil` if the selected bytes
+    ///            are not readable or there were not enough bytes.
+    public func getUUIDBytes(at index: Int) -> UUID? {
+        guard let chunk1 = self.getInteger(at: index, as: UInt64.self),
+              let chunk2 = self.getInteger(at: index + 8, as: UInt64.self) else {
+            return nil
+        }
+
+        let uuidBytes = (
+            UInt8(truncatingIfNeeded: chunk1 >> 56),
+            UInt8(truncatingIfNeeded: chunk1 >> 48),
+            UInt8(truncatingIfNeeded: chunk1 >> 40),
+            UInt8(truncatingIfNeeded: chunk1 >> 32),
+            UInt8(truncatingIfNeeded: chunk1 >> 24),
+            UInt8(truncatingIfNeeded: chunk1 >> 16),
+            UInt8(truncatingIfNeeded: chunk1 >> 8),
+            UInt8(truncatingIfNeeded: chunk1),
+            UInt8(truncatingIfNeeded: chunk2 >> 56),
+            UInt8(truncatingIfNeeded: chunk2 >> 48),
+            UInt8(truncatingIfNeeded: chunk2 >> 40),
+            UInt8(truncatingIfNeeded: chunk2 >> 32),
+            UInt8(truncatingIfNeeded: chunk2 >> 24),
+            UInt8(truncatingIfNeeded: chunk2 >> 16),
+            UInt8(truncatingIfNeeded: chunk2 >> 8),
+            UInt8(truncatingIfNeeded: chunk2)
+        )
+
+        return UUID(uuid: uuidBytes)
+    }
+
+    /// Set the bytes of the `UUID` into this `ByteBuffer` at `index`, allocating more storage if
+    /// necessary. Does not move the writer index.
+    ///
+    /// - Parameters:
+    ///   - uuid: The UUID to set.
+    ///   - index: The index into the buffer where `uuid` should be written.
+    /// - Returns: The number of bytes written.
+    @discardableResult
+    public mutating func setUUIDBytes(_ uuid: UUID, at index: Int) -> Int {
+        let bytes = uuid.uuid
+
+        // Pack the bytes into two 'UInt64's and set them.
+        let chunk1 = UInt64(bytes.0) << 56
+            | UInt64(bytes.1) << 48
+            | UInt64(bytes.2) << 40
+            | UInt64(bytes.3) << 32
+            | UInt64(bytes.4) << 24
+            | UInt64(bytes.5) << 16
+            | UInt64(bytes.6) << 8
+            | UInt64(bytes.7)
+
+        let chunk2 = UInt64(bytes.8) << 56
+            | UInt64(bytes.9) << 48
+            | UInt64(bytes.10) << 40
+            | UInt64(bytes.11) << 32
+            | UInt64(bytes.12) << 24
+            | UInt64(bytes.13) << 16
+            | UInt64(bytes.14) << 8
+            | UInt64(bytes.15)
+
+        var written = self.setInteger(chunk1, at: index)
+        written &+= self.setInteger(chunk2, at: index &+ written)
+        assert(written == 16)
+        return written
+    }
+
+    /// Read a `UUID` from the first 16 bytes in the buffer. Advances the reader index.
+    ///
+    /// - Returns: The `UUID` or `nil` if the buffer did not contain enough bytes.
+    public mutating func readUUIDBytes() -> UUID? {
+        guard let uuid = self.getUUIDBytes(at: self.readerIndex) else {
+            return nil
+        }
+        self.moveReaderIndex(forwardBy: MemoryLayout<uuid_t>.size)
+        return uuid
+    }
+
+    /// Write a `UUID` info the buffer and advances the writer index.
+    ///
+    /// - Parameter uuid: The `UUID` to write into the buffer.
+    /// - Returns: The number of bytes written.
+    @discardableResult
+    public mutating func writeUUIDBytes(_ uuid: UUID) -> Int {
+        let written = self.setUUIDBytes(uuid, at: self.writerIndex)
+        self.moveWriterIndex(forwardBy: written)
+        return written
+    }
 }
 
 extension ByteBufferAllocator {
@@ -294,12 +389,12 @@ extension ByteBufferView: MutableDataProtocol {}
 
 // MARK: - Data
 extension Data {
-    
+
     /// Creates a `Data` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
     /// - parameter buffer: The buffer to read.
     public init(buffer: ByteBuffer, byteTransferStrategy: ByteBuffer.ByteTransferStrategy = .automatic) {
         var buffer = buffer
         self = buffer.readData(length: buffer.readableBytes, byteTransferStrategy: byteTransferStrategy)!
     }
-    
+
 }
