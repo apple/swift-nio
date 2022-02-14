@@ -72,7 +72,16 @@ public enum IPAddress: CustomStringConvertible {
             addressString = "\(addr.address)"
             type = "IPv4"
         case .v6(let addr):
-            let hexRepresentation = Mirror(reflecting: addr.address).children.map {String(format: "%02X", $0.value as! UInt8)}
+            let hexRepresentation: [UInt16] = [
+                addr.address.0 | addr.address.1 << 8,
+                addr.address.2 | addr.address.3 << 8,
+                addr.address.4 | addr.address.5 << 8,
+                addr.address.6 | addr.address.7 << 8,
+                addr.address.8 | addr.address.9 << 8,
+                addr.address.10 | addr.address.11 << 8,
+                addr.address.12 | addr.address.13 << 8,
+                addr.address.14 | addr.address.15 << 8
+            ].map {String(format: "%02X", $0)}
             addressString = "\(hexRepresentation.joined(separator: ":"))"
             
             if let zone = addr.zone {
@@ -99,12 +108,9 @@ public enum IPAddress: CustomStringConvertible {
     
     public init(bytes: [UInt8]) {
         if bytes.count == 16 {
-            var byteTuple: IPv6Bytes = (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-            withUnsafeMutablePointer(to: &byteTuple) { dst -> () in
-                memcpy(dst, bytes, 16)
-                return
-            }
-            self = .v6(.init(address: byteTuple))
+            self = .v6(.init(address: (
+                bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+            )))
         } else {
             // TODO: throw exception
             self = .v4(.init(address: (0,0,0,0)))
