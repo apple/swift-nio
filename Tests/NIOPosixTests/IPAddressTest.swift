@@ -18,11 +18,18 @@ import XCTest
 
 class IPAddressTest: XCTestCase {
     
-    func testDescriptionWorks() throws {
+    func testDescriptionWorksIPv4() throws {
         let ipAddress = IPAddress(bytes: [
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+            1, 2, 3, 4
         ])
         print(ipAddress.description)
     }
     
+    func testDescriptionWorksIPv6() throws {
+        let ipAddress = IPAddress(bytes: [
+            0, 1, 255, 3, 128, 5, 6, 54, 8, 9, 100, 11, 132, 13, 104, 15
+        ])
+        
+        print(ipAddress.description)
+    }
 }

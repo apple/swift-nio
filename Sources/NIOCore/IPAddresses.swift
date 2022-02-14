@@ -12,13 +12,122 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+
 import Darwin
 import CNIOLinux
 import CoreFoundation
 
-public typealias IPv4Bytes = (UInt8, UInt8, UInt8, UInt8)
-public typealias IPv6Bytes = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
+
+extension UInt8 {
+    var hexValue: String {
+        let table: StaticString = "0123456789ABCDEF"
+        
+        let b0 = table.withUTF8Buffer { table in
+            table[Int(self >> 4)]
+        }
+        let b1 = table.withUTF8Buffer { table in
+            table[Int(self & 0x0F)]
+        }
+        return String(UnicodeScalar(b0)) + String(UnicodeScalar(b1))
+    }
+}
+
+public typealias IPv4BytesTuple = (UInt8, UInt8, UInt8, UInt8)
+public typealias IPv6BytesTuple = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
+
+public struct IPv4Bytes: Collection, IteratorProtocol{
+    public typealias Index = Int
+    public typealias Element = UInt8
+    private var _times = 0
+    public let startIndex: Index = 0
+    public let endIndex: Index = 3
+    
+    private let _storage: IPv4BytesTuple
+    
+    
+    public var bytes: IPv4BytesTuple {
+        return self._storage
+    }
+    
+    init(_ bytes: IPv4BytesTuple) {
+        self._storage = bytes
+    }
+    
+    mutating public func next() -> Element? {
+        let nextVal: Element? = self[self._times]
+        self._times += 1
+        return nextVal
+    }
+    
+    public subscript(position: Index) -> Element {
+        get {
+            switch position {
+            case 0: return self.bytes.0
+            case 1: return self.bytes.1
+            case 2: return self.bytes.2
+            case 3: return self.bytes.3
+            default: return 0  // can never be the case TODO: guard?
+            }
+        }
+    }
+    
+    public func index(after: Index) -> Index {
+        return after + 1
+    }
+}
+
+public struct IPv6Bytes: Collection, IteratorProtocol{
+    public typealias Index = Int
+    public typealias Element = UInt8
+    private var _times = 0
+    public let startIndex: Index = 0
+    public let endIndex: Index = 15
+    
+    private let _storage: IPv6BytesTuple
+    
+    
+    public var bytes: IPv6BytesTuple {
+        return self._storage
+    }
+    
+    init(_ bytes: IPv6BytesTuple) {
+        self._storage = bytes
+    }
+    
+    mutating public func next() -> Element? {
+        let nextVal: Element? = self[self._times]
+        self._times += 1
+        return nextVal
+    }
+    
+    public subscript(position: Index) -> Element {
+        get {
+            switch position {
+            case 0: return self.bytes.0
+            case 1: return self.bytes.1
+            case 2: return self.bytes.2
+            case 3: return self.bytes.3
+            case 4: return self.bytes.4
+            case 5: return self.bytes.5
+            case 6: return self.bytes.6
+            case 7: return self.bytes.7
+            case 8: return self.bytes.8
+            case 9: return self.bytes.9
+            case 10: return self.bytes.10
+            case 11: return self.bytes.11
+            case 12: return self.bytes.12
+            case 13: return self.bytes.13
+            case 14: return self.bytes.14
+            case 15: return self.bytes.15
+            default: return 0  // can never be the case TODO: guard?
+            }
+        }
+    }
+    
+    public func index(after: Index) -> Index {
+        return after + 1
+    }
+}
 
 
 /// Represent a IP address
@@ -27,13 +136,12 @@ public enum IPAddress: CustomStringConvertible {
     /// A single IPv4 address for `IPAddress`.
     public struct IPv4Address {
         /// The libc ip address for an IPv4 address.
-        /// 8b.8b.8b.8b => 32b Int
         private let _storage: IPv4Bytes
         
         public var address: IPv4Bytes {
-            return _storage
+            return self._storage
         }
-    
+        
         fileprivate init(address: IPv4Bytes) {
             self._storage = address
         }
@@ -51,7 +159,7 @@ public enum IPAddress: CustomStringConvertible {
         public var zone: String? {
             return self._storage.value.zone
         }
-    
+        
         fileprivate init(address: IPv6Bytes, zone: String?=nil) {
             self._storage = Box((address: address, zone: zone))
         }
@@ -69,21 +177,12 @@ public enum IPAddress: CustomStringConvertible {
         let type: String
         switch self {
         case .v4(let addr):
-            addressString = "\(addr.address)"
+            addressString = addr.address.map({"\($0)"}).joined(separator: ".")
             type = "IPv4"
         case .v6(let addr):
-            let hexRepresentation: [UInt16] = [
-                addr.address.0 | addr.address.1 << 8,
-                addr.address.2 | addr.address.3 << 8,
-                addr.address.4 | addr.address.5 << 8,
-                addr.address.6 | addr.address.7 << 8,
-                addr.address.8 | addr.address.9 << 8,
-                addr.address.10 | addr.address.11 << 8,
-                addr.address.12 | addr.address.13 << 8,
-                addr.address.14 | addr.address.15 << 8
-            ].map {String(format: "%02X", $0)}
-            addressString = "\(hexRepresentation.joined(separator: ":"))"
-            
+            addressString = stride(from: 0, to: 15, by: 2).map({ idx in
+                addr.address[idx].hexValue + addr.address[idx + 1].hexValue
+            }).joined(separator: ":")
             if let zone = addr.zone {
                 addressString += "%<\(zone)>"
             }
@@ -103,17 +202,22 @@ public enum IPAddress: CustomStringConvertible {
 
 
     public init(string: String) {
-        self = .v4(.init(address: (0,0,0,0)))
+        self = .v4(.init(address: .init((0,0,0,0))))
     }
     
     public init(bytes: [UInt8]) {
+        if bytes.count == 4 {
+            self = .v4(.init(address: .init((
+                bytes[0], bytes[1], bytes[2], bytes[3]
+            ))))
+        }
         if bytes.count == 16 {
-            self = .v6(.init(address: (
+            self = .v6(.init(address: .init((
                 bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
-            )))
+            ))))
         } else {
             // TODO: throw exception
-            self = .v4(.init(address: (0,0,0,0)))
+            self = .v4(.init(address: .init((0,0,0,0))))
         }
     }
     
@@ -124,7 +228,7 @@ public enum IPAddress: CustomStringConvertible {
     */
     
     public init(_ addr: in6_addr) {
-        self = .v6(.init(address: addr.__u6_addr.__u6_addr8))
+        self = .v6(.init(address: .init(addr.__u6_addr.__u6_addr8)))
     }
     
 }
