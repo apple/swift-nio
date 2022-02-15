@@ -40,13 +40,20 @@ public struct IPv4Bytes: Collection, IteratorProtocol{
     public typealias Element = UInt8
     private var _times = 0
     public let startIndex: Index = 0
-    public let endIndex: Index = 3
+    public let endIndex: Index = 4
     
     private let _storage: IPv4BytesTuple
     
     
     public var bytes: IPv4BytesTuple {
         return self._storage
+    }
+    
+    public var posixIPv4Address: in_addr {
+        get {
+            // TODO: posix in_addr only 24 leading bits
+            return in_addr.init(s_addr: .init(UInt32(self.bytes.0) * 256 * 256 + UInt32(self.bytes.1) * 256 + UInt32(self.bytes.2)))
+        }
     }
     
     init(_ bytes: IPv4BytesTuple) {
@@ -81,13 +88,19 @@ public struct IPv6Bytes: Collection, IteratorProtocol{
     public typealias Element = UInt8
     private var _times = 0
     public let startIndex: Index = 0
-    public let endIndex: Index = 15
+    public let endIndex: Index = 16
     
     private let _storage: IPv6BytesTuple
     
     
     public var bytes: IPv6BytesTuple {
         return self._storage
+    }
+    
+    public var posixIPv6Address: in6_addr {
+        get {
+            return in6_addr.init(__u6_addr: .init(__u6_addr8: self.bytes))
+        }
     }
     
     init(_ bytes: IPv6BytesTuple) {
@@ -135,6 +148,7 @@ public enum IPAddress: CustomStringConvertible {
     
     /// A single IPv4 address for `IPAddress`.
     public struct IPv4Address {
+        // TODO: Merge IPv4Address with IPv4Bytes struct?
         /// The libc ip address for an IPv4 address.
         private let _storage: IPv4Bytes
         
@@ -150,18 +164,14 @@ public enum IPAddress: CustomStringConvertible {
     /// A single IPv6 address for `IPAddress`
     public struct IPv6Address {
         /// The libc ip address for an IPv6 address.
-        private let _storage: Box<(address: IPv6Bytes, zone: String?)>
+        private let _storage: IPv6Bytes
         
         public var address: IPv6Bytes {
-            return self._storage.value.address
+            return self._storage
         }
         
-        public var zone: String? {
-            return self._storage.value.zone
-        }
-        
-        fileprivate init(address: IPv6Bytes, zone: String?=nil) {
-            self._storage = Box((address: address, zone: zone))
+        fileprivate init(address: IPv6Bytes) {
+            self._storage = address
         }
     }
         
@@ -173,7 +183,7 @@ public enum IPAddress: CustomStringConvertible {
 
     /// A human-readable description of this `IPAddress`. Mostly useful for logging.
     public var description: String {
-        var addressString: String
+        let addressString: String
         let type: String
         switch self {
         case .v4(let addr):
@@ -183,52 +193,52 @@ public enum IPAddress: CustomStringConvertible {
             addressString = stride(from: 0, to: 15, by: 2).map({ idx in
                 addr.address[idx].hexValue + addr.address[idx + 1].hexValue
             }).joined(separator: ":")
-            if let zone = addr.zone {
-                addressString += "%<\(zone)>"
-            }
             type = "IPv6"
         }
         return "[\(type)]\(addressString)"
     }
     
 // TODO:
-//    "While NIO requires that we be able to produce C types, we don't need to store things there!"
 //    accept: IPv4 a.b.c.d
-//    accept: IPv6
+//    accept: IPv6 strings
 //       a) x:x:x:x:x:x:x:x with x one to four hex digits
 //       b) x:x:x::x:x where '::' represents fill up zeros
 //       c) x:x:x:x:x:x:d.d.d.d where d's are decimal values of the four low-order 8-bit pieces
 //       d) <address>%<zone_id> where address is a literal IPv6 address and zone_id is a string identifying the zone
 
-
     public init(string: String) {
         self = .v4(.init(address: .init((0,0,0,0))))
     }
     
-    public init(bytes: [UInt8]) {
-        if bytes.count == 4 {
-            self = .v4(.init(address: .init((
-                bytes[0], bytes[1], bytes[2], bytes[3]
-            ))))
-        }
-        if bytes.count == 16 {
-            self = .v6(.init(address: .init((
-                bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
-            ))))
-        } else {
-            // TODO: throw exception
-            self = .v4(.init(address: .init((0,0,0,0))))
+    public init(packedBytes bytes: [UInt8]) {
+        switch bytes.count {
+        case 4: self = .v4(.init(address: .init((
+            bytes[0], bytes[1], bytes[2], bytes[3]
+        ))))
+        case 16: self = .v6(.init(address: .init((
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+        ))))
+        default: self = .v4(.init(address: .init((0,0,0,0))))
         }
     }
     
-    /*
-    public init(_ addr: in_addr) {
-        self = .v4(.init(address: addr.s_addr))
+    public init(posixIPv4Address: in_addr) {
+        let uint8Bitmask: UInt32 = 0x000000FF
+        
+        // TODO: alternative memcpy(&uint8, &uint32, 4)?
+        // TODO: posix in_addr only 24 leading bits
+        let uint8AddressBytes: IPv4Bytes = .init((
+            UInt8((posixIPv4Address.s_addr >> 16) & uint8Bitmask),
+            UInt8((posixIPv4Address.s_addr >> 8) & uint8Bitmask),
+            UInt8(posixIPv4Address.s_addr & uint8Bitmask),
+            0
+        ))
+        
+        self = .v4(.init(address: uint8AddressBytes))
     }
-    */
     
-    public init(_ addr: in6_addr) {
-        self = .v6(.init(address: .init(addr.__u6_addr.__u6_addr8)))
+    public init(posixIPv6Address: in6_addr) {
+        self = .v6(.init(address: .init(posixIPv6Address.__u6_addr.__u6_addr8)))
     }
     
 }
