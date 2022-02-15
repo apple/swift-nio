@@ -35,15 +35,14 @@ extension UInt8 {
 public typealias IPv4BytesTuple = (UInt8, UInt8, UInt8, UInt8)
 public typealias IPv6BytesTuple = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 
-public struct IPv4Bytes: Collection, IteratorProtocol{
+public struct IPv4Bytes: Collection {
     public typealias Index = Int
     public typealias Element = UInt8
-    private var _times = 0
+    
     public let startIndex: Index = 0
     public let endIndex: Index = 4
     
     private let _storage: IPv4BytesTuple
-    
     
     public var bytes: IPv4BytesTuple {
         return self._storage
@@ -58,12 +57,6 @@ public struct IPv4Bytes: Collection, IteratorProtocol{
     
     init(_ bytes: IPv4BytesTuple) {
         self._storage = bytes
-    }
-    
-    mutating public func next() -> Element? {
-        let nextVal: Element? = self[self._times]
-        self._times += 1
-        return nextVal
     }
     
     public subscript(position: Index) -> Element {
@@ -83,20 +76,19 @@ public struct IPv4Bytes: Collection, IteratorProtocol{
     }
 }
 
-public struct IPv6Bytes: Collection, IteratorProtocol{
+public struct IPv6Bytes: Collection {
     public typealias Index = Int
     public typealias Element = UInt8
-    private var _times = 0
+    
     public let startIndex: Index = 0
     public let endIndex: Index = 16
     
     private let _storage: IPv6BytesTuple
     
-    
     public var bytes: IPv6BytesTuple {
         return self._storage
     }
-    
+
     public var posixIPv6Address: in6_addr {
         get {
             return in6_addr.init(__u6_addr: .init(__u6_addr8: self.bytes))
@@ -105,12 +97,6 @@ public struct IPv6Bytes: Collection, IteratorProtocol{
     
     init(_ bytes: IPv6BytesTuple) {
         self._storage = bytes
-    }
-    
-    mutating public func next() -> Element? {
-        let nextVal: Element? = self[self._times]
-        self._times += 1
-        return nextVal
     }
     
     public subscript(position: Index) -> Element {
@@ -145,6 +131,7 @@ public struct IPv6Bytes: Collection, IteratorProtocol{
 
 /// Represent a IP address
 public enum IPAddress: CustomStringConvertible {
+    public typealias Element = UInt8
     
     /// A single IPv4 address for `IPAddress`.
     public struct IPv4Address {
@@ -164,14 +151,18 @@ public enum IPAddress: CustomStringConvertible {
     /// A single IPv6 address for `IPAddress`
     public struct IPv6Address {
         /// The libc ip address for an IPv6 address.
-        private let _storage: IPv6Bytes
+        private let _storage: Box<(address: IPv6Bytes, zone: String?)>
         
         public var address: IPv6Bytes {
-            return self._storage
+            return self._storage.value.address
         }
         
-        fileprivate init(address: IPv6Bytes) {
-            self._storage = address
+        public var zone: String? {
+            return self._storage.value.zone
+        }
+        
+        fileprivate init(address: IPv6Bytes, zone: String? = nil) {
+            self._storage = .init((address, zone: zone))
         }
     }
         
@@ -183,7 +174,7 @@ public enum IPAddress: CustomStringConvertible {
 
     /// A human-readable description of this `IPAddress`. Mostly useful for logging.
     public var description: String {
-        let addressString: String
+        var addressString: String
         let type: String
         switch self {
         case .v4(let addr):
@@ -193,6 +184,9 @@ public enum IPAddress: CustomStringConvertible {
             addressString = stride(from: 0, to: 15, by: 2).map({ idx in
                 addr.address[idx].hexValue + addr.address[idx + 1].hexValue
             }).joined(separator: ":")
+            if let zone = addr.zone {
+                addressString += "%\(zone)"
+            }
             type = "IPv6"
         }
         return "[\(type)]\(addressString)"
@@ -210,14 +204,14 @@ public enum IPAddress: CustomStringConvertible {
         self = .v4(.init(address: .init((0,0,0,0))))
     }
     
-    public init(packedBytes bytes: [UInt8]) {
+    public init(packedBytes bytes: [UInt8], zone: String? = nil) {
         switch bytes.count {
         case 4: self = .v4(.init(address: .init((
             bytes[0], bytes[1], bytes[2], bytes[3]
         ))))
         case 16: self = .v6(.init(address: .init((
             bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
-        ))))
+        )), zone: zone))
         default: self = .v4(.init(address: .init((0,0,0,0))))
         }
     }

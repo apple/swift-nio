@@ -28,7 +28,7 @@ class IPAddressTest: XCTestCase {
     func testDescriptionWorksIPv6() throws {
         let ipAddress = IPAddress(packedBytes: [
             0, 1, 255, 3, 128, 5, 6, 54, 8, 9, 100, 11, 132, 13, 104, 15
-        ])
+        ], zone: "testzone")
         
         print(ipAddress.description)
     }
