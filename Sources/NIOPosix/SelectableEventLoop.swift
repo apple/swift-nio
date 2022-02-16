@@ -66,7 +66,10 @@ internal final class SelectableEventLoop: EventLoop {
     internal var scheduledTaskCounter = NIOAtomic.makeAtomic(value: UInt64(0))
     @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
-    private var tasksCopy = ContiguousArray<() -> Void>()
+
+    // We only need the ScheduledTask's task closure. However, an `Array<() -> Void>` allocates
+    // for every appended closure. https://bugs.swift.org/browse/SR-15872
+    private var tasksCopy = ContiguousArray<ScheduledTask>()
     @usableFromInline
     internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
         didSet {
@@ -491,7 +494,7 @@ Further information:
                         while tasksCopy.count < tasksCopy.capacity, let task = self._scheduledTasks.peek() {
                             if task.readyIn(now) <= .nanoseconds(0) {
                                 self._scheduledTasks.pop()
-                                self.tasksCopy.append(task.task)
+                                self.tasksCopy.append(task)
                             } else {
                                 nextReadyTask = task
                                 break
@@ -517,7 +520,7 @@ Further information:
                 for task in self.tasksCopy {
                     /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
                     withAutoReleasePool {
-                        task()
+                        task.task()
                     }
                 }
                 // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
