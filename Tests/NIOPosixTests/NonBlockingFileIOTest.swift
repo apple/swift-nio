@@ -869,7 +869,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                                          chunkSize: 1,
                                                          allocator: self.allocator,
                                                          eventLoop: self.eventLoop) { buffer in
-                _ = numberOfCalls.add(1)
+                numberOfCalls.add(1)
                 XCTAssertEqual(1, buffer.readableBytes)
                 XCTAssertEqual(UInt8(ascii: "X"), buffer.readableBytesView.first)
                 return self.eventLoop.makeSucceededFuture(())

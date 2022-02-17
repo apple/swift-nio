@@ -56,7 +56,7 @@ func run(identifier: String) {
                                 chunkSize: 1,
                                 allocator: allocator,
                                 eventLoop: loop) { buffer in
-                _ = numberOfBytes.add(buffer.readableBytes)
+                numberOfBytes.add(buffer.readableBytes)
                 return loop.makeSucceededFuture(())
         }.wait()
         precondition(numberOfBytes.load() == numberOfChunks, "\(numberOfBytes.load()), \(numberOfChunks)")
