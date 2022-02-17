@@ -14,3 +14,4 @@ or cases where the Swift compiler was unable to sufficiently optimize the code:
 - https://github.com/apple/swift-nio/pull/1814
 - https://github.com/apple/swift-nio/pull/1956
 - https://github.com/apple/swift-nio/pull/1961
+- https://github.com/apple/swift-nio/pull/2046
