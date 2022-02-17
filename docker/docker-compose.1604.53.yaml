@@ -25,6 +25,7 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlertype=9050
       - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet=25050
       - MAX_ALLOCS_ALLOWED_1000_autoReadGetAndSet_sync=0
+      - MAX_ALLOCS_ALLOWED_1000_copying_bytebufferview_to_array=1050
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=9050
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=30450
       - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=35
@@ -41,6 +42,7 @@ services:
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer_with_space=3
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer=3050
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_space=3050
+      - MAX_ALLOCS_ALLOWED_execute_hop_10000_tasks=10000
       - MAX_ALLOCS_ALLOWED_future_erase_result=4050
       - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=60050
       - MAX_ALLOCS_ALLOWED_get_100000_headers_canonical_form=700050
