@@ -152,7 +152,7 @@ public final class EventLoopTest : XCTestCase {
         loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
             XCTAssertTrue(loop.inEventLoop)
             let initialValue = counter.load()
-            _ = counter.add(1)
+            counter.add(1)
             if initialValue == 0 {
                 XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
             } else if initialValue == count {

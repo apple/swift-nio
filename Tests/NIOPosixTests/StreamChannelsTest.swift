@@ -352,7 +352,7 @@ class StreamChannelTest: XCTestCase {
                     // reliably trigger it for TCP sockets.
                     let myBuffer = allBuffer.readSlice(length: sends.load() == 0 ? receiveBufferSize : 1)!
                     sender.writeAndFlush(myBuffer).map {
-                        _ = sends.add(1)
+                        sends.add(1)
                         sender.eventLoop.scheduleTask(in: .microseconds(1)) {
                             send()
                         }

@@ -41,7 +41,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
                 everybodyHere.signal()
                 go.wait()
                 for _ in 0..<noCounts {
-                    _ = ai.add(thread)
+                    ai.add(thread)
                 }
             }
         }
@@ -253,7 +253,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
                 everybodyHere.signal()
                 go.wait()
                 for _ in 0..<noCounts {
-                    _ = ai.add(thread)
+                    ai.add(thread)
                 }
             }
         }
@@ -1050,6 +1050,6 @@ fileprivate class IntHolderWithDeallocationTracking {
 
     deinit {
         self.value = -1
-        _ = self.allDeallocations.add(1)
+        self.allDeallocations.add(1)
     }
 }

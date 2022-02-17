@@ -401,7 +401,7 @@ class SelectorTest: XCTestCase {
                                                            socket: socketFDs[0]), eventLoop: el)
         let sched = el.scheduleRepeatedTask(initialDelay: .microseconds(delayToUseInMicroSeconds),
                                             delay: .microseconds(delayToUseInMicroSeconds)) { (_: RepeatedTask) in
-            _ = numberFires.add(1)
+            numberFires.add(1)
         }
         XCTAssertNoThrow(try el.submit {
             // EL tick 1: this is used to
