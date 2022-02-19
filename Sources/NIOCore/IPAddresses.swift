@@ -16,7 +16,7 @@
 import Darwin
 import CNIOLinux
 import CoreFoundation
-import Foundation
+
 
 public enum IPAddressError: Error {
     /// Given string input is not supported IPv4 Style
@@ -24,8 +24,6 @@ public enum IPAddressError: Error {
     /// Given string input is not supported IP Address
     case unsupportedIPAddress
 }
-
-
 
 extension UInt8 {
     var hexValue: String {
