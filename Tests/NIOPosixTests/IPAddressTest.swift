@@ -33,12 +33,55 @@ class IPAddressTest: XCTestCase {
         print(ipAddress.description)
     }
     
+    func testStringInitWorksIPv4() throws {
+        let address = "255.7.40.128"
+        
+        var posix: in_addr = .init()
+        inet_aton(address, &posix)
+        
+        dump(posix)
+        let ipAddress = IPAddress(string: address)
+        switch ipAddress {
+        case .v4(let iPv4Address):
+            dump(iPv4Address.posix)
+            XCTAssertEqual(posix.s_addr, iPv4Address.posix.s_addr)
+        default:
+            print("ups")
+        }
+    }
+    
+    func testStringInitWorksIPv6() throws {
+        let ipAddress = IPAddress(string: "1:2:123:67:0:0:0:7")
+        
+        if let ipAddress = ipAddress {
+            dump(ipAddress.description)
+        }
+    }
+    
+    func testStringInitWorksIPv6WithZone() throws {
+        let ipAddress = IPAddress(string: "1:2:123:67:FF:0:0:7%testzone")
+        
+        if let ipAddress = ipAddress {
+            dump(ipAddress.description)
+        }
+    }
+    
     func testPosixInitWorksIPv4() throws {
-        // TODO: not more than 24 bits? Using _UInt24
-        // TODO: Only netmask?
-        let addr: in_addr = .init(s_addr: 255 * 256 * 256 + 7 * 256 + 40)
+        let addr: in_addr = .init(s_addr: 255 << 24 + 7 << 16 + 40 << 8 + 128)
         let ipAddress = IPAddress(posixIPv4Address: addr)
         
+        switch ipAddress {
+        case .v4(let iPv4Address):
+            let address = "255.7.40.128"
+            var posix: in_addr = .init()
+            inet_aton(address, &posix)
+            
+            dump(posix)
+            dump(iPv4Address.posix)
+            XCTAssertEqual(posix.s_addr, iPv4Address.posix.s_addr)
+        case .v6(_):
+            return
+        }
         print(ipAddress.description)
     }
     
@@ -49,3 +92,4 @@ class IPAddressTest: XCTestCase {
         print(ipAddress.description)
     }
 }
+

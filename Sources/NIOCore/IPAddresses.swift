@@ -16,19 +16,26 @@
 import Darwin
 import CNIOLinux
 import CoreFoundation
+import Foundation
+
+public enum IPAddressError: Error {
+    /// Given string input is not supported IPv4 Style
+    case unsupportedIPv4Address
+    /// Given string input is not supported IP Address
+    case unsupportedIPAddress
+}
+
 
 
 extension UInt8 {
     var hexValue: String {
         let table: StaticString = "0123456789ABCDEF"
         
-        let b0 = table.withUTF8Buffer { table in
+        return String.init(cString: [table.withUTF8Buffer { table in
             table[Int(self >> 4)]
-        }
-        let b1 = table.withUTF8Buffer { table in
+        }, table.withUTF8Buffer { table in
             table[Int(self & 0x0F)]
-        }
-        return String(UnicodeScalar(b0)) + String(UnicodeScalar(b1))
+        }])
     }
 }
 
@@ -48,13 +55,6 @@ public struct IPv4Bytes: Collection {
         return self._storage
     }
     
-    public var posixIPv4Address: in_addr {
-        get {
-            // TODO: posix in_addr only 24 leading bits
-            return in_addr.init(s_addr: .init(UInt32(self.bytes.0) * 256 * 256 + UInt32(self.bytes.1) * 256 + UInt32(self.bytes.2)))
-        }
-    }
-    
     init(_ bytes: IPv4BytesTuple) {
         self._storage = bytes
     }
@@ -66,7 +66,7 @@ public struct IPv4Bytes: Collection {
             case 1: return self.bytes.1
             case 2: return self.bytes.2
             case 3: return self.bytes.3
-            default: return 0  // can never be the case TODO: guard?
+            default: preconditionFailure()
             }
         }
     }
@@ -87,12 +87,6 @@ public struct IPv6Bytes: Collection {
     
     public var bytes: IPv6BytesTuple {
         return self._storage
-    }
-
-    public var posixIPv6Address: in6_addr {
-        get {
-            return in6_addr.init(__u6_addr: .init(__u6_addr8: self.bytes))
-        }
     }
     
     init(_ bytes: IPv6BytesTuple) {
@@ -118,7 +112,7 @@ public struct IPv6Bytes: Collection {
             case 13: return self.bytes.13
             case 14: return self.bytes.14
             case 15: return self.bytes.15
-            default: return 0  // can never be the case TODO: guard?
+            default: preconditionFailure()
             }
         }
     }
@@ -128,41 +122,44 @@ public struct IPv6Bytes: Collection {
     }
 }
 
-
 /// Represent a IP address
 public enum IPAddress: CustomStringConvertible {
     public typealias Element = UInt8
     
     /// A single IPv4 address for `IPAddress`.
     public struct IPv4Address {
-        // TODO: Merge IPv4Address with IPv4Bytes struct?
         /// The libc ip address for an IPv4 address.
-        private let _storage: IPv4Bytes
+        let address: IPv4Bytes
         
-        public var address: IPv4Bytes {
-            return self._storage
+        var posix: in_addr {
+            get {
+                return in_addr.init(s_addr: UInt32(self.address.bytes.3) << 24
+                                          + UInt32(self.address.bytes.2) << 16
+                                          + UInt32(self.address.bytes.1) << 8
+                                          + UInt32(self.address.bytes.0))
+            }
         }
         
         fileprivate init(address: IPv4Bytes) {
-            self._storage = address
+            self.address = address
         }
     }
     
     /// A single IPv6 address for `IPAddress`
     public struct IPv6Address {
         /// The libc ip address for an IPv6 address.
-        private let _storage: Box<(address: IPv6Bytes, zone: String?)>
+        let address: IPv6Bytes
+        let zone: String?
         
-        public var address: IPv6Bytes {
-            return self._storage.value.address
-        }
-        
-        public var zone: String? {
-            return self._storage.value.zone
+        var posix: in6_addr {
+            get {
+                return in6_addr.init(__u6_addr: .init(__u6_addr8: self.address.bytes))
+            }
         }
         
         fileprivate init(address: IPv6Bytes, zone: String? = nil) {
-            self._storage = .init((address, zone: zone))
+            self.address = address
+            self.zone = zone
         }
     }
         
@@ -174,36 +171,80 @@ public enum IPAddress: CustomStringConvertible {
 
     /// A human-readable description of this `IPAddress`. Mostly useful for logging.
     public var description: String {
-        var addressString: String
-        let type: String
+        switch self {
+        case .v4(_):
+            return "[IPv4]\(self.ipAddress)"
+        case .v6(_):
+            return "[IPv6]\(self.ipAddress)"
+        }
+    }
+    
+    /// Get the IP address as a string
+    public var ipAddress: String {
         switch self {
         case .v4(let addr):
-            addressString = addr.address.map({"\($0)"}).joined(separator: ".")
-            type = "IPv4"
+            return addr.address.map({"\($0)"}).joined(separator: ".")
         case .v6(let addr):
-            addressString = stride(from: 0, to: 15, by: 2).map({ idx in
+            let addressString = stride(from: 0, to: 15, by: 2).map({ idx in
                 addr.address[idx].hexValue + addr.address[idx + 1].hexValue
             }).joined(separator: ":")
             if let zone = addr.zone {
-                addressString += "%\(zone)"
+                return addressString + "%\(zone)"
+            } else {
+                return addressString
             }
-            type = "IPv6"
         }
-        return "[\(type)]\(addressString)"
     }
-    
-// TODO:
-//    accept: IPv4 a.b.c.d
-//    accept: IPv6 strings
-//       a) x:x:x:x:x:x:x:x with x one to four hex digits
-//       b) x:x:x::x:x where '::' represents fill up zeros
-//       c) x:x:x:x:x:x:d.d.d.d where d's are decimal values of the four low-order 8-bit pieces
-//       d) <address>%<zone_id> where address is a literal IPv6 address and zone_id is a string identifying the zone
 
-    public init(string: String) {
-        self = .v4(.init(address: .init((0,0,0,0))))
+    /// Creates a new `IPAddress` for the given string.
+    /// "d.d.d.d" with decimal values for IPv4 and "h:h:h:h:h:h:h:h" or "h:h:h:h:h:h:h:h%<zone>" with hexadecimal values for IPv6 with optional zone/scope-id supported. Shortened and hybrid versions for IPv6 are not (yet) supported.
+    ///
+    /// - parameters:
+    ///     - string: String representation of IPv4 or IPv6 Address
+    /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
+    public init?(string: String) {
+        var bytes: [UInt8] = [0,0,0,0]
+        var zone: String? = nil
+        var idx: Int = 0
+        
+        do {
+            for char in string {
+                if char == "." {
+                    idx += 1
+                } else if let number = char.wholeNumberValue {
+                    bytes[idx] = bytes[idx]*10 + UInt8(number)
+                } else {
+                    throw IPAddressError.unsupportedIPv4Address
+                }
+            }
+        } catch {
+            idx = 0
+            var ipv6Bytes: [UInt16] = [0,0,0,0,0,0,0,0]
+            
+            for char in string {
+                if let z = zone {
+                    zone = z + String(char)
+                } else if char == ":" {
+                    idx += 1
+                } else if let number = char.hexDigitValue {
+                    ipv6Bytes[idx] = ipv6Bytes[idx]*16 + UInt16(number)
+                } else if char == "%" {
+                    zone = ""
+                } else {
+                    return nil
+                }
+            }
+            bytes = ipv6Bytes.flatMap {[UInt8($0 >> 8), UInt8($0 & 0x00FF)]}
+        }
+        self.init(packedBytes: bytes, zone: zone)
     }
     
+    /// Creates a new `IPAddress` for the given bytes and optional zone.
+    ///
+    /// - parameters:
+    ///     - bytes: Either 4 or 16 bytes representing the IPAddress value.
+    ///     - zone: Optional zone/scope-id string for IPv6Address.
+    /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
     public init(packedBytes bytes: [UInt8], zone: String? = nil) {
         switch bytes.count {
         case 4: self = .v4(.init(address: .init((
@@ -219,13 +260,11 @@ public enum IPAddress: CustomStringConvertible {
     public init(posixIPv4Address: in_addr) {
         let uint8Bitmask: UInt32 = 0x000000FF
         
-        // TODO: alternative memcpy(&uint8, &uint32, 4)?
-        // TODO: posix in_addr only 24 leading bits
         let uint8AddressBytes: IPv4Bytes = .init((
+            UInt8((posixIPv4Address.s_addr >> 24) & uint8Bitmask),
             UInt8((posixIPv4Address.s_addr >> 16) & uint8Bitmask),
             UInt8((posixIPv4Address.s_addr >> 8) & uint8Bitmask),
-            UInt8(posixIPv4Address.s_addr & uint8Bitmask),
-            0
+            UInt8(posixIPv4Address.s_addr & uint8Bitmask)
         ))
         
         self = .v4(.init(address: uint8AddressBytes))
@@ -235,4 +274,33 @@ public enum IPAddress: CustomStringConvertible {
         self = .v6(.init(address: .init(posixIPv6Address.__u6_addr.__u6_addr8)))
     }
     
+}
+
+/// We define an extension on `IPv4Bytes` that gives it an elementwise equatable conformance
+extension IPv4Bytes: Equatable {
+    public static func == (lhs: IPv4Bytes, rhs: IPv4Bytes) -> Bool {
+        return lhs.bytes == rhs.bytes
+    }
+}
+
+/// We define an extension on `IPv6Bytes` that gives it an elementwise equatable conformance
+extension IPv6Bytes: Equatable {
+    public static func == (lhs: IPv6Bytes, rhs: IPv6Bytes) -> Bool {
+        return zip(lhs, rhs).allSatisfy {$0 == $1}
+    }
+}
+
+/// We define an extension on `IPAddress` that gives it an elementwise equatable conformance
+extension IPAddress: Equatable {
+    public static func == (lhs: IPAddress, rhs: IPAddress) -> Bool {
+        switch (lhs, rhs) {
+        case (.v4(let addr1), .v4(let addr2)):
+            return addr1.address == addr2.address
+        case (.v6(let addr1), .v6(let addr2)):
+            return addr1.address == addr2.address &&
+                   addr1.zone == addr2.zone
+        default:
+            return false
+        }
+    }
 }
