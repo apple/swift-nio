@@ -193,7 +193,7 @@ public enum IPAddress: CustomStringConvertible {
     public var ipAddress: String {
         switch self {
         case .v4(let addr):
-            return addr.address.map({String($0)}).joined(separator: ".")
+            return addr.address.lazy.map({String($0)}).joined(separator: ".")
         case .v6(let addr):
             return stride(from: 0, to: 15, by: 2).lazy.map({ idx in
                 let hexValues = [
