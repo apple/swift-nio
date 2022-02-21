@@ -110,8 +110,8 @@ public struct IPv6Bytes: Collection {
     }
 }
 
-extension UInt16 {
-    func toHex() -> String {
+extension UInt8 {
+    func toHex() -> Character {
         switch self {
         case 0: return "0"
         case 1: return "1"
@@ -129,7 +129,7 @@ extension UInt16 {
         case 13: return "D"
         case 14: return "E"
         case 15: return "F"
-        default: return ""
+        default: preconditionFailure()
         }
     }
 }
@@ -195,22 +195,30 @@ public enum IPAddress: CustomStringConvertible {
         case .v4(let addr):
             return addr.address.map({String($0)}).joined(separator: ".")
         case .v6(let addr):
-            return stride(from: 0, to: 15, by: 2).map({ idx in
-                UInt16(addr.address[idx]) << 8 + UInt16(addr.address[idx + 1])
-            }).map({ (segment: UInt16) in
-                var segment = segment
-                var segmentString = ""
-                repeat {
-                    segmentString = (segment & 0x000F).toHex() + segmentString
-                    segment = segment >> 4
-                } while segment > 0
-                return segmentString
+            return stride(from: 0, to: 15, by: 2).lazy.map({ idx in
+                let hexValues = [
+                    addr.address[idx] >> 4,
+                    addr.address[idx] & 0x0F,
+                    addr.address[idx + 1] >> 4,
+                    addr.address[idx + 1] & 0x0F
+                ]
+                
+                var removeLeadingZeros = 0
+                if hexValues[0] + hexValues[1] + hexValues[2] == 0 {
+                    removeLeadingZeros = 3
+                } else if hexValues[0] + hexValues[1] == 0 {
+                    removeLeadingZeros = 2
+                } else if hexValues[0] == 0 {
+                    removeLeadingZeros = 1
+                }
+                
+                return String(hexValues[removeLeadingZeros...].lazy.map {$0.toHex()})
             }).joined(separator: ":")
         }
     }
 
     /// Creates a new `IPAddress` for the given string.
-    /// "d.d.d.d" with decimal values for IPv4 and "h:h:h:h:h:h:h:h" or "h:h:h:h:h:h:h:h%<zone>" with hexadecimal values for IPv6 with optional zone/scope-id supported. Shortened and hybrid versions for IPv6 are not (yet) supported.
+    /// "d.d.d.d" with decimal values for IPv4 and "h:h:h:h:h:h:h:h" with hexadecimal values for IPv6. Hybrid versions for IPv6 are not (yet) supported.
     ///
     /// - parameters:
     ///     - string: String representation of IPv4 or IPv6 Address
