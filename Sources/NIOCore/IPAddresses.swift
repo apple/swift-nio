@@ -20,9 +20,11 @@ import CoreFoundation
 
 public enum IPAddressError: Error {
     /// Given string input is not supported IPv4 Style
-    case unsupportedIPv4Address
+    case failedToParseIPv4String
     /// Given string input is not supported IP Address
-    case unsupportedIPAddress
+    case failedToParseIPString(String)
+    /// Given string input is not supported IP Address
+    case bytesArrayHasWrongLength(Int)
 }
 
 extension UInt8 {
@@ -47,14 +49,14 @@ public struct IPv4Bytes: Collection {
     public let startIndex: Index = 0
     public let endIndex: Index = 4
     
-    private let _storage: IPv4BytesTuple
+    private let ipv4BytesTuple: IPv4BytesTuple
     
     public var bytes: IPv4BytesTuple {
-        return self._storage
+        return self.ipv4BytesTuple
     }
     
     init(_ bytes: IPv4BytesTuple) {
-        self._storage = bytes
+        self.ipv4BytesTuple = bytes
     }
     
     public subscript(position: Index) -> Element {
@@ -81,14 +83,14 @@ public struct IPv6Bytes: Collection {
     public let startIndex: Index = 0
     public let endIndex: Index = 16
     
-    private let _storage: IPv6BytesTuple
+    private let ipv6BytesTuple: IPv6BytesTuple
     
     public var bytes: IPv6BytesTuple {
-        return self._storage
+        return self.ipv6BytesTuple
     }
     
     init(_ bytes: IPv6BytesTuple) {
-        self._storage = bytes
+        self.ipv6BytesTuple = bytes
     }
     
     public subscript(position: Index) -> Element {
@@ -147,7 +149,6 @@ public enum IPAddress: CustomStringConvertible {
     public struct IPv6Address {
         /// The libc ip address for an IPv6 address.
         let address: IPv6Bytes
-        let zone: String?
         
         var posix: in6_addr {
             get {
@@ -155,9 +156,8 @@ public enum IPAddress: CustomStringConvertible {
             }
         }
         
-        fileprivate init(address: IPv6Bytes, zone: String? = nil) {
+        fileprivate init(address: IPv6Bytes) {
             self.address = address
-            self.zone = zone
         }
     }
         
@@ -181,16 +181,11 @@ public enum IPAddress: CustomStringConvertible {
     public var ipAddress: String {
         switch self {
         case .v4(let addr):
-            return addr.address.map({"\($0)"}).joined(separator: ".")
+            return addr.address.map({String($0)}).joined(separator: ".")
         case .v6(let addr):
-            let addressString = stride(from: 0, to: 15, by: 2).map({ idx in
+            return stride(from: 0, to: 15, by: 2).map({ idx in
                 addr.address[idx].hexValue + addr.address[idx + 1].hexValue
             }).joined(separator: ":")
-            if let zone = addr.zone {
-                return addressString + "%\(zone)"
-            } else {
-                return addressString
-            }
         }
     }
 
@@ -200,9 +195,9 @@ public enum IPAddress: CustomStringConvertible {
     /// - parameters:
     ///     - string: String representation of IPv4 or IPv6 Address
     /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
-    public init?(string: String) {
+    /// - throws: May throw `IPAddressError.failedToParseIPString` if the string cannot be parsed to IPv4 or IPv6.
+    public init(string: String) throws {
         var bytes: [UInt8] = [0,0,0,0]
-        var zone: String? = nil
         var idx: Int = 0
         
         do {
@@ -212,46 +207,73 @@ public enum IPAddress: CustomStringConvertible {
                 } else if let number = char.wholeNumberValue {
                     bytes[idx] = bytes[idx]*10 + UInt8(number)
                 } else {
-                    throw IPAddressError.unsupportedIPv4Address
+                    throw IPAddressError.failedToParseIPv4String
                 }
             }
         } catch {
             idx = 0
             var ipv6Bytes: [UInt16] = [0,0,0,0,0,0,0,0]
+            var isLastCharSeparator: Bool = false
+            var shortenerIndex: Int?
             
             for char in string {
-                if let z = zone {
-                    zone = z + String(char)
-                } else if char == ":" {
+                if char == ":" {
+                    if isLastCharSeparator {
+                        if shortenerIndex != nil {
+                            // Two shortener are not allowed
+                            throw IPAddressError.failedToParseIPString(string)
+                        }
+                        shortenerIndex = idx
+                    }
                     idx += 1
-                } else if let number = char.hexDigitValue {
-                    ipv6Bytes[idx] = ipv6Bytes[idx]*16 + UInt16(number)
-                } else if char == "%" {
-                    zone = ""
+                    isLastCharSeparator = true
                 } else {
-                    return nil
+                    isLastCharSeparator = false
+                    if let number = char.hexDigitValue {
+                        ipv6Bytes[idx] = ipv6Bytes[idx]*16 + UInt16(number)
+                    } else {
+                        throw IPAddressError.failedToParseIPString(string)
+                    }
                 }
             }
+            
+            if let shortenerIndex = shortenerIndex {
+                // For all i after shortenerIndex move to i + (7 - idx)
+                let shiftBy = ipv6Bytes.count - 1 - idx
+                
+                // Go from last index backwards to the shortener position
+                for i in (shortenerIndex+1...idx).reversed() {
+                    ipv6Bytes[i + shiftBy] = ipv6Bytes[i]
+                    ipv6Bytes[i] = 0
+                }
+            } else {
+                if (idx != ipv6Bytes.count - 1) {
+                    // if IPv6 wasn't shortened, every byte should be set explicitly
+                    throw IPAddressError.failedToParseIPString(string)
+                }
+            }
+            
             bytes = ipv6Bytes.flatMap {[UInt8($0 >> 8), UInt8($0 & 0x00FF)]}
         }
-        self.init(packedBytes: bytes, zone: zone)
+        try self.init(packedBytes: bytes)
     }
     
     /// Creates a new `IPAddress` for the given bytes and optional zone.
     ///
     /// - parameters:
     ///     - bytes: Either 4 or 16 bytes representing the IPAddress value.
-    ///     - zone: Optional zone/scope-id string for IPv6Address.
     /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
-    public init(packedBytes bytes: [UInt8], zone: String? = nil) {
+    // TODO: update to init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8
+    public init(packedBytes bytes: [UInt8]) throws {
         switch bytes.count {
         case 4: self = .v4(.init(address: .init((
             bytes[0], bytes[1], bytes[2], bytes[3]
         ))))
         case 16: self = .v6(.init(address: .init((
             bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
-        )), zone: zone))
-        default: self = .v4(.init(address: .init((0,0,0,0))))
+        ))))
+        default:
+            throw IPAddressError.bytesArrayHasWrongLength(bytes.count)
         }
     }
     
@@ -271,7 +293,6 @@ public enum IPAddress: CustomStringConvertible {
     public init(posixIPv6Address: in6_addr) {
         self = .v6(.init(address: .init(posixIPv6Address.__u6_addr.__u6_addr8)))
     }
-    
 }
 
 /// We define an extension on `IPv4Bytes` that gives it an elementwise equatable conformance
@@ -295,8 +316,7 @@ extension IPAddress: Equatable {
         case (.v4(let addr1), .v4(let addr2)):
             return addr1.address == addr2.address
         case (.v6(let addr1), .v6(let addr2)):
-            return addr1.address == addr2.address &&
-                   addr1.zone == addr2.zone
+            return addr1.address == addr2.address
         default:
             return false
         }

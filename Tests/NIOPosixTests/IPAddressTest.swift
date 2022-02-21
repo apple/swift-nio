@@ -17,79 +17,117 @@ import XCTest
 @testable import NIOPosix
 
 class IPAddressTest: XCTestCase {
-    
-    func testDescriptionWorksIPv4() throws {
-        let ipAddress = IPAddress(packedBytes: [
-            1, 2, 3, 4
-        ])
-        print(ipAddress.description)
-    }
-    
-    func testDescriptionWorksIPv6() throws {
-        let ipAddress = IPAddress(packedBytes: [
-            0, 1, 255, 3, 128, 5, 6, 54, 8, 9, 100, 11, 132, 13, 104, 15
-        ], zone: "testzone")
+    func testCanCreateIPv4AddressFromString() throws {
+        let ipAddress = try IPAddress(string: "255.0.128.18")
+        let expectedAddressBytes: IPv4Bytes = .init((255, 0, 128, 18))
         
-        print(ipAddress.description)
-    }
-    
-    func testStringInitWorksIPv4() throws {
-        let address = "255.7.40.128"
-        
-        var posix: in_addr = .init()
-        inet_aton(address, &posix)
-        
-        dump(posix)
-        let ipAddress = IPAddress(string: address)
         switch ipAddress {
         case .v4(let iPv4Address):
-            dump(iPv4Address.posix)
-            XCTAssertEqual(posix.s_addr, iPv4Address.posix.s_addr)
+            XCTAssertEqual(iPv4Address.address, expectedAddressBytes)
         default:
-            print("ups")
+            XCTFail()
         }
     }
     
-    func testStringInitWorksIPv6() throws {
-        let ipAddress = IPAddress(string: "1:2:123:67:0:0:0:7")
+    func testCanCreateIPv6AddressFromString() throws {
+        let ipAddress = try IPAddress(string: "FFFF:0:18:1E0:0:0:6:0")
+        let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
-        if let ipAddress = ipAddress {
-            dump(ipAddress.description)
+        switch ipAddress {
+        case .v6(let iPv6Address):
+            XCTAssertEqual(iPv6Address.address, expectedAddressBytes)
+        default:
+            XCTFail()
         }
     }
     
-    func testStringInitWorksIPv6WithZone() throws {
-        let ipAddress = IPAddress(string: "1:2:123:67:FF:0:0:7%testzone")
+    func testCanCreateIPv6AddressFromShortenedString() throws {
+        let ipAddress = try IPAddress(string: "FFFF:0:18:1E0::6:0")
+        let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
-        if let ipAddress = ipAddress {
-            dump(ipAddress.description)
+        switch ipAddress {
+        case .v6(let iPv6Address):
+            XCTAssertEqual(iPv6Address.address, expectedAddressBytes)
+        default:
+            XCTFail()
         }
     }
     
-    func testPosixInitWorksIPv4() throws {
-        let addr: in_addr = .init(s_addr: 255 << 24 + 7 << 16 + 40 << 8 + 128)
-        let ipAddress = IPAddress(posixIPv4Address: addr)
+    func testCanCreateIPv4AddressFromBytes() throws {
+        let ipAddress = try IPAddress(packedBytes: [255, 0, 128, 18])
+        let expectedAddressBytes: IPv4Bytes = .init((255, 0, 128, 18))
         
         switch ipAddress {
         case .v4(let iPv4Address):
-            let address = "255.7.40.128"
-            var posix: in_addr = .init()
-            inet_aton(address, &posix)
-            
-            dump(posix)
-            dump(iPv4Address.posix)
-            XCTAssertEqual(posix.s_addr, iPv4Address.posix.s_addr)
-        case .v6(_):
-            return
+            XCTAssertEqual(iPv4Address.address, expectedAddressBytes)
+        default:
+            XCTFail()
         }
-        print(ipAddress.description)
     }
     
-    func testPosixInitWorksIPv6() throws {
-        let addr: in6_addr = .init(__u6_addr: .init(__u6_addr8:(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)))
-        let ipAddress = IPAddress(posixIPv6Address: addr)
+    func testCanCreateIPv6AddressFromBytes() throws {
+        let ipAddress = try IPAddress(packedBytes: [255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0])
+        let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
-        print(ipAddress.description)
+        switch ipAddress {
+        case .v6(let iPv6Address):
+            XCTAssertEqual(iPv6Address.address, expectedAddressBytes)
+        default:
+            XCTFail()
+        }
     }
+    
+    func testCanCreateIPv4AddressFromPosix() throws {
+        let bigEndianAddress: Int32 = 255 << 24 + 0 << 16 + 128 << 8 + 18
+        let testPosixAddress: in_addr = .init(s_addr: .init(bitPattern: bigEndianAddress))
+        
+        let ipAddress = IPAddress(posixIPv4Address: testPosixAddress)
+        let expectedAddressBytes: IPv4Bytes = .init((255, 0, 128, 18))
+        
+        switch ipAddress {
+        case .v4(let iPv4Address):
+            XCTAssertEqual(iPv4Address.address, expectedAddressBytes)
+        default:
+            XCTFail()
+        }
+    }
+    
+    func testCanCreateIPv6AddressFromPosix() throws {
+        let testPosixAddress: in6_addr = .init(__u6_addr: .init(__u6_addr8: (255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0)))
+        
+        let ipAddress = IPAddress(posixIPv6Address: testPosixAddress)
+        let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
+        
+        switch ipAddress {
+        case .v6(let iPv6Address):
+            XCTAssertEqual(iPv6Address.address, expectedAddressBytes)
+        default:
+            XCTFail()
+        }
+    }
+    
+    func testDescriptionWorksIPv4Address() throws {
+        let ipAddress1 = try IPAddress(packedBytes: [255, 0, 128, 18])
+        let ipAddress2 = try IPAddress(string: "255.0.128.18")
+        let expectedDescription = "[IPv4]255.0.128.18"
+        
+        XCTAssertEqual(ipAddress1.description, expectedDescription)
+        XCTAssertEqual(ipAddress2.description, expectedDescription)
+    }
+    
+    func testDescriptionWorksIPv6Address() throws {
+        let ipAddress1 = try IPAddress(packedBytes: [255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0])
+        let ipAddress2 = try IPAddress(string: "FFFF:0:18:1E0:0:0:6:0")
+        
+        let expectedDescription = "[IPv6]FFFF:0000:0018:01E0:0000:0000:0006:0000"
+        
+        XCTAssertEqual(ipAddress1.description, expectedDescription)
+        XCTAssertEqual(ipAddress2.description, expectedDescription)
+    }
+    
+    // TODO: Test posix representation
+    // TODO: Test error cases
+    // TODO: description remove leading zeros
+    // TODO: IPv6 description shortened
 }
 
