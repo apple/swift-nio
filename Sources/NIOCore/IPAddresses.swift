@@ -27,18 +27,6 @@ public enum IPAddressError: Error {
     case bytesArrayHasWrongLength(Int)
 }
 
-extension UInt8 {
-    var hexValue: String {
-        let table: StaticString = "0123456789ABCDEF"
-        
-        return String.init(cString: [table.withUTF8Buffer { table in
-            table[Int(self >> 4)]
-        }, table.withUTF8Buffer { table in
-            table[Int(self & 0x0F)]
-        }])
-    }
-}
-
 public typealias IPv4BytesTuple = (UInt8, UInt8, UInt8, UInt8)
 public typealias IPv6BytesTuple = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 
@@ -122,6 +110,30 @@ public struct IPv6Bytes: Collection {
     }
 }
 
+extension UInt16 {
+    func toHex() -> String {
+        switch self {
+        case 0: return "0"
+        case 1: return "1"
+        case 2: return "2"
+        case 3: return "3"
+        case 4: return "4"
+        case 5: return "5"
+        case 6: return "6"
+        case 7: return "7"
+        case 8: return "8"
+        case 9: return "9"
+        case 10: return "A"
+        case 11: return "B"
+        case 12: return "C"
+        case 13: return "D"
+        case 14: return "E"
+        case 15: return "F"
+        default: return ""
+        }
+    }
+}
+
 /// Represent a IP address
 public enum IPAddress: CustomStringConvertible {
     public typealias Element = UInt8
@@ -184,7 +196,15 @@ public enum IPAddress: CustomStringConvertible {
             return addr.address.map({String($0)}).joined(separator: ".")
         case .v6(let addr):
             return stride(from: 0, to: 15, by: 2).map({ idx in
-                addr.address[idx].hexValue + addr.address[idx + 1].hexValue
+                UInt16(addr.address[idx]) << 8 + UInt16(addr.address[idx + 1])
+            }).map({ (segment: UInt16) in
+                var segment = segment
+                var segmentString = ""
+                repeat {
+                    segmentString = (segment & 0x000F).toHex() + segmentString
+                    segment = segment >> 4
+                } while segment > 0
+                return segmentString
             }).joined(separator: ":")
         }
     }

@@ -119,7 +119,7 @@ class IPAddressTest: XCTestCase {
         let ipAddress1 = try IPAddress(packedBytes: [255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0])
         let ipAddress2 = try IPAddress(string: "FFFF:0:18:1E0:0:0:6:0")
         
-        let expectedDescription = "[IPv6]FFFF:0000:0018:01E0:0000:0000:0006:0000"
+        let expectedDescription = "[IPv6]FFFF:0:18:1E0:0:0:6:0"
         
         XCTAssertEqual(ipAddress1.description, expectedDescription)
         XCTAssertEqual(ipAddress2.description, expectedDescription)
