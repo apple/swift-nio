@@ -1591,7 +1591,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
         let closeFuture = channel.close() // close the channel, `removeHandlers` will be called in next EL tick.
 
-        // user-trigger the handelr removal (the actual removal will be done on the next EL tick too)
+        // user-trigger the handler removal (the actual removal will be done on the next EL tick too)
         let removalFuture = channel.pipeline.removeHandler(decoderHandler)
 
         // run the event loop, this will make `removeHandlers` run first because it was enqueued before the

@@ -31,7 +31,7 @@ extension NIOHTTPServerRequestFull: Equatable {}
 
 /// The parts of a complete HTTP response from the view of the client.
 ///
-/// Afull HTTP response is made up of a response header encoded by `.head`
+/// A full HTTP response is made up of a response header encoded by `.head`
 /// and an optional `.body`.
 public struct NIOHTTPClientResponseFull {
     public var head: HTTPResponseHead
@@ -223,7 +223,7 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
             context.fireErrorCaught(error)
         }
 
-        // Generated a server esponse to send back
+        // Generated a server response to send back
         if let response = serverResponse {
             context.write(self.wrapOutboundOut(.head(response)), promise: nil)
             context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)

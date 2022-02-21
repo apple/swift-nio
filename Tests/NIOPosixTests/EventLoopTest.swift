@@ -933,7 +933,7 @@ public final class EventLoopTest : XCTestCase {
                 if overflow {
                     XCTAssertGreaterThanOrEqual(timeAmount.nanoseconds, 0)
                     XCTAssertGreaterThanOrEqual(deadline.uptimeNanoseconds, 0)
-                    // we cap at distantFuture torwards +inf
+                    // we cap at distantFuture towards +inf
                     expectedValue = NIODeadline.distantFuture.uptimeNanoseconds
                 } else if partial < 0 {
                     // we cap at 0 towards -inf
@@ -967,7 +967,7 @@ public final class EventLoopTest : XCTestCase {
                 if overflow {
                     XCTAssertLessThan(timeAmount.nanoseconds, 0)
                     XCTAssertGreaterThanOrEqual(deadline.uptimeNanoseconds, 0)
-                    // we cap at distantFuture torwards +inf
+                    // we cap at distantFuture towards +inf
                     expectedValue = NIODeadline.distantFuture.uptimeNanoseconds
                 } else if partial < 0 {
                     // we cap at 0 towards -inf

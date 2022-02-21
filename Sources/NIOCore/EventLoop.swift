@@ -266,14 +266,14 @@ public protocol EventLoop: EventLoopGroup {
     ///
     /// Semantically, this function is equivalent to calling `makeSucceededFuture(())`.
     /// Contrary to `makeSucceededFuture`, `makeSucceededVoidFuture` is a customization point for `EventLoop`s which
-    /// allows `EventLoop`s to cache a pre-succeded `Void` future to prevent superfluous allocations.
+    /// allows `EventLoop`s to cache a pre-succeeded `Void` future to prevent superfluous allocations.
     func makeSucceededVoidFuture() -> EventLoopFuture<Void>
 
     /// Must crash if it is not safe to call `wait()` on an `EventLoopFuture`.
     ///
     /// This method is a debugging hook that can be used to override the behaviour of `EventLoopFuture.wait()` when called.
     /// By default this simply becomes `preconditionNotInEventLoop`, but some `EventLoop`s are capable of more exhaustive
-    /// checking and can validate that the wait is not occuring on an entire `EventLoopGroup`, or even more broadly.
+    /// checking and can validate that the wait is not occurring on an entire `EventLoopGroup`, or even more broadly.
     ///
     /// This method should not be called by users directly, it should only be implemented by `EventLoop` implementers that
     /// need to customise the behaviour.
