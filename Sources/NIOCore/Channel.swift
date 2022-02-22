@@ -253,7 +253,7 @@ extension ChannelCore {
     ///
     /// Note that if the unwrap fails, this will cause a runtime trap. `ChannelCore`
     /// implementations should be concrete about what types they support writing. If multiple
-    /// types are supported, considere using a tagged union to store the type information like
+    /// types are supported, consider using a tagged union to store the type information like
     /// NIO's own `IOData`, which will minimise the amount of runtime type checking.
     ///
     /// - parameters:

@@ -406,7 +406,7 @@ class SelectorTest: XCTestCase {
         XCTAssertNoThrow(try el.submit {
             // EL tick 1: this is used to
             //   - actually arm the timer (timerfd_settime)
-            //   - set the channel restration up
+            //   - set the channel registration up
             if numberFires.load() > 0 {
                 print("WARNING: This test hit a race and this result doesn't mean it actually worked." +
                       " This should really only ever happen in very bizarre conditions.")

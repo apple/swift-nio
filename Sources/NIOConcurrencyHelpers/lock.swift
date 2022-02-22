@@ -77,7 +77,7 @@ public final class Lock {
 
     /// Release the lock.
     ///
-    /// Whenver possible, consider using `withLock` instead of this method and
+    /// Whenever possible, consider using `withLock` instead of this method and
     /// `lock`, to simplify lock handling.
     public func unlock() {
 #if os(Windows)

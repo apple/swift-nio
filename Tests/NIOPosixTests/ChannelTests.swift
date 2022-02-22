@@ -237,8 +237,8 @@ public final class ChannelTests: XCTestCase {
 
     /// A frankenstein testing monster. It asserts that for `PendingStreamWritesManager` `pwm` and `EventLoopPromises` `promises`
     /// the following conditions hold:
-    ///  - The 'single write operation' is called `exepectedSingleWritabilities.count` number of times with the respective buffer lenghts in the array.
-    ///  - The 'vector write operation' is called `exepectedVectorWritabilities.count` number of times with the respective buffer lenghts in the array.
+    ///  - The 'single write operation' is called `exepectedSingleWritabilities.count` number of times with the respective buffer lengths in the array.
+    ///  - The 'vector write operation' is called `exepectedVectorWritabilities.count` number of times with the respective buffer lengths in the array.
     ///  - after calling the write operations, the promises have the states in `promiseStates`
     ///
     /// The write operations will all be faked and return the return values provided in `returns`.

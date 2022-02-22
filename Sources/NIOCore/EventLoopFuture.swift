@@ -1535,7 +1535,7 @@ extension EventLoopFuture {
     /// `EventLoopFuture` has any result. The observer callback is permitted to block.
     ///
     /// - parameters:
-    ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is schedulded.
+    ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is scheduled.
     ///     - callbackMayBlock: The callback that is called when the `EventLoopFuture` is fulfilled.
     @inlinable
     public func whenCompleteBlocking(onto queue: DispatchQueue, _ callbackMayBlock: @escaping (Result<Value, Error>) -> Void) {

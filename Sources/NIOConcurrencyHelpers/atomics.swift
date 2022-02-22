@@ -529,7 +529,7 @@ public final class AtomicBox<T: AnyObject> {
             }
         }
 
-        // step 2: After having gained 'ownership' of the old value, we can release the Unmanged.
+        // step 2: After having gained 'ownership' of the old value, we can release the Unmanaged.
         let oldPtr = Unmanaged<T>.fromOpaque(UnsafeRawPointer(bitPattern: oldPtrBits)!)
         return oldPtr.takeRetainedValue()
     }

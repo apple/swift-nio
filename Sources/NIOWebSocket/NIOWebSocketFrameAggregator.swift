@@ -41,7 +41,7 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
     
     /// Configures a `NIOWebSocketFrameAggregator`.
     /// - Parameters:
-    ///   - minNonFinalFragmentSize: Minimum size in bytes of a fragment which is not the last fragment of a complete frame. Used to defend agains many really small payloads.
+    ///   - minNonFinalFragmentSize: Minimum size in bytes of a fragment which is not the last fragment of a complete frame. Used to defend against many really small payloads.
     ///   - maxAccumulatedFrameCount: Maximum number of fragments which are allowed to result in a complete frame.
     ///   - maxAccumulatedFrameSize: Maximum accumulated size in bytes of buffered fragments. It is essentially the maximum allowed size of an incoming frame after all fragments are concatenated.
     public init(

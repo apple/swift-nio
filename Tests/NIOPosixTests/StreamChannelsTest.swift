@@ -531,7 +531,7 @@ class StreamChannelTest: XCTestCase {
          5:         --> registerForWritable (because line 4 could not write everything and flushNow returned .register)
          6: --> unregisterForWritable (because line 2 wrote everything and flushNow returned .unregister)
 
-         line 6 undoes the registeration in line 5. The fix makes sure that flushNow never re-enters and therefore the
+         line 6 undoes the registration in line 5. The fix makes sure that flushNow never re-enters and therefore the
          problem described above cannot happen anymore.
 
          Our match plan is the following:
@@ -605,7 +605,7 @@ class StreamChannelTest: XCTestCase {
                     context.eventLoop.scheduleTask(in: .microseconds(100)) {
                         switch self.state {
                         case .writingUntilFull:
-                            // We're just enqueing another chunk.
+                            // We're just enqueuing another chunk.
                             writeOneMore()
                         case .writeSentinel:
                             // We've seen the notification that the channel is unwritable, let's write one more byte.
@@ -804,7 +804,7 @@ class StreamChannelTest: XCTestCase {
             // test.
             XCTAssertNoThrow(try beganBigWritePromise.futureResult.wait())
 
-            // We now just set autoRead to true and let the receiver receive everything to tear everthing down.
+            // We now just set autoRead to true and let the receiver receive everything to tear everything down.
             XCTAssertNoThrow(try receiver.setOption(ChannelOptions.autoRead, value: true).wait())
 
             XCTAssertNoThrow(try finishedBigWritePromise.futureResult.wait())
