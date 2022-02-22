@@ -145,10 +145,10 @@ public enum IPAddress: CustomStringConvertible {
         
         var posix: in_addr {
             get {
-                return in_addr.init(s_addr: UInt32(self.address.bytes.3) << 24
-                                          + UInt32(self.address.bytes.2) << 16
-                                          + UInt32(self.address.bytes.1) << 8
-                                          + UInt32(self.address.bytes.0))
+                return in_addr.init(s_addr: UInt32(self.address.bytes.0) << 24
+                                          + UInt32(self.address.bytes.1) << 16
+                                          + UInt32(self.address.bytes.2) << 8
+                                          + UInt32(self.address.bytes.3))
             }
         }
         
@@ -217,6 +217,16 @@ public enum IPAddress: CustomStringConvertible {
         }
     }
 
+    /// Creates a `IPAddress` directly out of UInt8 Tuple for IPv4.
+    public init(_ ipv4BytesTuple: IPv4BytesTuple) {
+        self = .v4(IPv4Address(address: .init(ipv4BytesTuple)))
+    }
+    
+    /// Creates a `IPAddress` directly out of UInt8 Tuple for IPv6.
+    public init(_ ipv6BytesTuple: IPv6BytesTuple) {
+        self = .v6(IPv6Address(address: .init(ipv6BytesTuple)))
+    }
+    
     /// Creates a new `IPAddress` for the given string.
     /// "d.d.d.d" with decimal values for IPv4 and "h:h:h:h:h:h:h:h" with hexadecimal values for IPv6. Hybrid versions for IPv6 are not (yet) supported.
     ///
@@ -227,18 +237,30 @@ public enum IPAddress: CustomStringConvertible {
     public init(string: String) throws {
         var bytes: [UInt8] = [0,0,0,0]
         var idx: Int = 0
+        var incompleteIPv4 = false
         
         do {
             for char in string {
                 if char == "." {
                     idx += 1
                 } else if let number = char.wholeNumberValue {
-                    bytes[idx] = bytes[idx]*10 + UInt8(number)
+                    if idx > 3 || bytes[idx] > 25 || (255 - number < (bytes[idx] * 10)) {
+                        // if this is the case, the calculations would result in arithmetic overflow
+                        throw IPAddressError.failedToParseIPv4String
+                    }
+                    bytes[idx] = bytes[idx] * 10 + UInt8(number)
                 } else {
                     throw IPAddressError.failedToParseIPv4String
                 }
             }
+            if idx != 3 {
+                incompleteIPv4 = true
+                throw IPAddressError.failedToParseIPv4String
+            }
         } catch {
+            if incompleteIPv4 {
+                throw IPAddressError.failedToParseIPString(string)
+            }
             idx = 0
             var ipv6Bytes: [UInt16] = [0,0,0,0,0,0,0,0]
             var isLastCharSeparator: Bool = false
@@ -258,6 +280,10 @@ public enum IPAddress: CustomStringConvertible {
                 } else {
                     isLastCharSeparator = false
                     if let number = char.hexDigitValue {
+                        if idx > 7 || ipv6Bytes[idx] > 4095 || (65535 - number < (ipv6Bytes[idx] * 16)) {
+                            // if this is the case, the calculations would result in arithmetic overflow
+                            throw IPAddressError.failedToParseIPString(string)
+                        }
                         ipv6Bytes[idx] = ipv6Bytes[idx]*16 + UInt16(number)
                     } else {
                         throw IPAddressError.failedToParseIPString(string)
