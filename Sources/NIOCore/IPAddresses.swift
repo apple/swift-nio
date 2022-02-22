@@ -245,7 +245,6 @@ public enum IPAddress: CustomStringConvertible {
                     idx += 1
                 } else if let number = char.wholeNumberValue {
                     if idx > 3 || bytes[idx] > 25 || (255 - number < (bytes[idx] * 10)) {
-                        // if this is the case, the calculations would result in arithmetic overflow
                         throw IPAddressError.failedToParseIPv4String
                     }
                     bytes[idx] = bytes[idx] * 10 + UInt8(number)
@@ -281,7 +280,6 @@ public enum IPAddress: CustomStringConvertible {
                     isLastCharSeparator = false
                     if let number = char.hexDigitValue {
                         if idx > 7 || ipv6Bytes[idx] > 4095 || (65535 - number < (ipv6Bytes[idx] * 16)) {
-                            // if this is the case, the calculations would result in arithmetic overflow
                             throw IPAddressError.failedToParseIPString(string)
                         }
                         ipv6Bytes[idx] = ipv6Bytes[idx]*16 + UInt16(number)
