@@ -42,30 +42,6 @@ public struct IPv4Bytes {
     }
 }
 
-extension IPv4Bytes: Collection {
-    public typealias Index = Int
-    public typealias Element = UInt8
-    
-    public var startIndex: Index { 0 }
-    public var endIndex: Index { 4 }
-    
-    public subscript(position: Index) -> Element {
-        get {
-            switch position {
-            case 0: return self.bytes.0
-            case 1: return self.bytes.1
-            case 2: return self.bytes.2
-            case 3: return self.bytes.3
-            default: preconditionFailure()
-            }
-        }
-    }
-    
-    public func index(after: Index) -> Index {
-        return after + 1
-    }
-}
-
 /// Represent the bytes for an IPv6Address.
 public struct IPv6Bytes {
     private let ipv6BytesTuple: IPv6BytesTuple
@@ -76,67 +52,6 @@ public struct IPv6Bytes {
     
     init(_ bytes: IPv6BytesTuple) {
         self.ipv6BytesTuple = bytes
-    }
-}
-
-extension IPv6Bytes: Collection {
-    public typealias Index = Int
-    public typealias Element = UInt8
-    
-    public var startIndex: Index { 0 }
-    public var endIndex: Index { 16 }
-    
-    public subscript(position: Index) -> Element {
-        get {
-            switch position {
-            case 0: return self.bytes.0
-            case 1: return self.bytes.1
-            case 2: return self.bytes.2
-            case 3: return self.bytes.3
-            case 4: return self.bytes.4
-            case 5: return self.bytes.5
-            case 6: return self.bytes.6
-            case 7: return self.bytes.7
-            case 8: return self.bytes.8
-            case 9: return self.bytes.9
-            case 10: return self.bytes.10
-            case 11: return self.bytes.11
-            case 12: return self.bytes.12
-            case 13: return self.bytes.13
-            case 14: return self.bytes.14
-            case 15: return self.bytes.15
-            default: preconditionFailure()
-            }
-        }
-    }
-    
-    public func index(after: Index) -> Index {
-        return after + 1
-    }
-}
-
-extension UInt8 {
-    /// Convenience function especially useful for representing IPv6 bytes as readable string.
-    func toHex() -> Character {
-        switch self {
-        case 0: return "0"
-        case 1: return "1"
-        case 2: return "2"
-        case 3: return "3"
-        case 4: return "4"
-        case 5: return "5"
-        case 6: return "6"
-        case 7: return "7"
-        case 8: return "8"
-        case 9: return "9"
-        case 10: return "A"
-        case 11: return "B"
-        case 12: return "C"
-        case 13: return "D"
-        case 14: return "E"
-        case 15: return "F"
-        default: preconditionFailure()
-        }
     }
 }
 
@@ -404,6 +319,93 @@ public enum IPAddress {
     ///     - posixIPv6Address: libc ipv6 address.
     public init(posixIPv6Address: in6_addr) {
         self = .v6(.init(address: .init(posixIPv6Address.__u6_addr.__u6_addr8)))
+    }
+}
+
+extension UInt8 {
+    /// Convenience function especially useful for representing IPv6 bytes as readable string.
+    func toHex() -> Character {
+        switch self {
+        case 0: return "0"
+        case 1: return "1"
+        case 2: return "2"
+        case 3: return "3"
+        case 4: return "4"
+        case 5: return "5"
+        case 6: return "6"
+        case 7: return "7"
+        case 8: return "8"
+        case 9: return "9"
+        case 10: return "A"
+        case 11: return "B"
+        case 12: return "C"
+        case 13: return "D"
+        case 14: return "E"
+        case 15: return "F"
+        default: preconditionFailure()
+        }
+    }
+}
+
+/// We define an extension on `IPv4Bytes` that gives it a collection conformance.
+extension IPv4Bytes: Collection {
+    public typealias Index = Int
+    public typealias Element = UInt8
+    
+    public var startIndex: Index { 0 }
+    public var endIndex: Index { 4 }
+    
+    public subscript(position: Index) -> Element {
+        get {
+            switch position {
+            case 0: return self.bytes.0
+            case 1: return self.bytes.1
+            case 2: return self.bytes.2
+            case 3: return self.bytes.3
+            default: preconditionFailure()
+            }
+        }
+    }
+    
+    public func index(after: Index) -> Index {
+        return after + 1
+    }
+}
+
+/// We define an extension on `IPv6Bytes` that gives it a collection conformance.
+extension IPv6Bytes: Collection {
+    public typealias Index = Int
+    public typealias Element = UInt8
+    
+    public var startIndex: Index { 0 }
+    public var endIndex: Index { 16 }
+    
+    public subscript(position: Index) -> Element {
+        get {
+            switch position {
+            case 0: return self.bytes.0
+            case 1: return self.bytes.1
+            case 2: return self.bytes.2
+            case 3: return self.bytes.3
+            case 4: return self.bytes.4
+            case 5: return self.bytes.5
+            case 6: return self.bytes.6
+            case 7: return self.bytes.7
+            case 8: return self.bytes.8
+            case 9: return self.bytes.9
+            case 10: return self.bytes.10
+            case 11: return self.bytes.11
+            case 12: return self.bytes.12
+            case 13: return self.bytes.13
+            case 14: return self.bytes.14
+            case 15: return self.bytes.15
+            default: preconditionFailure()
+            }
+        }
+    }
+    
+    public func index(after: Index) -> Index {
+        return after + 1
     }
 }
 
