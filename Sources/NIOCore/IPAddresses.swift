@@ -159,7 +159,7 @@ public enum IPAddress: CustomStringConvertible {
             self.address = address
         }
         
-        public init(packedBytes bytes: [UInt8]) {
+        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8 {
             self = .init(address: .init((
                 bytes[0], bytes[1], bytes[2], bytes[3]
             )))
@@ -226,7 +226,7 @@ public enum IPAddress: CustomStringConvertible {
             self.address = address
         }
         
-        public init(packedBytes bytes: [UInt8]) {
+        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8 {
             self = .init(address: .init((
                 bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
             )))
@@ -273,7 +273,7 @@ public enum IPAddress: CustomStringConvertible {
                 }
             } else {
                 if (idx != ipv6Bytes.count - 1) {
-                    // if IPv6 wasn't shortened, every byte should be set explicitly
+                    // if IPv6 wasn't shortened, every segment should be set explicitly
                     throw IPAddressError.failedToParseIPString(string)
                 }
             }
@@ -323,7 +323,7 @@ public enum IPAddress: CustomStringConvertible {
     ///
     /// - parameters:
     ///     - string: String representation of IPv4 or IPv6 Address
-    /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
+    /// - returns: The `IPAddress` for the given string
     /// - throws: May throw `IPAddressError.failedToParseIPString` if the string cannot be parsed to IPv4 or IPv6.
     public init(string: String) throws {
         do {
@@ -339,7 +339,7 @@ public enum IPAddress: CustomStringConvertible {
     ///     - bytes: Either 4 or 16 bytes representing the IPAddress value.
     /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
     // TODO: update to init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8
-    public init(packedBytes bytes: [UInt8]) throws {
+    public init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8 {
         switch bytes.count {
         case 4: self = .v4(.init(packedBytes: bytes))
         case 16: self = .v6(.init(packedBytes: bytes))
