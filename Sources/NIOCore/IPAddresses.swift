@@ -29,7 +29,7 @@ public enum IPAddressError: Error {
 public typealias IPv4BytesTuple = (UInt8, UInt8, UInt8, UInt8)
 public typealias IPv6BytesTuple = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 
-/// Represent the bytes for an IPv4Address.
+/// Represent the bytes for an `IPv4Address`.
 public struct IPv4Bytes {
     private let ipv4BytesTuple: IPv4BytesTuple
     
@@ -42,7 +42,7 @@ public struct IPv4Bytes {
     }
 }
 
-/// Represent the bytes for an IPv6Address.
+/// Represent the bytes for an `IPv6Address.
 public struct IPv6Bytes {
     private let ipv6BytesTuple: IPv6BytesTuple
     
