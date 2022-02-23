@@ -57,8 +57,6 @@ public struct IPv6Bytes {
 
 /// Represent a single `IPAddress`.
 public enum IPAddress {
-    public typealias Element = UInt8
-    
     /// A single IPv4 address for `IPAddress`.
     public struct IPv4Address {
         /// The bytes storing the address of the IPv4 address.
