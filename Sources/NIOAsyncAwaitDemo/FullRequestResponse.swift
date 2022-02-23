@@ -35,7 +35,7 @@ public final class MakeFullRequestHandler: ChannelOutboundHandler {
 ///
 /// `RequestResponseHandler` does support pipelining `Request`s and it will send them pipelined further down the
 /// `Channel`. Should `RequestResponseHandler` receive an error from the `Channel`, it will fail all promises meant for
-/// the outstanding `Reponse`s and close the `Channel`. All requests enqueued after an error occured will be immediately
+/// the outstanding `Response`s and close the `Channel`. All requests enqueued after an error occurred will be immediately
 /// failed with the first error the channel received.
 ///
 /// `RequestResponseHandler` requires that the `Response`s arrive on `Channel` in the same order as the `Request`s

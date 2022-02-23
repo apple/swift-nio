@@ -295,7 +295,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         context.pipeline.removeHandler(context: context, promise: nil)
     }
 
-    /// Builds the initial mandatory HTTP headers for HTTP ugprade responses.
+    /// Builds the initial mandatory HTTP headers for HTTP upgrade responses.
     private func buildUpgradeHeaders(`protocol`: String) -> HTTPHeaders {
         return HTTPHeaders([("connection", "upgrade"), ("upgrade", `protocol`)])
     }

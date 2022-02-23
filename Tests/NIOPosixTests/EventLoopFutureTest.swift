@@ -1460,4 +1460,40 @@ class EventLoopFutureTest : XCTestCase {
         sem.signal()
     }
 
+    func testFlatMapWithEL() {
+        let el = EmbeddedEventLoop()
+
+        XCTAssertEqual(2,
+                       try el.makeSucceededFuture(1).flatMapWithEventLoop { one, el2 in
+            XCTAssert(el === el2)
+            return el2.makeSucceededFuture(one + 1)
+        }.wait())
+    }
+
+    func testFlatMapErrorWithEL() {
+        let el = EmbeddedEventLoop()
+        struct E: Error {}
+
+        XCTAssertEqual(1,
+                       try el.makeFailedFuture(E()).flatMapErrorWithEventLoop { error, el2 in
+            XCTAssert(error is E)
+            return el2.makeSucceededFuture(1)
+        }.wait())
+    }
+
+    func testFoldWithEL() {
+        let el = EmbeddedEventLoop()
+
+        let futures = (1...10).map { el.makeSucceededFuture($0) }
+
+        var calls = 0
+        let all = el.makeSucceededFuture(0).foldWithEventLoop(futures) { l, r, el2 in
+            calls += 1
+            XCTAssert(el === el2)
+            XCTAssertEqual(calls, r)
+            return el2.makeSucceededFuture(l + r)
+        }
+
+        XCTAssertEqual((1...10).reduce(0, +), try all.wait())
+    }
 }

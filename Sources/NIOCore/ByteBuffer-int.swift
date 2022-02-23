@@ -127,6 +127,7 @@ extension UInt32 {
     /// Returns the next power of two unless that would overflow, in which case UInt32.max (on 64-bit systems) or
     /// Int32.max (on 32-bit systems) is returned. The returned value is always safe to be cast to Int and passed
     /// to malloc on all platforms.
+    @inlinable
     func nextPowerOf2ClampedToMax() -> UInt32 {
         guard self > 0 else {
             return 1
