@@ -19,8 +19,6 @@ import CoreFoundation
 
 
 public enum IPAddressError: Error {
-    /// Given string input is not supported IPv4 Style
-    case failedToParseIPv4String
     /// Given string input is not supported IP Address
     case failedToParseIPString(String)
     /// Given string input is not supported IP Address
@@ -34,8 +32,8 @@ public struct IPv4Bytes: Collection {
     public typealias Index = Int
     public typealias Element = UInt8
     
-    public let startIndex: Index = 0
-    public let endIndex: Index = 4
+    public var startIndex: Index { 0 }
+    public var endIndex: Index { 4 }
     
     private let ipv4BytesTuple: IPv4BytesTuple
     
@@ -68,8 +66,8 @@ public struct IPv6Bytes: Collection {
     public typealias Index = Int
     public typealias Element = UInt8
     
-    public let startIndex: Index = 0
-    public let endIndex: Index = 16
+    public var startIndex: Index { 0 }
+    public var endIndex: Index { 16 }
     
     private let ipv6BytesTuple: IPv6BytesTuple
     
@@ -143,6 +141,11 @@ public enum IPAddress: CustomStringConvertible {
         /// The libc ip address for an IPv4 address.
         let address: IPv4Bytes
         
+        /// Get the IP address as a string
+        var ipAddress: String {
+            self.address.lazy.map({String($0)}).joined(separator: ".")
+        }
+        
         var posix: in_addr {
             get {
                 return in_addr.init(s_addr: UInt32(self.address.bytes.0) << 24
@@ -155,6 +158,34 @@ public enum IPAddress: CustomStringConvertible {
         fileprivate init(address: IPv4Bytes) {
             self.address = address
         }
+        
+        public init(packedBytes bytes: [UInt8]) {
+            self = .init(address: .init((
+                bytes[0], bytes[1], bytes[2], bytes[3]
+            )))
+        }
+        
+        fileprivate init(string: String) throws {
+            var bytes: [UInt8] = [0,0,0,0]
+            var idx: Int = 0
+            
+            for char in string {
+                if char == "." {
+                    idx += 1
+                } else if let number = char.wholeNumberValue {
+                    if idx > 3 || bytes[idx] > 25 || (255 - number < (bytes[idx] * 10)) {
+                        throw IPAddressError.failedToParseIPString(string)
+                    }
+                    bytes[idx] = bytes[idx] * 10 + UInt8(number)
+                } else {
+                    throw IPAddressError.failedToParseIPString(string)
+                }
+            }
+            if idx != 3 {
+                throw IPAddressError.failedToParseIPString(string)
+            }
+            self = .init(packedBytes: bytes)
+        }
     }
     
     /// A single IPv6 address for `IPAddress`
@@ -162,45 +193,14 @@ public enum IPAddress: CustomStringConvertible {
         /// The libc ip address for an IPv6 address.
         let address: IPv6Bytes
         
-        var posix: in6_addr {
-            get {
-                return in6_addr.init(__u6_addr: .init(__u6_addr8: self.address.bytes))
-            }
-        }
-        
-        fileprivate init(address: IPv6Bytes) {
-            self.address = address
-        }
-    }
-        
-    /// An IPv4 `IPAddress`.
-    case v4(IPv4Address)
-
-    /// An IPv6 `IPAddress`.
-    case v6(IPv6Address)
-
-    /// A human-readable description of this `IPAddress`. Mostly useful for logging.
-    public var description: String {
-        switch self {
-        case .v4(_):
-            return "[IPv4]\(self.ipAddress)"
-        case .v6(_):
-            return "[IPv6]\(self.ipAddress)"
-        }
-    }
-    
-    /// Get the IP address as a string
-    public var ipAddress: String {
-        switch self {
-        case .v4(let addr):
-            return addr.address.lazy.map({String($0)}).joined(separator: ".")
-        case .v6(let addr):
-            return stride(from: 0, to: 15, by: 2).lazy.map({ idx in
+        /// Get the IP address as a string
+        var ipAddress: String {
+            stride(from: 0, to: 15, by: 2).lazy.map({ idx in
                 let hexValues = [
-                    addr.address[idx] >> 4,
-                    addr.address[idx] & 0x0F,
-                    addr.address[idx + 1] >> 4,
-                    addr.address[idx + 1] & 0x0F
+                    self.address[idx] >> 4,
+                    self.address[idx] & 0x0F,
+                    self.address[idx + 1] >> 4,
+                    self.address[idx + 1] & 0x0F
                 ]
                 
                 var removeLeadingZeros = 0
@@ -215,52 +215,25 @@ public enum IPAddress: CustomStringConvertible {
                 return String(hexValues[removeLeadingZeros...].lazy.map {$0.toHex()})
             }).joined(separator: ":")
         }
-    }
-
-    /// Creates a `IPAddress` directly out of UInt8 Tuple for IPv4.
-    public init(_ ipv4BytesTuple: IPv4BytesTuple) {
-        self = .v4(IPv4Address(address: .init(ipv4BytesTuple)))
-    }
-    
-    /// Creates a `IPAddress` directly out of UInt8 Tuple for IPv6.
-    public init(_ ipv6BytesTuple: IPv6BytesTuple) {
-        self = .v6(IPv6Address(address: .init(ipv6BytesTuple)))
-    }
-    
-    /// Creates a new `IPAddress` for the given string.
-    /// "d.d.d.d" with decimal values for IPv4 and "h:h:h:h:h:h:h:h" with hexadecimal values for IPv6. Hybrid versions for IPv6 are not (yet) supported.
-    ///
-    /// - parameters:
-    ///     - string: String representation of IPv4 or IPv6 Address
-    /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
-    /// - throws: May throw `IPAddressError.failedToParseIPString` if the string cannot be parsed to IPv4 or IPv6.
-    public init(string: String) throws {
-        var bytes: [UInt8] = [0,0,0,0]
-        var idx: Int = 0
-        var incompleteIPv4 = false
         
-        do {
-            for char in string {
-                if char == "." {
-                    idx += 1
-                } else if let number = char.wholeNumberValue {
-                    if idx > 3 || bytes[idx] > 25 || (255 - number < (bytes[idx] * 10)) {
-                        throw IPAddressError.failedToParseIPv4String
-                    }
-                    bytes[idx] = bytes[idx] * 10 + UInt8(number)
-                } else {
-                    throw IPAddressError.failedToParseIPv4String
-                }
+        var posix: in6_addr {
+            get {
+                return in6_addr.init(__u6_addr: .init(__u6_addr8: self.address.bytes))
             }
-            if idx != 3 {
-                incompleteIPv4 = true
-                throw IPAddressError.failedToParseIPv4String
-            }
-        } catch {
-            if incompleteIPv4 {
-                throw IPAddressError.failedToParseIPString(string)
-            }
-            idx = 0
+        }
+        
+        fileprivate init(address: IPv6Bytes) {
+            self.address = address
+        }
+        
+        public init(packedBytes bytes: [UInt8]) {
+            self = .init(address: .init((
+                bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+            )))
+        }
+        
+        fileprivate init(string: String) throws {
+            var idx = 0
             var ipv6Bytes: [UInt16] = [0,0,0,0,0,0,0,0]
             var isLastCharSeparator: Bool = false
             var shortenerIndex: Int?
@@ -305,9 +278,59 @@ public enum IPAddress: CustomStringConvertible {
                 }
             }
             
-            bytes = ipv6Bytes.flatMap {[UInt8($0 >> 8), UInt8($0 & 0x00FF)]}
+            self = .init(packedBytes: ipv6Bytes.lazy.flatMap {[UInt8($0 >> 8), UInt8($0 & 0x00FF)]} )
         }
-        try self.init(packedBytes: bytes)
+    }
+        
+    /// An IPv4 `IPAddress`.
+    case v4(IPv4Address)
+
+    /// An IPv6 `IPAddress`.
+    case v6(IPv6Address)
+
+    /// A human-readable description of this `IPAddress`. Mostly useful for logging.
+    public var description: String {
+        switch self {
+        case .v4(_):
+            return "[IPv4]\(self.ipAddress)"
+        case .v6(_):
+            return "[IPv6]\(self.ipAddress)"
+        }
+    }
+    
+    /// Get the IP address as a string
+    public var ipAddress: String {
+        switch self {
+        case .v4(let addr):
+            return addr.ipAddress
+        case .v6(let addr):
+            return addr.ipAddress
+        }
+    }
+
+    /// Creates a `IPAddress` directly out of UInt8 Tuple for IPv4.
+    public init(_ ipv4BytesTuple: IPv4BytesTuple) {
+        self = .v4(IPv4Address(address: .init(ipv4BytesTuple)))
+    }
+    
+    /// Creates a `IPAddress` directly out of UInt8 Tuple for IPv6.
+    public init(_ ipv6BytesTuple: IPv6BytesTuple) {
+        self = .v6(IPv6Address(address: .init(ipv6BytesTuple)))
+    }
+    
+    /// Creates a new `IPAddress` for the given string.
+    /// "d.d.d.d" with decimal values for IPv4 and "h:h:h:h:h:h:h:h" with hexadecimal values for IPv6. Hybrid versions for IPv6 are not (yet) supported.
+    ///
+    /// - parameters:
+    ///     - string: String representation of IPv4 or IPv6 Address
+    /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
+    /// - throws: May throw `IPAddressError.failedToParseIPString` if the string cannot be parsed to IPv4 or IPv6.
+    public init(string: String) throws {
+        do {
+            try self = .v4(.init(string: string))
+        } catch {
+            try self = .v6(.init(string: string))
+        }
     }
     
     /// Creates a new `IPAddress` for the given bytes and optional zone.
@@ -318,12 +341,8 @@ public enum IPAddress: CustomStringConvertible {
     // TODO: update to init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8
     public init(packedBytes bytes: [UInt8]) throws {
         switch bytes.count {
-        case 4: self = .v4(.init(address: .init((
-            bytes[0], bytes[1], bytes[2], bytes[3]
-        ))))
-        case 16: self = .v6(.init(address: .init((
-            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
-        ))))
+        case 4: self = .v4(.init(packedBytes: bytes))
+        case 16: self = .v6(.init(packedBytes: bytes))
         default:
             throw IPAddressError.bytesArrayHasWrongLength(bytes.count)
         }
@@ -361,16 +380,40 @@ extension IPv6Bytes: Equatable {
     }
 }
 
-/// We define an extension on `IPAddress` that gives it an elementwise equatable conformance
-extension IPAddress: Equatable {
-    public static func == (lhs: IPAddress, rhs: IPAddress) -> Bool {
-        switch (lhs, rhs) {
-        case (.v4(let addr1), .v4(let addr2)):
-            return addr1.address == addr2.address
-        case (.v6(let addr1), .v6(let addr2)):
-            return addr1.address == addr2.address
-        default:
-            return false
-        }
+extension IPAddress.IPv4Address: Equatable {}
+extension IPAddress.IPv6Address: Equatable {}
+extension IPAddress: Equatable {}
+
+
+extension IPv4Bytes: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.bytes.0)
+        hasher.combine(self.bytes.1)
+        hasher.combine(self.bytes.2)
+        hasher.combine(self.bytes.3)
     }
 }
+extension IPv6Bytes: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.bytes.0)
+        hasher.combine(self.bytes.1)
+        hasher.combine(self.bytes.2)
+        hasher.combine(self.bytes.3)
+        hasher.combine(self.bytes.4)
+        hasher.combine(self.bytes.5)
+        hasher.combine(self.bytes.6)
+        hasher.combine(self.bytes.7)
+        hasher.combine(self.bytes.8)
+        hasher.combine(self.bytes.9)
+        hasher.combine(self.bytes.10)
+        hasher.combine(self.bytes.11)
+        hasher.combine(self.bytes.12)
+        hasher.combine(self.bytes.13)
+        hasher.combine(self.bytes.14)
+        hasher.combine(self.bytes.15)
+    }
+}
+
+extension IPAddress.IPv4Address: Hashable {}
+extension IPAddress.IPv6Address: Hashable {}
+extension IPAddress: Hashable {}
