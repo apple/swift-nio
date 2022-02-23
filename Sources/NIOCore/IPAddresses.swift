@@ -18,6 +18,7 @@ import CNIOLinux
 import CoreFoundation
 
 
+/// `Error` that may be thrown if we fail to create a `IPAddress`
 public enum IPAddressError: Error {
     /// Given string input is not supported IP Address
     case failedToParseIPString(String)
@@ -28,13 +29,8 @@ public enum IPAddressError: Error {
 public typealias IPv4BytesTuple = (UInt8, UInt8, UInt8, UInt8)
 public typealias IPv6BytesTuple = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
 
-public struct IPv4Bytes: Collection {
-    public typealias Index = Int
-    public typealias Element = UInt8
-    
-    public var startIndex: Index { 0 }
-    public var endIndex: Index { 4 }
-    
+/// Represent the bytes for an IPv4Address.
+public struct IPv4Bytes {
     private let ipv4BytesTuple: IPv4BytesTuple
     
     public var bytes: IPv4BytesTuple {
@@ -44,6 +40,14 @@ public struct IPv4Bytes: Collection {
     init(_ bytes: IPv4BytesTuple) {
         self.ipv4BytesTuple = bytes
     }
+}
+
+extension IPv4Bytes: Collection {
+    public typealias Index = Int
+    public typealias Element = UInt8
+    
+    public var startIndex: Index { 0 }
+    public var endIndex: Index { 4 }
     
     public subscript(position: Index) -> Element {
         get {
@@ -62,13 +66,8 @@ public struct IPv4Bytes: Collection {
     }
 }
 
-public struct IPv6Bytes: Collection {
-    public typealias Index = Int
-    public typealias Element = UInt8
-    
-    public var startIndex: Index { 0 }
-    public var endIndex: Index { 16 }
-    
+/// Represent the bytes for an IPv6Address.
+public struct IPv6Bytes {
     private let ipv6BytesTuple: IPv6BytesTuple
     
     public var bytes: IPv6BytesTuple {
@@ -78,6 +77,14 @@ public struct IPv6Bytes: Collection {
     init(_ bytes: IPv6BytesTuple) {
         self.ipv6BytesTuple = bytes
     }
+}
+
+extension IPv6Bytes: Collection {
+    public typealias Index = Int
+    public typealias Element = UInt8
+    
+    public var startIndex: Index { 0 }
+    public var endIndex: Index { 16 }
     
     public subscript(position: Index) -> Element {
         get {
@@ -109,6 +116,7 @@ public struct IPv6Bytes: Collection {
 }
 
 extension UInt8 {
+    /// Convenience function especially useful for representing IPv6 bytes as readable string.
     func toHex() -> Character {
         switch self {
         case 0: return "0"
@@ -132,39 +140,52 @@ extension UInt8 {
     }
 }
 
-/// Represent a IP address
-public enum IPAddress: CustomStringConvertible {
+/// Represent a single `IPAddress`.
+public enum IPAddress {
     public typealias Element = UInt8
     
     /// A single IPv4 address for `IPAddress`.
     public struct IPv4Address {
-        /// The libc ip address for an IPv4 address.
+        /// The bytes storing the address of the IPv4 address.
         let address: IPv4Bytes
         
-        /// Get the IP address as a string
+        /// Get the `IPv4Address` as a string.
         var ipAddress: String {
             self.address.lazy.map({String($0)}).joined(separator: ".")
         }
         
+        /// Get the libc address for an IPv4 address.
         var posix: in_addr {
             get {
                 return in_addr.init(s_addr: UInt32(self.address.bytes.0) << 24
-                                          + UInt32(self.address.bytes.1) << 16
-                                          + UInt32(self.address.bytes.2) << 8
-                                          + UInt32(self.address.bytes.3))
+                                    + UInt32(self.address.bytes.1) << 16
+                                    + UInt32(self.address.bytes.2) << 8
+                                    + UInt32(self.address.bytes.3))
             }
         }
         
+        /// Creates a new `IPv4Address`.
+        ///
+        /// - parameters:
+        ///   - address: Bytes that hold the IPv4 address.
         fileprivate init(address: IPv4Bytes) {
             self.address = address
         }
         
-        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8 {
+        /// Creates a new `IPv4Address`.
+        ///
+        /// - parameters:
+        ///   - packedBytes: Collection of UInt8 that holds the address.
+        fileprivate init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8, Bytes.Index == Int {
             self = .init(address: .init((
                 bytes[0], bytes[1], bytes[2], bytes[3]
             )))
         }
         
+        /// Creates a new `IPv4Address`.
+        ///
+        /// - parameters:
+        ///   - string: String representation of an IPv4 address.
         fileprivate init(string: String) throws {
             var bytes: [UInt8] = [0,0,0,0]
             var idx: Int = 0
@@ -190,10 +211,10 @@ public enum IPAddress: CustomStringConvertible {
     
     /// A single IPv6 address for `IPAddress`
     public struct IPv6Address {
-        /// The libc ip address for an IPv6 address.
+        /// The bytes storing the address of the IPv6 address.
         let address: IPv6Bytes
         
-        /// Get the IP address as a string
+        /// Get the `IPv6Address` as a string.
         var ipAddress: String {
             stride(from: 0, to: 15, by: 2).lazy.map({ idx in
                 let hexValues = [
@@ -216,22 +237,35 @@ public enum IPAddress: CustomStringConvertible {
             }).joined(separator: ":")
         }
         
+        /// Get the libc address for an IPv6 address.
         var posix: in6_addr {
             get {
                 return in6_addr.init(__u6_addr: .init(__u6_addr8: self.address.bytes))
             }
         }
         
+        /// Creates a new `IPv6Address`.
+        ///
+        /// - parameters:
+        ///   - address: Bytes that hold the IPv6 address.
         fileprivate init(address: IPv6Bytes) {
             self.address = address
         }
         
-        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8 {
+        /// Creates a new `IPv6Address`.
+        ///
+        /// - parameters:
+        ///   - packedBytes: Collection of UInt8 that holds the address.
+        fileprivate init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8, Bytes.Index == Int {
             self = .init(address: .init((
                 bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
             )))
         }
         
+        /// Creates a new `IPv6Address`.
+        ///
+        /// - parameters:
+        ///   - string: String representation of an IPv6 address.
         fileprivate init(string: String) throws {
             var idx = 0
             var ipv6Bytes: [UInt16] = [0,0,0,0,0,0,0,0]
@@ -242,7 +276,7 @@ public enum IPAddress: CustomStringConvertible {
                 if char == ":" {
                     if isLastCharSeparator {
                         if shortenerIndex != nil {
-                            // Two shortener are not allowed
+                            // Two shortener are not allowed.
                             throw IPAddressError.failedToParseIPString(string)
                         }
                         shortenerIndex = idx
@@ -263,17 +297,17 @@ public enum IPAddress: CustomStringConvertible {
             }
             
             if let shortenerIndex = shortenerIndex {
-                // For all i after shortenerIndex move to i + (7 - idx)
+                // For all i after shortenerIndex move to i + (7 - idx).
                 let shiftBy = ipv6Bytes.count - 1 - idx
                 
-                // Go from last index backwards to the shortener position
+                // Go from last index backwards to the shortener position.
                 for i in (shortenerIndex+1...idx).reversed() {
                     ipv6Bytes[i + shiftBy] = ipv6Bytes[i]
                     ipv6Bytes[i] = 0
                 }
             } else {
                 if (idx != ipv6Bytes.count - 1) {
-                    // if IPv6 wasn't shortened, every segment should be set explicitly
+                    // if IPv6 wasn't shortened, every segment should be set explicitly.
                     throw IPAddressError.failedToParseIPString(string)
                 }
             }
@@ -298,7 +332,7 @@ public enum IPAddress: CustomStringConvertible {
         }
     }
     
-    /// Get the IP address as a string
+    /// Get the `IPAddress` as a string.
     public var ipAddress: String {
         switch self {
         case .v4(let addr):
@@ -319,7 +353,7 @@ public enum IPAddress: CustomStringConvertible {
     }
     
     /// Creates a new `IPAddress` for the given string.
-    /// "d.d.d.d" with decimal values for IPv4 and "h:h:h:h:h:h:h:h" with hexadecimal values for IPv6. Hybrid versions for IPv6 are not (yet) supported.
+    /// "d.d.d.d" with decimal values for IPv4 and "h:h:h:h:h:h:h:h" with hexadecimal values for IPv6. Also allowing for shortened IPv6 representation with "::". Hybrid versions for IPv6 are not (yet) supported.
     ///
     /// - parameters:
     ///     - string: String representation of IPv4 or IPv6 Address
@@ -333,13 +367,12 @@ public enum IPAddress: CustomStringConvertible {
         }
     }
     
-    /// Creates a new `IPAddress` for the given bytes and optional zone.
+    /// Creates a new `IPAddress` for the given bytes.
     ///
     /// - parameters:
     ///     - bytes: Either 4 or 16 bytes representing the IPAddress value.
     /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
-    // TODO: update to init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8
-    public init<Bytes: Collection>(packedBytes bytes: Bytes) where Element == UInt8 {
+    public init<Bytes: Collection>(packedBytes bytes: Bytes) throws where Bytes.Element == UInt8, Bytes.Index == Int {
         switch bytes.count {
         case 4: self = .v4(.init(packedBytes: bytes))
         case 16: self = .v6(.init(packedBytes: bytes))
@@ -348,6 +381,10 @@ public enum IPAddress: CustomStringConvertible {
         }
     }
     
+    /// Creates a new `IPAddress` for the given libc IPv4 address.
+    ///
+    /// - parameters:
+    ///     - posixIPv4Address: libc ipv4 address.
     public init(posixIPv4Address: in_addr) {
         let uint8Bitmask: UInt32 = 0x000000FF
         
@@ -361,19 +398,23 @@ public enum IPAddress: CustomStringConvertible {
         self = .v4(.init(address: uint8AddressBytes))
     }
     
+    /// Creates a new `IPAddress` for the given libc IPv6 address.
+    ///
+    /// - parameters:
+    ///     - posixIPv6Address: libc ipv6 address.
     public init(posixIPv6Address: in6_addr) {
         self = .v6(.init(address: .init(posixIPv6Address.__u6_addr.__u6_addr8)))
     }
 }
 
-/// We define an extension on `IPv4Bytes` that gives it an elementwise equatable conformance
+/// We define an extension on `IPv4Bytes` that gives it an equatable conformance.
 extension IPv4Bytes: Equatable {
     public static func == (lhs: IPv4Bytes, rhs: IPv4Bytes) -> Bool {
         return lhs.bytes == rhs.bytes
     }
 }
 
-/// We define an extension on `IPv6Bytes` that gives it an elementwise equatable conformance
+/// We define an extension on `IPv6Bytes` that gives it an element wise equatable conformance.
 extension IPv6Bytes: Equatable {
     public static func == (lhs: IPv6Bytes, rhs: IPv6Bytes) -> Bool {
         return zip(lhs, rhs).allSatisfy {$0 == $1}
@@ -385,35 +426,22 @@ extension IPAddress.IPv6Address: Equatable {}
 extension IPAddress: Equatable {}
 
 
+/// We define an extension on `IPv4Bytes` that combines each byte to the hasher.
 extension IPv4Bytes: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(self.bytes.0)
-        hasher.combine(self.bytes.1)
-        hasher.combine(self.bytes.2)
-        hasher.combine(self.bytes.3)
+        self.forEach { hasher.combine($0) }
     }
 }
+
+/// We define an extension on `IPv6Bytes` that combines each byte to the hasher.
 extension IPv6Bytes: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(self.bytes.0)
-        hasher.combine(self.bytes.1)
-        hasher.combine(self.bytes.2)
-        hasher.combine(self.bytes.3)
-        hasher.combine(self.bytes.4)
-        hasher.combine(self.bytes.5)
-        hasher.combine(self.bytes.6)
-        hasher.combine(self.bytes.7)
-        hasher.combine(self.bytes.8)
-        hasher.combine(self.bytes.9)
-        hasher.combine(self.bytes.10)
-        hasher.combine(self.bytes.11)
-        hasher.combine(self.bytes.12)
-        hasher.combine(self.bytes.13)
-        hasher.combine(self.bytes.14)
-        hasher.combine(self.bytes.15)
+        self.forEach { hasher.combine($0) }
     }
 }
 
 extension IPAddress.IPv4Address: Hashable {}
 extension IPAddress.IPv6Address: Hashable {}
 extension IPAddress: Hashable {}
+
+extension IPAddress: CustomStringConvertible {}
