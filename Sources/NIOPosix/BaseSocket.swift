@@ -84,10 +84,8 @@ extension sockaddr_storage {
     /// This will crash if `ss_family` != AF_INET!
     mutating func convert() -> sockaddr_in {
         precondition(self.ss_family == NIOBSDSocket.AddressFamily.inet.rawValue)
-        return withUnsafePointer(to: &self) {
-            $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                $0.pointee
-            }
+        return withUnsafeMutableBytes(of: &self) {
+            $0.load(as: sockaddr_in.self)
         }
     }
 
@@ -96,10 +94,8 @@ extension sockaddr_storage {
     /// This will crash if `ss_family` != AF_INET6!
     mutating func convert() -> sockaddr_in6 {
         precondition(self.ss_family == NIOBSDSocket.AddressFamily.inet6.rawValue)
-        return withUnsafePointer(to: &self) {
-            $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                $0.pointee
-            }
+        return withUnsafeMutableBytes(of: &self) {
+            $0.load(as: sockaddr_in6.self)
         }
     }
 
@@ -108,10 +104,8 @@ extension sockaddr_storage {
     /// This will crash if `ss_family` != AF_UNIX!
     mutating func convert() -> sockaddr_un {
         precondition(self.ss_family == NIOBSDSocket.AddressFamily.unix.rawValue)
-        return withUnsafePointer(to: &self) {
-            $0.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
-                $0.pointee
-            }
+        return withUnsafeMutableBytes(of: &self) {
+            $0.load(as: sockaddr_un.self)
         }
     }
 
@@ -136,19 +130,14 @@ extension sockaddr_storage {
 extension UnsafeMutablePointer where Pointee == sockaddr {
     /// Converts the `sockaddr` to a `SocketAddress`.
     func convert() -> SocketAddress? {
+        let addressBytes = UnsafeRawPointer(self)
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(pointee.sa_family)) {
         case .inet:
-            return self.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            return SocketAddress(addressBytes.load(as: sockaddr_in.self))
         case .inet6:
-            return self.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            return SocketAddress(addressBytes.load(as: sockaddr_in6.self))
         case .unix:
-            return self.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            return SocketAddress(addressBytes.load(as: sockaddr_un.self))
         default:
             return nil
         }

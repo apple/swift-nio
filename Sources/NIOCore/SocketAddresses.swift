@@ -406,15 +406,12 @@ public enum SocketAddress: CustomStringConvertible {
                 }
 
                 if let pResult = pResult {
+                    let addressBytes = UnsafeRawPointer(pResult.pointee.ai_addr)
                     switch pResult.pointee.ai_family {
                     case AF_INET:
-                        return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                            .v4(IPv4Address(address: $0.pointee, host: host))
-                        }
+                        return .v4(IPv4Address(address: addressBytes.load(as: sockaddr_in.self), host: host))
                     case AF_INET6:
-                        return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self) {
-                            .v6(IPv6Address(address: $0.pointee, host: host))
-                        }
+                        return .v6(IPv6Address(address: addressBytes.load(as: sockaddr_in6.self), host: host))
                     default:
                         break
                     }
@@ -438,15 +435,12 @@ public enum SocketAddress: CustomStringConvertible {
         }
 
         if let info = info {
+            let addressBytes = UnsafeRawPointer(info.pointee.ai_addr!)
             switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
             case .inet:
-                return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { ptr in
-                    .v4(.init(address: ptr.pointee, host: host))
-                }
+                return .v4(.init(address: addressBytes.load(as: sockaddr_in.self), host: host))
             case .inet6:
-                return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { ptr in
-                    .v6(.init(address: ptr.pointee, host: host))
-                }
+                return .v6(.init(address: addressBytes.load(as: sockaddr_in6.self), host: host))
             default:
                 throw SocketAddressError.unsupported
             }
