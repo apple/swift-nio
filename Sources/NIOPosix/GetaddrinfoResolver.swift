@@ -188,12 +188,14 @@ internal class GetaddrinfoResolver: Resolver {
 
         var info: UnsafeMutablePointer<CAddrInfo> = info
         while true {
-            let addressBytes = UnsafeRawPointer(info.pointee.ai_addr!)
+            let addressBytes = UnsafeRawPointer(info.pointee.ai_addr)
             switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
             case .inet:
-                v4Results.append(.init(addressBytes.load(as: sockaddr_in.self), host: host))
+                // Force-unwrap must be safe, or libc did the wrong thing.
+                v4Results.append(.init(addressBytes!.load(as: sockaddr_in.self), host: host))
             case .inet6:
-                v6Results.append(.init(addressBytes.load(as: sockaddr_in6.self), host: host))
+                // Force-unwrap must be safe, or libc did the wrong thing.
+                v6Results.append(.init(addressBytes!.load(as: sockaddr_in6.self), host: host))
             default:
                 self.fail(SocketAddressError.unsupported)
                 return

@@ -97,25 +97,10 @@ typealias IOVector = iovec
     /// - returns: `true` if the connection attempt completes, `false` if `finishConnect` must be called later to complete the connection attempt.
     /// - throws: An `IOError` if the operation failed.
     func connect(to address: SocketAddress) throws -> Bool {
-        switch address {
-        case .v4(let addr):
-            return try self.connectSocket(addr: addr.address)
-        case .v6(let addr):
-            return try self.connectSocket(addr: addr.address)
-        case .unixDomainSocket(let addr):
-            return try self.connectSocket(addr: addr.address)
-        }
-    }
-
-    /// Private helper function to handle connection attempts.
-    private func connectSocket<T>(addr: T) throws -> Bool {
         return try withUnsafeHandle { fd in
-            var addr = addr
-            return try withUnsafePointer(to: &addr) { ptr in
-                try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                    try NIOBSDSocket.connect(socket: fd, address: ptr,
-                                             address_len: socklen_t(MemoryLayout<T>.size))
-                }
+            return try address.withSockAddr { (ptr, size) in
+                return try NIOBSDSocket.connect(socket: fd, address: ptr,
+                                                address_len: socklen_t(size))
             }
         }
     }

@@ -434,8 +434,8 @@ public enum SocketAddress: CustomStringConvertible {
             }
         }
 
-        if let info = info {
-            let addressBytes = UnsafeRawPointer(info.pointee.ai_addr!)
+        if let info = info, let addrPointer = info.pointee.ai_addr {
+            let addressBytes = UnsafeRawPointer(addrPointer)
             switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
             case .inet:
                 return .v4(.init(address: addressBytes.load(as: sockaddr_in.self), host: host))
