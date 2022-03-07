@@ -230,14 +230,11 @@ public enum SocketAddress: CustomStringConvertible {
     public func withSockAddr<T>(_ body: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
         switch self {
         case .v4(let addr):
-            var address = addr.address
-            return try address.withSockAddr({ try body($0, $1) })
+            return try addr.address.withSockAddr({ try body($0, $1) })
         case .v6(let addr):
-            var address = addr.address
-            return try address.withSockAddr({ try body($0, $1) })
+            return try addr.address.withSockAddr({ try body($0, $1) })
         case .unixDomainSocket(let addr):
-            var address = addr.address
-            return try address.withSockAddr({ try body($0, $1) })
+            return try addr.address.withSockAddr({ try body($0, $1) })
         }
     }
 
@@ -264,7 +261,6 @@ public enum SocketAddress: CustomStringConvertible {
     /// - parameters:
     ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
     public init(_ addr: sockaddr_in) {
-        var addr = addr
         self = .v4(.init(address: addr, host: addr.addressDescription()))
     }
 
@@ -273,7 +269,6 @@ public enum SocketAddress: CustomStringConvertible {
     /// - parameters:
     ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
     public init(_ addr: sockaddr_in6) {
-        var addr = addr
         self = .v6(.init(address: addr, host: addr.addressDescription()))
     }
 
@@ -406,15 +401,12 @@ public enum SocketAddress: CustomStringConvertible {
                 }
 
                 if let pResult = pResult {
+                    let addressBytes = UnsafeRawPointer(pResult.pointee.ai_addr)
                     switch pResult.pointee.ai_family {
                     case AF_INET:
-                        return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                            .v4(IPv4Address(address: $0.pointee, host: host))
-                        }
+                        return .v4(IPv4Address(address: addressBytes.load(as: sockaddr_in.self), host: host))
                     case AF_INET6:
-                        return pResult.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self) {
-                            .v6(IPv6Address(address: $0.pointee, host: host))
-                        }
+                        return .v6(IPv6Address(address: addressBytes.load(as: sockaddr_in6.self), host: host))
                     default:
                         break
                     }
@@ -437,16 +429,13 @@ public enum SocketAddress: CustomStringConvertible {
             }
         }
 
-        if let info = info {
+        if let info = info, let addrPointer = info.pointee.ai_addr {
+            let addressBytes = UnsafeRawPointer(addrPointer)
             switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
             case .inet:
-                return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { ptr in
-                    .v4(.init(address: ptr.pointee, host: host))
-                }
+                return .v4(.init(address: addressBytes.load(as: sockaddr_in.self), host: host))
             case .inet6:
-                return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { ptr in
-                    .v6(.init(address: ptr.pointee, host: host))
-                }
+                return .v6(.init(address: addressBytes.load(as: sockaddr_in6.self), host: host))
             default:
                 throw SocketAddressError.unsupported
             }
@@ -570,7 +559,7 @@ extension SocketAddress {
 }
 
 protocol SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R
+    func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R
 }
 
 /// Returns a description for the given address.
@@ -587,16 +576,15 @@ internal func descriptionForAddress(family: NIOBSDSocket.AddressFamily, bytes: U
 }
 
 extension sockaddr_in: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeBytes(of: &me) { p in
+    func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        return try withUnsafeBytes(of: self) { p in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 
     /// Returns a description of the `sockaddr_in`.
-    mutating func addressDescription() -> String {
-        return withUnsafePointer(to: &self.sin_addr) { addrPtr in
+    func addressDescription() -> String {
+        return withUnsafePointer(to: self.sin_addr) { addrPtr in
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
             try! descriptionForAddress(family: .inet, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
         }
@@ -604,16 +592,15 @@ extension sockaddr_in: SockAddrProtocol {
 }
 
 extension sockaddr_in6: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeBytes(of: &me) { p in
+    func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        return try withUnsafeBytes(of: self) { p in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 
     /// Returns a description of the `sockaddr_in6`.
-    mutating func addressDescription() -> String {
-        return withUnsafePointer(to: &self.sin6_addr) { addrPtr in
+    func addressDescription() -> String {
+        return withUnsafePointer(to: self.sin6_addr) { addrPtr in
             // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
             try! descriptionForAddress(family: .inet6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
         }
@@ -621,18 +608,16 @@ extension sockaddr_in6: SockAddrProtocol {
 }
 
 extension sockaddr_un: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeBytes(of: &me) { p in
+    func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        return try withUnsafeBytes(of: self) { p in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 }
 
 extension sockaddr_storage: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeBytes(of: &me) { p in
+    func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        return try withUnsafeBytes(of: self) { p in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
@@ -642,22 +627,22 @@ extension sockaddr_storage: SockAddrProtocol {
 // We need these free functions to expose our extension methods, because otherwise
 // the compiler falls over when we try to access them from test code. As these functions
 // exist purely to make the behaviours accessible from test code, we name them truly awfully.
-func __testOnly_addressDescription(_ addr: inout sockaddr_in) -> String {
+func __testOnly_addressDescription(_ addr: sockaddr_in) -> String {
     return addr.addressDescription()
 }
 
-func __testOnly_addressDescription(_ addr: inout sockaddr_in6) -> String {
+func __testOnly_addressDescription(_ addr: sockaddr_in6) -> String {
     return addr.addressDescription()
 }
 
 func __testOnly_withSockAddr<ReturnType>(
-    _ addr: inout sockaddr_in, _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
+    _ addr: sockaddr_in, _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
 ) rethrows -> ReturnType {
     return try addr.withSockAddr(body)
 }
 
 func __testOnly_withSockAddr<ReturnType>(
-    _ addr: inout sockaddr_in6, _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
+    _ addr: sockaddr_in6, _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
 ) rethrows -> ReturnType {
     return try addr.withSockAddr(body)
 }
