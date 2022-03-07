@@ -224,7 +224,7 @@ extension CircularBuffer: Collection, MutableCollection {
     }
 
     @inlinable
-    public __consuming func _copyContents(
+    public func _copyContents(
         initializing buffer: UnsafeMutableBufferPointer<Element>
     ) -> (Iterator,UnsafeMutableBufferPointer<Element>.Index) {
         precondition(buffer.count >= self.count)
