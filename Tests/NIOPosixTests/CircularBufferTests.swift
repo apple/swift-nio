@@ -1039,4 +1039,27 @@ class CircularBufferTests: XCTestCase {
         buffer.reserveCapacity(0)
         XCTAssertEqual(buffer.capacity, 32)
     }
+
+    func testCopyContents_bufferFullAndHeadBehindTail() {
+        var buffer = CircularBuffer<String>(initialCapacity: 4)
+
+        // Test with no elements.
+        XCTAssertEqual(buffer._buffer.count, 4)
+        XCTAssertEqual(Array(buffer), [])
+
+        // Test with head < tail.
+        buffer.append(contentsOf: ["a", "b", "c"])
+        XCTAssertEqual(buffer._buffer.count, 4)
+        XCTAssertEqual(buffer.count, 3)
+        XCTAssertLessThan(buffer.headBackingIndex, buffer.tailBackingIndex)
+        XCTAssertEqual(Array(buffer), ["a", "b", "c"])
+
+        // Test with head > tail.
+        buffer.removeFirst()
+        buffer.append("d")
+        XCTAssertEqual(buffer._buffer.count, 4)
+        XCTAssertEqual(buffer.count, 3)
+        XCTAssertGreaterThan(buffer.headBackingIndex, buffer.tailBackingIndex)
+        XCTAssertEqual(Array(buffer), ["b", "c", "d"])
+    }
 }

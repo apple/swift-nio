@@ -17,13 +17,13 @@
 /// expansions from happening frequently. Expansions will always force an allocation and a copy to happen.
 public struct CircularBuffer<Element>: CustomStringConvertible {
     @usableFromInline
-    internal var _buffer: ContiguousArray<Element?>
+    internal private(set) var _buffer: ContiguousArray<Element?>
 
     @usableFromInline
-    internal var headBackingIndex: Int
+    internal private(set) var headBackingIndex: Int
 
     @usableFromInline
-    internal var tailBackingIndex: Int
+    internal private(set) var tailBackingIndex: Int
 
     @inlinable
     internal var mask: Int {
@@ -63,9 +63,9 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
     /// - note: Every index is invalidated as soon as you perform a length-changing operating on the `CircularBuffer`
     ///         but remains valid when you replace one item by another using the subscript.
     public struct Index: Comparable {
-        @usableFromInline var _backingIndex: UInt32
-        @usableFromInline var _backingCheck: _UInt24
-        @usableFromInline var isIndexGEQHeadIndex: Bool
+        @usableFromInline private(set) var _backingIndex: UInt32
+        @usableFromInline private(set) var _backingCheck: _UInt24
+        @usableFromInline private(set) var isIndexGEQHeadIndex: Bool
 
         @inlinable
         internal var backingIndex: Int {
@@ -221,6 +221,33 @@ extension CircularBuffer: Collection, MutableCollection {
         case (false, false):
             return end.backingIndex &- start.backingIndex
         }
+    }
+
+    @inlinable
+    public __consuming func _copyContents(
+        initializing buffer: UnsafeMutableBufferPointer<Element>
+    ) -> (Iterator,UnsafeMutableBufferPointer<Element>.Index) {
+        precondition(buffer.count >= self.count)
+
+        guard var ptr = buffer.baseAddress else {
+            return (self.makeIterator(), buffer.startIndex)
+        }
+
+        let indexRanges: [Range<Int>]
+        if self.tailBackingIndex >= self.headBackingIndex {
+            indexRanges = [self.headBackingIndex..<self.tailBackingIndex]
+        } else {
+            indexRanges = [ self.headBackingIndex..<self._buffer.count, 0..<self.tailBackingIndex ]
+        }
+
+        for indexRange in indexRanges {
+            for index in indexRange {
+                ptr.initialize(to: self._buffer[index]!)
+                ptr += 1
+            }
+        }
+
+        return (self[endIndex..<self.endIndex].makeIterator(), self.count)
     }
 }
 
