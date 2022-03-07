@@ -237,7 +237,7 @@ extension CircularBuffer: Collection, MutableCollection {
         if self.tailBackingIndex >= self.headBackingIndex {
             indexRanges = [self.headBackingIndex..<self.tailBackingIndex]
         } else {
-            indexRanges = [ self.headBackingIndex..<self._buffer.count, 0..<self.tailBackingIndex ]
+            indexRanges = [ self.headBackingIndex..<self._buffer.endIndex, 0..<self.tailBackingIndex ]
         }
 
         for indexRange in indexRanges {
