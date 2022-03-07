@@ -82,41 +82,35 @@ extension sockaddr_storage {
     /// Converts the `socketaddr_storage` to a `sockaddr_in`.
     ///
     /// This will crash if `ss_family` != AF_INET!
-    mutating func convert() -> sockaddr_in {
+    func convert() -> sockaddr_in {
         precondition(self.ss_family == NIOBSDSocket.AddressFamily.inet.rawValue)
-        return withUnsafePointer(to: &self) {
-            $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                $0.pointee
-            }
+        return withUnsafeBytes(of: self) {
+            $0.load(as: sockaddr_in.self)
         }
     }
 
     /// Converts the `socketaddr_storage` to a `sockaddr_in6`.
     ///
     /// This will crash if `ss_family` != AF_INET6!
-    mutating func convert() -> sockaddr_in6 {
+    func convert() -> sockaddr_in6 {
         precondition(self.ss_family == NIOBSDSocket.AddressFamily.inet6.rawValue)
-        return withUnsafePointer(to: &self) {
-            $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                $0.pointee
-            }
+        return withUnsafeBytes(of: self) {
+            $0.load(as: sockaddr_in6.self)
         }
     }
 
     /// Converts the `socketaddr_storage` to a `sockaddr_un`.
     ///
     /// This will crash if `ss_family` != AF_UNIX!
-    mutating func convert() -> sockaddr_un {
+    func convert() -> sockaddr_un {
         precondition(self.ss_family == NIOBSDSocket.AddressFamily.unix.rawValue)
-        return withUnsafePointer(to: &self) {
-            $0.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
-                $0.pointee
-            }
+        return withUnsafeBytes(of: self) {
+            $0.load(as: sockaddr_un.self)
         }
     }
 
     /// Converts the `socketaddr_storage` to a `SocketAddress`.
-    mutating func convert() -> SocketAddress {
+    func convert() -> SocketAddress {
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(self.ss_family)) {
         case .inet:
             let sockAddr: sockaddr_in = self.convert()
@@ -136,19 +130,14 @@ extension sockaddr_storage {
 extension UnsafeMutablePointer where Pointee == sockaddr {
     /// Converts the `sockaddr` to a `SocketAddress`.
     func convert() -> SocketAddress? {
+        let addressBytes = UnsafeRawPointer(self)
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(pointee.sa_family)) {
         case .inet:
-            return self.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            return SocketAddress(addressBytes.load(as: sockaddr_in.self))
         case .inet6:
-            return self.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            return SocketAddress(addressBytes.load(as: sockaddr_in6.self))
         case .unix:
-            return self.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            return SocketAddress(addressBytes.load(as: sockaddr_un.self))
         default:
             return nil
         }
@@ -416,15 +405,15 @@ extension BaseSocket: CustomStringConvertible {
 // We need these free functions to expose our extension methods, because otherwise
 // the compiler falls over when we try to access them from test code. As these functions
 // exist purely to make the behaviours accessible from test code, we name them truly awfully.
-func __testOnly_convertSockAddr(_ addr: inout sockaddr_storage) -> sockaddr_in {
+func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_in {
     return addr.convert()
 }
 
-func __testOnly_convertSockAddr(_ addr: inout sockaddr_storage) -> sockaddr_in6 {
+func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_in6 {
     return addr.convert()
 }
 
-func __testOnly_convertSockAddr(_ addr: inout sockaddr_storage) -> sockaddr_un {
+func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_un {
     return addr.convert()
 }
 

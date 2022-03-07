@@ -29,17 +29,15 @@ private struct PendingDatagramWrite {
     /// it will screw any other values pointing to that box. That would be a pretty bad scene. And
     /// in most cases we're not copying large values here: only for UDS does this become a problem.
     func copySocketAddress(_ target: UnsafeMutablePointer<sockaddr_storage>) -> socklen_t {
+        let erased = UnsafeMutableRawPointer(target)
+
         switch address {
         case .v4(let innerAddress):
-            return target.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                $0.pointee = innerAddress.address
-                return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
-            }
+            erased.storeBytes(of: innerAddress.address, as: sockaddr_in.self)
+            return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
         case .v6(let innerAddress):
-            return target.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                $0.pointee = innerAddress.address
-                return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
-            }
+            erased.storeBytes(of: innerAddress.address, as: sockaddr_in6.self)
+            return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
         case .unixDomainSocket:
             fatalError("UDS with datagrams is currently not supported")
         }
