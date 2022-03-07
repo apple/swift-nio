@@ -846,3 +846,6 @@ try measureAndPrint(desc: "execute_10000",
 
 try measureAndPrint(desc: "bytebufferview_copy_to_array_1000_times_1kb",
                     benchmark: ByteBufferViewCopyToArrayBenchmark(iterations: 1000, size: 1024))
+
+try measureAndPrint(desc: "circularbuffer_copy_to_array_1000_times_1kb",
+                    benchmark: CircularBufferViewCopyToArrayBenchmark(iterations: 1000, size: 1024))
