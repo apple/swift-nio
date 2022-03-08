@@ -247,7 +247,7 @@ extension CircularBuffer: Collection, MutableCollection {
             }
         }
 
-        return (self[endIndex..<self.endIndex].makeIterator(), self.count)
+        return (self[self.endIndex..<self.endIndex].makeIterator(), self.count)
     }
 }
 

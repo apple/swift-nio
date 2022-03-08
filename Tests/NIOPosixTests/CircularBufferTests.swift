@@ -1040,7 +1040,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(buffer.capacity, 32)
     }
 
-    func testCopyContents_bufferFullAndHeadBehindTail() {
+    func testCopyContents() {
         var buffer = CircularBuffer<String>(initialCapacity: 4)
 
         // Test with no elements.
