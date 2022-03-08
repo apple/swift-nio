@@ -80,7 +80,7 @@ extension CircularBufferTests {
                 ("testArrayLiteralInit", testArrayLiteralInit),
                 ("testFirstWorks", testFirstWorks),
                 ("testReserveCapacityActuallyDoesSomething", testReserveCapacityActuallyDoesSomething),
-                ("testCopyContents_bufferFullAndHeadBehindTail", testCopyContents_bufferFullAndHeadBehindTail),
+                ("testCopyContents", testCopyContents),
            ]
    }
 }
