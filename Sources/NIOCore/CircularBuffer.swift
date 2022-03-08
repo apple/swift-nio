@@ -233,18 +233,23 @@ extension CircularBuffer: Collection, MutableCollection {
             return (self.makeIterator(), buffer.startIndex)
         }
 
-        let indexRanges: [Range<Int>]
-        if self.tailBackingIndex >= self.headBackingIndex {
-            indexRanges = [self.headBackingIndex..<self.tailBackingIndex]
-        } else {
-            indexRanges = [ self.headBackingIndex..<self._buffer.endIndex, 0..<self.tailBackingIndex ]
-        }
-
-        for indexRange in indexRanges {
-            for index in indexRange {
+        @inline(__always)
+        func copy(
+            range: Range<Int>,
+            from src: ContiguousArray<Element?>,
+            to ptr: inout UnsafeMutablePointer<Element>
+        ) {
+            for index in range {
                 ptr.initialize(to: self._buffer[index]!)
                 ptr += 1
             }
+        }
+
+        if self.tailBackingIndex >= self.headBackingIndex {
+            copy(range: self.headBackingIndex..<self.tailBackingIndex, from: self._buffer, to: &ptr)
+        } else {
+            copy(range: self.headBackingIndex..<self._buffer.endIndex, from: self._buffer, to: &ptr)
+            copy(range: 0..<self.tailBackingIndex, from: self._buffer, to: &ptr)
         }
 
         return (self[self.endIndex..<self.endIndex].makeIterator(), self.count)
