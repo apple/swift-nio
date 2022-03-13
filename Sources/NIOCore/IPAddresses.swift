@@ -48,16 +48,22 @@ public struct IPv6Bytes {
 }
 
 /// Represent a single `IPAddress`.
-public enum IPAddress {
+public enum IPAddress: CustomStringConvertible {
     /// A single IPv4 address for `IPAddress`.
-    public struct IPv4Address {
+    public struct IPv4Address: CustomStringConvertible {
         /// The bytes storing the address of the IPv4 address.
         var address: IPv4Bytes
         
         /// Get the `IPv4Address` as a string.
-        var ipAddress: String {
+        public var ipAddress: String {
             self.address.lazy.map({String($0)}).joined(separator: ".")
         }
+        
+        /// A human-readable description of this `IPv4Address`. Mostly useful for logging.
+        public var description: String {
+            return "[IPv4]\(self.ipAddress)"
+        }
+        
         
         /// Get the libc address for an IPv4 address.
         var posix: in_addr {
@@ -112,12 +118,12 @@ public enum IPAddress {
     }
     
     /// A single IPv6 address for `IPAddress`
-    public struct IPv6Address {
+    public struct IPv6Address: CustomStringConvertible {
         /// The bytes storing the address of the IPv6 address.
         var address: IPv6Bytes
         
         /// Get the `IPv6Address` as a string.
-        var ipAddress: String {
+        public var ipAddress: String {
             stride(from: 0, to: 15, by: 2).lazy.map({ idx in
                 let hexValues = [
                     self.address[idx] >> 4,
@@ -137,6 +143,11 @@ public enum IPAddress {
                 
                 return String(hexValues[removeLeadingZeros...].lazy.map {$0.toHex()})
             }).joined(separator: ":")
+        }
+        
+        /// A human-readable description of this `IPv6Address`. Mostly useful for logging.
+        public var description: String {
+            return "[IPv6]\(self.ipAddress)"
         }
         
         /// Get the libc address for an IPv6 address.
@@ -217,22 +228,12 @@ public enum IPAddress {
             self = .init(packedBytes: ipv6Bytes.lazy.flatMap {[UInt8($0 >> 8), UInt8($0 & 0x00FF)]} )
         }
     }
-        
+    
     /// An IPv4 `IPAddress`.
     case v4(IPv4Address)
 
     /// An IPv6 `IPAddress`.
     case v6(IPv6Address)
-
-    /// A human-readable description of this `IPAddress`. Mostly useful for logging.
-    public var description: String {
-        switch self {
-        case .v4(_):
-            return "[IPv4]\(self.ipAddress)"
-        case .v6(_):
-            return "[IPv6]\(self.ipAddress)"
-        }
-    }
     
     /// Get the `IPAddress` as a string.
     public var ipAddress: String {
@@ -241,6 +242,16 @@ public enum IPAddress {
             return addr.ipAddress
         case .v6(let addr):
             return addr.ipAddress
+        }
+    }
+    
+    /// A human-readable description of this `IPAddress`. Mostly useful for logging.
+    public var description: String {
+        switch self {
+        case .v4(let addr):
+            return addr.description
+        case .v6(let addr):
+            return addr.description
         }
     }
 
@@ -442,5 +453,3 @@ extension IPv6Bytes: Hashable {
 extension IPAddress.IPv4Address: Hashable {}
 extension IPAddress.IPv6Address: Hashable {}
 extension IPAddress: Hashable {}
-
-extension IPAddress: CustomStringConvertible {}
