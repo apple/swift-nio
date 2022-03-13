@@ -31,27 +31,19 @@ public typealias IPv6BytesTuple = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UIn
 
 /// Represent the bytes for an `IPv4Address`.
 public struct IPv4Bytes {
-    private let ipv4BytesTuple: IPv4BytesTuple
+    public var bytes: IPv4BytesTuple
     
-    public var bytes: IPv4BytesTuple {
-        return self.ipv4BytesTuple
-    }
-    
-    init(_ bytes: IPv4BytesTuple) {
-        self.ipv4BytesTuple = bytes
+    public init(_ bytes: IPv4BytesTuple) {
+        self.bytes = bytes
     }
 }
 
 /// Represent the bytes for an `IPv6Address.
 public struct IPv6Bytes {
-    private let ipv6BytesTuple: IPv6BytesTuple
+    public var bytes: IPv6BytesTuple
     
-    public var bytes: IPv6BytesTuple {
-        return self.ipv6BytesTuple
-    }
-    
-    init(_ bytes: IPv6BytesTuple) {
-        self.ipv6BytesTuple = bytes
+    public init(_ bytes: IPv6BytesTuple) {
+        self.bytes = bytes
     }
 }
 
