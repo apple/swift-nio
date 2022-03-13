@@ -62,10 +62,7 @@ public enum IPAddress {
         /// Get the libc address for an IPv4 address.
         var posix: in_addr {
             get {
-                return in_addr.init(s_addr: UInt32(self.address.bytes.0) << 24
-                                    + UInt32(self.address.bytes.1) << 16
-                                    + UInt32(self.address.bytes.2) << 8
-                                    + UInt32(self.address.bytes.3))
+                return in_addr.init(s_addr: UInt32(uint8Tuple: self.address.bytes))
             }
         }
         
@@ -334,6 +331,16 @@ extension UInt8 {
         case 15: return "F"
         default: preconditionFailure()
         }
+    }
+}
+
+extension UInt32 {
+    /// Creates an integer from the given UInt8 tuple.
+    init(uint8Tuple: (UInt8, UInt8, UInt8, UInt8)) {
+        self = UInt32(uint8Tuple.0) << 24
+            + UInt32(uint8Tuple.1) << 16
+            + UInt32(uint8Tuple.2) << 8
+            + UInt32(uint8Tuple.3)
     }
 }
 
