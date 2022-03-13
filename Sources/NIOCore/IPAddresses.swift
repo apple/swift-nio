@@ -101,14 +101,15 @@ public enum IPAddress: CustomStringConvertible {
             var bytes: [UInt8] = [0,0,0,0]
             var idx: Int = 0
             
-            for char in string {
-                if char == "." {
+            for char in string.utf8 {
+                if char == UInt8(ascii: ".") {
                     idx += 1
-                } else if let number = char.wholeNumberValue {
+                } else if UInt8(ascii: "0")...UInt8(ascii: "9") ~= char {
+                    let number = char - UInt8(ascii: "0")
                     if idx > 3 || bytes[idx] > 25 || (255 - number < (bytes[idx] * 10)) {
                         throw IPAddressError.failedToParseIPString(string)
                     }
-                    bytes[idx] = bytes[idx] * 10 + UInt8(number)
+                    bytes[idx] = bytes[idx] * 10 + number
                 } else {
                     throw IPAddressError.failedToParseIPString(string)
                 }
@@ -192,8 +193,8 @@ public enum IPAddress: CustomStringConvertible {
             var isLastCharSeparator: Bool = false
             var shortenerIndex: Int?
             
-            for char in string {
-                if char == ":" {
+            for char in string.utf8 {
+                if char == UInt8(ascii: ":") {
                     if isLastCharSeparator {
                         if shortenerIndex != nil {
                             // Two shortener are not allowed.
@@ -205,8 +206,8 @@ public enum IPAddress: CustomStringConvertible {
                     isLastCharSeparator = true
                 } else {
                     isLastCharSeparator = false
-                    if let number = char.hexDigitValue {
-                        if idx > 7 || ipv6Bytes[idx] > 4095 || (65535 - number < (ipv6Bytes[idx] * 16)) {
+                    if let number = UInt8(asciiHex: char) {
+                        if idx > 7 || ipv6Bytes[idx] > 4095 || (65535 - UInt16(number) < (ipv6Bytes[idx] * 16)) {
                             throw IPAddressError.failedToParseIPString(string)
                         }
                         ipv6Bytes[idx] = ipv6Bytes[idx]*16 + UInt16(number)
@@ -348,6 +349,28 @@ extension UInt8 {
         default: preconditionFailure()
         }
     }
+    
+    init?(asciiHex: UInt8) {
+        switch asciiHex {
+        case UInt8(ascii: "0"): self = 0
+        case UInt8(ascii: "1"): self = 1
+        case UInt8(ascii: "2"): self = 2
+        case UInt8(ascii: "3"): self = 3
+        case UInt8(ascii: "4"): self = 4
+        case UInt8(ascii: "5"): self = 5
+        case UInt8(ascii: "6"): self = 6
+        case UInt8(ascii: "7"): self = 7
+        case UInt8(ascii: "8"): self = 8
+        case UInt8(ascii: "9"): self = 9
+        case UInt8(ascii: "A"): self = 10
+        case UInt8(ascii: "B"): self = 11
+        case UInt8(ascii: "C"): self = 12
+        case UInt8(ascii: "D"): self = 13
+        case UInt8(ascii: "E"): self = 14
+        case UInt8(ascii: "F"): self = 15
+        default: return nil
+        }
+    }
 }
 
 extension UInt32 {
@@ -469,7 +492,6 @@ extension IPv6Bytes: Equatable {
 extension IPAddress.IPv4Address: Equatable {}
 extension IPAddress.IPv6Address: Equatable {}
 extension IPAddress: Equatable {}
-
 
 /// We define an extension on `IPv4Bytes` that combines each byte to the hasher.
 extension IPv4Bytes: Hashable {
