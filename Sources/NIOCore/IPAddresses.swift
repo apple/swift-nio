@@ -64,9 +64,8 @@ public enum IPAddress: CustomStringConvertible {
             return "[IPv4]\(self.ipAddress)"
         }
         
-        
         /// Get the libc address for an IPv4 address.
-        var posix: in_addr {
+        public var posix: in_addr {
             get {
                 return in_addr.init(s_addr: UInt32(uint8Tuple: self.address.bytes))
             }
@@ -156,7 +155,7 @@ public enum IPAddress: CustomStringConvertible {
         }
         
         /// Get the libc address for an IPv6 address.
-        var posix: in6_addr {
+        public var posix: in6_addr {
             get {
                 return in6_addr.init(__u6_addr: .init(__u6_addr8: self.address.bytes))
             }
