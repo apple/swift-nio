@@ -149,19 +149,14 @@ extension NIONetworkInterface: Equatable {
 extension UnsafeMutablePointer where Pointee == sockaddr {
     /// Converts the `sockaddr` to a `SocketAddress`.
     fileprivate func convert() -> SocketAddress? {
+        let addressBytes = UnsafeRawPointer(self)
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(pointee.sa_family)) {
         case .inet:
-            return self.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            return SocketAddress(addressBytes.load(as: sockaddr_in.self))
         case .inet6:
-            return self.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            return SocketAddress(addressBytes.load(as: sockaddr_in6.self))
         case .unix:
-            return self.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            return SocketAddress(addressBytes.load(as: sockaddr_un.self))
         default:
             return nil
         }

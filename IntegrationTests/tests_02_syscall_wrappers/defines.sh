@@ -54,4 +54,5 @@ EOF
     ln -s "$here/../../Sources/CNIODarwin" "$tmpdir/syscallwrapper/Sources"
     mkdir "$tmpdir/syscallwrapper/Sources/NIOCore"
     touch "$tmpdir/syscallwrapper/Sources/NIOCore/empty.swift"
+    rm -rf "$tmpdir/syscallwrapper/Sources/syscallwrapper/syscallwrapper.swift"
 }

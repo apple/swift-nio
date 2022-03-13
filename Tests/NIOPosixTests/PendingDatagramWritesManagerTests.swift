@@ -19,19 +19,15 @@ import XCTest
 
 private extension SocketAddress {
     init(_ addr: UnsafePointer<sockaddr>) {
+        let erased = UnsafeRawPointer(addr)
+
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(addr.pointee.sa_family)) {
         case .unix:
-            self = addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
-                SocketAddress($0.pointee)
-            }
+            self = SocketAddress(erased.load(as: sockaddr_un.self))
         case .inet:
-            self = addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                SocketAddress($0.pointee, host: "")
-            }
+            self = SocketAddress(erased.load(as: sockaddr_in.self))
         case .inet6:
-            self = addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                SocketAddress($0.pointee, host: "")
-            }
+            self = SocketAddress(erased.load(as: sockaddr_in6.self))
         default:
             fatalError("Unexpected family type")
         }
