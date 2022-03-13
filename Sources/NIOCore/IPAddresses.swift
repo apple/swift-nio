@@ -362,8 +362,8 @@ extension UInt32 {
     }
 }
 
-/// We define an extension on `IPv4Bytes` that gives it a collection conformance.
-extension IPv4Bytes: Collection {
+/// We define an extension on `IPv4Bytes` that gives it a mutable collection and random access conformance.
+extension IPv4Bytes: MutableCollection, RandomAccessCollection {
     public typealias Index = Int
     public typealias Element = UInt8
     
@@ -396,8 +396,8 @@ extension IPv4Bytes: Collection {
     }
 }
 
-/// We define an extension on `IPv6Bytes` that gives it a collection conformance.
-extension IPv6Bytes: Collection {
+/// We define an extension on `IPv6Bytes` that gives it a mutable collection and random access conformance.
+extension IPv6Bytes: MutableCollection, RandomAccessCollection {
     public typealias Index = Int
     public typealias Element = UInt8
     
