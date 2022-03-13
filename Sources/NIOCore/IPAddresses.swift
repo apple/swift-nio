@@ -55,13 +55,13 @@ public enum IPAddress: CustomStringConvertible {
         public var address: IPv4Bytes
         
         /// Get the `IPv4Address` as a string.
-        public var ipAddress: String {
+        public var ipAddressString: String {
             self.address.lazy.map({String($0)}).joined(separator: ".")
         }
         
         /// A human-readable description of this `IPv4Address`. Mostly useful for logging.
         public var description: String {
-            return "[IPv4]\(self.ipAddress)"
+            return "[IPv4]\(self.ipAddressString)"
         }
         
         /// Get the libc address for an IPv4 address.
@@ -126,7 +126,7 @@ public enum IPAddress: CustomStringConvertible {
         public var address: IPv6Bytes
         
         /// Get the `IPv6Address` as a string.
-        public var ipAddress: String {
+        public var ipAddressString: String {
             stride(from: 0, to: 15, by: 2).lazy.map({ idx in
                 let hexValues = [
                     self.address[idx] >> 4,
@@ -150,7 +150,7 @@ public enum IPAddress: CustomStringConvertible {
         
         /// A human-readable description of this `IPv6Address`. Mostly useful for logging.
         public var description: String {
-            return "[IPv6]\(self.ipAddress)"
+            return "[IPv6]\(self.ipAddressString)"
         }
         
         /// Get the libc address for an IPv6 address.
@@ -243,12 +243,12 @@ public enum IPAddress: CustomStringConvertible {
     case v6(IPv6Address)
     
     /// Get the `IPAddress` as a string.
-    public var ipAddress: String {
+    public var ipAddressString: String {
         switch self {
         case .v4(let addr):
-            return addr.ipAddress
+            return addr.ipAddressString
         case .v6(let addr):
-            return addr.ipAddress
+            return addr.ipAddressString
         }
     }
     
