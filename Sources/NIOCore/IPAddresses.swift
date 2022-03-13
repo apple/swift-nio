@@ -145,7 +145,16 @@ public enum IPAddress: CustomStringConvertible {
                     removeLeadingZeros = 1
                 }
                 
-                return String(hexValues[removeLeadingZeros...].lazy.map {$0.toHex()})
+                var asciiIpAddress = Array(hexValues[removeLeadingZeros...].lazy.map {$0.toAsciiHex()})
+                asciiIpAddress.append(0) // append null termination for cString
+                
+                return asciiIpAddress.withUnsafeBufferPointer { bytes -> String in
+                    if let pointer = bytes.baseAddress {
+                        return String(cString: pointer)
+                    } else {
+                        preconditionFailure()
+                    }
+                }
             }).joined(separator: ":")
         }
         
@@ -328,24 +337,24 @@ public enum IPAddress: CustomStringConvertible {
 
 extension UInt8 {
     /// Convenience function especially useful for representing IPv6 bytes as readable string.
-    func toHex() -> Character {
+    func toAsciiHex() -> UInt8 {
         switch self {
-        case 0: return "0"
-        case 1: return "1"
-        case 2: return "2"
-        case 3: return "3"
-        case 4: return "4"
-        case 5: return "5"
-        case 6: return "6"
-        case 7: return "7"
-        case 8: return "8"
-        case 9: return "9"
-        case 10: return "A"
-        case 11: return "B"
-        case 12: return "C"
-        case 13: return "D"
-        case 14: return "E"
-        case 15: return "F"
+        case 0: return UInt8(ascii: "0")
+        case 1: return UInt8(ascii: "1")
+        case 2: return UInt8(ascii: "2")
+        case 3: return UInt8(ascii: "3")
+        case 4: return UInt8(ascii: "4")
+        case 5: return UInt8(ascii: "5")
+        case 6: return UInt8(ascii: "6")
+        case 7: return UInt8(ascii: "7")
+        case 8: return UInt8(ascii: "8")
+        case 9: return UInt8(ascii: "9")
+        case 10: return UInt8(ascii: "A")
+        case 11: return UInt8(ascii: "B")
+        case 12: return UInt8(ascii: "C")
+        case 13: return UInt8(ascii: "D")
+        case 14: return UInt8(ascii: "E")
+        case 15: return UInt8(ascii: "F")
         default: preconditionFailure()
         }
     }
