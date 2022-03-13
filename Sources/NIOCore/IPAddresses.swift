@@ -84,9 +84,14 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - packedBytes: Collection of UInt8 that holds the address.
-        fileprivate init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8, Bytes.Index == Int {
+        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8 {
+            var bytes = bytes.prefix(4)
+            
             self = .init(address: .init((
-                bytes[0], bytes[1], bytes[2], bytes[3]
+                bytes.popFirst()!,
+                bytes.popFirst()!,
+                bytes.popFirst()!,
+                bytes.popFirst()!
             )))
         }
         
