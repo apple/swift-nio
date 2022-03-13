@@ -89,6 +89,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     ///
     /// - Parameter rhs: The value to add to this object.
     /// - Returns: The previous value of this object, before the addition occurred.
+    @discardableResult
     @inlinable
     public func add(_ rhs: T) -> T {
         return T.atomic_add(self.value, rhs)
@@ -102,6 +103,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     ///
     /// - Parameter rhs: The value to subtract from this object.
     /// - Returns: The previous value of this object, before the subtraction occurred.
+    @discardableResult
     @inlinable
     public func sub(_ rhs: T) -> T {
         return T.atomic_sub(self.value, rhs)
@@ -210,6 +212,7 @@ public final class Atomic<T: AtomicPrimitive> {
     ///
     /// - Parameter rhs: The value to add to this object.
     /// - Returns: The previous value of this object, before the addition occurred.
+    @discardableResult
     @inlinable
     public func add(_ rhs: T) -> T {
         return self.embedded.add(rhs)
@@ -223,6 +226,7 @@ public final class Atomic<T: AtomicPrimitive> {
     ///
     /// - Parameter rhs: The value to subtract from this object.
     /// - Returns: The previous value of this object, before the subtraction occurred.
+    @discardableResult
     @inlinable
     public func sub(_ rhs: T) -> T {
         return self.embedded.sub(rhs)
@@ -525,7 +529,7 @@ public final class AtomicBox<T: AnyObject> {
             }
         }
 
-        // step 2: After having gained 'ownership' of the old value, we can release the Unmanged.
+        // step 2: After having gained 'ownership' of the old value, we can release the Unmanaged.
         let oldPtr = Unmanaged<T>.fromOpaque(UnsafeRawPointer(bitPattern: oldPtrBits)!)
         return oldPtr.takeRetainedValue()
     }

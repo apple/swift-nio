@@ -152,7 +152,7 @@ public final class EventLoopTest : XCTestCase {
         loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
             XCTAssertTrue(loop.inEventLoop)
             let initialValue = counter.load()
-            _ = counter.add(1)
+            counter.add(1)
             if initialValue == 0 {
                 XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
             } else if initialValue == count {
@@ -933,7 +933,7 @@ public final class EventLoopTest : XCTestCase {
                 if overflow {
                     XCTAssertGreaterThanOrEqual(timeAmount.nanoseconds, 0)
                     XCTAssertGreaterThanOrEqual(deadline.uptimeNanoseconds, 0)
-                    // we cap at distantFuture torwards +inf
+                    // we cap at distantFuture towards +inf
                     expectedValue = NIODeadline.distantFuture.uptimeNanoseconds
                 } else if partial < 0 {
                     // we cap at 0 towards -inf
@@ -967,7 +967,7 @@ public final class EventLoopTest : XCTestCase {
                 if overflow {
                     XCTAssertLessThan(timeAmount.nanoseconds, 0)
                     XCTAssertGreaterThanOrEqual(deadline.uptimeNanoseconds, 0)
-                    // we cap at distantFuture torwards +inf
+                    // we cap at distantFuture towards +inf
                     expectedValue = NIODeadline.distantFuture.uptimeNanoseconds
                 } else if partial < 0 {
                     // we cap at 0 towards -inf

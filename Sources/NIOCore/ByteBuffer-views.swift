@@ -113,6 +113,13 @@ public struct ByteBufferView: RandomAccessCollection {
             return ptr.lastIndex(of: element).map { $0 + self._range.lowerBound }
         })
     }
+    
+    @inlinable
+    public func _customContainsEquatableElement(_ element: Element) -> Bool? {
+        return .some(self.withUnsafeBytes { ptr -> Bool in
+            return ptr.contains(element)
+        })
+    }
 
     @inlinable
     public func _copyContents(
@@ -214,6 +221,7 @@ extension ByteBuffer {
 
 extension ByteBufferView: Equatable {
     /// required by `Equatable`
+    @inlinable
     public static func == (lhs: ByteBufferView, rhs: ByteBufferView) -> Bool {
 
         guard lhs._range.count == rhs._range.count else {
@@ -231,6 +239,7 @@ extension ByteBufferView: Equatable {
 
 extension ByteBufferView: Hashable {
     /// required by `Hashable`
+    @inlinable
     public func hash(into hasher: inout Hasher) {
         // A well-formed ByteBufferView can never have a range that is out-of-bounds of the backing ByteBuffer.
         // As a result, this getSlice call can never fail, and we'd like to know it if it does.
@@ -240,6 +249,7 @@ extension ByteBufferView: Hashable {
 
 extension ByteBufferView: ExpressibleByArrayLiteral {
     /// required by `ExpressibleByArrayLiteral`
+    @inlinable
     public init(arrayLiteral elements: Element...) {
         self.init(elements)
     }

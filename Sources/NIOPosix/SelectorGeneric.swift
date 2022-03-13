@@ -44,7 +44,7 @@ extension timespec {
 
 /// Represents IO events NIO might be interested in. `SelectorEventSet` is used for two purposes:
 ///  1. To express interest in a given event set and
-///  2. for notifications about an IO event set that has occured.
+///  2. for notifications about an IO event set that has occurred.
 ///
 /// For example, if you were interested in reading and writing data from/to a socket and also obviously if the socket
 /// receives a connection reset, express interest with `[.read, .write, .reset]`.

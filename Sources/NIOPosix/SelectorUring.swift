@@ -205,7 +205,7 @@ extension Selector: _SelectorBackendProtocol {
 
         var ready: Int = 0
 
-        // flush reregisteration of pending modifications if needed (nop in SQPOLL mode)
+        // flush reregistration of pending modifications if needed (nop in SQPOLL mode)
         // basically this elides all reregistrations and deregistrations into a single
         // syscall instead of one for each. Future improvement would be to also merge
         // the pending pollmasks (now each change will be queued, but we could also

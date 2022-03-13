@@ -1794,7 +1794,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertTrue(buffer.discardReadBytes())
         XCTAssertEqual(0, buffer.readerIndex)
         XCTAssertEqual(0, buffer.writerIndex)
-        // As we fully consumed the buffer we should only have adjusted the indices but not triggered a copy as result of CoW sematics.
+        // As we fully consumed the buffer we should only have adjusted the indices but not triggered a copy as result of CoW semantics.
         // So we should still be able to also read the old data.
         buffer.moveWriterIndex(to: 1)
         buffer.moveReaderIndex(to: 0)
