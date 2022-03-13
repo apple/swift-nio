@@ -76,7 +76,7 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - address: Bytes that hold the IPv4 address.
-        fileprivate init(address: IPv4Bytes) {
+        public init(address: IPv4Bytes) {
             self.address = address
         }
         
@@ -99,7 +99,7 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - string: String representation of an IPv4 address.
-        fileprivate init(string: String) throws {
+        public init(string: String) throws {
             var bytes: [UInt8] = [0,0,0,0]
             var idx: Int = 0
             
@@ -166,7 +166,7 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - address: Bytes that hold the IPv6 address.
-        fileprivate init(address: IPv6Bytes) {
+        public init(address: IPv6Bytes) {
             self.address = address
         }
         
@@ -174,7 +174,7 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - packedBytes: Collection of UInt8 that holds the address.
-        fileprivate init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8, Bytes.Index == Int {
+        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8, Bytes.Index == Int {
             self = .init(address: .init((
                 bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
             )))
@@ -184,7 +184,7 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - string: String representation of an IPv6 address.
-        fileprivate init(string: String) throws {
+        public init(string: String) throws {
             var idx = 0
             var ipv6Bytes: [UInt16] = [0,0,0,0,0,0,0,0]
             var isLastCharSeparator: Bool = false
