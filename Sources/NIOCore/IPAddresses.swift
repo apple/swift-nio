@@ -84,14 +84,13 @@ public enum IPAddress: CustomStringConvertible {
         /// - parameters:
         ///   - packedBytes: Collection of UInt8 that holds the address.
         public init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8 {
-            var bytes = bytes.prefix(4)
+            var ipv4Bytes = IPv4Bytes((0,0,0,0))
             
-            self = .init(address: .init((
-                bytes.popFirst()!,
-                bytes.popFirst()!,
-                bytes.popFirst()!,
-                bytes.popFirst()!
-            )))
+            for (idx, elt) in bytes.prefix(4).enumerated() {
+                ipv4Bytes[idx] = elt
+            }
+            
+            self = .init(address: ipv4Bytes)
         }
         
         /// Creates a new `IPv4Address`.
@@ -173,10 +172,14 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - packedBytes: Collection of UInt8 that holds the address.
-        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8, Bytes.Index == Int {
-            self = .init(address: .init((
-                bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
-            )))
+        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8 {
+            var ipv6Bytes = IPv6Bytes((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
+            
+            for (idx, elt) in bytes.prefix(16).enumerated() {
+                ipv6Bytes[idx] = elt
+            }
+            
+            self = .init(address: ipv6Bytes)
         }
         
         /// Creates a new `IPv6Address`.
@@ -289,7 +292,7 @@ public enum IPAddress: CustomStringConvertible {
     /// - parameters:
     ///     - bytes: Either 4 or 16 bytes representing the IPAddress value.
     /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
-    public init<Bytes: Collection>(packedBytes bytes: Bytes) throws where Bytes.Element == UInt8, Bytes.Index == Int {
+    public init<Bytes: Collection>(packedBytes bytes: Bytes) throws where Bytes.Element == UInt8 {
         switch bytes.count {
         case 4: self = .v4(.init(packedBytes: bytes))
         case 16: self = .v6(.init(packedBytes: bytes))
@@ -377,6 +380,15 @@ extension IPv4Bytes: Collection {
             default: preconditionFailure()
             }
         }
+        set(value) {
+            switch position {
+            case 0: self.bytes.0 = value
+            case 1: self.bytes.1 = value
+            case 2: self.bytes.2 = value
+            case 3: self.bytes.3 = value
+            default: preconditionFailure()
+            }
+        }
     }
     
     public func index(after: Index) -> Index {
@@ -411,6 +423,27 @@ extension IPv6Bytes: Collection {
             case 13: return self.bytes.13
             case 14: return self.bytes.14
             case 15: return self.bytes.15
+            default: preconditionFailure()
+            }
+        }
+        set(value) {
+            switch position {
+            case 0: self.bytes.0 = value
+            case 1: self.bytes.1 = value
+            case 2: self.bytes.2 = value
+            case 3: self.bytes.3 = value
+            case 4: self.bytes.4 = value
+            case 5: self.bytes.5 = value
+            case 6: self.bytes.6 = value
+            case 7: self.bytes.7 = value
+            case 8: self.bytes.8 = value
+            case 9: self.bytes.9 = value
+            case 10: self.bytes.10 = value
+            case 11: self.bytes.11 = value
+            case 12: self.bytes.12 = value
+            case 13: self.bytes.13 = value
+            case 14: self.bytes.14 = value
+            case 15: self.bytes.15 = value
             default: preconditionFailure()
             }
         }
