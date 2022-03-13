@@ -128,34 +128,42 @@ public enum IPAddress: CustomStringConvertible {
         
         /// Get the `IPv6Address` as a string.
         public var ipAddressString: String {
-            stride(from: 0, to: 15, by: 2).lazy.map({ idx in
-                let hexValues = [
-                    self.address[idx] >> 4,
-                    self.address[idx] & 0x0F,
-                    self.address[idx + 1] >> 4,
-                    self.address[idx + 1] & 0x0F
-                ]
-                
-                var removeLeadingZeros = 0
-                if hexValues[0] + hexValues[1] + hexValues[2] == 0 {
-                    removeLeadingZeros = 3
-                } else if hexValues[0] + hexValues[1] == 0 {
-                    removeLeadingZeros = 2
-                } else if hexValues[0] == 0 {
-                    removeLeadingZeros = 1
+            let bucketValues = stride(from: 0, to: 15, by: 2).lazy.map({ idx in
+                UInt16(uint8Tuple: (self.address[idx], self.address[idx + 1]))
+            })
+            
+            var bucketStrings: Array<String> = bucketValues.map {String(uint16Hex: $0)}
+            
+            // find most consecutive zeros and remove them
+            var consecutiveZeros = [0, 0, 0, 0, 0, 0, 0, 0]
+            var consecutiveCounter = 0
+            for (idx, value) in bucketValues.enumerated() {
+                switch value {
+                case 0: consecutiveCounter += 1
+                default: consecutiveCounter = 0
                 }
-                
-                var asciiIpAddress = Array(hexValues[removeLeadingZeros...].lazy.map {$0.toAsciiHex()})
-                asciiIpAddress.append(0) // append null termination for cString
-                
-                return asciiIpAddress.withUnsafeBufferPointer { bytes -> String in
-                    if let pointer = bytes.baseAddress {
-                        return String(cString: pointer)
-                    } else {
-                        preconditionFailure()
+                consecutiveZeros[idx] = consecutiveCounter
+            }
+            let mostConsecutiveZeros = consecutiveZeros.max()
+            
+            if let mostConsecutiveZeros = mostConsecutiveZeros {
+                if mostConsecutiveZeros > 0 {
+                    let consecutiveZeroIndex = consecutiveZeros.firstIndex(of: mostConsecutiveZeros)
+                    
+                    if let endCompression = consecutiveZeroIndex {
+                        let startCompression = endCompression - mostConsecutiveZeros + 1
+                        
+                        switch (startCompression, endCompression) {
+                        case (0, 7): bucketStrings.replaceSubrange(startCompression...endCompression, with: ["::"])
+                        case (0, _): bucketStrings.replaceSubrange(startCompression...endCompression, with: [":"])
+                        case (_, 7): bucketStrings.replaceSubrange(startCompression...endCompression, with: [":"])
+                        case (_, _): bucketStrings.replaceSubrange(startCompression...endCompression, with: [""])
+                        }
                     }
                 }
-            }).joined(separator: ":")
+            }
+            
+            return bucketStrings.joined(separator: ":")
         }
         
         /// A human-readable description of this `IPv6Address`. Mostly useful for logging.
@@ -215,7 +223,7 @@ public enum IPAddress: CustomStringConvertible {
                     isLastCharSeparator = true
                 } else {
                     isLastCharSeparator = false
-                    if let number = UInt8(asciiHex: char) {
+                    if let number = UInt8(asciiValue: char) {
                         if idx > 7 || ipv6Bytes[idx] > 4095 || (65535 - UInt16(number) < (ipv6Bytes[idx] * 16)) {
                             throw IPAddressError.failedToParseIPString(string)
                         }
@@ -336,31 +344,8 @@ public enum IPAddress: CustomStringConvertible {
 }
 
 extension UInt8 {
-    /// Convenience function especially useful for representing IPv6 bytes as readable string.
-    func toAsciiHex() -> UInt8 {
-        switch self {
-        case 0: return UInt8(ascii: "0")
-        case 1: return UInt8(ascii: "1")
-        case 2: return UInt8(ascii: "2")
-        case 3: return UInt8(ascii: "3")
-        case 4: return UInt8(ascii: "4")
-        case 5: return UInt8(ascii: "5")
-        case 6: return UInt8(ascii: "6")
-        case 7: return UInt8(ascii: "7")
-        case 8: return UInt8(ascii: "8")
-        case 9: return UInt8(ascii: "9")
-        case 10: return UInt8(ascii: "A")
-        case 11: return UInt8(ascii: "B")
-        case 12: return UInt8(ascii: "C")
-        case 13: return UInt8(ascii: "D")
-        case 14: return UInt8(ascii: "E")
-        case 15: return UInt8(ascii: "F")
-        default: preconditionFailure()
-        }
-    }
-    
-    init?(asciiHex: UInt8) {
-        switch asciiHex {
+    init?(asciiValue: UInt8) {
+        switch asciiValue {
         case UInt8(ascii: "0"): self = 0
         case UInt8(ascii: "1"): self = 1
         case UInt8(ascii: "2"): self = 2
@@ -391,6 +376,77 @@ extension UInt32 {
             + UInt32(uint8Tuple.3)
     }
 }
+
+extension UInt16 {
+    /// Creates an integer from the given `UInt8` tuple.
+    init(uint8Tuple: (UInt8, UInt8)) {
+        self = UInt16(uint8Tuple.0) << 8
+             + UInt16(uint8Tuple.1)
+    }
+    
+    /// Interprets value as hex and creates ascii `UInt8`.
+    func asciiValue() -> UInt8 {
+        switch self {
+        case 0: return UInt8(ascii: "0")
+        case 1: return UInt8(ascii: "1")
+        case 2: return UInt8(ascii: "2")
+        case 3: return UInt8(ascii: "3")
+        case 4: return UInt8(ascii: "4")
+        case 5: return UInt8(ascii: "5")
+        case 6: return UInt8(ascii: "6")
+        case 7: return UInt8(ascii: "7")
+        case 8: return UInt8(ascii: "8")
+        case 9: return UInt8(ascii: "9")
+        case 10: return UInt8(ascii: "A")
+        case 11: return UInt8(ascii: "B")
+        case 12: return UInt8(ascii: "C")
+        case 13: return UInt8(ascii: "D")
+        case 14: return UInt8(ascii: "E")
+        case 15: return UInt8(ascii: "F")
+        default: preconditionFailure()
+        }
+    }
+    
+}
+
+extension String {
+    /// Creates an hex representation for given `UInt16`
+    init(uint16Hex: UInt16) {
+        let asciiHex = [
+            ((uint16Hex >> 12) & 0x000F).asciiValue(),
+            ((uint16Hex >> 8)  & 0x000F).asciiValue(),
+            ((uint16Hex >> 4)  & 0x000F).asciiValue(),
+            (uint16Hex         & 0x000F).asciiValue()
+        ]
+        
+        // remove leading zeros
+        var asciiCompressed: ArraySlice<UInt8>
+        
+        switch uint16Hex {
+        case 0..<16:
+            asciiCompressed = asciiHex[3...]
+        case 16..<256:
+            asciiCompressed = asciiHex[2...]
+        case 256..<4096:
+            asciiCompressed = asciiHex[1...]
+        case 4096...65535:
+            asciiCompressed = asciiHex[...]
+        default: preconditionFailure()
+        }
+        
+        // append null termination for cString
+        asciiCompressed.append(0)
+        
+        self = asciiCompressed.withUnsafeBufferPointer { bytes -> String in
+            if let pointer = bytes.baseAddress {
+                return String(cString: pointer)
+            } else {
+                preconditionFailure()
+            }
+        }
+    }
+}
+
 
 /// We define an extension on `IPv4Bytes` that gives it a mutable collection and random access conformance.
 extension IPv4Bytes: MutableCollection, RandomAccessCollection {

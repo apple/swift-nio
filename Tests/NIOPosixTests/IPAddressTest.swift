@@ -107,33 +107,30 @@ class IPAddressTest: XCTestCase {
     }
     
     func testDescriptionWorksIPv4Address() throws {
-        let ipAddress1 = try IPAddress(packedBytes: [255, 0, 128, 18])
-        let ipAddress2 = try IPAddress(string: "255.0.128.18")
-        let ipAddress3 = IPAddress(posixIPv4Address: .init(s_addr: UInt32(255) << 24 + UInt32(128) << 8 + UInt32(18)))
+        let ipAddress = try IPAddress(packedBytes: [255, 0, 128, 18])
         let expectedDescription = "[IPv4]255.0.128.18"
         
-        XCTAssertEqual(ipAddress1.description, expectedDescription)
-        XCTAssertEqual(ipAddress2.description, expectedDescription)
-        XCTAssertEqual(ipAddress3.description, expectedDescription)
+        XCTAssertEqual(ipAddress.description, expectedDescription)
     }
     
     func testDescriptionWorksIPv6Address() throws {
         let ipAddress1 = try IPAddress(packedBytes: [255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0])
-        let ipAddress2 = try IPAddress(string: "FFFF:0:18:1E0:0:0:6:0")
-        let ipAddress3 = IPAddress(posixIPv6Address: .init(__u6_addr: .init(__u6_addr8: (255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))))
+        let expectedDescription1 = "[IPv6]FFFF:0:18:1E0::6:0"
         
-        let expectedDescription = "[IPv6]FFFF:0:18:1E0:0:0:6:0"
+        let ipAddress2 = try IPAddress(packedBytes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+        let expectedDescription2 = "[IPv6]::1"
         
-        XCTAssertEqual(ipAddress1.description, expectedDescription)
-        XCTAssertEqual(ipAddress2.description, expectedDescription)
-        XCTAssertEqual(ipAddress3.description, expectedDescription)
+        let ipAddress3 = try IPAddress(packedBytes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        let expectedDescription3 = "[IPv6]::"
+    
+        XCTAssertEqual(ipAddress1.description, expectedDescription1)
+        XCTAssertEqual(ipAddress2.description, expectedDescription2)
+        XCTAssertEqual(ipAddress3.description, expectedDescription3)
     }
     
     func testPosixWorksIPv4Address() throws {
         let expectedPosix = in_addr(s_addr: UInt32(255) << 24 + UInt32(128) << 8 + UInt32(18))
         let ipAddress = IPAddress(posixIPv4Address: expectedPosix)
-        
-        print(ipAddress.description)
         
         switch ipAddress {
         case .v4(let iPv4Address):
