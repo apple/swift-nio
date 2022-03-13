@@ -52,7 +52,7 @@ public enum IPAddress: CustomStringConvertible {
     /// A single IPv4 address for `IPAddress`.
     public struct IPv4Address: CustomStringConvertible {
         /// The bytes storing the address of the IPv4 address.
-        var address: IPv4Bytes
+        public var address: IPv4Bytes
         
         /// Get the `IPv4Address` as a string.
         public var ipAddress: String {
@@ -125,7 +125,7 @@ public enum IPAddress: CustomStringConvertible {
     /// A single IPv6 address for `IPAddress`
     public struct IPv6Address: CustomStringConvertible {
         /// The bytes storing the address of the IPv6 address.
-        var address: IPv6Bytes
+        public var address: IPv6Bytes
         
         /// Get the `IPv6Address` as a string.
         public var ipAddress: String {
