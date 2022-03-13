@@ -52,7 +52,7 @@ public enum IPAddress {
     /// A single IPv4 address for `IPAddress`.
     public struct IPv4Address {
         /// The bytes storing the address of the IPv4 address.
-        let address: IPv4Bytes
+        var address: IPv4Bytes
         
         /// Get the `IPv4Address` as a string.
         var ipAddress: String {
@@ -117,7 +117,7 @@ public enum IPAddress {
     /// A single IPv6 address for `IPAddress`
     public struct IPv6Address {
         /// The bytes storing the address of the IPv6 address.
-        let address: IPv6Bytes
+        var address: IPv6Bytes
         
         /// Get the `IPv6Address` as a string.
         var ipAddress: String {
