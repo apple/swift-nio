@@ -306,13 +306,11 @@ public enum IPAddress: CustomStringConvertible {
     /// - parameters:
     ///     - posixIPv4Address: libc ipv4 address.
     public init(posixIPv4Address: in_addr) {
-        let uint8Bitmask: UInt32 = 0x000000FF
-        
         let uint8AddressBytes: IPv4Bytes = .init((
-            UInt8((posixIPv4Address.s_addr >> 24) & uint8Bitmask),
-            UInt8((posixIPv4Address.s_addr >> 16) & uint8Bitmask),
-            UInt8((posixIPv4Address.s_addr >> 8) & uint8Bitmask),
-            UInt8(posixIPv4Address.s_addr & uint8Bitmask)
+            UInt8(truncatingIfNeeded: posixIPv4Address.s_addr >> 24),
+            UInt8(truncatingIfNeeded: posixIPv4Address.s_addr >> 16),
+            UInt8(truncatingIfNeeded: posixIPv4Address.s_addr >> 8),
+            UInt8(truncatingIfNeeded: posixIPv4Address.s_addr)
         ))
         
         self = .v4(.init(address: uint8AddressBytes))
