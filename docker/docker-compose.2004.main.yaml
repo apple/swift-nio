@@ -7,7 +7,6 @@ services:
     build:
       args:
         base_image: "swiftlang/swift:nightly-main-focal"
-        ubuntu_version: "focal"
 
   unit-tests:
     image: swift-nio:20.04-main
