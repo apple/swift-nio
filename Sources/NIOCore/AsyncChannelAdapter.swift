@@ -15,6 +15,7 @@
 #if compiler(>=5.5.2) && canImport(_Concurrency)
 
 import NIOConcurrencyHelpers
+import Darwin
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
@@ -26,17 +27,13 @@ final class AsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
     // shows it's necessary.
     @usableFromInline let bufferSize: Int
     @usableFromInline let _lock: Lock
-    @usableFromInline var _bufferedMessages: CircularBuffer<InboundMessage>
-    @usableFromInline var _messageDelivered: Optional<CheckedContinuation<InboundMessage, Never>>
-    @usableFromInline var _readPromise: Optional<EventLoopPromise<Void>>
+    @usableFromInline var _state: StreamState
 
     @inlinable
     init(bufferSize: Int) {
         self.bufferSize = bufferSize
         self._lock = Lock()
-        self._bufferedMessages = CircularBuffer(initialCapacity: bufferSize)
-        self._messageDelivered = nil
-        self._readPromise = nil
+        self._state = .bufferingWithoutPendingRead(CircularBuffer(initialCapacity: bufferSize))
     }
 
     @inlinable
@@ -61,22 +58,23 @@ final class AsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
     @inlinable
     func read(context: ChannelHandlerContext) {
         let continueReading: Bool = self._lock.withLock {
-            if self._bufferedMessages.count >= bufferSize && self._readPromise == nil {
-                // TODO: rewrite this to avoid promises
-                let promise = context.eventLoop.makePromise(of: Void.self)
-                promise.futureResult.whenComplete { result in
-                    self._lock.withLockVoid { self._readPromise = nil }
-
-                    switch result {
-                    case .success:
-                        context.read()
-                    case .failure:
-                        context.close(promise: nil)
-                    }
-                }
+            switch self._state {
+            case .bufferingWithPendingRead:
                 return false
-            } else {
+            case .waitingForBuffer:
                 return true
+            case .bufferingWithoutPendingRead(let buffer):
+                if buffer.count >= self.bufferSize {
+                    // TODO: Rewrite this to avoid promises.
+                    let promise = context.eventLoop.makePromise(of: Void.self)
+                    promise.futureResult.whenComplete { result in
+                        self._delayedRead(result: result, context: context)
+                    }
+                    self._state = .bufferingWithPendingRead(buffer, promise)
+                    return false
+                } else {
+                    return true
+                }
             }
         }
 
@@ -86,47 +84,131 @@ final class AsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
     }
 
     @inlinable
+    func _delayedRead(result: Result<Void, Error>, context: ChannelHandlerContext) {
+        self._lock.withLockVoid {
+            switch self._state {
+            case .bufferingWithPendingRead(let buffer, _):
+                self._state = .bufferingWithoutPendingRead(buffer)
+            case .bufferingWithoutPendingRead, .waitingForBuffer:
+                preconditionFailure()
+            }
+        }
+
+        switch result {
+        case .success:
+            context.read()
+        case .failure:
+            context.close(promise: nil)
+        }
+    }
+
+    @inlinable
     func _receiveNewEvent(_ event: InboundMessage) {
         // Sadly, we need to do some lock shenanigans here.
         self._lock.lock()
 
-        if let continuation = self._messageDelivered {
-            self._messageDelivered = nil
-
-            // We MUST unlock here in case this does something weird.
+        switch self._state {
+        case .bufferingWithPendingRead(var buffer, let promise):
+            // Weird, but let's tolerate it.
+            buffer.append(event)
+            self._state = .bufferingWithPendingRead(buffer, promise)
             self._lock.unlock()
+        case .bufferingWithoutPendingRead(var buffer):
+            buffer.append(event)
+            self._state = .bufferingWithoutPendingRead(buffer)
+            self._lock.unlock()
+        case .waitingForBuffer(let buffer, let continuation):
+            precondition(buffer.count == 0)
+            self._state = .bufferingWithoutPendingRead(buffer)
+            // DANGER: This is only safe if we aren't a custom executor. Otherwise this is
+            // v. bad. We should decide if it matters.
             continuation.resume(returning: event)
-        } else {
-            self._bufferedMessages.append(event)
             self._lock.unlock()
         }
     }
 
     @inlinable
-    func loadEvent() async throws -> InboundMessage {
+    func loadEvent() async -> InboundMessage {
         // We have to do some lock shenanigans here.
         self._lock.lock()
 
-        if let nextElement = self._bufferedMessages.popFirst() {
-            // TODO: promise?
-            let mustRead = self._pendingRead
-            let maybeLoop = self._eventLoop
-            self._lock.unlock()
+        switch self._state {
+        case .bufferingWithoutPendingRead(var buffer):
+            if buffer.count > 0 {
+                let result = buffer.removeFirst()
+                self._state = .bufferingWithoutPendingRead(buffer)
+                self._lock.unlock()
+                return result
+            } else {
+                // We're going to wait for a load. Here we do our lock shenanigans.
+                // Observe my madness.
+                let capturedBuffer = buffer
+                async let result = withCheckedContinuation { continuation in
+                    self._state = .waitingForBuffer(capturedBuffer, continuation)
+                }
+                self._lock.unlock()
+                return await result
+            }
+        case .bufferingWithPendingRead(var buffer, let promise):
+            // No matter what happens here, we need to complete this promise.
+            if buffer.count > 0 {
+                let result = buffer.removeFirst()
+                self._state = .bufferingWithoutPendingRead(buffer)
+                self._lock.unlock()
+                promise.succeed(())
+                return result
+            } else {
+                // We're going to wait for a load. Here we do our lock shenanigans.
+                // Observe my madness.
+                let capturedBuffer = buffer
+                async let result = withCheckedContinuation { continuation in
+                    self._state = .waitingForBuffer(capturedBuffer, continuation)
+                }
+                self._lock.unlock()
+                promise.succeed(())
+                return await result
+            }
+        case .waitingForBuffer:
+            preconditionFailure("Should never be async nexting twice.")
+        }
+    }
 
-            if mustRead, let loop = maybeLoop {
+    @inlinable
+    func _loadEventSlowPath() async -> InboundMessage {
+        return await withCheckedContinuation { (continuation: CheckedContinuation<InboundMessage, Never>) in
+            let result: (InboundMessage?, EventLoopPromise<Void>?) = self._lock.withLock {
+                switch self._state {
+                case .bufferingWithoutPendingRead(var buffer):
+                    if let result = buffer.popFirst() {
+                        // In the time between dropping the lock and getting it back we got some data. We can satisfy immediately.
+                        self._state = .bufferingWithoutPendingRead(buffer)
+                        return (result, nil)
+                    } else {
+                        self._state = .waitingForBuffer(buffer, continuation)
+                        return (nil, nil)
+                    }
 
+                case .bufferingWithPendingRead(var buffer, let promise):
+                    // No matter what happens here, we need to complete this promise.
+                    if let result = buffer.popFirst() {
+                        self._state = .bufferingWithoutPendingRead(buffer)
+                        return (result, promise)
+                    } else {
+                        self._state = .waitingForBuffer(buffer, continuation)
+                        return (nil, promise)
+                    }
+
+                case .waitingForBuffer:
+                    preconditionFailure("Should never be async nexting twice")
+                }
             }
 
-            return nextElement
-        } else {
-            // We need a continuation to come into existence.
-            // We must not await it.
-            async let continuation = withCheckedContinuation { continuation in
-                self._messageDelivered = continuation
+            if let message = result.0 {
+                continuation.resume(returning: message)
             }
-            self._lock.unlock()
-
-            return await continuation
+            if let promise = result.1 {
+                promise.succeed(())
+            }
         }
     }
 }
@@ -137,6 +219,16 @@ extension AsyncChannelAdapterHandler {
     enum InboundMessage {
         case channelRead(InboundIn)
         case eof
+    }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension AsyncChannelAdapterHandler {
+    @usableFromInline
+    enum StreamState {
+        case bufferingWithoutPendingRead(CircularBuffer<InboundMessage>)
+        case bufferingWithPendingRead(CircularBuffer<InboundMessage>, EventLoopPromise<Void>)
+        case waitingForBuffer(CircularBuffer<InboundMessage>, CheckedContinuation<InboundMessage, Never>)
     }
 }
 
