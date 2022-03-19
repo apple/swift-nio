@@ -434,7 +434,7 @@ public final class ServerBootstrap {
             let accepted = self.unwrapInboundIn(data)
             let ctxEventLoop = context.eventLoop
             let childEventLoop = accepted.eventLoop
-            let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.makeSucceededFuture(()) }
+            let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.makeSucceededVoidFuture() }
 
             @inline(__always)
             func setupChildChannel() -> EventLoopFuture<Void> {

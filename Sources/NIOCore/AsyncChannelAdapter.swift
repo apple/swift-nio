@@ -140,14 +140,9 @@ final class AsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
                 self._lock.unlock()
                 return result
             } else {
-                // We're going to wait for a load. Here we do our lock shenanigans.
-                // Observe my madness.
-                let capturedBuffer = buffer
-                async let result = withCheckedContinuation { continuation in
-                    self._state = .waitingForBuffer(capturedBuffer, continuation)
-                }
+                // We have to create a continuation. Drop the lock.
                 self._lock.unlock()
-                return await result
+                return await self._loadEventSlowPath()
             }
         case .bufferingWithPendingRead(var buffer, let promise):
             // No matter what happens here, we need to complete this promise.
@@ -158,15 +153,9 @@ final class AsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
                 promise.succeed(())
                 return result
             } else {
-                // We're going to wait for a load. Here we do our lock shenanigans.
-                // Observe my madness.
-                let capturedBuffer = buffer
-                async let result = withCheckedContinuation { continuation in
-                    self._state = .waitingForBuffer(capturedBuffer, continuation)
-                }
+                // We have to create a continuation, drop the lock.
                 self._lock.unlock()
-                promise.succeed(())
-                return await result
+                return await self._loadEventSlowPath()
             }
         case .waitingForBuffer:
             preconditionFailure("Should never be async nexting twice.")
@@ -233,7 +222,7 @@ extension AsyncChannelAdapterHandler {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public struct InboundChannelStream<InboundIn> {
+public struct InboundChannelStream<InboundIn>: @unchecked Sendable {
     @usableFromInline let _handler: AsyncChannelAdapterHandler<InboundIn>
 
     @inlinable init(_ handler: AsyncChannelAdapterHandler<InboundIn>) {
@@ -243,7 +232,7 @@ public struct InboundChannelStream<InboundIn> {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension InboundChannelStream: AsyncSequence {
-    public typealias Element = Void
+    public typealias Element = InboundIn
 
     public class AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline let _handler: AsyncChannelAdapterHandler<InboundIn>
@@ -253,12 +242,35 @@ extension InboundChannelStream: AsyncSequence {
             self._handler = handler
         }
 
-        @inlinable public func next() async throws -> Element? { return () }
+        @inlinable public func next() async throws -> Element? {
+            switch await self._handler.loadEvent() {
+            case .channelRead(let message):
+                return message
+            case .eof:
+                return nil
+            }
+        }
     }
 
     @inlinable
     public func makeAsyncIterator() -> AsyncIterator {
         return AsyncIterator(self._handler)
+    }
+}
+
+extension Channel {
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @inlinable
+    public func makeAsyncStream<InboundIn>(of type: InboundIn.Type = InboundIn.self, bufferSize: Int) async throws -> InboundChannelStream<InboundIn> {
+        let handler = AsyncChannelAdapterHandler<InboundIn>(bufferSize: bufferSize)
+
+        if self.eventLoop.inEventLoop {
+            try self.pipeline.syncOperations.addHandler(handler)
+        } else {
+            try await self.pipeline.addHandler(handler)
+        }
+
+        return InboundChannelStream(handler)
     }
 }
 
