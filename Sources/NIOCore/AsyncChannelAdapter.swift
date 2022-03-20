@@ -31,22 +31,34 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandle
 
     // The initial buffer is just using a lock. We'll do something better later if profiling
     // shows it's necessary.
-    @usableFromInline let bufferSize: Int
+    @usableFromInline let config: NIOInboundChannelStreamConfig
     @usableFromInline let _lock: Lock
     @usableFromInline var _state: StreamState
 
     @inlinable
     public init(config: NIOInboundChannelStreamConfig) {
-        self.bufferSize = config.bufferSize
+        self.config = config
         self._lock = Lock()
-        self._state = .bufferingWithoutPendingRead(CircularBuffer(initialCapacity: bufferSize))
+        self._state = .bufferingWithoutPendingRead(CircularBuffer(initialCapacity: config.bufferSize))
     }
 
     @inlinable
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         // TODO: This should really be done a little differently, with a single big append in the channelReadComplete to reduce
         // lock contention.
-        self._receiveNewEvent(.channelRead(self.unwrapInboundIn(data)))
+        var promise: EventLoopPromise<Void>? = nil
+        if self.config.forwardReads {
+            let readPromise = context.eventLoop.makePromise(of: Void.self)
+            readPromise.futureResult.whenSuccess {
+                // This is less than ideal because we pay no attention to read(), but I didn't really
+                // want to manage the complexity of that right now. We should be wary of this though
+                // as it might cause gnarly bugs in the future.
+                context.fireChannelRead(data)
+                context.fireChannelReadComplete()
+            }
+            promise = readPromise
+        }
+        self._receiveNewEvent(.channelRead(self.unwrapInboundIn(data), promise))
     }
 
     @inlinable
@@ -70,7 +82,7 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandle
             case .waitingForBuffer:
                 return true
             case .bufferingWithoutPendingRead(let buffer):
-                if buffer.count >= self.bufferSize {
+                if buffer.count >= self.config.bufferSize {
                     // TODO: Rewrite this to avoid promises.
                     let promise = context.eventLoop.makePromise(of: Void.self)
                     promise.futureResult.whenComplete { result in
@@ -212,7 +224,7 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandle
 extension NIOAsyncChannelAdapterHandler {
     @usableFromInline
     enum InboundMessage {
-        case channelRead(InboundIn)
+        case channelRead(InboundIn, EventLoopPromise<Void>?)
         case eof
     }
 }
@@ -251,7 +263,8 @@ extension NIOInboundChannelStream: AsyncSequence {
 
         @inlinable public func next() async throws -> Element? {
             switch await self._handler.loadEvent() {
-            case .channelRead(let message):
+            case .channelRead(let message, let promise):
+                promise?.succeed(())
                 return message
             case .eof:
                 return nil
@@ -267,10 +280,23 @@ extension NIOInboundChannelStream: AsyncSequence {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public struct NIOInboundChannelStreamConfig {
+    /// The size of the backpressure buffer to use.
+    ///
+    /// The larger this buffer, the higher the throughput will be, but the
+    /// higher the peak latencies will be. Tuning buffer sizes is a complex
+    /// art.
     public var bufferSize: Int
 
-    public init(bufferSize: Int) {
+    /// Whether `channelRead`s should be forwarded to the rest of the
+    /// `ChannelPipeline` after they're delivered to the stream. This is
+    /// generally set to `false` because it imposes a performance cost, but
+    /// some `Channel`s require this for correct functionality.
+    public var forwardReads: Bool
+
+    @inlinable
+    public init(bufferSize: Int, forwardReads: Bool = false) {
         self.bufferSize = bufferSize
+        self.forwardReads = forwardReads
     }
 }
 #endif

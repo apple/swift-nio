@@ -362,6 +362,27 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.reregister(selectable: self.socket, interested: interested)
     }
+
+    #if compiler(>=5.5.2) && canImport(_Concurrency)
+    // We override the async stream construction as we require that we forward the reads on, or the
+    // channels will never activate.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    override func makeAsyncStream<InboundIn>(of type: InboundIn.Type, config: NIOInboundChannelStreamConfig) async throws -> NIOInboundChannelStream<InboundIn> {
+        // Enable read forwarding.
+        var config = config
+        config.forwardReads = true
+
+        let handler = NIOAsyncChannelAdapterHandler<InboundIn>(config: config)
+
+        if self.eventLoop.inEventLoop {
+            try self.pipeline.syncOperations.addHandler(handler)
+        } else {
+            try await self.pipeline.addHandler(handler)
+        }
+
+        return NIOInboundChannelStream(handler)
+    }
+    #endif
 }
 
 /// A channel used with datagram sockets.

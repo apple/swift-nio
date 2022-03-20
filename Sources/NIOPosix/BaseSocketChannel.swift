@@ -1309,6 +1309,24 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         fatalError("must override")
     }
+
+#if compiler(>=5.5.2) && canImport(_Concurrency)
+    // TODO: I don't know why I had to implement this here in order to let `ServerSocketChannel` declare the
+    // protocol witness. It's a strange thing, but so it goes. This is just the default implementation.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @inlinable
+    public func makeAsyncStream<InboundIn>(of type: InboundIn.Type, config: NIOInboundChannelStreamConfig) async throws -> NIOInboundChannelStream<InboundIn> {
+        let handler = NIOAsyncChannelAdapterHandler<InboundIn>(config: config)
+
+        if self.eventLoop.inEventLoop {
+            try self.pipeline.syncOperations.addHandler(handler)
+        } else {
+            try await self.pipeline.addHandler(handler)
+        }
+
+        return NIOInboundChannelStream(handler)
+    }
+#endif
 }
 
 extension BaseSocketChannel {
