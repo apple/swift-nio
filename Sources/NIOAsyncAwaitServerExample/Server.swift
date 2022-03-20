@@ -60,8 +60,6 @@ final class Server {
             throw error
         }
 
-        print("Server listening on \(self.host):\(self.port)")
-
         // We split these two apart here to avoid capturing more than we want to
         // in any given closure.
         let serverChannel = serverChannelAndStream.channel
@@ -82,13 +80,11 @@ final class Server {
             try await withThrowingTaskGroup(of: Void.self) { taskGroup in
                 for try await childChannel in serverChannelStream {
                     taskGroup.addTask {
-                        print("handling new child channel")
                         await Self.handleChildChannel(childChannel)
                     }
                 }
             }
         } onCancel: {
-            print("Cancelled the parent task")
             // This is a nice property of NIO: we can do this without actually
             // awaiting it.
             serverChannel.close(promise: nil)
@@ -153,7 +149,6 @@ final class Server {
                 // below, it's possible for us to accidentally livelock the connection. How, and how could
                 // we change our business logic to fix it?
                 for try await message in inboundMessageStream {
-                    print("did receive message")
                     try await channel.writeAndFlush(message)
                 }
             } catch {
@@ -163,11 +158,9 @@ final class Server {
                 //
                 // Additionally, we close the channel. We don't care about any errors we hit
                 // while doing that: they aren't material.
-                print("Errored child channel: \(error)")
                 try? await channel.close()
             }
         } onCancel: {
-            print("cancelled child channel")
             channel.close(promise: nil)
         }
     }
