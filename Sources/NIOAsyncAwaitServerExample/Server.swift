@@ -109,14 +109,15 @@ final class Server {
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         let channel = try await bootstrap.bind(host: self.host, port: self.port).get()
 
-        // We have an extra do-catch here because in principle adding the InboundChannelStream
+        // We have an extra do-catch here because in principle adding the NIOInboundChannelStream
         // can fail. It's unlikely, but if it does we want to clean up the server channel. This
         // gives this method the nice property that either it entirely succeeds or entirely fails.
         do {
             // We set the buffer size to maxMessagesPerRead. This is a nice middle ground: it ensures a
             // full read will fit in an empty buffer nicely.
             let maxMessagesPerRead = try await channel.getOption(ChannelOptions.maxMessagesPerRead).get()
-            let stream = try await channel.makeAsyncStream(of: Channel.self, bufferSize: Int(maxMessagesPerRead))
+            let config = NIOInboundChannelStreamConfig(bufferSize: Int(maxMessagesPerRead))
+            let stream = try await channel.makeAsyncStream(of: Channel.self, config: config)
 
             return ChannelAndStream(channel: channel, stream: stream)
         } catch {
@@ -142,7 +143,8 @@ final class Server {
                 // Again, we wrap the channel in a stream, and again, we use maxMessagesPerRead as our buffer
                 // size.
                 let bufferSize = try await channel.getOption(ChannelOptions.maxMessagesPerRead).get()
-                let inboundMessageStream = try await channel.makeAsyncStream(of: ByteBuffer.self, bufferSize: Int(bufferSize))
+                let config = NIOInboundChannelStreamConfig(bufferSize: Int(bufferSize))
+                let inboundMessageStream = try await channel.makeAsyncStream(of: ByteBuffer.self, config: config)
 
                 // And here's our business logic! As we're a TCP echo server, we just echo the bytes back
                 // to the client.
@@ -174,7 +176,7 @@ final class Server {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 fileprivate struct ChannelAndStream<InboundIn> {
     var channel: Channel
-    var stream: InboundChannelStream<InboundIn>
+    var stream: NIOInboundChannelStream<InboundIn>
 }
 
 #endif

@@ -145,6 +145,13 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, NIOPreconcurrencySen
     /// The default implementation returns `nil`, and `Channel` implementations must opt in to
     /// support this behavior.
     var syncOptions: NIOSynchronousChannelOptions? { get }
+
+    #if compiler(>=5.5.2) && canImport(_Concurrency)
+    /// Provides an `NIOInboundChannelStream` that can be used to operate on the inbound side of a
+    /// `Channel` as an async stream.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    func makeAsyncStream<InboundIn>(of type: InboundIn.Type, config: NIOInboundChannelStreamConfig) async throws -> NIOInboundChannelStream<InboundIn>
+    #endif
 }
 
 extension Channel {
@@ -153,6 +160,28 @@ extension Channel {
         return nil
     }
 }
+
+#if compiler(>=5.5.2) && canImport(_Concurrency)
+extension Channel {
+    /// Default implementation: construct a stream with the given API surface, not modifying the configuration.
+    ///
+    /// Almost all Channels will use the default implementation. A few Channels may require specialized behaviour:
+    /// those Channels can override and modify this implementation as they need.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @inlinable
+    public func makeAsyncStream<InboundIn>(of type: InboundIn.Type, config: NIOInboundChannelStreamConfig) async throws -> NIOInboundChannelStream<InboundIn> {
+        let handler = NIOAsyncChannelAdapterHandler<InboundIn>(config: config)
+
+        if self.eventLoop.inEventLoop {
+            try self.pipeline.syncOperations.addHandler(handler)
+        } else {
+            try await self.pipeline.addHandler(handler)
+        }
+
+        return NIOInboundChannelStream(handler)
+    }
+}
+#endif
 
 public protocol NIOSynchronousChannelOptions {
     /// Set `option` to `value` on this `Channel`.

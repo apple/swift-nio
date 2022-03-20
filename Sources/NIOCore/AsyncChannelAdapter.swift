@@ -17,11 +17,17 @@
 import NIOConcurrencyHelpers
 import Darwin
 
+/// A `ChannelHandler` that is used to transform the inbound portion of a NIO
+/// `Channel` into an `AsyncSequence` that supports backpressure.
+///
+/// Users should not construct this type directly: instead, they should use the
+/// `Channel.makeAsyncStream(of:config:)` method to use the `Channel`'s preferred
+/// construction. These types are `public` only to allow other `Channel`s to
+/// override the implementation of that method.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-@usableFromInline
-final class AsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
-    @usableFromInline typealias OutboundIn = Any
-    @usableFromInline typealias OutboundOut = Any
+public final class NIOAsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
+    public typealias OutboundIn = Any
+    public typealias OutboundOut = Any
 
     // The initial buffer is just using a lock. We'll do something better later if profiling
     // shows it's necessary.
@@ -30,33 +36,33 @@ final class AsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
     @usableFromInline var _state: StreamState
 
     @inlinable
-    init(bufferSize: Int) {
-        self.bufferSize = bufferSize
+    public init(config: NIOInboundChannelStreamConfig) {
+        self.bufferSize = config.bufferSize
         self._lock = Lock()
         self._state = .bufferingWithoutPendingRead(CircularBuffer(initialCapacity: bufferSize))
     }
 
     @inlinable
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         // TODO: This should really be done a little differently, with a single big append in the channelReadComplete to reduce
         // lock contention.
         self._receiveNewEvent(.channelRead(self.unwrapInboundIn(data)))
     }
 
     @inlinable
-    func channelInactive(context: ChannelHandlerContext) {
+    public func channelInactive(context: ChannelHandlerContext) {
         self._receiveNewEvent(.eof)
     }
 
     @inlinable
-    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         if let event = event as? ChannelEvent, event == .inputClosed {
             self._receiveNewEvent(.eof)
         }
     }
 
     @inlinable
-    func read(context: ChannelHandlerContext) {
+    public func read(context: ChannelHandlerContext) {
         let continueReading: Bool = self._lock.withLock {
             switch self._state {
             case .bufferingWithPendingRead:
@@ -203,7 +209,7 @@ final class AsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension AsyncChannelAdapterHandler {
+extension NIOAsyncChannelAdapterHandler {
     @usableFromInline
     enum InboundMessage {
         case channelRead(InboundIn)
@@ -212,7 +218,7 @@ extension AsyncChannelAdapterHandler {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension AsyncChannelAdapterHandler {
+extension NIOAsyncChannelAdapterHandler {
     @usableFromInline
     enum StreamState {
         case bufferingWithoutPendingRead(CircularBuffer<InboundMessage>)
@@ -222,23 +228,24 @@ extension AsyncChannelAdapterHandler {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public struct InboundChannelStream<InboundIn>: @unchecked Sendable {
-    @usableFromInline let _handler: AsyncChannelAdapterHandler<InboundIn>
+public struct NIOInboundChannelStream<InboundIn>: @unchecked Sendable {
+    @usableFromInline let _handler: NIOAsyncChannelAdapterHandler<InboundIn>
 
-    @inlinable init(_ handler: AsyncChannelAdapterHandler<InboundIn>) {
+    @inlinable
+    public init(_ handler: NIOAsyncChannelAdapterHandler<InboundIn>) {
         self._handler = handler
     }
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension InboundChannelStream: AsyncSequence {
+extension NIOInboundChannelStream: AsyncSequence {
     public typealias Element = InboundIn
 
     public class AsyncIterator: AsyncIteratorProtocol {
-        @usableFromInline let _handler: AsyncChannelAdapterHandler<InboundIn>
+        @usableFromInline let _handler: NIOAsyncChannelAdapterHandler<InboundIn>
 
         @inlinable
-        init(_ handler: AsyncChannelAdapterHandler<InboundIn>) {
+        init(_ handler: NIOAsyncChannelAdapterHandler<InboundIn>) {
             self._handler = handler
         }
 
@@ -258,20 +265,12 @@ extension InboundChannelStream: AsyncSequence {
     }
 }
 
-extension Channel {
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @inlinable
-    public func makeAsyncStream<InboundIn>(of type: InboundIn.Type = InboundIn.self, bufferSize: Int) async throws -> InboundChannelStream<InboundIn> {
-        let handler = AsyncChannelAdapterHandler<InboundIn>(bufferSize: bufferSize)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+public struct NIOInboundChannelStreamConfig {
+    public var bufferSize: Int
 
-        if self.eventLoop.inEventLoop {
-            try self.pipeline.syncOperations.addHandler(handler)
-        } else {
-            try await self.pipeline.addHandler(handler)
-        }
-
-        return InboundChannelStream(handler)
+    public init(bufferSize: Int) {
+        self.bufferSize = bufferSize
     }
 }
-
 #endif
