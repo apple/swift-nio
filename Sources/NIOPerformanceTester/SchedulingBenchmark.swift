@@ -19,11 +19,6 @@ import NIOPosix
 final class SchedulingBenchmark: Benchmark {
     private var group: MultiThreadedEventLoopGroup!
     private var loop: EventLoop!
-    private let numTasks: Int
-
-    init(numTasks: Int) {
-        self.numTasks = numTasks
-    }
 
     func setUp() throws {
         group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -33,7 +28,7 @@ final class SchedulingBenchmark: Benchmark {
         // during the actual test
         try! self.loop.submit {
             var counter: Int = 0
-            for _ in 0..<self.numTasks {
+            for _ in 0..<100000 {
                 self.loop.scheduleTask(in: .nanoseconds(0)) {
                     counter &+= 1
                 }
@@ -46,7 +41,7 @@ final class SchedulingBenchmark: Benchmark {
     func run() -> Int {
         let counter = try! self.loop.submit { () -> Int in
             var counter: Int = 0
-            for _ in 0..<self.numTasks {
+            for _ in 0..<10000 {
                 self.loop.scheduleTask(in: .hours(1)) {
                     counter &+= 1
                 }
