@@ -13,9 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if compiler(>=5.5.2) && canImport(_Concurrency)
-
 import NIOConcurrencyHelpers
-import Darwin
 
 /// A `ChannelHandler` that is used to transform the inbound portion of a NIO
 /// `Channel` into an `AsyncSequence` that supports backpressure.
