@@ -529,7 +529,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_staticstr
     return buffer.readableBytes
 }
 
-try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
+try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
     final class MeasuringHandler: ChannelDuplexHandler {
         typealias InboundIn = Never
         typealias InboundOut = ByteBuffer
@@ -612,7 +612,7 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
     return requestsDone
 }
 
-measureAndPrint(desc: "http1_10k_reqs_1_conn") {
+measureAndPrint(desc: "http1_1k_reqs_1_conn") {
     let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: 1_000, eventLoop: group.next())
 
     let clientChannel = try! ClientBootstrap(group: group)
@@ -629,7 +629,7 @@ measureAndPrint(desc: "http1_10k_reqs_1_conn") {
     return try! repeatedRequestsHandler.wait()
 }
 
-measureAndPrint(desc: "http1_10k_reqs_100_conns") {
+measureAndPrint(desc: "http1_1k_reqs_100_conns") {
     var reqs: [Int] = []
     let numConns = 100
     let numReqs = 1_000
@@ -672,7 +672,7 @@ measureAndPrint(desc: "future_whenallsucceed_100k_immediately_succeeded_on_loop"
     return allSucceeded.count
 }
 
-measureAndPrint(desc: "future_whenallsucceed_100k_deferred_off_loop") {
+measureAndPrint(desc: "future_whenallsucceed_10k_deferred_off_loop") {
     let loop = group.next()
     let expected = Array(0..<10_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
@@ -683,7 +683,7 @@ measureAndPrint(desc: "future_whenallsucceed_100k_deferred_off_loop") {
     return try! allSucceeded.wait().count
 }
 
-measureAndPrint(desc: "future_whenallsucceed_100k_deferred_on_loop") {
+measureAndPrint(desc: "future_whenallsucceed_10k_deferred_on_loop") {
     let loop = group.next()
     let expected = Array(0..<10_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
@@ -716,7 +716,7 @@ measureAndPrint(desc: "future_whenallcomplete_100k_immediately_succeeded_on_loop
     return allSucceeded.count
 }
 
-measureAndPrint(desc: "future_whenallcomplete_100k_deferred_off_loop") {
+measureAndPrint(desc: "future_whenallcomplete_10k_deferred_off_loop") {
     let loop = group.next()
     let expected = Array(0..<10_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
@@ -758,7 +758,7 @@ measureAndPrint(desc: "future_reduce_into_10k_futures") {
 try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark(runCount: 1_000_000))
 
 try measureAndPrint(
-    desc: "websocket_encode_50b_space_at_front_1m_frames_cow",
+    desc: "websocket_encode_50b_space_at_front_100k_frames_cow",
     benchmark: WebSocketFrameEncoderBenchmark(
         dataSize: 50,
         runCount: 100_000,
@@ -781,7 +781,7 @@ try measureAndPrint(
 
 
 try measureAndPrint(
-    desc: "websocket_encode_1kb_space_at_front_100k_frames_cow",
+    desc: "websocket_encode_1kb_space_at_front_1m_frames_cow",
     benchmark: WebSocketFrameEncoderBenchmark(
         dataSize: 1024,
         runCount: 1_000_000,
@@ -792,7 +792,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "websocket_encode_50b_no_space_at_front_1m_frames_cow",
+    desc: "websocket_encode_50b_no_space_at_front_100k_frames_cow",
     benchmark: WebSocketFrameEncoderBenchmark(
         dataSize: 50,
         runCount: 100_000,
@@ -814,7 +814,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "websocket_encode_50b_space_at_front_10k_frames",
+    desc: "websocket_encode_50b_space_at_front_100k_frames",
     benchmark: WebSocketFrameEncoderBenchmark(
         dataSize: 50,
         runCount: 100_000,
@@ -836,7 +836,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "websocket_encode_1kb_space_at_front_1k_frames",
+    desc: "websocket_encode_1kb_space_at_front_10k_frames",
     benchmark: WebSocketFrameEncoderBenchmark(
         dataSize: 1024,
         runCount: 10_000,
@@ -847,7 +847,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "websocket_encode_50b_no_space_at_front_10k_frames",
+    desc: "websocket_encode_50b_no_space_at_front_100k_frames",
     benchmark: WebSocketFrameEncoderBenchmark(
         dataSize: 50,
         runCount: 100_000,
@@ -858,7 +858,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
+    desc: "websocket_encode_1kb_no_space_at_front_10k_frames",
     benchmark: WebSocketFrameEncoderBenchmark(
         dataSize: 1024,
         runCount: 10_000,
@@ -869,7 +869,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "websocket_decode_125b_100k_frames",
+    desc: "websocket_decode_125b_10k_frames",
     benchmark: WebSocketFrameDecoderBenchmark(
         dataSize: 125,
         runCount: 10_000
@@ -877,7 +877,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "websocket_decode_125b_with_a_masking_key_100k_frames",
+    desc: "websocket_decode_125b_with_a_masking_key_10k_frames",
     benchmark: WebSocketFrameDecoderBenchmark(
         dataSize: 125,
         runCount: 10_000,
@@ -886,7 +886,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "websocket_decode_64kb_100k_frames",
+    desc: "websocket_decode_64kb_10k_frames",
     benchmark: WebSocketFrameDecoderBenchmark(
         dataSize: Int(UInt16.max),
         runCount: 10_000
@@ -894,7 +894,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "websocket_decode_64kb_with_a_masking_key_100k_frames",
+    desc: "websocket_decode_64kb_with_a_masking_key_10k_frames",
     benchmark: WebSocketFrameDecoderBenchmark(
         dataSize: Int(UInt16.max),
         runCount: 10_000,
@@ -902,16 +902,16 @@ try measureAndPrint(
     )
 )
 
-try measureAndPrint(
-    desc: "websocket_decode_64kb_+1_100k_frames",
-    benchmark: WebSocketFrameDecoderBenchmark(
-        dataSize: Int(UInt16.max) + 1,
-        runCount: 10_000
-    )
-)
+//try measureAndPrint(
+//    desc: "websocket_decode_64kb_+1_10k_frames",
+//    benchmark: WebSocketFrameDecoderBenchmark(
+//        dataSize: Int(UInt16.max) + 1,
+//        runCount: 10_000
+//    )
+//)
 
 try measureAndPrint(
-    desc: "websocket_decode_64kb_+1_with_a_masking_key_100k_frames",
+    desc: "websocket_decode_64kb_+1_with_a_masking_key_10k_frames",
     benchmark: WebSocketFrameDecoderBenchmark(
         dataSize: Int(UInt16.max) + 1,
         runCount: 10_000,
@@ -982,7 +982,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "lock_1_thread_10M_ops",
+    desc: "lock_1_thread_1M_ops",
     benchmark: LockBenchmark(
         numberOfThreads: 1,
         lockOperationsPerThread: 1_000_000
@@ -990,7 +990,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "lock_2_threads_10M_ops",
+    desc: "lock_2_threads_1M_ops",
     benchmark: LockBenchmark(
         numberOfThreads: 2,
         lockOperationsPerThread: 500_000
@@ -998,7 +998,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "lock_4_threads_10M_ops",
+    desc: "lock_4_threads_1M_ops",
     benchmark: LockBenchmark(
         numberOfThreads: 4,
         lockOperationsPerThread: 250_000
@@ -1006,7 +1006,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "lock_8_threads_10M_ops",
+    desc: "lock_8_threads_1M_ops",
     benchmark: LockBenchmark(
         numberOfThreads: 8,
         lockOperationsPerThread: 125_000
@@ -1014,22 +1014,22 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "schedule_10000_tasks",
+    desc: "schedule_1m_tasks",
     benchmark: SchedulingBenchmark(numTasks: 1_000_000)
 )
 
 try measureAndPrint(
-    desc: "schedule_and_run_10000_tasks",
+    desc: "schedule_and_run_100k_tasks",
     benchmark: SchedulingAndRunningBenchmark(numTasks: 100_000)
 )
 
 try measureAndPrint(
-    desc: "execute_10000",
+    desc: "execute_100k_tasks",
     benchmark: ExecuteBenchmark(numTasks: 100_000)
 )
 
 try measureAndPrint(
-    desc: "bytebufferview_copy_to_array_1000_times_1kb",
+    desc: "bytebufferview_copy_to_array_100k_times_1kb",
     benchmark: ByteBufferViewCopyToArrayBenchmark(
         iterations: 100_000,
         size: 1024
@@ -1037,7 +1037,7 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "circularbuffer_copy_to_array_1000_times_1kb",
+    desc: "circularbuffer_copy_to_array_10k_times_1kb",
     benchmark: CircularBufferViewCopyToArrayBenchmark(
         iterations: 10_000,
         size: 1024
