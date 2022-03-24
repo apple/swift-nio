@@ -933,7 +933,6 @@ try measureAndPrint(
         bufferSize: 1024*1024
     )
 )
-/*
 
 try measureAndPrint(
     desc: "byte_buffer_view_iterator_1mb",
@@ -996,6 +995,8 @@ try measureAndPrint(
         lockOperationsPerThread: 500_000
     )
 )
+
+/*
 
 try measureAndPrint(
     desc: "lock_4_threads_1M_ops",
