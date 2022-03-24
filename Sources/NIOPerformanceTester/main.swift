@@ -189,7 +189,6 @@ private func someString(size: Int) -> String {
 }
 
 // MARK: Performance Tests
-/*
 
 measureAndPrint(desc: "write_http_headers") {
     var headers: [(String, String)] = []
@@ -1013,21 +1012,16 @@ try measureAndPrint(
         lockOperationsPerThread: 125_000
     )
 )
-*/
 
 try measureAndPrint(
-    desc: "schedule_1m_tasks",
-    benchmark: SchedulingBenchmark(numTasks: 1_000_000)
+    desc: "schedule_100k_tasks",
+    benchmark: SchedulingBenchmark(numTasks: 100_000)
 )
-/*
 
 try measureAndPrint(
     desc: "schedule_and_run_100k_tasks",
     benchmark: SchedulingAndRunningBenchmark(numTasks: 100_000)
 )
-
-
-
 
 try measureAndPrint(
     desc: "execute_100k_tasks",
@@ -1049,5 +1043,3 @@ try measureAndPrint(
         size: 1024
     )
 )
-
-*/
