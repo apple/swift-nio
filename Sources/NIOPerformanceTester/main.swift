@@ -1005,7 +1005,6 @@ try measureAndPrint(
     )
 )
 
-*/
 
 try measureAndPrint(
     desc: "lock_8_threads_1M_ops",
@@ -1014,12 +1013,13 @@ try measureAndPrint(
         lockOperationsPerThread: 125_000
     )
 )
-/*
+*/
 
 try measureAndPrint(
     desc: "schedule_1m_tasks",
     benchmark: SchedulingBenchmark(numTasks: 1_000_000)
 )
+/*
 
 try measureAndPrint(
     desc: "schedule_and_run_100k_tasks",
