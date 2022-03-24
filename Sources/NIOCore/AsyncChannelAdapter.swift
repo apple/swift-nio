@@ -120,61 +120,57 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandle
 
     @inlinable
     func _receiveNewEvent(_ event: InboundMessage) {
-        // Sadly, we need to do some lock shenanigans here.
-        self._lock.lock()
-
-        switch self._state {
-        case .bufferingWithPendingRead(var buffer, let promise):
-            // Weird, but let's tolerate it.
-            buffer.append(event)
-            self._state = .bufferingWithPendingRead(buffer, promise)
-            self._lock.unlock()
-        case .bufferingWithoutPendingRead(var buffer):
-            buffer.append(event)
-            self._state = .bufferingWithoutPendingRead(buffer)
-            self._lock.unlock()
-        case .waitingForBuffer(let buffer, let continuation):
-            precondition(buffer.count == 0)
-            self._state = .bufferingWithoutPendingRead(buffer)
-            // DANGER: This is only safe if we aren't a custom executor. Otherwise this is
-            // v. bad. We should decide if it matters.
-            continuation.resume(returning: event)
-            self._lock.unlock()
+        self._lock.withLockVoid {
+            switch self._state {
+            case .bufferingWithPendingRead(var buffer, let promise):
+                // Weird, but let's tolerate it.
+                buffer.append(event)
+                self._state = .bufferingWithPendingRead(buffer, promise)
+            case .bufferingWithoutPendingRead(var buffer):
+                buffer.append(event)
+                self._state = .bufferingWithoutPendingRead(buffer)
+            case .waitingForBuffer(let buffer, let continuation):
+                precondition(buffer.count == 0)
+                self._state = .bufferingWithoutPendingRead(buffer)
+                // DANGER: This is only safe if we aren't a custom executor. Otherwise this is
+                // v. bad. We should decide if it matters.
+                continuation.resume(returning: event)
+            }
         }
     }
 
     @inlinable
     func loadEvent() async -> InboundMessage {
-        // We have to do some lock shenanigans here.
-        self._lock.lock()
+        let result: (InboundMessage, EventLoopPromise<Void>?)?
+        result = self._lock.withLock {
+            switch self._state {
+            case .bufferingWithoutPendingRead(var buffer):
+                if buffer.count > 0 {
+                    let result = buffer.removeFirst()
+                    self._state = .bufferingWithoutPendingRead(buffer)
+                    return (result, nil)
+                } else {
+                    return nil
+                }
+            case .bufferingWithPendingRead(var buffer, let promise):
+                // No matter what happens here, we need to complete this promise.
+                if buffer.count > 0 {
+                    let result = buffer.removeFirst()
+                    self._state = .bufferingWithoutPendingRead(buffer)
+                    return (result, promise)
+                } else {
+                    return nil
+                }
+            case .waitingForBuffer:
+                preconditionFailure("Should never be async nexting twice.")
+            }
+        }
 
-        switch self._state {
-        case .bufferingWithoutPendingRead(var buffer):
-            if buffer.count > 0 {
-                let result = buffer.removeFirst()
-                self._state = .bufferingWithoutPendingRead(buffer)
-                self._lock.unlock()
-                return result
-            } else {
-                // We have to create a continuation. Drop the lock.
-                self._lock.unlock()
-                return await self._loadEventSlowPath()
-            }
-        case .bufferingWithPendingRead(var buffer, let promise):
-            // No matter what happens here, we need to complete this promise.
-            if buffer.count > 0 {
-                let result = buffer.removeFirst()
-                self._state = .bufferingWithoutPendingRead(buffer)
-                self._lock.unlock()
-                promise.succeed(())
-                return result
-            } else {
-                // We have to create a continuation, drop the lock.
-                self._lock.unlock()
-                return await self._loadEventSlowPath()
-            }
-        case .waitingForBuffer:
-            preconditionFailure("Should never be async nexting twice.")
+        if let result = result {
+            result.1?.succeed(())
+            return result.0
+        } else {
+            return await self._loadEventSlowPath()
         }
     }
 
