@@ -902,13 +902,13 @@ try measureAndPrint(
     )
 )
 
-//try measureAndPrint(
-//    desc: "websocket_decode_64kb_+1_10k_frames",
-//    benchmark: WebSocketFrameDecoderBenchmark(
-//        dataSize: Int(UInt16.max) + 1,
-//        runCount: 10_000
-//    )
-//)
+try measureAndPrint(
+    desc: "websocket_decode_64kb_+1_10k_frames",
+    benchmark: WebSocketFrameDecoderBenchmark(
+        dataSize: Int(UInt16.max) + 1,
+        runCount: 10_000
+    )
+)
 
 try measureAndPrint(
     desc: "websocket_decode_64kb_+1_with_a_masking_key_10k_frames",
