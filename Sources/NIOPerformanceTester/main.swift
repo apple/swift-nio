@@ -189,6 +189,7 @@ private func someString(size: Int) -> String {
 }
 
 // MARK: Performance Tests
+/*
 
 measureAndPrint(desc: "write_http_headers") {
     var headers: [(String, String)] = []
@@ -1004,6 +1005,8 @@ try measureAndPrint(
     )
 )
 
+*/
+
 try measureAndPrint(
     desc: "lock_8_threads_1M_ops",
     benchmark: LockBenchmark(
@@ -1023,6 +1026,7 @@ try measureAndPrint(
 )
 
 /*
+
 
 try measureAndPrint(
     desc: "execute_100k_tasks",
