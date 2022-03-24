@@ -21,6 +21,11 @@ final class SchedulingAndRunningBenchmark: Benchmark {
     private var loop: EventLoop!
     private var dg: DispatchGroup!
     private var counter = 0
+    private let numTasks: Int
+
+    init(numTasks: Int) {
+        self.numTasks = numTasks
+    }
 
     func setUp() throws {
         group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -31,7 +36,7 @@ final class SchedulingAndRunningBenchmark: Benchmark {
         // during the actual test
         try! self.loop.submit {
             var counter: Int = 0
-            for _ in 0..<100000 {
+            for _ in 0..<self.numTasks {
                 self.loop.scheduleTask(in: .nanoseconds(0)) {
                     counter &+= 1
                 }
@@ -43,7 +48,7 @@ final class SchedulingAndRunningBenchmark: Benchmark {
 
     func run() -> Int {
         try! self.loop.submit {
-            for _ in 0..<10000 {
+            for _ in 0..<self.numTasks {
                 self.dg.enter()
 
                 self.loop.scheduleTask(in: .nanoseconds(0)) {

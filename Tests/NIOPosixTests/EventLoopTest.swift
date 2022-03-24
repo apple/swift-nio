@@ -769,7 +769,7 @@ public final class EventLoopTest : XCTestCase {
         let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(10), notifying: promise1) { task in
             expectRuns.fulfill()
         }
-        XCTAssertEqual(XCTWaiter.wait(for: [expectRuns], timeout: 0.05), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectRuns], timeout: 0.1), .completed)
         let expect1 = XCTestExpectation(description: "Initializer promise was fulfilled")
         let expect2 = XCTestExpectation(description: "Cancellation-specific promise was fulfilled")
         promise1.futureResult.whenSuccess { expect1.fulfill() }
