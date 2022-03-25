@@ -1017,8 +1017,8 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "schedule_1m_tasks",
-    benchmark: SchedulingBenchmark(numTasks: 1_000_000)
+    desc: "schedule_100k_tasks",
+    benchmark: SchedulingBenchmark(numTasks: 100_000)
 )
 
 try measureAndPrint(
