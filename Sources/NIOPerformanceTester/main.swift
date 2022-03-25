@@ -19,6 +19,9 @@ import NIOFoundationCompat
 import Dispatch
 import NIOWebSocket
 
+// Use unbuffered stdout to help detect exactly which test was running in the event of a crash.
+setbuf(stdout, nil)
+
 // MARK: Test Harness
 
 var warning: String = ""
