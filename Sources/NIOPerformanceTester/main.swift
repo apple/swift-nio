@@ -197,7 +197,7 @@ measureAndPrint(desc: "write_http_headers") {
     }
 
     var val = 0
-    for _ in 0..<100_000 {
+    for _ in 0..<1_000_000 {
         let headers = HTTPHeaders(headers)
         val += headers.underestimatedCount
     }
@@ -216,7 +216,7 @@ measureAndPrint(desc: "http_headers_canonical_form") {
 measureAndPrint(desc: "http_headers_canonical_form_trimming_whitespace") {
     let headers: HTTPHeaders = ["key": "         some   ,   trimming     "]
     var count = 0
-    for _ in 0..<100_000 {
+    for _ in 0..<10_000 {
         count &+= headers[canonicalForm: "key"].count
     }
     return count
@@ -225,7 +225,7 @@ measureAndPrint(desc: "http_headers_canonical_form_trimming_whitespace") {
 measureAndPrint(desc: "http_headers_canonical_form_trimming_whitespace_from_short_string") {
     let headers: HTTPHeaders = ["key": "   smallString   ,whenStripped"]
     var count = 0
-    for _ in 0..<100_000 {
+    for _ in 0..<10_000 {
         count &+= headers[canonicalForm: "key"].count
     }
     return count
@@ -234,7 +234,7 @@ measureAndPrint(desc: "http_headers_canonical_form_trimming_whitespace_from_shor
 measureAndPrint(desc: "http_headers_canonical_form_trimming_whitespace_from_long_string") {
     let headers: HTTPHeaders = ["key": " moreThan15CharactersWithAndWithoutWhitespace ,anotherValue"]
     var count = 0
-    for _ in 0..<100_000 {
+    for _ in 0..<10_000 {
         count &+= headers[canonicalForm: "key"].count
     }
     return count
@@ -244,7 +244,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
     let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
 
-    for _ in 0 ..< 5 {
+    for _ in 0 ..< 3 {
         buffer.clear()
         for _ in 0 ..< (bufferSize / 4) {
             buffer.writeString("abcd")
@@ -261,7 +261,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_calculated_strings") {
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 4)
 
-    for _ in 0 ..< 5 {
+    for _ in 0 ..< 1 {
         buffer.clear()
         for _ in  0 ..< (bufferSize / 4) {
             buffer.writeString(s)
@@ -277,7 +277,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_string_literals") {
     let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
 
-    for _ in 0 ..< 10 {
+    for _ in 0 ..< 100 {
         buffer.clear()
         for _ in  0 ..< (bufferSize / 24) {
             buffer.writeString("012345678901234567890123")
@@ -294,7 +294,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_calculated_strings") {
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 24)
 
-    for _ in 0 ..< 10 {
+    for _ in 0 ..< 5 {
         buffer.clear()
         for _ in 0 ..< (bufferSize / 24) {
             buffer.writeString(s)
@@ -311,7 +311,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_large_calculated_strings") {
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 1024 * 1024)
 
-    for _ in 0 ..< 10 {
+    for _ in 0 ..< 5 {
         buffer.clear()
         for _ in 0 ..< 12 {
             buffer.writeString(s)
@@ -360,7 +360,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         let str = buffer.readString(length: 1)
         precondition("A" == str, "\(str!)")
     }
-    for _ in 0 ..< 1024*1024 {
+    for _ in 0 ..< 100_000 {
         doWrites(buffer: &buffer, dispatchData: dispatchData, substring: substring)
         doReads(buffer: &buffer)
     }
@@ -529,7 +529,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_staticstr
     return buffer.readableBytes
 }
 
-try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
+try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
     final class MeasuringHandler: ChannelDuplexHandler {
         typealias InboundIn = Never
         typealias InboundOut = ByteBuffer
@@ -589,8 +589,9 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
     let eventLoop = EmbeddedEventLoop()
     let channel = EmbeddedChannel(handler: nil, loop: eventLoop)
     var done = false
+    let desiredRequests = 1_000
     var requestsDone = -1
-    let measuringHandler = MeasuringHandler(numberOfRequests: 10_000) { reqs in
+    let measuringHandler = MeasuringHandler(numberOfRequests: desiredRequests) { reqs in
         requestsDone = reqs
         done = true
     }
@@ -607,12 +608,12 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
         eventLoop.run()
     }
     _ = try channel.finish()
-    precondition(requestsDone == 10_000)
+    precondition(requestsDone == desiredRequests)
     return requestsDone
 }
 
-measureAndPrint(desc: "http1_10k_reqs_1_conn") {
-    let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: 10_000, eventLoop: group.next())
+measureAndPrint(desc: "http1_1k_reqs_1_conn") {
+    let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: 1_000, eventLoop: group.next())
 
     let clientChannel = try! ClientBootstrap(group: group)
         .channelInitializer { channel in
@@ -628,12 +629,14 @@ measureAndPrint(desc: "http1_10k_reqs_1_conn") {
     return try! repeatedRequestsHandler.wait()
 }
 
-measureAndPrint(desc: "http1_10k_reqs_100_conns") {
+measureAndPrint(desc: "http1_1k_reqs_100_conns") {
     var reqs: [Int] = []
-    let reqsPerConn = 100
+    let numConns = 100
+    let numReqs = 1_000
+    let reqsPerConn = numReqs / numConns
     reqs.reserveCapacity(reqsPerConn)
-    for _ in 0..<reqsPerConn {
-        let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: 100, eventLoop: group.next())
+    for _ in 0..<numConns {
+        let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: reqsPerConn, eventLoop: group.next())
 
         let clientChannel = try! ClientBootstrap(group: group)
             .channelInitializer { channel in
@@ -648,7 +651,7 @@ measureAndPrint(desc: "http1_10k_reqs_100_conns") {
         try! clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
         reqs.append(try! repeatedRequestsHandler.wait())
     }
-    return reqs.reduce(0, +) / reqsPerConn
+    return reqs.reduce(0, +) / numConns
 }
 
 measureAndPrint(desc: "future_whenallsucceed_100k_immediately_succeeded_off_loop") {
@@ -669,9 +672,9 @@ measureAndPrint(desc: "future_whenallsucceed_100k_immediately_succeeded_on_loop"
     return allSucceeded.count
 }
 
-measureAndPrint(desc: "future_whenallsucceed_100k_deferred_off_loop") {
+measureAndPrint(desc: "future_whenallsucceed_10k_deferred_off_loop") {
     let loop = group.next()
-    let expected = Array(0..<100_000)
+    let expected = Array(0..<10_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
     let allSucceeded = EventLoopFuture.whenAllSucceed(promises.map { $0.futureResult }, on: loop)
     for (index, promise) in promises.enumerated() {
@@ -680,9 +683,9 @@ measureAndPrint(desc: "future_whenallsucceed_100k_deferred_off_loop") {
     return try! allSucceeded.wait().count
 }
 
-measureAndPrint(desc: "future_whenallsucceed_100k_deferred_on_loop") {
+measureAndPrint(desc: "future_whenallsucceed_10k_deferred_on_loop") {
     let loop = group.next()
-    let expected = Array(0..<100_000)
+    let expected = Array(0..<10_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
     let allSucceeded = try! loop.makeSucceededFuture(()).flatMap { _ -> EventLoopFuture<[Int]> in
         let result = EventLoopFuture.whenAllSucceed(promises.map { $0.futureResult }, on: loop)
@@ -713,9 +716,9 @@ measureAndPrint(desc: "future_whenallcomplete_100k_immediately_succeeded_on_loop
     return allSucceeded.count
 }
 
-measureAndPrint(desc: "future_whenallcomplete_100k_deferred_off_loop") {
+measureAndPrint(desc: "future_whenallcomplete_10k_deferred_off_loop") {
     let loop = group.next()
-    let expected = Array(0..<100_000)
+    let expected = Array(0..<10_000)
     let promises = expected.map { _ in loop.makePromise(of: Int.self) }
     let allSucceeded = EventLoopFuture.whenAllComplete(promises.map { $0.futureResult }, on: loop)
     for (index, promise) in promises.enumerated() {
@@ -741,111 +744,302 @@ measureAndPrint(desc: "future_whenallcomplete_100k_deferred_on_loop") {
 measureAndPrint(desc: "future_reduce_10k_futures") {
     let el1 = group.next()
 
-    let oneHundredFutures = (1 ... 10_000).map { i in el1.makeSucceededFuture(i) }
-    return try! EventLoopFuture<Int>.reduce(0, oneHundredFutures, on: el1, +).wait()
+    let futures = (1...10_000).map { i in el1.makeSucceededFuture(i) }
+    return try! EventLoopFuture<Int>.reduce(0, futures, on: el1, +).wait()
 }
 
 measureAndPrint(desc: "future_reduce_into_10k_futures") {
     let el1 = group.next()
 
-    let oneHundredFutures = (1 ... 10_000).map { i in el1.makeSucceededFuture(i) }
-    return try! EventLoopFuture<Int>.reduce(into: 0, oneHundredFutures, on: el1, { $0 += $1 }).wait()
+    let futures = (1...10_000).map { i in el1.makeSucceededFuture(i) }
+    return try! EventLoopFuture<Int>.reduce(into: 0, futures, on: el1, { $0 += $1 }).wait()
 }
 
-try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark())
+try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark(runCount: 1_000_000))
 
-try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
+try measureAndPrint(
+    desc: "websocket_encode_50b_space_at_front_100k_frames_cow",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 50,
+        runCount: 100_000,
+        dataStrategy: .spaceAtFront,
+        cowStrategy: .always,
+        maskingKeyStrategy: .never
+    )
+)
 
-try measureAndPrint(desc: "websocket_encode_50b_space_at_front_1m_frames_cow_masking",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .always))
+try measureAndPrint(
+    desc: "websocket_encode_50b_space_at_front_1m_frames_cow_masking",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 50,
+        runCount: 1_000_000,
+        dataStrategy: .spaceAtFront,
+        cowStrategy: .always,
+        maskingKeyStrategy: .always
+    )
+)
 
-try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_100k_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
+try measureAndPrint(
+    desc: "websocket_encode_1kb_space_at_front_1m_frames_cow",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 1024,
+        runCount: 1_000_000,
+        dataStrategy: .spaceAtFront,
+        cowStrategy: .always,
+        maskingKeyStrategy: .never
+    )
+)
 
-try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_1m_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 1_000_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
+try measureAndPrint(
+    desc: "websocket_encode_50b_no_space_at_front_100k_frames_cow",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 50,
+        runCount: 100_000,
+        dataStrategy: .noSpaceAtFront,
+        cowStrategy: .always,
+        maskingKeyStrategy: .never
+    )
+)
 
-try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_100k_frames_cow",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 100_000, dataStrategy: .noSpaceAtFront, cowStrategy: .always, maskingKeyStrategy: .never))
+try measureAndPrint(
+    desc: "websocket_encode_1kb_no_space_at_front_100k_frames_cow",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 1024,
+        runCount: 100_000,
+        dataStrategy: .noSpaceAtFront,
+        cowStrategy: .always,
+        maskingKeyStrategy: .never
+    )
+)
 
-try measureAndPrint(desc: "websocket_encode_50b_space_at_front_10k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
+try measureAndPrint(
+    desc: "websocket_encode_50b_space_at_front_100k_frames",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 50,
+        runCount: 100_000,
+        dataStrategy: .spaceAtFront,
+        cowStrategy: .never,
+        maskingKeyStrategy: .never
+    )
+)
 
-try measureAndPrint(desc: "websocket_encode_50b_space_at_front_10k_frames_masking",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 100_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .always))
+try measureAndPrint(
+    desc: "websocket_encode_50b_space_at_front_10k_frames_masking",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 50,
+        runCount: 10_000,
+        dataStrategy: .spaceAtFront,
+        cowStrategy: .never,
+        maskingKeyStrategy: .always
+    )
+)
 
-try measureAndPrint(desc: "websocket_encode_1kb_space_at_front_1k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .spaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
+try measureAndPrint(
+    desc: "websocket_encode_1kb_space_at_front_10k_frames",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 1024,
+        runCount: 10_000,
+        dataStrategy: .spaceAtFront,
+        cowStrategy: .never,
+        maskingKeyStrategy: .never
+    )
+)
 
-try measureAndPrint(desc: "websocket_encode_50b_no_space_at_front_10k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 50, runCount: 10_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
+try measureAndPrint(
+    desc: "websocket_encode_50b_no_space_at_front_100k_frames",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 50,
+        runCount: 100_000,
+        dataStrategy: .noSpaceAtFront,
+        cowStrategy: .never,
+        maskingKeyStrategy: .never
+    )
+)
 
-try measureAndPrint(desc: "websocket_encode_1kb_no_space_at_front_1k_frames",
-                    benchmark: WebSocketFrameEncoderBenchmark(dataSize: 1024, runCount: 1_000, dataStrategy: .noSpaceAtFront, cowStrategy: .never, maskingKeyStrategy: .never))
+try measureAndPrint(
+    desc: "websocket_encode_1kb_no_space_at_front_10k_frames",
+    benchmark: WebSocketFrameEncoderBenchmark(
+        dataSize: 1024,
+        runCount: 10_000,
+        dataStrategy: .noSpaceAtFront,
+        cowStrategy: .never,
+        maskingKeyStrategy: .never
+    )
+)
 
- try measureAndPrint(desc: "websocket_decode_125b_100k_frames",
-                     benchmark: WebSocketFrameDecoderBenchmark(dataSize: 125, runCount: 100_000))
+try measureAndPrint(
+    desc: "websocket_decode_125b_10k_frames",
+    benchmark: WebSocketFrameDecoderBenchmark(
+        dataSize: 125,
+        runCount: 10_000
+    )
+)
 
-try measureAndPrint(desc: "websocket_decode_125b_with_a_masking_key_100k_frames",
-                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: 125, runCount: 100_000, maskingKey: [0x80, 0x08, 0x10, 0x01]))
+try measureAndPrint(
+    desc: "websocket_decode_125b_with_a_masking_key_10k_frames",
+    benchmark: WebSocketFrameDecoderBenchmark(
+        dataSize: 125,
+        runCount: 10_000,
+        maskingKey: [0x80, 0x08, 0x10, 0x01]
+    )
+)
 
-try measureAndPrint(desc: "websocket_decode_64kb_100k_frames",
-                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max), runCount: 100_000))
+try measureAndPrint(
+    desc: "websocket_decode_64kb_10k_frames",
+    benchmark: WebSocketFrameDecoderBenchmark(
+        dataSize: Int(UInt16.max),
+        runCount: 10_000
+    )
+)
 
-try measureAndPrint(desc: "websocket_decode_64kb_with_a_masking_key_100k_frames",
-                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max), runCount: 100_000, maskingKey: [0x80, 0x08, 0x10, 0x01]))
+try measureAndPrint(
+    desc: "websocket_decode_64kb_with_a_masking_key_10k_frames",
+    benchmark: WebSocketFrameDecoderBenchmark(
+        dataSize: Int(UInt16.max),
+        runCount: 10_000,
+        maskingKey: [0x80, 0x08, 0x10, 0x01]
+    )
+)
 
-try measureAndPrint(desc: "websocket_decode_64kb_+1_100k_frames",
-                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max) + 1, runCount: 100_000))
+try measureAndPrint(
+    desc: "websocket_decode_64kb_+1_10k_frames",
+    benchmark: WebSocketFrameDecoderBenchmark(
+        dataSize: Int(UInt16.max) + 1,
+        runCount: 10_000
+    )
+)
 
-try measureAndPrint(desc: "websocket_decode_64kb_+1_with_a_masking_key_100k_frames",
-                    benchmark: WebSocketFrameDecoderBenchmark(dataSize: Int(UInt16.max) + 1, runCount: 100_000, maskingKey: [0x80, 0x08, 0x10, 0x01]))
+try measureAndPrint(
+    desc: "websocket_decode_64kb_+1_with_a_masking_key_10k_frames",
+    benchmark: WebSocketFrameDecoderBenchmark(
+        dataSize: Int(UInt16.max) + 1,
+        runCount: 10_000,
+        maskingKey: [0x80, 0x08, 0x10, 0x01]
+    )
+)
 
-try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1kb", benchmark: CircularBufferIntoByteBufferBenchmark(iterations: 10000, bufferSize: 1024))
+try measureAndPrint(
+    desc: "circular_buffer_into_byte_buffer_1kb",
+    benchmark: CircularBufferIntoByteBufferBenchmark(
+        iterations: 10_000,
+        bufferSize: 1024
+    )
+)
 
-try measureAndPrint(desc: "circular_buffer_into_byte_buffer_1mb", benchmark: CircularBufferIntoByteBufferBenchmark(iterations: 20, bufferSize: 1024*1024))
+try measureAndPrint(
+    desc: "circular_buffer_into_byte_buffer_1mb",
+    benchmark: CircularBufferIntoByteBufferBenchmark(
+        iterations: 20,
+        bufferSize: 1024*1024
+    )
+)
 
-try measureAndPrint(desc: "byte_buffer_view_iterator_1mb", benchmark: ByteBufferViewIteratorBenchmark(iterations: 20, bufferSize: 1024*1024))
+try measureAndPrint(
+    desc: "byte_buffer_view_iterator_1mb",
+    benchmark: ByteBufferViewIteratorBenchmark(
+        iterations: 20,
+        bufferSize: 1024*1024
+    )
+)
 
-try measureAndPrint(desc: "byte_buffer_view_contains_12mb", benchmark: ByteBufferViewContainsBenchmark(iterations: 20, bufferSize: 12*1024*1024))
+try measureAndPrint(
+    desc: "byte_buffer_view_contains_12mb",
+    benchmark: ByteBufferViewContainsBenchmark(
+        iterations: 5,
+        bufferSize: 12*1024*1024
+    )
+)
 
-try measureAndPrint(desc: "byte_to_message_decoder_decode_many_small",
-                    benchmark: ByteToMessageDecoderDecodeManySmallsBenchmark(iterations: 1_000, bufferSize: 16384))
+try measureAndPrint(
+    desc: "byte_to_message_decoder_decode_many_small",
+    benchmark: ByteToMessageDecoderDecodeManySmallsBenchmark(
+        iterations: 200,
+        bufferSize: 16384
+    )
+)
 
 measureAndPrint(desc: "generate_10k_random_request_keys") {
-    return (0 ..< 10_000).reduce(into: 0, { result, _ in result &+= NIOWebSocketClientUpgrader.randomRequestKey().count })
+    let numKeys = 10_000
+    return (0 ..< numKeys).reduce(into: 0, { result, _ in
+        result &+= NIOWebSocketClientUpgrader.randomRequestKey().count
+    })
 }
 
-try measureAndPrint(desc: "bytebuffer_rw_10_uint32s",
-                    benchmark: ByteBufferReadWriteMultipleIntegersBenchmark<UInt32>(iterations: 1_000_000, numberOfInts: 10))
+try measureAndPrint(
+    desc: "bytebuffer_rw_10_uint32s",
+    benchmark: ByteBufferReadWriteMultipleIntegersBenchmark<UInt32>(
+        iterations: 100_000,
+        numberOfInts: 10
+    )
+)
 
-try measureAndPrint(desc: "bytebuffer_multi_rw_10_uint32s",
-                    benchmark: ByteBufferMultiReadWriteTenIntegersBenchmark<UInt32>(iterations: 1_000_000))
+try measureAndPrint(
+    desc: "bytebuffer_multi_rw_10_uint32s",
+    benchmark: ByteBufferMultiReadWriteTenIntegersBenchmark<UInt32>(
+        iterations: 1_000_000
+    )
+)
 
-try measureAndPrint(desc: "lock_1_thread_10M_ops",
-                    benchmark: LockBenchmark(numberOfThreads: 1, lockOperationsPerThread: 10_000_000))
+try measureAndPrint(
+    desc: "lock_1_thread_1M_ops",
+    benchmark: LockBenchmark(
+        numberOfThreads: 1,
+        lockOperationsPerThread: 1_000_000
+    )
+)
 
-try measureAndPrint(desc: "lock_2_threads_10M_ops",
-                    benchmark: LockBenchmark(numberOfThreads: 2, lockOperationsPerThread: 5_000_000))
+try measureAndPrint(
+    desc: "lock_2_threads_1M_ops",
+    benchmark: LockBenchmark(
+        numberOfThreads: 2,
+        lockOperationsPerThread: 500_000
+    )
+)
 
-try measureAndPrint(desc: "lock_4_threads_10M_ops",
-                    benchmark: LockBenchmark(numberOfThreads: 4, lockOperationsPerThread: 2_500_000))
+try measureAndPrint(
+    desc: "lock_4_threads_1M_ops",
+    benchmark: LockBenchmark(
+        numberOfThreads: 4,
+        lockOperationsPerThread: 250_000
+    )
+)
 
-try measureAndPrint(desc: "lock_8_threads_10M_ops",
-                    benchmark: LockBenchmark(numberOfThreads: 8, lockOperationsPerThread: 1_250_000))
 
-try measureAndPrint(desc: "schedule_10000_tasks",
-                    benchmark: SchedulingBenchmark())
+try measureAndPrint(
+    desc: "lock_8_threads_1M_ops",
+    benchmark: LockBenchmark(
+        numberOfThreads: 8,
+        lockOperationsPerThread: 125_000
+    )
+)
 
-try measureAndPrint(desc: "schedule_and_run_10000_tasks",
-                    benchmark: SchedulingAndRunningBenchmark())
+try measureAndPrint(
+    desc: "schedule_100k_tasks",
+    benchmark: SchedulingBenchmark(numTasks: 100_000)
+)
 
-try measureAndPrint(desc: "execute_10000",
-                    benchmark: ExecuteBenchmark())
+try measureAndPrint(
+    desc: "schedule_and_run_100k_tasks",
+    benchmark: SchedulingAndRunningBenchmark(numTasks: 100_000)
+)
 
-try measureAndPrint(desc: "bytebufferview_copy_to_array_1000_times_1kb",
-                    benchmark: ByteBufferViewCopyToArrayBenchmark(iterations: 1000, size: 1024))
+try measureAndPrint(
+    desc: "execute_100k_tasks",
+    benchmark: ExecuteBenchmark(numTasks: 100_000)
+)
 
-try measureAndPrint(desc: "circularbuffer_copy_to_array_1000_times_1kb",
-                    benchmark: CircularBufferViewCopyToArrayBenchmark(iterations: 1000, size: 1024))
+try measureAndPrint(
+    desc: "bytebufferview_copy_to_array_100k_times_1kb",
+    benchmark: ByteBufferViewCopyToArrayBenchmark(
+        iterations: 100_000,
+        size: 1024
+    )
+)
+
+try measureAndPrint(
+    desc: "circularbuffer_copy_to_array_10k_times_1kb",
+    benchmark: CircularBufferViewCopyToArrayBenchmark(
+        iterations: 10_000,
+        size: 1024
+    )
+)

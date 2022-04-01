@@ -26,11 +26,13 @@ final class ChannelPipelineBenchmark: Benchmark {
     }
 
     private let channel: EmbeddedChannel
+    private let runCount: Int
     private let extraHandlers = 4
     private var handlers: [RemovableChannelHandler] = []
 
-    init() {
+    init(runCount: Int) {
         self.channel = EmbeddedChannel()
+        self.runCount = runCount
     }
 
     func setUp() throws {
@@ -53,7 +55,7 @@ final class ChannelPipelineBenchmark: Benchmark {
     }
 
     func run() -> Int {
-        for _ in 0..<1_000_000 {
+        for _ in 0..<self.runCount {
             self.channel.pipeline.fireChannelReadComplete()
         }
         return 1
