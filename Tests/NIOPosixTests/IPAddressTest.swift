@@ -165,12 +165,17 @@ class IPAddressTest: XCTestCase {
         XCTAssertThrowsError(try IPAddress(string: "0"))
         // invalid ipv4
         XCTAssertThrowsError(try IPAddress(string: "."))
+        XCTAssertThrowsError(try IPAddress(string: ".."))
+        XCTAssertThrowsError(try IPAddress(string: "..."))
+        XCTAssertThrowsError(try IPAddress(string: "...."))
         XCTAssertThrowsError(try IPAddress(string: "0.256.0.0"))
         XCTAssertThrowsError(try IPAddress(string: "0.0.-1.0"))
         XCTAssertThrowsError(try IPAddress(string: "0.0.0"))
         XCTAssertThrowsError(try IPAddress(string: "0.0.0.0.0"))
         // invalid ipv6
         XCTAssertThrowsError(try IPAddress(string: ":"))
+        XCTAssertThrowsError(try IPAddress(string: ":::"))
+        XCTAssertThrowsError(try IPAddress(string: ":::::::"))
         XCTAssertThrowsError(try IPAddress(string: "10000:0:0:0:0:0:0:0"))
         XCTAssertThrowsError(try IPAddress(string: "0:0:0:-0:0:0:0:0"))
         XCTAssertThrowsError(try IPAddress(string: "0::0:0:0::0"))

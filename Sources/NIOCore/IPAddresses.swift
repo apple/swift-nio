@@ -101,16 +101,23 @@ public enum IPAddress: CustomStringConvertible {
         public init(string: String) throws {
             var bytes: IPv4Bytes = IPv4Bytes((0,0,0,0))
             var idx: Int = 0
+            var byteIsSet: Bool = false
             
             for char in string.utf8 {
                 if char == UInt8(ascii: ".") {
-                    idx += 1
+                    if byteIsSet {
+                        idx += 1
+                        byteIsSet = false
+                    } else {
+                        throw IPAddressError.failedToParseIPString(string)
+                    }
                 } else if UInt8(ascii: "0")...UInt8(ascii: "9") ~= char {
                     let number = char - UInt8(ascii: "0")
                     if idx > 3 || bytes[idx] > 25 || (255 - number < (bytes[idx] * 10)) {
                         throw IPAddressError.failedToParseIPString(string)
                     }
                     bytes[idx] = bytes[idx] * 10 + number
+                    byteIsSet = true
                 } else {
                     throw IPAddressError.failedToParseIPString(string)
                 }
