@@ -83,6 +83,7 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - packedBytes: Collection of UInt8 that holds the address.
+        @inlinable
         public init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8 {
             var ipv4Bytes = IPv4Bytes((0,0,0,0))
             
