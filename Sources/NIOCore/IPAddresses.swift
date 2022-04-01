@@ -84,7 +84,11 @@ public enum IPAddress: CustomStringConvertible {
         /// - parameters:
         ///   - packedBytes: Collection of UInt8 that holds the address.
         @inlinable
-        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8 {
+        public init<Bytes: Collection>(packedBytes bytes: Bytes) throws where Bytes.Element == UInt8 {
+            if bytes.count != 4 {
+                throw IPAddressError.bytesArrayHasWrongLength(bytes.count)
+            }
+            
             var ipv4Bytes = IPv4Bytes((0,0,0,0))
             
             for (idx, elt) in bytes.prefix(4).enumerated() {
@@ -198,10 +202,13 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - packedBytes: Collection of UInt8 that holds the address.
-        public init<Bytes: Collection>(packedBytes bytes: Bytes) where Bytes.Element == UInt8 {
-            var ipv6Bytes = IPv6Bytes((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
+        public init<Bytes: Collection>(packedBytes bytes: Bytes) throws where Bytes.Element == UInt8 {
+            if bytes.count != 16 {
+                throw IPAddressError.bytesArrayHasWrongLength(bytes.count)
+            }
             
-            for (idx, elt) in bytes.prefix(16).enumerated() {
+            var ipv6Bytes = IPv6Bytes((0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
+            for (idx, elt) in bytes.enumerated() {
                 ipv6Bytes[idx] = elt
             }
             
@@ -258,7 +265,7 @@ public enum IPAddress: CustomStringConvertible {
                 }
             }
             
-            self = .init(packedBytes: ipv6Bytes.lazy.flatMap {[UInt8($0 >> 8), UInt8($0 & 0x00FF)]} )
+            self = try .init(packedBytes: ipv6Bytes.lazy.flatMap {[UInt8($0 >> 8), UInt8($0 & 0x00FF)]} )
         }
     }
     
@@ -320,8 +327,8 @@ public enum IPAddress: CustomStringConvertible {
     /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
     public init<Bytes: Collection>(packedBytes bytes: Bytes) throws where Bytes.Element == UInt8 {
         switch bytes.count {
-        case 4: self = .v4(.init(packedBytes: bytes))
-        case 16: self = .v6(.init(packedBytes: bytes))
+        case 4: self = .v4(try .init(packedBytes: bytes))
+        case 16: self = .v6(try .init(packedBytes: bytes))
         default:
             throw IPAddressError.bytesArrayHasWrongLength(bytes.count)
         }
