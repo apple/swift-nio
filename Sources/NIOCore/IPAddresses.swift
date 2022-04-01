@@ -143,31 +143,31 @@ public enum IPAddress: CustomStringConvertible {
             var bucketStrings: Array<String> = bucketValues.map {String(uint16Hex: $0)}
             
             // find most consecutive zeros and remove them
-            var consecutiveZeros = [0, 0, 0, 0, 0, 0, 0, 0]
-            var consecutiveCounter = 0
-            for (idx, value) in bucketValues.enumerated() {
-                switch value {
-                case 0: consecutiveCounter += 1
-                default: consecutiveCounter = 0
-                }
-                consecutiveZeros[idx] = consecutiveCounter
-            }
-            let mostConsecutiveZeros = consecutiveZeros.max()
+            var mostConsecutiveZeros = 0
+            var mostConsecutiveZerosIndex = 0
             
-            if let mostConsecutiveZeros = mostConsecutiveZeros {
-                if mostConsecutiveZeros > 0 {
-                    let consecutiveZeroIndex = consecutiveZeros.firstIndex(of: mostConsecutiveZeros)
-                    
-                    if let endCompression = consecutiveZeroIndex {
-                        let startCompression = endCompression - mostConsecutiveZeros + 1
-                        
-                        switch (startCompression, endCompression) {
-                        case (0, 7): bucketStrings.replaceSubrange(startCompression...endCompression, with: ["::"])
-                        case (0, _): bucketStrings.replaceSubrange(startCompression...endCompression, with: [":"])
-                        case (_, 7): bucketStrings.replaceSubrange(startCompression...endCompression, with: [":"])
-                        case (_, _): bucketStrings.replaceSubrange(startCompression...endCompression, with: [""])
-                        }
+            var consecutiveZeros = 0
+            
+            for (idx, value) in bucketValues.enumerated() {
+                if value == 0 {
+                    consecutiveZeros += 1
+                    if consecutiveZeros > mostConsecutiveZeros {
+                        mostConsecutiveZeros = consecutiveZeros
+                        mostConsecutiveZerosIndex = idx
                     }
+                } else {
+                    consecutiveZeros = 0
+                }
+            }
+            
+            if mostConsecutiveZeros > 0 {
+                let startCompression = mostConsecutiveZerosIndex - mostConsecutiveZeros + 1
+                
+                switch (startCompression, mostConsecutiveZerosIndex) {
+                case (0, 7): bucketStrings.replaceSubrange(startCompression...mostConsecutiveZerosIndex, with: ["::"])
+                case (0, _): bucketStrings.replaceSubrange(startCompression...mostConsecutiveZerosIndex, with: [":"])
+                case (_, 7): bucketStrings.replaceSubrange(startCompression...mostConsecutiveZerosIndex, with: [":"])
+                case (_, _): bucketStrings.replaceSubrange(startCompression...mostConsecutiveZerosIndex, with: [""])
                 }
             }
             
