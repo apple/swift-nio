@@ -239,7 +239,7 @@ public enum IPAddress: CustomStringConvertible {
                     isLastCharSeparator = true
                 } else {
                     isLastCharSeparator = false
-                    if let number = UInt8(asciiValue: char) {
+                    if let number = UInt8(hexAsciiValue: char) {
                         if idx > 7 || ipv6Bytes[idx] > 4095 || (65535 - UInt16(number) < (ipv6Bytes[idx] * 16)) {
                             throw IPAddressError.failedToParseIPString(string)
                         }
@@ -361,8 +361,9 @@ public enum IPAddress: CustomStringConvertible {
 }
 
 extension UInt8 {
-    init?(asciiValue: UInt8) {
-        switch asciiValue {
+    /// Creates UInt8 from hex character in form of an ascii value.
+    init?(hexAsciiValue: UInt8) {
+        switch hexAsciiValue {
         case UInt8(ascii: "0"): self = 0
         case UInt8(ascii: "1"): self = 1
         case UInt8(ascii: "2"): self = 2
