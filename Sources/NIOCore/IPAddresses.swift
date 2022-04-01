@@ -99,7 +99,7 @@ public enum IPAddress: CustomStringConvertible {
         /// - parameters:
         ///   - string: String representation of an IPv4 address.
         public init(string: String) throws {
-            var bytes: [UInt8] = [0,0,0,0]
+            var bytes: IPv4Bytes = IPv4Bytes((0,0,0,0))
             var idx: Int = 0
             
             for char in string.utf8 {
@@ -118,7 +118,7 @@ public enum IPAddress: CustomStringConvertible {
             if idx != 3 {
                 throw IPAddressError.failedToParseIPString(string)
             }
-            self = .init(packedBytes: bytes)
+            self = .init(address: bytes)
         }
     }
     
