@@ -202,6 +202,7 @@ public enum IPAddress: CustomStringConvertible {
         ///
         /// - parameters:
         ///   - packedBytes: Collection of UInt8 that holds the address.
+        @inlinable
         public init<Bytes: Collection>(packedBytes bytes: Bytes) throws where Bytes.Element == UInt8 {
             if bytes.count != 16 {
                 throw IPAddressError.bytesArrayHasWrongLength(bytes.count)
@@ -325,6 +326,7 @@ public enum IPAddress: CustomStringConvertible {
     /// - parameters:
     ///     - bytes: Either 4 or 16 bytes representing the IPAddress value.
     /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
+    @inlinable
     public init<Bytes: Collection>(packedBytes bytes: Bytes) throws where Bytes.Element == UInt8 {
         switch bytes.count {
         case 4: self = .v4(try .init(packedBytes: bytes))
