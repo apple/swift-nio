@@ -452,16 +452,7 @@ extension String {
         default: preconditionFailure()
         }
         
-        // append null termination for cString
-        asciiCompressed.append(0)
-        
-        self = asciiCompressed.withUnsafeBufferPointer { bytes -> String in
-            if let pointer = bytes.baseAddress {
-                return String(cString: pointer)
-            } else {
-                preconditionFailure()
-            }
-        }
+        self = String(decoding: asciiCompressed, as: UTF8.self)
     }
 }
 
