@@ -18,7 +18,7 @@ import CNIOLinux
 import CoreFoundation
 
 
-/// `Error` that may be thrown if we fail to create a `IPAddress`
+/// `Error` that may be thrown if we fail to create a `NIOIPAddress`
 public enum IPAddressError: Error {
     /// Given string input is not supported IP Address
     case failedToParseIPString(String)
@@ -47,9 +47,9 @@ public struct IPv6Bytes {
     }
 }
 
-/// Represent a single `IPAddress`.
-public enum IPAddress: CustomStringConvertible {
-    /// A single IPv4 address for `IPAddress`.
+/// Represent a single `NIOIPAddress`.
+public enum NIOIPAddress: CustomStringConvertible {
+    /// A single IPv4 address for `NIOIPAddress`.
     public struct IPv4Address: CustomStringConvertible {
         /// The bytes storing the address of the IPv4 address.
         public var address: IPv4Bytes
@@ -133,7 +133,7 @@ public enum IPAddress: CustomStringConvertible {
         }
     }
     
-    /// A single IPv6 address for `IPAddress`
+    /// A single IPv6 address for `NIOIPAddress`
     public struct IPv6Address: CustomStringConvertible {
         /// The bytes storing the address of the IPv6 address.
         public var address: IPv6Bytes
@@ -296,22 +296,22 @@ public enum IPAddress: CustomStringConvertible {
         }
     }
 
-    /// Creates a `IPAddress` directly out of UInt8 Tuple for IPv4.
+    /// Creates a `NIOIPAddress` directly out of UInt8 Tuple for IPv4.
     public init(_ ipv4BytesTuple: IPv4BytesTuple) {
         self = .v4(IPv4Address(address: .init(ipv4BytesTuple)))
     }
     
-    /// Creates a `IPAddress` directly out of UInt8 Tuple for IPv6.
+    /// Creates a `NIOIPAddress` directly out of UInt8 Tuple for IPv6.
     public init(_ ipv6BytesTuple: IPv6BytesTuple) {
         self = .v6(IPv6Address(address: .init(ipv6BytesTuple)))
     }
     
-    /// Creates a new `IPAddress` for the given string.
+    /// Creates a new `NIOIPAddress` for the given string.
     /// "d.d.d.d" with decimal values for IPv4 and "h:h:h:h:h:h:h:h" with hexadecimal values for IPv6. Also allowing for shortened IPv6 representation with "::". Hybrid versions for IPv6 are not (yet) supported.
     ///
     /// - parameters:
     ///     - string: String representation of IPv4 or IPv6 Address
-    /// - returns: The `IPAddress` for the given string
+    /// - returns: The `NIOIPAddress` for the given string
     /// - throws: May throw `IPAddressError.failedToParseIPString` if the string cannot be parsed to IPv4 or IPv6.
     public init(string: String) throws {
         do {
@@ -321,11 +321,11 @@ public enum IPAddress: CustomStringConvertible {
         }
     }
     
-    /// Creates a new `IPAddress` for the given bytes.
+    /// Creates a new `NIOIPAddress` for the given bytes.
     ///
     /// - parameters:
-    ///     - bytes: Either 4 or 16 bytes representing the IPAddress value.
-    /// - returns: The `IPAddress` for the given string or `nil` if the string representation is not supported.
+    ///     - bytes: Either 4 or 16 bytes representing the NIOIPAddress value.
+    /// - returns: The `NIOIPAddress` for the given string or `nil` if the string representation is not supported.
     @inlinable
     public init<Bytes: Collection>(packedBytes bytes: Bytes) throws where Bytes.Element == UInt8 {
         switch bytes.count {
@@ -336,7 +336,7 @@ public enum IPAddress: CustomStringConvertible {
         }
     }
     
-    /// Creates a new `IPAddress` for the given libc IPv4 address.
+    /// Creates a new `NIOIPAddress` for the given libc IPv4 address.
     ///
     /// - parameters:
     ///     - posixIPv4Address: libc ipv4 address.
@@ -351,7 +351,7 @@ public enum IPAddress: CustomStringConvertible {
         self = .v4(.init(address: uint8AddressBytes))
     }
     
-    /// Creates a new `IPAddress` for the given libc IPv6 address.
+    /// Creates a new `NIOIPAddress` for the given libc IPv6 address.
     ///
     /// - parameters:
     ///     - posixIPv6Address: libc ipv6 address.
@@ -563,9 +563,9 @@ extension IPv6Bytes: Equatable {
     }
 }
 
-extension IPAddress.IPv4Address: Equatable {}
-extension IPAddress.IPv6Address: Equatable {}
-extension IPAddress: Equatable {}
+extension NIOIPAddress.IPv4Address: Equatable {}
+extension NIOIPAddress.IPv6Address: Equatable {}
+extension NIOIPAddress: Equatable {}
 
 /// We define an extension on `IPv4Bytes` that combines each byte to the hasher.
 extension IPv4Bytes: Hashable {
@@ -581,6 +581,6 @@ extension IPv6Bytes: Hashable {
     }
 }
 
-extension IPAddress.IPv4Address: Hashable {}
-extension IPAddress.IPv6Address: Hashable {}
-extension IPAddress: Hashable {}
+extension NIOIPAddress.IPv4Address: Hashable {}
+extension NIOIPAddress.IPv6Address: Hashable {}
+extension NIOIPAddress: Hashable {}

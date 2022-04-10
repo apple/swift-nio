@@ -18,7 +18,7 @@ import XCTest
 
 class IPAddressTest: XCTestCase {
     func testCanCreateIPv4AddressFromString() throws {
-        let ipAddress = try IPAddress(string: "255.0.128.18")
+        let ipAddress = try NIOIPAddress(string: "255.0.128.18")
         let expectedAddressBytes: IPv4Bytes = .init((255, 0, 128, 18))
         
         switch ipAddress {
@@ -30,7 +30,7 @@ class IPAddressTest: XCTestCase {
     }
     
     func testCanCreateIPv6AddressFromString() throws {
-        let ipAddress = try IPAddress(string: "FFFF:0:18:1E0:0:0:6:0")
+        let ipAddress = try NIOIPAddress(string: "FFFF:0:18:1E0:0:0:6:0")
         let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
         switch ipAddress {
@@ -42,7 +42,7 @@ class IPAddressTest: XCTestCase {
     }
     
     func testCanCreateIPv6AddressFromShortenedString() throws {
-        let ipAddress = try IPAddress(string: "FF::1")
+        let ipAddress = try NIOIPAddress(string: "FF::1")
         let expectedAddressBytes: IPv6Bytes = .init((0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
         
         switch ipAddress {
@@ -54,7 +54,7 @@ class IPAddressTest: XCTestCase {
     }
     
     func testCanCreateIPv4AddressFromBytes() throws {
-        let ipAddress = try IPAddress(packedBytes: [255, 0, 128, 18])
+        let ipAddress = try NIOIPAddress(packedBytes: [255, 0, 128, 18])
         let expectedAddressBytes: IPv4Bytes = .init((255, 0, 128, 18))
         
         switch ipAddress {
@@ -66,7 +66,7 @@ class IPAddressTest: XCTestCase {
     }
     
     func testCanCreateIPv6AddressFromBytes() throws {
-        let ipAddress = try IPAddress(packedBytes: [255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0])
+        let ipAddress = try NIOIPAddress(packedBytes: [255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0])
         let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
         switch ipAddress {
@@ -81,7 +81,7 @@ class IPAddressTest: XCTestCase {
         let bigEndianAddress: Int32 = 255 << 24 + 0 << 16 + 128 << 8 + 18
         let testPosixAddress: in_addr = .init(s_addr: .init(bitPattern: bigEndianAddress))
         
-        let ipAddress = IPAddress(posixIPv4Address: testPosixAddress)
+        let ipAddress = NIOIPAddress(posixIPv4Address: testPosixAddress)
         let expectedAddressBytes: IPv4Bytes = .init((255, 0, 128, 18))
         
         switch ipAddress {
@@ -95,7 +95,7 @@ class IPAddressTest: XCTestCase {
     func testCanCreateIPv6AddressFromPosix() throws {
         let testPosixAddress: in6_addr = .init(__u6_addr: .init(__u6_addr8: (255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0)))
         
-        let ipAddress = IPAddress(posixIPv6Address: testPosixAddress)
+        let ipAddress = NIOIPAddress(posixIPv6Address: testPosixAddress)
         let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
         switch ipAddress {
@@ -107,20 +107,20 @@ class IPAddressTest: XCTestCase {
     }
     
     func testDescriptionWorksIPv4Address() throws {
-        let ipAddress = try IPAddress(packedBytes: [255, 0, 128, 18])
+        let ipAddress = try NIOIPAddress(packedBytes: [255, 0, 128, 18])
         let expectedDescription = "[IPv4]255.0.128.18"
         
         XCTAssertEqual(ipAddress.description, expectedDescription)
     }
     
     func testDescriptionWorksIPv6Address() throws {
-        let ipAddress1 = try IPAddress(packedBytes: [255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0])
+        let ipAddress1 = try NIOIPAddress(packedBytes: [255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0])
         let expectedDescription1 = "[IPv6]FFFF:0:18:1E0::6:0"
         
-        let ipAddress2 = try IPAddress(packedBytes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+        let ipAddress2 = try NIOIPAddress(packedBytes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
         let expectedDescription2 = "[IPv6]::1"
         
-        let ipAddress3 = try IPAddress(packedBytes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        let ipAddress3 = try NIOIPAddress(packedBytes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         let expectedDescription3 = "[IPv6]::"
     
         XCTAssertEqual(ipAddress1.description, expectedDescription1)
@@ -130,7 +130,7 @@ class IPAddressTest: XCTestCase {
     
     func testPosixWorksIPv4Address() throws {
         let expectedPosix = in_addr(s_addr: UInt32(255) << 24 + UInt32(128) << 8 + UInt32(18))
-        let ipAddress = IPAddress(posixIPv4Address: expectedPosix)
+        let ipAddress = NIOIPAddress(posixIPv4Address: expectedPosix)
         
         switch ipAddress {
         case .v4(let iPv4Address):
@@ -141,7 +141,7 @@ class IPAddressTest: XCTestCase {
     }
     
     func testPosixWorksIPv6Address() throws {
-        let ipAddress = IPAddress((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
+        let ipAddress = NIOIPAddress((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         let expectedPosix = in6_addr.init(__u6_addr: .init(__u6_addr8: (255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0)))
         
         
@@ -161,26 +161,26 @@ class IPAddressTest: XCTestCase {
     
     func testInvalidIPAddressString() throws {
         // non categorised strings
-        XCTAssertThrowsError(try IPAddress(string: ""))
-        XCTAssertThrowsError(try IPAddress(string: "0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: ""))
+        XCTAssertThrowsError(try NIOIPAddress(string: "0"))
         // invalid ipv4
-        XCTAssertThrowsError(try IPAddress(string: "."))
-        XCTAssertThrowsError(try IPAddress(string: ".."))
-        XCTAssertThrowsError(try IPAddress(string: "..."))
-        XCTAssertThrowsError(try IPAddress(string: "...."))
-        XCTAssertThrowsError(try IPAddress(string: "0.256.0.0"))
-        XCTAssertThrowsError(try IPAddress(string: "0.0.-1.0"))
-        XCTAssertThrowsError(try IPAddress(string: "0.0.0"))
-        XCTAssertThrowsError(try IPAddress(string: "0.0.0.0.0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: "."))
+        XCTAssertThrowsError(try NIOIPAddress(string: ".."))
+        XCTAssertThrowsError(try NIOIPAddress(string: "..."))
+        XCTAssertThrowsError(try NIOIPAddress(string: "...."))
+        XCTAssertThrowsError(try NIOIPAddress(string: "0.256.0.0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: "0.0.-1.0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: "0.0.0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: "0.0.0.0.0"))
         // invalid ipv6
-        XCTAssertThrowsError(try IPAddress(string: ":"))
-        XCTAssertThrowsError(try IPAddress(string: ":::"))
-        XCTAssertThrowsError(try IPAddress(string: ":::::::"))
-        XCTAssertThrowsError(try IPAddress(string: "10000:0:0:0:0:0:0:0"))
-        XCTAssertThrowsError(try IPAddress(string: "0:0:0:-0:0:0:0:0"))
-        XCTAssertThrowsError(try IPAddress(string: "0::0:0:0::0"))
-        XCTAssertThrowsError(try IPAddress(string: "0:0:0:0:0:0:0"))
-        XCTAssertThrowsError(try IPAddress(string: "0:0:0:0:0:0:0:0:0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: ":"))
+        XCTAssertThrowsError(try NIOIPAddress(string: ":::"))
+        XCTAssertThrowsError(try NIOIPAddress(string: ":::::::"))
+        XCTAssertThrowsError(try NIOIPAddress(string: "10000:0:0:0:0:0:0:0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: "0:0:0:-0:0:0:0:0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: "0::0:0:0::0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: "0:0:0:0:0:0:0"))
+        XCTAssertThrowsError(try NIOIPAddress(string: "0:0:0:0:0:0:0:0:0"))
     }
 }
 
