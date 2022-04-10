@@ -91,7 +91,7 @@ public enum NIOIPAddress: CustomStringConvertible {
             
             var ipv4Bytes = IPv4Bytes((0,0,0,0))
             
-            for (idx, elt) in bytes.prefix(4).enumerated() {
+            for (idx, elt) in bytes.enumerated() {
                 ipv4Bytes[idx] = elt
             }
             
@@ -169,8 +169,7 @@ public enum NIOIPAddress: CustomStringConvertible {
                 
                 switch (startCompression, mostConsecutiveZerosIndex) {
                 case (0, 7): bucketStrings.replaceSubrange(startCompression...mostConsecutiveZerosIndex, with: ["::"])
-                case (0, _): bucketStrings.replaceSubrange(startCompression...mostConsecutiveZerosIndex, with: [":"])
-                case (_, 7): bucketStrings.replaceSubrange(startCompression...mostConsecutiveZerosIndex, with: [":"])
+                case (0, _), (_, 7): bucketStrings.replaceSubrange(startCompression...mostConsecutiveZerosIndex, with: [":"])
                 case (_, _): bucketStrings.replaceSubrange(startCompression...mostConsecutiveZerosIndex, with: [""])
                 }
             }
