@@ -490,10 +490,6 @@ extension NIOIPAddress.IPv4Bytes: MutableCollection, RandomAccessCollection {
             }
         }
     }
-    
-    public func index(after: Index) -> Index {
-        return after + 1
-    }
 }
 
 /// We define an extension on `IPv6Bytes` that gives it a mutable collection and random access conformance.
@@ -547,10 +543,6 @@ extension NIOIPAddress.IPv6Bytes: MutableCollection, RandomAccessCollection {
             default: preconditionFailure()
             }
         }
-    }
-    
-    public func index(after: Index) -> Index {
-        return after + 1
     }
 }
 
