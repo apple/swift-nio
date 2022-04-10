@@ -408,7 +408,7 @@ extension UInt16 {
     }
     
     /// Interprets value as hex and creates ascii `UInt8`.
-    func asciiValue() -> UInt8 {
+    var asciiValue: UInt8 {
         switch self {
         case 0: return UInt8(ascii: "0")
         case 1: return UInt8(ascii: "1")
@@ -436,10 +436,10 @@ extension String {
     /// Creates an hex representation for given `UInt16`
     init(uint16Hex: UInt16) {
         let asciiHex = [
-            ((uint16Hex >> 12) & 0x000F).asciiValue(),
-            ((uint16Hex >> 8)  & 0x000F).asciiValue(),
-            ((uint16Hex >> 4)  & 0x000F).asciiValue(),
-            (uint16Hex         & 0x000F).asciiValue()
+            ((uint16Hex >> 12) & 0x000F).asciiValue,
+            ((uint16Hex >> 8)  & 0x000F).asciiValue,
+            ((uint16Hex >> 4)  & 0x000F).asciiValue,
+            (uint16Hex         & 0x000F).asciiValue
         ]
         
         // remove leading zeros
