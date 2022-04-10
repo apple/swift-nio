@@ -16,10 +16,10 @@ import XCTest
 @testable import NIOCore
 @testable import NIOPosix
 
-class IPAddressTest: XCTestCase {
+class NIOIPAddressTest: XCTestCase {
     func testCanCreateIPv4AddressFromString() throws {
         let ipAddress = try NIOIPAddress(string: "255.0.128.18")
-        let expectedAddressBytes: IPv4Bytes = .init((255, 0, 128, 18))
+        let expectedAddressBytes: NIOIPAddress.IPv4Bytes = .init((255, 0, 128, 18))
         
         switch ipAddress {
         case .v4(let iPv4Address):
@@ -31,7 +31,7 @@ class IPAddressTest: XCTestCase {
     
     func testCanCreateIPv6AddressFromString() throws {
         let ipAddress = try NIOIPAddress(string: "FFFF:0:18:1E0:0:0:6:0")
-        let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
+        let expectedAddressBytes: NIOIPAddress.IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
         switch ipAddress {
         case .v6(let iPv6Address):
@@ -43,7 +43,7 @@ class IPAddressTest: XCTestCase {
     
     func testCanCreateIPv6AddressFromShortenedString() throws {
         let ipAddress = try NIOIPAddress(string: "FF::1")
-        let expectedAddressBytes: IPv6Bytes = .init((0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
+        let expectedAddressBytes: NIOIPAddress.IPv6Bytes = .init((0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
         
         switch ipAddress {
         case .v6(let iPv6Address):
@@ -55,7 +55,7 @@ class IPAddressTest: XCTestCase {
     
     func testCanCreateIPv4AddressFromBytes() throws {
         let ipAddress = try NIOIPAddress(packedBytes: [255, 0, 128, 18])
-        let expectedAddressBytes: IPv4Bytes = .init((255, 0, 128, 18))
+        let expectedAddressBytes: NIOIPAddress.IPv4Bytes = .init((255, 0, 128, 18))
         
         switch ipAddress {
         case .v4(let iPv4Address):
@@ -67,7 +67,7 @@ class IPAddressTest: XCTestCase {
     
     func testCanCreateIPv6AddressFromBytes() throws {
         let ipAddress = try NIOIPAddress(packedBytes: [255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0])
-        let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
+        let expectedAddressBytes: NIOIPAddress.IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
         switch ipAddress {
         case .v6(let iPv6Address):
@@ -82,7 +82,7 @@ class IPAddressTest: XCTestCase {
         let testPosixAddress: in_addr = .init(s_addr: .init(bitPattern: bigEndianAddress))
         
         let ipAddress = NIOIPAddress(posixIPv4Address: testPosixAddress)
-        let expectedAddressBytes: IPv4Bytes = .init((255, 0, 128, 18))
+        let expectedAddressBytes: NIOIPAddress.IPv4Bytes = .init((255, 0, 128, 18))
         
         switch ipAddress {
         case .v4(let iPv4Address):
@@ -96,7 +96,7 @@ class IPAddressTest: XCTestCase {
         let testPosixAddress: in6_addr = .init(__u6_addr: .init(__u6_addr8: (255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0)))
         
         let ipAddress = NIOIPAddress(posixIPv6Address: testPosixAddress)
-        let expectedAddressBytes: IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
+        let expectedAddressBytes: NIOIPAddress.IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
         switch ipAddress {
         case .v6(let iPv6Address):

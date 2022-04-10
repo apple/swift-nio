@@ -18,37 +18,37 @@ import CNIOLinux
 import CoreFoundation
 
 
-/// `Error` that may be thrown if we fail to create a `NIOIPAddress`
-public enum IPAddressError: Error {
-    /// Given string input is not supported IP Address
-    case failedToParseIPString(String)
-    /// Given string input is not supported IP Address
-    case bytesArrayHasWrongLength(Int)
-}
-
-public typealias IPv4BytesTuple = (UInt8, UInt8, UInt8, UInt8)
-public typealias IPv6BytesTuple = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
-
-/// Represent the bytes for an `IPv4Address`.
-public struct IPv4Bytes {
-    public var bytes: IPv4BytesTuple
-    
-    public init(_ bytes: IPv4BytesTuple) {
-        self.bytes = bytes
-    }
-}
-
-/// Represent the bytes for an `IPv6Address.
-public struct IPv6Bytes {
-    public var bytes: IPv6BytesTuple
-    
-    public init(_ bytes: IPv6BytesTuple) {
-        self.bytes = bytes
-    }
-}
-
 /// Represent a single `NIOIPAddress`.
 public enum NIOIPAddress: CustomStringConvertible {
+    /// `Error` that may be thrown if we fail to create a `NIOIPAddress`
+    public enum IPAddressError: Error {
+        /// Given string input is not supported IP Address
+        case failedToParseIPString(String)
+        /// Given string input is not supported IP Address
+        case bytesArrayHasWrongLength(Int)
+    }
+
+    public typealias IPv4BytesTuple = (UInt8, UInt8, UInt8, UInt8)
+    public typealias IPv6BytesTuple = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
+
+    /// Represent the bytes for an `IPv4Address`.
+    public struct IPv4Bytes {
+        public var bytes: IPv4BytesTuple
+        
+        public init(_ bytes: IPv4BytesTuple) {
+            self.bytes = bytes
+        }
+    }
+
+    /// Represent the bytes for an `IPv6Address.
+    public struct IPv6Bytes {
+        public var bytes: IPv6BytesTuple
+        
+        public init(_ bytes: IPv6BytesTuple) {
+            self.bytes = bytes
+        }
+    }
+    
     /// A single IPv4 address for `NIOIPAddress`.
     public struct IPv4Address: CustomStringConvertible {
         /// The bytes storing the address of the IPv4 address.
@@ -458,7 +458,7 @@ extension String {
 
 
 /// We define an extension on `IPv4Bytes` that gives it a mutable collection and random access conformance.
-extension IPv4Bytes: MutableCollection, RandomAccessCollection {
+extension NIOIPAddress.IPv4Bytes: MutableCollection, RandomAccessCollection {
     public typealias Index = Int
     public typealias Element = UInt8
     
@@ -492,7 +492,7 @@ extension IPv4Bytes: MutableCollection, RandomAccessCollection {
 }
 
 /// We define an extension on `IPv6Bytes` that gives it a mutable collection and random access conformance.
-extension IPv6Bytes: MutableCollection, RandomAccessCollection {
+extension NIOIPAddress.IPv6Bytes: MutableCollection, RandomAccessCollection {
     public typealias Index = Int
     public typealias Element = UInt8
     
@@ -550,15 +550,15 @@ extension IPv6Bytes: MutableCollection, RandomAccessCollection {
 }
 
 /// We define an extension on `IPv4Bytes` that gives it an equatable conformance.
-extension IPv4Bytes: Equatable {
-    public static func == (lhs: IPv4Bytes, rhs: IPv4Bytes) -> Bool {
+extension NIOIPAddress.IPv4Bytes: Equatable {
+    public static func == (lhs: NIOIPAddress.IPv4Bytes, rhs: NIOIPAddress.IPv4Bytes) -> Bool {
         return lhs.bytes == rhs.bytes
     }
 }
 
 /// We define an extension on `IPv6Bytes` that gives it an element wise equatable conformance.
-extension IPv6Bytes: Equatable {
-    public static func == (lhs: IPv6Bytes, rhs: IPv6Bytes) -> Bool {
+extension NIOIPAddress.IPv6Bytes: Equatable {
+    public static func == (lhs: NIOIPAddress.IPv6Bytes, rhs: NIOIPAddress.IPv6Bytes) -> Bool {
         return zip(lhs, rhs).allSatisfy {$0 == $1}
     }
 }
@@ -568,14 +568,14 @@ extension NIOIPAddress.IPv6Address: Equatable {}
 extension NIOIPAddress: Equatable {}
 
 /// We define an extension on `IPv4Bytes` that combines each byte to the hasher.
-extension IPv4Bytes: Hashable {
+extension NIOIPAddress.IPv4Bytes: Hashable {
     public func hash(into hasher: inout Hasher) {
         self.forEach { hasher.combine($0) }
     }
 }
 
 /// We define an extension on `IPv6Bytes` that combines each byte to the hasher.
-extension IPv6Bytes: Hashable {
+extension NIOIPAddress.IPv6Bytes: Hashable {
     public func hash(into hasher: inout Hasher) {
         self.forEach { hasher.combine($0) }
     }
