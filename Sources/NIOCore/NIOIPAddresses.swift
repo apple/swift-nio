@@ -373,11 +373,17 @@ extension UInt8 {
         case UInt8(ascii: "7"): self = 7
         case UInt8(ascii: "8"): self = 8
         case UInt8(ascii: "9"): self = 9
+        case UInt8(ascii: "a"): self = 10
         case UInt8(ascii: "A"): self = 10
+        case UInt8(ascii: "b"): self = 11
         case UInt8(ascii: "B"): self = 11
+        case UInt8(ascii: "c"): self = 12
         case UInt8(ascii: "C"): self = 12
+        case UInt8(ascii: "d"): self = 13
         case UInt8(ascii: "D"): self = 13
+        case UInt8(ascii: "e"): self = 14
         case UInt8(ascii: "E"): self = 14
+        case UInt8(ascii: "f"): self = 15
         case UInt8(ascii: "F"): self = 15
         default: return nil
         }

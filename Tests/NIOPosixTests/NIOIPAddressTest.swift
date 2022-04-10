@@ -30,12 +30,16 @@ class NIOIPAddressTest: XCTestCase {
     }
     
     func testCanCreateIPv6AddressFromString() throws {
-        let ipAddress = try NIOIPAddress(string: "FFFF:0:18:1E0:0:0:6:0")
+        let ipAddressUpper = try NIOIPAddress(string: "FFFF:0:18:1E0:0:0:6:0")
+        let ipAddressLower = try NIOIPAddress(string: "ffff:0:18:1e0:0:0:6:0")
+        let ipAddressMix = try NIOIPAddress(string: "fFFf:0:18:1E0:0:0:6:0")
         let expectedAddressBytes: NIOIPAddress.IPv6Bytes = .init((255, 255, 0, 0, 0, 24, 1, 224, 0, 0, 0, 0, 0, 6, 0, 0))
         
-        switch ipAddress {
-        case .v6(let iPv6Address):
-            XCTAssertEqual(iPv6Address.address, expectedAddressBytes)
+        switch (ipAddressUpper, ipAddressLower, ipAddressMix) {
+        case (.v6(let ipAddressUpper), .v6(let ipAddressLower), .v6(let ipAddressMix)):
+            XCTAssertEqual(ipAddressUpper.address, expectedAddressBytes)
+            XCTAssertEqual(ipAddressLower.address, expectedAddressBytes)
+            XCTAssertEqual(ipAddressMix.address, expectedAddressBytes)
         default:
             XCTFail()
         }
