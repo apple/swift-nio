@@ -1746,6 +1746,30 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0xcc, slice.getInteger(at: 0, as: UInt8.self))
         XCTAssertEqual(0xdd, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
     }
+
+    func testSliceOfMassiveBufferWithAdvancedReaderIndexIsOk() throws {
+        // We only want to run this test on 64-bit systems: 32-bit systems can't allocate buffers
+        // large enough to run this test safely.
+        guard MemoryLayout<Int>.size >= 8 else {
+            return
+        }
+
+        let targetSize = Int(UInt32.max)
+        var buffer = self.allocator.buffer(capacity: targetSize)
+
+        // Move the reader index forward such that we hit the slow path.
+        let offset = Int(_UInt24.max) + 1
+        buffer.moveWriterIndex(to: offset)
+        buffer.moveReaderIndex(to: offset)
+        buffer.writeInteger(UInt32(0))
+
+        // We're going to move the readerIndex forward by 1, and then slice.
+        buffer.moveReaderIndex(forwardBy: 1)
+        let slice = buffer.getSlice(at: buffer.readerIndex, length: 3)!
+        XCTAssertEqual(slice.readableBytes, 3)
+        XCTAssertEqual(slice.readerIndex, 0)
+        XCTAssertEqual(Int(UInt32(3).nextPowerOf2()), slice.capacity)
+    }
     
     func testSliceOnSliceAfterHitting16MBMark() {
         // This test ensures that a slice will get a new backing storage if its start is more than
