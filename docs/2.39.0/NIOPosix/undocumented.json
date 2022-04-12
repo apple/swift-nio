@@ -1,0 +1,26 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOPosix/BaseSocketChannel.swift",
+      "line": 1290,
+      "symbol": "BaseSocketChannel.SynchronousOptions",
+      "symbol_kind": "source.lang.swift.decl.struct",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOPosix/NIOThreadPool.swift",
+      "line": 243,
+      "symbol": "NIOThreadPool.shutdownGracefully(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOPosix/NIOThreadPool.swift",
+      "line": 247,
+      "symbol": "NIOThreadPool.syncShutdownGracefully()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}
