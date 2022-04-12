@@ -1751,7 +1751,7 @@ class ByteBufferTest: XCTestCase {
         // We only want to run this test on 64-bit systems: 32-bit systems can't allocate buffers
         // large enough to run this test safely.
         guard MemoryLayout<Int>.size >= 8 else {
-            return
+            throw XCTSkip("This test is only supported on 64-bit systems.")
         }
 
         let targetSize = Int(UInt32.max)

@@ -361,10 +361,9 @@ public struct ByteBuffer {
         let newSlice = storageRebaseAmount ..< storageUpperBound
         self._storage = self._storage.reallocSlice(newSlice, capacity: capacity)
 
-        // Step 5: Fixup the indices. These can never underflow: `indexRebaseAmount` can only ever be 0 or `self._readerIndex`, so we either do nothing
-        // or we move the indices backwards by a valid range, as `self._writerIndex` is always >= `self._readerIndex`.
-        self._moveReaderIndex(to: self._readerIndex &- indexRebaseAmount)
-        self._moveWriterIndex(to: self._writerIndex &- indexRebaseAmount)
+        // Step 5: Fixup the indices. These should never trap, but we're going to leave them checked because this method is fiddly.
+        self._moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
+        self._moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
 
         // Step 6: As we've reallocated the buffer, we can now use the entire new buffer as our slice.
         self._slice = self._storage.fullSlice
