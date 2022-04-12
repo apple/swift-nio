@@ -18,7 +18,7 @@
 /// to the `ByteBuffer` when returning. This allows for greatly simplified processing.
 ///
 /// Many `ByteToMessageDecoder`'s can trivially be translated to `NIOSingleStepByteToMessageDecoder`'s. You should not implement
-/// `ByteToMessageDecoder`'s decode` and `decodeLast` methods.
+/// `ByteToMessageDecoder`'s `decode` and `decodeLast` methods.
 public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     /// The decoded type this `NIOSingleStepByteToMessageDecoder` decodes to. To conform to `ByteToMessageDecoder` it must be called
     /// `InboundOut` - see https://bugs.swift.org/browse/SR-11868.
