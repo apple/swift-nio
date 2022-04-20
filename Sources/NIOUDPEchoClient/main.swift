@@ -126,14 +126,23 @@ defer {
     try! group.syncShutdownGracefully()
 }
 
-let channel = try { () -> Channel in
-    switch connectTarget {
-    case .ip(let host, _, let listeningPort):
-        return try bootstrap.bind(host: host, port: listeningPort).wait()
-    case .unixDomainSocket(_, let listeningPath):
-        return try bootstrap.bind(unixDomainSocketPath: listeningPath).wait()
+
+let channel: Channel
+let connectedMode = true
+switch connectTarget {
+case .ip(let host, let sendPort, let listeningPort):
+    channel = try bootstrap.bind(host: host, port: listeningPort).wait()
+    if connectedMode {
+        print("Using connected-mode UDP")
+        try channel.connect(to: .init(ipAddress: host, port: sendPort)).wait()
     }
-    }()
+case .unixDomainSocket(let sendPath, let listeningPath):
+    channel = try bootstrap.bind(unixDomainSocketPath: listeningPath).wait()
+    if connectedMode {
+        print("Using connected-mode UDP")
+        try channel.connect(to: .init(unixDomainSocketPath: sendPath)).wait()
+    }
+}
 
 // Will be closed after we echo-ed back to the server.
 try channel.closeFuture.wait()
