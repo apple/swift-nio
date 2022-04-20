@@ -89,9 +89,6 @@ class TransitiveDependencyResolver(object):
 
         # Find the package dependency with the right name.
         for package_dependency in package["dependencies"]:
-            if "sourceControl" not in package_dependency:
-                continue
-
             dependency = package_dependency["sourceControl"][0]
 
             is_right_package = (
