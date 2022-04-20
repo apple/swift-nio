@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.4
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project

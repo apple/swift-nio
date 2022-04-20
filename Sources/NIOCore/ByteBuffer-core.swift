@@ -318,12 +318,54 @@ public struct ByteBuffer {
     @inlinable
     @inline(never)
     mutating func _copyStorageAndRebase(capacity: _Capacity, resetIndices: Bool = false) {
+        // This math has to be very careful, because we already know that in some call paths _readerIndex exceeds 1 << 24, and lots of this math
+        // is in UInt32 space. It's not hard for us to trip some of these conditions. As a result, I've heavily commented this
+        // fairly heavily to explain the math.
+
+        // Step 1: If we are resetting the indices, we need to slide the allocation by at least the current value of _readerIndex, so the new
+        // value of _readerIndex will be 0. Otherwise we can leave them as they are.
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
+
+        // Step 2: We also want to only copy the bytes within the slice, and move them to index 0. As a result, we have this
+        // state space after the copy-and-rebase:
+        //
+        // +--------------+------------------------+-------------------+
+        // | resetIndices | self._slice.lowerBound | self._readerIndex |
+        // +--------------+------------------------+-------------------+
+        // |     true     | 0                      | 0                 |
+        // |     false    | 0                      | self._readerIndex |
+        // +--------------+------------------------+-------------------+
+        //
+        // The maximum value of _readerIndex (and so indexRebaseAmount) is UInt32.max, but that can only happen if the lower bound
+        // of the slice is 0, when this addition would be safe. Recall that _readerIndex is an index _into_ the slice, and the upper bound of
+        // the slice must be stored into a UInt32, so the capacity can never be more than UInt32.max. As _slice.lowerBound advances, _readerIndex
+        // must shrink. In the worst case, _readerIndex == _slice.count == (_slice.upperBound - _slice.lowerBound), so it is always safe to add
+        // _slice.lowerBound to _readerIndex. This cannot overflow.
+        //
+        // This value ends up storing the lower bound of the bytes we want to copy.
         let storageRebaseAmount = self._slice.lowerBound + indexRebaseAmount
-        let newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
+
+        // Step 3: Here we need to find out the range within the slice that defines the upper bound of the range of bytes we want to copy.
+        // This will be the smallest of:
+        //
+        // 1. The target requested capacity, in bytes, as a UInt32 (the argument `capacity`), added to the lower bound. The resulting size of
+        //     the slice is equal to the argument `capacity`.
+        // 2. The upper bound of the current slice. This will be smaller than (1) if there are fewer bytes in the current buffer than the size of
+        //     the requested capacity.
+        //
+        // This math is checked on purpose: we should not pass a value of capacity that is larger than the size of the buffer, and if resetIndices is
+        // true then we shouldn't pass a value that is larger than readable bytes. If we do, that's an error.
+        let storageUpperBound = min(self._slice.upperBound, storageRebaseAmount + capacity)
+
+        // Step 4: Allocate the new buffer and copy the slice of bytes we want to keep.
+        let newSlice = storageRebaseAmount ..< storageUpperBound
         self._storage = self._storage.reallocSlice(newSlice, capacity: capacity)
+
+        // Step 5: Fixup the indices. These should never trap, but we're going to leave them checked because this method is fiddly.
         self._moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
         self._moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
+
+        // Step 6: As we've reallocated the buffer, we can now use the entire new buffer as our slice.
         self._slice = self._storage.fullSlice
     }
 

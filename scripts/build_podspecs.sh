@@ -75,7 +75,7 @@ for target in "${targets[@]}"; do
 
   while read -r raw_dependency; do
     dependencies+=( "${newline}  s.dependency '$raw_dependency', s.version.to_s" )
-  done < <("${here}/list_topsorted_dependencies.sh" -d "${target#Swift}" | grep -v "NIOPriorityQueue" | sed 's/^NIO/SwiftNIO/')
+  done < <("${here}/list_transitive_dependencies.py" "${target#Swift}" | grep -v "NIOPriorityQueue" | sed 's/^NIO/SwiftNIO/')
 
   libraries=""
 
@@ -100,7 +100,7 @@ Pod::Spec.new do |s|
   s.documentation_url = 'https://apple.github.io/swift-nio/docs/current/NIO/index.html'
   s.module_name = '${target#Swift}'
 
-  s.swift_version = '5.2'
+  s.swift_version = '5.4'
   s.cocoapods_version = '>=1.6.0'
   s.ios.deployment_target = '10.0'
   s.osx.deployment_target = '10.10'
@@ -114,8 +114,8 @@ Pod::Spec.new do |s|
 end
 EOF
 
-  pod repo update # last chance of getting the latest versions of previous pushed pods
   if $upload; then
+    pod repo update # last chance of getting the latest versions of previous pushed pods
     echo "Uploading ${tmpfile}/${target}.podspec"
     pod trunk push "${tmpfile}/${target}.podspec" --synchronous
   fi
