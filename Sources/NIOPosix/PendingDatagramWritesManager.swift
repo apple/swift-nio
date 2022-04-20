@@ -442,7 +442,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// On platforms that do not support a gathering write operation,
     ///
     /// - parameters:
-    ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
+    ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendmsg`).
     ///     - vectorWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `sendmmsg`).
     /// - returns: The `WriteResult` and whether the `Channel` is now writable.
     func triggerAppropriateWriteOperations(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?) throws -> IOResult<Int>,
