@@ -843,7 +843,7 @@ public final class DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop, socket: socket)
         }
-        return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
+        return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             let promise = eventLoop.makePromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
@@ -907,14 +907,14 @@ public final class DatagramBootstrap {
             return try DatagramChannel(eventLoop: eventLoop,
                                        protocolFamily: address.protocol)
         }
-        return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
+        return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             channel.register().flatMap {
                 channel.bind(to: address)
             }
         }
     }
 
-    private func bind0(makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel, _ registerAndBind: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
+    private func withNewChannel(makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel, _ bringup: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
         let channelOptions = self._channelOptions
@@ -932,7 +932,7 @@ public final class DatagramBootstrap {
                 channelInitializer(channel)
             }.flatMap {
                 eventLoop.assertInEventLoop()
-                return registerAndBind(eventLoop, channel)
+                return bringup(eventLoop, channel)
             }.map {
                 channel
             }.flatMapError { error in
