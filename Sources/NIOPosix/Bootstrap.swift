@@ -914,6 +914,74 @@ public final class DatagramBootstrap {
         }
     }
 
+    /// Connect the `DatagramChannel` to `host` and `port`.
+    ///
+    /// - parameters:
+    ///     - host: The host to connect to.
+    ///     - port: The port to connect to.
+    ///
+    /// - NOTE: This function is specifically for connected-mode UDP and does not call `bind`.
+    public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
+        return connect0 {
+            return try SocketAddress.makeAddressResolvingHost(host, port: port)
+        }
+    }
+
+    /// Connect the `DatagramChannel` to `address`.
+    ///
+    /// - parameters:
+    ///     - address: The `SocketAddress` to connect to.
+    ///
+    /// - NOTE: This function is specifically for connected-mode UDP and does not call `bind`.
+    public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
+        return connect0 { address }
+    }
+
+    /// Connect the `DatagramChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to connect to. `path` must not exist, it will be created by the system.
+    public func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
+        return bind0 {
+            return try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+        }
+    }
+
+    /// Connect the `DatagramChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to connect to. `path` must not exist, it will be created by the system.
+    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `path`.
+    public func connect(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool) -> EventLoopFuture<Channel> {
+        if cleanupExistingSocketFile {
+            do {
+                try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
+            } catch {
+                return group.next().makeFailedFuture(error)
+            }
+        }
+
+        return self.bind(unixDomainSocketPath: unixDomainSocketPath)
+    }
+
+    private func connect0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
+        let address: SocketAddress
+        do {
+            address = try makeSocketAddress()
+        } catch {
+            return group.next().makeFailedFuture(error)
+        }
+        func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
+            return try DatagramChannel(eventLoop: eventLoop,
+                                       protocolFamily: address.protocol)
+        }
+        return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
+            channel.register().flatMap {
+                channel.connect(to: address)
+            }
+        }
+    }
+
     private func withNewChannel(makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel, _ bringup: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
