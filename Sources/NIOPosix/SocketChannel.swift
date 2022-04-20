@@ -526,12 +526,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
-        // For now we don't support operating in connected mode for datagram channels.
-        throw ChannelError.operationUnsupported
+        if try self.socket.connect(to: address) {
+            self.pendingWrites.markConnected()
+            return true
+        } else {
+            preconditionFailure("Connect of datagram socket did not complete synchronously.")
+        }
     }
 
     override func finishConnectSocket() throws {
-        // For now we don't support operating in connected mode for datagram channels.
+        // This is not required for connected datagram channels connect is a synchronous operation.
         throw ChannelError.operationUnsupported
     }
 
