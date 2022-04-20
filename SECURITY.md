@@ -2,6 +2,24 @@
 
 This document specifies the security process for the SwiftNIO project.
 
+## Versions
+
+The SwiftNIO core team will address Security vulnarabilities in all SwiftNIO 2.x 
+versions. Since support for some Swift versions was dropped during the lifetime of 
+SwiftNIO 2, patch releases will be created for the last supported SwiftNIO versions
+that supported older Swift versions. 
+Considering a security vulnerability was introduced in 2.10.0, then SwiftNIO core 
+team will create the following patch releases:
+
+* NIO 2.29. + plus next patch release to address the issue for projects that support
+  Swift 5.0 and 5.1
+* NIO 2.39. + plus next patch release to address the issue for projects that support 
+  Swift 5.2 and 5.3
+* mainline + plus next patch release to address the issue for projects that support 
+  Swift 5.4 and later
+
+SwiftNIO 1.x is considered end of life and will not receive any security patches.
+
 ## Disclosures
 
 ### Private Disclosure Process
