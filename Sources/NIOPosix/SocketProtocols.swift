@@ -54,7 +54,7 @@ protocol SocketProtocol: BaseSocketProtocol {
                  controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int>
     
     func sendmsg(pointer: UnsafeRawBufferPointer,
-                 destinationPtr: UnsafePointer<sockaddr>,
+                 destinationPtr: UnsafePointer<sockaddr>?,
                  destinationSize: socklen_t,
                  controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
 
