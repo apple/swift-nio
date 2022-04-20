@@ -140,6 +140,7 @@ private struct PendingDatagramWritesState {
     private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialCapacity: 16)
     private var chunks: Int = 0
     public private(set) var bytes: Int64 = 0
+    private(set) var isConnected: Bool = false
 
     public var nextWrite: PendingDatagramWrite? {
         return self.pendingWrites.first
@@ -192,6 +193,10 @@ private struct PendingDatagramWritesState {
     /// All writes before this checkpoint will eventually be written to the socket.
     public mutating func markFlushCheckpoint() {
         self.pendingWrites.mark()
+    }
+
+    mutating func markConnected() {
+        self.isConnected = true
     }
 
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `sendmmsg`).
@@ -400,6 +405,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// Mark the flush checkpoint.
     func markFlushCheckpoint() {
         self.state.markFlushCheckpoint()
+    }
+
+    func markConnected() {
+        self.state.markConnected()
     }
 
     /// Is there a flush pending?
