@@ -11,13 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-
+#if compiler(>=5.5.2) && canImport(_Concurrency)
 import Dispatch
 import _NIODataStructures
 import NIOCore
 import NIOConcurrencyHelpers
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 
 /// An `EventLoop` that is thread safe and whose execution is fully controlled
 /// by the user.
@@ -41,7 +40,7 @@ import NIOConcurrencyHelpers
 /// If users wish to perform multiple tasks at once on an `AsyncEmbeddedEventLoop`, it is recommended that they
 /// use `establishContext` to perform the operations.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public final class AsyncEmbeddedEventLoop: EventLoop {
+public final class AsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     /// As we need to access this from any thread, we store this as an atomic.
     private let _now = NIOAtomic<UInt64>.makeAtomic(value: 0)
@@ -177,7 +176,7 @@ public final class AsyncEmbeddedEventLoop: EventLoop {
     /// a callback to an `EventLoopFuture` (which is what `EventLoopFuture.get` does) requires scheduling a work item onto
     /// the event loop, and running that work item requires spinning the loop. This is a non-trivial dance to get right due
     /// to timing issues, so we need to
-    public func awaitFuture<ResultType>(_ future: EventLoopFuture<ResultType>) async throws -> ResultType {
+    public func awaitFuture<ResultType: Sendable>(_ future: EventLoopFuture<ResultType>) async throws -> ResultType {
         // We need a task group to wait for the scheduled future result, because the future result callback
         // can only complete when we actually run the loop, which we need to do in another Task.
         return try await withThrowingTaskGroup(of: ResultType.self, returning: ResultType.self) { group in
@@ -248,7 +247,7 @@ public final class AsyncEmbeddedEventLoop: EventLoop {
 
     /// Executes the given function in the context of this actor. This is useful when it's necessary to be confident that an operation
     /// is "blocking" the actor. As long as you are executing, nothing else can execute in this loop.
-    public func executeInContext<ReturnType>(_ task: @escaping () throws -> ReturnType) async throws -> ReturnType {
+    public func executeInContext<ReturnType: Sendable>(_ task: @escaping @Sendable () throws -> ReturnType) async throws -> ReturnType {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ReturnType, Error>) in
             self.queue.async {
                 do {
