@@ -99,14 +99,31 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 
         p.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
             storageRefs[c] = storageRef.retain()
-            let addressLen = p.copySocketAddress(addresses.baseAddress! + c)
+
+            /// From man page of `sendmsg(2)`:
+            ///
+            /// > The `msg_name` field is used on an unconnected socket to specify
+            /// > the target address for a datagram.  It points to a buffer
+            /// > containing the address; the `msg_namelen` field should be set to
+            /// > the size of the address.  For a connected socket, these fields
+            /// > should be specified as `NULL` and 0, respectively.
+            let address: UnsafeMutablePointer<sockaddr_storage>?
+            let addressLen: socklen_t
+            if pending.isConnected {
+                address = nil
+                addressLen = 0
+            } else {
+                address = addresses.baseAddress! + c
+                addressLen = p.copySocketAddress(address!)
+            }
+
             iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
 
             var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[c])
             controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: p.address.protocol)
             let controlMessageBytePointer = controlBytes.validControlBytes
 
-            let msg = msghdr(msg_name: addresses.baseAddress! + c,
+            let msg = msghdr(msg_name: address,
                              msg_namelen: addressLen,
                              msg_iov: iovecs.baseAddress! + c,
                              msg_iovlen: 1,
@@ -529,9 +546,23 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                "illegal state for scalar datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
         let pending = self.state.nextWrite!
         do {
-            let writeResult = try pending.address.withSockAddr { (addrPtr, addrSize) in
-                try pending.data.withUnsafeReadableBytes {
-                    try scalarWriteOperation($0, addrPtr, socklen_t(addrSize), pending.metadata)
+            let writeResult: IOResult<Int>
+            if self.state.isConnected {
+                /// From man page of `sendmsg(2)`:
+                ///
+                /// > The `msg_name` field is used on an unconnected socket to specify
+                /// > the target address for a datagram.  It points to a buffer
+                /// > containing the address; the `msg_namelen` field should be set to
+                /// > the size of the address.  For a connected socket, these fields
+                /// > should be specified as `NULL` and 0, respectively.
+                writeResult = try pending.data.withUnsafeReadableBytes {
+                    try scalarWriteOperation($0, nil, 0, pending.metadata)
+                }
+            } else {
+                writeResult = try pending.address.withSockAddr { (addrPtr, addrSize) in
+                    try pending.data.withUnsafeReadableBytes {
+                        try scalarWriteOperation($0, addrPtr, socklen_t(addrSize), pending.metadata)
+                    }
                 }
             }
             return self.didWrite(writeResult, messages: nil)
