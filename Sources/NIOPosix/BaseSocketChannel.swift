@@ -140,12 +140,18 @@ private struct SocketChannelLifecycleManager {
                 pipeline.syncOperations.fireChannelUnregistered()
             }
 
+        // TODO: This is to support connect after bind for connected-mode datagram sockets. Might need a better solution for this.
+        // origin: .activated
+        case (.activated, .activate):
+            return { promise, pipeline in
+                promise?.succeed(())
+            }
+
         // bad transitions
         case (.fresh, .activate),                  // should go through .registered first
              (.preRegistered, .activate),       // need to first be fully registered
              (.preRegistered, .beginRegistration), // already registered
              (.fullyRegistered, .beginRegistration),  // already registered
-             (.activated, .activate),              // already activated
              (.activated, .beginRegistration),        // already fully registered (and activated)
              (.activated, .finishRegistration),         // already fully registered (and activated)
              (.fullyRegistered, .finishRegistration),   // already fully registered
