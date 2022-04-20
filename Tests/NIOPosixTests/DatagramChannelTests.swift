@@ -102,10 +102,10 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
     }
 }
 
-final class DatagramChannelTests: XCTestCase {
+class DatagramChannelTests: XCTestCase {
     private var group: MultiThreadedEventLoopGroup! = nil
-    private var firstChannel: Channel! = nil
-    private var secondChannel: Channel! = nil
+    var firstChannel: Channel! = nil
+    var secondChannel: Channel! = nil
 
     private func buildChannel(group: EventLoopGroup, host: String = "127.0.0.1") throws -> Channel {
         return try DatagramBootstrap(group: group)
@@ -126,11 +126,11 @@ final class DatagramChannelTests: XCTestCase {
         }
     }
 
-    override func setUp() {
-        super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        self.firstChannel = try! buildChannel(group: group)
-        self.secondChannel = try! buildChannel(group: group)
+        self.firstChannel = try buildChannel(group: group)
+        self.secondChannel = try buildChannel(group: group)
     }
 
     override func tearDown() {
@@ -904,5 +904,13 @@ final class DatagramChannelTests: XCTestCase {
             return // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
+    }
+}
+
+final class ConnectedDatagramChannelTests: DatagramChannelTests {
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait()
+        try self.secondChannel.connect(to: self.firstChannel.localAddress!).wait()
     }
 }
