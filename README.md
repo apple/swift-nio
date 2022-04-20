@@ -11,7 +11,7 @@ It's like [Netty](https://netty.io), but written for Swift.
 
 The SwiftNIO project is split across multiple repositories:
 
-Repository | NIO 2 (Swift 5.2+)
+Repository | NIO 2 (Swift 5.4+)
 --- | ---
 [https://github.com/apple/swift-nio][repo-nio] <br> SwiftNIO core | `from: "2.0.0"`
 [https://github.com/apple/swift-nio-ssl][repo-nio-ssl] <br> TLS (SSL) support | `from: "2.0.0"`
@@ -20,7 +20,7 @@ Repository | NIO 2 (Swift 5.2+)
 [https://github.com/apple/swift-nio-transport-services][repo-nio-transport-services] <br> first-class support for macOS, iOS, tvOS, and watchOS | `from: "1.0.0"`
 [https://github.com/apple/swift-nio-ssh][repo-nio-ssh] <br> SSH support | `.upToNextMinor(from: "0.2.0")`
 
-NIO 2.29.0 and older support Swift 5.0+.
+NIO 2.29.0 and older support Swift 5.0+, NIO 2.39.0 and older support Swift 5.2+.
 
 Within this repository we have a number of products that provide different functionality. This package contains the following products:
 
@@ -69,7 +69,7 @@ Redis | ✅ | ❌ | [mordil/swift-redi-stack](https://gitlab.com/Mordil/swift-re
 ### SwiftNIO 2
 This is the current version of SwiftNIO and will be supported for the foreseeable future.
 
-The latest released SwiftNIO 2 version supports Swift 5.2+. NIO 2.29.0 and older support Swift 5.0+.
+The latest released SwiftNIO 2 version supports Swift 5.4+. NIO 2.29.0 and older support Swift 5.0+, NIO 2.39.0 and older support Swift 5.2+.
 
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.
@@ -246,7 +246,7 @@ The syntax for adding target dependencies differs slightly between Swift
 versions. For example, if you want to depend on the `NIOCore`, `NIOPosix` and 
 `NIOHTTP1` modules, specify the following dependencies:
 
-#### Swift 5.2 and newer (`swift-tools-version:5.2`)
+#### Swift 5.4 and newer (`swift-tools-version:5.4`)
 
     dependencies: [.product(name: "NIOCore", package: "swift-nio"),
                    .product(name: "NIOPosix", package: "swift-nio"),
