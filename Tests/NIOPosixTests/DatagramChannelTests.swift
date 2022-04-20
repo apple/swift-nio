@@ -173,12 +173,6 @@ final class DatagramChannelTests: XCTestCase {
         }
     }
 
-    func testConnectionFails() throws {
-        XCTAssertThrowsError(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait()) { error in
-            XCTAssertEqual(.operationUnsupported, error as? ChannelError)
-        }
-    }
-
     func testDatagramChannelHasWatermark() throws {
         _ = try self.firstChannel.setOption(ChannelOptions.writeBufferWaterMark, value: ChannelOptions.Types.WriteBufferWaterMark(low: 1, high: 1024)).wait()
 

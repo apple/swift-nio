@@ -29,7 +29,6 @@ extension DatagramChannelTests {
       return [
                 ("testBasicChannelCommunication", testBasicChannelCommunication),
                 ("testManyWrites", testManyWrites),
-                ("testConnectionFails", testConnectionFails),
                 ("testDatagramChannelHasWatermark", testDatagramChannelHasWatermark),
                 ("testWriteFuturesFailWhenChannelClosed", testWriteFuturesFailWhenChannelClosed),
                 ("testManyManyDatagramWrites", testManyManyDatagramWrites),
