@@ -454,7 +454,7 @@ extension TimeAmount: AdditiveArithmetic {
 /// ```
 ///
 /// - note: `NIODeadline` should not be used to represent a time interval
-public struct NIODeadline: Equatable, Hashable {
+public struct NIODeadline: Equatable, Hashable, NIOSendable {
     @available(*, deprecated, message: "This typealias doesn't serve any purpose, please use UInt64 directly.")
     public typealias Value = UInt64
 
