@@ -913,4 +913,21 @@ final class ConnectedDatagramChannelTests: DatagramChannelTests {
         try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait()
         try self.secondChannel.connect(to: self.firstChannel.localAddress!).wait()
     }
+
+    func testConnectSetsRemoteAddressOnChannel() {
+        XCTAssertEqual(self.firstChannel.remoteAddress, self.secondChannel.localAddress)
+        XCTAssertEqual(self.secondChannel.remoteAddress, self.firstChannel.localAddress)
+    }
+
+    func testSendingToDifferentDestinationFails() {
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
+        buffer.writeStaticString("hello, someone else!")
+        let differentRemoteAddress = try! SocketAddress(
+            ipAddress: self.firstChannel.remoteAddress!.ipAddress!,
+            port: self.firstChannel.remoteAddress!.port! + 1)
+        let writeData = AddressedEnvelope(remoteAddress: differentRemoteAddress, data: buffer)
+        XCTAssertThrowsError(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait()) { error in
+            XCTAssertEqual((error as? IOError)?.errnoCode, EINVAL, "expected EINVAL, but caught other error: \(error)")
+        }
+    }
 }

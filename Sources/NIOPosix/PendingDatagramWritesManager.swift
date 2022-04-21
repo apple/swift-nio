@@ -97,7 +97,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
         let toWriteForThisBuffer = p.data.readableBytes
         toWrite += numericCast(toWriteForThisBuffer)
 
-        p.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+        try p.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
             storageRefs[c] = storageRef.retain()
 
             /// From man page of `sendmsg(2)`:
@@ -109,10 +109,14 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
             /// > should be specified as `NULL` and 0, respectively.
             let address: UnsafeMutablePointer<sockaddr_storage>?
             let addressLen: socklen_t
-            if pending.isConnected {
+            switch pending.connectedState {
+            case let .connected(to: connectedAddress):
+                guard p.address == connectedAddress else {
+                    throw IOError(errnoCode: EINVAL, reason: "synthetic error for sending message to a different destination from the remote of connected socket")
+                }
                 address = nil
                 addressLen = 0
-            } else {
+            case .unconnected:
                 address = addresses.baseAddress! + c
                 addressLen = p.copySocketAddress(address!)
             }
@@ -157,7 +161,12 @@ private struct PendingDatagramWritesState {
     private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialCapacity: 16)
     private var chunks: Int = 0
     public private(set) var bytes: Int64 = 0
-    private(set) var isConnected: Bool = false
+    private(set) var connectedState: ConnectedState = .unconnected
+
+    enum ConnectedState {
+        case unconnected
+        case connected(to: SocketAddress)
+    }
 
     public var nextWrite: PendingDatagramWrite? {
         return self.pendingWrites.first
@@ -212,8 +221,8 @@ private struct PendingDatagramWritesState {
         self.pendingWrites.mark()
     }
 
-    mutating func markConnected() {
-        self.isConnected = true
+    mutating func markConnected(to address: SocketAddress) {
+        self.connectedState = .connected(to: address)
     }
 
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `sendmmsg`).
@@ -424,8 +433,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         self.state.markFlushCheckpoint()
     }
 
-    func markConnected() {
-        self.state.markConnected()
+    func markConnected(to address: SocketAddress) {
+        self.state.markConnected(to: address)
     }
 
     /// Is there a flush pending?
@@ -541,13 +550,17 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///
     /// - parameters:
     ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
-    private func triggerScalarBufferWrite(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>?, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?) throws -> IOResult<Int>) rethrows -> OneWriteOperationResult {
+    private func triggerScalarBufferWrite(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>?, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
         assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
                "illegal state for scalar datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
         let pending = self.state.nextWrite!
         do {
             let writeResult: IOResult<Int>
-            if self.state.isConnected {
+            switch self.state.connectedState {
+            case let .connected(to: address):
+                guard pending.address == address else {
+                    throw IOError(errnoCode: EINVAL, reason: "synthetic error for sending message to a different destination from the remote of connected socket")
+                }
                 /// From man page of `sendmsg(2)`:
                 ///
                 /// > The `msg_name` field is used on an unconnected socket to specify
@@ -558,7 +571,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                 writeResult = try pending.data.withUnsafeReadableBytes {
                     try scalarWriteOperation($0, nil, 0, pending.metadata)
                 }
-            } else {
+            case .unconnected:
                 writeResult = try pending.address.withSockAddr { (addrPtr, addrSize) in
                     try pending.data.withUnsafeReadableBytes {
                         try scalarWriteOperation($0, addrPtr, socklen_t(addrSize), pending.metadata)
