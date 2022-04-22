@@ -527,7 +527,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
         if try self.socket.connect(to: address) {
-            self.pendingWrites.markConnected(to: address)
+            self.pendingWrites.markConnected()
             return true
         } else {
             preconditionFailure("Connect of datagram socket did not complete synchronously.")
