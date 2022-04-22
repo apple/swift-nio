@@ -73,7 +73,16 @@ private final class EchoHandler: ChannelInboundHandler {
 }
 
 // First argument is the program path
-let arguments = CommandLine.arguments
+var arguments = CommandLine.arguments
+// Support for `--connect` if it appears as the first argument.
+let connectedMode: Bool
+if let connectedModeFlagIndex = arguments.firstIndex(where: { $0 == "--connect" }) {
+    connectedMode = true
+    arguments.remove(at: connectedModeFlagIndex)
+} else {
+    connectedMode = false
+}
+// Now process the positional arguments.
 let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst(2).first
 let arg3 = arguments.dropFirst(3).first
@@ -126,22 +135,19 @@ defer {
     try! group.syncShutdownGracefully()
 }
 
+let channel = try { () -> Channel in
+    switch connectTarget {
+    case .ip(let host, _, let listeningPort):
+        return try bootstrap.bind(host: host, port: listeningPort).wait()
+    case .unixDomainSocket(_, let listeningPath):
+        return try bootstrap.bind(unixDomainSocketPath: listeningPath).wait()
+    }
+}()
 
-let channel: Channel
-let connectedMode = true
-switch connectTarget {
-case .ip(let host, let sendPort, let listeningPort):
-    channel = try bootstrap.bind(host: host, port: listeningPort).wait()
-    if connectedMode {
-        print("Using connected-mode UDP")
-        try channel.connect(to: .init(ipAddress: host, port: sendPort)).wait()
-    }
-case .unixDomainSocket(let sendPath, let listeningPath):
-    channel = try bootstrap.bind(unixDomainSocketPath: listeningPath).wait()
-    if connectedMode {
-        print("Using connected-mode UDP")
-        try channel.connect(to: .init(unixDomainSocketPath: sendPath)).wait()
-    }
+if connectedMode {
+    let remoteAddress = try remoteAddress()
+    print("Connecting to remote: \(remoteAddress)")
+    try channel.connect(to: remoteAddress).wait()
 }
 
 // Will be closed after we echo-ed back to the server.
