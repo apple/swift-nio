@@ -526,6 +526,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
+        // TODO: this could be a channel option to do other things instead here, e.g. fail the connect
+        if !self.pendingWrites.isEmpty {
+            self.pendingWrites.failAll(
+                error: IOError(
+                    errnoCode: EISCONN,
+                    reason: "Socket was connected before flushing pending write."),
+                close: false)
+        }
         if try self.socket.connect(to: address) {
             self.pendingWrites.markConnected()
             return true
@@ -675,6 +683,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     /// Buffer a write in preparation for a flush.
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         let data = self.unwrapData(data, as: AddressedEnvelope<ByteBuffer>.self)
+
+        // If the datagram socket is connected then we check here that the remote is appropriate.
+        if let remoteAddress = self.remoteAddress {
+            guard data.remoteAddress == remoteAddress else {
+                promise?.fail(IOError(errnoCode: EISCONN, reason: "Socket was connected before flushing pending write."))
+                return
+            }
+        }
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {
             assert(self.isActive)
