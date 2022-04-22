@@ -277,8 +277,8 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
         }
     }
 
-    /// Executes the given function in the context of this actor. This is useful when it's necessary to be confident that an operation
-    /// is "blocking" the actor. As long as you are executing, nothing else can execute in this loop.
+    /// Executes the given function in the context of this event loop. This is useful when it's necessary to be confident that an operation
+    /// is "blocking" the event loop. As long as you are executing, nothing else can execute in this loop.
     public func executeInContext<ReturnType: Sendable>(_ task: @escaping @Sendable () throws -> ReturnType) async throws -> ReturnType {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ReturnType, Error>) in
             self.queue.async {
