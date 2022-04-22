@@ -18,13 +18,13 @@ import XCTest
 
 private class EmbeddedTestError: Error { }
 
-final class AsyncEmbeddedEventLoopTests: XCTestCase {
+final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() throws {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = NIOAtomic<Bool>.makeAtomic(value: false)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             try await loop.executeInContext {
                 loop.execute { callbackRan.store(true) }
                 XCTAssertFalse(callbackRan.load())
@@ -42,7 +42,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let runCount = NIOAtomic<Int>.makeAtomic(value: 0)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             loop.execute { runCount.add(1) }
             loop.execute { runCount.add(1) }
             loop.execute { runCount.add(1) }
@@ -65,7 +65,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = NIOAtomic<Int>.makeAtomic(value: 0)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
 
             loop.execute {
                 // This should execute first.
@@ -101,7 +101,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = NIOAtomic<Bool>.makeAtomic(value: false)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             loop.execute { callbackRan.store(true) }
 
             try await loop.executeInContext {
@@ -128,7 +128,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = NIOAtomic<Bool>.makeAtomic(value: false)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             loop.execute { callbackRan.store(true) }
 
             try await loop.executeInContext {
@@ -149,7 +149,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = NIOAtomic<Bool>.makeAtomic(value: false)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             loop.execute { callbackRan.store(true) }
 
             try await loop.executeInContext {
@@ -170,7 +170,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackCount = NIOAtomic<Int>.makeAtomic(value: 0)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             _ = loop.scheduleTask(in: .nanoseconds(5)) {
                 callbackCount.add(1)
             }
@@ -205,7 +205,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = NIOAtomic.makeAtomic(value: 0)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             for index in 1...10 {
                 _ = loop.scheduleTask(in: .nanoseconds(Int64(index))) {
                     sentinel.store(index)
@@ -232,7 +232,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = NIOAtomic.makeAtomic(value: 0)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             _ = loop.scheduleTask(in: .nanoseconds(5)) {
                 sentinel.store(1)
                 loop.execute {
@@ -259,7 +259,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = NIOAtomic.makeAtomic(value: 0)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             _ = loop.scheduleTask(in: .nanoseconds(5)) {
                 sentinel.store(1)
                 _ = loop.scheduleTask(in: .nanoseconds(3)) {
@@ -305,7 +305,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = NIOAtomic.makeAtomic(value: 0)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             loop.execute {
                 XCTAssertEqual(sentinel.load(), 0)
                 _ = loop.scheduleTask(in: .nanoseconds(5)) {
@@ -329,7 +329,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             let task = loop.scheduleTask(in: .nanoseconds(10), { XCTFail("Cancelled task ran") })
             _ = loop.scheduleTask(in: .nanoseconds(5)) {
                 task.cancel()
@@ -347,7 +347,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let fired = NIOAtomic.makeAtomic(value: false)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             let task = loop.scheduleTask(in: .nanoseconds(5)) { true }
             task.futureResult.whenSuccess { fired.store($0) }
 
@@ -367,7 +367,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         XCTAsyncTest {
             let err = EmbeddedTestError()
             let fired = NIOAtomic.makeAtomic(value: false)
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             let task = loop.scheduleTask(in: .nanoseconds(5)) {
                 throw err
             }
@@ -397,7 +397,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
             // advanceTime(by:) is the same as on MultiThreadedEventLoopGroup: specifically, that tasks run via
             // schedule that expire "now" all run at the same time, and that any work they schedule is run
             // after all such tasks expire.
-            let loop = AsyncEmbeddedEventLoop()
+            let loop = NIOAsyncEmbeddedEventLoop()
             let lock = Lock()
             var firstScheduled: Scheduled<Void>? = nil
             var secondScheduled: Scheduled<Void>? = nil
@@ -480,7 +480,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = AsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncEmbeddedEventLoop()
             defer {
                 XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
             }
@@ -503,8 +503,28 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
             XCTAssertNotNil(weakThing)
             await eventLoop.run()
             XCTAssertNil(weakThing)
-            await XCTAssertThrowsError(try await eventLoop.awaitFuture(scheduled.futureResult)) { error in
+            await XCTAssertThrowsError(try await eventLoop.awaitFuture(scheduled.futureResult, timeout: .seconds(1))) { error in
                 XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
+            }
+        }
+        #else
+        throw XCTSkip()
+        #endif
+    }
+
+    func testWaitingForFutureCanTimeOut() throws {
+        #if compiler(>=5.5.2) && canImport(_Concurrency)
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        throw XCTSkip("Skip until #2087 is fixed.")
+        XCTAsyncTest {
+            let eventLoop = NIOAsyncEmbeddedEventLoop()
+            defer {
+                XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+            }
+            let promise = eventLoop.makePromise(of: Void.self)
+
+            await XCTAssertThrowsError(try await eventLoop.awaitFuture(promise.futureResult, timeout: .milliseconds(1))) { error in
+                XCTAssertEqual(NIOAsyncEmbeddedEventLoopError.timeoutAwaitingFuture, error as? NIOAsyncEmbeddedEventLoopError)
             }
         }
         #else
@@ -516,7 +536,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = AsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncEmbeddedEventLoop()
             let tasksRun = NIOAtomic.makeAtomic(value: 0)
             let startTime = eventLoop.now
 
@@ -542,7 +562,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = AsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncEmbeddedEventLoop()
             let tasksRun = NIOAtomic.makeAtomic(value: 0)
 
             func scheduleNowAndIncrement() {
@@ -565,7 +585,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = AsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncEmbeddedEventLoop()
             let deadline = NIODeadline.uptimeNanoseconds(0) + .seconds(42)
 
             let tasksRun = NIOAtomic.makeAtomic(value: 0)
@@ -585,7 +605,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = AsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncEmbeddedEventLoop()
 
             let tasksRun = NIOAtomic.makeAtomic(value: 0)
             eventLoop.scheduleTask(deadline: .uptimeNanoseconds(0) + .seconds(42)) {
@@ -613,7 +633,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = AsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncEmbeddedEventLoop()
             let counter = NIOAtomic.makeAtomic(value: 0)
 
             eventLoop.execute {
@@ -643,7 +663,7 @@ final class AsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = AsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncEmbeddedEventLoop()
             let counter = NIOAtomic.makeAtomic(value: 0)
 
             eventLoop.scheduleTask(in: .seconds(1)) {

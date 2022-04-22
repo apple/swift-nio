@@ -21,26 +21,45 @@ import NIOConcurrencyHelpers
 /// An `EventLoop` that is thread safe and whose execution is fully controlled
 /// by the user.
 ///
-/// Unlike more complex `EventLoop`s, such as `SelectableEventLoop`, the `AsyncEmbeddedEventLoop`
+/// Unlike more complex `EventLoop`s, such as `SelectableEventLoop`, the `NIOAsyncEmbeddedEventLoop`
 /// has no proper eventing mechanism. Instead, reads and writes are fully controlled by the
-/// entity that instantiates the `AsyncEmbeddedEventLoop`. This property makes `AsyncEmbeddedEventLoop`
+/// entity that instantiates the `NIOAsyncEmbeddedEventLoop`. This property makes `NIOAsyncEmbeddedEventLoop`
 /// of limited use for many application purposes, but highly valuable for testing and other
-/// kinds of mocking. Unlike `EmbeddedEventLoop`, `AsyncEmbeddedEventLoop` is fully thread-safe and
+/// kinds of mocking. Unlike `EmbeddedEventLoop`, `NIOAsyncEmbeddedEventLoop` is fully thread-safe and
 /// safe to use from within a Swift concurrency context.
 ///
-/// Unlike `EmbeddedEventLoop`, `AsyncEmbeddedEventLoop` does require that user tests appropriately
+/// Unlike `EmbeddedEventLoop`, `NIOAsyncEmbeddedEventLoop` does require that user tests appropriately
 /// enforce thread safety. Used carefully it is possible to safely operate the event loop without
-/// explicit synchronization, but it is recommended to use `establishContext` in any case where it's
+/// explicit synchronization, but it is recommended to use `executeInContext` in any case where it's
 /// necessary to ensure that the event loop is not making progress.
 ///
-/// Time is controllable on an `AsyncEmbeddedEventLoop`. It begins at `NIODeadline.uptimeNanoseconds(0)`
+/// Time is controllable on an `NIOAsyncEmbeddedEventLoop`. It begins at `NIODeadline.uptimeNanoseconds(0)`
 /// and may be advanced by a fixed amount by using `advanceTime(by:)`, or advanced to a point in
 /// time with `advanceTime(to:)`.
 ///
-/// If users wish to perform multiple tasks at once on an `AsyncEmbeddedEventLoop`, it is recommended that they
-/// use `establishContext` to perform the operations.
+/// If users wish to perform multiple tasks at once on an `NIOAsyncEmbeddedEventLoop`, it is recommended that they
+/// use `executeInContext` to perform the operations. For example:
+///
+/// ```
+/// await loop.executeInContext {
+///     // All three of these will be queued up simultaneously, and no other code can
+///     // get between them.
+///     loop.execute { firstTask() }
+///     loop.execute { secondTask() }
+///     loop.execute { thirdTask() }
+/// }
+/// ```
+///
+/// There is a tricky requirement around waiting for `EventLoopFuture`s when working with this
+/// event loop. Simply calling `.wait()` from the test thread will never complete. This is because
+/// `wait` calls `loop.execute` under the hood, and that callback cannot execute without calling
+/// `loop.run()`. As a result, if you need to await an `EventLoopFuture` created on this loop you
+/// should use `awaitFuture`.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public final class AsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
+public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
+    // This type is `@unchecked Sendable` because of the use of `taskNumber`. This
+    // variable is only used from within `queue`, but the compiler cannot see that.
+
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     /// As we need to access this from any thread, we store this as an atomic.
     private let _now = NIOAtomic<UInt64>.makeAtomic(value: 0)
@@ -70,12 +89,16 @@ public final class AsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
     // The number of the next task to be created. We track the order so that when we execute tasks
     // scheduled at the same time, we may do so in the order in which they were submitted for
     // execution.
+    //
+    // This can only be accessed from `queue`
     private var taskNumber = UInt64(0)
 
     /// The queue on which we run all our operations.
     private let queue = DispatchQueue(label: "io.swiftnio.AsyncEmbeddedEventLoop")
 
+    // This function must only be called on queue.
     private func nextTaskNumber() -> UInt64 {
+        dispatchPrecondition(condition: .onQueue(self.queue))
         defer {
             self.taskNumber += 1
         }
@@ -175,8 +198,8 @@ public final class AsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
     /// This replaces `EventLoopFuture.get()` for use with `AsyncEmbeddedEventLoop`. This is necessary because attaching
     /// a callback to an `EventLoopFuture` (which is what `EventLoopFuture.get` does) requires scheduling a work item onto
     /// the event loop, and running that work item requires spinning the loop. This is a non-trivial dance to get right due
-    /// to timing issues, so we need to
-    public func awaitFuture<ResultType: Sendable>(_ future: EventLoopFuture<ResultType>) async throws -> ResultType {
+    /// to timing issues, so this function provides a helper to ensure that this will work.
+    public func awaitFuture<ResultType: Sendable>(_ future: EventLoopFuture<ResultType>, timeout: TimeAmount) async throws -> ResultType {
         // We need a task group to wait for the scheduled future result, because the future result callback
         // can only complete when we actually run the loop, which we need to do in another Task.
         return try await withThrowingTaskGroup(of: ResultType.self, returning: ResultType.self) { group in
@@ -188,8 +211,14 @@ public final class AsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
                 while true {
                     await self.run()
                     try Task.checkCancellation()
-                    try await Task.sleep(nanoseconds: 100_000)
+                    await Task.yield()
                 }
+            }
+
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(timeout.nanoseconds))
+                print("Throwing")
+                throw NIOAsyncEmbeddedEventLoopError.timeoutAwaitingFuture
             }
 
             do {
@@ -200,6 +229,7 @@ public final class AsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
                 group.cancelAll()
                 return result
             } catch {
+                print("Threw")
                 group.cancelAll()
                 throw error
             }
@@ -215,6 +245,7 @@ public final class AsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
             self.queue.async {
                 let newTime = max(deadline, self.now)
 
+                var tasks = CircularBuffer<EmbeddedScheduledTask>()
                 while let nextTask = self.scheduledTasks.peek() {
                     guard nextTask.readyTime <= newTime else {
                         break
@@ -222,7 +253,6 @@ public final class AsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
 
                     // Now we want to grab all tasks that are ready to execute at the same
                     // time as the first.
-                    var tasks = Array<EmbeddedScheduledTask>()
                     while let candidateTask = self.scheduledTasks.peek(), candidateTask.readyTime == nextTask.readyTime {
                         tasks.append(candidateTask)
                         self.scheduledTasks.pop()
@@ -235,6 +265,8 @@ public final class AsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
                     for task in tasks {
                         task.task()
                     }
+
+                    tasks.removeAll(keepingCapacity: true)
                 }
 
                 // Finally ensure we got the time right.
@@ -352,6 +384,22 @@ private class PromiseCreationStore {
         // We no longer need the lock here.
         precondition(self.promiseCreationStore.isEmpty, "AsyncEmbeddedEventLoop freed with uncompleted promises!")
     }
+}
+
+/// Errors that can happen on a `NIOAsyncEmbeddedEventLoop`.
+public struct NIOAsyncEmbeddedEventLoopError: Error, Hashable {
+    private enum Backing {
+        case timeoutAwaitingFuture
+    }
+
+    private var backing: Backing
+
+    private init(_ backing: Backing) {
+        self.backing = backing
+    }
+
+    /// A timeout occurred while waiting for a future to complete.
+    public static let timeoutAwaitingFuture = Self(.timeoutAwaitingFuture)
 }
 
 #endif

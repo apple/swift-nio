@@ -48,7 +48,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
              testCase(AddressedEnvelopeTests.allTests),
              testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
-             testCase(AsyncEmbeddedEventLoopTests.allTests),
+             testCase(NIOAsyncEmbeddedEventLoopTests.allTests),
              testCase(AsyncSequenceCollectTests.allTests),
              testCase(Base64Test.allTests),
              testCase(BaseObjectTest.allTests),
