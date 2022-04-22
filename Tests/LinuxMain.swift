@@ -74,6 +74,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(EmbeddedChannelTest.allTests),
              testCase(EmbeddedEventLoopTest.allTests),
              testCase(EventCounterHandlerTest.allTests),
+             testCase(EventLoopFutureAsyncAwaitSupportTest.allTests),
              testCase(EventLoopFutureTest.allTests),
              testCase(EventLoopTest.allTests),
              testCase(FileRegionTest.allTests),

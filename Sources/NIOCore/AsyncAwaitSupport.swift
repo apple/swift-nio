@@ -28,13 +28,23 @@ extension EventLoopFuture {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func get() async throws -> Value {
-        return try await withUnsafeThrowingContinuation { cont in
-            self.whenComplete { result in
-                switch result {
-                case .success(let value):
-                    cont.resume(returning: value)
-                case .failure(let error):
-                    cont.resume(throwing: error)
+        try await withTaskCancellationHandler {
+            try await withUnsafeThrowingContinuation { cont in
+                self.whenComplete { result in
+                    switch result {
+                    case .success(let value):
+                        cont.resume(returning: value)
+                    case .failure(let error):
+                        cont.resume(throwing: error)
+                    }
+                }
+            }
+        } onCancel: {
+            if self.eventLoop.inEventLoop {
+                self._setValue(value: .failure(CancellationError()))._run()
+            } else {
+                self.eventLoop.execute {
+                    self._setValue(value: .failure(CancellationError()))._run()
                 }
             }
         }
