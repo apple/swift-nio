@@ -66,11 +66,13 @@ extension DatagramChannelTests {
                 ("testReceiveEcnAndPacketInfoIPV6VectorRead", testReceiveEcnAndPacketInfoIPV6VectorRead),
                 ("testReceiveEcnAndPacketInfoIPV4VectorReadVectorWrite", testReceiveEcnAndPacketInfoIPV4VectorReadVectorWrite),
                 ("testReceiveEcnAndPacketInfoIPV6VectorReadVectorWrite", testReceiveEcnAndPacketInfoIPV6VectorReadVectorWrite),
-                ("testSendingMessageOnConnectedSocket", testSendingMessageOnConnectedSocket),
+                ("testSendingAddressedEnvelopeOnUnconnectedSocketSucceeds", testSendingAddressedEnvelopeOnUnconnectedSocketSucceeds),
+                ("testSendingByteBufferOnUnconnectedSocketFails", testSendingByteBufferOnUnconnectedSocketFails),
+                ("testSendingByteBufferOnConnectedSocketSucceeds", testSendingByteBufferOnConnectedSocketSucceeds),
+                ("testSendingAddressedEnvelopeOnConnectedSocketFails", testSendingAddressedEnvelopeOnConnectedSocketFails),
                 ("testConnectingSocketAfterFlushingExistingMessages", testConnectingSocketAfterFlushingExistingMessages),
                 ("testConnectingUnconnectedSocketToADifferentRemoteFailsBufferedWrites", testConnectingUnconnectedSocketToADifferentRemoteFailsBufferedWrites),
                 ("testConnectingConnectedSocketToADifferentRemoteFailsBufferedWrites", testConnectingConnectedSocketToADifferentRemoteFailsBufferedWrites),
-                ("testNewWriteToDifferentPeerOnConnectedSocketThrowsError", testNewWriteToDifferentPeerOnConnectedSocketThrowsError),
            ]
    }
 }

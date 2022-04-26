@@ -680,16 +680,43 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return true
         }
     }
+
     /// Buffer a write in preparation for a flush.
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let data = self.unwrapData(data, as: AddressedEnvelope<ByteBuffer>.self)
+        if let envelope = self.tryUnwrapData(data, as: AddressedEnvelope<ByteBuffer>.self) {
+            return bufferPendingAddressedWrite(data: envelope, promise: promise)
+        }
+        if let data = self.tryUnwrapData(data, as: ByteBuffer.self) {
+            return bufferPendingUnaddressedWrite(data: data, promise: promise)
+        }
+        // TODO: should this be a preconditionFailure or just fail the promise?
+        preconditionFailure("bufferPendingWrite(data:promise:) called with unexpected type.")
+    }
 
-        // If the datagram socket is connected then we check here that the remote is appropriate.
-        if let remoteAddress = self.remoteAddress {
-            guard data.remoteAddress == remoteAddress else {
-                promise?.fail(IOError(errnoCode: EISCONN, reason: "Socket was connected before flushing pending write."))
-                return
-            }
+    /// Buffer a write in preparation for a flush.
+    private func bufferPendingUnaddressedWrite(data: ByteBuffer, promise: EventLoopPromise<Void>?) {
+        // It is only appropriate to not use an AddressedEnvelope if the socket is connected.
+        guard self.remoteAddress != nil else {
+            promise?.fail(IOError(errnoCode: ENOTCONN, reason: """
+                Address not supplied when writing to an unconnected socket
+                """))
+            return
+        }
+
+        if !self.pendingWrites.add(data: data, promise: promise) {
+            assert(self.isActive)
+            self.pipeline.syncOperations.fireChannelWritabilityChanged()
+        }
+    }
+
+    /// Buffer a write in preparation for a flush.
+    private func bufferPendingAddressedWrite(data: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) {
+        // It is only appropriate to use an AddressedEnvelope if the socket is not connected.
+        guard self.remoteAddress == nil else {
+            promise?.fail(IOError(errnoCode: EISCONN, reason: """
+            Address supplied when writing to an connected socket
+            """))
+            return
         }
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {

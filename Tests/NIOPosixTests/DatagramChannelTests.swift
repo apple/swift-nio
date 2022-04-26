@@ -129,6 +129,7 @@ class DatagramChannelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        self.continueAfterFailure = false
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.firstChannel = try! buildChannel(group: group)
         self.secondChannel = try! buildChannel(group: group)
@@ -908,96 +909,204 @@ class DatagramChannelTests: XCTestCase {
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
     }
 
-    func testSendingMessageOnConnectedSocket() throws {
-        // Connect firstChannel to secondChannel.
+    func assertSending(
+        data: ByteBuffer,
+        from sourceChannel: Channel,
+        to destinationChannel: Channel,
+        wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool,
+        resultsIn expectedResult: Result<Void, IOError>,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws {
+        // Wrap data in AddressedEnvelope if required.
+        let writePayload: NIOAny
+        if shouldWrapInAddressedEnvelope {
+            let envelope = AddressedEnvelope(remoteAddress: destinationChannel.localAddress!, data: data)
+            writePayload = NIOAny(envelope)
+        } else {
+            writePayload = NIOAny(data)
+        }
+
+        // Write and flush.
+        let writeResult = sourceChannel.writeAndFlush(writePayload)
+
+        // Check the expected result.
+        switch expectedResult {
+        case .success:
+            // Check the write succeeded.
+            XCTAssertNoThrow(try writeResult.wait())
+
+            // Check the destination received the sent payload.
+            let reads = try destinationChannel.waitForDatagrams(count: 1)
+            XCTAssertEqual(reads.count, 1)
+            let read = reads.first!
+            XCTAssertEqual(read.data, data)
+            XCTAssertEqual(read.remoteAddress, sourceChannel.localAddress!)
+
+        case .failure(let expectedError):
+            // Check the write failed with the expected errno.
+            XCTAssertThrowsError(try writeResult.wait()) { error in
+                XCTAssertEqual(
+                    (error as? IOError)?.errnoCode,
+                    expectedError.errnoCode,
+                    "expected \(expectedError), but caught other error: \(error)")
+            }
+        }
+    }
+
+    func assertSendingHelloWorld(
+        from sourceChannel: Channel,
+        to destinationChannel: Channel,
+        wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool,
+        resultsIn expectedResult: Result<Void, IOError>,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws {
+        var buffer = sourceChannel.allocator.buffer(capacity: 256)
+        buffer.writeStaticString("hello, world!")
+        try self.assertSending(
+            data: buffer,
+            from: sourceChannel,
+            to: destinationChannel,
+            wrappingInAddressedEnvelope: shouldWrapInAddressedEnvelope,
+            resultsIn: expectedResult,
+            file: file,
+            line: line
+        )
+    }
+
+    func bufferWrite(
+        of data: ByteBuffer,
+        from sourceChannel: Channel,
+        to destinationChannel: Channel,
+        wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool
+    ) -> EventLoopFuture<Void> {
+        if shouldWrapInAddressedEnvelope {
+            let envelope = AddressedEnvelope(remoteAddress: destinationChannel.localAddress!, data: data)
+            return sourceChannel.write(envelope)
+        } else {
+            return sourceChannel.write(data)
+        }
+    }
+
+    func bufferWriteOfHelloWorld(
+        from sourceChannel: Channel,
+        to destinationChannel: Channel,
+        wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool
+    ) -> EventLoopFuture<Void> {
+        var buffer = sourceChannel.allocator.buffer(capacity: 256)
+        buffer.writeStaticString("hello, world!")
+        return self.bufferWrite(
+            of: buffer,
+            from: sourceChannel,
+            to: destinationChannel,
+            wrappingInAddressedEnvelope: shouldWrapInAddressedEnvelope
+        )
+    }
+
+    func testSendingAddressedEnvelopeOnUnconnectedSocketSucceeds() throws {
+        try self.assertSendingHelloWorld(
+            from: self.firstChannel,
+            to: self.secondChannel,
+            wrappingInAddressedEnvelope: true,
+            resultsIn: .success(())
+        )
+    }
+
+    func testSendingByteBufferOnUnconnectedSocketFails() throws {
+        try self.assertSendingHelloWorld(
+            from: self.firstChannel,
+            to: self.secondChannel,
+            wrappingInAddressedEnvelope: false,
+            resultsIn: .failure(IOError(errnoCode: ENOTCONN, reason: ""))
+        )
+    }
+
+    func testSendingByteBufferOnConnectedSocketSucceeds() throws {
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait())
 
-        // Send message from firstChannel to secondChannel.
-        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
-        buffer.writeStaticString("hello, world!")
-        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        try self.assertSendingHelloWorld(
+            from: self.firstChannel,
+            to: self.secondChannel,
+            wrappingInAddressedEnvelope: false,
+            resultsIn: .success(())
+        )
+    }
 
-        // Check secondChannel received message.
-        let reads = try self.secondChannel.waitForDatagrams(count: 1)
-        XCTAssertEqual(reads.count, 1)
-        let read = reads.first!
-        XCTAssertEqual(read.data, buffer)
-        XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!)
+    func testSendingAddressedEnvelopeOnConnectedSocketFails() throws {
+        XCTAssertNoThrow(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait())
+
+        try self.assertSendingHelloWorld(
+            from: self.firstChannel,
+            to: self.secondChannel,
+            wrappingInAddressedEnvelope: true,
+            resultsIn: .failure(IOError(errnoCode: EISCONN, reason: ""))
+        )
     }
 
     func testConnectingSocketAfterFlushingExistingMessages() throws {
         // Send message from firstChannel to secondChannel.
-        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
-        buffer.writeStaticString("hello, world!")
-        let writeDataFirstToSecond = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeDataFirstToSecond)).wait())
-
-        // Check secondChannel received message.
-        let secondChannelReads = try self.secondChannel.waitForDatagrams(count: 1)
-        XCTAssertEqual(secondChannelReads.count, 1)
-        XCTAssertEqual(secondChannelReads.first!.data, buffer)
-        XCTAssertEqual(secondChannelReads.first!.remoteAddress, self.firstChannel.localAddress!)
+        try self.assertSendingHelloWorld(
+            from: self.firstChannel,
+            to: self.secondChannel,
+            wrappingInAddressedEnvelope: true,
+            resultsIn: .success(())
+        )
 
         // Connect firstChannel to thirdChannel.
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.thirdChannel.localAddress!).wait())
 
         // Send message from firstChannel to thirdChannel.
-        let writeDataFirstToThird = AddressedEnvelope(remoteAddress: self.thirdChannel.localAddress!, data: buffer)
-        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeDataFirstToThird)).wait())
-
-        // Check thirdChannel received message.
-        let thirdChannelReads = try self.thirdChannel.waitForDatagrams(count: 1)
-        XCTAssertEqual(thirdChannelReads.count, 1)
-        XCTAssertEqual(thirdChannelReads.first!.data, buffer)
-        XCTAssertEqual(thirdChannelReads.first!.remoteAddress, self.firstChannel.localAddress!)
+        try self.assertSendingHelloWorld(
+            from: self.firstChannel,
+            to: self.thirdChannel,
+            wrappingInAddressedEnvelope: false,
+            resultsIn: .success(())
+        )
     }
 
-    func testConnectingUnconnectedSocketToADifferentRemoteFailsBufferedWrites() {
+    func testConnectingUnconnectedSocketToADifferentRemoteFailsBufferedWrites() throws {
         // Buffer message from firstChannel to secondChannel.
-        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
-        buffer.writeStaticString("hello")
-        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        let writeFuture = self.firstChannel.write(writeData)
+        let bufferedWrite = bufferWriteOfHelloWorld(from: self.firstChannel, to: self.secondChannel, wrappingInAddressedEnvelope: true)
 
         // Connect firstChannel to thirdChannel.
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.thirdChannel.localAddress!).wait())
 
         // Check that the buffered write was failed.
-        XCTAssertThrowsError(try writeFuture.wait()) { error in
+        XCTAssertThrowsError(try bufferedWrite.wait()) { error in
             XCTAssertEqual((error as? IOError)?.errnoCode, EISCONN, "expected EISCONN, but caught other error: \(error)")
         }
+
+        // Send message from firstChannel to thirdChannel.
+        try self.assertSendingHelloWorld(
+            from: self.firstChannel,
+            to: self.thirdChannel,
+            wrappingInAddressedEnvelope: false,
+            resultsIn: .success(())
+        )
     }
 
-    func testConnectingConnectedSocketToADifferentRemoteFailsBufferedWrites() {
+    func testConnectingConnectedSocketToADifferentRemoteFailsBufferedWrites() throws {
         // Connect firstChannel to secondChannel.
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait())
 
         // Buffer message from firstChannel to secondChannel.
-        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
-        buffer.writeStaticString("hello")
-        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        let writeFuture = self.firstChannel.write(writeData)
+        let bufferedWrite = bufferWriteOfHelloWorld(from: self.firstChannel, to: self.secondChannel, wrappingInAddressedEnvelope: false)
 
         // Connect firstChannel to thirdChannel.
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.thirdChannel.localAddress!).wait())
 
         // Check that the buffered write was failed.
-        XCTAssertThrowsError(try writeFuture.wait()) { error in
+        XCTAssertThrowsError(try bufferedWrite.wait()) { error in
             XCTAssertEqual((error as? IOError)?.errnoCode, EISCONN, "expected EISCONN, but caught other error: \(error)")
         }
-    }
 
-    func testNewWriteToDifferentPeerOnConnectedSocketThrowsError() {
-        // Connect firstChannel to secondChannel.
-        XCTAssertNoThrow(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait())
-
-        // Check that sending message from firstChannel to thirdChannel fails.
-        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
-        buffer.writeStaticString("hello, someone else!")
-        let writeData = AddressedEnvelope(remoteAddress: self.thirdChannel.localAddress!, data: buffer)
-        XCTAssertThrowsError(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait()) { error in
-            XCTAssertEqual((error as? IOError)?.errnoCode, EISCONN, "expected EISCONN, but caught other error: \(error)")
-        }
+        // Send message from firstChannel to thirdChannel.
+        try self.assertSendingHelloWorld(
+            from: self.firstChannel,
+            to: self.thirdChannel,
+            wrappingInAddressedEnvelope: false,
+            resultsIn: .success(())
+        )
     }
 }
