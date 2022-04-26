@@ -71,8 +71,8 @@ extension DatagramChannelTests {
                 ("testSendingByteBufferOnConnectedSocketSucceeds", testSendingByteBufferOnConnectedSocketSucceeds),
                 ("testSendingAddressedEnvelopeOnConnectedSocketFails", testSendingAddressedEnvelopeOnConnectedSocketFails),
                 ("testConnectingSocketAfterFlushingExistingMessages", testConnectingSocketAfterFlushingExistingMessages),
-                ("testConnectingUnconnectedSocketToADifferentRemoteFailsBufferedWrites", testConnectingUnconnectedSocketToADifferentRemoteFailsBufferedWrites),
-                ("testConnectingConnectedSocketToADifferentRemoteFailsBufferedWrites", testConnectingConnectedSocketToADifferentRemoteFailsBufferedWrites),
+                ("testConnectingSocketFailsBufferedWrites", testConnectingSocketFailsBufferedWrites),
+                ("testReconnectingSocketFailsBufferedWrites", testReconnectingSocketFailsBufferedWrites),
            ]
    }
 }

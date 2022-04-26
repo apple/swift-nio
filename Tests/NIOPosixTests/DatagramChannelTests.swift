@@ -962,10 +962,8 @@ class DatagramChannelTests: XCTestCase {
         file: StaticString = #file,
         line: UInt = #line
     ) throws {
-        var buffer = sourceChannel.allocator.buffer(capacity: 256)
-        buffer.writeStaticString("hello, world!")
         try self.assertSending(
-            data: buffer,
+            data: sourceChannel.allocator.buffer(staticString: "hello, world!"),
             from: sourceChannel,
             to: destinationChannel,
             wrappingInAddressedEnvelope: shouldWrapInAddressedEnvelope,
@@ -994,10 +992,8 @@ class DatagramChannelTests: XCTestCase {
         to destinationChannel: Channel,
         wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool
     ) -> EventLoopFuture<Void> {
-        var buffer = sourceChannel.allocator.buffer(capacity: 256)
-        buffer.writeStaticString("hello, world!")
-        return self.bufferWrite(
-            of: buffer,
+        self.bufferWrite(
+            of: sourceChannel.allocator.buffer(staticString: "hello, world!"),
             from: sourceChannel,
             to: destinationChannel,
             wrappingInAddressedEnvelope: shouldWrapInAddressedEnvelope
@@ -1065,7 +1061,7 @@ class DatagramChannelTests: XCTestCase {
         )
     }
 
-    func testConnectingUnconnectedSocketToADifferentRemoteFailsBufferedWrites() throws {
+    func testConnectingSocketFailsBufferedWrites() throws {
         // Buffer message from firstChannel to secondChannel.
         let bufferedWrite = bufferWriteOfHelloWorld(from: self.firstChannel, to: self.secondChannel, wrappingInAddressedEnvelope: true)
 
@@ -1086,7 +1082,7 @@ class DatagramChannelTests: XCTestCase {
         )
     }
 
-    func testConnectingConnectedSocketToADifferentRemoteFailsBufferedWrites() throws {
+    func testReconnectingSocketFailsBufferedWrites() throws {
         // Connect firstChannel to secondChannel.
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait())
 
