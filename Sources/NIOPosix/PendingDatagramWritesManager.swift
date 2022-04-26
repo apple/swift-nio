@@ -442,18 +442,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         return self.state.isEmpty
     }
 
-    /// Add a pending write.
-    ///
-    /// - parameters:
-    ///     - envelope: The `AddressedEnvelope<IOData>` to write.
-    ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
-    /// - result: If the `Channel` is still writable after adding the write of `data`.
-    func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
+    private func add(_ pendingWrite: PendingDatagramWrite) -> Bool {
         assert(self.isOpen)
-        self.state.append(.init(data: envelope.data,
-                                promise: promise,
-                                address: envelope.remoteAddress,
-                                metadata: envelope.metadata))
+        self.state.append(pendingWrite)
 
         if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
             // Returns false to signal the Channel became non-writable and we need to notify the user.
@@ -463,25 +454,32 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         return true
     }
 
-    /// Add a pending write, without an addressed envelope (on a connected socket).
+    /// Add a pending write, with an `AddressedEnvelope`, on an unconnected socket.
+    ///
+    /// - parameters:
+    ///     - envelope: The `AddressedEnvelope<ByteBuffer>` to write.
+    ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
+    /// - result: If the `Channel` is still writable after adding the write of `data`.
+    func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
+        return self.add(PendingDatagramWrite(
+            data: envelope.data,
+            promise: promise,
+            address: envelope.remoteAddress,
+            metadata: envelope.metadata))
+    }
+
+    /// Add a pending write, without an `AddressedEnvelope`, on a connected socket.
     ///
     /// - parameters:
     ///     - data: The `ByteBuffer` to write.
     ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
     /// - result: If the `Channel` is still writable after adding the write of `data`.
     func add(data: ByteBuffer, promise: EventLoopPromise<Void>?) -> Bool {
-        assert(self.isOpen)
-        self.state.append(.init(data: data,
-                                promise: promise,
-                                address: nil,
-                                metadata: nil))
-
-        if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
-            // Returns false to signal the Channel became non-writable and we need to notify the user.
-            self.publishedWritability = false
-            return false
-        }
-        return true
+        return self.add(PendingDatagramWrite(
+            data: data,
+            promise: promise,
+            address: nil,
+            metadata: nil))
     }
 
     /// Returns the best mechanism to write pending data at the current point in time.
