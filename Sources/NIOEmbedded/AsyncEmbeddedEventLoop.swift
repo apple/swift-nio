@@ -110,7 +110,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
         return DispatchQueue.getSpecific(key: Self.inQueueKey) == self.thisLoopID
     }
 
-    /// Initialize a new `AsyncEmbeddedEventLoop`.
+    /// Initialize a new `NIOAsyncEmbeddedEventLoop`.
     public init() {
         self.queue.setSpecific(key: Self.inQueueKey, value: self.thisLoopID)
     }
@@ -171,13 +171,13 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
         return self.scheduleTask(deadline: self.now + `in`, task)
     }
 
-    /// On an `AsyncEmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that
+    /// On an `NIOAsyncEmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that
     /// `task` will be run the next time you call `AsyncEmbeddedEventLoop.run`.
     public func execute(_ task: @escaping () -> Void) {
         self.scheduleTask(deadline: self.now, task)
     }
 
-    /// Run all tasks that have previously been submitted to this `AsyncEmbeddedEventLoop`, either by calling `execute` or
+    /// Run all tasks that have previously been submitted to this `NIOAsyncEmbeddedEventLoop`, either by calling `execute` or
     /// events that have been enqueued using `scheduleTask`/`scheduleRepeatedTask`/`scheduleRepeatedAsyncTask` and whose
     /// deadlines have expired.
     ///
@@ -195,7 +195,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
 
     /// Unwrap a future result from this event loop.
     ///
-    /// This replaces `EventLoopFuture.get()` for use with `AsyncEmbeddedEventLoop`. This is necessary because attaching
+    /// This replaces `EventLoopFuture.get()` for use with `NIOAsyncEmbeddedEventLoop`. This is necessary because attaching
     /// a callback to an `EventLoopFuture` (which is what `EventLoopFuture.get` does) requires scheduling a work item onto
     /// the event loop, and running that work item requires spinning the loop. This is a non-trivial dance to get right due
     /// to timing issues, so this function provides a helper to ensure that this will work.
@@ -285,7 +285,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
     /// accessed from the event loop thread and want to be 100% sure of the thread-safety of accessing them.
     ///
     /// Be careful not to try to spin the event loop again from within this callback, however. As long as this function is on the call
-    /// stack the `AsyncEmbeddedEventLoop` cannot progress, and so any attempt to progress it will block until this function returns.
+    /// stack the `NIOAsyncEmbeddedEventLoop` cannot progress, and so any attempt to progress it will block until this function returns.
     public func executeInContext<ReturnType: Sendable>(_ task: @escaping @Sendable () throws -> ReturnType) async throws -> ReturnType {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ReturnType, Error>) in
             self.queue.async {
@@ -368,7 +368,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
 
 /// This is a thread-safe promise creation store.
 ///
-/// We use this to keep track of where promises come from in the `AsyncEmbeddedEventLoop`.
+/// We use this to keep track of where promises come from in the `NIOAsyncEmbeddedEventLoop`.
 private class PromiseCreationStore {
     private let lock = Lock()
     private var promiseCreationStore: [_NIOEventLoopFutureIdentifier: (file: StaticString, line: UInt)] = [:]
