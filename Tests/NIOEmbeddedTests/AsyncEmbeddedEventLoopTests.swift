@@ -393,7 +393,7 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            // This test validates that the ordering of task firing on EmbeddedEventLoop via
+            // This test validates that the ordering of task firing on NIOAsyncEmbeddedEventLoop via
             // advanceTime(by:) is the same as on MultiThreadedEventLoopGroup: specifically, that tasks run via
             // schedule that expire "now" all run at the same time, and that any work they schedule is run
             // after all such tasks expire.
