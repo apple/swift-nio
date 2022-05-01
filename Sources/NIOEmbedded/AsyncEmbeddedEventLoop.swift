@@ -360,7 +360,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
     }
 
     deinit {
-        precondition(scheduledTasks.isEmpty, "AsyncEmbeddedEventLoop freed with unexecuted scheduled tasks!")
+        precondition(scheduledTasks.isEmpty, "NIOAsyncEmbeddedEventLoop freed with unexecuted scheduled tasks!")
     }
 }
 
@@ -387,7 +387,7 @@ private class PromiseCreationStore {
 
     deinit {
         // We no longer need the lock here.
-        precondition(self.promiseCreationStore.isEmpty, "AsyncEmbeddedEventLoop freed with uncompleted promises!")
+        precondition(self.promiseCreationStore.isEmpty, "NIOAsyncEmbeddedEventLoop freed with uncompleted promises!")
     }
 }
 
