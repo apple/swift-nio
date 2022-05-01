@@ -279,6 +279,13 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
 
     /// Executes the given function in the context of this event loop. This is useful when it's necessary to be confident that an operation
     /// is "blocking" the event loop. As long as you are executing, nothing else can execute in this loop.
+    ///
+    /// While this call is running, no action can take place on the loop. This function can therefore be a good place to schedule a bunch
+    /// of tasks "at once", with a guarantee that none of them can progress. It's also useful if you have types that can only be safely
+    /// accessed from the event loop thread and want to be 100% sure of the thread-safety of accessing them.
+    ///
+    /// Be careful not to try to spin the event loop again from within this callback, however. As long as this function is on the call
+    /// stack the `AsyncEmbeddedEventLoop` cannot progress, and so any attempt to progress it will block until this function returns.
     public func executeInContext<ReturnType: Sendable>(_ task: @escaping @Sendable () throws -> ReturnType) async throws -> ReturnType {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ReturnType, Error>) in
             self.queue.async {
