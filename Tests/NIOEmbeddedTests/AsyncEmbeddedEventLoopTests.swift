@@ -515,7 +515,6 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
     func testWaitingForFutureCanTimeOut() throws {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
-        throw XCTSkip("Skip until #2087 is fixed.")
         XCTAsyncTest {
             let eventLoop = NIOAsyncEmbeddedEventLoop()
             defer {

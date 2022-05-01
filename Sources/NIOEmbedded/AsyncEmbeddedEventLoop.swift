@@ -203,8 +203,12 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
         // We need a task group to wait for the scheduled future result, because the future result callback
         // can only complete when we actually run the loop, which we need to do in another Task.
         return try await withThrowingTaskGroup(of: ResultType.self, returning: ResultType.self) { group in
+            // We need an innner promise to allow cancellation of the wait.
+            let promise = self.makePromise(of: ResultType.self)
+            future.cascade(to: promise)
+
             group.addTask {
-                try await future.get()
+                try await promise.futureResult.get()
             }
 
             group.addTask {
@@ -217,6 +221,14 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
 
             group.addTask {
                 try await Task.sleep(nanoseconds: UInt64(timeout.nanoseconds))
+                promise.fail(NIOAsyncEmbeddedEventLoopError.timeoutAwaitingFuture)
+
+                // This self.run() is _very important_. We're about to throw out of this function, which will
+                // cancel the entire TaskGroup. Depending on how things get scheduled it is possible for that
+                // cancellation to cancel the runner task above _before_ it spins again, meaning that the
+                // promise failure never actually happens (as it has to establish event loop context). So
+                // before we cancel this we make sure that we get a chance to spin the loop.
+                await self.run()
                 throw NIOAsyncEmbeddedEventLoopError.timeoutAwaitingFuture
             }
 
