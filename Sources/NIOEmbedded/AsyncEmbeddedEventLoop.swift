@@ -110,7 +110,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
         return DispatchQueue.getSpecific(key: Self.inQueueKey) == self.thisLoopID
     }
 
-    /// Initialize a new `EmbeddedEventLoop`.
+    /// Initialize a new `AsyncEmbeddedEventLoop`.
     public init() {
         self.queue.setSpecific(key: Self.inQueueKey, value: self.thisLoopID)
     }
@@ -171,17 +171,17 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
         return self.scheduleTask(deadline: self.now + `in`, task)
     }
 
-    /// On an `EmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that
-    /// `task` will be run the next time you call `EmbeddedEventLoop.run`.
+    /// On an `AsyncEmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that
+    /// `task` will be run the next time you call `AsyncEmbeddedEventLoop.run`.
     public func execute(_ task: @escaping () -> Void) {
         self.scheduleTask(deadline: self.now, task)
     }
 
-    /// Run all tasks that have previously been submitted to this `EmbeddedEventLoop`, either by calling `execute` or
+    /// Run all tasks that have previously been submitted to this `AsyncEmbeddedEventLoop`, either by calling `execute` or
     /// events that have been enqueued using `scheduleTask`/`scheduleRepeatedTask`/`scheduleRepeatedAsyncTask` and whose
     /// deadlines have expired.
     ///
-    /// - seealso: `EmbeddedEventLoop.advanceTime`.
+    /// - seealso: `AsyncEmbeddedEventLoop.advanceTime`.
     public func run() async {
         // Execute all tasks that are currently enqueued to be executed *now*.
         await self.advanceTime(to: self.now)
