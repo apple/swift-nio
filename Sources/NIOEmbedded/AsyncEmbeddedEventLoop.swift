@@ -217,7 +217,6 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
 
             group.addTask {
                 try await Task.sleep(nanoseconds: UInt64(timeout.nanoseconds))
-                print("Throwing")
                 throw NIOAsyncEmbeddedEventLoopError.timeoutAwaitingFuture
             }
 
@@ -229,7 +228,6 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
                 group.cancelAll()
                 return result
             } catch {
-                print("Threw")
                 group.cancelAll()
                 throw error
             }
