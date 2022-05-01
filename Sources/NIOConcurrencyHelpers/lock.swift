@@ -286,3 +286,12 @@ public final class ConditionLock<T: Equatable> {
 internal func debugOnly(_ body: () -> Void) {
     assert({ body(); return true }())
 }
+
+#if compiler(>=5.5) && canImport(_Concurrency)
+extension Lock: Sendable {
+
+}
+extension ConditionLock: @unchecked Sendable {
+
+}
+#endif
