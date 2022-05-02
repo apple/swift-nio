@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// NIOAsyncEmbeddedEventLoopTests+XCTest.swift
+// AsyncEmbeddedEventLoopTests+XCTest.swift
 //
 import XCTest
 
@@ -43,6 +43,7 @@ extension NIOAsyncEmbeddedEventLoopTests {
                 ("testScheduledTasksFuturesError", testScheduledTasksFuturesError),
                 ("testTaskOrdering", testTaskOrdering),
                 ("testCancelledScheduledTasksDoNotHoldOnToRunClosure", testCancelledScheduledTasksDoNotHoldOnToRunClosure),
+                ("testWaitingForFutureCanTimeOut", testWaitingForFutureCanTimeOut),
                 ("testDrainScheduledTasks", testDrainScheduledTasks),
                 ("testDrainScheduledTasksDoesNotRunNewlyScheduledTasks", testDrainScheduledTasksDoesNotRunNewlyScheduledTasks),
                 ("testAdvanceTimeToDeadline", testAdvanceTimeToDeadline),
