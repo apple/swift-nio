@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import NIOCore
 
 class LinuxTest: XCTestCase {
     func testCoreCountQuota() {
