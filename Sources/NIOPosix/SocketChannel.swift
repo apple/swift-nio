@@ -703,9 +703,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     private func bufferPendingUnaddressedWrite(data: ByteBuffer, promise: EventLoopPromise<Void>?) {
         // It is only appropriate to not use an AddressedEnvelope if the socket is connected.
         guard self.remoteAddress != nil else {
-            promise?.fail(IOError(errnoCode: ENOTCONN, reason: """
-                Address not supplied when writing to an unconnected socket
-                """))
+            promise?.fail(DatagramChannelError.WriteOnUnconnectedSocketWithoutAddress())
             return
         }
 
@@ -720,9 +718,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         // If the socket is connected, check the remote provided matches the connected address.
         if let connectedRemoteAddress = self.remoteAddress {
             guard envelope.remoteAddress == connectedRemoteAddress else {
-                promise?.fail(IOError(errnoCode: EISCONN, reason: """
-                Remote address in AddressedEnvelope does not match remote address of connected socket.
-                """))
+                promise?.fail(DatagramChannelError.WriteOnConnectedSocketWithInvalidAddress(
+                    envelopeRemoteAddress: envelope.remoteAddress,
+                    connectedRemoteAddress: connectedRemoteAddress))
                 return
             }
         }

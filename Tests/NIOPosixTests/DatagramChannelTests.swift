@@ -914,7 +914,7 @@ class DatagramChannelTests: XCTestCase {
         from sourceChannel: Channel,
         to destinationChannel: Channel,
         wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool,
-        resultsIn expectedResult: Result<Void, IOError>,
+        resultsIn expectedResult: Result<Void, Error>,
         file: StaticString = #file,
         line: UInt = #line
     ) throws {
@@ -944,12 +944,12 @@ class DatagramChannelTests: XCTestCase {
             XCTAssertEqual(read.remoteAddress, sourceChannel.localAddress!)
 
         case .failure(let expectedError):
-            // Check the write failed with the expected errno.
+            // Check the error is of the expected type.
             XCTAssertThrowsError(try writeResult.wait()) { error in
-                XCTAssertEqual(
-                    (error as? IOError)?.errnoCode,
-                    expectedError.errnoCode,
-                    "expected \(expectedError), but caught other error: \(error)")
+                guard type(of: error) == type(of: expectedError) else {
+                    XCTFail("expected error of type \(type(of: expectedError)), but caught other error of type (\(type(of: error)): \(error)")
+                    return
+                }
             }
         }
     }
@@ -958,7 +958,7 @@ class DatagramChannelTests: XCTestCase {
         from sourceChannel: Channel,
         to destinationChannel: Channel,
         wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool,
-        resultsIn expectedResult: Result<Void, IOError>,
+        resultsIn expectedResult: Result<Void, Error>,
         file: StaticString = #file,
         line: UInt = #line
     ) throws {
@@ -1014,7 +1014,7 @@ class DatagramChannelTests: XCTestCase {
             from: self.firstChannel,
             to: self.secondChannel,
             wrappingInAddressedEnvelope: false,
-            resultsIn: .failure(IOError(errnoCode: ENOTCONN, reason: ""))
+            resultsIn: .failure(DatagramChannelError.WriteOnUnconnectedSocketWithoutAddress())
         )
     }
 
@@ -1047,7 +1047,9 @@ class DatagramChannelTests: XCTestCase {
             from: self.firstChannel,
             to: self.thirdChannel,
             wrappingInAddressedEnvelope: true,
-            resultsIn: .failure(IOError(errnoCode: EISCONN, reason: ""))
+            resultsIn: .failure(DatagramChannelError.WriteOnConnectedSocketWithInvalidAddress(
+                envelopeRemoteAddress: self.thirdChannel.localAddress!,
+                connectedRemoteAddress: self.secondChannel.localAddress!))
         )
     }
 

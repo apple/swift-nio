@@ -378,6 +378,25 @@ extension ChannelError: Equatable { }
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
 
+public enum DatagramChannelError {
+    public struct WriteOnUnconnectedSocketWithoutAddress: Error {
+        public init() {}
+    }
+
+    public struct WriteOnConnectedSocketWithInvalidAddress: Error {
+        let envelopeRemoteAddress: SocketAddress
+        let connectedRemoteAddress: SocketAddress
+
+        public init(
+            envelopeRemoteAddress: SocketAddress,
+            connectedRemoteAddress: SocketAddress
+        ) {
+            self.envelopeRemoteAddress = envelopeRemoteAddress
+            self.connectedRemoteAddress = connectedRemoteAddress
+        }
+    }
+}
+
 /// An `Channel` related event that is passed through the `ChannelPipeline` to notify the user.
 public enum ChannelEvent: Equatable {
     /// `ChannelOptions.allowRemoteHalfClosure` is `true` and input portion of the `Channel` was closed.
