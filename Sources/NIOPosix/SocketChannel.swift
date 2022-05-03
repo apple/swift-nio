@@ -693,11 +693,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         if let envelope = self.tryUnwrapData(data, as: AddressedEnvelope<ByteBuffer>.self) {
             return bufferPendingAddressedWrite(envelope: envelope, promise: promise)
         }
-        if let data = self.tryUnwrapData(data, as: ByteBuffer.self) {
-            return bufferPendingUnaddressedWrite(data: data, promise: promise)
-        }
-        // TODO: should this be a preconditionFailure or just fail the promise?
-        preconditionFailure("bufferPendingWrite(data:promise:) called with unexpected type.")
+        // If it's not an `AddressedEnvelope` then it must be a `ByteBuffer` so we let the common
+        // `unwrapData(_:as:)` throw the fatal error if it's some other type.
+        let data = self.unwrapData(data, as: ByteBuffer.self)
+        return bufferPendingUnaddressedWrite(data: data, promise: promise)
     }
 
     /// Buffer a write in preparation for a flush.
