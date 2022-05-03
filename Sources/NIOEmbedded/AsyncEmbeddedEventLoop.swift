@@ -181,7 +181,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
     /// events that have been enqueued using `scheduleTask`/`scheduleRepeatedTask`/`scheduleRepeatedAsyncTask` and whose
     /// deadlines have expired.
     ///
-    /// - seealso: `AsyncEmbeddedEventLoop.advanceTime`.
+    /// - seealso: `NIOAsyncEmbeddedEventLoop.advanceTime`.
     public func run() async {
         // Execute all tasks that are currently enqueued to be executed *now*.
         await self.advanceTime(to: self.now)
@@ -233,9 +233,9 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
             }
 
             do {
-                // This force-unwrap is safe: there are only two tasks, one will either return or hang, and the
-                // one that returns cannot be nil, only error. We then cancel the other Task, but we'll never
-                // ask for its result.
+                // This force-unwrap is safe: there are only three tasks and only one of them can ever return a value,
+                // the rest will error. The one that does return a value can never return `nil`. In essence, this is an
+                // `AsyncSequenceOfOneOrError`.
                 let result = try await group.next()!
                 group.cancelAll()
                 return result
