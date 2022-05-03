@@ -1029,12 +1029,23 @@ class DatagramChannelTests: XCTestCase {
         )
     }
 
-    func testSendingAddressedEnvelopeOnConnectedSocketFails() throws {
+    func testSendingAddressedEnvelopeOnConnectedSocketSucceeds() throws {
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait())
 
         try self.assertSendingHelloWorld(
             from: self.firstChannel,
             to: self.secondChannel,
+            wrappingInAddressedEnvelope: true,
+            resultsIn: .success(())
+        )
+    }
+
+    func testSendingAddressedEnvelopeOnConnectedSocketWithDifferentAddressFails() throws {
+        XCTAssertNoThrow(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait())
+
+        try self.assertSendingHelloWorld(
+            from: self.firstChannel,
+            to: self.thirdChannel,
             wrappingInAddressedEnvelope: true,
             resultsIn: .failure(IOError(errnoCode: EISCONN, reason: ""))
         )

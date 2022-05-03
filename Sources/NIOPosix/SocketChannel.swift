@@ -535,7 +535,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 close: false)
         }
         if try self.socket.connect(to: address) {
-            self.pendingWrites.markConnected()
+            self.pendingWrites.markConnected(to: address)
             return true
         } else {
             preconditionFailure("Connect of datagram socket did not complete synchronously.")
@@ -682,9 +682,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     /// Buffer a write in preparation for a flush.
+    ///
+    /// When the channel is unconnected, `data` _must_ be of type `AddressedEnvelope<ByteBuffer>`.
+    ///
+    /// When the channel is connected, `data` _should_ be of type `ByteBuffer`, but _may_ be of type
+    /// `AddressedEnvelope<ByteBuffer>` to allow users to provide protocol control messages via
+    /// `AddressedEnvelope.metadata`. In this case, `AddressedEnvelope.remoteAddress` _must_ match
+    /// the address of the connected peer.
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let envelope = self.tryUnwrapData(data, as: AddressedEnvelope<ByteBuffer>.self) {
-            return bufferPendingAddressedWrite(data: envelope, promise: promise)
+            return bufferPendingAddressedWrite(envelope: envelope, promise: promise)
         }
         if let data = self.tryUnwrapData(data, as: ByteBuffer.self) {
             return bufferPendingUnaddressedWrite(data: data, promise: promise)
@@ -710,16 +717,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     /// Buffer a write in preparation for a flush.
-    private func bufferPendingAddressedWrite(data: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) {
-        // It is only appropriate to use an AddressedEnvelope if the socket is not connected.
-        guard self.remoteAddress == nil else {
-            promise?.fail(IOError(errnoCode: EISCONN, reason: """
-            Address supplied when writing to an connected socket
-            """))
-            return
+    private func bufferPendingAddressedWrite(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) {
+        // If the socket is connected, check the remote provided matches the connected address.
+        if let connectedRemoteAddress = self.remoteAddress {
+            guard envelope.remoteAddress == connectedRemoteAddress else {
+                promise?.fail(IOError(errnoCode: EISCONN, reason: """
+                Remote address in AddressedEnvelope does not match remote address of connected socket.
+                """))
+                return
+            }
         }
 
-        if !self.pendingWrites.add(envelope: data, promise: promise) {
+        if !self.pendingWrites.add(envelope: envelope, promise: promise) {
             assert(self.isActive)
             self.pipeline.syncOperations.fireChannelWritabilityChanged()
         }
