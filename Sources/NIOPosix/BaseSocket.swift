@@ -353,10 +353,6 @@ class BaseSocket: BaseSocketProtocol {
     /// - throws: An `IOError` if the operation failed.
     func bind(to address: SocketAddress) throws {
         try self.withUnsafeHandle { fd in
-            func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
-                try NIOBSDSocket.bind(socket: fd, address: ptr, address_len: socklen_t(bytes))
-            }
-
             try address.withSockAddr {
                 try NIOBSDSocket.bind(socket: fd, address: $0, address_len: socklen_t($1))
             }

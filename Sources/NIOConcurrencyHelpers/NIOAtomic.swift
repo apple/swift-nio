@@ -311,3 +311,9 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
         }
     }
 }
+
+#if compiler(>=5.5) && canImport(_Concurrency)
+extension NIOAtomic: Sendable {
+
+}
+#endif

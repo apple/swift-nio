@@ -101,3 +101,10 @@ extension PriorityQueue: CustomStringConvertible {
         return "PriorityQueue(count: \(self.count)): \(Array(self))"
     }
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+
+extension PriorityQueue: Sendable where Element: Sendable {}
+extension PriorityQueue.Iterator: Sendable where Element: Sendable {}
+
+#endif
