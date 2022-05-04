@@ -49,7 +49,7 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle
         XCTAssertNoThrow(try FileManager.default.removeItem(atPath: temporaryFilePath))
     }
 
-    let fileHandle = try NIOFileHandle(path: temporaryFilePath, mode: .write)
+    let fileHandle = try NIOFileHandle(path: temporaryFilePath, mode: [.read, .write])
     defer {
         XCTAssertNoThrow(try fileHandle.close())
     }
