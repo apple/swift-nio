@@ -14,7 +14,6 @@
 
 import XCTest
 import NIOCore
-import struct System.FileDescriptor
 
 func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
@@ -44,18 +43,18 @@ func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue
 }
 
 func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle, String) throws -> T) throws -> T {
-    let (fd, path) = openTemporaryFile()
-    let fileHandle = NIOFileHandle(descriptor: fd)
+    let temporaryFilePath = "\(temporaryDirectory)/nio_\(UUID())"
+    FileManager.default.createFile(atPath: temporaryFilePath, contents: content?.data(using: .utf8))
+    defer {
+        XCTAssertNoThrow(try FileManager.default.removeItem(atPath: temporaryFilePath))
+    }
+
+    let fileHandle = try NIOFileHandle(path: temporaryFilePath, mode: .write)
     defer {
         XCTAssertNoThrow(try fileHandle.close())
-        XCTAssertEqual(0, unlink(path))
     }
-    if let content = content {
-        let fileDesciptor = FileDescriptor(rawValue: fd)
-        try fileDesciptor.writeAll(content.utf8)
-        XCTAssertEqual(try fileDesciptor.seek(offset: 0, from: .start), 0)
-    }
-    return try body(fileHandle, path)
+
+    return try body(fileHandle, temporaryFilePath)
 }
 
 fileprivate var temporaryDirectory: String {
@@ -76,17 +75,4 @@ fileprivate var temporaryDirectory: String {
 #endif // os
 #endif // targetEnvironment
     }
-}
-
-func openTemporaryFile() -> (CInt, String) {
-    let template = "\(temporaryDirectory)/nio_XXXXXX"
-    var templateBytes = template.utf8 + [0]
-    let templateBytesCount = templateBytes.count
-    let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in
-        ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytesCount) { (ptr: UnsafeMutablePointer<Int8>) in
-            return mkstemp(ptr)
-        }
-    }
-    templateBytes.removeLast()
-    return (fd, String(decoding: templateBytes, as: Unicode.UTF8.self))
 }
