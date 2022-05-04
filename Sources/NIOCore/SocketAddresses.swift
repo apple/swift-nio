@@ -55,10 +55,10 @@ extension SocketAddressError {
 }
 
 /// Represent a socket address to which we may want to connect or bind.
-public enum SocketAddress: CustomStringConvertible {
+public enum SocketAddress: CustomStringConvertible, NIOSendable {
 
     /// A single IPv4 address for `SocketAddress`.
-    public struct IPv4Address {
+    public struct IPv4Address: NIOSendable {
         private let _storage: Box<(address: sockaddr_in, host: String)>
 
         /// The libc socket address for an IPv4 address.
@@ -73,7 +73,7 @@ public enum SocketAddress: CustomStringConvertible {
     }
 
     /// A single IPv6 address for `SocketAddress`.
-    public struct IPv6Address {
+    public struct IPv6Address: NIOSendable {
         private let _storage: Box<(address: sockaddr_in6, host: String)>
 
         /// The libc socket address for an IPv6 address.
@@ -88,7 +88,7 @@ public enum SocketAddress: CustomStringConvertible {
     }
 
     /// A single Unix socket address for `SocketAddress`.
-    public struct UnixSocketAddress {
+    public struct UnixSocketAddress: NIOSendable {
         private let _storage: Box<sockaddr_un>
 
         /// The libc socket address for a Unix Domain Socket.
