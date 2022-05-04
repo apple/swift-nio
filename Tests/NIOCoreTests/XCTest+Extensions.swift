@@ -41,3 +41,31 @@ func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue
         }
     }
 }
+
+func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle, String) throws -> T) rethrows -> T {
+    let (fd, path) = openTemporaryFile()
+    let fileHandle = NIOFileHandle(descriptor: fd)
+    defer {
+        XCTAssertNoThrow(try fileHandle.close())
+        XCTAssertEqual(0, unlink(path))
+    }
+    if let content = content {
+        try Array(content.utf8).withUnsafeBufferPointer { ptr in
+            var toWrite = ptr.count
+            var start = ptr.baseAddress!
+            while toWrite > 0 {
+                let res = try Posix.write(descriptor: fd, pointer: start, size: toWrite)
+                switch res {
+                case .processed(let written):
+                    toWrite -= written
+                    start = start + written
+                case .wouldBlock:
+                    XCTFail("unexpectedly got .wouldBlock from a file")
+                    continue
+                }
+            }
+            XCTAssertEqual(0, lseek(fd, 0, SEEK_SET))
+        }
+    }
+    return try body(fileHandle, path)
+}
