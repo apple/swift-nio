@@ -18,7 +18,7 @@ services:
     image: swift-nio:20.04-5.7
     environment:
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=45050
-      - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=38050
+      - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=37050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlercontext=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlername=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlertype=9050
@@ -34,7 +34,7 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_udp_reqs=12050
       - MAX_ALLOCS_ALLOWED_1000_udpbootstraps=2050
       - MAX_ALLOCS_ALLOWED_1000_udpconnections=81050
-      - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=406050
+      - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=405050
       - MAX_ALLOCS_ALLOWED_bytebuffer_lots_of_rw=2050
       - MAX_ALLOCS_ALLOWED_creating_10000_headers=0
       - MAX_ALLOCS_ALLOWED_decode_1000_ws_frames=2050
