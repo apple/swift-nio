@@ -261,3 +261,10 @@ extension Heap: Sequence {
         return self.storage.count
     }
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+
+extension Heap: Sendable where Element: Sendable {}
+extension HeapIterator: Sendable where Element: Sendable {}
+
+#endif
