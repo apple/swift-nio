@@ -16,9 +16,9 @@ import XCTest
 @testable import NIOCore
 
 class LinuxTest: XCTestCase {
-    func testCoreCountQuota() {
+    func testCoreCountQuota() throws {
         #if os(Linux) || os(Android)
-        [
+        try [
             ("50000", "100000", 1),
             ("100000", "100000", 1),
             ("100000\n", "100000", 1),
@@ -31,8 +31,8 @@ class LinuxTest: XCTestCase {
             ("100000", "", nil),
             ("100000", "0", nil)
         ].forEach { quota, period, count in
-            withTemporaryFile(content: quota) { (_, quotaPath) -> Void in
-                withTemporaryFile(content: period) { (_, periodPath) -> Void in
+            try withTemporaryFile(content: quota) { (_, quotaPath) -> Void in
+                try withTemporaryFile(content: period) { (_, periodPath) -> Void in
                     XCTAssertEqual(Linux.coreCount(quota: quotaPath, period: periodPath), count)
                 }
             }
@@ -40,9 +40,9 @@ class LinuxTest: XCTestCase {
         #endif
     }
 
-    func testCoreCountCpuset() {
+    func testCoreCountCpuset() throws {
         #if os(Linux) || os(Android)
-        [
+        try [
             ("0", 1),
             ("0,3", 2),
             ("0-3", 4),
@@ -51,7 +51,7 @@ class LinuxTest: XCTestCase {
             ("0,2-4,6,7,9-11", 9),
             ("", nil)
         ].forEach { cpuset, count in
-            withTemporaryFile(content: cpuset) { (_, path) -> Void in
+            try withTemporaryFile(content: cpuset) { (_, path) -> Void in
                 XCTAssertEqual(Linux.coreCount(cpuset: path), count)
             }
         }
