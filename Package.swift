@@ -26,7 +26,8 @@ var targets: [PackageDescription.Target] = [
                            "CNIOWindows",
                            "NIOConcurrencyHelpers",
                            "NIOCore",
-                           "_NIODataStructures"]),
+                           "_NIODataStructures",
+                           .product(name: "SystemPackage", package: "swift-system")]),
     .target(name: "NIO",
             dependencies: ["NIOCore",
                            "NIOEmbedded",
@@ -127,6 +128,19 @@ let package = Package(
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
     ],
     dependencies: [
+        .package(
+            /// Using open pull request apple/swift-system#82:
+            ///
+            /// ```
+            /// $ git ls-remote https://github.com/apple/swift-system refs/pull/82/head
+            /// 5d3519dcef5c4a650c34b7a9bec70942d7975d22        refs/pull/82/head
+            /// ```
+            ///
+            /// If/when the above pull request is merged we should nail this down to a released version.
+            url: "https://github.com/apple/swift-system",
+            // .upToNextMajor(from: "1.1.1")
+            .branchItem("refs/pull/82/head")
+        ),
     ],
     targets: targets
 )

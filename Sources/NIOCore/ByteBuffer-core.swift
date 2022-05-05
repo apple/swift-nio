@@ -303,6 +303,15 @@ public struct ByteBuffer {
                             allocator: allocator)
         }
 
+        @inlinable
+        static func reallocated(exactCapacity: _Capacity, allocator: Allocator) -> _Storage {
+            let newCapacity = exactCapacity == 0 ? 0 : exactCapacity.nextPowerOf2ClampedToMax()
+            // TODO: Use realloc if possible
+            return _Storage(bytesNoCopy: _Storage._allocateAndPrepareRawMemory(bytes: newCapacity, allocator: allocator),
+                            capacity: newCapacity,
+                            allocator: allocator)
+        }
+
         func dumpBytes(slice: Slice, offset: Int, length: Int) -> String {
             var desc = "["
             let bytes = UnsafeRawBufferPointer(start: self.bytes, count: Int(self.capacity))
@@ -627,6 +636,23 @@ public struct ByteBuffer {
         let bytesWritten = try self.withUnsafeMutableWritableBytes({ try body($0) })
         self._moveWriterIndex(to: self._writerIndex + _toIndex(bytesWritten))
         return bytesWritten
+    }
+
+    /// This vends a pointer of the `ByteBuffer` at the `writerIndex` after ensuring that the buffer has at least `exactWritableBytes` of writable bytes available. The buffer pointer returned will have a count of exactly `exactWritableBytes`.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - exactWritableBytes: The number of writable bytes to reserve capacity for before vending the `ByteBuffer` pointer to `body`.
+    ///     - body: The closure that will accept the yielded bytes and return the number of bytes written.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    @inlinable
+    public mutating func writeWithUnsafeMutableBytes(exactWritableBytes: Int, _ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
+        return try self.writeWithUnsafeMutableBytes(minimumWritableBytes: exactWritableBytes) {
+            let truncatedWritableRegion = UnsafeMutableRawBufferPointer(start: $0.baseAddress, count: exactWritableBytes)
+            return try body(truncatedWritableRegion)
+        }
     }
 
     @available(*, deprecated, message: "please use writeWithUnsafeMutableBytes(minimumWritableBytes:_:) instead to ensure sufficient write capacity.")
