@@ -315,12 +315,13 @@ public struct NonBlockingFileIO {
             return eventLoop.makeSucceededFuture(allocator.buffer(capacity: 0))
         }
 
+        // TODO: Maybe swift-system should grow a readAll() helper given it has a writeAll()
         var buf = allocator.buffer(capacity: byteCount)
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
             var bytesRead = 0
             while bytesRead < byteCount {
                 let n = try buf.writeWithUnsafeMutableBytes(exactWritableBytes: byteCount - bytesRead) { ptr in
-                    do {
+                    try preservingNIOAPIErrors {
                         let numBytesRead = try fileHandle.withUnsafeSystemFileDescriptor { descriptor -> Int in
                             if let offset = fromOffset {
                                 return try descriptor.read(
@@ -337,16 +338,6 @@ public struct NonBlockingFileIO {
                         }
                         assert(numBytesRead >= 0, "read claims to have read a negative number of bytes \(numBytesRead)")
                         return numBytesRead
-                    } catch let errno as Errno {
-                        /// To preserve the existing NIO API, from before we adopted the Swift System
-                        /// APIs, we convert the System.Errno errors back to what what we threw before
-                        /// adopting Swift System.
-                        switch errno {
-                        case .wouldBlock:
-                            throw Error.descriptorSetToNonBlocking
-                        default:
-                            throw IOError(errnoCode: errno.rawValue, reason: errno.description)
-                        }
                     }
                 }
                 if n == 0 {
@@ -426,47 +417,44 @@ public struct NonBlockingFileIO {
         return self.write0(fileHandle: fileHandle, toOffset: toOffset, buffer: buffer, eventLoop: eventLoop)
     }
 
+    /// Converts `SystemPackage.Errno` to NIO API errors for backwards compatiblity.
+    ///
+    /// To preserve the existing NIO API, from before we adopted the Swift System APIs, we convert
+    /// the Swift System's `Errno` errors back to what what we threw before adopting Swift System.
+    ///
+    /// - throws: `NonBlockingFileIO.Error.descriptosSetToNonBlocking` if `operation` throws `SystemPackage.Errno.wouldBlock`
+    /// - throws: `IOError` if `operation` throws `SystemPackage.Errno` other than `.wouldBlock`.
+    /// - throws: If `operation` throws an error that is not `SystemPackage.Errno`, it is rethrown.
+    private func preservingNIOAPIErrors<T>(_ operation: () throws -> T) rethrows -> T {
+        do {
+            return try operation()
+        } catch let errno as SystemPackage.Errno {
+            switch errno {
+            case .wouldBlock:
+                throw Error.descriptorSetToNonBlocking
+            default:
+                throw IOError(errnoCode: errno.rawValue, reason: errno.description)
+            }
+        }
+    }
+
     private func write0(fileHandle: NIOFileHandle,
-                        toOffset: Int64?,
+                        toOffset offset: Int64?,
                         buffer: ByteBuffer,
                         eventLoop: EventLoop) -> EventLoopFuture<()> {
-        let byteCount = buffer.readableBytes
-
-        guard byteCount > 0 else {
+        guard buffer.readableBytes > 0 else {
             return eventLoop.makeSucceededFuture(())
         }
-
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            var buf = buffer
-
-            var offsetAccumulator: Int = 0
-            repeat {
-                let n = try buf.readWithUnsafeReadableBytes { ptr in
-                    precondition(ptr.count == byteCount - offsetAccumulator)
-                    do {
-                        let numBytesWritten = try fileHandle.withUnsafeSystemFileDescriptor { descriptor -> Int in
-                            // TODO: simplify by using writeAll
-                            if let toOffset = toOffset {
-                                return try descriptor.write(
-                                    toAbsoluteOffset: toOffset + Int64(offsetAccumulator),
-                                    ptr,
-                                    retryOnInterrupt: false
-                                )
-                            } else {
-                                return try descriptor.write(
-                                    ptr,
-                                    retryOnInterrupt: false
-                                )
-                            }
-                        }
-                        assert(numBytesWritten >= 0, "write claims to have written a negative number of bytes: \(numBytesWritten)")
-                        return numBytesWritten
-                    } catch {
-                        throw Error.descriptorSetToNonBlocking
+            try preservingNIOAPIErrors {
+                _ = try fileHandle.withUnsafeSystemFileDescriptor { descriptor in
+                    if let offset = offset {
+                        try descriptor.writeAll(toAbsoluteOffset: offset, buffer.readableBytesView)
+                    } else {
+                        try descriptor.writeAll(buffer.readableBytesView)
                     }
                 }
-                offsetAccumulator += n
-            } while offsetAccumulator < byteCount
+            }
         }
     }
 
