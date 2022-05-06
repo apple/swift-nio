@@ -62,7 +62,7 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
     ///
     /// - note: Every index is invalidated as soon as you perform a length-changing operating on the `CircularBuffer`
     ///         but remains valid when you replace one item by another using the subscript.
-    public struct Index: Comparable {
+    public struct Index: Comparable, NIOSendable {
         @usableFromInline private(set) var _backingIndex: UInt32
         @usableFromInline private(set) var _backingCheck: _UInt24
         @usableFromInline private(set) var isIndexGEQHeadIndex: Bool
@@ -814,6 +814,8 @@ extension CircularBuffer: Hashable where Element: Hashable {
         }
     }
 }
+
+extension CircularBuffer: NIOSendable where Element: NIOSendable {}
 
 extension CircularBuffer: ExpressibleByArrayLiteral {
     public init(arrayLiteral elements: Element...) {
