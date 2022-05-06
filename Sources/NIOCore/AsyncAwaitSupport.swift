@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if swift(>=5.5) && canImport(_Concurrency)
-public typealias NIOSendable = Swift.Sendable
-#else
-public typealias NIOSendable = Any
-#endif
-
 #if compiler(>=5.5.2) && canImport(_Concurrency)
 
 extension EventLoopFuture {
