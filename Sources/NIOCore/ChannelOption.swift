@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 /// A configuration option that can be set on a `Channel` to configure different behaviour.
-public protocol ChannelOption: Equatable {
+public protocol ChannelOption: Equatable, NIOPreconcurrencySendable {
     /// The type of the `ChannelOption`'s value.
     associatedtype Value
 }
@@ -386,6 +386,6 @@ extension ChannelOptions {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
+#if swift(>=5.6)
 extension ChannelOptions.Storage: @unchecked Sendable {}
 #endif
