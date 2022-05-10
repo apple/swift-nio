@@ -19,15 +19,28 @@ import Dispatch
 ///
 /// A `Scheduled` allows the user to either `cancel()` the execution of the scheduled task (if possible) or obtain a reference to the `EventLoopFuture` that
 /// will be notified once the execution is complete.
-public struct Scheduled<T> {
+public struct Scheduled<T>: NIOSendable {
     /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
-    /* private but usableFromInline */ @usableFromInline let _cancellationTask: (() -> Void)
-
+    #if swift(>=5.5) && canImport(_Concurrency)
+    /* private but usableFromInline */ @usableFromInline let _cancellationTask: @Sendable () -> Void
+    #else
+    /* private but usableFromInline */ @usableFromInline let _cancellationTask: () -> Void
+    #endif
+    
+    #if swift(>=5.5) && canImport(_Concurrency)
+    @inlinable
+    @preconcurrency
+    public init(promise: EventLoopPromise<T>, cancellationTask: @escaping @Sendable () -> Void) {
+        self._promise = promise
+        self._cancellationTask = cancellationTask
+    }
+    #else
     @inlinable
     public init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> Void) {
         self._promise = promise
         self._cancellationTask = cancellationTask
     }
+    #endif
 
     /// Try to cancel the execution of the scheduled task.
     ///
@@ -54,15 +67,41 @@ public final class RepeatedTask {
     private let eventLoop: EventLoop
     private let cancellationPromise: EventLoopPromise<Void>?
     private var scheduled: Optional<Scheduled<EventLoopFuture<Void>>>
+    #if swift(>=5.5) && canImport(_Concurrency)
+    private var task: Optional<@Sendable (RepeatedTask) -> EventLoopFuture<Void>>
+    #else
     private var task: Optional<(RepeatedTask) -> EventLoopFuture<Void>>
-
-    internal init(interval: TimeAmount, eventLoop: EventLoop, cancellationPromise: EventLoopPromise<Void>? = nil, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
+    #endif
+    
+    #if swift(>=5.5) && canImport(_Concurrency)
+    @preconcurrency
+    internal init(
+        interval: TimeAmount,
+        eventLoop: EventLoop,
+        cancellationPromise: EventLoopPromise<Void>? = nil,
+        task: @escaping @Sendable (RepeatedTask) -> EventLoopFuture<Void>
+    ) {
         self.delay = interval
         self.eventLoop = eventLoop
         self.cancellationPromise = cancellationPromise
         self.task = task
         self.scheduled = nil
     }
+    #else
+    internal init(
+        interval: TimeAmount,
+        eventLoop: EventLoop,
+        cancellationPromise: EventLoopPromise<Void>? = nil,
+        task: @escaping (RepeatedTask) -> EventLoopFuture<Void>
+    ) {
+        self.delay = interval
+        self.eventLoop = eventLoop
+        self.cancellationPromise = cancellationPromise
+        self.task = task
+        self.scheduled = nil
+    }
+    #endif
+    
 
     internal func begin(in delay: TimeAmount) {
         if self.eventLoop.inEventLoop {
@@ -165,6 +204,10 @@ public final class RepeatedTask {
     }
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension RepeatedTask: @unchecked Sendable {}
+#endif
+
 /// An iterator over the `EventLoop`s forming an `EventLoopGroup`.
 ///
 /// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
@@ -174,7 +217,7 @@ public final class RepeatedTask {
 ///         // Do something with each loop
 ///     }
 ///
-public struct EventLoopIterator: Sequence, IteratorProtocol {
+public struct EventLoopIterator: Sequence, IteratorProtocol, NIOSendable {
     public typealias Element = EventLoop
     private var eventLoops: IndexingIterator<[EventLoop]>
 
@@ -220,7 +263,47 @@ public struct EventLoopIterator: Sequence, IteratorProtocol {
 public protocol EventLoop: EventLoopGroup {
     /// Returns `true` if the current `NIOThread` is the same as the `NIOThread` that is tied to this `EventLoop`. `false` otherwise.
     var inEventLoop: Bool { get }
+    
+    #if swift(>=5.5) && canImport(_Concurrency)
+    /// Submit a given task to be executed by the `EventLoop`
+    @preconcurrency
+    func execute(_ task: @escaping @Sendable () -> Void)
 
+    /// Submit a given task to be executed by the `EventLoop`. Once the execution is complete the returned `EventLoopFuture` is notified.
+    ///
+    /// - parameters:
+    ///     - task: The closure that will be submitted to the `EventLoop` for execution.
+    /// - returns: `EventLoopFuture` that is notified once the task was executed.
+    @preconcurrency
+    func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T>
+
+    /// Schedule a `task` that is executed by this `EventLoop` at the given time.
+    ///
+    /// - parameters:
+    ///     - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
+    @discardableResult
+    @preconcurrency
+    func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping @Sendable () throws -> T) -> Scheduled<T>
+
+    /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
+    ///
+    /// - parameters:
+    ///     - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
+    /// - note: The `in` value is clamped to a maximum when running on a Darwin-kernel.
+    @discardableResult
+    @preconcurrency
+    func scheduleTask<T>(in: TimeAmount, _ task: @escaping @Sendable () throws -> T) -> Scheduled<T>
+    
+    #else
+    
     /// Submit a given task to be executed by the `EventLoop`
     func execute(_ task: @escaping () -> Void)
 
@@ -253,6 +336,8 @@ public protocol EventLoop: EventLoopGroup {
     /// - note: The `in` value is clamped to a maximum when running on a Darwin-kernel.
     @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
+    
+    #endif
 
     /// Asserts that the current thread is the one tied to this `EventLoop`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
@@ -542,6 +627,91 @@ extension NIODeadline {
 }
 
 extension EventLoop {
+    #if swift(>=5.5) && canImport(_Concurrency)
+    /// Submit `task` to be run on this `EventLoop`.
+    ///
+    /// The returned `EventLoopFuture` will be completed when `task` has finished running. It will be succeeded with
+    /// `task`'s return value or failed if the execution of `task` threw an error.
+    ///
+    /// - parameters:
+    ///     - task: The synchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    /// - returns: An `EventLoopFuture` containing the result of `task`'s execution.
+    @inlinable
+    @preconcurrency
+    public func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
+        let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
+
+        self.execute {
+            do {
+                promise.succeed(try task())
+            } catch let err {
+                promise.fail(err)
+            }
+        }
+
+        return promise.futureResult
+    }
+
+    /// Submit `task` to be run on this `EventLoop`.
+    ///
+    /// The returned `EventLoopFuture` will be completed when `task` has finished running. It will be identical to
+    /// the `EventLoopFuture` returned by `task`.
+    ///
+    /// - parameters:
+    ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - returns: An `EventLoopFuture` identical to the `EventLoopFuture` returned from `task`.
+    @inlinable
+    @preconcurrency
+    public func flatSubmit<T>(_ task: @escaping @Sendable () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
+        return self.submit(task).flatMap { $0 }
+    }
+
+    /// Schedule a `task` that is executed by this `EventLoop` at the given time.
+    ///
+    /// - parameters:
+    ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the full execution of the task, including its returned `EventLoopFuture`.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
+    @discardableResult
+    @inlinable
+    @preconcurrency
+    public func flatScheduleTask<T>(deadline: NIODeadline,
+                                    file: StaticString = #file,
+                                    line: UInt = #line,
+                                    _ task: @escaping @Sendable () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = self.makePromise(file:#file, line: line)
+        let scheduled = self.scheduleTask(deadline: deadline, task)
+
+        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        return .init(promise: promise, cancellationTask: { scheduled.cancel() })
+    }
+
+    /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
+    ///
+    /// - parameters:
+    ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the full execution of the task, including its returned `EventLoopFuture`.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
+    @discardableResult
+    @inlinable
+    @preconcurrency
+    public func flatScheduleTask<T>(in delay: TimeAmount,
+                                    file: StaticString = #file,
+                                    line: UInt = #line,
+                                    _ task: @escaping @Sendable () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
+        let scheduled = self.scheduleTask(in: delay, task)
+
+        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        return .init(promise: promise, cancellationTask: { scheduled.cancel() })
+    }
+    
+    #else
+    
     /// Submit `task` to be run on this `EventLoop`.
     ///
     /// The returned `EventLoopFuture` will be completed when `task` has finished running. It will be succeeded with
@@ -619,6 +789,8 @@ extension EventLoop {
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
+    
+    #endif
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.
     @inlinable
@@ -684,7 +856,61 @@ extension EventLoop {
     public func close() throws {
         // Do nothing
     }
+    
+    #if swift(>=5.5) && canImport(_Concurrency)
 
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each
+    /// task.
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
+    ///     - task: The closure that will be executed.
+    /// - return: `RepeatedTask`
+    @discardableResult
+    @preconcurrency
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, notifying promise: EventLoopPromise<Void>? = nil, _ task: @escaping @Sendable (RepeatedTask) throws -> Void) -> RepeatedTask {
+        let futureTask: @Sendable (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
+            do {
+                try task(repeatedTask)
+                return self.makeSucceededFuture(())
+            } catch {
+                return self.makeFailedFuture(error)
+            }
+        }
+        return self.scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, notifying: promise, futureTask)
+    }
+
+    /// Schedule a repeated asynchronous task to be executed by the `EventLoop` with a fixed delay between the end and
+    /// start of each task.
+    ///
+    /// - note: The delay is measured from the completion of one run's returned future to the start of the execution of
+    ///         the next run. For example: If you schedule a task once per second but your task takes two seconds to
+    ///         complete, the time interval between two subsequent runs will actually be three seconds (2s run time plus
+    ///         the 1s delay.)
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
+    ///     - task: The closure that will be executed. Task will keep repeating regardless of whether the future
+    ///             gets fulfilled with success or error.
+    ///
+    /// - return: `RepeatedTask`
+    @discardableResult
+    @preconcurrency
+    public func scheduleRepeatedAsyncTask(initialDelay: TimeAmount,
+                                          delay: TimeAmount,
+                                          notifying promise: EventLoopPromise<Void>? = nil,
+                                          _ task: @escaping @Sendable (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
+        let repeated = RepeatedTask(interval: delay, eventLoop: self, cancellationPromise: promise, task: task)
+        repeated.begin(in: initialDelay)
+        return repeated
+    }
+    
+    #else
+    
     /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each
     /// task.
     ///
@@ -732,6 +958,8 @@ extension EventLoop {
         repeated.begin(in: initialDelay)
         return repeated
     }
+    
+    #endif
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///
@@ -778,7 +1006,7 @@ extension EventLoop {
 }
 
 /// Provides an endless stream of `EventLoop`s to use.
-public protocol EventLoopGroup: AnyObject {
+public protocol EventLoopGroup: AnyObject, NIOPreconcurrencySendable {
     /// Returns the next `EventLoop` to use, this is useful for load balancing.
     ///
     /// The algorithm that is used to select the next `EventLoop` is specific to each `EventLoopGroup`. A common choice
@@ -814,13 +1042,21 @@ public protocol EventLoopGroup: AnyObject {
     /// The rule of thumb is: If you are trying to do _load balancing_, use `next()`. If you just want to create a new
     /// future or kick off some operation, use `any()`.
     func any() -> EventLoop
-
+    
+    #if swift(>=5.5) && canImport(_Concurrency)
+    /// Shuts down the eventloop gracefully. This function is clearly an outlier in that it uses a completion
+    /// callback instead of an EventLoopFuture. The reason for that is that NIO's EventLoopFutures will call back on an event loop.
+    /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
+    /// instead.
+    @preconcurrency func shutdownGracefully(queue: DispatchQueue, _ callback: @Sendable @escaping (Error?) -> Void)
+    #else
     /// Shuts down the eventloop gracefully. This function is clearly an outlier in that it uses a completion
     /// callback instead of an EventLoopFuture. The reason for that is that NIO's EventLoopFutures will call back on an event loop.
     /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
     /// instead.
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
-
+    #endif
+    
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
     ///
     /// - returns: `EventLoopIterator`
@@ -842,10 +1078,16 @@ extension EventLoopGroup {
 }
 
 extension EventLoopGroup {
+    #if swift(>=5.5) && canImport(_Concurrency)
+    @preconcurrency public func shutdownGracefully(_ callback: @escaping @Sendable (Error?) -> Void) {
+        self.shutdownGracefully(queue: .global(), callback)
+    }
+    #else
     public func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
         self.shutdownGracefully(queue: .global(), callback)
     }
-
+    #endif
+    
     public func syncShutdownGracefully() throws {
         self._preconditionSafeToSyncShutdown(file: #file, line: #line)
 
@@ -876,7 +1118,7 @@ extension EventLoopGroup {
 /// This type is intended to be used by libraries which use NIO, and offer their users either the option
 /// to `.share` an existing event loop group or create (and manage) a new one (`.createNew`) and let it be
 /// managed by given library and its lifecycle.
-public enum NIOEventLoopGroupProvider {
+public enum NIOEventLoopGroupProvider: NIOSendable {
     /// Use an `EventLoopGroup` provided by the user.
     /// The owner of this group is responsible for its lifecycle.
     case shared(EventLoopGroup)
