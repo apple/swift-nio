@@ -21,13 +21,13 @@ import Dispatch
 /// will be notified once the execution is complete.
 public struct Scheduled<T>: NIOSendable {
     /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
-    #if swift(>=5.5) && canImport(_Concurrency)
+    #if swift(>=5.6)
     /* private but usableFromInline */ @usableFromInline let _cancellationTask: @Sendable () -> Void
     #else
     /* private but usableFromInline */ @usableFromInline let _cancellationTask: () -> Void
     #endif
     
-    #if swift(>=5.5) && canImport(_Concurrency)
+    #if swift(>=5.6)
     @inlinable
     @preconcurrency
     public init(promise: EventLoopPromise<T>, cancellationTask: @escaping @Sendable () -> Void) {
@@ -67,13 +67,13 @@ public final class RepeatedTask {
     private let eventLoop: EventLoop
     private let cancellationPromise: EventLoopPromise<Void>?
     private var scheduled: Optional<Scheduled<EventLoopFuture<Void>>>
-    #if swift(>=5.5) && canImport(_Concurrency)
+    #if swift(>=5.6)
     private var task: Optional<@Sendable (RepeatedTask) -> EventLoopFuture<Void>>
     #else
     private var task: Optional<(RepeatedTask) -> EventLoopFuture<Void>>
     #endif
     
-    #if swift(>=5.5) && canImport(_Concurrency)
+    #if swift(>=5.6)
     @preconcurrency
     internal init(
         interval: TimeAmount,
@@ -204,7 +204,7 @@ public final class RepeatedTask {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
+#if swift(>=5.6)
 extension RepeatedTask: @unchecked Sendable {}
 #endif
 
@@ -264,7 +264,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Returns `true` if the current `NIOThread` is the same as the `NIOThread` that is tied to this `EventLoop`. `false` otherwise.
     var inEventLoop: Bool { get }
     
-    #if swift(>=5.5) && canImport(_Concurrency)
+    #if swift(>=5.6)
     /// Submit a given task to be executed by the `EventLoop`
     @preconcurrency
     func execute(_ task: @escaping @Sendable () -> Void)
@@ -627,7 +627,7 @@ extension NIODeadline {
 }
 
 extension EventLoop {
-    #if swift(>=5.5) && canImport(_Concurrency)
+    #if swift(>=5.6)
     /// Submit `task` to be run on this `EventLoop`.
     ///
     /// The returned `EventLoopFuture` will be completed when `task` has finished running. It will be succeeded with
@@ -857,7 +857,7 @@ extension EventLoop {
         // Do nothing
     }
     
-    #if swift(>=5.5) && canImport(_Concurrency)
+    #if swift(>=5.6)
 
     /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each
     /// task.
@@ -1043,7 +1043,7 @@ public protocol EventLoopGroup: AnyObject, NIOPreconcurrencySendable {
     /// future or kick off some operation, use `any()`.
     func any() -> EventLoop
     
-    #if swift(>=5.5) && canImport(_Concurrency)
+    #if swift(>=5.6)
     /// Shuts down the eventloop gracefully. This function is clearly an outlier in that it uses a completion
     /// callback instead of an EventLoopFuture. The reason for that is that NIO's EventLoopFutures will call back on an event loop.
     /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
@@ -1078,7 +1078,7 @@ extension EventLoopGroup {
 }
 
 extension EventLoopGroup {
-    #if swift(>=5.5) && canImport(_Concurrency)
+    #if swift(>=5.6)
     @preconcurrency public func shutdownGracefully(_ callback: @escaping @Sendable (Error?) -> Void) {
         self.shutdownGracefully(queue: .global(), callback)
     }
