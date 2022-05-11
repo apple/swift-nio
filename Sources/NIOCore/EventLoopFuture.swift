@@ -24,8 +24,13 @@ import Dispatch
 /// This eliminates recursion when processing `flatMap()` chains.
 @usableFromInline
 internal struct CallbackList {
+    #if swift(>=5.6)
+    @usableFromInline
+    internal typealias Element = @Sendable () -> CallbackList
+    #else
     @usableFromInline
     internal typealias Element = () -> CallbackList
+    #endif
     @usableFromInline
     internal var firstCallback: Optional<Element>
     @usableFromInline
@@ -38,7 +43,7 @@ internal struct CallbackList {
     }
 
     @inlinable
-    internal mutating func append(_ callback: @escaping () -> CallbackList) {
+    internal mutating func append(_ callback: @escaping Element) {
         if self.firstCallback == nil {
             self.firstCallback = callback
         } else {
@@ -442,6 +447,57 @@ extension EventLoopFuture: Equatable {
 
 // 'flatMap' and 'map' implementations. This is really the key of the entire system.
 extension EventLoopFuture {
+    #if swift(>=5.6)
+    /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback,
+    /// which will provide a new `EventLoopFuture`.
+    ///
+    /// This allows you to dynamically dispatch new asynchronous tasks as phases in a
+    /// longer series of processing steps. Note that you can use the results of the
+    /// current `EventLoopFuture<Value>` when determining how to dispatch the next operation.
+    ///
+    /// This works well when you have APIs that already know how to return `EventLoopFuture`s.
+    /// You can do something with the result of one and just return the next future:
+    ///
+    /// ```
+    /// let d1 = networkRequest(args).future()
+    /// let d2 = d1.flatMap { t -> EventLoopFuture<NewValue> in
+    ///     . . . something with t . . .
+    ///     return netWorkRequest(args)
+    /// }
+    /// d2.whenSuccess { u in
+    ///     NSLog("Result of second request: \(u)")
+    /// }
+    /// ```
+    ///
+    /// Note: In a sense, the `EventLoopFuture<NewValue>` is returned before it's created.
+    ///
+    /// - parameters:
+    ///     - callback: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new `EventLoopFuture`.
+    /// - returns: A future that will receive the eventual value.
+    @inlinable
+    @preconcurrency
+    public func flatMap<NewValue>(_ callback: @escaping @Sendable (Value) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
+        let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let t):
+                let futureU = callback(t)
+                if futureU.eventLoop.inEventLoop {
+                    return futureU._addCallback {
+                        next._setValue(value: futureU._value!)
+                    }
+                } else {
+                    futureU.cascade(to: next)
+                    return CallbackList()
+                }
+            case .failure(let error):
+                return next._setValue(value: .failure(error))
+            }
+        }
+        return next.futureResult
+    }
+    #else
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback,
     /// which will provide a new `EventLoopFuture`.
     ///
@@ -490,7 +546,43 @@ extension EventLoopFuture {
         }
         return next.futureResult
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
+    /// performs a synchronous computation and returns a new value of type `NewValue`. The provided
+    /// callback may optionally `throw`.
+    ///
+    /// Operations performed in `flatMapThrowing` should not block, or they will block the entire
+    /// event loop. `flatMapThrowing` is intended for use when you have a data-driven function that
+    /// performs a simple data transformation that can potentially error.
+    ///
+    /// If your callback function throws, the returned `EventLoopFuture` will error.
+    ///
+    /// - parameters:
+    ///     - callback: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new value lifted into a new `EventLoopFuture`.
+    /// - returns: A future that will receive the eventual value.
+    @inlinable
+    @preconcurrency
+    public func flatMapThrowing<NewValue>(_ callback: @escaping @Sendable (Value) throws -> NewValue) -> EventLoopFuture<NewValue> {
+        let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let t):
+                do {
+                    let r = try callback(t)
+                    return next._setValue(value: .success(r))
+                } catch {
+                    return next._setValue(value: .failure(error))
+                }
+            case .failure(let e):
+                return next._setValue(value: .failure(e))
+            }
+        }
+        return next.futureResult
+    }
+    #else
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
     /// performs a synchronous computation and returns a new value of type `NewValue`. The provided
     /// callback may optionally `throw`.
@@ -523,7 +615,43 @@ extension EventLoopFuture {
         }
         return next.futureResult
     }
-
+    #endif
+    
+    #if swift(>=5.6)
+    /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
+    /// may recover from the error and returns a new value of type `Value`. The provided callback may optionally `throw`,
+    /// in which case the `EventLoopFuture` will be in a failed state with the new thrown error.
+    ///
+    /// Operations performed in `flatMapErrorThrowing` should not block, or they will block the entire
+    /// event loop. `flatMapErrorThrowing` is intended for use when you have the ability to synchronously
+    /// recover from errors.
+    ///
+    /// If your callback function throws, the returned `EventLoopFuture` will error.
+    ///
+    /// - parameters:
+    ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
+    ///         a new value lifted into a new `EventLoopFuture`.
+    /// - returns: A future that will receive the eventual value or a rethrown error.
+    @inlinable
+    @preconcurrency
+    public func flatMapErrorThrowing(_ callback: @escaping @Sendable (Error) throws -> Value) -> EventLoopFuture<Value> {
+        let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self.eventLoop)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let t):
+                return next._setValue(value: .success(t))
+            case .failure(let e):
+                do {
+                    let r = try callback(e)
+                    return next._setValue(value: .success(r))
+                } catch {
+                    return next._setValue(value: .failure(error))
+                }
+            }
+        }
+        return next.futureResult
+    }
+    #else
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// may recover from the error and returns a new value of type `Value`. The provided callback may optionally `throw`,
     /// in which case the `EventLoopFuture` will be in a failed state with the new thrown error.
@@ -556,7 +684,50 @@ extension EventLoopFuture {
         }
         return next.futureResult
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
+    /// performs a synchronous computation and returns a new value of type `NewValue`.
+    ///
+    /// Operations performed in `map` should not block, or they will block the entire event
+    /// loop. `map` is intended for use when you have a data-driven function that performs
+    /// a simple data transformation that cannot error.
+    ///
+    /// If you have a data-driven function that can throw, you should use `flatMapThrowing`
+    /// instead.
+    ///
+    /// ```
+    /// let future1 = eventually()
+    /// let future2 = future1.map { T -> U in
+    ///     ... stuff ...
+    ///     return u
+    /// }
+    /// let future3 = future2.map { U -> V in
+    ///     ... stuff ...
+    ///     return v
+    /// }
+    /// ```
+    ///
+    /// - parameters:
+    ///     - callback: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new value lifted into a new `EventLoopFuture`.
+    /// - returns: A future that will receive the eventual value.
+    @inlinable
+    @preconcurrency
+    public func map<NewValue>(_ callback: @escaping @Sendable (Value) -> (NewValue)) -> EventLoopFuture<NewValue> {
+        if NewValue.self == Value.self && NewValue.self == Void.self {
+            self.whenSuccess(callback as! @Sendable (Value) -> Void)
+            return self as! EventLoopFuture<NewValue>
+        } else {
+            let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
+            self._whenComplete {
+                return next._setValue(value: self._value!.map(callback))
+            }
+            return next.futureResult
+        }
+    }
+    #else
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
     /// performs a synchronous computation and returns a new value of type `NewValue`.
     ///
@@ -596,7 +767,43 @@ extension EventLoopFuture {
             return next.futureResult
         }
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
+    /// may recover from the error by returning an `EventLoopFuture<NewValue>`. The callback is intended to potentially
+    /// recover from the error by returning a new `EventLoopFuture` that will eventually contain the recovered
+    /// result.
+    ///
+    /// If the callback cannot recover it should return a failed `EventLoopFuture`.
+    ///
+    /// - parameters:
+    ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
+    ///         a new value lifted into a new `EventLoopFuture`.
+    /// - returns: A future that will receive the recovered value.
+    @inlinable
+    @preconcurrency
+    public func flatMapError(_ callback: @escaping @Sendable (Error) -> EventLoopFuture<Value>) -> EventLoopFuture<Value> {
+        let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self.eventLoop)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let t):
+                return next._setValue(value: .success(t))
+            case .failure(let e):
+                let t = callback(e)
+                if t.eventLoop.inEventLoop {
+                    return t._addCallback {
+                        next._setValue(value: t._value!)
+                    }
+                } else {
+                    t.cascade(to: next)
+                    return CallbackList()
+                }
+            }
+        }
+        return next.futureResult
+    }
+    #else
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// may recover from the error by returning an `EventLoopFuture<NewValue>`. The callback is intended to potentially
     /// recover from the error by returning a new `EventLoopFuture` that will eventually contain the recovered
@@ -629,7 +836,42 @@ extension EventLoopFuture {
         }
         return next.futureResult
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
+    /// performs a synchronous computation and returns either a new value (of type `NewValue`) or
+    /// an error depending on the `Result` returned by the closure.
+    ///
+    /// Operations performed in `flatMapResult` should not block, or they will block the entire
+    /// event loop. `flatMapResult` is intended for use when you have a data-driven function that
+    /// performs a simple data transformation that can potentially error.
+    ///
+    ///
+    /// - parameters:
+    ///     - body: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new value or error lifted into a new `EventLoopFuture`.
+    /// - returns: A future that will receive the eventual value.
+    @inlinable
+    @preconcurrency
+    public func flatMapResult<NewValue, SomeError: Error>(_ body: @escaping @Sendable (Value) -> Result<NewValue, SomeError>) -> EventLoopFuture<NewValue> {
+        let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let value):
+                switch body(value) {
+                case .success(let newValue):
+                    return next._setValue(value: .success(newValue))
+                case .failure(let error):
+                    return next._setValue(value: .failure(error))
+                }
+            case .failure(let e):
+                return next._setValue(value: .failure(e))
+            }
+        }
+        return next.futureResult
+    }
+    #else
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
     /// performs a synchronous computation and returns either a new value (of type `NewValue`) or
     /// an error depending on the `Result` returned by the closure.
@@ -661,7 +903,36 @@ extension EventLoopFuture {
         }
         return next.futureResult
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
+    /// can recover from the error and return a new value of type `Value`. The provided callback may not `throw`,
+    /// so this function should be used when the error is always recoverable.
+    ///
+    /// Operations performed in `recover` should not block, or they will block the entire
+    /// event loop. `recover` is intended for use when you have the ability to synchronously
+    /// recover from errors.
+    ///
+    /// - parameters:
+    ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
+    ///         a new value lifted into a new `EventLoopFuture`.
+    /// - returns: A future that will receive the recovered value.
+    @inlinable
+    @preconcurrency
+    public func recover(_ callback: @escaping @Sendable (Error) -> Value) -> EventLoopFuture<Value> {
+        let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self.eventLoop)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let t):
+                return next._setValue(value: .success(t))
+            case .failure(let e):
+                return next._setValue(value: .success(callback(e)))
+            }
+        }
+        return next.futureResult
+    }
+    #else
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// can recover from the error and return a new value of type `Value`. The provided callback may not `throw`,
     /// so this function should be used when the error is always recoverable.
@@ -687,8 +958,21 @@ extension EventLoopFuture {
         }
         return next.futureResult
     }
+    #endif
 
-
+    #if swift(>=5.6)
+    /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
+    @inlinable
+    @preconcurrency
+    internal func _addCallback(_ callback: @escaping @Sendable () -> CallbackList) -> CallbackList {
+        self.eventLoop.assertInEventLoop()
+        if self._value == nil {
+            self._callbacks.append(callback)
+            return CallbackList()
+        }
+        return callback()
+    }
+    #else
     /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
     @inlinable
     internal func _addCallback(_ callback: @escaping () -> CallbackList) -> CallbackList {
@@ -699,7 +983,22 @@ extension EventLoopFuture {
         }
         return callback()
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// Add a callback.  If there's already a value, run as much of the chain as we can.
+    @inlinable
+    @preconcurrency
+    internal func _whenComplete(_ callback: @Sendable @escaping () -> CallbackList) {
+        if self.eventLoop.inEventLoop {
+            self._addCallback(callback)._run()
+        } else {
+            self.eventLoop.execute {
+                self._addCallback(callback)._run()
+            }
+        }
+    }
+    #else
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
     @inlinable
     internal func _whenComplete(_ callback: @escaping () -> CallbackList) {
@@ -711,7 +1010,30 @@ extension EventLoopFuture {
             }
         }
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has a success result.
+    ///
+    /// An observer callback cannot return a value, meaning that this function cannot be chained
+    /// from. If you are attempting to create a computation pipeline, consider `map` or `flatMap`.
+    /// If you find yourself passing the results from this `EventLoopFuture` to a new `EventLoopPromise`
+    /// in the body of this function, consider using `cascade` instead.
+    ///
+    /// - parameters:
+    ///     - callback: The callback that is called with the successful result of the `EventLoopFuture`.
+    @inlinable
+    @preconcurrency
+    public func whenSuccess(_ callback: @escaping @Sendable (Value) -> Void) {
+        self._whenComplete {
+            if case .success(let t) = self._value! {
+                callback(t)
+            }
+            return CallbackList()
+        }
+    }
+    #else
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has a success result.
     ///
@@ -731,7 +1053,30 @@ extension EventLoopFuture {
             return CallbackList()
         }
     }
-
+    #endif
+    
+    #if swift(>=5.6)
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has a failure result.
+    ///
+    /// An observer callback cannot return a value, meaning that this function cannot be chained
+    /// from. If you are attempting to create a computation pipeline, consider `recover` or `flatMapError`.
+    /// If you find yourself passing the results from this `EventLoopFuture` to a new `EventLoopPromise`
+    /// in the body of this function, consider using `cascade` instead.
+    ///
+    /// - parameters:
+    ///     - callback: The callback that is called with the failed result of the `EventLoopFuture`.
+    @inlinable
+    @preconcurrency
+    public func whenFailure(_ callback: @escaping @Sendable (Error) -> Void) {
+        self._whenComplete {
+            if case .failure(let e) = self._value! {
+                callback(e)
+            }
+            return CallbackList()
+        }
+    }
+    #else
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has a failure result.
     ///
@@ -751,7 +1096,23 @@ extension EventLoopFuture {
             return CallbackList()
         }
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has any result.
+    ///
+    /// - parameters:
+    ///     - callback: The callback that is called when the `EventLoopFuture` is fulfilled.
+    @inlinable
+    @preconcurrency
+    public func whenComplete(_ callback: @escaping @Sendable (Result<Value, Error>) -> Void) {
+        self._whenComplete {
+            callback(self._value!)
+            return CallbackList()
+        }
+    }
+    #else
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result.
     ///
@@ -764,7 +1125,7 @@ extension EventLoopFuture {
             return CallbackList()
         }
     }
-
+    #endif
 
     /// Internal: Set the value and return a list of callbacks that should be invoked as a result.
     @inlinable
@@ -942,6 +1303,51 @@ extension EventLoopFuture {
 // MARK: fold
 
 extension EventLoopFuture {
+    #if swift(>=5.6)
+    /// Returns a new `EventLoopFuture` that fires only when this `EventLoopFuture` and
+    /// all the provided `futures` complete. It then provides the result of folding the value of this
+    /// `EventLoopFuture` with the values of all the provided `futures`.
+    ///
+    /// This function is suited when you have APIs that already know how to return `EventLoopFuture`s.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as the a failure is encountered in any of the
+    /// `futures` (or in this one). However, the failure will not occur until all preceding
+    /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
+    /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
+    /// a failure is encountered, it will immediately fail the overall EventLoopFuture.
+    ///
+    /// - parameters:
+    ///     - futures: An array of `EventLoopFuture<NewValue>` to wait for.
+    ///     - with: A function that will be used to fold the values of two `EventLoopFuture`s and return a new value wrapped in an `EventLoopFuture`.
+    /// - returns: A new `EventLoopFuture` with the folded value whose callbacks run on `self.eventLoop`.
+    @inlinable
+    @preconcurrency
+    public func fold<OtherValue>(_ futures: [EventLoopFuture<OtherValue>],
+                                 with combiningFunction: @escaping @Sendable (Value, OtherValue) -> EventLoopFuture<Value>) -> EventLoopFuture<Value> {
+        func fold0() -> EventLoopFuture<Value> {
+            let body = futures.reduce(self) { (f1: EventLoopFuture<Value>, f2: EventLoopFuture<OtherValue>) -> EventLoopFuture<Value> in
+                let newFuture = f1.and(f2).flatMap { (args: (Value, OtherValue)) -> EventLoopFuture<Value> in
+                    let (f1Value, f2Value) = args
+                    self.eventLoop.assertInEventLoop()
+                    return combiningFunction(f1Value, f2Value)
+                }
+                assert(newFuture.eventLoop === self.eventLoop)
+                return newFuture
+            }
+            return body
+        }
+
+        if self.eventLoop.inEventLoop {
+            return fold0()
+        } else {
+            let promise = self.eventLoop.makePromise(of: Value.self)
+            self.eventLoop.execute {
+                fold0().cascade(to: promise)
+            }
+            return promise.futureResult
+        }
+    }
+    #else
     /// Returns a new `EventLoopFuture` that fires only when this `EventLoopFuture` and
     /// all the provided `futures` complete. It then provides the result of folding the value of this
     /// `EventLoopFuture` with the values of all the provided `futures`.
@@ -984,11 +1390,46 @@ extension EventLoopFuture {
             return promise.futureResult
         }
     }
+    #endif
 }
 
 // MARK: reduce
 
 extension EventLoopFuture {
+    #if swift(>=5.6)
+    /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
+    /// The new `EventLoopFuture` contains the result of reducing the `initialResult` with the
+    /// values of the `[EventLoopFuture<NewValue>]`.
+    ///
+    /// This function makes copies of the result for each EventLoopFuture, for a version which avoids
+    /// making copies, check out `reduce<NewValue>(into:)`.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as a failure is encountered in any of the
+    /// `futures`. However, the failure will not occur until all preceding
+    /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
+    /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
+    /// a failure is encountered, it will immediately fail the overall `EventLoopFuture`.
+    ///
+    /// - parameters:
+    ///     - initialResult: An initial result to begin the reduction.
+    ///     - futures: An array of `EventLoopFuture` to wait for.
+    ///     - eventLoop: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
+    ///     - nextPartialResult: The bifunction used to produce partial results.
+    /// - returns: A new `EventLoopFuture` with the reduced value.
+    @preconcurrency
+    public static func reduce<InputValue>(_ initialResult: Value,
+                                          _ futures: [EventLoopFuture<InputValue>],
+                                          on eventLoop: EventLoop,
+                                          _ nextPartialResult: @escaping @Sendable (Value, InputValue) -> Value) -> EventLoopFuture<Value> {
+        let f0 = eventLoop.makeSucceededFuture(initialResult)
+
+        let body = f0.fold(futures) { (t: Value, u: InputValue) -> EventLoopFuture<Value> in
+            eventLoop.makeSucceededFuture(nextPartialResult(t, u))
+        }
+
+        return body
+    }
+    #else
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
     /// The new `EventLoopFuture` contains the result of reducing the `initialResult` with the
     /// values of the `[EventLoopFuture<NewValue>]`.
@@ -1020,7 +1461,52 @@ extension EventLoopFuture {
 
         return body
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
+    /// The new `EventLoopFuture` contains the result of combining the `initialResult` with the
+    /// values of the `[EventLoopFuture<NewValue>]`. This function is analogous to the standard library's
+    /// `reduce(into:)`, which does not make copies of the result type for each `EventLoopFuture`.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as a failure is encountered in any of the
+    /// `futures`. However, the failure will not occur until all preceding
+    /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
+    /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
+    /// a failure is encountered, it will immediately fail the overall `EventLoopFuture`.
+    ///
+    /// - parameters:
+    ///     - initialResult: An initial result to begin the reduction.
+    ///     - futures: An array of `EventLoopFuture` to wait for.
+    ///     - eventLoop: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
+    ///     - updateAccumulatingResult: The bifunction used to combine partialResults with new elements.
+    /// - returns: A new `EventLoopFuture` with the combined value.
+    @preconcurrency
+    public static func reduce<InputValue>(into initialResult: Value,
+                                          _ futures: [EventLoopFuture<InputValue>],
+                                          on eventLoop: EventLoop,
+                                          _ updateAccumulatingResult: @escaping @Sendable (inout Value, InputValue) -> Void) -> EventLoopFuture<Value> {
+        let p0 = eventLoop.makePromise(of: Value.self)
+        var value: Value = initialResult
+
+        let f0 = eventLoop.makeSucceededFuture(())
+        let future = f0.fold(futures) { (_: (), newValue: InputValue) -> EventLoopFuture<Void> in
+            eventLoop.assertInEventLoop()
+            updateAccumulatingResult(&value, newValue)
+            return eventLoop.makeSucceededFuture(())
+        }
+
+        future.whenSuccess {
+            eventLoop.assertInEventLoop()
+            p0.succeed(value)
+        }
+        future.whenFailure { (error) in
+            eventLoop.assertInEventLoop()
+            p0.fail(error)
+        }
+        return p0.futureResult
+    }
+    #else
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
     /// The new `EventLoopFuture` contains the result of combining the `initialResult` with the
     /// values of the `[EventLoopFuture<NewValue>]`. This function is analogous to the standard library's
@@ -1062,6 +1548,7 @@ extension EventLoopFuture {
         }
         return p0.futureResult
     }
+    #endif
 }
 
 // MARK: "fail fast" reduce
@@ -1156,7 +1643,60 @@ extension EventLoopFuture {
             }
         }
     }
+    
+    #if swift(>=5.6)
+    /// Loops through the futures array and attaches callbacks to execute `onValue` on the provided `EventLoop` when
+    /// they succeed. The `onValue` will receive the index of the future that fulfilled the provided `Result`.
+    ///
+    /// Once all the futures have succeed, the provided promise will succeed.
+    /// Once any future fails, the provided promise will fail.
+    @inlinable
+    @preconcurrency
+    internal static func _reduceSuccesses0<InputValue>(_ promise: EventLoopPromise<Void>,
+                                                       _ futures: [EventLoopFuture<InputValue>],
+                                                       _ eventLoop: EventLoop,
+                                                       onValue: @escaping @Sendable (Int, InputValue) -> Void) {
+        eventLoop.assertInEventLoop()
 
+        var remainingCount = futures.count
+
+        if remainingCount == 0 {
+            promise.succeed(())
+            return
+        }
+
+        // Sends the result to `onValue` in case of success and succeeds/fails the input promise, if appropriate.
+        func processResult(_ index: Int, _ result: Result<InputValue, Error>) {
+            switch result {
+            case .success(let result):
+                onValue(index, result)
+                remainingCount -= 1
+
+                if remainingCount == 0 {
+                    promise.succeed(())
+                }
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
+        // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
+        // in the "futures" to pass their result to the caller
+        for (index, future) in futures.enumerated() {
+            if future.eventLoop.inEventLoop,
+                let result = future._value {
+                // Fast-track already-fulfilled results without the overhead of calling `whenComplete`. This can yield a
+                // ~20% performance improvement in the case of large arrays where all elements are already fulfilled.
+                processResult(index, result)
+                if case .failure = result {
+                    return  // Once the promise is failed, future results do not need to be processed.
+                }
+            } else {
+                future.hop(to: eventLoop)
+                    .whenComplete { result in processResult(index, result) }
+            }
+        }
+    }
+    #else
     /// Loops through the futures array and attaches callbacks to execute `onValue` on the provided `EventLoop` when
     /// they succeed. The `onValue` will receive the index of the future that fulfilled the provided `Result`.
     ///
@@ -1207,6 +1747,7 @@ extension EventLoopFuture {
             }
         }
     }
+    #endif
 }
 
 // MARK: "fail slow" reduce
@@ -1311,7 +1852,51 @@ extension EventLoopFuture {
             }
         }
     }
+    
+    #if swift(>=5.6)
+    /// Loops through the futures array and attaches callbacks to execute `onResult` on the provided `EventLoop` when
+    /// they complete. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
+    ///
+    /// Once all the futures have completed, the provided promise will succeed.
+    @inlinable
+    @preconcurrency
+    internal static func _reduceCompletions0<InputValue>(_ promise: EventLoopPromise<Void>,
+                                                         _ futures: [EventLoopFuture<InputValue>],
+                                                         _ eventLoop: EventLoop,
+                                                         onResult: @escaping @Sendable (Int, Result<InputValue, Error>) -> Void) {
+        eventLoop.assertInEventLoop()
 
+        var remainingCount = futures.count
+
+        if remainingCount == 0 {
+            promise.succeed(())
+            return
+        }
+
+        // Sends the result to `onResult` in case of success and succeeds the input promise, if appropriate.
+        func processResult(_ index: Int, _ result: Result<InputValue, Error>) {
+            onResult(index, result)
+            remainingCount -= 1
+
+            if remainingCount == 0 {
+                promise.succeed(())
+            }
+        }
+        // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
+        // in the "futures" to pass their result to the caller
+        for (index, future) in futures.enumerated() {
+            if future.eventLoop.inEventLoop,
+                let result = future._value {
+                // Fast-track already-fulfilled results without the overhead of calling `whenComplete`. This can yield a
+                // ~30% performance improvement in the case of large arrays where all elements are already fulfilled.
+                processResult(index, result)
+            } else {
+                future.hop(to: eventLoop)
+                    .whenComplete { result in processResult(index, result) }
+            }
+        }
+    }
+    #else
     /// Loops through the futures array and attaches callbacks to execute `onResult` on the provided `EventLoop` when
     /// they complete. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
     ///
@@ -1353,6 +1938,7 @@ extension EventLoopFuture {
             }
         }
     }
+    #endif
 }
 
 // MARK: hop
@@ -1384,6 +1970,7 @@ extension EventLoopFuture {
 // MARK: always
 
 extension EventLoopFuture {
+    #if swift(>=5.6)
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result.
     ///
@@ -1391,10 +1978,24 @@ extension EventLoopFuture {
     ///     - callback: the callback that is called when the `EventLoopFuture` is fulfilled.   
     /// - returns: the current `EventLoopFuture`
     @inlinable
+    @preconcurrency
+    public func always(_ callback: @escaping @Sendable (Result<Value, Error>) -> Void) -> EventLoopFuture<Value> {
+        self.whenComplete { result in callback(result) }
+        return self
+    }
+    #else
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has any result.
+    ///
+    /// - parameters:
+    ///     - callback: the callback that is called when the `EventLoopFuture` is fulfilled.
+    /// - returns: the current `EventLoopFuture`
+    @inlinable
     public func always(_ callback: @escaping (Result<Value, Error>) -> Void) -> EventLoopFuture<Value> {
         self.whenComplete { result in callback(result) }
         return self
     }
+    #endif
 }
 
 // MARK: unwrap
@@ -1448,7 +2049,33 @@ extension EventLoopFuture {
             return value 
         }
     }
-
+    
+    #if swift(>=5.6)
+    /// Unwrap an `EventLoopFuture` where its type parameter is an `Optional`.
+    ///
+    /// Unwraps a future returning a new `EventLoopFuture` with either: the value returned by the closure passed in
+    /// the `orElse` parameter when the future resolved with value Optional.none, or the same value otherwise. For example:
+    /// ```
+    /// var x = 2
+    /// promise.futureResult.unwrap(orElse: { x * 2 }).wait()
+    /// ```
+    ///
+    /// - parameters:
+    ///     - orElse: a closure that returns the value of the returned `EventLoopFuture` when then resolved future's value
+    ///         is `Optional.some()`.
+    /// - returns: an new `EventLoopFuture` with new type parameter `NewValue` and with the value returned by the closure
+    ///     passed in the `orElse` parameter.
+    @inlinable
+    @preconcurrency
+    public func unwrap<NewValue>(orElse callback: @escaping @Sendable () -> NewValue) -> EventLoopFuture<NewValue> where Value == Optional<NewValue> {
+        return self.map { (value) -> NewValue  in
+            guard let value = value else {
+                return callback()
+            }
+            return value 
+        }
+    }
+    #else
     /// Unwrap an `EventLoopFuture` where its type parameter is an `Optional`.
     ///
     /// Unwraps a future returning a new `EventLoopFuture` with either: the value returned by the closure passed in
@@ -1469,14 +2096,35 @@ extension EventLoopFuture {
             guard let value = value else {
                 return callback()
             }
-            return value 
+            return value
         }
     }
+    #endif
 }
 
 // MARK: may block 
 
 extension EventLoopFuture {
+    #if swift(>=5.6)
+    /// Chain an `EventLoopFuture<NewValue>` providing the result of a IO / task that may block. For example:
+    ///
+    ///     promise.futureResult.flatMapBlocking(onto: DispatchQueue.global()) { value in Int
+    ///         blockingTask(value)
+    ///     }
+    ///
+    /// - parameters:
+    ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is scheduled.
+    ///     - callbackMayBlock: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new `EventLoopFuture`.
+    @inlinable
+    @preconcurrency
+    public func flatMapBlocking<NewValue>(onto queue: DispatchQueue, _ callbackMayBlock: @escaping @Sendable (Value) throws -> NewValue)
+        -> EventLoopFuture<NewValue> {
+        return self.flatMap { result in
+            queue.asyncWithFuture(eventLoop: self.eventLoop) { try callbackMayBlock(result) }
+        }
+    }
+    #else
     /// Chain an `EventLoopFuture<NewValue>` providing the result of a IO / task that may block. For example:
     ///
     ///     promise.futureResult.flatMapBlocking(onto: DispatchQueue.global()) { value in Int
@@ -1494,7 +2142,7 @@ extension EventLoopFuture {
             queue.asyncWithFuture(eventLoop: self.eventLoop) { try callbackMayBlock(result) }
         }
     }
-
+    #endif
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has a success result. The observer callback is permitted to block.
     ///
@@ -1512,7 +2160,27 @@ extension EventLoopFuture {
             queue.async { callbackMayBlock(value) }
         }
     }
-
+    
+    #if swift(>=5.6)
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has a failure result. The observer callback is permitted to block.
+    ///
+    /// An observer callback cannot return a value, meaning that this function cannot be chained
+    /// from. If you are attempting to create a computation pipeline, consider `recover` or `flatMapError`.
+    /// If you find yourself passing the results from this `EventLoopFuture` to a new `EventLoopPromise`
+    /// in the body of this function, consider using `cascade` instead.
+    ///
+    /// - parameters:
+    ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is scheduled.
+    ///     - callbackMayBlock: The callback that is called with the failed result of the `EventLoopFuture`.
+    @inlinable
+    @preconcurrency
+    public func whenFailureBlocking(onto queue: DispatchQueue, _ callbackMayBlock: @escaping @Sendable (Error) -> Void) {
+        self.whenFailure { err in
+            queue.async { callbackMayBlock(err) }
+        }
+    }
+    #else
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has a failure result. The observer callback is permitted to block.
     ///
@@ -1530,7 +2198,23 @@ extension EventLoopFuture {
             queue.async { callbackMayBlock(err) }
         }
     }
+    #endif
 
+    #if swift(>=5.6)
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has any result. The observer callback is permitted to block.
+    ///
+    /// - parameters:
+    ///     - onto: the `DispatchQueue` on which the blocking IO / task specified by `callbackMayBlock` is scheduled.
+    ///     - callbackMayBlock: The callback that is called when the `EventLoopFuture` is fulfilled.
+    @inlinable
+    @preconcurrency
+    public func whenCompleteBlocking(onto queue: DispatchQueue, _ callbackMayBlock: @escaping @Sendable (Result<Value, Error>) -> Void) {
+        self.whenComplete { value in
+            queue.async { callbackMayBlock(value) }
+        }
+    }
+    #else
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result. The observer callback is permitted to block.
     ///
@@ -1543,6 +2227,7 @@ extension EventLoopFuture {
             queue.async { callbackMayBlock(value) }
         }
     }
+    #endif
 }
 
 
@@ -1551,7 +2236,7 @@ extension EventLoopFuture {
 /// This is used only when attempting to provide high-fidelity diagnostics of leaked
 /// `EventLoopFuture`s. It is entirely opaque and can only be stored in a simple
 /// tracking data structure.
-public struct _NIOEventLoopFutureIdentifier: Hashable {
+public struct _NIOEventLoopFutureIdentifier: Hashable, NIOSendable {
     private var opaqueID: UInt
 
     @usableFromInline
