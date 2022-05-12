@@ -198,7 +198,7 @@ extension ChannelPipeline {
     @_disfavoredOverload
     public func addHandlers(_ handlers: ChannelHandler...,
                             position: ChannelPipeline.Position = .last) async throws {
-        try await self.addHandlers(handlers, position: position)
+        try await self.addHandlers(handlers, position: position).get()
     }
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandler is not Sendable and it is therefore not safe to be send to a different thread")
