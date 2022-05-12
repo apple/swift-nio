@@ -14,8 +14,13 @@
 
 /// A configuration option that can be set on a `Channel` to configure different behaviour.
 public protocol ChannelOption: Equatable, NIOPreconcurrencySendable {
+    #if swift(>=5.6)
+    /// The type of the `ChannelOption`'s value.
+    associatedtype Value: Sendable
+    #else
     /// The type of the `ChannelOption`'s value.
     associatedtype Value
+    #endif
 }
 
 public typealias SocketOptionName = Int32
