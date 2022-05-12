@@ -22,8 +22,8 @@ import Dispatch
 func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
     let channel = try await ClientBootstrap(group: group).connect(host: host, port: port).get()
     try await channel.pipeline.addHTTPClientHandlers().get()
-    try await channel.pipeline.addHandler(NIOHTTPClientResponseAggregator(maxContentLength: 1_000_000))
-    try await channel.pipeline.addHandler(MakeFullRequestHandler())
+    try await channel.pipeline.addHandler(NIOHTTPClientResponseAggregator(maxContentLength: 1_000_000)).get()
+    try await channel.pipeline.addHandler(MakeFullRequestHandler()).get()
     return try await AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull>(channel).start()
 }
 
