@@ -187,6 +187,7 @@ extension ChannelPipeline {
 extension ChannelPipeline {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandler is not Sendable and it is therefore not safe to be send to a different thread")
+    @_disfavoredOverload
     public func addHandlers(_ handlers: [ChannelHandler],
                             position: ChannelPipeline.Position = .last) async throws {
         try await self.addHandlers(handlers, position: position).get()
@@ -194,12 +195,14 @@ extension ChannelPipeline {
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandler is not Sendable and it is therefore not safe to be send to a different thread")
+    @_disfavoredOverload
     public func addHandlers(_ handlers: ChannelHandler...,
                             position: ChannelPipeline.Position = .last) async throws {
         try await self.addHandlers(handlers, position: position)
     }
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandler is not Sendable and it is therefore not safe to be send to a different thread")
+    @_disfavoredOverload
     public func addHandler(_ handler: ChannelHandler,
                            name: String? = nil,
                            position: ChannelPipeline.Position = .last) async throws {
@@ -208,12 +211,14 @@ extension ChannelPipeline {
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandler is not Sendable and it is therefore not safe to be send to a different thread")
+    @_disfavoredOverload
     public func removeHandler(_ handler: RemovableChannelHandler) async throws {
         try await self.removeHandler(handler).get()
     }
     
-    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be send to a different thread")
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be send to a different thread")
+    @_disfavoredOverload
     public func removeHandler(context: ChannelHandlerContext) async throws {
         try await self.removeHandler(context: context).get()
     }
