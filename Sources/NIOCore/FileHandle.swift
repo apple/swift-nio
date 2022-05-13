@@ -89,7 +89,7 @@ public final class NIOFileHandle: FileDescriptor {
 
 extension NIOFileHandle {
     /// `Mode` represents file access modes.
-    public struct Mode: OptionSet {
+    public struct Mode: OptionSet, NIOSendable {
         public let rawValue: UInt8
 
         public init(rawValue: UInt8) {
@@ -116,7 +116,7 @@ extension NIOFileHandle {
     }
 
     /// `Flags` allows to specify additional flags to `Mode`, such as permission for file creation.
-    public struct Flags {
+    public struct Flags: NIOSendable {
         internal var posixMode: mode_t
         internal var posixFlags: CInt
 

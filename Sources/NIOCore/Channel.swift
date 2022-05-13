@@ -102,7 +102,7 @@ public protocol ChannelCore: AnyObject {
 /// passed to or returned by the operations are used to retrieve the result of an operation after it has completed.
 ///
 /// A `Channel` owns its `ChannelPipeline` which handles all I/O events and requests associated with the `Channel`.
-public protocol Channel: AnyObject, ChannelOutboundInvoker {
+public protocol Channel: AnyObject, ChannelOutboundInvoker, NIOPreconcurrencySendable {
     /// The `Channel`'s `ByteBuffer` allocator. This is _the only_ supported way of allocating `ByteBuffer`s to be used with this `Channel`.
     var allocator: ByteBufferAllocator { get }
 
@@ -379,7 +379,7 @@ extension ChannelError: Equatable { }
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
 
 /// An `Channel` related event that is passed through the `ChannelPipeline` to notify the user.
-public enum ChannelEvent: Equatable {
+public enum ChannelEvent: Equatable, NIOSendable {
     /// `ChannelOptions.allowRemoteHalfClosure` is `true` and input portion of the `Channel` was closed.
     case inputClosed
     /// Output portion of the `Channel` was closed.
@@ -391,7 +391,7 @@ public enum ChannelEvent: Equatable {
 /// The action(s) that should be taken after receiving this event are both application and protocol dependent. If the
 /// protocol supports a notion of requests and responses, it might make sense to stop accepting new requests but finish
 /// processing the request currently in flight.
-public struct ChannelShouldQuiesceEvent {
+public struct ChannelShouldQuiesceEvent: NIOSendable {
     public init() {
     }
 }
