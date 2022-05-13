@@ -14,7 +14,7 @@
 
 #if compiler(>=5.5.2) && canImport(_Concurrency)
 
-extension EventLoopFuture {
+extension EventLoopFuture where Value: Sendable {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
     ///
     /// This function can be used to bridge an `EventLoopFuture` into the `async` world. Ie. if you're in an `async`
@@ -98,7 +98,7 @@ extension Channel {
     /// Get the value of `option` for this `Channel`.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
-    public func getOption<Option: ChannelOption>(_ option: Option) async throws -> Option.Value {
+    public func getOption<Option: ChannelOption>(_ option: Option) async throws -> Option.Value where Option.Value: Sendable {
         return try await self.getOption(option).get()
     }
 }
@@ -187,20 +187,20 @@ extension ChannelPipeline {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     public func context(handler: ChannelHandler) async throws -> ChannelHandlerContext {
-        return try await self.context(handler: handler).get()
+        return try await self.context(handler: handler).map(UncheckedSendable.init(_:)).get().value
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     public func context(name: String) async throws -> ChannelHandlerContext {
-        return try await self.context(name: name).get()
+        return try await self.context(name: name).map(UncheckedSendable.init(_:)).get().value
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     @inlinable
     public func context<Handler: ChannelHandler>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
-        return try await self.context(handlerType: handlerType).get()
+        return try await self.context(handlerType: handlerType).map(UncheckedSendable.init(_:)).get().value
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)

@@ -23,3 +23,15 @@ public typealias NIOSendable = Any
 #else
 public protocol NIOPreconcurrencySendable {}
 #endif
+
+#if swift(>=5.5) && canImport(_Concurrency)
+@usableFromInline
+internal struct UncheckedSendable<Value>: @unchecked Sendable {
+    @usableFromInline
+    var value: Value
+    @inlinable
+    init(_ value: Value) {
+        self.value = value
+    }
+}
+#endif

@@ -14,7 +14,7 @@
 
 #if compiler(>=5.5) && !compiler(>=5.5.2) && canImport(_Concurrency) 
 
-extension EventLoopFuture {
+extension EventLoopFuture where Value: Sendable {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
     ///
     /// This function can be used to bridge an `EventLoopFuture` into the `async` world. Ie. if you're in an `async`

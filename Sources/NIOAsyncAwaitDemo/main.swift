@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 import NIOPosix
-import NIOHTTP1
+@preconcurrency import NIOHTTP1
 import Dispatch
 
 #if canImport(_Concurrency) && compiler(>=5.5.2)
