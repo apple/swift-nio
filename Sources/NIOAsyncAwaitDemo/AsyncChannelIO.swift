@@ -15,9 +15,33 @@
 import NIOCore
 import NIOHTTP1
 
-#if canImport(_Concurrency) && compiler(>=5.5.2)
+#if compiler(>=5.6)
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 struct AsyncChannelIO<Request: Sendable, Response: Sendable> {
+    let channel: Channel
+
+    init(_ channel: Channel) {
+        self.channel = channel
+    }
+
+    func start() async throws -> AsyncChannelIO<Request, Response> {
+        try await channel.pipeline.addHandler(RequestResponseHandler<HTTPRequestHead, NIOHTTPClientResponseFull>()).get()
+        return self
+    }
+
+    func sendRequest(_ request: Request) async throws -> Response {
+        let responsePromise: EventLoopPromise<Response> = channel.eventLoop.makePromise()
+        try await self.channel.writeAndFlush((request, responsePromise)).get()
+        return try await responsePromise.futureResult.get()
+    }
+
+    func close() async throws {
+        try await self.channel.close()
+    }
+}
+#elseif canImport(_Concurrency) && compiler(>=5.5.2)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+struct AsyncChannelIO<Request, Response> {
     let channel: Channel
 
     init(_ channel: Channel) {

@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 import NIOPosix
+#if swift(>=5.6)
 @preconcurrency import NIOHTTP1
+#else
+import NIOHTTP1
+#endif
 import Dispatch
 
 #if canImport(_Concurrency) && compiler(>=5.5.2)

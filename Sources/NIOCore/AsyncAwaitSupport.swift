@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 
+#if compiler(>=5.6)
 extension EventLoopFuture where Value: Sendable {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
     ///
@@ -34,6 +34,30 @@ extension EventLoopFuture where Value: Sendable {
         }
     }
 }
+#elseif compiler(>=5.5.2) && canImport(_Concurrency)
+extension EventLoopFuture {
+    /// Get the value/error from an `EventLoopFuture` in an `async` context.
+    ///
+    /// This function can be used to bridge an `EventLoopFuture` into the `async` world. Ie. if you're in an `async`
+    /// function and want to get the result of this future.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @inlinable
+    public func get() async throws -> Value {
+        return try await withUnsafeThrowingContinuation { cont in
+            self.whenComplete { result in
+                switch result {
+                case .success(let value):
+                    cont.resume(returning: value)
+                case .failure(let error):
+                    cont.resume(throwing: error)
+                }
+            }
+        }
+    }
+}
+#endif
+
+#if compiler(>=5.5.2) && canImport(_Concurrency)
 
 extension EventLoopGroup {
     /// Shuts down the event loop gracefully.
