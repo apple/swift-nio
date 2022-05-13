@@ -221,7 +221,7 @@ extension RepeatedTask: @unchecked Sendable {}
 ///         // Do something with each loop
 ///     }
 ///
-public struct EventLoopIterator: Sequence, IteratorProtocol, NIOSendable {
+public struct EventLoopIterator: Sequence, IteratorProtocol {
     public typealias Element = EventLoop
     private var eventLoops: IndexingIterator<[EventLoop]>
 
@@ -237,6 +237,10 @@ public struct EventLoopIterator: Sequence, IteratorProtocol, NIOSendable {
         return self.eventLoops.next()
     }
 }
+
+#if swift(>=5.6)
+extension EventLoopIterator: Sendable {}
+#endif
 
 /// An EventLoop processes IO / tasks in an endless loop for `Channel`s until it's closed.
 ///
@@ -1129,7 +1133,7 @@ extension EventLoopGroup {
 /// This type is intended to be used by libraries which use NIO, and offer their users either the option
 /// to `.share` an existing event loop group or create (and manage) a new one (`.createNew`) and let it be
 /// managed by given library and its lifecycle.
-public enum NIOEventLoopGroupProvider: NIOSendable {
+public enum NIOEventLoopGroupProvider {
     /// Use an `EventLoopGroup` provided by the user.
     /// The owner of this group is responsible for its lifecycle.
     case shared(EventLoopGroup)
@@ -1138,6 +1142,10 @@ public enum NIOEventLoopGroupProvider: NIOSendable {
     /// and must ensure its proper shutdown when the library is being shut down.
     case createNew
 }
+
+#if swift(>=5.6)
+extension NIOEventLoopGroupProvider: Sendable {}
+#endif
 
 /// Different `Error`s that are specific to `EventLoop` operations / implementations.
 public enum EventLoopError: Error {
