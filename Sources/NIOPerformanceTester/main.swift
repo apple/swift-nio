@@ -1046,3 +1046,10 @@ try measureAndPrint(
         size: 1024
     )
 )
+
+try measureAndPrint(
+    desc: "deadline_now_1M_times",
+    benchmark: DeadlineNowBenchmark(
+        iterations: 1_000_000
+    )
+)
