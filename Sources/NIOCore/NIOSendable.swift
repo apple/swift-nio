@@ -23,3 +23,19 @@ public typealias NIOSendable = Any
 #else
 public protocol NIOPreconcurrencySendable {}
 #endif
+
+#if swift(>=5.5) && canImport(_Concurrency)
+@usableFromInline
+struct UnsafeTransfer<Wrapped> : @unchecked Sendable {
+    @usableFromInline
+    var wrappedValue: Wrapped
+    
+    @inlinable
+    init(_ wrappedValue: Wrapped) {
+        self.wrappedValue = wrappedValue
+    }
+}
+
+extension UnsafeTransfer: Equatable where Wrapped: Equatable {}
+extension UnsafeTransfer: Hashable where Wrapped: Hashable {}
+#endif
