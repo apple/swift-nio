@@ -32,8 +32,7 @@ final class DeadlineNowBenchmark: Benchmark {
         for _ in 0..<self.iterations {
             let now = NIODeadline.now().uptimeNanoseconds
             counter &+= now
-
         }
-        return 1
+        return Int(truncatingIfNeeded: counter)
     }
 }
