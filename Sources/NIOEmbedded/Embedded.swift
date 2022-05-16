@@ -17,7 +17,7 @@ import _NIODataStructures
 import NIOCore
 
 
-private struct EmbeddedScheduledTask {
+internal struct EmbeddedScheduledTask {
     let id: UInt64
     let task: () -> Void
     let failFn: (Error) -> ()

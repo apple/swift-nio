@@ -230,6 +230,7 @@ public struct ByteBuffer {
     @usableFromInline var _slice: Slice
 
     // MARK: Internal _Storage for CoW
+    /// Note: This class is **not** thread-safe
     @usableFromInline final class _Storage {
         @usableFromInline private(set) var capacity: _Capacity
         @usableFromInline private(set) var bytes: UnsafeMutableRawPointer

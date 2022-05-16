@@ -35,7 +35,7 @@ public struct AddressedEnvelope<DataType> {
     }
     
     /// Any metadata associated with an `AddressedEnvelope`
-    public struct Metadata: Hashable {
+    public struct Metadata: Hashable, NIOSendable {
         /// Details of any congestion state.
         public var ecnState: NIOExplicitCongestionNotificationState
         public var packetInfo: NIOPacketInfo?
@@ -62,8 +62,10 @@ extension AddressedEnvelope: Equatable where DataType: Equatable {}
 
 extension AddressedEnvelope: Hashable where DataType: Hashable {}
 
+extension AddressedEnvelope: NIOSendable where DataType: NIOSendable {}
+
 /// Possible Explicit Congestion Notification States
-public enum NIOExplicitCongestionNotificationState: Hashable {
+public enum NIOExplicitCongestionNotificationState: Hashable, NIOSendable {
     /// Non-ECN Capable Transport.
     case transportNotCapable
     /// ECN Capable Transport (flag 0).
@@ -74,7 +76,7 @@ public enum NIOExplicitCongestionNotificationState: Hashable {
     case congestionExperienced
 }
 
-public struct NIOPacketInfo: Hashable {
+public struct NIOPacketInfo: Hashable, NIOSendable {
     public var destinationAddress: SocketAddress
     public var interfaceIndex: Int
 
