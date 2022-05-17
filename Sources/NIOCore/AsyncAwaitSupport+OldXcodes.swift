@@ -163,6 +163,41 @@ extension ChannelOutboundInvoker {
 
 extension ChannelPipeline {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    public func addHandlers(_ handlers: [ChannelHandler & Sendable],
+                            position: ChannelPipeline.Position = .last) async throws {
+        try await self.addHandlers(handlers, position: position).get()
+    }
+
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    public func addHandlers(_ handlers: ChannelHandler & Sendable...,
+                            position: ChannelPipeline.Position = .last) async throws {
+        try await self.addHandlers(handlers, position: position)
+    }
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    public func addHandler(_ handler: ChannelHandler & Sendable,
+                           name: String? = nil,
+                           position: ChannelPipeline.Position = .last) async throws {
+        try await self.addHandler(handler, name: name, position: position).get()
+    }
+
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    public func removeHandler(_ handler: RemovableChannelHandler & Sendable) async throws {
+        try await self.removeHandler(handler).get()
+    }
+
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    public func removeHandler(context: ChannelHandlerContext & Sendable) async throws {
+        try await self.removeHandler(context: context).get()
+    }
+    
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    public func removeHandler(name: String) async throws {
+        try await self.removeHandler(name: name).get()
+    }
+}
+
+extension ChannelPipeline {
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     public func context(handler: ChannelHandler) async throws -> ChannelHandlerContext {
         return try await self.context(handler: handler).get()
@@ -179,11 +214,6 @@ extension ChannelPipeline {
     @inlinable
     public func context<Handler: ChannelHandler>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
         return try await self.context(handlerType: handlerType).get()
-    }
-    
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public func removeHandler(name: String) async throws {
-        try await self.removeHandler(name: name).get()
     }
 }
 
@@ -223,36 +253,6 @@ extension ChannelPipeline {
     @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be send to a different thread")
     @_disfavoredOverload
     public func removeHandler(context: ChannelHandlerContext) async throws {
-        try await self.removeHandler(context: context).get()
-    }
-}
-
-extension ChannelPipeline {
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public func addHandlers(_ handlers: [ChannelHandler & Sendable],
-                            position: ChannelPipeline.Position = .last) async throws {
-        try await self.addHandlers(handlers, position: position).get()
-    }
-
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public func addHandlers(_ handlers: ChannelHandler & Sendable...,
-                            position: ChannelPipeline.Position = .last) async throws {
-        try await self.addHandlers(handlers, position: position)
-    }
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public func addHandler(_ handler: ChannelHandler & Sendable,
-                           name: String? = nil,
-                           position: ChannelPipeline.Position = .last) async throws {
-        try await self.addHandler(handler, name: name, position: position).get()
-    }
-
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public func removeHandler(_ handler: RemovableChannelHandler & Sendable) async throws {
-        try await self.removeHandler(handler).get()
-    }
-
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public func removeHandler(context: ChannelHandlerContext & Sendable) async throws {
         try await self.removeHandler(context: context).get()
     }
 }
