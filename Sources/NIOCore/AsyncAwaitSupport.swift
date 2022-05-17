@@ -26,12 +26,12 @@ extension EventLoopFuture {
             self.whenComplete { result in
                 switch result {
                 case .success(let value):
-                    cont.resume(returning: value)
+                    cont.resume(returning: UnsafeTransfer(value))
                 case .failure(let error):
                     cont.resume(throwing: error)
                 }
             }
-        }
+        }.wrappedValue
     }
 }
 
