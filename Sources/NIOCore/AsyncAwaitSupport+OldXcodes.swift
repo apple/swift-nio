@@ -163,16 +163,19 @@ extension ChannelOutboundInvoker {
 
 extension ChannelPipeline {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     public func context(handler: ChannelHandler) async throws -> ChannelHandlerContext {
         return try await self.context(handler: handler).get()
     }
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     public func context(name: String) async throws -> ChannelHandlerContext {
         return try await self.context(name: name).get()
     }
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     @inlinable
     public func context<Handler: ChannelHandler>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
         return try await self.context(handlerType: handlerType).get()
