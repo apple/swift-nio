@@ -14,7 +14,9 @@
 
 import NIOConcurrencyHelpers
 import Dispatch
+#if os(Linux)
 import CNIOLinux
+#endif // os(Linux)
 
 /// Returned once a task was scheduled on the `EventLoop` for later execution.
 ///
@@ -480,18 +482,16 @@ public struct NIODeadline: Equatable, Hashable, NIOSendable {
     }
 
 
-//#if os(Linux)
     @inline(__always)
     private static func timeNow() -> UInt64 {
-        if #available(macOS 10.12, *) {
-            var ts = timespec()
-            clock_gettime(CLOCK_MONOTONIC, &ts)
-            return UInt64(ts.tv_sec) &* 1_000_000_000 &+ UInt64(ts.tv_nsec)
-        } else {
-            return DispatchTime.now().uptimeNanoseconds
-        }
+#if os(Linux)
+        var ts = timespec()
+        clock_gettime(CLOCK_MONOTONIC, &ts)
+        return UInt64(ts.tv_sec) &* 1_000_000_000 &+ UInt64(ts.tv_nsec)
+#else // os(Linux)
+        return DispatchTime.now().uptimeNanoseconds
+#endif // os(Linux)
     }
-//#endif
 
     public static func now() -> NIODeadline {
         return NIODeadline.uptimeNanoseconds(timeNow())
