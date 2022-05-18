@@ -22,7 +22,7 @@ extension EventLoopFuture {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func get() async throws -> Value {
-        return try await withUnsafeThrowingContinuation { cont in
+        return try await withUnsafeThrowingContinuation { (cont: UnsafeContinuation<UnsafeTransfer<Value>, Error>) in
             self.whenComplete { result in
                 switch result {
                 case .success(let value):
