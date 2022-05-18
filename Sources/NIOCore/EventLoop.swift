@@ -482,11 +482,24 @@ public struct NIODeadline: Equatable, Hashable, NIOSendable {
     }
 
 
+    /// Getting the time is a very common operation so it warrants optimization.
+    ///
+    /// Prior to this function, NIO relied on `DispatchTime.now()`, on all platforms. In addition to
+    /// the overhead of making a library call, the underlying implementation has a lot of branches
+    /// because `libdispatch` supports many more usecases than we are making use of here.
+    ///
+    /// On Linux, `DispachTime.now()` _always_ results in a simple call to `clock_gettime(3)` and so
+    /// we make that call here, directly from NIO.
+    ///
+    /// - TODO: Investigate optimizing the call to `DispatchTime.now()` away on other platforms too.
     @inline(__always)
     private static func timeNow() -> UInt64 {
 #if os(Linux)
         var ts = timespec()
         clock_gettime(CLOCK_MONOTONIC, &ts)
+        /// We use unsafe arithmetic here because `UInt64.max` nanoseconds is more than 580 years,
+        /// and the odds that this code will still be running 530 years from now is very, very low,
+        /// so as a practical matter this will never overflow.
         return UInt64(ts.tv_sec) &* 1_000_000_000 &+ UInt64(ts.tv_nsec)
 #else // os(Linux)
         return DispatchTime.now().uptimeNanoseconds
