@@ -1628,8 +1628,8 @@ extension EventLoopFuture {
         _ promise: EventLoopPromise<Void>,
         _ futures: [EventLoopFuture<InputValue>],
         _ eventLoop: EventLoop,
-        onValue: @escaping @Sendable (Int, InputValue
-    ) -> Void) {
+        onValue: @escaping @Sendable (Int, InputValue) -> Void
+    ) {
         Self.__reduceSuccesses0(promise, futures, eventLoop, onValue: onValue)
     }
     @usableFromInline typealias ReduceSuccessCallback<InputValue> = @Sendable (Int, InputValue) -> Void

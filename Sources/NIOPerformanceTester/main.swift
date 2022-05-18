@@ -984,35 +984,35 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "lock_1_thread_1M_ops",
+    desc: "lock_1_thread_10M_ops",
     benchmark: LockBenchmark(
         numberOfThreads: 1,
-        lockOperationsPerThread: 1_000_000
+        lockOperationsPerThread: 10_000_000
     )
 )
 
 try measureAndPrint(
-    desc: "lock_2_threads_1M_ops",
+    desc: "lock_2_threads_10M_ops",
     benchmark: LockBenchmark(
         numberOfThreads: 2,
-        lockOperationsPerThread: 500_000
+        lockOperationsPerThread: 5_000_000
     )
 )
 
 try measureAndPrint(
-    desc: "lock_4_threads_1M_ops",
+    desc: "lock_4_threads_10M_ops",
     benchmark: LockBenchmark(
         numberOfThreads: 4,
-        lockOperationsPerThread: 250_000
+        lockOperationsPerThread: 2_500_000
     )
 )
 
 
 try measureAndPrint(
-    desc: "lock_8_threads_1M_ops",
+    desc: "lock_8_threads_10M_ops",
     benchmark: LockBenchmark(
         numberOfThreads: 8,
-        lockOperationsPerThread: 125_000
+        lockOperationsPerThread: 1_250_000
     )
 )
 
