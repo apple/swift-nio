@@ -20,14 +20,15 @@ import Dispatch
 /// A `Scheduled` allows the user to either `cancel()` the execution of the scheduled task (if possible) or obtain a reference to the `EventLoopFuture` that
 /// will be notified once the execution is complete.
 public struct Scheduled<T> {
-    /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
-    #if swift(>=5.6)
-    /* private but usableFromInline */ @usableFromInline let _cancellationTask: @Sendable () -> Void
+    #if swift(>=5.7)
+    @usableFromInline typealias CancelationCallback = @Sendable () -> Void
     #else
-    /* private but usableFromInline */ @usableFromInline let _cancellationTask: () -> Void
+    @usableFromInline typealias CancelationCallback = () -> Void
     #endif
+    /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
+    /* private but usableFromInline */ @usableFromInline let _cancellationTask: CancelationCallback
     
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     @inlinable
     @preconcurrency
     public init(promise: EventLoopPromise<T>, cancellationTask: @escaping @Sendable () -> Void) {
@@ -59,7 +60,7 @@ public struct Scheduled<T> {
     }
 }
 
-#if swift(>=5.6)
+#if swift(>=5.7)
 extension Scheduled: Sendable where T: Sendable {}
 #endif
 
@@ -67,23 +68,22 @@ extension Scheduled: Sendable where T: Sendable {}
 ///
 /// A `RepeatedTask` allows the user to `cancel()` the repeated scheduling of further tasks.
 public final class RepeatedTask {
+    #if swift(>=5.7)
+    typealias RepeatedTaskCallback = @Sendable (RepeatedTask) -> EventLoopFuture<Void>
+    #else
+    typealias RepeatedTaskCallback = (RepeatedTask) -> EventLoopFuture<Void>
+    #endif
     private let delay: TimeAmount
     private let eventLoop: EventLoop
     private let cancellationPromise: EventLoopPromise<Void>?
     private var scheduled: Optional<Scheduled<EventLoopFuture<Void>>>
-    #if swift(>=5.6)
-    private var task: Optional<@Sendable (RepeatedTask) -> EventLoopFuture<Void>>
-    #else
-    private var task: Optional<(RepeatedTask) -> EventLoopFuture<Void>>
-    #endif
-    
-    #if swift(>=5.6)
-    @preconcurrency
+    private var task: Optional<RepeatedTaskCallback>
+
     internal init(
         interval: TimeAmount,
         eventLoop: EventLoop,
         cancellationPromise: EventLoopPromise<Void>? = nil,
-        task: @escaping @Sendable (RepeatedTask) -> EventLoopFuture<Void>
+        task: @escaping RepeatedTaskCallback
     ) {
         self.delay = interval
         self.eventLoop = eventLoop
@@ -91,21 +91,6 @@ public final class RepeatedTask {
         self.task = task
         self.scheduled = nil
     }
-    #else
-    internal init(
-        interval: TimeAmount,
-        eventLoop: EventLoop,
-        cancellationPromise: EventLoopPromise<Void>? = nil,
-        task: @escaping (RepeatedTask) -> EventLoopFuture<Void>
-    ) {
-        self.delay = interval
-        self.eventLoop = eventLoop
-        self.cancellationPromise = cancellationPromise
-        self.task = task
-        self.scheduled = nil
-    }
-    #endif
-    
 
     internal func begin(in delay: TimeAmount) {
         if self.eventLoop.inEventLoop {
@@ -208,7 +193,7 @@ public final class RepeatedTask {
     }
 }
 
-#if swift(>=5.6)
+#if swift(>=5.7)
 extension RepeatedTask: @unchecked Sendable {}
 #endif
 
@@ -238,7 +223,7 @@ public struct EventLoopIterator: Sequence, IteratorProtocol {
     }
 }
 
-#if swift(>=5.6)
+#if swift(>=5.7)
 extension EventLoopIterator: Sendable {}
 #endif
 
@@ -652,18 +637,9 @@ extension EventLoop {
     @inlinable
     @preconcurrency
     public func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
-        let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
-
-        self.execute {
-            do {
-                promise.succeed(try task())
-            } catch let err {
-                promise.fail(err)
-            }
-        }
-
-        return promise.futureResult
+        _submit(task)
     }
+    @usableFromInline typealias SubmitCallback<T> = @Sendable () throws -> T
     #else
     /// Submit `task` to be run on this `EventLoop`.
     ///
@@ -675,6 +651,13 @@ extension EventLoop {
     /// - returns: An `EventLoopFuture` containing the result of `task`'s execution.
     @inlinable
     public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        _submit(task)
+    }
+    @usableFromInline typealias SubmitCallback<T> = () throws -> T
+    #endif
+    
+    @inlinable
+    func _submit<T>(_ task: @escaping SubmitCallback<T>) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
 
         self.execute {
@@ -687,7 +670,6 @@ extension EventLoop {
 
         return promise.futureResult
     }
-    #endif
 
     #if swift(>=5.7)
     /// Submit `task` to be run on this `EventLoop`.
@@ -701,8 +683,9 @@ extension EventLoop {
     @inlinable
     @preconcurrency
     public func flatSubmit<T>(_ task: @escaping @Sendable () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
-        return self.submit(task).flatMap { $0 }
+        self._flatSubmit(task)
     }
+    @usableFromInline typealias FlatSubmitCallback<T> = @Sendable () -> EventLoopFuture<T>
     #else
     /// Submit `task` to be run on this `EventLoop`.
     ///
@@ -714,9 +697,15 @@ extension EventLoop {
     /// - returns: An `EventLoopFuture` identical to the `EventLoopFuture` returned from `task`.
     @inlinable
     public func flatSubmit<T>(_ task: @escaping () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
-        return self.submit(task).flatMap { $0 }
+        self._flatSubmit(task)
     }
+    @usableFromInline typealias FlatSubmitCallback<T> = () -> EventLoopFuture<T>
     #endif
+    
+    @inlinable
+    func _flatSubmit<T>(_ task: @escaping FlatSubmitCallback<T>) -> EventLoopFuture<T> {
+        self.submit(task).flatMap { $0 }
+    }
     
     #if swift(>=5.7)
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
@@ -730,16 +719,15 @@ extension EventLoop {
     @discardableResult
     @inlinable
     @preconcurrency
-    public func flatScheduleTask<T>(deadline: NIODeadline,
-                                    file: StaticString = #file,
-                                    line: UInt = #line,
-                                    _ task: @escaping @Sendable () throws -> EventLoopFuture<T>) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = self.makePromise(file:#file, line: line)
-        let scheduled = self.scheduleTask(deadline: deadline, task)
-
-        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
-        return .init(promise: promise, cancellationTask: { scheduled.cancel() })
+    public func flatScheduleTask<T>(
+        deadline: NIODeadline,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ task: @escaping @Sendable () throws -> EventLoopFuture<T>
+    ) -> Scheduled<T> {
+        self._flatScheduleTask(deadline: deadline, file: file, line: line, task)
     }
+    @usableFromInline typealias FlatScheduleTaskDeadlineCallback<T> = () throws -> EventLoopFuture<T>
     #else
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
     ///
@@ -751,17 +739,31 @@ extension EventLoop {
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
     @inlinable
-    public func flatScheduleTask<T>(deadline: NIODeadline,
-                                    file: StaticString = #file,
-                                    line: UInt = #line,
-                                    _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+    public func flatScheduleTask<T>(
+        deadline: NIODeadline,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ task: @escaping () throws -> EventLoopFuture<T>
+    ) -> Scheduled<T> {
+        self._flatScheduleTask(deadline: deadline, file: file, line: line, task)
+    }
+    @usableFromInline typealias FlatScheduleTaskDeadlineCallback<T> = () throws -> EventLoopFuture<T>
+    #endif
+    
+    @discardableResult
+    @inlinable
+    func _flatScheduleTask<T>(
+        deadline: NIODeadline,
+        file: StaticString,
+        line: UInt,
+        _ task: @escaping FlatScheduleTaskDelayCallback<T>
+    ) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise(file:#file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
 
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
-    #endif
 
     #if swift(>=5.7)
     /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
@@ -775,16 +777,15 @@ extension EventLoop {
     @discardableResult
     @inlinable
     @preconcurrency
-    public func flatScheduleTask<T>(in delay: TimeAmount,
-                                    file: StaticString = #file,
-                                    line: UInt = #line,
-                                    _ task: @escaping @Sendable () throws -> EventLoopFuture<T>) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
-        let scheduled = self.scheduleTask(in: delay, task)
-
-        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
-        return .init(promise: promise, cancellationTask: { scheduled.cancel() })
+    public func flatScheduleTask<T>(
+        in delay: TimeAmount,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ task: @escaping @Sendable () throws -> EventLoopFuture<T>
+    ) -> Scheduled<T> {
+        self._flatScheduleTask(in: delay, file: file, line: line, task)
     }
+    @usableFromInline typealias FlatScheduleTaskDelayCallback<T> = @Sendable () throws -> EventLoopFuture<T>
     #else
     /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
     ///
@@ -796,17 +797,30 @@ extension EventLoop {
     /// - note: You can only cancel a task before it has started executing.
     @discardableResult
     @inlinable
-    public func flatScheduleTask<T>(in delay: TimeAmount,
-                                    file: StaticString = #file,
-                                    line: UInt = #line,
-                                    _ task: @escaping () throws -> EventLoopFuture<T>) -> Scheduled<T> {
+    public func flatScheduleTask<T>(
+        in delay: TimeAmount,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ task: @escaping () throws -> EventLoopFuture<T>
+    ) -> Scheduled<T> {
+        self._flatScheduleTask(in: delay, file: file, line: line, task)
+    }
+    @usableFromInline typealias FlatScheduleTaskDelayCallback<T> = () throws -> EventLoopFuture<T>
+    #endif
+    
+    @inlinable
+    func _flatScheduleTask<T>(
+        in delay: TimeAmount,
+        file: StaticString,
+        line: UInt,
+        _ task: @escaping FlatScheduleTaskDelayCallback<T>
+    ) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(in: delay, task)
 
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
-    #endif
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.
     @inlinable
@@ -886,17 +900,15 @@ extension EventLoop {
     /// - return: `RepeatedTask`
     @discardableResult
     @preconcurrency
-    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, notifying promise: EventLoopPromise<Void>? = nil, _ task: @escaping @Sendable (RepeatedTask) throws -> Void) -> RepeatedTask {
-        let futureTask: @Sendable (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
-            do {
-                try task(repeatedTask)
-                return self.makeSucceededFuture(())
-            } catch {
-                return self.makeFailedFuture(error)
-            }
-        }
-        return self.scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, notifying: promise, futureTask)
+    public func scheduleRepeatedTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        notifying promise: EventLoopPromise<Void>? = nil,
+        _ task: @escaping @Sendable (RepeatedTask) throws -> Void
+    ) -> RepeatedTask {
+        self._scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, notifying: promise, task)
     }
+    typealias ScheduleRepeatedTaskCallback = @Sendable (RepeatedTask) throws -> Void
     #else
     /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each
     /// task.
@@ -908,7 +920,23 @@ extension EventLoop {
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, notifying promise: EventLoopPromise<Void>? = nil, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
+    public func scheduleRepeatedTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        notifying promise: EventLoopPromise<Void>? = nil,
+        _ task: @escaping (RepeatedTask) throws -> Void
+    ) -> RepeatedTask {
+        self._scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, notifying: promise, task)
+    }
+    typealias ScheduleRepeatedTaskCallback = (RepeatedTask) throws -> Void
+    #endif
+    
+    func _scheduleRepeatedTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        notifying promise: EventLoopPromise<Void>?,
+        _ task: @escaping ScheduleRepeatedTaskCallback
+    ) -> RepeatedTask {
         let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
                 try task(repeatedTask)
@@ -919,7 +947,6 @@ extension EventLoop {
         }
         return self.scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, notifying: promise, futureTask)
     }
-    #endif
     
     #if swift(>=5.7)
     /// Schedule a repeated asynchronous task to be executed by the `EventLoop` with a fixed delay between the end and
@@ -940,14 +967,15 @@ extension EventLoop {
     /// - return: `RepeatedTask`
     @discardableResult
     @preconcurrency
-    public func scheduleRepeatedAsyncTask(initialDelay: TimeAmount,
-                                          delay: TimeAmount,
-                                          notifying promise: EventLoopPromise<Void>? = nil,
-                                          _ task: @escaping @Sendable (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
-        let repeated = RepeatedTask(interval: delay, eventLoop: self, cancellationPromise: promise, task: task)
-        repeated.begin(in: initialDelay)
-        return repeated
+    public func scheduleRepeatedAsyncTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        notifying promise: EventLoopPromise<Void>? = nil,
+        _ task: @escaping @Sendable (RepeatedTask) -> EventLoopFuture<Void>
+    ) -> RepeatedTask {
+        self._scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, notifying: promise, task)
     }
+    typealias ScheduleRepeatedAsyncTaskCallback = @Sendable (RepeatedTask) -> EventLoopFuture<Void>
     #else
     /// Schedule a repeated asynchronous task to be executed by the `EventLoop` with a fixed delay between the end and
     /// start of each task.
@@ -966,15 +994,28 @@ extension EventLoop {
     ///
     /// - return: `RepeatedTask`
     @discardableResult
-    public func scheduleRepeatedAsyncTask(initialDelay: TimeAmount,
-                                          delay: TimeAmount,
-                                          notifying promise: EventLoopPromise<Void>? = nil,
-                                          _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
+    public func scheduleRepeatedAsyncTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        notifying promise: EventLoopPromise<Void>? = nil,
+        _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>
+    ) -> RepeatedTask {
+        self._scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, notifying: promise, task)
+    }
+    typealias ScheduleRepeatedAsyncTaskCallback = (RepeatedTask) -> EventLoopFuture<Void>
+    #endif
+    
+    func _scheduleRepeatedAsyncTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        notifying promise: EventLoopPromise<Void>?,
+        _ task: @escaping ScheduleRepeatedAsyncTaskCallback
+    ) -> RepeatedTask {
         let repeated = RepeatedTask(interval: delay, eventLoop: self, cancellationPromise: promise, task: task)
         repeated.begin(in: initialDelay)
         return repeated
     }
-    #endif
+    
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///
@@ -1143,7 +1184,7 @@ public enum NIOEventLoopGroupProvider {
     case createNew
 }
 
-#if swift(>=5.6)
+#if swift(>=5.7)
 extension NIOEventLoopGroupProvider: Sendable {}
 #endif
 
