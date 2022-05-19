@@ -24,7 +24,7 @@ import Dispatch
 /// This eliminates recursion when processing `flatMap()` chains.
 @usableFromInline
 internal struct CallbackList {
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     @usableFromInline
     internal typealias Element = @Sendable () -> CallbackList
     #else
@@ -447,7 +447,7 @@ extension EventLoopFuture: Equatable {
 
 // 'flatMap' and 'map' implementations. This is really the key of the entire system.
 extension EventLoopFuture {
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback,
     /// which will provide a new `EventLoopFuture`.
     ///
@@ -538,7 +538,7 @@ extension EventLoopFuture {
         return next.futureResult
     }
     
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
     /// performs a synchronous computation and returns a new value of type `NewValue`. The provided
     /// callback may optionally `throw`.
@@ -600,7 +600,7 @@ extension EventLoopFuture {
         return next.futureResult
     }
     
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// may recover from the error and returns a new value of type `Value`. The provided callback may optionally `throw`,
     /// in which case the `EventLoopFuture` will be in a failed state with the new thrown error.
@@ -662,7 +662,7 @@ extension EventLoopFuture {
         return next.futureResult
     }
 
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
     /// performs a synchronous computation and returns a new value of type `NewValue`.
     ///
@@ -732,7 +732,7 @@ extension EventLoopFuture {
     @inlinable
     func _map<NewValue>(_ callback: @escaping MapCallback<NewValue>) -> EventLoopFuture<NewValue> {
         if NewValue.self == Value.self && NewValue.self == Void.self {
-            #if swift(>=5.6)
+            #if swift(>=5.7)
             self.whenSuccess(callback as! @Sendable (Value) -> Void)
             #else
             self.whenSuccess(callback as! (Value) -> Void)
@@ -747,7 +747,7 @@ extension EventLoopFuture {
         }
     }
 
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// may recover from the error by returning an `EventLoopFuture<NewValue>`. The callback is intended to potentially
     /// recover from the error by returning a new `EventLoopFuture` that will eventually contain the recovered
@@ -806,7 +806,7 @@ extension EventLoopFuture {
         return next.futureResult
     }
 
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
     /// performs a synchronous computation and returns either a new value (of type `NewValue`) or
     /// an error depending on the `Result` returned by the closure.
@@ -866,7 +866,7 @@ extension EventLoopFuture {
         return next.futureResult
     }
 
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// can recover from the error and return a new value of type `Value`. The provided callback may not `throw`,
     /// so this function should be used when the error is always recoverable.
@@ -919,7 +919,7 @@ extension EventLoopFuture {
         return next.futureResult
     }
 
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     @inlinable
     @preconcurrency // TODO(davidnadoba): remove @preconcurrency and fix our internal use sites
     internal func _addCallback(_ callback: @escaping AddCallbackCallback) -> CallbackList {
@@ -944,7 +944,7 @@ extension EventLoopFuture {
         return callback()
     }
     
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
     @inlinable
     @preconcurrency // TODO(davidnadoba): remove @preconcurrency and fix our internal use sites
@@ -972,7 +972,7 @@ extension EventLoopFuture {
         }
     }
 
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has a success result.
     ///
@@ -1017,7 +1017,7 @@ extension EventLoopFuture {
         }
     }
     
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has a failure result.
     ///
@@ -1062,7 +1062,7 @@ extension EventLoopFuture {
         }
     }
 
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result.
     ///
@@ -1270,7 +1270,7 @@ extension EventLoopFuture {
 // MARK: fold
 
 extension EventLoopFuture {
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Returns a new `EventLoopFuture` that fires only when this `EventLoopFuture` and
     /// all the provided `futures` complete. It then provides the result of folding the value of this
     /// `EventLoopFuture` with the values of all the provided `futures`.
@@ -1356,7 +1356,7 @@ extension EventLoopFuture {
 // MARK: reduce
 
 extension EventLoopFuture {
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
     /// The new `EventLoopFuture` contains the result of reducing the `initialResult` with the
     /// values of the `[EventLoopFuture<NewValue>]`.
@@ -1435,7 +1435,7 @@ extension EventLoopFuture {
         return body
     }
 
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
     /// The new `EventLoopFuture` contains the result of combining the `initialResult` with the
     /// values of the `[EventLoopFuture<NewValue>]`. This function is analogous to the standard library's
@@ -1616,7 +1616,7 @@ extension EventLoopFuture {
         }
     }
     
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Loops through the futures array and attaches callbacks to execute `onValue` on the provided `EventLoop` when
     /// they succeed. The `onValue` will receive the index of the future that fulfilled the provided `Result`.
     ///
@@ -1802,7 +1802,7 @@ extension EventLoopFuture {
         }
     }
     
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Loops through the futures array and attaches callbacks to execute `onResult` on the provided `EventLoop` when
     /// they complete. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
     ///
@@ -1905,7 +1905,7 @@ extension EventLoopFuture {
 // MARK: always
 
 extension EventLoopFuture {
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result.
     ///
@@ -1991,7 +1991,7 @@ extension EventLoopFuture {
         }
     }
     
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Unwrap an `EventLoopFuture` where its type parameter is an `Optional`.
     ///
     /// Unwraps a future returning a new `EventLoopFuture` with either: the value returned by the closure passed in
@@ -2054,7 +2054,7 @@ extension EventLoopFuture {
 // MARK: may block 
 
 extension EventLoopFuture {
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Chain an `EventLoopFuture<NewValue>` providing the result of a IO / task that may block. For example:
     ///
     ///     promise.futureResult.flatMapBlocking(onto: DispatchQueue.global()) { value in Int
@@ -2123,7 +2123,7 @@ extension EventLoopFuture {
         }
     }
     
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has a failure result. The observer callback is permitted to block.
     ///
@@ -2168,7 +2168,7 @@ extension EventLoopFuture {
     }
     
 
-    #if swift(>=5.6)
+    #if swift(>=5.7)
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result. The observer callback is permitted to block.
     ///
