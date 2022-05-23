@@ -315,7 +315,6 @@ public struct NonBlockingFileIO {
             return eventLoop.makeSucceededFuture(allocator.buffer(capacity: 0))
         }
 
-        // TODO: Maybe swift-system should grow a readAll() helper given it has a writeAll()
         var buf = allocator.buffer(capacity: byteCount)
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
             var bytesRead = 0
@@ -327,12 +326,12 @@ public struct NonBlockingFileIO {
                                 return try descriptor.read(
                                     fromAbsoluteOffset: offset + Int64(bytesRead),
                                     into: ptr,
-                                    retryOnInterrupt: false
+                                    retryOnInterrupt: true
                                 )
                             } else {
                                 return try descriptor.read(
                                     into: ptr,
-                                    retryOnInterrupt: false
+                                    retryOnInterrupt: true
                                 )
                             }
                         }
