@@ -137,7 +137,7 @@ let package = Package(
             /// When a new version is released we should nail this back down.
             url: "https://github.com/apple/swift-system",
             // .upToNextMajor(from: "1.2.0")
-            .branchItem("main")
+            .branch("main")
         ),
     ],
     targets: targets
