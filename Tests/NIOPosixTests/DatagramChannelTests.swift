@@ -702,34 +702,32 @@ final class DatagramChannelTests: XCTestCase {
                                                                        .congestionExperienced,
                                                                        .transportCapableFlag0,
                                                                        .transportCapableFlag1]
-            for (ecnStateIdx, ecnState) in ecnStates.enumerated() {
-                // Datagrams may be received out-of-order, so we use the payload to associate the read.
+            // Datagrams may be received out-of-order, so we use a sequential integer in the payload.
+            let metadataWrites: [(Int, AddressedEnvelope<ByteBuffer>.Metadata?)] = try ecnStates.enumerated().reduce(into: []) { metadataWrites, ecnState in
                 let writeData = AddressedEnvelope(
                     remoteAddress: receiveChannel.localAddress!,
-                    data: sendChannel.allocator.buffer(integer: ecnStateIdx),
-                    metadata: .init(ecnState: ecnState, packetInfo: expectedPacketInfo)
+                    data: sendChannel.allocator.buffer(integer: ecnState.offset),
+                    metadata: .init(ecnState: ecnState.element, packetInfo: expectedPacketInfo)
                 )
                 // Sending extra data without flushing should trigger a vector send.
                 if (vectorSend) {
                     sendChannel.write(writeData, promise: nil)
+                    metadataWrites.append((ecnState.offset, writeData.metadata))
                 }
                 try sendChannel.writeAndFlush(writeData).wait()
+                metadataWrites.append((ecnState.offset, writeData.metadata))
             }
 
             let expectedNumReads = ecnStates.count * (vectorSend ? 2 : 1)
-            let reads = try receiveChannel.waitForDatagrams(count: expectedNumReads)
-            XCTAssertEqual(reads.count, expectedNumReads)
-            for (ecnStateIdx, ecnState) in ecnStates.enumerated() {
-                // Datagrams may be received out-of-order, let's find the associated reads.
-                let encStateReads = reads.filter { read in
-                    read.data.getInteger(at: read.data.readerIndex) == ecnStateIdx
-                }
-                XCTAssertEqual(encStateReads.count, vectorSend ? 2 : 1)
-                for read in encStateReads {
-                    XCTAssertEqual(read.metadata?.ecnState, ecnState)
-                    XCTAssertEqual(read.metadata?.packetInfo, expectedPacketInfo)
-                }
+            let metadataReads = try receiveChannel.waitForDatagrams(count: expectedNumReads).map {
+                ($0.data.getInteger(at: $0.data.readerIndex, as: Int.self)!, $0.metadata)
             }
+
+            // Datagrams may be received out-of-order, so we order reads and writes by payload.
+            XCTAssertEqual(
+                metadataReads.sorted { $0.0 < $1.0 }.map { $0.1 },
+                metadataWrites.sorted { $0.0 < $1.0 }.map { $0.1 }
+            )
         } ())
     }
 
