@@ -706,11 +706,7 @@ final class DatagramChannelTests: XCTestCase {
                 // Datagrams may be received out-of-order, so we use the payload to associate the read.
                 let writeData = AddressedEnvelope(
                     remoteAddress: receiveChannel.localAddress!,
-                    data: sendChannel.allocator.buffer(
-                        integer: ecnStateIdx,
-                        endianness: .big,
-                        as: Int.self
-                    ),
+                    data: sendChannel.allocator.buffer(integer: ecnStateIdx),
                     metadata: .init(ecnState: ecnState, packetInfo: expectedPacketInfo)
                 )
                 // Sending extra data without flushing should trigger a vector send.
@@ -725,11 +721,7 @@ final class DatagramChannelTests: XCTestCase {
             XCTAssertEqual(reads.count, expectedNumReads)
             for read in reads {
                 // Datagrams may be received out-of-order, let's find the associated ecnStateIdx.
-                let ecnStateIdx = try XCTUnwrap(read.data.getInteger(
-                    at: 0,
-                    endianness: .big,
-                    as: Int.self
-                ))
+                let ecnStateIdx: Int = try XCTUnwrap(read.data.getInteger(at: read.data.readerIndex))
                 XCTAssertEqual(read.metadata?.ecnState, ecnStates[ecnStateIdx])
                 XCTAssertEqual(read.metadata?.packetInfo, expectedPacketInfo)
             }
