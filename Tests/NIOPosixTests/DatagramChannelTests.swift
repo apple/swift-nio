@@ -698,16 +698,21 @@ final class DatagramChannelTests: XCTestCase {
                 XCTAssertNoThrow(try sendChannel.close().wait())
             }
             
-            var buffer = sendChannel.allocator.buffer(capacity: 1)
-            buffer.writeRepeatingByte(0, count: 1)
             let ecnStates: [NIOExplicitCongestionNotificationState] = [.transportNotCapable,
                                                                        .congestionExperienced,
                                                                        .transportCapableFlag0,
                                                                        .transportCapableFlag1]
-            for ecnState in ecnStates {
-                let writeData = AddressedEnvelope(remoteAddress: receiveChannel.localAddress!,
-                                                  data: buffer,
-                                                  metadata: .init(ecnState: ecnState, packetInfo: expectedPacketInfo))
+            for (ecnStateIdx, ecnState) in ecnStates.enumerated() {
+                // Datagrams may be received out-of-order, so we use the payload to associate the read.
+                let writeData = AddressedEnvelope(
+                    remoteAddress: receiveChannel.localAddress!,
+                    data: sendChannel.allocator.buffer(
+                        integer: ecnStateIdx,
+                        endianness: .big,
+                        as: Int.self
+                    ),
+                    metadata: .init(ecnState: ecnState, packetInfo: expectedPacketInfo)
+                )
                 // Sending extra data without flushing should trigger a vector send.
                 if (vectorSend) {
                     sendChannel.write(writeData, promise: nil)
@@ -715,12 +720,17 @@ final class DatagramChannelTests: XCTestCase {
                 try sendChannel.writeAndFlush(writeData).wait()
             }
 
-            let expectedReads = ecnStates.count * (vectorSend ? 2 : 1)
-            let reads = try receiveChannel.waitForDatagrams(count: expectedReads)
-            XCTAssertEqual(reads.count, expectedReads)
-            for readNumber in 0..<reads.count {
-                let read = reads[readNumber]
-                XCTAssertEqual(read.metadata?.ecnState, ecnStates[readNumber / (vectorSend ? 2 : 1)])
+            let expectedNumReads = ecnStates.count * (vectorSend ? 2 : 1)
+            let reads = try receiveChannel.waitForDatagrams(count: expectedNumReads)
+            XCTAssertEqual(reads.count, expectedNumReads)
+            for read in reads {
+                // Datagrams may be received out-of-order, let's find the associated ecnStateIdx.
+                let ecnStateIdx = try XCTUnwrap(read.data.getInteger(
+                    at: 0,
+                    endianness: .big,
+                    as: Int.self
+                ))
+                XCTAssertEqual(read.metadata?.ecnState, ecnStates[ecnStateIdx])
                 XCTAssertEqual(read.metadata?.packetInfo, expectedPacketInfo)
             }
         } ())
