@@ -719,11 +719,16 @@ final class DatagramChannelTests: XCTestCase {
             let expectedNumReads = ecnStates.count * (vectorSend ? 2 : 1)
             let reads = try receiveChannel.waitForDatagrams(count: expectedNumReads)
             XCTAssertEqual(reads.count, expectedNumReads)
-            for read in reads {
-                // Datagrams may be received out-of-order, let's find the associated ecnStateIdx.
-                let ecnStateIdx: Int = try XCTUnwrap(read.data.getInteger(at: read.data.readerIndex))
-                XCTAssertEqual(read.metadata?.ecnState, ecnStates[ecnStateIdx])
-                XCTAssertEqual(read.metadata?.packetInfo, expectedPacketInfo)
+            for (ecnStateIdx, ecnState) in ecnStates.enumerated() {
+                // Datagrams may be received out-of-order, let's find the associated reads.
+                let encStateReads = reads.filter { read in
+                    read.data.getInteger(at: read.data.readerIndex) == ecnStateIdx
+                }
+                XCTAssertEqual(encStateReads.count, vectorSend ? 2 : 1)
+                for read in encStateReads {
+                    XCTAssertEqual(read.metadata?.ecnState, ecnState)
+                    XCTAssertEqual(read.metadata?.packetInfo, expectedPacketInfo)
+                }
             }
         } ())
     }
