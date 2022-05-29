@@ -403,8 +403,7 @@ public enum SocketAddress: CustomStringConvertible, NIOSendable {
                     FreeAddrInfoW(pResult)
                 }
 
-                if let pResult = pResult {
-                    let addressBytes = UnsafeRawPointer(pResult.pointee.ai_addr)
+                if let pResult = pResult, let addressBytes = UnsafeRawPointer(pResult.pointee.ai_addr) {
                     switch pResult.pointee.ai_family {
                     case AF_INET:
                         return .v4(IPv4Address(address: addressBytes.load(as: sockaddr_in.self), host: host))
