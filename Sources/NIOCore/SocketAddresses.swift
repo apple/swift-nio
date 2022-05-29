@@ -16,6 +16,9 @@
 import let WinSDK.AF_INET
 import let WinSDK.AF_INET6
 
+import let WinSDK.INET_ADDRSTRLEN
+import let WinSDK.INET6_ADDRSTRLEN
+
 import func WinSDK.FreeAddrInfoW
 import func WinSDK.GetAddrInfoW
 
