@@ -54,6 +54,9 @@ import struct WinSDK.SOCKET
 
 import func WinSDK.inet_ntop
 import func WinSDK.inet_pton
+
+import func WinSDK.GetLastError
+import func WinSDK.WSAGetLastError
 #elseif os(Linux) || os(Android)
 import Glibc
 import CNIOLinux
