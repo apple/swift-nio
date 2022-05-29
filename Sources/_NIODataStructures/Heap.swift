@@ -15,6 +15,8 @@
 import Darwin.C
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 import Glibc
+#elseif os(Windows)
+import ucrt
 #endif
 
 @usableFromInline
