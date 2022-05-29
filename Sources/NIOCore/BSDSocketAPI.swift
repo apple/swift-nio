@@ -351,7 +351,7 @@ extension NIOBSDSocket {
     internal static func inet_pton(addressFamily: NIOBSDSocket.AddressFamily, addressDescription: UnsafePointer<CChar>, address: UnsafeMutableRawPointer) throws {
         #if os(Windows)
         // TODO(compnerd) use `InetPtonW` to ensure that we handle unicode properly
-        switch WinSDK.inet_pton(family.rawValue, addressDescription, address) {
+        switch WinSDK.inet_pton(addressFamily.rawValue, addressDescription, address) {
         case 0: throw IOError(errnoCode: EINVAL, reason: "inet_pton")
         case 1: return
         default: throw IOError(winsock: WSAGetLastError(), reason: "inet_pton")
@@ -370,7 +370,8 @@ extension NIOBSDSocket {
     internal static func inet_ntop(addressFamily: NIOBSDSocket.AddressFamily, addressBytes: UnsafeRawPointer, addressDescription: UnsafeMutablePointer<CChar>, addressDescriptionLength: socklen_t) throws -> UnsafePointer<CChar> {
         #if os(Windows)
         // TODO(compnerd) use `InetNtopW` to ensure that we handle unicode properly
-        guard let result = WinSDK.inet_ntop(family.rawValue, addressBytes, addressDescription,
+        guard let result = WinSDK.inet_ntop(addressFamily.rawValue, addressBytes,
+                                            addressDescription,
                                             Int(addressDescriptionLength)) else {
             throw IOError(windows: GetLastError(), reason: "inet_ntop")
         }
