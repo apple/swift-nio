@@ -412,7 +412,7 @@ public enum SocketAddress: CustomStringConvertible, NIOSendable {
                     }
                 }
 
-                throw SocketAddressErro.unsupported
+                throw SocketAddressError.unsupported
             }
         }
 #else
