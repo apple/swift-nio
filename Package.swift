@@ -17,7 +17,7 @@ import PackageDescription
 
 var targets: [PackageDescription.Target] = [
     .target(name: "NIOCore",
-            dependencies: ["NIOConcurrencyHelpers", "CNIOLinux"]),
+            dependencies: ["NIOConcurrencyHelpers", "CNIOLinux", "CNIOWindows"]),
     .target(name: "_NIODataStructures"),
     .target(name: "NIOEmbedded",
             dependencies: ["NIOCore",
