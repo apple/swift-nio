@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
+import ucrt
+
 import let WinSDK.AF_INET
 import let WinSDK.AF_INET6
 
