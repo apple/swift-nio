@@ -128,11 +128,17 @@ extension NIOFileHandle {
 
         public static let `default` = Flags(posixMode: 0, posixFlags: 0)
 
+#if os(Windows)
+        internal static let defaultPermissions = _S_IREAD | _S_IWRITE
+#else
+        internal static let defaultPermissions = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
+#endif
+
         /// Allows file creation when opening file for writing. File owner is set to the effective user ID of the process.
         ///
         /// - parameters:
         ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
-        public static func allowFileCreation(posixMode: NIOPOSIXFileMode = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
+        public static func allowFileCreation(posixMode: NIOPOSIXFileMode = defaultPermissions) -> Flags {
             return Flags(posixMode: posixMode, posixFlags: O_CREAT)
         }
 
@@ -154,7 +160,12 @@ extension NIOFileHandle {
     ///     - mode: Access mode. Default mode is `.read`.
     ///     - flags: Additional POSIX flags.
     public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
-        let fd = try SystemCalls.open(file: path, oFlag: mode.posixFlags | O_CLOEXEC | flags.posixFlags, mode: flags.posixMode)
+#if os(Windows)
+        let fl = mode.posixFlags | flags.posixFlags | _O_NOINHERIT
+#else
+        let fl = mode.posixFlags | flags.posixFlags | O_CLOEXEC
+#endif
+        let fd = try SystemCalls.open(file: path, oFlag: fl, mode: flags.posixMode)
         self.init(descriptor: fd)
     }
 
