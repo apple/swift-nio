@@ -19,6 +19,12 @@ import Darwin
 import Glibc
 #endif
 
+#if os(Windows)
+public typealias NIOPOSIXFileMode = CInt
+#else
+public typealias NIOPOSIXFileMode = mode_t
+#endif
+
 /// A `NIOFileHandle` is a handle to an open file.
 ///
 /// When creating a `NIOFileHandle` it takes ownership of the underlying file descriptor. When a `NIOFileHandle` is no longer
@@ -117,7 +123,7 @@ extension NIOFileHandle {
 
     /// `Flags` allows to specify additional flags to `Mode`, such as permission for file creation.
     public struct Flags: NIOSendable {
-        internal var posixMode: mode_t
+        internal var posixMode: NIOPOSIXFileMode
         internal var posixFlags: CInt
 
         public static let `default` = Flags(posixMode: 0, posixFlags: 0)
@@ -126,7 +132,7 @@ extension NIOFileHandle {
         ///
         /// - parameters:
         ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
-        public static func allowFileCreation(posixMode: mode_t = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
+        public static func allowFileCreation(posixMode: NIOPOSIXFileMode = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH ) -> Flags {
             return Flags(posixMode: posixMode, posixFlags: O_CREAT)
         }
 
@@ -136,7 +142,7 @@ extension NIOFileHandle {
         ///     - flags: The POSIX open flags (the second parameter for `open(2)`).
         ///     - mode: The POSIX mode (the third parameter for `open(2)`).
         /// - returns: A `NIOFileHandle.Mode` equivalent to the given POSIX flags and mode.
-        public static func posix(flags: CInt, mode: mode_t) -> Flags {
+        public static func posix(flags: CInt, mode: NIOPOSIXFileMode) -> Flags {
             return Flags(posixMode: mode, posixFlags: flags)
         }
     }
