@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
+import ucrt
 import typealias WinSDK.DWORD
 #elseif os(Linux) || os(Android)
 import Glibc
