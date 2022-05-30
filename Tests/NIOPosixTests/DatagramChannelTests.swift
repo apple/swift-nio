@@ -718,7 +718,7 @@ final class DatagramChannelTests: XCTestCase {
                 metadataWrites.append((ecnState.offset, writeData.metadata))
             }
 
-            let expectedNumReads = ecnStates.count * (vectorSend ? 2 : 1)
+            let expectedNumReads = metadataWrites.count
             let metadataReads = try receiveChannel.waitForDatagrams(count: expectedNumReads).map {
                 ($0.data.getInteger(at: $0.data.readerIndex, as: Int.self)!, $0.metadata)
             }
