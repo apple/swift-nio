@@ -202,7 +202,7 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 
 ## Documentation
 
- - [API documentation](https://apple.github.io/swift-nio/docs/current/NIO/index.html)
+ - [API documentation](https://apple.github.io/swift-nio/docs/current/NIOCore/index.html)
 
 ## Example Usage
 

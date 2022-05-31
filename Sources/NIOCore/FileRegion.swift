@@ -31,6 +31,7 @@ import Glibc
 /// need access to the bytes (in a `ByteBuffer`) to transform these.
 ///
 /// - note: It is important to manually manage the lifetime of the `NIOFileHandle` used to create a `FileRegion`.
+/// - warning: `FileRegion` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
 public struct FileRegion {
 
     /// The `NIOFileHandle` that is used by this `FileRegion`.

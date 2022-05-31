@@ -54,6 +54,9 @@ import struct WinSDK.SOCKET
 
 import func WinSDK.inet_ntop
 import func WinSDK.inet_pton
+
+import func WinSDK.GetLastError
+import func WinSDK.WSAGetLastError
 #elseif os(Linux) || os(Android)
 import Glibc
 import CNIOLinux
@@ -91,7 +94,7 @@ public enum NIOBSDSocket {
 
 extension NIOBSDSocket {
     /// Specifies the addressing scheme that the socket can use.
-    public struct AddressFamily: RawRepresentable {
+    public struct AddressFamily: RawRepresentable, NIOSendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -108,7 +111,7 @@ extension NIOBSDSocket.AddressFamily: Hashable {
 
 extension NIOBSDSocket {
     /// Specifies the type of protocol that the socket can use.
-    public struct ProtocolFamily: RawRepresentable {
+    public struct ProtocolFamily: RawRepresentable, NIOSendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -125,7 +128,7 @@ extension NIOBSDSocket.ProtocolFamily: Hashable {
 
 extension NIOBSDSocket {
     /// Defines socket option levels.
-    public struct OptionLevel: RawRepresentable {
+    public struct OptionLevel: RawRepresentable, NIOSendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -142,7 +145,7 @@ extension NIOBSDSocket.OptionLevel: Hashable {
 
 extension NIOBSDSocket {
     /// Defines configuration option names.
-    public struct Option: RawRepresentable {
+    public struct Option: RawRepresentable, NIOSendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -351,7 +354,7 @@ extension NIOBSDSocket {
     internal static func inet_pton(addressFamily: NIOBSDSocket.AddressFamily, addressDescription: UnsafePointer<CChar>, address: UnsafeMutableRawPointer) throws {
         #if os(Windows)
         // TODO(compnerd) use `InetPtonW` to ensure that we handle unicode properly
-        switch WinSDK.inet_pton(family.rawValue, addressDescription, address) {
+        switch WinSDK.inet_pton(addressFamily.rawValue, addressDescription, address) {
         case 0: throw IOError(errnoCode: EINVAL, reason: "inet_pton")
         case 1: return
         default: throw IOError(winsock: WSAGetLastError(), reason: "inet_pton")
@@ -370,7 +373,8 @@ extension NIOBSDSocket {
     internal static func inet_ntop(addressFamily: NIOBSDSocket.AddressFamily, addressBytes: UnsafeRawPointer, addressDescription: UnsafeMutablePointer<CChar>, addressDescriptionLength: socklen_t) throws -> UnsafePointer<CChar> {
         #if os(Windows)
         // TODO(compnerd) use `InetNtopW` to ensure that we handle unicode properly
-        guard let result = WinSDK.inet_ntop(family.rawValue, addressBytes, addressDescription,
+        guard let result = WinSDK.inet_ntop(addressFamily.rawValue, addressBytes,
+                                            addressDescription,
                                             Int(addressDescriptionLength)) else {
             throw IOError(windows: GetLastError(), reason: "inet_ntop")
         }

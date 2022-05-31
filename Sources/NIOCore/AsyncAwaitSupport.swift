@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if swift(>=5.5) && canImport(_Concurrency)
-public typealias NIOSendable = Swift.Sendable
-#else
-public typealias NIOSendable = Any
-#endif
-
 #if compiler(>=5.5.2) && canImport(_Concurrency)
 
 extension EventLoopFuture {
@@ -28,16 +22,16 @@ extension EventLoopFuture {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func get() async throws -> Value {
-        return try await withUnsafeThrowingContinuation { cont in
+        return try await withUnsafeThrowingContinuation { (cont: UnsafeContinuation<UnsafeTransfer<Value>, Error>) in
             self.whenComplete { result in
                 switch result {
                 case .success(let value):
-                    cont.resume(returning: value)
+                    cont.resume(returning: UnsafeTransfer(value))
                 case .failure(let error):
                     cont.resume(throwing: error)
                 }
             }
-        }
+        }.wrappedValue
     }
 }
 
@@ -191,16 +185,19 @@ extension ChannelPipeline {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     public func context(handler: ChannelHandler) async throws -> ChannelHandlerContext {
         return try await self.context(handler: handler).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     public func context(name: String) async throws -> ChannelHandlerContext {
         return try await self.context(name: name).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     @inlinable
     public func context<Handler: ChannelHandler>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
         return try await self.context(handlerType: handlerType).get()
