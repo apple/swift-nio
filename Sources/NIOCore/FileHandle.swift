@@ -132,7 +132,7 @@ extension NIOFileHandle {
         ///
         /// - parameters:
         ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
-        public static func allowFileCreation(posixMode: NIOPOSIXFileMode = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH ) -> Flags {
+        public static func allowFileCreation(posixMode: NIOPOSIXFileMode = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) -> Flags {
             return Flags(posixMode: posixMode, posixFlags: O_CREAT)
         }
 
