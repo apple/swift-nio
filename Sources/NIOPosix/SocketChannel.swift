@@ -155,10 +155,13 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     init(serverSocket: ServerSocket, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
         self.group = group
-        try super.init(socket: serverSocket,
-                       parent: nil,
-                       eventLoop: eventLoop,
-                       recvAllocator: AdaptiveRecvByteBufferAllocator())
+        try super.init(
+            socket: serverSocket,
+            parent: nil,
+            eventLoop: eventLoop,
+            recvAllocator: AdaptiveRecvByteBufferAllocator(),
+            supportReconnect: false
+        )
     }
 
     convenience init(socket: NIOBSDSocket.Handle, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
@@ -398,10 +401,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           storageRefs: eventLoop.storageRefs,
                                                           controlMessageStorage: eventLoop.controlMessageStorage)
 
-        try super.init(socket: socket,
-                       parent: nil,
-                       eventLoop: eventLoop,
-                       recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
+        try super.init(
+            socket: socket,
+            parent: nil,
+            eventLoop: eventLoop,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048),
+            supportReconnect: true
+        )
     }
 
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
@@ -412,7 +418,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           addresses: eventLoop.addresses,
                                                           storageRefs: eventLoop.storageRefs,
                                                           controlMessageStorage: eventLoop.controlMessageStorage)
-        try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
+        try super.init(
+            socket: socket,
+            parent: parent,
+            eventLoop: eventLoop,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048),
+            supportReconnect: true
+        )
     }
 
     // MARK: Datagram Channel overrides required by BaseSocketChannel

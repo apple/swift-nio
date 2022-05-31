@@ -42,6 +42,9 @@ private struct SocketChannelLifecycleManager {
     // note: this can be `false` on a deactivated channel, we might just have torn it down.
     var hasSeenEOFNotification: Bool = false
 
+    // Should we support transition from `active` to `active`, used by datagram sockets.
+    let supportsReconnect: Bool
+
     private var currentState: State = .fresh {
         didSet {
             self.eventLoop.assertInEventLoop()
@@ -58,9 +61,14 @@ private struct SocketChannelLifecycleManager {
 
     // MARK: API
     // isActiveAtomic needs to be injected as it's accessed from arbitrary threads and `SocketChannelLifecycleManager` is usually held mutable
-    internal init(eventLoop: EventLoop, isActiveAtomic: NIOAtomic<Bool>) {
+    internal init(
+        eventLoop: EventLoop,
+        isActiveAtomic: NIOAtomic<Bool>,
+        supportReconnect: Bool
+    ) {
         self.eventLoop = eventLoop
         self.isActiveAtomic = isActiveAtomic
+        self.supportsReconnect = supportReconnect
     }
 
     // this is called from Channel's deinit, so don't assert we're on the EventLoop!
@@ -140,9 +148,8 @@ private struct SocketChannelLifecycleManager {
                 pipeline.syncOperations.fireChannelUnregistered()
             }
 
-        // TODO: This is to support connect after bind for connected-mode datagram sockets. Might need a better solution for this.
         // origin: .activated
-        case (.activated, .activate):
+        case (.activated, .activate) where self.supportsReconnect:
             return { promise, pipeline in
                 promise?.succeed(())
             }
@@ -152,6 +159,7 @@ private struct SocketChannelLifecycleManager {
              (.preRegistered, .activate),       // need to first be fully registered
              (.preRegistered, .beginRegistration), // already registered
              (.fullyRegistered, .beginRegistration),  // already registered
+             (.activated, .activate),              // already activated
              (.activated, .beginRegistration),        // already fully registered (and activated)
              (.activated, .finishRegistration),         // already fully registered (and activated)
              (.fullyRegistered, .finishRegistration),   // already fully registered
@@ -445,7 +453,13 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     // MARK: Common base socket logic.
-    init(socket: SocketType, parent: Channel?, eventLoop: SelectableEventLoop, recvAllocator: RecvByteBufferAllocator) throws {
+    init(
+        socket: SocketType,
+        parent: Channel?,
+        eventLoop: SelectableEventLoop,
+        recvAllocator: RecvByteBufferAllocator,
+        supportReconnect: Bool
+    ) throws {
         self._bufferAllocatorCache = self.bufferAllocator
         self.socket = socket
         self.selectableEventLoop = eventLoop
@@ -454,7 +468,11 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.recvAllocator = recvAllocator
         // As the socket may already be connected we should ensure we start with the correct addresses cached.
         self._addressCache = .init(local: try? socket.localAddress(), remote: try? socket.remoteAddress())
-        self.lifecycleManager = SocketChannelLifecycleManager(eventLoop: eventLoop, isActiveAtomic: self.isActiveAtomic)
+        self.lifecycleManager = SocketChannelLifecycleManager(
+            eventLoop: eventLoop,
+            isActiveAtomic: self.isActiveAtomic,
+            supportReconnect: supportReconnect
+        )
         self.socketDescription = socket.description
         self.pendingConnect = nil
         self._pipeline = ChannelPipeline(channel: self)
