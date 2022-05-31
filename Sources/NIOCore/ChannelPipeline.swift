@@ -1468,6 +1468,15 @@ public final class ChannelHandlerContext: ChannelInvoker {
         precondition(self.inboundHandler != nil || self.outboundHandler != nil, "ChannelHandlers need to either be inbound or outbound")
     }
 
+    private func executeIfNotNil(
+        _ context: inout ChannelHandlerContext?,
+        _ body: (ChannelHandlerContext) -> Void)
+    {
+        if context != nil {
+            body(context!)
+        }
+    }
+
     /// Send a `channelRegistered` event to the next (inbound) `ChannelHandler` in the `ChannelPipeline`.
     ///
     /// - note: For correct operation it is very important to forward any `channelRegistered` event using this method at the right point in time, that is usually when received.
@@ -1503,7 +1512,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
 
     /// Signal to the next `ChannelHandler` that a read burst has finished.
     public func fireChannelReadComplete() {
-        self.next?.invokeChannelReadComplete()
+        executeIfNotNil(&self.next) { $0.invokeChannelReadComplete() }
     }
 
     /// Send a `writabilityChanged` event to the next (inbound) `ChannelHandler` in the `ChannelPipeline`.
