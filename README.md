@@ -376,3 +376,4 @@ It's possible to run the test suite in parallel, it can save significant time if
 ```
 swift test --parallel
 ```
+
