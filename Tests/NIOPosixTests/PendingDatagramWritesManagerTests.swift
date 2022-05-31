@@ -126,7 +126,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                     if expected.count > singleState {
                         XCTAssertGreaterThan(returns.count, everythingState)
                         XCTAssertEqual(expected[singleState].0, buf.count, "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].0) bytes expected but \(buf.count) actual", file: (file), line: line)
-                        XCTAssertEqual(expected[singleState].1, SocketAddress(addr), "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].1) address expected but \(SocketAddress(addr)) received", file: (file), line: line)
+                        XCTAssertEqual(expected[singleState].1, addr.map(SocketAddress.init), "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].1) address expected but \(String(describing: addr.map(SocketAddress.init))) received", file: (file), line: line)
                         XCTAssertEqual(expected[singleState].1.expectedSize, len, "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].1.expectedSize) socklen expected but \(len) received", file: (file), line: line)
 
                         switch returns[everythingState] {

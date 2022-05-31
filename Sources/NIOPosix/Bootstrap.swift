@@ -843,7 +843,7 @@ public final class DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop, socket: socket)
         }
-        return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
+        return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             let promise = eventLoop.makePromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
@@ -907,14 +907,61 @@ public final class DatagramBootstrap {
             return try DatagramChannel(eventLoop: eventLoop,
                                        protocolFamily: address.protocol)
         }
-        return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
+        return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             channel.register().flatMap {
                 channel.bind(to: address)
             }
         }
     }
 
-    private func bind0(makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel, _ registerAndBind: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
+    /// Connect the `DatagramChannel` to `host` and `port`.
+    ///
+    /// - parameters:
+    ///     - host: The host to connect to.
+    ///     - port: The port to connect to.
+    public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
+        return connect0 {
+            return try SocketAddress.makeAddressResolvingHost(host, port: port)
+        }
+    }
+
+    /// Connect the `DatagramChannel` to `address`.
+    ///
+    /// - parameters:
+    ///     - address: The `SocketAddress` to connect to.
+    public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
+        return connect0 { address }
+    }
+
+    /// Connect the `DatagramChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to connect to. `path` must not exist, it will be created by the system.
+    public func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
+        return connect0 {
+            return try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+        }
+    }
+
+    private func connect0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
+        let address: SocketAddress
+        do {
+            address = try makeSocketAddress()
+        } catch {
+            return group.next().makeFailedFuture(error)
+        }
+        func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
+            return try DatagramChannel(eventLoop: eventLoop,
+                                       protocolFamily: address.protocol)
+        }
+        return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
+            channel.register().flatMap {
+                channel.connect(to: address)
+            }
+        }
+    }
+
+    private func withNewChannel(makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel, _ bringup: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
         let channelOptions = self._channelOptions
@@ -932,7 +979,7 @@ public final class DatagramBootstrap {
                 channelInitializer(channel)
             }.flatMap {
                 eventLoop.assertInEventLoop()
-                return registerAndBind(eventLoop, channel)
+                return bringup(eventLoop, channel)
             }.map {
                 channel
             }.flatMapError { error in

@@ -20,13 +20,21 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     private var outputShutdown: Bool = false
     private let pendingWrites: PendingStreamWritesManager
 
-    override init(socket: Socket,
-                  parent: Channel?,
-                  eventLoop: SelectableEventLoop,
-                  recvAllocator: RecvByteBufferAllocator) throws {
+    init(
+        socket: Socket,
+        parent: Channel?,
+        eventLoop: SelectableEventLoop,
+        recvAllocator: RecvByteBufferAllocator
+    ) throws {
         self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         self.connectTimeoutScheduled = nil
-        try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: recvAllocator)
+        try super.init(
+            socket: socket,
+            parent: parent,
+            eventLoop: eventLoop,
+            recvAllocator: recvAllocator,
+            supportReconnect: false
+        )
     }
 
     deinit {

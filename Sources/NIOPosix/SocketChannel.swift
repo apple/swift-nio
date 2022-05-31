@@ -155,10 +155,13 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     init(serverSocket: ServerSocket, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
         self.group = group
-        try super.init(socket: serverSocket,
-                       parent: nil,
-                       eventLoop: eventLoop,
-                       recvAllocator: AdaptiveRecvByteBufferAllocator())
+        try super.init(
+            socket: serverSocket,
+            parent: nil,
+            eventLoop: eventLoop,
+            recvAllocator: AdaptiveRecvByteBufferAllocator(),
+            supportReconnect: false
+        )
     }
 
     convenience init(socket: NIOBSDSocket.Handle, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
@@ -398,10 +401,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           storageRefs: eventLoop.storageRefs,
                                                           controlMessageStorage: eventLoop.controlMessageStorage)
 
-        try super.init(socket: socket,
-                       parent: nil,
-                       eventLoop: eventLoop,
-                       recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
+        try super.init(
+            socket: socket,
+            parent: nil,
+            eventLoop: eventLoop,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048),
+            supportReconnect: true
+        )
     }
 
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
@@ -412,7 +418,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           addresses: eventLoop.addresses,
                                                           storageRefs: eventLoop.storageRefs,
                                                           controlMessageStorage: eventLoop.controlMessageStorage)
-        try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
+        try super.init(
+            socket: socket,
+            parent: parent,
+            eventLoop: eventLoop,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048),
+            supportReconnect: true
+        )
     }
 
     // MARK: Datagram Channel overrides required by BaseSocketChannel
@@ -526,12 +538,24 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
-        // For now we don't support operating in connected mode for datagram channels.
-        throw ChannelError.operationUnsupported
+        // TODO: this could be a channel option to do other things instead here, e.g. fail the connect
+        if !self.pendingWrites.isEmpty {
+            self.pendingWrites.failAll(
+                error: IOError(
+                    errnoCode: EISCONN,
+                    reason: "Socket was connected before flushing pending write."),
+                close: false)
+        }
+        if try self.socket.connect(to: address) {
+            self.pendingWrites.markConnected(to: address)
+            return true
+        } else {
+            preconditionFailure("Connect of datagram socket did not complete synchronously.")
+        }
     }
 
     override func finishConnectSocket() throws {
-        // For now we don't support operating in connected mode for datagram channels.
+        // This is not required for connected datagram channels connect is a synchronous operation.
         throw ChannelError.operationUnsupported
     }
 
@@ -668,11 +692,52 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return true
         }
     }
-    /// Buffer a write in preparation for a flush.
-    override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let data = self.unwrapData(data, as: AddressedEnvelope<ByteBuffer>.self)
 
-        if !self.pendingWrites.add(envelope: data, promise: promise) {
+    /// Buffer a write in preparation for a flush.
+    ///
+    /// When the channel is unconnected, `data` _must_ be of type `AddressedEnvelope<ByteBuffer>`.
+    ///
+    /// When the channel is connected, `data` _should_ be of type `ByteBuffer`, but _may_ be of type
+    /// `AddressedEnvelope<ByteBuffer>` to allow users to provide protocol control messages via
+    /// `AddressedEnvelope.metadata`. In this case, `AddressedEnvelope.remoteAddress` _must_ match
+    /// the address of the connected peer.
+    override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+        if let envelope = self.tryUnwrapData(data, as: AddressedEnvelope<ByteBuffer>.self) {
+            return bufferPendingAddressedWrite(envelope: envelope, promise: promise)
+        }
+        // If it's not an `AddressedEnvelope` then it must be a `ByteBuffer` so we let the common
+        // `unwrapData(_:as:)` throw the fatal error if it's some other type.
+        let data = self.unwrapData(data, as: ByteBuffer.self)
+        return bufferPendingUnaddressedWrite(data: data, promise: promise)
+    }
+
+    /// Buffer a write in preparation for a flush.
+    private func bufferPendingUnaddressedWrite(data: ByteBuffer, promise: EventLoopPromise<Void>?) {
+        // It is only appropriate to not use an AddressedEnvelope if the socket is connected.
+        guard self.remoteAddress != nil else {
+            promise?.fail(DatagramChannelError.WriteOnUnconnectedSocketWithoutAddress())
+            return
+        }
+
+        if !self.pendingWrites.add(data: data, promise: promise) {
+            assert(self.isActive)
+            self.pipeline.syncOperations.fireChannelWritabilityChanged()
+        }
+    }
+
+    /// Buffer a write in preparation for a flush.
+    private func bufferPendingAddressedWrite(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) {
+        // If the socket is connected, check the remote provided matches the connected address.
+        if let connectedRemoteAddress = self.remoteAddress {
+            guard envelope.remoteAddress == connectedRemoteAddress else {
+                promise?.fail(DatagramChannelError.WriteOnConnectedSocketWithInvalidAddress(
+                    envelopeRemoteAddress: envelope.remoteAddress,
+                    connectedRemoteAddress: connectedRemoteAddress))
+                return
+            }
+        }
+
+        if !self.pendingWrites.add(envelope: envelope, promise: promise) {
             assert(self.isActive)
             self.pipeline.syncOperations.fireChannelWritabilityChanged()
         }

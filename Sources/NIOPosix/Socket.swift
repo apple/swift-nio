@@ -151,7 +151,7 @@ typealias IOVector = iovec
     /// (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func sendmsg(pointer: UnsafeRawBufferPointer,
-                 destinationPtr: UnsafePointer<sockaddr>,
+                 destinationPtr: UnsafePointer<sockaddr>?,
                  destinationSize: socklen_t,
                  controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         // Dubious const casts - it should be OK as there is no reason why this should get mutated

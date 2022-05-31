@@ -98,7 +98,7 @@ final class PipePair: SocketProtocol {
     }
     
     func sendmsg(pointer: UnsafeRawBufferPointer,
-                 destinationPtr: UnsafePointer<sockaddr>,
+                 destinationPtr: UnsafePointer<sockaddr>?,
                  destinationSize: socklen_t,
                  controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
