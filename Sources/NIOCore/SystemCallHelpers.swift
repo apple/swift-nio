@@ -31,7 +31,7 @@ import CNIOWindows
 
 private let sysDup: @convention(c) (CInt) -> CInt = dup
 private let sysClose: @convention(c) (CInt) -> CInt = close
-private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
+private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, NIOPOSIXFileMode) -> CInt = open
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
 private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t) -> size_t = read
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
@@ -68,7 +68,12 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
     while true {
         let res = try body()
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            ucrt._get_errno(&err)
+#else
             let err = errno
+#endif
             switch (err, blocking) {
             case (EINTR, _):
                 continue
@@ -96,7 +101,12 @@ enum SystemCalls {
     internal static func close(descriptor: CInt) throws {
         let res = sysClose(descriptor)
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            ucrt._get_errno(&err)
+#else
             let err = errno
+#endif
 
             // There is really nothing "sane" we can do when EINTR was reported on close.
             // So just ignore it and "assume" everything is fine == we closed the file descriptor.
@@ -112,7 +122,7 @@ enum SystemCalls {
     }
 
     @inline(never)
-    internal static func open(file: UnsafePointer<CChar>, oFlag: CInt, mode: mode_t) throws -> CInt {
+    internal static func open(file: UnsafePointer<CChar>, oFlag: CInt, mode: NIOPOSIXFileMode) throws -> CInt {
         return try syscall(blocking: false) {
             sysOpenWithMode(file, oFlag, mode)
         }.result
