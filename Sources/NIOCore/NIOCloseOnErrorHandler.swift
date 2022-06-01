@@ -14,7 +14,7 @@
 
 
 /// A `ChannelInboundHandler` that closes the channel when an error is caught
-public final class NIOCloseOnErrorHandler: ChannelInboundHandler {
+public final class NIOCloseOnErrorHandler: ChannelInboundHandler, NIOSendable {
 
     public typealias InboundIn = NIOAny
     
