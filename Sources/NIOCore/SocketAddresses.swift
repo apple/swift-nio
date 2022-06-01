@@ -25,6 +25,11 @@ import func WinSDK.GetAddrInfoW
 import struct WinSDK.ADDRESS_FAMILY
 import struct WinSDK.ADDRINFOW
 import struct WinSDK.in_addr_t
+import struct WinSDK.sockaddr
+import struct WinSDK.sockaddr_in
+import struct WinSDK.sockaddr_in6
+import struct WinSDK.sockaddr_storage
+import struct WinSDK.sockaddr_un
 
 import typealias WinSDK.u_short
 #elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
