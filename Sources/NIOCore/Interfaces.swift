@@ -361,9 +361,10 @@ extension NIONetworkDevice {
                 var mask: sockaddr_in = sockaddr_in()
                 mask.sin_family = ADDRESS_FAMILY(AF_INET)
                 _ = buffer.withUnsafeMutableBufferPointer {
-                    try! NIOBSDSocket.inet_ntop(af: .inet, src: &mask,
-                                                dst: $0.baseAddress!,
-                                                size: INET_ADDRSTRLEN)
+                    try! NIOBSDSocket.inet_ntop(addressFamily: .inet,
+                                                addressBytes: &mask,
+                                                addressDescription: $0.baseAddress!,
+                                                addressDescriptionLength: INET_ADDRSTRLEN)
                 }
                 return SocketAddress(mask)
             }
@@ -373,9 +374,10 @@ extension NIONetworkDevice {
                 var mask: sockaddr_in6 = sockaddr_in6()
                 mask.sin6_family = ADDRESS_FAMILY(AF_INET6)
                 _ = buffer.withUnsafeMutableBufferPointer {
-                    try! NIOBSDSocket.inet_ntop(af: .inet6, src: &mask,
-                                                dst: $0.baseAddress!,
-                                                size: INET6_ADDRSTRLEN)
+                    try! NIOBSDSocket.inet_ntop(addressFamily: .inet6,
+                                                addressBytes: &mask,
+                                                addressDescription: $0.baseAddress!,
+                                                addressDescriptionLength: INET6_ADDRSTRLEN)
                 }
                 return SocketAddress(mask)
             }
