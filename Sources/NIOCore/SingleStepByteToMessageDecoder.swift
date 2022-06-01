@@ -274,6 +274,10 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     }
 }
 
+#if swift(>=5.7)
+@available(*, unavailable)
+extension NIOSingleStepByteToMessageProcessor: Sendable {}
+#endif
 
 // MARK: NIOSingleStepByteToMessageProcessor Public API
 extension NIOSingleStepByteToMessageProcessor {
