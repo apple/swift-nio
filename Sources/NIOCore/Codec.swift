@@ -14,7 +14,7 @@
 
 
 /// State of the current decoding process.
-public enum DecodingState {
+public enum DecodingState: NIOSendable {
     /// Continue decoding.
     case `continue`
 
@@ -485,6 +485,11 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     }
 }
 
+#if swift(>=5.7)
+@available(*, unavailable)
+extension ByteToMessageHandler: Sendable {}
+#endif
+
 // MARK: ByteToMessageHandler: Test Helpers
 extension ByteToMessageHandler {
     internal var cumulationBuffer: ByteBuffer? {
@@ -770,6 +775,11 @@ public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelO
         self.encoder = encoder
     }
 }
+
+#if swift(>=5.7)
+@available(*, unavailable)
+extension MessageToByteHandler: Sendable {}
+#endif
 
 extension MessageToByteHandler {
     public func handlerAdded(context: ChannelHandlerContext) {
