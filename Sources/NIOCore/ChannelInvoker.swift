@@ -231,7 +231,7 @@ public protocol ChannelInboundInvoker {
 public protocol ChannelInvoker: ChannelOutboundInvoker, ChannelInboundInvoker { }
 
 /// Specify what kind of close operation is requested.
-public enum CloseMode {
+public enum CloseMode: NIOSendable {
     /// Close the output (writing) side of the `Channel` without closing the actual file descriptor.
     /// This is an optional mode which means it may not be supported by all `Channel` implementations.
     case output
