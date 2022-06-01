@@ -53,6 +53,10 @@ extension ChannelOptions.Types {
     }
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension ChannelOptions.Types.ConvenienceOptionValue: Sendable where ValueType: Sendable {}
+#endif
+
 extension ChannelOptions.Types.ConvenienceOptionValue where ValueType == () {
     /// Convenience method working with bool options as bool values for set.
     public var isSet: Bool {
@@ -80,7 +84,7 @@ extension ChannelOptions.Types.ConvenienceOptionValue where ValueType == () {
 // MARK: TCP - data
 extension ChannelOptions {
     /// A TCP channel option which can be applied to a bootstrap using convenience notation.
-    public struct TCPConvenienceOption: Hashable {
+    public struct TCPConvenienceOption: Hashable, NIOSendable {
         fileprivate var data: ConvenienceOption
         
         private init(_ data: ConvenienceOption) {
@@ -114,7 +118,7 @@ extension ChannelOptions.TCPConvenienceOption {
 
 extension ChannelOptions {
     /// A set of `TCPConvenienceOption`s
-    public struct TCPConvenienceOptions: ExpressibleByArrayLiteral, Hashable {
+    public struct TCPConvenienceOptions: ExpressibleByArrayLiteral, Hashable, NIOSendable {
         var allowLocalEndpointReuse = false
         var disableAutoRead = false
         var allowRemoteHalfClosure = false

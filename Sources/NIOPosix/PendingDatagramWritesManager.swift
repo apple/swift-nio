@@ -17,7 +17,7 @@ import NIOConcurrencyHelpers
 private struct PendingDatagramWrite {
     var data: ByteBuffer
     var promise: Optional<EventLoopPromise<Void>>
-    let address: SocketAddress
+    let address: SocketAddress?
     var metadata: AddressedEnvelope<ByteBuffer>.Metadata?
 
     /// A helper function that copies the underlying sockaddr structure into temporary storage,
@@ -31,7 +31,9 @@ private struct PendingDatagramWrite {
     func copySocketAddress(_ target: UnsafeMutablePointer<sockaddr_storage>) -> socklen_t {
         let erased = UnsafeMutableRawPointer(target)
 
-        switch address {
+        switch self.address {
+        case .none:
+            preconditionFailure("copySocketAddress called on write that has no address")
         case .v4(let innerAddress):
             erased.storeBytes(of: innerAddress.address, as: sockaddr_in.self)
             return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
@@ -99,14 +101,38 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 
         p.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
             storageRefs[c] = storageRef.retain()
-            let addressLen = p.copySocketAddress(addresses.baseAddress! + c)
+
+            /// From man page of `sendmsg(2)`:
+            ///
+            /// > The `msg_name` field is used on an unconnected socket to specify
+            /// > the target address for a datagram.  It points to a buffer
+            /// > containing the address; the `msg_namelen` field should be set to
+            /// > the size of the address.  For a connected socket, these fields
+            /// > should be specified as `NULL` and 0, respectively.
+            let address: UnsafeMutablePointer<sockaddr_storage>?
+            let addressLen: socklen_t
+            let protocolFamily: NIOBSDSocket.ProtocolFamily
+            if let envelopeAddress = p.address {
+                precondition(pending.remoteAddress == nil, "Pending write with address on connected socket.")
+                address = addresses.baseAddress! + c
+                addressLen = p.copySocketAddress(address!)
+                protocolFamily = envelopeAddress.protocol
+            } else {
+                guard let connectedRemoteAddress = pending.remoteAddress else {
+                    preconditionFailure("Pending write without address on unconnected socket.")
+                }
+                address = nil
+                addressLen = 0
+                protocolFamily = connectedRemoteAddress.protocol
+            }
+
             iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
 
             var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[c])
-            controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: p.address.protocol)
+            controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: protocolFamily)
             let controlMessageBytePointer = controlBytes.validControlBytes
 
-            let msg = msghdr(msg_name: addresses.baseAddress! + c,
+            let msg = msghdr(msg_name: address,
                              msg_namelen: addressLen,
                              msg_iov: iovecs.baseAddress! + c,
                              msg_iovlen: 1,
@@ -140,6 +166,7 @@ private struct PendingDatagramWritesState {
     private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialCapacity: 16)
     private var chunks: Int = 0
     public private(set) var bytes: Int64 = 0
+    private(set) var remoteAddress: SocketAddress? = nil
 
     public var nextWrite: PendingDatagramWrite? {
         return self.pendingWrites.first
@@ -192,6 +219,10 @@ private struct PendingDatagramWritesState {
     /// All writes before this checkpoint will eventually be written to the socket.
     public mutating func markFlushCheckpoint() {
         self.pendingWrites.mark()
+    }
+
+    mutating func markConnected(to remoteAddress: SocketAddress) {
+        self.remoteAddress = remoteAddress
     }
 
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `sendmmsg`).
@@ -402,6 +433,11 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         self.state.markFlushCheckpoint()
     }
 
+    /// Mark that the socket is connected.
+    func markConnected(to remoteAddress: SocketAddress) {
+        self.state.markConnected(to: remoteAddress)
+    }
+
     /// Is there a flush pending?
     var isFlushPending: Bool {
         return self.state.isFlushPending
@@ -412,18 +448,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         return self.state.isEmpty
     }
 
-    /// Add a pending write.
-    ///
-    /// - parameters:
-    ///     - envelope: The `AddressedEnvelope<IOData>` to write.
-    ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
-    /// - result: If the `Channel` is still writable after adding the write of `data`.
-    func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
+    private func add(_ pendingWrite: PendingDatagramWrite) -> Bool {
         assert(self.isOpen)
-        self.state.append(.init(data: envelope.data,
-                                promise: promise,
-                                address: envelope.remoteAddress,
-                                metadata: envelope.metadata))
+        self.state.append(pendingWrite)
 
         if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
             // Returns false to signal the Channel became non-writable and we need to notify the user.
@@ -431,6 +458,48 @@ final class PendingDatagramWritesManager: PendingWritesManager {
             return false
         }
         return true
+    }
+
+    /// Add a pending write, with an `AddressedEnvelope`, usually on an unconnected socket.
+    ///
+    /// - parameters:
+    ///     - envelope: The `AddressedEnvelope<ByteBuffer>` to write.
+    ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
+    /// - returns: If the `Channel` is still writable after adding the write of `data`.
+    ///
+    /// - warning: If the socket is connected, then the `envelope.remoteAddress` _must_ match the
+    /// address of the connected peer, otherwise this function will throw a fatal error.
+    func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
+        if let remoteAddress = self.state.remoteAddress {
+            precondition(envelope.remoteAddress == remoteAddress, """
+                Remote address of AddressedEnvelope does not match remote address of connected socket.
+                """)
+            return self.add(PendingDatagramWrite(
+                data: envelope.data,
+                promise: promise,
+                address: nil,
+                metadata: envelope.metadata))
+        } else {
+            return self.add(PendingDatagramWrite(
+                data: envelope.data,
+                promise: promise,
+                address: envelope.remoteAddress,
+                metadata: envelope.metadata))
+        }
+    }
+
+    /// Add a pending write, without an `AddressedEnvelope`, on a connected socket.
+    ///
+    /// - parameters:
+    ///     - data: The `ByteBuffer` to write.
+    ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
+    /// - returns: If the `Channel` is still writable after adding the write of `data`.
+    func add(data: ByteBuffer, promise: EventLoopPromise<Void>?) -> Bool {
+        return self.add(PendingDatagramWrite(
+            data: data,
+            promise: promise,
+            address: nil,
+            metadata: nil))
     }
 
     /// Returns the best mechanism to write pending data at the current point in time.
@@ -442,10 +511,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// On platforms that do not support a gathering write operation,
     ///
     /// - parameters:
-    ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
+    ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendmsg`).
     ///     - vectorWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `sendmmsg`).
     /// - returns: The `WriteResult` and whether the `Channel` is now writable.
-    func triggerAppropriateWriteOperations(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?) throws -> IOResult<Int>,
+    func triggerAppropriateWriteOperations(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>?, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?) throws -> IOResult<Int>,
                                            vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> OverallWriteResult {
         return try self.triggerWriteOperations { writeMechanism in
             switch writeMechanism {
@@ -515,14 +584,31 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///
     /// - parameters:
     ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
-    private func triggerScalarBufferWrite(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?) throws -> IOResult<Int>) rethrows -> OneWriteOperationResult {
+    private func triggerScalarBufferWrite(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>?, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?) throws -> IOResult<Int>) rethrows -> OneWriteOperationResult {
         assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
                "illegal state for scalar datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
         let pending = self.state.nextWrite!
         do {
-            let writeResult = try pending.address.withSockAddr { (addrPtr, addrSize) in
-                try pending.data.withUnsafeReadableBytes {
-                    try scalarWriteOperation($0, addrPtr, socklen_t(addrSize), pending.metadata)
+            let writeResult: IOResult<Int>
+
+            if let address = pending.address {
+                assert(self.state.remoteAddress == nil, "Pending write with address on connected socket.")
+                writeResult = try address.withSockAddr { (addrPtr, addrSize) in
+                    try pending.data.withUnsafeReadableBytes {
+                        try scalarWriteOperation($0, addrPtr, socklen_t(addrSize), pending.metadata)
+                    }
+                }
+            } else {
+                /// From man page of `sendmsg(2)`:
+                ///
+                /// > The `msg_name` field is used on an unconnected socket to specify
+                /// > the target address for a datagram.  It points to a buffer
+                /// > containing the address; the `msg_namelen` field should be set to
+                /// > the size of the address.  For a connected socket, these fields
+                /// > should be specified as `NULL` and 0, respectively.
+                assert(self.state.remoteAddress != nil, "Pending write without address on unconnected socket.")
+                writeResult = try pending.data.withUnsafeReadableBytes {
+                    try scalarWriteOperation($0, nil, 0, pending.metadata)
                 }
             }
             return self.didWrite(writeResult, messages: nil)

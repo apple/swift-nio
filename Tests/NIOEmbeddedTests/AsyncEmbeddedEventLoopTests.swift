@@ -499,10 +499,7 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
 
             let scheduled = make()
             scheduled.cancel()
-
-            XCTAssertNotNil(weakThing)
-            await eventLoop.run()
-            XCTAssertNil(weakThing)
+            assert(weakThing == nil, within: .seconds(1))
             await XCTAssertThrowsError(try await eventLoop.awaitFuture(scheduled.futureResult, timeout: .seconds(1))) { error in
                 XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
             }

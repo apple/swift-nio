@@ -73,7 +73,16 @@ private final class EchoHandler: ChannelInboundHandler {
 }
 
 // First argument is the program path
-let arguments = CommandLine.arguments
+var arguments = CommandLine.arguments
+// Support for `--connect` if it appears as the first argument.
+let connectedMode: Bool
+if let connectedModeFlagIndex = arguments.firstIndex(where: { $0 == "--connect" }) {
+    connectedMode = true
+    arguments.remove(at: connectedModeFlagIndex)
+} else {
+    connectedMode = false
+}
+// Now process the positional arguments.
 let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst(2).first
 let arg3 = arguments.dropFirst(3).first
@@ -133,7 +142,13 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(_, let listeningPath):
         return try bootstrap.bind(unixDomainSocketPath: listeningPath).wait()
     }
-    }()
+}()
+
+if connectedMode {
+    let remoteAddress = try remoteAddress()
+    print("Connecting to remote: \(remoteAddress)")
+    try channel.connect(to: remoteAddress).wait()
+}
 
 // Will be closed after we echo-ed back to the server.
 try channel.closeFuture.wait()

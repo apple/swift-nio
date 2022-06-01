@@ -16,6 +16,9 @@
 import let WinSDK.AF_INET
 import let WinSDK.AF_INET6
 
+import let WinSDK.INET_ADDRSTRLEN
+import let WinSDK.INET6_ADDRSTRLEN
+
 import func WinSDK.FreeAddrInfoW
 import func WinSDK.GetAddrInfoW
 
@@ -453,9 +456,15 @@ extension SocketAddress: Equatable {
     public static func ==(lhs: SocketAddress, rhs: SocketAddress) -> Bool {
         switch (lhs, rhs) {
         case (.v4(let addr1), .v4(let addr2)):
+#if os(Windows)
+            return addr1.address.sin_family == addr2.address.sin_family &&
+                   addr1.address.sin_port == addr2.address.sin_port &&
+                   addr1.address.sin_addr.S_un.S_addr == addr2.address.sin_addr.S_un.S_addr
+#else
             return addr1.address.sin_family == addr2.address.sin_family &&
                    addr1.address.sin_port == addr2.address.sin_port &&
                    addr1.address.sin_addr.s_addr == addr2.address.sin_addr.s_addr
+#endif
         case (.v6(let addr1), .v6(let addr2)):
             guard addr1.address.sin6_family == addr2.address.sin6_family &&
                   addr1.address.sin6_port == addr2.address.sin6_port &&
@@ -518,7 +527,11 @@ extension SocketAddress: Hashable {
             hasher.combine(1)
             hasher.combine(v4Addr.address.sin_family)
             hasher.combine(v4Addr.address.sin_port)
+#if os(Windows)
+            hasher.combine(v4Addr.address.sin_addr.S_un.S_addr)
+#else
             hasher.combine(v4Addr.address.sin_addr.s_addr)
+#endif
         case .v6(let v6Addr):
             hasher.combine(2)
             hasher.combine(v6Addr.address.sin6_family)
@@ -544,7 +557,11 @@ extension SocketAddress {
             // For IPv4 a multicast address is in the range 224.0.0.0/4.
             // The easy way to check if this is the case is to just mask off
             // the address.
+#if os(Windows)
+            let v4WireAddress = v4Addr.address.sin_addr.S_un.S_addr
+#else
             let v4WireAddress = v4Addr.address.sin_addr.s_addr
+#endif
             let mask = in_addr_t(0xF000_0000 as UInt32).bigEndian
             let subnet = in_addr_t(0xE000_0000 as UInt32).bigEndian
             return v4WireAddress & mask == subnet

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2018-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2018-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -29,7 +29,6 @@ extension DatagramChannelTests {
       return [
                 ("testBasicChannelCommunication", testBasicChannelCommunication),
                 ("testManyWrites", testManyWrites),
-                ("testConnectionFails", testConnectionFails),
                 ("testDatagramChannelHasWatermark", testDatagramChannelHasWatermark),
                 ("testWriteFuturesFailWhenChannelClosed", testWriteFuturesFailWhenChannelClosed),
                 ("testManyManyDatagramWrites", testManyManyDatagramWrites),
@@ -67,6 +66,14 @@ extension DatagramChannelTests {
                 ("testReceiveEcnAndPacketInfoIPV6VectorRead", testReceiveEcnAndPacketInfoIPV6VectorRead),
                 ("testReceiveEcnAndPacketInfoIPV4VectorReadVectorWrite", testReceiveEcnAndPacketInfoIPV4VectorReadVectorWrite),
                 ("testReceiveEcnAndPacketInfoIPV6VectorReadVectorWrite", testReceiveEcnAndPacketInfoIPV6VectorReadVectorWrite),
+                ("testSendingAddressedEnvelopeOnUnconnectedSocketSucceeds", testSendingAddressedEnvelopeOnUnconnectedSocketSucceeds),
+                ("testSendingByteBufferOnUnconnectedSocketFails", testSendingByteBufferOnUnconnectedSocketFails),
+                ("testSendingByteBufferOnConnectedSocketSucceeds", testSendingByteBufferOnConnectedSocketSucceeds),
+                ("testSendingAddressedEnvelopeOnConnectedSocketSucceeds", testSendingAddressedEnvelopeOnConnectedSocketSucceeds),
+                ("testSendingAddressedEnvelopeOnConnectedSocketWithDifferentAddressFails", testSendingAddressedEnvelopeOnConnectedSocketWithDifferentAddressFails),
+                ("testConnectingSocketAfterFlushingExistingMessages", testConnectingSocketAfterFlushingExistingMessages),
+                ("testConnectingSocketFailsBufferedWrites", testConnectingSocketFailsBufferedWrites),
+                ("testReconnectingSocketFailsBufferedWrites", testReconnectingSocketFailsBufferedWrites),
            ]
    }
 }
