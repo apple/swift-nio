@@ -24,7 +24,7 @@ class GetaddrinfoResolverTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let resolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: CInt(IPPROTO_TCP))
+        let resolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: .tcp)
         let v4Future = resolver.initiateAQuery(host: "127.0.0.1", port: 12345)
         let v6Future = resolver.initiateAAAAQuery(host: "127.0.0.1", port: 12345)
 
@@ -41,7 +41,7 @@ class GetaddrinfoResolverTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let resolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: CInt(IPPROTO_TCP))
+        let resolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: .tcp)
         let v4Future = resolver.initiateAQuery(host: "::1", port: 12345)
         let v6Future = resolver.initiateAAAAQuery(host: "::1", port: 12345)
 
