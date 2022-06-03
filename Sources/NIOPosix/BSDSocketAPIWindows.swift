@@ -90,8 +90,11 @@ import func WinSDK.WSAIoctl
 
 import struct WinSDK.socklen_t
 import struct WinSDK.u_long
+
+import struct WinSDK.ADDRESS_FAMILY
 import struct WinSDK.DWORD
 import struct WinSDK.HANDLE
+import struct WinSDK.IN_ADDR
 import struct WinSDK.LINGER
 import struct WinSDK.OVERLAPPED
 import struct WinSDK.SOCKADDR
@@ -102,12 +105,13 @@ import struct WinSDK.SOCKADDR_STORAGE
 
 import typealias WinSDK.LPFN_WSARECVMSG
 
+internal typealias in_addr = IN_ADDR
+internal typealias in_port_t = USHORT
+internal typealias sa_family_t = ADDRESS_FAMILY
 internal typealias sockaddr_in = SOCKADDR_IN
 internal typealias sockaddr_in6 = SOCKADDR_IN6
 internal typealias sockaddr_un = SOCKADDR_UN
 internal typealias sockaddr_storage = SOCKADDR_STORAGE
-
-public typealias linger = LINGER
 
 fileprivate var IOC_IN: DWORD {
   0x8000_0000
