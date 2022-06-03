@@ -936,14 +936,25 @@ extension EventLoopFuture {
     }
     
     #if swift(>=5.7)
+    /// Add a callback.  If there's already a value, run as much of the chain as we can.
+    @inlinable
+    @preconcurrency // TODO: We want to remove @preconcurrency but it results in more allocations in 1000_udpconnections
+    internal func _whenComplete(_ callback: @escaping @Sendable () -> CallbackList) {
+        _internalWhenComplete(callback)
+    }
     @usableFromInline typealias InternalWhenCompleteCallback = @Sendable () -> CallbackList
     #else
+    /// Add a callback.  If there's already a value, run as much of the chain as we can.
+    @inlinable
+    internal func _whenComplete(_ callback: @escaping () -> CallbackList) {
+        _internalWhenComplete(callback)
+    }
     @usableFromInline typealias InternalWhenCompleteCallback = () -> CallbackList
     #endif
     
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
     @inlinable
-    internal func _whenComplete(_ callback: @escaping InternalWhenCompleteCallback) {
+    internal func _internalWhenComplete(_ callback: @escaping InternalWhenCompleteCallback) {
         if self.eventLoop.inEventLoop {
             self._addCallback(callback)._run()
         } else {
