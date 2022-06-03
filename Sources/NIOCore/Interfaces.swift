@@ -27,6 +27,12 @@ import struct WinSDK.ADDRESS_FAMILY
 import struct WinSDK.IP_ADAPTER_ADDRESSES
 import struct WinSDK.IP_ADAPTER_UNICAST_ADDRESS
 
+import struct WinSDK.sockaddr
+import struct WinSDK.sockaddr_in
+import struct WinSDK.sockaddr_in6
+import struct WinSDK.sockaddr_storage
+import struct WinSDK.sockaddr_un
+
 import typealias WinSDK.UINT8
 #endif
 
