@@ -244,7 +244,7 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
         }
     }
     
-    /// Accumulates an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single ``NIO/ByteBuffer``.
+    /// Accumulates an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single ``ByteBuffer``.
     /// - Parameters:
     ///   - maxBytes: The maximum number of bytes this method is allowed to accumulate
     ///   - allocator: Allocator used for allocating the result `ByteBuffer`
