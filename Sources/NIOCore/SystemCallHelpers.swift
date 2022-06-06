@@ -134,7 +134,7 @@ enum SystemCalls {
 #if os(Windows)
         return try syscall(blocking: false) {
             var fh: CInt = -1
-            let _ = ucrt._sopen_s(&fh, filename, oflag, _SH_DENYNO, pmode)
+            let _ = ucrt._sopen_s(&fh, file, oflag, _SH_DENYNO, mode)
             return fh
         }.result
 #else
