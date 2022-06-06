@@ -26,6 +26,9 @@ import func WinSDK.GetAddrInfoW
 
 import struct WinSDK.ADDRESS_FAMILY
 import struct WinSDK.ADDRINFOW
+import struct WinSDK.IN_ADDR
+import struct WinSDK.IN6_ADDR
+
 import struct WinSDK.in_addr_t
 import struct WinSDK.sockaddr
 import struct WinSDK.sockaddr_in
@@ -34,6 +37,11 @@ import struct WinSDK.sockaddr_storage
 import struct WinSDK.sockaddr_un
 
 import typealias WinSDK.u_short
+
+fileprivate typealias in_addr = WinSDK.IN_ADDR
+fileprivate typealias in6_addr = WinSDK.IN6_ADDR
+fileprivate typealias in_port_t = WinSDK.u_short
+fileprivate typealias sa_family_t = WinSDK.ADDRESS_FAMILY
 #elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
 import Darwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
@@ -410,8 +418,7 @@ public enum SocketAddress: CustomStringConvertible, NIOSendable {
                     FreeAddrInfoW(pResult)
                 }
 
-                if let pResult = pResult {
-                    let addressBytes = UnsafeRawPointer(pResult.pointee.ai_addr)
+                if let pResult = pResult, let addressBytes = UnsafeRawPointer(pResult.pointee.ai_addr) {
                     switch pResult.pointee.ai_family {
                     case AF_INET:
                         return .v4(IPv4Address(address: addressBytes.load(as: sockaddr_in.self), host: host))

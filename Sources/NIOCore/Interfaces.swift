@@ -370,7 +370,7 @@ extension NIONetworkDevice {
                     try! NIOBSDSocket.inet_ntop(addressFamily: .inet,
                                                 addressBytes: &mask,
                                                 addressDescription: $0.baseAddress!,
-                                                addressDescriptionLength: INET_ADDRSTRLEN)
+                                                addressDescriptionLength: socklen_t(INET_ADDRSTRLEN))
                 }
                 return SocketAddress(mask)
             }
@@ -383,7 +383,7 @@ extension NIONetworkDevice {
                     try! NIOBSDSocket.inet_ntop(addressFamily: .inet6,
                                                 addressBytes: &mask,
                                                 addressDescription: $0.baseAddress!,
-                                                addressDescriptionLength: INET6_ADDRSTRLEN)
+                                                addressDescriptionLength: socklen_t(INET6_ADDRSTRLEN))
                 }
                 return SocketAddress(mask)
             }
