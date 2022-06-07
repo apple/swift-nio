@@ -57,6 +57,8 @@ import func WinSDK.inet_pton
 
 import func WinSDK.GetLastError
 import func WinSDK.WSAGetLastError
+
+internal typealias socklen_t = ucrt.size_t
 #elseif os(Linux) || os(Android)
 import Glibc
 import CNIOLinux

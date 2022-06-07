@@ -29,7 +29,6 @@ import struct WinSDK.ADDRINFOW
 import struct WinSDK.IN_ADDR
 import struct WinSDK.IN6_ADDR
 
-import struct WinSDK.in_addr_t
 import struct WinSDK.sockaddr
 import struct WinSDK.sockaddr_in
 import struct WinSDK.sockaddr_in6
@@ -395,6 +394,51 @@ public enum SocketAddress: CustomStringConvertible, NIOSendable {
         }
     }
 
+    /// Creates a new `SocketAddress` corresponding to the netmask for a subnet prefix.
+    ///
+    /// As an example, consider the subnet "127.0.0.1/8". The "subnet prefix" is "8", and the corresponding netmask is "255.0.0.0".
+    /// This initializer will produce a `SocketAddress` that contains "255.0.0.0".
+    ///
+    /// - parameters:
+    ///     - prefix: The prefix of the subnet.
+    /// - returns: A `SocketAddress` containing the associated netmask.
+    internal init(ipv4MaskForPrefix prefix: Int) {
+        precondition((0...32).contains(prefix))
+
+        let packedAddress = (UInt32(0xFFFFFFFF) << (32 - prefix)).bigEndian
+        var ipv4Addr = sockaddr_in()
+        ipv4Addr.sin_family = sa_family_t(AF_INET)
+        ipv4Addr.sin_port = 0
+        withUnsafeMutableBytes(of: &ipv4Addr.sin_addr) { $0.storeBytes(of: packedAddress, as: UInt32.self) }
+        self = .v4(.init(address: ipv4Addr, host: ""))
+    }
+
+    /// Creates a new `SocketAddress` corresponding to the netmask for a subnet prefix.
+    ///
+    /// As an example, consider the subnet "fe80::/10". The "subnet prefix" is "10", and the corresponding netmask is "ff30::".
+    /// This initializer will produce a `SocketAddress` that contains "ff30::".
+    ///
+    /// - parameters:
+    ///     - prefix: The prefix of the subnet.
+    /// - returns: A `SocketAddress` containing the associated netmask.
+    internal init(ipv6MaskForPrefix prefix: Int) {
+        precondition((0...128).contains(prefix))
+
+        // This defends against the possibility of a greater-than-/64 subnet, which would produce a negative shift
+        // operand which is absolutely not what we want.
+        let highShift = min(prefix, 64)
+        let packedAddressHigh = (UInt64(0xFFFFFFFFFFFFFFFF) << (64 - highShift)).bigEndian
+
+        let packedAddressLow = (UInt64(0xFFFFFFFFFFFFFFFF) << (128 - prefix)).bigEndian
+        let packedAddress = (packedAddressHigh, packedAddressLow)
+
+        var ipv6Addr = sockaddr_in6()
+        ipv6Addr.sin6_family = sa_family_t(AF_INET6)
+        ipv6Addr.sin6_port = 0
+        withUnsafeMutableBytes(of: &ipv6Addr.sin6_addr) { $0.storeBytes(of: packedAddress, as: (UInt64, UInt64).self) }
+        self = .v6(.init(address: ipv6Addr, host: ""))
+    }
+
     /// Creates a new `SocketAddress` for the given host (which will be resolved) and port.
     ///
     /// - warning: This is a blocking call, so please avoid calling this from an `EventLoop`.
@@ -573,11 +617,13 @@ extension SocketAddress {
             // the address.
 #if os(Windows)
             let v4WireAddress = v4Addr.address.sin_addr.S_un.S_addr
+            let mask = UInt32(0xF000_0000).bigEndian
+            let subnet = UInt32(0xE000_0000).bigEndian
 #else
             let v4WireAddress = v4Addr.address.sin_addr.s_addr
-#endif
             let mask = in_addr_t(0xF000_0000 as UInt32).bigEndian
             let subnet = in_addr_t(0xE000_0000 as UInt32).bigEndian
+#endif
             return v4WireAddress & mask == subnet
         case .v6(let v6Addr):
             // For IPv6 a multicast address is in the range ff00::/8.
