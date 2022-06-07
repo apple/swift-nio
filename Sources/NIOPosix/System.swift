@@ -208,7 +208,12 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
     while true {
         let res = try body()
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            _get_errno(&err)
+#else
             let err = errno
+#endif
             switch (err, blocking) {
             case (EINTR, _):
                 continue
@@ -237,7 +242,12 @@ internal func syscallForbiddingEINVAL<T: FixedWidthInteger>(where function: Stri
     while true {
         let res = try body()
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            _get_errno(&err)
+#else
             let err = errno
+#endif
             switch err {
             case EINTR:
                 continue
@@ -313,7 +323,12 @@ internal enum Posix {
     internal static func close(descriptor: CInt) throws {
         let res = sysClose(descriptor)
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            _get_errno(&err)
+#else
             let err = errno
+#endif
 
             // There is really nothing "sane" we can do when EINTR was reported on close.
             // So just ignore it and "assume" everything is fine == we closed the file descriptor.
