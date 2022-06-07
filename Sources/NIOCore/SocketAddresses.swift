@@ -394,6 +394,47 @@ public enum SocketAddress: CustomStringConvertible, NIOSendable {
         }
     }
 
+    /// Creates a new `SocketAddress` corresponding to the netmask for a subnet prefix.
+    ///
+    /// As an example, consider the subnet "127.0.0.1/8". The "subnet prefix" is "8", and the corresponding netmask is "255.0.0.0".
+    /// This initializer will produce a `SocketAddress` that contains "255.0.0.0".
+    ///
+    /// - parameters:
+    ///     - prefix: The prefix of the subnet.
+    /// - returns: A `SocketAddress` containing the associated netmask.
+    internal init(ipv4MaskForPrefix prefix: Int) {
+        let packedAddress = (UInt32(0xFFFFFFFF) << (32 - prefix)).bigEndian
+        var ipv4Addr = sockaddr_in()
+        ipv4Addr.sin_family = sa_family_t(AF_INET)
+        ipv4Addr.sin_port = 0
+        withUnsafeMutableBytes(of: &ipv4Addr.sin_addr) { $0.storeBytes(of: packedAddress, as: UInt32.self) }
+        self = .v4(.init(address: ipv4Addr, host: ""))
+    }
+
+    /// Creates a new `SocketAddress` corresponding to the netmask for a subnet prefix.
+    ///
+    /// As an example, consider the subnet "fe80::/10". The "subnet prefix" is "10", and the corresponding netmask is "ff30::".
+    /// This initializer will produce a `SocketAddress` that contains "ff30::".
+    ///
+    /// - parameters:
+    ///     - prefix: The prefix of the subnet.
+    /// - returns: A `SocketAddress` containing the associated netmask.
+    internal init(ipv6MaskForPrefix prefix: Int) {
+        // This defends against the possibility of a greater-than-/64 subnet, which would produce a negative shift
+        // operand which is absolutely not what we want.
+        let highShift = min(prefix, 64)
+        let packedAddressHigh = (UInt64(0xFFFFFFFFFFFFFFFF) << (64 - highShift)).bigEndian
+
+        let packedAddressLow = (UInt64(0xFFFFFFFFFFFFFFFF) << (128 - prefix)).bigEndian
+        let packedAddress = (packedAddressHigh, packedAddressLow)
+
+        var ipv6Addr = sockaddr_in6()
+        ipv6Addr.sin6_family = sa_family_t(AF_INET6)
+        ipv6Addr.sin6_port = 0
+        withUnsafeMutableBytes(of: &ipv6Addr.sin6_addr) { $0.storeBytes(of: packedAddress, as: (UInt64, UInt64).self) }
+        self = .v6(.init(address: ipv6Addr, host: ""))
+    }
+
     /// Creates a new `SocketAddress` for the given host (which will be resolved) and port.
     ///
     /// - warning: This is a blocking call, so please avoid calling this from an `EventLoop`.
