@@ -29,7 +29,6 @@ import struct WinSDK.ADDRINFOW
 import struct WinSDK.IN_ADDR
 import struct WinSDK.IN6_ADDR
 
-import struct WinSDK.in_addr_t
 import struct WinSDK.sockaddr
 import struct WinSDK.sockaddr_in
 import struct WinSDK.sockaddr_in6
@@ -573,11 +572,13 @@ extension SocketAddress {
             // the address.
 #if os(Windows)
             let v4WireAddress = v4Addr.address.sin_addr.S_un.S_addr
+            let mask = UInt32(0xF000_0000).bigEndian
+            let subnet = UInt32(0xE000_0000).bigEndian
 #else
             let v4WireAddress = v4Addr.address.sin_addr.s_addr
-#endif
             let mask = in_addr_t(0xF000_0000 as UInt32).bigEndian
             let subnet = in_addr_t(0xE000_0000 as UInt32).bigEndian
+#endif
             return v4WireAddress & mask == subnet
         case .v6(let v6Addr):
             // For IPv6 a multicast address is in the range ff00::/8.
