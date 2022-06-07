@@ -29,11 +29,18 @@ import CNIOWindows
 #error("bad os")
 #endif
 
+#if os(Windows)
+private let sysDup: @convention(c) (CInt) -> CInt = _dup
+private let sysClose: @convention(c) (CInt) -> CInt = _close
+private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = _lseek
+private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, CUnsignedInt) -> CInt = _read
+#else
 private let sysDup: @convention(c) (CInt) -> CInt = dup
 private let sysClose: @convention(c) (CInt) -> CInt = close
 private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, NIOPOSIXFileMode) -> CInt = open
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
 private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t) -> size_t = read
+#endif
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 
 #if !os(Windows)
@@ -122,10 +129,19 @@ enum SystemCalls {
     }
 
     @inline(never)
-    internal static func open(file: UnsafePointer<CChar>, oFlag: CInt, mode: NIOPOSIXFileMode) throws -> CInt {
+    internal static func open(file: UnsafePointer<CChar>, oFlag: CInt,
+                              mode: NIOPOSIXFileMode) throws -> CInt {
+#if os(Windows)
+        return try syscall(blocking: false) {
+            var fh: CInt = -1
+            let _ = ucrt._sopen_s(&fh, file, oFlag, _SH_DENYNO, mode)
+            return fh
+        }.result
+#else
         return try syscall(blocking: false) {
             sysOpenWithMode(file, oFlag, mode)
         }.result
+#endif
     }
 
     @discardableResult
@@ -136,12 +152,21 @@ enum SystemCalls {
         }.result
     }
 
+#if os(Windows)
+    @inline(never)
+    internal static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: CUnsignedInt) throws -> CoreIOResult<CInt> {
+        return try syscall(blocking: true) {
+            sysRead(descriptor, pointer, size)
+        }
+    }
+#else
     @inline(never)
     internal static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> CoreIOResult<ssize_t> {
         return try syscall(blocking: true) {
             sysRead(descriptor, pointer, size)
         }
     }
+#endif
 
     @inline(never)
     internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
