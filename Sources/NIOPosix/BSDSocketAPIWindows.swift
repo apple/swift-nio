@@ -112,6 +112,7 @@ internal typealias msghdr = WSAMSG
 internal typealias in_addr = IN_ADDR
 internal typealias in_port_t = USHORT
 internal typealias sa_family_t = ADDRESS_FAMILY
+internal typealias sockaddr = SOCKADDR
 internal typealias sockaddr_in = SOCKADDR_IN
 internal typealias sockaddr_in6 = SOCKADDR_IN6
 internal typealias sockaddr_un = SOCKADDR_UN

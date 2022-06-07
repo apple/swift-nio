@@ -31,7 +31,6 @@ internal typealias in6_pktinfo = CNIOLinux_in6_pktinfo
 
 import CNIOWindows
 
-internal typealias sockaddr = WinSDK.SOCKADDR
 internal typealias MMsgHdr = CNIOWindows_mmsghdr
 #else
 let badOS = { fatalError("unsupported OS") }()
