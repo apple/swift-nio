@@ -102,16 +102,22 @@ import struct WinSDK.SOCKADDR_IN
 import struct WinSDK.SOCKADDR_IN6
 import struct WinSDK.SOCKADDR_UN
 import struct WinSDK.SOCKADDR_STORAGE
+import struct WinSDK.WSACMSGHDR
+import struct WinSDK.WSAMSG
 
 import typealias WinSDK.LPFN_WSARECVMSG
 
+internal typealias cmsghdr = WSACMSGHDR
+internal typealias msghdr = WSAMSG
 internal typealias in_addr = IN_ADDR
 internal typealias in_port_t = USHORT
 internal typealias sa_family_t = ADDRESS_FAMILY
+internal typealias sockaddr = SOCKADDR
 internal typealias sockaddr_in = SOCKADDR_IN
 internal typealias sockaddr_in6 = SOCKADDR_IN6
 internal typealias sockaddr_un = SOCKADDR_UN
 internal typealias sockaddr_storage = SOCKADDR_STORAGE
+
 
 fileprivate var IOC_IN: DWORD {
   0x8000_0000
