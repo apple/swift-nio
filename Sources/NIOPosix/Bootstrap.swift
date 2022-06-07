@@ -1096,7 +1096,7 @@ public final class NIOPipeBootstrap {
     /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
     public func withInputOutputDescriptor(_ fileDescriptor: CInt) -> EventLoopFuture<Channel> {
         let inputFD = fileDescriptor
-        let outputFD = dup(fileDescriptor)
+        let outputFD = try! Posix.dup(descriptor: fileDescriptor)
 
         return self.withPipes(inputDescriptor: inputFD, outputDescriptor: outputFD).flatMapErrorThrowing { error in
             try! Posix.close(descriptor: outputFD)
