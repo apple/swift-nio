@@ -27,7 +27,10 @@ import CNIOLinux
 internal typealias MMsgHdr = CNIOLinux_mmsghdr
 internal typealias in6_pktinfo = CNIOLinux_in6_pktinfo
 #elseif os(Windows)
+@_exported import ucrt
+
 import CNIOWindows
+
 internal typealias sockaddr = WinSDK.SOCKADDR
 internal typealias MMsgHdr = CNIOWindows_mmsghdr
 #else
