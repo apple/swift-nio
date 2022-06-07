@@ -920,22 +920,13 @@ extension EventLoopFuture {
     }
 
     #if swift(>=5.7)
-    @inlinable
-    @preconcurrency // TODO(davidnadoba): remove @preconcurrency and fix our internal use sites
-    internal func _addCallback(_ callback: @escaping AddCallbackCallback) -> CallbackList {
-        self.__addCallback(callback)
-    }
     @usableFromInline typealias AddCallbackCallback = @Sendable () -> CallbackList
     #else
-    @inlinable
-    internal func _addCallback(_ callback: @escaping AddCallbackCallback) -> CallbackList {
-        self.__addCallback(callback)
-    }
     @usableFromInline typealias AddCallbackCallback = () -> CallbackList
     #endif
     /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
     @inlinable
-    internal func __addCallback(_ callback: @escaping AddCallbackCallback) -> CallbackList {
+    internal func _addCallback(_ callback: @escaping AddCallbackCallback) -> CallbackList {
         self.eventLoop.assertInEventLoop()
         if self._value == nil {
             self._callbacks.append(callback)
@@ -947,20 +938,21 @@ extension EventLoopFuture {
     #if swift(>=5.7)
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
     @inlinable
-    @preconcurrency // TODO(davidnadoba): remove @preconcurrency and fix our internal use sites
-    internal func _whenComplete(_ callback: @escaping InternalWhenCompleteCallback) {
+    @preconcurrency // TODO: We want to remove @preconcurrency but it results in more allocations in 1000_udpconnections
+    internal func _whenComplete(_ callback: @escaping @Sendable () -> CallbackList) {
         self._internalWhenComplete(callback)
     }
     @usableFromInline typealias InternalWhenCompleteCallback = @Sendable () -> CallbackList
     #else
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
     @inlinable
-    internal func _whenComplete(_ callback: @escaping InternalWhenCompleteCallback) {
+    internal func _whenComplete(_ callback: @escaping () -> CallbackList) {
         self._internalWhenComplete(callback)
     }
     @usableFromInline typealias InternalWhenCompleteCallback = () -> CallbackList
     #endif
     
+    /// Add a callback.  If there's already a value, run as much of the chain as we can.
     @inlinable
     internal func _internalWhenComplete(_ callback: @escaping InternalWhenCompleteCallback) {
         if self.eventLoop.inEventLoop {
@@ -1118,8 +1110,7 @@ extension EventLoopFuture {
     @inlinable
     public func and<OtherValue>(_ other: EventLoopFuture<OtherValue>) -> EventLoopFuture<(Value, OtherValue)> {
         let promise = EventLoopPromise<(Value, OtherValue)>.makeUnleakablePromise(eventLoop: self.eventLoop)
-        var tvalue: Value?
-        var uvalue: OtherValue?
+        let box: UnsafeMutableTransferBox<(t:Value?, u: OtherValue?)> = .init((nil, nil))
 
         assert(self.eventLoop === promise.futureResult.eventLoop)
         self._whenComplete { () -> CallbackList in
@@ -1127,10 +1118,10 @@ extension EventLoopFuture {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let t):
-                if let u = uvalue {
+                if let u = box.wrappedValue.u {
                     return promise._setValue(value: .success((t, u)))
                 } else {
-                    tvalue = t
+                    box.wrappedValue.t = t
                 }
             }
             return CallbackList()
@@ -1143,10 +1134,10 @@ extension EventLoopFuture {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let u):
-                if let t = tvalue {
+                if let t = box.wrappedValue.t {
                     return promise._setValue(value: .success((t, u)))
                 } else {
-                    uvalue = u
+                    box.wrappedValue.u = u
                 }
             }
             return CallbackList()
@@ -1247,18 +1238,18 @@ extension EventLoopFuture {
     public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value {
         self.eventLoop._preconditionSafeToWait(file: file, line: line)
 
-        var v: Result<Value, Error>? = nil
+        let v: UnsafeMutableTransferBox<Result<Value, Error>?> = .init(nil)
         let lock = ConditionLock(value: 0)
         self._whenComplete { () -> CallbackList in
             lock.lock()
-            v = self._value
+            v.wrappedValue = self._value
             lock.unlock(withValue: 1)
             return CallbackList()
         }
         lock.lock(whenValue: 1)
         lock.unlock()
 
-        switch(v!) {
+        switch(v.wrappedValue!) {
         case .success(let result):
             return result
         case .failure(let error):
@@ -1591,10 +1582,16 @@ extension EventLoopFuture {
         let eventLoop = promise.futureResult.eventLoop
         let reduced = eventLoop.makePromise(of: Void.self)
 
-        var results: [Value?] = .init(repeating: nil, count: futures.count)
-        let callback = { (index: Int, result: Value) in
-            results[index] = result
+        let results: UnsafeMutableTransferBox<[Value?]> = .init(.init(repeating: nil, count: futures.count))
+        #if swift(>=5.7)
+        let callback = { @Sendable (index: Int, result: Value) in
+            results.wrappedValue[index] = result
         }
+        #else
+        let callback = { (index: Int, result: Value) in
+            results.wrappedValue[index] = result
+        }
+        #endif
 
         if eventLoop.inEventLoop {
             self._reduceSuccesses0(reduced, futures, eventLoop, onValue: callback)
@@ -1608,8 +1605,8 @@ extension EventLoopFuture {
             switch result {
             case .success:
               // verify that all operations have been completed
-              assert(!results.contains(where: { $0 == nil }))
-                promise.succeed(results.map { $0! })
+                assert(!results.wrappedValue.contains(where: { $0 == nil }))
+                promise.succeed(results.wrappedValue.map { $0! })
             case .failure(let error):
                 promise.fail(error)
             }
@@ -1617,23 +1614,10 @@ extension EventLoopFuture {
     }
     
     #if swift(>=5.7)
-    /// Loops through the futures array and attaches callbacks to execute `onValue` on the provided `EventLoop` when
-    /// they succeed. The `onValue` will receive the index of the future that fulfilled the provided `Result`.
-    ///
-    /// Once all the futures have succeed, the provided promise will succeed.
-    /// Once any future fails, the provided promise will fail.
-    @inlinable
-    @preconcurrency // TODO(davidnadoba): remove @preconcurrency and fix our internal use sites
-    internal static func _reduceSuccesses0<InputValue>(
-        _ promise: EventLoopPromise<Void>,
-        _ futures: [EventLoopFuture<InputValue>],
-        _ eventLoop: EventLoop,
-        onValue: @escaping @Sendable (Int, InputValue) -> Void
-    ) {
-        Self.__reduceSuccesses0(promise, futures, eventLoop, onValue: onValue)
-    }
     @usableFromInline typealias ReduceSuccessCallback<InputValue> = @Sendable (Int, InputValue) -> Void
     #else
+    @usableFromInline typealias ReduceSuccessCallback<InputValue> = (Int, InputValue) -> Void
+    #endif
     /// Loops through the futures array and attaches callbacks to execute `onValue` on the provided `EventLoop` when
     /// they succeed. The `onValue` will receive the index of the future that fulfilled the provided `Result`.
     ///
@@ -1641,17 +1625,6 @@ extension EventLoopFuture {
     /// Once any future fails, the provided promise will fail.
     @inlinable
     internal static func _reduceSuccesses0<InputValue>(
-        _ promise: EventLoopPromise<Void>,
-        _ futures: [EventLoopFuture<InputValue>],
-        _ eventLoop: EventLoop,
-        onValue: @escaping (Int, InputValue) -> Void
-    ) {
-        Self.__reduceSuccesses0(promise, futures, eventLoop, onValue: onValue)
-    }
-    @usableFromInline typealias ReduceSuccessCallback<InputValue> = (Int, InputValue) -> Void
-    #endif
-    @inlinable
-    internal static func __reduceSuccesses0<InputValue>(
         _ promise: EventLoopPromise<Void>,
         _ futures: [EventLoopFuture<InputValue>],
         _ eventLoop: EventLoop,
@@ -1772,11 +1745,17 @@ extension EventLoopFuture {
                                        promise: EventLoopPromise<[Result<Value, Error>]>) {
         let eventLoop = promise.futureResult.eventLoop
         let reduced = eventLoop.makePromise(of: Void.self)
-
-        var results: [Result<Value, Error>] = .init(repeating: .failure(OperationPlaceholderError()), count: futures.count)
-        let callback = { (index: Int, result: Result<Value, Error>) in
-            results[index] = result
+        
+        let results: UnsafeMutableTransferBox<[Result<Value, Error>]> = .init(.init(repeating: .failure(OperationPlaceholderError()), count: futures.count))
+        #if swift(>=5.7)
+        let callback = { @Sendable (index: Int, result: Result<Value, Error>) in
+            results.wrappedValue[index] = result
         }
+        #else
+        let callback = { (index: Int, result: Result<Value, Error>) in
+            results.wrappedValue[index] = result
+        }
+        #endif
 
         if eventLoop.inEventLoop {
             self._reduceCompletions0(reduced, futures, eventLoop, onResult: callback)
@@ -1790,11 +1769,11 @@ extension EventLoopFuture {
             switch result {
             case .success:
                 // verify that all operations have been completed
-                assert(!results.contains(where: {
+                assert(!results.wrappedValue.contains(where: {
                     guard case let .failure(error) = $0 else { return false }
                     return error is OperationPlaceholderError
                 }))
-                promise.succeed(results)
+                promise.succeed(results.wrappedValue)
 
             case .failure(let error):
                 promise.fail(error)
@@ -1803,40 +1782,17 @@ extension EventLoopFuture {
     }
     
     #if swift(>=5.7)
-    /// Loops through the futures array and attaches callbacks to execute `onResult` on the provided `EventLoop` when
-    /// they complete. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
-    ///
-    /// Once all the futures have completed, the provided promise will succeed.
-    @inlinable
-    @preconcurrency // TODO(davidnadoba): remove @preconcurrency and fix our internal use sites
-    internal static func _reduceCompletions0<InputValue>(
-        _ promise: EventLoopPromise<Void>,
-        _ futures: [EventLoopFuture<InputValue>],
-        _ eventLoop: EventLoop,
-        onResult: @escaping @Sendable (Int, Result<InputValue, Error>) -> Void
-    ) {
-        Self.__reduceCompletions0(promise, futures, eventLoop, onResult: onResult)
-    }
     @usableFromInline typealias ReduceCompletions<InputValue> = @Sendable (Int, Result<InputValue, Error>) -> Void
     #else
-    /// Loops through the futures array and attaches callbacks to execute `onResult` on the provided `EventLoop` when
-    /// they complete. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
-    ///
-    /// Once all the futures have completed, the provided promise will succeed.
-    @inlinable
-    internal static func _reduceCompletions0<InputValue>(
-        _ promise: EventLoopPromise<Void>,
-        _ futures: [EventLoopFuture<InputValue>],
-        _ eventLoop: EventLoop,
-        onResult: @escaping (Int, Result<InputValue, Error>) -> Void
-    ) {
-        Self.__reduceCompletions0(promise, futures, eventLoop, onResult: onResult)
-    }
     @usableFromInline typealias ReduceCompletions<InputValue> = (Int, Result<InputValue, Error>) -> Void
     #endif
     
+    /// Loops through the futures array and attaches callbacks to execute `onResult` on the provided `EventLoop` when
+    /// they complete. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
+    ///
+    /// Once all the futures have completed, the provided promise will succeed.
     @inlinable
-    internal static func __reduceCompletions0<InputValue>(
+    internal static func _reduceCompletions0<InputValue>(
         _ promise: EventLoopPromise<Void>,
         _ futures: [EventLoopFuture<InputValue>],
         _ eventLoop: EventLoop,
