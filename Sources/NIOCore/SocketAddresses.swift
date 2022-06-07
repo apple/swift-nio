@@ -403,6 +403,8 @@ public enum SocketAddress: CustomStringConvertible, NIOSendable {
     ///     - prefix: The prefix of the subnet.
     /// - returns: A `SocketAddress` containing the associated netmask.
     internal init(ipv4MaskForPrefix prefix: Int) {
+        precondition((0...32).contains(prefix))
+
         let packedAddress = (UInt32(0xFFFFFFFF) << (32 - prefix)).bigEndian
         var ipv4Addr = sockaddr_in()
         ipv4Addr.sin_family = sa_family_t(AF_INET)
@@ -420,6 +422,8 @@ public enum SocketAddress: CustomStringConvertible, NIOSendable {
     ///     - prefix: The prefix of the subnet.
     /// - returns: A `SocketAddress` containing the associated netmask.
     internal init(ipv6MaskForPrefix prefix: Int) {
+        precondition((0...128).contains(prefix))
+
         // This defends against the possibility of a greater-than-/64 subnet, which would produce a negative shift
         // operand which is absolutely not what we want.
         let highShift = min(prefix, 64)
