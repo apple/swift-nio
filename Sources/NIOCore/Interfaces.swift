@@ -97,41 +97,13 @@ public final class NIONetworkInterface {
         }
         self.address = address
 
-        // TODO: convert the prefix length to the mask itself
-        let v4mask: (UINT8) -> SocketAddress? = { _ in
-            var buffer: [CChar] =
-                Array<CChar>(repeating: 0, count: Int(INET_ADDRSTRLEN))
-            var mask: sockaddr_in = sockaddr_in()
-            mask.sin_family = ADDRESS_FAMILY(AF_INET)
-            _ = buffer.withUnsafeMutableBufferPointer {
-                try! NIOBSDSocket.inet_ntop(addressFamily: .inet,
-                                            addressBytes: &mask,
-                                            addressDescription: $0.baseAddress!,
-                                            addressDescriptionLength: socklen_t(INET_ADDRSTRLEN))
-            }
-            return SocketAddress(mask)
-        }
-        let v6mask: (UINT8) -> SocketAddress? = { _ in
-            var buffer: [CChar] =
-                Array<CChar>(repeating: 0, count: Int(INET6_ADDRSTRLEN))
-            var mask: sockaddr_in6 = sockaddr_in6()
-            mask.sin6_family = ADDRESS_FAMILY(AF_INET6)
-            _ = buffer.withUnsafeMutableBufferPointer {
-                try! NIOBSDSocket.inet_ntop(addressFamily: .inet6,
-                                            addressBytes: &mask,
-                                            addressDescription: $0.baseAddress!,
-                                            addressDescriptionLength: socklen_t(INET6_ADDRSTRLEN))
-            }
-            return SocketAddress(mask)
-        }
-
         switch pAddress.pointee.Address.lpSockaddr.pointee.sa_family {
         case ADDRESS_FAMILY(AF_INET):
-            self.netmask = v4mask(pAddress.pointee.OnLinkPrefixLength)
+            self.netmask = SocketAddress(ipv4MaskForPrefix: Int(pAddress.pointee.OnLinkPrefixLength))
             self.interfaceIndex = Int(pAdapter.pointee.IfIndex)
             break
         case ADDRESS_FAMILY(AF_INET6):
-            self.netmask = v6mask(pAddress.pointee.OnLinkPrefixLength)
+            self.netmask = SocketAddress(ipv6MaskForPrefix: Int(pAddress.pointee.OnLinkPrefixLength))
             self.interfaceIndex = Int(pAdapter.pointee.Ipv6IfIndex)
             break
         default:
@@ -418,45 +390,17 @@ extension NIONetworkDevice {
                                as: UTF16.self)
             self.address = pAddress.pointee.Address.lpSockaddr.convert()
 
-            // TODO: convert the prefix length to the mask itself
-            let v4mask: (UINT8) -> SocketAddress? = { _ in
-                var buffer: [CChar] =
-                    Array<CChar>(repeating: 0, count: Int(INET_ADDRSTRLEN))
-                var mask: sockaddr_in = sockaddr_in()
-                mask.sin_family = ADDRESS_FAMILY(AF_INET)
-                _ = buffer.withUnsafeMutableBufferPointer {
-                    try! NIOBSDSocket.inet_ntop(addressFamily: .inet,
-                                                addressBytes: &mask,
-                                                addressDescription: $0.baseAddress!,
-                                                addressDescriptionLength: socklen_t(INET_ADDRSTRLEN))
-                }
-                return SocketAddress(mask)
-            }
-            let v6mask: (UINT8) -> SocketAddress? = { _ in
-                var buffer: [CChar] =
-                    Array<CChar>(repeating: 0, count: Int(INET6_ADDRSTRLEN))
-                var mask: sockaddr_in6 = sockaddr_in6()
-                mask.sin6_family = ADDRESS_FAMILY(AF_INET6)
-                _ = buffer.withUnsafeMutableBufferPointer {
-                    try! NIOBSDSocket.inet_ntop(addressFamily: .inet6,
-                                                addressBytes: &mask,
-                                                addressDescription: $0.baseAddress!,
-                                                addressDescriptionLength: socklen_t(INET6_ADDRSTRLEN))
-                }
-                return SocketAddress(mask)
-            }
-
             switch pAddress.pointee.Address.lpSockaddr.pointee.sa_family {
             case ADDRESS_FAMILY(AF_INET):
-                self.netmask = v4mask(pAddress.pointee.OnLinkPrefixLength)
+                self.netmask = SocketAddress(ipv4MaskForPrefix: Int(pAddress.pointee.OnLinkPrefixLength))
                 self.interfaceIndex = Int(pAdapter.pointee.IfIndex)
                 break
             case ADDRESS_FAMILY(AF_INET6):
-                self.netmask = v6mask(pAddress.pointee.OnLinkPrefixLength)
+                self.netmask = SocketAddress(ipv6MaskForPrefix: Int(pAddress.pointee.OnLinkPrefixLength))
                 self.interfaceIndex = Int(pAdapter.pointee.Ipv6IfIndex)
                 break
             default:
-              return nil
+                return nil
             }
 
             // TODO(compnerd) handle broadcast/ppp/multicast information
