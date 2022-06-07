@@ -129,9 +129,9 @@ extension NIOFileHandle {
         public static let `default` = Flags(posixMode: 0, posixFlags: 0)
 
 #if os(Windows)
-        internal static let defaultPermissions = _S_IREAD | _S_IWRITE
+        public static let defaultPermissions = _S_IREAD | _S_IWRITE
 #else
-        internal static let defaultPermissions = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
+        public static let defaultPermissions = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
 #endif
 
         /// Allows file creation when opening file for writing. File owner is set to the effective user ID of the process.
