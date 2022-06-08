@@ -177,19 +177,41 @@ private func isUnacceptableErrnoForbiddingEINVAL(_ code: Int32) -> Bool {
     #endif
 }
 
+#if os(Windows)
+internal func strerror(_ errno: CInt) -> String {
+    return withUnsafeTemporaryAllocation(of: CChar.self, capacity: 95) {
+        let result = strerror_s($0.baseAddress, $0.count, errno)
+        guard result == 0 else { return "Unknown error: \(errno)" }
+        return String(cString: $0.baseAddress!)
+    }
+}
+#endif
+
 private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
+#if os(Windows)
+    precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(strerror(err)) in \(function))")
+#else
     precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+#endif
 }
 
 private func preconditionIsNotUnacceptableErrnoOnClose(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
+#if os(Windows)
+    precondition(!isUnacceptableErrnoOnClose(err), "unacceptable errno \(err) \(strerror(err)) in \(function))")
+#else
     precondition(!isUnacceptableErrnoOnClose(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+#endif
 }
 
 private func preconditionIsNotUnacceptableErrnoForbiddingEINVAL(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
+#if os(Windows)
+    precondition(!isUnacceptableErrnoForbiddingEINVAL(err), "unacceptable errno \(err) \(strerror(err)) in \(function))")
+#else
     precondition(!isUnacceptableErrnoForbiddingEINVAL(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+#endif
 }
 
 
