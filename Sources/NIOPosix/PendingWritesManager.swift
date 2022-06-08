@@ -53,7 +53,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
 
             buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
                 storageRefs[i] = storageRef.retain()
-                iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
+                iovecs[i] = IOVector(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
             }
             numberOfUsedStorageSlots += 1
         case .fileRegion:

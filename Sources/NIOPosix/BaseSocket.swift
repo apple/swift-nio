@@ -18,44 +18,8 @@ import NIOConcurrencyHelpers
 #if os(Windows)
 import let WinSDK.EAFNOSUPPORT
 import let WinSDK.EBADF
-import let WinSDK.ENOENT
 
-import let WinSDK.FILE_ATTRIBUTE_REPARSE_POINT
-import let WinSDK.FILE_FLAG_BACKUP_SEMANTICS
-import let WinSDK.FILE_FLAG_OPEN_REPARSE_POINT
-import let WinSDK.FILE_SHARE_DELETE
-import let WinSDK.FILE_SHARE_READ
-import let WinSDK.FILE_SHARE_WRITE
-import let WinSDK.FileDispositionInfoEx
-
-import let WinSDK.GENERIC_READ
-
-import let WinSDK.INET_ADDRSTRLEN
-import let WinSDK.INET6_ADDRSTRLEN
-
-import let WinSDK.INVALID_HANDLE_VALUE
-import let WinSDK.INVALID_SOCKET
-
-import let WinSDK.IO_REPARSE_TAG_AF_UNIX
-
-import let WinSDK.NO_ERROR
-
-import let WinSDK.OPEN_EXISTING
-
-import func WinSDK.CloseHandle
-import func WinSDK.CreateFileW
-import func WinSDK.DeviceIoControl
-import func WinSDK.GetFileInformationByHandle
-import func WinSDK.GetFileType
-import func WinSDK.GetLastError
-import func WinSDK.SetFileInformationByHandle
-
-import struct WinSDK.BY_HANDLE_FILE_INFORMATION
-import struct WinSDK.DWORD
-import struct WinSDK.FILE_DISPOSITION_INFO
 import struct WinSDK.socklen_t
-
-import CNIOWindows
 #endif
 
 protocol Registration {

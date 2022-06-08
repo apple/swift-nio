@@ -27,8 +27,10 @@ import CNIOLinux
 internal typealias MMsgHdr = CNIOLinux_mmsghdr
 internal typealias in6_pktinfo = CNIOLinux_in6_pktinfo
 #elseif os(Windows)
+@_exported import ucrt
+
 import CNIOWindows
-internal typealias sockaddr = WinSDK.SOCKADDR
+
 internal typealias MMsgHdr = CNIOWindows_mmsghdr
 #else
 let badOS = { fatalError("unsupported OS") }()
@@ -99,7 +101,7 @@ private let sysDup: @convention(c) (CInt) -> CInt = dup
 private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
 private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockname
 #endif
-private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
+
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 #if !os(Windows)
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
@@ -175,19 +177,41 @@ private func isUnacceptableErrnoForbiddingEINVAL(_ code: Int32) -> Bool {
     #endif
 }
 
+#if os(Windows)
+internal func strerror(_ errno: CInt) -> String {
+    return withUnsafeTemporaryAllocation(of: CChar.self, capacity: 95) {
+        let result = strerror_s($0.baseAddress, $0.count, errno)
+        guard result == 0 else { return "Unknown error: \(errno)" }
+        return String(cString: $0.baseAddress!)
+    }
+}
+#endif
+
 private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
+#if os(Windows)
+    precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(strerror(err)) in \(function))")
+#else
     precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+#endif
 }
 
 private func preconditionIsNotUnacceptableErrnoOnClose(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
+#if os(Windows)
+    precondition(!isUnacceptableErrnoOnClose(err), "unacceptable errno \(err) \(strerror(err)) in \(function))")
+#else
     precondition(!isUnacceptableErrnoOnClose(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+#endif
 }
 
 private func preconditionIsNotUnacceptableErrnoForbiddingEINVAL(err: CInt, where function: String) -> Void {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
+#if os(Windows)
+    precondition(!isUnacceptableErrnoForbiddingEINVAL(err), "unacceptable errno \(err) \(strerror(err)) in \(function))")
+#else
     precondition(!isUnacceptableErrnoForbiddingEINVAL(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+#endif
 }
 
 
@@ -205,7 +229,12 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
     while true {
         let res = try body()
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            _get_errno(&err)
+#else
             let err = errno
+#endif
             switch (err, blocking) {
             case (EINTR, _):
                 continue
@@ -234,7 +263,12 @@ internal func syscallForbiddingEINVAL<T: FixedWidthInteger>(where function: Stri
     while true {
         let res = try body()
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            _get_errno(&err)
+#else
             let err = errno
+#endif
             switch err {
             case EINTR:
                 continue
@@ -310,7 +344,12 @@ internal enum Posix {
     internal static func close(descriptor: CInt) throws {
         let res = sysClose(descriptor)
         if res == -1 {
+#if os(Windows)
+            var err: CInt = 0
+            _get_errno(&err)
+#else
             let err = errno
+#endif
 
             // There is really nothing "sane" we can do when EINTR was reported on close.
             // So just ignore it and "assume" everything is fine == we closed the file descriptor.
