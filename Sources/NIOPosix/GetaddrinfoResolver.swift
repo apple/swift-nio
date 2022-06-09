@@ -52,7 +52,7 @@ internal class GetaddrinfoResolver: Resolver {
     private let v4Future: EventLoopPromise<[SocketAddress]>
     private let v6Future: EventLoopPromise<[SocketAddress]>
     private let aiSocktype: NIOBSDSocket.SocketType
-    private let aiProtocol: CInt
+    private let aiProtocol: NIOBSDSocket.OptionLevel
 
     /// Create a new resolver.
     ///
@@ -60,7 +60,8 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - loop: The `EventLoop` whose thread this resolver will block.
     ///     - aiSocktype: The sock type to use as hint when calling getaddrinfo.
     ///     - aiProtocol: the protocol to use as hint when calling getaddrinfo.
-    init(loop: EventLoop, aiSocktype: NIOBSDSocket.SocketType, aiProtocol: CInt) {
+    init(loop: EventLoop, aiSocktype: NIOBSDSocket.SocketType,
+         aiProtocol: NIOBSDSocket.OptionLevel) {
         self.v4Future = loop.makePromise()
         self.v6Future = loop.makePromise()
         self.aiSocktype = aiSocktype
@@ -134,7 +135,7 @@ internal class GetaddrinfoResolver: Resolver {
 
                 var aiHints: ADDRINFOW = ADDRINFOW()
                 aiHints.ai_socktype = self.aiSocktype.rawValue
-                aiHints.ai_protocol = self.aiProtocol
+                aiHints.ai_protocol = self.aiProtocol.rawValue
 
                 let iResult = GetAddrInfoW(wszHost, wszPort, &aiHints, &pResult)
                 guard iResult == 0 else {
@@ -155,7 +156,7 @@ internal class GetaddrinfoResolver: Resolver {
 
         var hint = addrinfo()
         hint.ai_socktype = self.aiSocktype.rawValue
-        hint.ai_protocol = self.aiProtocol
+        hint.ai_protocol = self.aiProtocol.rawValue
         guard getaddrinfo(host, String(port), &hint, &info) == 0 else {
             self.fail(SocketAddressError.unknown(host: host, port: port))
             return
