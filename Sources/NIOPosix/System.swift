@@ -289,34 +289,12 @@ internal enum Posix {
     static let SHUT_RD: CInt = CInt(Darwin.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
-    static let IPTOS_ECN_NOTECT: CInt = CNIODarwin_IPTOS_ECN_NOTECT
-    static let IPTOS_ECN_MASK: CInt = CNIODarwin_IPTOS_ECN_MASK
-    static let IPTOS_ECN_ECT0: CInt = CNIODarwin_IPTOS_ECN_ECT0
-    static let IPTOS_ECN_ECT1: CInt = CNIODarwin_IPTOS_ECN_ECT1
-    static let IPTOS_ECN_CE: CInt = CNIODarwin_IPTOS_ECN_CE
-    static let IP_RECVPKTINFO: CInt = CNIODarwin.IP_RECVPKTINFO
-    static let IP_PKTINFO: CInt = CNIODarwin.IP_PKTINFO
-    static let IPV6_RECVPKTINFO: CInt = CNIODarwin_IPV6_RECVPKTINFO
-    static let IPV6_PKTINFO: CInt = CNIODarwin_IPV6_PKTINFO
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
     static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
-    #if os(Android)
-    static let IPTOS_ECN_NOTECT: CInt = CInt(CNIOLinux.IPTOS_ECN_NOTECT)
-    #else
-    static let IPTOS_ECN_NOTECT: CInt = CInt(CNIOLinux.IPTOS_ECN_NOT_ECT)
-    #endif
-    static let IPTOS_ECN_MASK: CInt = CInt(CNIOLinux.IPTOS_ECN_MASK)
-    static let IPTOS_ECN_ECT0: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT0)
-    static let IPTOS_ECN_ECT1: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT1)
-    static let IPTOS_ECN_CE: CInt = CInt(CNIOLinux.IPTOS_ECN_CE)
-    static let IP_RECVPKTINFO: CInt = CInt(CNIOLinux.IP_PKTINFO)
-    static let IP_PKTINFO: CInt = CInt(CNIOLinux.IP_PKTINFO)
-    static let IPV6_RECVPKTINFO: CInt = CInt(CNIOLinux.IPV6_RECVPKTINFO)
-    static let IPV6_PKTINFO: CInt = CInt(CNIOLinux.IPV6_PKTINFO)
 #else
     static var UIO_MAXIOV: Int {
         fatalError("unsupported OS")
@@ -330,6 +308,48 @@ internal enum Posix {
     static var SHUT_RDWR: Int {
         fatalError("unsupported OS")
     }
+#endif
+
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    static let IPTOS_ECN_NOTECT: CInt = CNIODarwin_IPTOS_ECN_NOTECT
+    static let IPTOS_ECN_MASK: CInt = CNIODarwin_IPTOS_ECN_MASK
+    static let IPTOS_ECN_ECT0: CInt = CNIODarwin_IPTOS_ECN_ECT0
+    static let IPTOS_ECN_ECT1: CInt = CNIODarwin_IPTOS_ECN_ECT1
+    static let IPTOS_ECN_CE: CInt = CNIODarwin_IPTOS_ECN_CE
+#elseif os(Linux) || os(FreeBSD) || os(Android)
+    #if os(Android)
+    static let IPTOS_ECN_NOTECT: CInt = CInt(CNIOLinux.IPTOS_ECN_NOTECT)
+    #else
+    static let IPTOS_ECN_NOTECT: CInt = CInt(CNIOLinux.IPTOS_ECN_NOT_ECT)
+    #endif
+    static let IPTOS_ECN_MASK: CInt = CInt(CNIOLinux.IPTOS_ECN_MASK)
+    static let IPTOS_ECN_ECT0: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT0)
+    static let IPTOS_ECN_ECT1: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT1)
+    static let IPTOS_ECN_CE: CInt = CInt(CNIOLinux.IPTOS_ECN_CE)
+#elseif os(Windows)
+    static let IPTOS_ECN_NOTECT: CInt = CInt(0x00)
+    static let IPTOS_ECN_MASK: CInt = CInt(0x03)
+    static let IPTOS_ECN_ECT0: CInt = CInt(0x02)
+    static let IPTOS_ECN_ECT1: CInt = CInt(0x01)
+    static let IPTOS_ECN_CE: CInt = CInt(0x03)
+#endif
+
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    static let IP_RECVPKTINFO: CInt = CNIODarwin.IP_RECVPKTINFO
+    static let IP_PKTINFO: CInt = CNIODarwin.IP_PKTINFO
+
+    static let IPV6_RECVPKTINFO: CInt = CNIODarwin_IPV6_RECVPKTINFO
+    static let IPV6_PKTINFO: CInt = CNIODarwin_IPV6_PKTINFO
+#elseif os(Linux) || os(FreeBSD) || os(Android)
+    static let IP_RECVPKTINFO: CInt = CInt(CNIOLinux.IP_PKTINFO)
+    static let IP_PKTINFO: CInt = CInt(CNIOLinux.IP_PKTINFO)
+
+    static let IPV6_RECVPKTINFO: CInt = CInt(CNIOLinux.IPV6_RECVPKTINFO)
+    static let IPV6_PKTINFO: CInt = CInt(CNIOLinux.IPV6_PKTINFO)
+#elseif os(Windows)
+    static let IP_PKTINFO: CInt = CInt(WinSDK.IP_PKTINFO)
+
+    static let IPV6_PKTINFO: CInt = CInt(WinSDK.IPV6_PKTINFO)
 #endif
 
 #if !os(Windows)

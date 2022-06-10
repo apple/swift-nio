@@ -172,7 +172,11 @@ struct DatagramVectorReadManager {
             totalReadSize += readBytes
 
             // Next we extract the remote peer address.
+#if os(Windows)
+            precondition(self.messageVector[i].msg_hdr.namelen != 0, "Unexpected zero length peer name")
+#else
             precondition(self.messageVector[i].msg_hdr.msg_namelen != 0, "Unexpected zero length peer name")
+#endif
             let address: SocketAddress = self.sockaddrVector[i].convert()
             
             // Extract congestion information if requested.
