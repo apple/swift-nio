@@ -13,6 +13,18 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
+#if os(Windows)
+import ucrt
+
+import func WinSDK.GetFileType
+
+import let WinSDK.FILE_TYPE_PIPE
+import let WinSDK.INVALID_HANDLE_VALUE
+
+import struct WinSDK.DWORD
+import struct WinSDK.HANDLE
+#endif
+
 /// The type of all `channelInitializer` callbacks.
 internal typealias ChannelInitializerCallback = (Channel) -> EventLoopFuture<Void>
 
@@ -1070,6 +1082,25 @@ public final class NIOPipeBootstrap {
     }
 
     private func validateFileDescriptorIsNotAFile(_ descriptor: CInt) throws {
+#if os(Windows)
+        // NOTE: this is a *non-owning* handle, do *NOT* call `CloseHandle`
+        let hFile: HANDLE = HANDLE(bitPattern: _get_osfhandle(descriptor))!
+        if hFile == INVALID_HANDLE_VALUE {
+            throw IOError(errnoCode: EBADF, reason: "_get_osfhandle")
+        }
+
+        // The check here is different from other platforms as the file types on
+        // Windows are different.  SOCKETs and files are different domains, and
+        // as a result we know that the descriptor is not a socket.  The only
+        // other type of file it could be is either character or disk, neither
+        // of which support the operations here.
+        switch GetFileType(hFile) {
+        case DWORD(FILE_TYPE_PIPE):
+            break
+        default:
+            throw ChannelError.operationUnsupported
+        }
+#else
         var s: stat = .init()
         try withUnsafeMutablePointer(to: &s) { ptr in
             try Posix.fstat(descriptor: descriptor, outStat: ptr)
@@ -1080,6 +1111,7 @@ public final class NIOPipeBootstrap {
         default:
             () // Let's default to ok
         }
+#endif
     }
 
     /// Create the `PipeChannel` with the provided file descriptor which is used for both input & output.
