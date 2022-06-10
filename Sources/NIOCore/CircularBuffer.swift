@@ -252,6 +252,7 @@ extension CircularBuffer: Collection, MutableCollection {
         return (self[self.endIndex..<self.endIndex].makeIterator(), self.count)
     }
     
+    // These are implemented as no-ops for performance reasons.
     @inlinable
     public func _failEarlyRangeCheck(_ index: Index, bounds: Range<Index>) {}
     
