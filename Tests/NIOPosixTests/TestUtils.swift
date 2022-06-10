@@ -278,7 +278,7 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
             return __testOnly_addressDescription(sa.address)
         }
     }
-    let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: .stream, aiProtocol: CInt(IPPROTO_TCP))
+    let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: .stream, aiProtocol: .tcp)
     let ipv6Results = try assertNoThrowWithValue(res.initiateAAAAQuery(host: host, port: 0).wait()).map(printSocketAddress)
     let ipv4Results = try assertNoThrowWithValue(res.initiateAQuery(host: host, port: 0).wait()).map(printSocketAddress)
 
