@@ -325,9 +325,19 @@ Further information:
         } else {
             let shouldWakeSelector: Bool = self.externalStateLock.withLock {
                 guard self.validExternalStateToScheduleTasks else {
-                    print("ERROR: Cannot schedule tasks on an EventLoop that has already shut down. " +
-                          "This will be upgraded to a forced crash in future SwiftNIO versions.")
-                    return false
+                    switch getenv("SWIFTNIO_STRICT").map({ String.init(cString: $0).lowercased() }) {
+                    case "true", "y", "yes", "on", "1":
+                        fatalError("Cannot schedule tasks on an EventLoop that has already shut down.")
+                    default:
+                        fputs(
+                            """
+                            ERROR: Cannot schedule tasks on an EventLoop that has already shut down. \
+                            This will be upgraded to a forced crash in future SwiftNIO versions.\n
+                            """,
+                            stderr
+                        )
+                        return false
+                    }
                 }
 
                 return self._tasksLock.withLock {
