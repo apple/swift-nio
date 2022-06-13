@@ -31,6 +31,9 @@ extension TimeAmountTests {
                 ("testTimeAmountIsHashable", testTimeAmountIsHashable),
                 ("testTimeAmountDoesAddTime", testTimeAmountDoesAddTime),
                 ("testTimeAmountDoesSubtractTime", testTimeAmountDoesSubtractTime),
+                ("testTimeAmountFromDurationConversion", testTimeAmountFromDurationConversion),
+                ("testTimeAmountToDurationLosslessRountTrip", testTimeAmountToDurationLosslessRountTrip),
+                ("testDurationToTimeAmountLossyRoundTrip", testDurationToTimeAmountLossyRoundTrip),
            ]
    }
 }
