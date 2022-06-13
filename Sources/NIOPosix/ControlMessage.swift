@@ -17,6 +17,8 @@ import NIOCore
 import CNIODarwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#elseif os(Windows)
+import CNIOWindows
 #endif
 
 /// Memory for use as `cmsghdr` and associated data.
