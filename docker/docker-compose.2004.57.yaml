@@ -6,7 +6,7 @@ services:
     image: swift-nio:20.04-5.7
     build:
       args:
-        base_image: "swiftlang/swift:nightly-main-focal"
+        base_image: "swiftlang/swift:nightly-5.7-focal"
 
   unit-tests:
     image: swift-nio:20.04-5.7
