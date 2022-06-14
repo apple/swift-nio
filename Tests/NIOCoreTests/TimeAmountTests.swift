@@ -11,7 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-@testable import NIOCore
+import NIOCore
+@testable import _NIOBeta57
 import XCTest
 
 class TimeAmountTests: XCTestCase {
