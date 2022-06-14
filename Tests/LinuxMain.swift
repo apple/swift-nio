@@ -23,6 +23,7 @@ import XCTest
 ///
 
 #if os(Linux) || os(FreeBSD) || os(Android)
+   @testable import NIOBetaTests
    @testable import NIOConcurrencyHelpersTests
    @testable import NIOCoreTests
    @testable import NIODataStructuresTests
@@ -129,6 +130,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(StreamChannelTest.allTests),
              testCase(SystemTest.allTests),
              testCase(ThreadTest.allTests),
+             testCase(TimeAmountDurationTests.allTests),
              testCase(TimeAmountTests.allTests),
              testCase(TypeAssistedChannelHandlerTest.allTests),
              testCase(UniversalBootstrapSupportTest.allTests),
