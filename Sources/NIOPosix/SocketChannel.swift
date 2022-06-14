@@ -20,6 +20,11 @@ import let WinSDK.EMFILE
 import let WinSDK.ENFILE
 import let WinSDK.ENOBUFS
 import let WinSDK.ENOMEM
+import let WinSDK.INADDR_ANY
+
+import struct WinSDK.ip_mreq
+import struct WinSDK.ipv6_mreq
+import struct WinSDK.socklen_t
 #endif
 
 extension ByteBuffer {
