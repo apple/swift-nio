@@ -34,6 +34,16 @@ internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
 /// is guaranteed to never change!
 @usableFromInline
 internal final class SelectableEventLoop: EventLoop {
+
+    static let strictModeEnabled: Bool = {
+        switch getenv("SWIFTNIO_STRICT").map({ String.init(cString: $0).lowercased() }) {
+        case "true", "y", "yes", "on", "1":
+            return true
+        default:
+            return false
+        }
+    }()
+
     /// The different state in the lifecycle of an `EventLoop` seen from _outside_ the `EventLoop`.
     private enum ExternalState {
         /// `EventLoop` is open and so can process more work.
@@ -325,8 +335,16 @@ Further information:
         } else {
             let shouldWakeSelector: Bool = self.externalStateLock.withLock {
                 guard self.validExternalStateToScheduleTasks else {
-                    print("ERROR: Cannot schedule tasks on an EventLoop that has already shut down. " +
-                          "This will be upgraded to a forced crash in future SwiftNIO versions.")
+                    if Self.strictModeEnabled {
+                        fatalError("Cannot schedule tasks on an EventLoop that has already shut down.")
+                    }
+                    fputs(
+                        """
+                        ERROR: Cannot schedule tasks on an EventLoop that has already shut down. \
+                        This will be upgraded to a forced crash in future SwiftNIO versions.\n
+                        """,
+                        stderr
+                    )
                     return false
                 }
 
