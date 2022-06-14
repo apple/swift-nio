@@ -551,12 +551,11 @@ internal extension Swift.Duration {
         let components = self.components
 
         let secondsComponentNanos = components.seconds.multipliedReportingOverflow(by: 1_000_000_000)
-        let attosCompononentNanos = components.attoseconds.dividedReportingOverflow(by: 1_000_000_000)
-        let combinedNanos = secondsComponentNanos.partialValue.addingReportingOverflow(attosCompononentNanos.partialValue)
+        let attosCompononentNanos = components.attoseconds / 1_000_000_000
+        let combinedNanos = secondsComponentNanos.partialValue.addingReportingOverflow(attosCompononentNanos)
 
         guard
             !secondsComponentNanos.overflow,
-            !attosCompononentNanos.overflow,
             !combinedNanos.overflow
         else {
             return .max
