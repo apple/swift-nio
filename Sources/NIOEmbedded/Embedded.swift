@@ -761,3 +761,8 @@ extension EmbeddedChannel {
         return SynchronousOptions(channel: self)
     }
 }
+
+#if swift(>=5.5)
+@available(*, unavailable)
+extension EmbeddedChannel.SynchronousOptions: Sendable {}
+#endif
