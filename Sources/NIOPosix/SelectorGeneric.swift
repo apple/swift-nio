@@ -33,6 +33,7 @@ extension Optional {
     }
 }
 
+#if !os(Windows)
 extension timespec {
     init(timeAmount amount: TimeAmount) {
         let nsecPerSec: Int64 = 1_000_000_000
@@ -41,6 +42,7 @@ extension timespec {
         self = timespec(tv_sec: Int(sec), tv_nsec: Int(ns - sec * nsecPerSec))
     }
 }
+#endif
 
 /// Represents IO events NIO might be interested in. `SelectorEventSet` is used for two purposes:
 ///  1. To express interest in a given event set and
