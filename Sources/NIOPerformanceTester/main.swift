@@ -1053,3 +1053,74 @@ try measureAndPrint(
         iterations: 1_000_000
     )
 )
+
+try measureAndPrint(
+    desc: "datagram_channel_bootstrap_create",
+    benchmark: DatagramBootstrapCreateBenchmark(
+        iterations: 100_000
+    )
+)
+
+try measureAndPrint(
+    desc: "datagram_channel_bind",
+    benchmark: DatagramChannelBindBenchmark(
+        iterations: 1_000
+    )
+)
+
+try measureAndPrint(
+    desc: "datagram_channel_connect",
+    benchmark: DatagramChannelConnectBenchmark(
+        iterations: 1_000
+    )
+)
+
+try measureAndPrint(
+    desc: "datagram_channel_write_unconnected_addressed",
+    benchmark: DatagramChannelWriteBenchmark(
+        iterations: 100_000,
+        connect: false,
+        envelope: true,
+        metadata: false
+    )
+)
+
+try measureAndPrint(
+    desc: "datagram_channel_write_connected_addressed",
+    benchmark: DatagramChannelWriteBenchmark(
+        iterations: 100_000,
+        connect: true,
+        envelope: true,
+        metadata: false
+    )
+)
+
+try measureAndPrint(
+    desc: "datagram_channel_write_connected_unaddressed",
+    benchmark: DatagramChannelWriteBenchmark(
+        iterations: 100_000,
+        connect: true,
+        envelope: false,
+        metadata: false
+    )
+)
+
+try measureAndPrint(
+    desc: "datagram_channel_write_unconnected_addressed_metadata",
+    benchmark: DatagramChannelWriteBenchmark(
+        iterations: 100_000,
+        connect: false,
+        envelope: true,
+        metadata: true
+    )
+)
+
+try measureAndPrint(
+    desc: "datagram_channel_write_connected_addressed_metadata",
+    benchmark: DatagramChannelWriteBenchmark(
+        iterations: 100_000,
+        connect: true,
+        envelope: true,
+        metadata: true
+    )
+)
