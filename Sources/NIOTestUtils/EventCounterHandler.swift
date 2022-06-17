@@ -23,7 +23,7 @@ import NIOConcurrencyHelpers
 ///
 /// - note: Contrary to most `ChannelHandler`s, all of `EventCounterHandler`'s API is thread-safe meaning that you can
 ///         query the events received from any thread.
-public final class EventCounterHandler {
+public final class EventCounterHandler: NIOSendable {
     private let _channelRegisteredCalls = NIOAtomic<Int>.makeAtomic(value: 0)
     private let _channelUnregisteredCalls = NIOAtomic<Int>.makeAtomic(value: 0)
     private let _channelActiveCalls = NIOAtomic<Int>.makeAtomic(value: 0)
