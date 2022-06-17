@@ -310,13 +310,13 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
 
             let diff = .now() - latestLast
             if diff >= timeout {
-                // Reader is idle - set a new timeout and trigger an event through the pipeline
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
+                // Both reader and writer are idle - set a new timeout and trigger an event through the pipeline
+                self.scheduledAllTask = context.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
 
                 context.fireUserInboundEventTriggered(IdleStateEvent.all)
             } else {
-                // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(deadline: latestLast + timeout, self.makeAllTimeoutTask(context, timeout))
+                // Read or write occurred before the timeout - set a new timeout with shorter delay.
+                self.scheduledAllTask = context.eventLoop.scheduleTask(deadline: latestLast + timeout, self.makeAllTimeoutTask(context, timeout))
             }
         }
     }
