@@ -19,12 +19,13 @@ public enum ByteToMessageDecoderVerifier {
     ///
     /// Verify `ByteToMessageDecoder`s with `String` inputs
     public static func verifyDecoder<Decoder: ByteToMessageDecoder>(stringInputOutputPairs: [(String, [Decoder.InboundOut])],
-                                                                    decoderFactory: @escaping () -> Decoder) throws where Decoder.InboundOut: Equatable {
+                                                                    decoderFactory: () -> Decoder) throws where Decoder.InboundOut: Equatable {
         let alloc = ByteBufferAllocator()
         let ioPairs = stringInputOutputPairs.map { (ioPair: (String, [Decoder.InboundOut])) -> (ByteBuffer, [Decoder.InboundOut]) in
             return (alloc.buffer(string: ioPair.0), ioPair.1)
         }
-        return try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: ioPairs, decoderFactory: decoderFactory)
+        
+        try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: ioPairs, decoderFactory: decoderFactory)
     }
 
     /// Verifies a `ByteToMessageDecoder` by performing a number of tests.
@@ -51,7 +52,7 @@ public enum ByteToMessageDecoderVerifier {
     ///     XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: expectedInOuts,
     ///                                                                     decoderFactory: { ExampleDecoder() }))
     public static func verifyDecoder<Decoder: ByteToMessageDecoder>(inputOutputPairs: [(ByteBuffer, [Decoder.InboundOut])],
-                                                                    decoderFactory: @escaping () -> Decoder) throws where Decoder.InboundOut: Equatable {
+                                                                    decoderFactory: () -> Decoder) throws where Decoder.InboundOut: Equatable {
         typealias Out = Decoder.InboundOut
 
         func verifySimple(channel: RecordingChannel) throws {
@@ -207,3 +208,12 @@ extension ByteToMessageDecoderVerifier {
         }
     }
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+/// `VerificationError` conforms to `Error` and therefore `Sendable`.
+/// `VerificationError` has a stored property `errorCode` of type `ErrorCode` which can store `NIOAny` which is not and can not be `Sendable`.
+/// In addtion, `ErrorCode` can also store a user defined `OutputType` which is not required to be `Sendable` but we could require it to be `Sendable`.
+/// We have to choises, we could either lie and confrom `ErrorCode` to `Sendable` with `@unchecked` or do the same but for `VerificationError`.
+/// As `VerificationError` already conforms to `Sendable` this sounds like the best option and this still allows us to adopt `Sendable` for `ErrorCode` later.
+extension ByteToMessageDecoderVerifier.VerificationError: @unchecked Sendable {}
+#endif
