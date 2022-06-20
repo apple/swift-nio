@@ -210,10 +210,14 @@ extension ByteToMessageDecoderVerifier {
 }
 
 #if swift(>=5.5) && canImport(_Concurrency)
-/// `VerificationError` conforms to `Error` and therefore `Sendable`.
+/// `VerificationError` conforms to `Error` and therefore needs to conform to `Sendable` too.
 /// `VerificationError` has a stored property `errorCode` of type `ErrorCode` which can store `NIOAny` which is not and can not be `Sendable`.
 /// In addtion, `ErrorCode` can also store a user defined `OutputType` which is not required to be `Sendable` but we could require it to be `Sendable`.
-/// We have to choises, we could either lie and confrom `ErrorCode` to `Sendable` with `@unchecked` or do the same but for `VerificationError`.
-/// As `VerificationError` already conforms to `Sendable` this sounds like the best option and this still allows us to adopt `Sendable` for `ErrorCode` later.
+/// We have two choices:
+///  - we could lie and conform `ErrorCode` to `Sendable` with `@unchecked`
+///  - do the same but for `VerificationError`
+/// As `VerificationError` already conforms to `Sendable` (because it conforms to `Error` and `Error` inherits from `Sendable`)
+/// it sound like the best option to just stick to the conformances we already have and **not** lie twice by making `VerificationError` conform to `Sendable` too.
+/// Note that this still allows us to adopt `Sendable` for `ErrorCode` later if we change our opinion.
 extension ByteToMessageDecoderVerifier.VerificationError: @unchecked Sendable {}
 #endif
