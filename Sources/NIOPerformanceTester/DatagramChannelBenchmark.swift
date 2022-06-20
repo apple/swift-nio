@@ -14,62 +14,22 @@
 import NIOCore
 import NIOPosix
 
-final class DoNothingHandler: ChannelInboundHandler {
-    public typealias InboundIn = ByteBuffer
-    public typealias OutboundOut = ByteBuffer
-}
-
-final class CountReadsHandler: ChannelInboundHandler {
-    public typealias InboundIn = NIOAny
-    public typealias OutboundOut = NIOAny
-
-    private var numReads: Int = 0
-    private let receivedAtLeastOneReadPromise: EventLoopPromise<Void>
-
-    var receivedAtLeastOneRead: EventLoopFuture<Void> {
-        self.receivedAtLeastOneReadPromise.futureResult
-    }
-
-    init(receivedAtLeastOneReadPromise: EventLoopPromise<Void>) {
-        self.receivedAtLeastOneReadPromise = receivedAtLeastOneReadPromise
-    }
-
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.numReads += 1
-        self.receivedAtLeastOneReadPromise.succeed(())
-    }
-}
-
-
-private final class EchoHandler: ChannelInboundHandler {
-    public typealias InboundIn = AddressedEnvelope<ByteBuffer>
-    public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
-
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        context.write(data, promise: nil)
-    }
-
-    public func channelReadComplete(context: ChannelHandlerContext) {
-        context.flush()
-    }
-
-    public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        preconditionFailure("EchoHandler received errorCaught")
-    }
+fileprivate final class DoNothingHandler: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+    typealias OutboundOut = ByteBuffer
 }
 
 class DatagramClientBenchmark {
-    final private let group: MultiThreadedEventLoopGroup
-    final let serverChannel: Channel
-    final let localhostPickPort: SocketAddress
-    final let clientBootstrap: DatagramBootstrap
-    final let clientHandler: CountReadsHandler
-    final let clientChannel: Channel
-    final let payload: NIOAny
+    fileprivate final let group: MultiThreadedEventLoopGroup
+    fileprivate final let serverChannel: Channel
+    fileprivate final let localhostPickPort: SocketAddress
+    fileprivate final let clientBootstrap: DatagramBootstrap
+    fileprivate final let clientChannel: Channel
+    fileprivate final let payload: NIOAny
 
     final let iterations: Int
 
-    init(iterations: Int, connect: Bool, envelope: Bool, metadata: Bool) {
+    fileprivate init(iterations: Int, connect: Bool, envelope: Bool, metadata: Bool) {
         self.iterations = iterations
 
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
@@ -77,20 +37,13 @@ class DatagramClientBenchmark {
         // server setup
         self.localhostPickPort = try! SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0)
         self.serverChannel = try! DatagramBootstrap(group: self.group)
-            .channelInitializer { $0.pipeline.addHandler(EchoHandler()) }
+            .channelInitializer { $0.pipeline.addHandler(DoNothingHandler()) }
             .bind(to: localhostPickPort)
             .wait()
 
-        // client handler setup
-        let clientHandler = CountReadsHandler(
-            receivedAtLeastOneReadPromise: self.group.next().makePromise()
-        )
-        self.clientHandler = clientHandler
-
         // client bootstrap setup
-        self.clientBootstrap = DatagramBootstrap(group: self.group).channelInitializer { channel in
-            channel.pipeline.addHandler(clientHandler)
-        }
+        self.clientBootstrap = DatagramBootstrap(group: self.group)
+            .channelInitializer { $0.pipeline.addHandler(DoNothingHandler()) }
 
         // client channel setup
         if connect {
@@ -118,19 +71,24 @@ class DatagramClientBenchmark {
         case (false, true):
             preconditionFailure("No API for this")
         }
+
+        // send one payload to activate the channel
+        try! self.clientChannel.writeAndFlush(payload).wait()
     }
 
     func setUp() throws {
     }
 
     func tearDown() {
+        try! self.clientChannel.close().wait()
+        try! self.serverChannel.close().wait()
         try! self.group.syncShutdownGracefully()
     }
 }
 
 final class DatagramBootstrapCreateBenchmark: DatagramClientBenchmark, Benchmark {
     init(iterations: Int) {
-        super.init(iterations: iterations, connect: false, envelope: false, metadata: false)
+        super.init(iterations: iterations, connect: false, envelope: true, metadata: false)
     }
 
     func run() throws -> Int {
@@ -146,7 +104,7 @@ final class DatagramBootstrapCreateBenchmark: DatagramClientBenchmark, Benchmark
 
 final class DatagramChannelBindBenchmark: DatagramClientBenchmark, Benchmark {
     init(iterations: Int) {
-        super.init(iterations: iterations, connect: false, envelope: false, metadata: false)
+        super.init(iterations: iterations, connect: false, envelope: true, metadata: false)
     }
 
     func run() throws -> Int {
@@ -159,7 +117,7 @@ final class DatagramChannelBindBenchmark: DatagramClientBenchmark, Benchmark {
 
 final class DatagramChannelConnectBenchmark: DatagramClientBenchmark, Benchmark {
     init(iterations: Int) {
-        super.init(iterations: iterations, connect: false, envelope: false, metadata: false)
+        super.init(iterations: iterations, connect: false, envelope: true, metadata: false)
     }
 
     func run() throws -> Int {
@@ -171,15 +129,14 @@ final class DatagramChannelConnectBenchmark: DatagramClientBenchmark, Benchmark 
 }
 
 final class DatagramChannelWriteBenchmark: DatagramClientBenchmark, Benchmark {
-    func run() throws -> Int {
-        for _ in 1...self.iterations {
-            _ = self.clientChannel.writeAndFlush(self.payload, promise: nil)
-        }
-        return 0
+    override init(iterations: Int, connect: Bool, envelope: Bool, metadata: Bool) {
+        super.init(iterations: iterations, connect: connect, envelope: envelope, metadata: metadata)
     }
 
-    override func tearDown() {
-        try! self.clientHandler.receivedAtLeastOneRead.wait()
-        super.tearDown()
+    func run() throws -> Int {
+        for _ in 1...self.iterations {
+            try! self.clientChannel.writeAndFlush(self.payload).wait()
+        }
+        return 0
     }
 }

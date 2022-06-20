@@ -1078,7 +1078,7 @@ try measureAndPrint(
 try measureAndPrint(
     desc: "datagram_channel_write_unconnected_addressed",
     benchmark: DatagramChannelWriteBenchmark(
-        iterations: 100_000,
+        iterations: 1_000,
         connect: false,
         envelope: true,
         metadata: false
@@ -1088,7 +1088,7 @@ try measureAndPrint(
 try measureAndPrint(
     desc: "datagram_channel_write_connected_addressed",
     benchmark: DatagramChannelWriteBenchmark(
-        iterations: 100_000,
+        iterations: 1_000,
         connect: true,
         envelope: true,
         metadata: false
@@ -1098,7 +1098,7 @@ try measureAndPrint(
 try measureAndPrint(
     desc: "datagram_channel_write_connected_unaddressed",
     benchmark: DatagramChannelWriteBenchmark(
-        iterations: 100_000,
+        iterations: 1_000,
         connect: true,
         envelope: false,
         metadata: false
@@ -1108,7 +1108,7 @@ try measureAndPrint(
 try measureAndPrint(
     desc: "datagram_channel_write_unconnected_addressed_metadata",
     benchmark: DatagramChannelWriteBenchmark(
-        iterations: 100_000,
+        iterations: 1_000,
         connect: false,
         envelope: true,
         metadata: true
@@ -1118,7 +1118,7 @@ try measureAndPrint(
 try measureAndPrint(
     desc: "datagram_channel_write_connected_addressed_metadata",
     benchmark: DatagramChannelWriteBenchmark(
-        iterations: 100_000,
+        iterations: 1_000,
         connect: true,
         envelope: true,
         metadata: true
