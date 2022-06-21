@@ -39,7 +39,7 @@ public enum ByteBufferFoundationError: Error {
 
 extension ByteBuffer {
     /// Controls how bytes are transferred between `ByteBuffer` and other storage types.
-    public enum ByteTransferStrategy {
+    public enum ByteTransferStrategy: NIOSendable {
         /// Force a copy of the bytes.
         case copy
 
