@@ -91,7 +91,7 @@ var targets: [PackageDescription.Target] = [
                       dependencies: ["NIOPosix", "NIOCore"],
                       exclude: ["README.md"]),
     .target(name: "NIOTestUtils",
-            dependencies: ["NIOPosix", "NIOCore", "NIOEmbedded", "NIOHTTP1"]),
+            dependencies: ["NIOPosix", "NIOCore", "NIOEmbedded", "NIOHTTP1", swiftAtomics]),
     .executableTarget(name: "NIOCrashTester",
             dependencies: ["NIOPosix", "NIOCore", "NIOEmbedded", "NIOHTTP1", "NIOWebSocket", "NIOFoundationCompat"]),
     .executableTarget(name: "NIOAsyncAwaitDemo",
