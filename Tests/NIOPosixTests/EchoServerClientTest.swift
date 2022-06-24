@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIOConcurrencyHelpers
+import Atomics
 import Dispatch
 import NIOCore
 @testable import NIOPosix
@@ -352,8 +352,8 @@ class EchoServerClientTest : XCTestCase {
 
     private final class CloseInInActiveAndUnregisteredChannelHandler: ChannelInboundHandler {
         typealias InboundIn = Never
-        let alreadyClosedInChannelInactive = NIOAtomic<Bool>.makeAtomic(value: false)
-        let alreadyClosedInChannelUnregistered = NIOAtomic<Bool>.makeAtomic(value: false)
+        let alreadyClosedInChannelInactive = ManagedAtomic(false)
+        let alreadyClosedInChannelUnregistered = ManagedAtomic(false)
         let channelUnregisteredPromise: EventLoopPromise<Void>
         let channelInactivePromise: EventLoopPromise<Void>
 
@@ -370,7 +370,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         public func channelInactive(context: ChannelHandlerContext) {
-            if alreadyClosedInChannelInactive.compareAndExchange(expected: false, desired: true) {
+            if alreadyClosedInChannelInactive.compareExchange(expected: false, desired: true, ordering: .relaxed).exchanged {
                 XCTAssertFalse(self.channelUnregisteredPromise.futureResult.isFulfilled,
                                "channelInactive should fire before channelUnregistered")
                 context.close().map {
@@ -390,7 +390,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         public func channelUnregistered(context: ChannelHandlerContext) {
-            if alreadyClosedInChannelUnregistered.compareAndExchange(expected: false, desired: true) {
+            if alreadyClosedInChannelUnregistered.compareExchange(expected: false, desired: true, ordering: .relaxed).exchanged {
                 XCTAssertTrue(self.channelInactivePromise.futureResult.isFulfilled,
                               "when channelUnregister fires, channelInactive should already have fired")
                 context.close().map {
@@ -459,8 +459,8 @@ class EchoServerClientTest : XCTestCase {
 
         _ = try inactivePromise.futureResult.and(unregistredPromise.futureResult).wait()
 
-        XCTAssertTrue(handler.alreadyClosedInChannelInactive.load())
-        XCTAssertTrue(handler.alreadyClosedInChannelUnregistered.load())
+        XCTAssertTrue(handler.alreadyClosedInChannelInactive.load(ordering: .relaxed))
+        XCTAssertTrue(handler.alreadyClosedInChannelUnregistered.load(ordering: .relaxed))
     }
 
     func testFlushOnEmpty() throws {
@@ -758,8 +758,8 @@ class EchoServerClientTest : XCTestCase {
             defer {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
-            let acceptedRemotePort: NIOAtomic<Int> = .makeAtomic(value: -1)
-            let acceptedLocalPort: NIOAtomic<Int> = .makeAtomic(value: -2)
+            let acceptedRemotePort = ManagedAtomic<Int>(-1)
+            let acceptedLocalPort = ManagedAtomic<Int>(-2)
             let sem = DispatchSemaphore(value: 0)
 
             let serverChannel: Channel
@@ -767,8 +767,8 @@ class EchoServerClientTest : XCTestCase {
                 serverChannel = try ServerBootstrap(group: group)
                     .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                     .childChannelInitializer { channel in
-                        acceptedRemotePort.store(channel.remoteAddress?.port ?? -3)
-                        acceptedLocalPort.store(channel.localAddress?.port ?? -4)
+                        acceptedRemotePort.store(channel.remoteAddress?.port ?? -3, ordering: .relaxed)
+                        acceptedLocalPort.store(channel.localAddress?.port ?? -4, ordering: .relaxed)
                         sem.signal()
                         return channel.eventLoop.makeSucceededFuture(())
                     }.bind(host: host, port: 0).wait()
@@ -798,8 +798,8 @@ class EchoServerClientTest : XCTestCase {
             }
             sem.wait()
             XCTAssertEqual(serverChannel.localAddress?.port, clientChannel.remoteAddress?.port)
-            XCTAssertEqual(acceptedLocalPort.load(), clientChannel.remoteAddress?.port ?? -5)
-            XCTAssertEqual(acceptedRemotePort.load(), clientChannel.localAddress?.port ?? -6)
+            XCTAssertEqual(acceptedLocalPort.load(ordering: .relaxed), clientChannel.remoteAddress?.port ?? -5)
+            XCTAssertEqual(acceptedRemotePort.load(ordering: .relaxed), clientChannel.localAddress?.port ?? -6)
         }
         XCTAssertTrue(atLeastOneSucceeded)
     }

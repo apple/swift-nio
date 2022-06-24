@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+import Atomics
 import Foundation
 import XCTest
 import NIOCore
@@ -60,13 +61,13 @@ extension EventLoopFuture {
     }
 }
 
-internal func XCTAssertCompareAndSwapSucceeds<Type: NIOAtomicPrimitive>(
-    storage: NIOAtomic<Type>,
+internal func XCTAssertCompareAndSwapSucceeds<Type: AtomicValue>(
+    storage: ManagedAtomic<Type>,
     expected: Type,
     desired: Type,
     file: StaticString = #file,
     line: UInt = #line
 ) {
-    let swapped = storage.compareAndExchange(expected: expected, desired: desired)
-    XCTAssertTrue(swapped, file: file, line: line)
+    let result = storage.compareExchange(expected: expected, desired: desired, ordering: .relaxed)
+    XCTAssertTrue(result.exchanged, file: file, line: line)
 }

@@ -15,7 +15,7 @@ import XCTest
 import NIOCore
 @testable import NIOPosix
 import NIOTestUtils
-import NIOConcurrencyHelpers
+import Atomics
 
 private extension Array {
     /// A helper function that asserts that a predicate is true for all elements.
@@ -52,15 +52,15 @@ public final class SocketChannelTest : XCTestCase {
 
         // Ensure we can dispatch two concurrent set option's on each others
         // event loops.
-        let condition = NIOAtomic<Int>.makeAtomic(value: 0)
+        let condition = ManagedAtomic(0)
         let futureA = channelA.eventLoop.submit {
-            condition.add(1)
-            while condition.load() < 2 { }
+            condition.wrappingIncrement(ordering: .relaxed)
+            while condition.load(ordering: .relaxed) < 2 { }
             _ = channelB.setOption(ChannelOptions.backlog, value: 1)
         }
         let futureB = channelB.eventLoop.submit {
-            condition.add(1)
-            while condition.load() < 2 { }
+            condition.wrappingIncrement(ordering: .relaxed)
+            while condition.load(ordering: .relaxed) < 2 { }
             _ = channelA.setOption(ChannelOptions.backlog, value: 1)
         }
         try futureA.wait()
@@ -670,10 +670,10 @@ public final class SocketChannelTest : XCTestCase {
         // - https://github.com/apple/swift-nio/issues/1030
         // - https://github.com/apple/swift-nio/issues/1598
         class HandsOutMoodySocketsServerSocket: ServerSocket {
-            let shouldAcceptsFail: NIOAtomic<Bool> = .makeAtomic(value: true)
+            let shouldAcceptsFail = ManagedAtomic(true)
             override func accept(setNonBlocking: Bool = false) throws -> Socket? {
                 XCTAssertTrue(setNonBlocking)
-                if self.shouldAcceptsFail.load() {
+                if self.shouldAcceptsFail.load(ordering: .relaxed) {
                     throw NIOFcntlFailedError()
                 } else {
                     return try Socket(protocolFamily: .inet,
@@ -720,7 +720,7 @@ public final class SocketChannelTest : XCTestCase {
         XCTAssertEqual(["errorCaught"], eventCounter.allTriggeredEvents())
         XCTAssertEqual(1, eventCounter.errorCaughtCalls)
 
-        serverSock.shouldAcceptsFail.store(false)
+        serverSock.shouldAcceptsFail.store(false, ordering: .relaxed)
 
         XCTAssertNoThrow(try serverChan.eventLoop.submit {
             serverChan.readable()
