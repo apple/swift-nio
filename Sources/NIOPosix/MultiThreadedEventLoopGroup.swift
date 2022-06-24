@@ -15,6 +15,7 @@
 import NIOCore
 import NIOConcurrencyHelpers
 import Dispatch
+import Atomics
 
 struct NIORegistration: Registration {
     enum ChannelType {
@@ -33,7 +34,7 @@ struct NIORegistration: Registration {
     var registrationID: SelectorRegistrationID
 }
 
-private let nextEventLoopGroupID = NIOAtomic.makeAtomic(value: 0)
+private let nextEventLoopGroupID = ManagedAtomic(0)
 
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
 typealias ThreadInitializer = (NIOThread) -> Void
@@ -62,7 +63,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
 
     private let myGroupID: Int
-    private let index = NIOAtomic<Int>.makeAtomic(value: 0)
+    private let index = ManagedAtomic<Int>(0)
     private var eventLoops: [SelectableEventLoop]
     private let shutdownLock: Lock = Lock()
     private var runState: RunState = .running
@@ -148,7 +149,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///     - threadInitializers: The `ThreadInitializer`s to use.
     internal init(threadInitializers: [ThreadInitializer],
                   selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration> = NIOPosix.Selector<NIORegistration>.init) {
-        let myGroupID = nextEventLoopGroupID.add(1)
+        let myGroupID = nextEventLoopGroupID.loadThenWrappingIncrement(ordering: .relaxed)
         self.myGroupID = myGroupID
         var idx = 0
         self.eventLoops = [] // Just so we're fully initialised and can vend `self` to the `SelectableEventLoop`.
@@ -187,7 +188,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///
     /// - returns: The next `EventLoop` to use.
     public func next() -> EventLoop {
-        return eventLoops[abs(index.add(1) % eventLoops.count)]
+        return eventLoops[abs(index.loadThenWrappingIncrement(ordering: .relaxed) % eventLoops.count)]
     }
 
     /// Returns the current `EventLoop` if we are on an `EventLoop` of this `MultiThreadedEventLoopGroup` instance.

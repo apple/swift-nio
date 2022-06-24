@@ -16,6 +16,7 @@ import Dispatch
 import NIOCore
 import NIOConcurrencyHelpers
 import _NIODataStructures
+import Atomics
 
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
@@ -73,7 +74,7 @@ internal final class SelectableEventLoop: EventLoop {
     // This may only be read/written while holding the _tasksLock.
     internal var _pendingTaskPop = false
     @usableFromInline
-    internal var scheduledTaskCounter = NIOAtomic.makeAtomic(value: UInt64(0))
+    internal var scheduledTaskCounter = ManagedAtomic<UInt64>(0)
     @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
 
@@ -276,7 +277,7 @@ Further information:
     @inlinable
     internal func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise()
-        let task = ScheduledTask(id: self.scheduledTaskCounter.add(1), {
+        let task = ScheduledTask(id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed), {
             do {
                 promise.succeed(try task())
             } catch let err {
@@ -317,7 +318,7 @@ Further information:
     @inlinable
     internal func execute(_ task: @escaping () -> Void) {
         // nothing we can do if we fail enqueuing here.
-        try? self._schedule0(ScheduledTask(id: self.scheduledTaskCounter.add(1), task, { error in
+        try? self._schedule0(ScheduledTask(id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed), task, { error in
             // do nothing
         }, .now()))
     }

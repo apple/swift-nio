@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIOConcurrencyHelpers
+import Atomics
 
 private struct PendingStreamWrite {
     var data: IOData
@@ -283,7 +283,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
-    internal let channelWritabilityFlag: NIOAtomic<Bool> = .makeAtomic(value: true)
+    internal let channelWritabilityFlag = ManagedAtomic(true)
     internal var publishedWritability = true
 
     internal var writeSpinCount: UInt = 16
@@ -315,7 +315,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
         assert(self.isOpen)
         self.state.append(.init(data: data, promise: promise))
 
-        if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
+        if self.state.bytes > waterMark.high,
+           channelWritabilityFlag.compareExchange(expected: true, desired: false, ordering: .relaxed).exchanged {
             // Returns false to signal the Channel became non-writable and we need to notify the user.
             self.publishedWritability = false
             return false
@@ -364,7 +365,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         let (promise, result) = self.state.didWrite(itemCount: itemCount, result: result)
 
         if self.state.bytes < waterMark.low {
-            channelWritabilityFlag.store(true)
+            channelWritabilityFlag.store(true, ordering: .relaxed)
         }
 
         promise?.succeed(())
@@ -459,7 +460,7 @@ internal protocol PendingWritesManager: AnyObject {
     var isFlushPending: Bool { get }
     var writeSpinCount: UInt { get }
     var currentBestWriteMechanism: WriteMechanism { get }
-    var channelWritabilityFlag: NIOAtomic<Bool> { get }
+    var channelWritabilityFlag: ManagedAtomic<Bool> { get }
 
     /// Represents the writability state the last time we published a writability change to the `Channel`.
     /// This is used in `triggerWriteOperations` to determine whether we need to trigger a writability
@@ -470,7 +471,7 @@ internal protocol PendingWritesManager: AnyObject {
 extension PendingWritesManager {
     // This is called from `Channel` API so must be thread-safe.
     var isWritable: Bool {
-        return self.channelWritabilityFlag.load()
+        return self.channelWritabilityFlag.load(ordering: .relaxed)
     }
 
     internal func triggerWriteOperations(triggerOneWriteOperation: (WriteMechanism) throws -> OneWriteOperationResult) throws -> OverallWriteResult {
@@ -514,6 +515,6 @@ extension PendingWritesManager {
 extension PendingStreamWritesManager: CustomStringConvertible {
     var description: String {
         return "PendingStreamWritesManager { isFlushPending: \(self.isFlushPending), " +
-        /*  */ "writabilityFlag: \(self.channelWritabilityFlag.load())), state: \(self.state) }"
+        /*  */ "writabilityFlag: \(self.channelWritabilityFlag.load(ordering: .relaxed))), state: \(self.state) }"
     }
 }
