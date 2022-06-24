@@ -15,6 +15,8 @@
 
 import PackageDescription
 
+let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
+
 var targets: [PackageDescription.Target] = [
     .target(name: "NIOCore",
             dependencies: ["NIOConcurrencyHelpers", "CNIOLinux", "CNIOWindows"]),
@@ -135,6 +137,7 @@ let package = Package(
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.0.0"),
     ],
     targets: targets
 )
