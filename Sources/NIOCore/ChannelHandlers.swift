@@ -301,7 +301,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
             }
 
             if self.reading {
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
+                self.scheduledAllTask = context.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
                 return
             }
             let lastRead = self.lastReadTime
