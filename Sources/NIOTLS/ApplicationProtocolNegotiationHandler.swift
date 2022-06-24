@@ -26,7 +26,7 @@ import NIOCore
 ///
 /// Exactly what to do when falling back is the responsibility of a specific
 /// implementation.
-public enum ALPNResult: Equatable {
+public enum ALPNResult: Equatable, NIOSendable {
     /// ALPN negotiation succeeded. The associated value is the ALPN token that
     /// was negotiated.
     case negotiated(String)
@@ -60,10 +60,26 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
     public typealias InboundIn = Any
     public typealias InboundOut = Any
 
+    #if swift(>=5.7)
+    private let completionHandler: @Sendable (ALPNResult, Channel) -> EventLoopFuture<Void>
+    #else
     private let completionHandler: (ALPNResult, Channel) -> EventLoopFuture<Void>
+    #endif
     private var waitingForUser: Bool
     private var eventBuffer: [NIOAny]
 
+    #if swift(>=5.7)
+    /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
+    /// callback.
+    ///
+    /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
+    ///   negotiation has completed.
+    @preconcurrency public init(alpnCompleteHandler: @Sendable @escaping (ALPNResult, Channel) -> EventLoopFuture<Void>) {
+        self.completionHandler = alpnCompleteHandler
+        self.waitingForUser = false
+        self.eventBuffer = []
+    }
+    #else
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
     /// callback.
     ///
@@ -74,7 +90,20 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
         self.waitingForUser = false
         self.eventBuffer = []
     }
+    #endif
 
+    #if swift(>=5.7)
+    /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
+    /// callback.
+    ///
+    /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
+    ///   negotiation has completed.
+    @preconcurrency public convenience init(alpnCompleteHandler: @Sendable @escaping (ALPNResult) -> EventLoopFuture<Void>) {
+        self.init { result, _ in
+            alpnCompleteHandler(result)
+        }
+    }
+    #else
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
     /// callback.
     ///
@@ -85,6 +114,7 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
             alpnCompleteHandler(result)
         }
     }
+    #endif
 
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         guard let tlsEvent = event as? TLSUserEvent else {
@@ -136,3 +166,8 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
         }
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension ApplicationProtocolNegotiationHandler: Sendable {}
+#endif

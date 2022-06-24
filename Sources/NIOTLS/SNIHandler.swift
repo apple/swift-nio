@@ -33,7 +33,7 @@ private let sniHostNameType: UInt8 = 0
 /// contains the hostname received in the SNI extension. If `fallback`,
 /// then either we could not parse the SNI extension or it was not there
 /// at all.
-public enum SNIResult: Equatable {
+public enum SNIResult: Equatable, NIOSendable {
     case fallback
     case hostname(String)
 }
@@ -98,15 +98,26 @@ public final class SNIHandler: ByteToMessageDecoder {
     public var cumulationBuffer: Optional<ByteBuffer>
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
-
+    #if swift(>=5.7)
+    private let completionHandler: @Sendable (SNIResult) -> EventLoopFuture<Void>
+    #else
     private let completionHandler: (SNIResult) -> EventLoopFuture<Void>
+    #endif
     private var waitingForUser: Bool
-
+    
+    #if swift(>=5.7)
+    @preconcurrency public init(sniCompleteHandler: @Sendable @escaping (SNIResult) -> EventLoopFuture<Void>) {
+        self.cumulationBuffer = nil
+        self.completionHandler = sniCompleteHandler
+        self.waitingForUser = false
+    }
+    #else
     public init(sniCompleteHandler: @escaping (SNIResult) -> EventLoopFuture<Void>) {
         self.cumulationBuffer = nil
         self.completionHandler = sniCompleteHandler
         self.waitingForUser = false
     }
+    #endif
 
     public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
         context.fireChannelRead(NIOAny(buffer))
@@ -426,3 +437,8 @@ public final class SNIHandler: ByteToMessageDecoder {
         }
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension SNIHandler: Sendable {}
+#endif
