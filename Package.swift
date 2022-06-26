@@ -139,7 +139,7 @@ let package = Package(
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.0.2"),
     ],
     targets: targets
 )
