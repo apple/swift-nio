@@ -28,7 +28,7 @@ import Atomics
 ///
 /// - note: Contrary to most `ChannelHandler`s, all of `EventCounterHandler`'s API is thread-safe meaning that you can
 ///         query the events received from any thread.
-public final class EventCounterHandler: NIOSendable {
+public final class EventCounterHandler {
     private let _channelRegisteredCalls = ManagedAtomic<Int>(0)
     private let _channelUnregisteredCalls = ManagedAtomic<Int>(0)
     private let _channelActiveCalls = ManagedAtomic<Int>(0)
@@ -369,3 +369,11 @@ extension EventCounterHandler: ChannelDuplexHandler {
         context.triggerUserOutboundEvent(event, promise: promise)
     }
 }
+
+#if compiler(>=5.6) && canImport(_Concurrency)
+// This is a workaround before ManagedAtomic gets Sendable conformance. Once the support
+// is ready, we should remove '@preconcurrency import' and declare NIOSendable directly.
+extension EventCounterHandler: Sendable {
+
+}
+#endif
