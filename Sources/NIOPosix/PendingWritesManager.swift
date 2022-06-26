@@ -315,8 +315,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
         assert(self.isOpen)
         self.state.append(.init(data: data, promise: promise))
 
-        if self.state.bytes > waterMark.high,
-           channelWritabilityFlag.compareExchange(expected: true, desired: false, ordering: .relaxed).exchanged {
+        if self.state.bytes > waterMark.high &&
+            channelWritabilityFlag.compareExchange(expected: true, desired: false, ordering: .relaxed).exchanged {
             // Returns false to signal the Channel became non-writable and we need to notify the user.
             self.publishedWritability = false
             return false
