@@ -29,7 +29,7 @@ private struct PendingStreamWrite {
 /// - returns: A tuple of the number of items attempted to write and the result of the write operation.
 private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
                                            iovecs: UnsafeMutableBufferPointer<IOVector>,
-                                           storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+                                           storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>?>,
                                            _ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (itemCount: Int, writeResult: IOResult<Int>) {
     assert(iovecs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal writev")
 
@@ -64,7 +64,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
     }
     defer {
         for i in 0..<numberOfUsedStorageSlots {
-            storageRefs[i].release()
+            storageRefs[i]?.release()
         }
     }
     let result = try body(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
@@ -280,7 +280,7 @@ private struct PendingStreamWritesState {
 final class PendingStreamWritesManager: PendingWritesManager {
     private var state = PendingStreamWritesState()
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
-    private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
+    private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>?>
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag: NIOAtomic<Bool> = .makeAtomic(value: true)
@@ -441,7 +441,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - iovecs: A pre-allocated array of `IOVector` elements
     ///     - storageRefs: A pre-allocated array of storage management tokens used to keep storage elements alive during a vector write operation
-    init(iovecs: UnsafeMutableBufferPointer<IOVector>, storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) {
+    init(iovecs: UnsafeMutableBufferPointer<IOVector>, storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>?>) {
         self.iovecs = iovecs
         self.storageRefs = storageRefs
     }

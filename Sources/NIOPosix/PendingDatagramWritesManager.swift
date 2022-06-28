@@ -66,7 +66,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
                                                    iovecs: UnsafeMutableBufferPointer<IOVector>,
                                                    msgs: UnsafeMutableBufferPointer<MMsgHdr>,
                                                    addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
-                                                   storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+                                                   storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>?>,
                                                    controlMessageStorage: UnsafeControlMessageStorage,
                                                    _ body: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> IOResult<Int> {
     assert(msgs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal sendmmsg")
@@ -145,7 +145,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
     }
     defer {
         for i in 0..<c {
-            storageRefs[i].release()
+            storageRefs[i]!.release()
         }
     }
     return try body(UnsafeMutableBufferPointer(start: msgs.baseAddress!, count: c))
@@ -385,7 +385,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     /// Storage for the references to the buffers used when we perform gathering writes. Only present
     /// on Linux because Darwin does not support gathering datagram writes.
-    private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
+    private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>?>
 
     /// Storage for iovec structures. Only present on Linux because this is only needed when we call
     /// sendmmsg: sendto doesn't require any iovecs.
@@ -419,7 +419,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     init(msgs: UnsafeMutableBufferPointer<MMsgHdr>,
          iovecs: UnsafeMutableBufferPointer<IOVector>,
          addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
-         storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+         storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>?>,
          controlMessageStorage: UnsafeControlMessageStorage) {
         self.msgs = msgs
         self.iovecs = iovecs
