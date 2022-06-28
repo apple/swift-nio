@@ -62,11 +62,26 @@ public final class Lock {
         mutex.deallocate()
     }
 
+    #if swift(>=5.7)
+    /// Acquire the lock.
+    ///
+    /// Whenever possible, consider using `withLock` instead of this method and
+    /// `unlock`, to simplify lock handling.
+    @available(*, noasync, message: "use 'withLock(_:)' if you do not cross suspension points")
+    public func lock() {
+        self._lock()
+    }
+    #else
     /// Acquire the lock.
     ///
     /// Whenever possible, consider using `withLock` instead of this method and
     /// `unlock`, to simplify lock handling.
     public func lock() {
+        self._lock()
+    }
+    #endif
+    
+    private func _lock() {
 #if os(Windows)
         AcquireSRWLockExclusive(self.mutex)
 #else
@@ -75,11 +90,26 @@ public final class Lock {
 #endif
     }
 
+    #if swift(>=5.7)
+    /// Release the lock.
+    ///
+    /// Whenever possible, consider using `withLock` instead of this method and
+    /// `lock`, to simplify lock handling.
+    @available(*, noasync, message: "use 'withLock(_:)' if you do not cross suspension points")
+    public func unlock() {
+        self._unlock()
+    }
+    #else
     /// Release the lock.
     ///
     /// Whenever possible, consider using `withLock` instead of this method and
     /// `lock`, to simplify lock handling.
     public func unlock() {
+        self._unlock()
+    }
+    #endif
+    
+    private func _unlock() {
 #if os(Windows)
         ReleaseSRWLockExclusive(self.mutex)
 #else
