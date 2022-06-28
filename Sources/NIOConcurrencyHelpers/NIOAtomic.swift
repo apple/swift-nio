@@ -193,7 +193,7 @@ extension UInt: NIOAtomicPrimitive {
 /// By necessity, all atomic values are references: after all, it makes no
 /// sense to talk about managing an atomic value when each time it's modified
 /// the thread that modified it gets a local copy!
-@available(*, deprecated, message:"please use Atomics.ManagedAtomic instead")
+@available(*, deprecated, message:"please use ManagedAtomic from https://github.com/apple/swift-atomics instead")
 public final class NIOAtomic<T: NIOAtomicPrimitive> {
     @usableFromInline
     typealias Manager = ManagedBufferPointer<Void, T.AtomicWrapper>
