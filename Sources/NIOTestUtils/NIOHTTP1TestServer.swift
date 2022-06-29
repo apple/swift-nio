@@ -46,6 +46,11 @@ private final class BlockingQueue<Element> {
     }
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension BlockingQueue: @unchecked Sendable where Element: Sendable {}
+#endif
+
+
 private final class WebServerHandler: ChannelDuplexHandler {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundIn = HTTPServerResponsePart
@@ -302,6 +307,11 @@ extension NIOHTTP1TestServer {
         return self.serverChannel!.localAddress!.port!
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension NIOHTTP1TestServer: Sendable {}
+#endif
 
 // MARK: - API for HTTP server
 extension NIOHTTP1TestServer {
