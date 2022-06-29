@@ -191,20 +191,20 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     @available(*, noasync, message: "threads can change between suspension points and therefore the thread specific value too")
     public var currentValue: Value? {
         get {
-            get()
+            self.get()
         }
         set {
-            set(newValue)
+            self.set(newValue)
         }
     }
     #else
     /// The value for the current thread.
     public var currentValue: Value? {
         get {
-            get()
+            self.get()
         }
         set {
-            set(newValue)
+            self.set(newValue)
         }
     }
     #endif
