@@ -214,9 +214,9 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         guard let raw = self.key.get() else { return nil }
         // parenthesize the return value to silence the cast warning
         return (Unmanaged<BoxedType>
-            .fromOpaque(raw)
-            .takeUnretainedValue()
-            .value.1 as! Value)
+                 .fromOpaque(raw)
+                 .takeUnretainedValue()
+                 .value.1 as! Value)
     }
     
     /// Set the current value for the calling threads. The `currentValue` for all other threads remains unchanged.
