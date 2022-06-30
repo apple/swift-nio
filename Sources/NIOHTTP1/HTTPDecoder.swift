@@ -442,7 +442,7 @@ public typealias HTTPResponseDecoder = HTTPDecoder<HTTPClientResponsePart, HTTPC
 /// Rather than set this up manually, consider using `ChannelPipeline.configureHTTPServerPipeline`.
 public typealias HTTPRequestDecoder = HTTPDecoder<HTTPServerRequestPart, HTTPServerResponsePart>
 
-public enum HTTPDecoderKind {
+public enum HTTPDecoderKind: NIOSendable {
     case request
     case response
 }
@@ -697,8 +697,13 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     }
 }
 
+#if swift(>=5.6)
+@available(*, unavailable)
+extension HTTPDecoder: Sendable {}
+#endif
+
 /// Strategy to use when a HTTPDecoder is removed from a pipeline after a HTTP upgrade was detected.
-public enum RemoveAfterUpgradeStrategy {
+public enum RemoveAfterUpgradeStrategy: NIOSendable {
     /// Forward all the remaining bytes that are currently buffered in the deccoder to the next handler in the pipeline.
     case forwardBytes
     /// Fires a `ByteToMessageDecoder.leftoverDataWhenDone` error through the pipeline
@@ -708,7 +713,7 @@ public enum RemoveAfterUpgradeStrategy {
 }
 
 /// Strategy to use when a HTTPDecoder receives an informational HTTP response (1xx except 101)
-public struct NIOInformationalResponseStrategy: Hashable {
+public struct NIOInformationalResponseStrategy: Hashable, NIOSendable {
     enum Base {
         case drop
         case forward
