@@ -207,6 +207,22 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
     }
 
+    #if swift(>=5.7)
+    /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
+    /// shut down and release their resources.
+    ///
+    /// Even though calling `shutdownGracefully` more than once should be avoided, it is safe to do so and execution
+    /// of the `handler` is guaranteed.
+    ///
+    /// - parameters:
+    ///    - queue: The `DispatchQueue` to run `handler` on when the shutdown operation completes.
+    ///    - handler: The handler which is called after the shutdown operation completes. The parameter will be `nil`
+    ///               on success and contain the `Error` otherwise.
+    @preconcurrency
+    public func shutdownGracefully(queue: DispatchQueue, _ handler: @escaping @Sendable (Error?) -> Void) {
+        self._shutdownGracefully(queue: queue, handler)
+    }
+    #else
     /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
     /// shut down and release their resources.
     ///
@@ -218,6 +234,11 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///    - handler: The handler which is called after the shutdown operation completes. The parameter will be `nil`
     ///               on success and contain the `Error` otherwise.
     public func shutdownGracefully(queue: DispatchQueue, _ handler: @escaping (Error?) -> Void) {
+        self._shutdownGracefully(queue: queue, handler)
+    }
+    #endif
+    
+    private func _shutdownGracefully(queue: DispatchQueue, _ handler: @escaping (Error?) -> Void) {
         // This method cannot perform its final cleanup using EventLoopFutures, because it requires that all
         // our event loops still be alive, and they may not be. Instead, we use Dispatch to manage
         // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
@@ -300,7 +321,21 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             }
         }
     }
-
+    
+    #if swift(>=5.7)
+    /// Convert the calling thread into an `EventLoop`.
+    ///
+    /// This function will not return until the `EventLoop` has stopped. You can initiate stopping the `EventLoop` by
+    /// calling `eventLoop.shutdownGracefully` which will eventually make this function return.
+    ///
+    /// - parameters:
+    ///     - callback: Called _on_ the `EventLoop` that the calling thread was converted to, providing you the
+    ///                 `EventLoop` reference. Just like usually on the `EventLoop`, do not block in `callback`.
+    @preconcurrency
+    public static func withCurrentThreadAsEventLoop(_ callback: @escaping @Sendable (EventLoop) -> Void) {
+        Self._withCurrentThreadAsEventLoop(callback)
+    }
+    #else
     /// Convert the calling thread into an `EventLoop`.
     ///
     /// This function will not return until the `EventLoop` has stopped. You can initiate stopping the `EventLoop` by
@@ -310,6 +345,11 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///     - callback: Called _on_ the `EventLoop` that the calling thread was converted to, providing you the
     ///                 `EventLoop` reference. Just like usually on the `EventLoop`, do not block in `callback`.
     public static func withCurrentThreadAsEventLoop(_ callback: @escaping (EventLoop) -> Void) {
+        Self._withCurrentThreadAsEventLoop(callback)
+    }
+    #endif
+    
+    private static func _withCurrentThreadAsEventLoop(_ callback: @escaping (EventLoop) -> Void) {
         let callingThread = NIOThread.current
         MultiThreadedEventLoopGroup.runTheLoop(thread: callingThread,
                                                parentGroup: nil,
