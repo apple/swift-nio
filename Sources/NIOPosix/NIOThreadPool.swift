@@ -42,7 +42,7 @@ public enum NIOThreadPoolError {
 public final class NIOThreadPool {
 
     /// The state of the `WorkItem`.
-    public enum WorkItemState {
+    public enum WorkItemState: NIOSendable {
         /// The `WorkItem` is active now and in process by the `NIOThreadPool`.
         case active
         /// The `WorkItem` was cancelled and will not be processed by the `NIOThreadPool`.
@@ -212,6 +212,10 @@ public final class NIOThreadPool {
         }
     }
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+extension NIOThreadPool: @unchecked Sendable {}
+#endif
 
 extension NIOThreadPool {
     
