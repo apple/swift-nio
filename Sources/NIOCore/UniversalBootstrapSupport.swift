@@ -14,7 +14,7 @@
 
 /// `NIOClientTCPBootstrapProtocol` is implemented by various underlying transport mechanisms. Typically,
 /// this will be the BSD Sockets API implemented by `ClientBootstrap`.
-public protocol NIOClientTCPBootstrapProtocol: NIOPreconcurrencySendable {
+public protocol NIOClientTCPBootstrapProtocol {
     #if swift(>=5.7)
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
