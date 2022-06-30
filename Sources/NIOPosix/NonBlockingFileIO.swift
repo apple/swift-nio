@@ -28,7 +28,7 @@ import NIOConcurrencyHelpers
 /// `NonBlockingFileIO` helps to work around this issue by maintaining its own thread pool that is used to read the data
 /// from the files into memory. It will then hand the (in-memory) data back which makes it available without the possibility
 /// of blocking.
-public struct NonBlockingFileIO {
+public struct NonBlockingFileIO: NIOSendable {
     /// The default and recommended size for `NonBlockingFileIO`'s thread pool.
     public static let defaultThreadPoolSize = 2
 
