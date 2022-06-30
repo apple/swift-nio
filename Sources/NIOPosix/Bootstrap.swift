@@ -408,6 +408,11 @@ public final class ServerBootstrap {
     }
 }
 
+#if swift(>=5.6)
+@available(*, unavailable)
+extension ServerBootstrap: Sendable {}
+#endif
+
 private extension Channel {
     func registerAndDoSynchronously(_ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
         // this is pretty delicate at the moment:
@@ -755,6 +760,11 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     }
 }
 
+#if swift(>=5.6)
+@available(*, unavailable)
+extension ClientBootstrap: Sendable {}
+#endif
+
 /// A `DatagramBootstrap` is an easy way to bootstrap a `DatagramChannel` when creating datagram clients
 /// and servers.
 ///
@@ -1009,6 +1019,11 @@ public final class DatagramBootstrap {
     }
 }
 
+#if swift(>=5.6)
+@available(*, unavailable)
+extension DatagramBootstrap: Sendable {}
+#endif
+
 /// A `NIOPipeBootstrap` is an easy way to bootstrap a `PipeChannel` which uses two (uni-directional) UNIX pipes
 /// and makes a `Channel` out of them.
 ///
@@ -1202,3 +1217,8 @@ public final class NIOPipeBootstrap {
         }
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension NIOPipeBootstrap: Sendable {}
+#endif
