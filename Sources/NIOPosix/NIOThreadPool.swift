@@ -48,10 +48,14 @@ public final class NIOThreadPool {
         /// The `WorkItem` was cancelled and will not be processed by the `NIOThreadPool`.
         case cancelled
     }
-
+    
+    #if swift(>=5.7)
+    /// The work that should be done by the `NIOThreadPool`.
+    public typealias WorkItem = @Sendable (WorkItemState) -> Void
+    #else
     /// The work that should be done by the `NIOThreadPool`.
     public typealias WorkItem = (WorkItemState) -> Void
-
+    #endif
     private enum State {
         /// The `NIOThreadPool` is already stopped.
         case stopped
@@ -66,12 +70,28 @@ public final class NIOThreadPool {
     private var state: State = .stopped
     private let numberOfThreads: Int
 
+    #if swift(>=5.7)
+    /// Gracefully shutdown this `NIOThreadPool`. All tasks will be run before shutdown will take place.
+    ///
+    /// - parameters:
+    ///     - queue: The `DispatchQueue` used to executed the callback
+    ///     - callback: The function to be executed once the shutdown is complete.
+    @preconcurrency
+    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable (Error?) -> Void) {
+        self._shutdownGracefully(queue: queue, callback)
+    }
+    #else
     /// Gracefully shutdown this `NIOThreadPool`. All tasks will be run before shutdown will take place.
     ///
     /// - parameters:
     ///     - queue: The `DispatchQueue` used to executed the callback
     ///     - callback: The function to be executed once the shutdown is complete.
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        self._shutdownGracefully(queue: queue, callback)
+    }
+    #endif
+    
+    private func _shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         let g = DispatchGroup()
         let threadsToJoin = self.lock.withLock { () -> [NIOThread] in
             switch self.state {
@@ -101,7 +121,21 @@ public final class NIOThreadPool {
             callback(nil)
         }
     }
+    
+    
 
+    #if swift(>=5.7)
+    /// Submit a `WorkItem` to process.
+    ///
+    /// - note: This is a low-level method, in most cases the `runIfActive` method should be used.
+    ///
+    /// - parameters:
+    ///     - body: The `WorkItem` to process by the `NIOThreadPool`.
+    @preconcurrency
+    public func submit(_ body: @escaping WorkItem) {
+        self._submit(body)
+    }
+    #else
     /// Submit a `WorkItem` to process.
     ///
     /// - note: This is a low-level method, in most cases the `runIfActive` method should be used.
@@ -109,6 +143,11 @@ public final class NIOThreadPool {
     /// - parameters:
     ///     - body: The `WorkItem` to process by the `NIOThreadPool`.
     public func submit(_ body: @escaping WorkItem) {
+        self._submit(body)
+    }
+    #endif
+
+    private func _submit(_ body: @escaping WorkItem) {
         let item = self.lock.withLock { () -> WorkItem? in
             switch self.state {
             case .running(var items):
@@ -123,7 +162,7 @@ public final class NIOThreadPool {
         /* if item couldn't be added run it immediately indicating that it couldn't be run */
         item.map { $0(.cancelled) }
     }
-
+    
     /// Initialize a `NIOThreadPool` thread pool with `numberOfThreads` threads.
     ///
     /// - parameters:
@@ -219,6 +258,19 @@ extension NIOThreadPool: @unchecked Sendable {}
 
 extension NIOThreadPool {
     
+    #if swift(>=5.7)
+    /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
+    /// The closure will be run on the thread pool so can do blocking work.
+    ///
+    /// - parameters:
+    ///     - eventLoop: The `EventLoop` the returned `EventLoopFuture` will fire on.
+    ///     - body: The closure which performs some blocking work to be done on the thread pool.
+    /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
+    @preconcurrency
+    public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
+        self._runIfActive(eventLoop: eventLoop, body)
+    }
+    #else
     /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
     /// The closure will be run on the thread pool so can do blocking work.
     ///
@@ -227,6 +279,11 @@ extension NIOThreadPool {
     ///     - body: The closure which performs some blocking work to be done on the thread pool.
     /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
     public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
+        self._runIfActive(eventLoop: eventLoop, body)
+    }
+    #endif
+    
+    private func _runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
             guard case shouldRun = NIOThreadPool.WorkItemState.active else {
@@ -244,9 +301,16 @@ extension NIOThreadPool {
 }
 
 extension NIOThreadPool {
+    #if swift(>=5.7)
+    @preconcurrency
+    public func shutdownGracefully(_ callback: @escaping @Sendable (Error?) -> Void) {
+        self.shutdownGracefully(queue: .global(), callback)
+    }
+    #else
     public func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
         self.shutdownGracefully(queue: .global(), callback)
     }
+    #endif
 
     public func syncShutdownGracefully() throws {
         let errorStorageLock = Lock()
