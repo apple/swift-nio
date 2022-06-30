@@ -494,7 +494,11 @@ private extension Channel {
 /// The connected `SocketChannel` will operate on `ByteBuffer` as inbound and on `IOData` as outbound messages.
 public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     private let group: EventLoopGroup
+    #if swift(>=5.7)
+    private var protocolHandlers: Optional<@Sendable () -> [ChannelHandler]>
+    #else
     private var protocolHandlers: Optional<() -> [ChannelHandler]>
+    #endif
     private var _channelInitializer: ChannelInitializerCallback
     private var channelInitializer: ChannelInitializerCallback {
         if let protocolHandlers = self.protocolHandlers {
