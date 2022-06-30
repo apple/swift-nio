@@ -470,3 +470,8 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         }
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension HTTPServerPipelineHandler: Sendable {}
+#endif
