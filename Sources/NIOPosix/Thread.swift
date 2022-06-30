@@ -185,27 +185,52 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         self.currentValue = value
     }
 
+    
+    #if swift(>=5.7)
     /// The value for the current thread.
+    @available(*, noasync, message: "threads can change between suspension points and therefore the thread specific value too")
     public var currentValue: Value? {
-        /// Get the current value for the calling thread.
         get {
-            guard let raw = self.key.get() else { return nil }
-          // parenthesize the return value to silence the cast warning
-          return (Unmanaged<BoxedType>
-                   .fromOpaque(raw)
-                   .takeUnretainedValue()
-                   .value.1 as! Value)
+            self.get()
         }
-
-        /// Set the current value for the calling threads. The `currentValue` for all other threads remains unchanged.
         set {
-            if let raw = self.key.get() {
-                Unmanaged<BoxedType>.fromOpaque(raw).release()
-            }
-            self.key.set(value: newValue.map { Unmanaged.passRetained(Box((self, $0))).toOpaque() })
+            self.set(newValue)
         }
     }
+    #else
+    /// The value for the current thread.
+    public var currentValue: Value? {
+        get {
+            self.get()
+        }
+        set {
+            self.set(newValue)
+        }
+    }
+    #endif
+    
+    /// Get the current value for the calling thread.
+    func get() -> Value? {
+        guard let raw = self.key.get() else { return nil }
+        // parenthesize the return value to silence the cast warning
+        return (Unmanaged<BoxedType>
+                 .fromOpaque(raw)
+                 .takeUnretainedValue()
+                 .value.1 as! Value)
+    }
+    
+    /// Set the current value for the calling threads. The `currentValue` for all other threads remains unchanged.
+    func set(_ newValue: Value?) {
+        if let raw = self.key.get() {
+            Unmanaged<BoxedType>.fromOpaque(raw).release()
+        }
+        self.key.set(value: newValue.map { Unmanaged.passRetained(Box((self, $0))).toOpaque() })
+    }
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+extension ThreadSpecificVariable: @unchecked Sendable where Value: Sendable {}
+#endif
 
 extension NIOThread: Equatable {
     static func ==(lhs: NIOThread, rhs: NIOThread) -> Bool {
