@@ -15,6 +15,8 @@
 import Darwin
 #elseif os(Linux) || os(Android)
 import Glibc
+#elseif os(Windows)
+import WinSDK
 #endif
 
 /// This protocol defines an object, most commonly a `Channel`, that supports
