@@ -72,24 +72,11 @@ extension ChannelPipeline {
     public func addHTTPClientHandlers(position: Position = .last,
                                       leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
                                       withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration?) -> EventLoopFuture<Void> {
-        let future: EventLoopFuture<Void>
-
-        if self.eventLoop.inEventLoop {
-            let result = Result<Void, Error> {
-                try self.syncOperations.addHTTPClientHandlers(position: position,
-                                                              leftOverBytesStrategy: leftOverBytesStrategy,
-                                                              withClientUpgrade: upgrade)
-            }
-            future = self.eventLoop.makeCompletedFuture(result)
-        } else {
-            future = self.eventLoop.submit {
-                return try self.syncOperations.addHTTPClientHandlers(position: position,
-                                                                     leftOverBytesStrategy: leftOverBytesStrategy,
-                                                                     withClientUpgrade: upgrade)
-            }
-        }
-
-        return future
+        self._addHTTPClientHandlers(
+            position: position,
+            leftOverBytesStrategy: leftOverBytesStrategy,
+            withClientUpgrade: upgrade
+        )
     }
     #else
     /// Configure a `ChannelPipeline` for use as a HTTP client with a client upgrader configuration.
@@ -106,24 +93,11 @@ extension ChannelPipeline {
     public func addHTTPClientHandlers(position: Position = .last,
                                       leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
                                       withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration?) -> EventLoopFuture<Void> {
-        let future: EventLoopFuture<Void>
-
-        if self.eventLoop.inEventLoop {
-            let result = Result<Void, Error> {
-                try self.syncOperations.addHTTPClientHandlers(position: position,
-                                                              leftOverBytesStrategy: leftOverBytesStrategy,
-                                                              withClientUpgrade: upgrade)
-            }
-            future = self.eventLoop.makeCompletedFuture(result)
-        } else {
-            future = self.eventLoop.submit {
-                return try self.syncOperations.addHTTPClientHandlers(position: position,
-                                                                     leftOverBytesStrategy: leftOverBytesStrategy,
-                                                                     withClientUpgrade: upgrade)
-            }
-        }
-
-        return future
+        self._addHTTPClientHandlers(
+            position: position,
+            leftOverBytesStrategy: leftOverBytesStrategy,
+            withClientUpgrade: upgrade
+        )
     }
     #endif
     
