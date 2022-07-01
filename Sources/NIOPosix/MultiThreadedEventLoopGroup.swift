@@ -321,7 +321,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             }
         }
     }
-    
+
     /// Convert the calling thread into an `EventLoop`.
     ///
     /// This function will not return until the `EventLoop` has stopped. You can initiate stopping the `EventLoop` by
