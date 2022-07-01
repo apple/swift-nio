@@ -322,20 +322,6 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
     }
     
-    #if swift(>=5.7)
-    /// Convert the calling thread into an `EventLoop`.
-    ///
-    /// This function will not return until the `EventLoop` has stopped. You can initiate stopping the `EventLoop` by
-    /// calling `eventLoop.shutdownGracefully` which will eventually make this function return.
-    ///
-    /// - parameters:
-    ///     - callback: Called _on_ the `EventLoop` that the calling thread was converted to, providing you the
-    ///                 `EventLoop` reference. Just like usually on the `EventLoop`, do not block in `callback`.
-    @preconcurrency
-    public static func withCurrentThreadAsEventLoop(_ callback: @escaping @Sendable (EventLoop) -> Void) {
-        Self._withCurrentThreadAsEventLoop(callback)
-    }
-    #else
     /// Convert the calling thread into an `EventLoop`.
     ///
     /// This function will not return until the `EventLoop` has stopped. You can initiate stopping the `EventLoop` by
@@ -345,11 +331,6 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///     - callback: Called _on_ the `EventLoop` that the calling thread was converted to, providing you the
     ///                 `EventLoop` reference. Just like usually on the `EventLoop`, do not block in `callback`.
     public static func withCurrentThreadAsEventLoop(_ callback: @escaping (EventLoop) -> Void) {
-        Self._withCurrentThreadAsEventLoop(callback)
-    }
-    #endif
-    
-    private static func _withCurrentThreadAsEventLoop(_ callback: @escaping (EventLoop) -> Void) {
         let callingThread = NIOThread.current
         MultiThreadedEventLoopGroup.runTheLoop(thread: callingThread,
                                                parentGroup: nil,
