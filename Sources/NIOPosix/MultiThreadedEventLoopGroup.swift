@@ -332,6 +332,10 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     }
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension MultiThreadedEventLoopGroup: @unchecked Sendable {}
+#endif
+
 extension MultiThreadedEventLoopGroup: CustomStringConvertible {
     public var description: String {
         return "MultiThreadedEventLoopGroup { threadPattern = NIO-ELT-\(self.myGroupID)-#* }"
