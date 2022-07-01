@@ -14,7 +14,7 @@
 
 import XCTest
 import Dispatch
-import NIOCore
+@testable import NIOCore
 import NIOEmbedded
 @testable import NIOPosix
 @testable import NIOHTTP1
@@ -83,11 +83,17 @@ extension EmbeddedChannel {
     }
 }
 
+#if swift(>=5.7)
+private typealias UpgradeCompletionHandler = @Sendable (ChannelHandlerContext) -> Void
+#else
+private typealias UpgradeCompletionHandler = (ChannelHandlerContext) -> Void
+#endif
+
 private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
                                               pipelining: Bool,
                                               upgraders: [HTTPServerProtocolUpgrader],
                                               extraHandlers: [ChannelHandler],
-                                              _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (Channel, EventLoopFuture<Channel>) {
+                                              _ upgradeCompletionHandler: @escaping UpgradeCompletionHandler) throws -> (Channel, EventLoopFuture<Channel>) {
     let p = group.next().makePromise(of: Channel.self)
     let c = try ServerBootstrap(group: group)
         .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -138,7 +144,7 @@ private func connectedClientChannel(group: EventLoopGroup, serverAddress: Socket
 private func setUpTestWithAutoremoval(pipelining: Bool = false,
                                       upgraders: [HTTPServerProtocolUpgrader],
                                       extraHandlers: [ChannelHandler],
-                                      _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (EventLoopGroup, Channel, Channel, Channel) {
+                                      _ upgradeCompletionHandler: @escaping UpgradeCompletionHandler) throws -> (EventLoopGroup, Channel, Channel, Channel) {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     let (serverChannel, connectedServerChannelFuture) = try serverHTTPChannelWithAutoremoval(group: group,
                                                                                              pipelining: pipelining,
@@ -427,21 +433,21 @@ class HTTPServerUpgradeTestCase: XCTestCase {
     }
 
     func testSimpleUpgradeSucceeds() throws {
-        var upgradeRequest: HTTPRequestHead? = nil
-        var upgradeHandlerCbFired = false
-        var upgraderCbFired = false
+        let upgradeRequest = UnsafeMutableTransferBox<HTTPRequestHead?>(nil)
+        let upgradeHandlerCbFired = UnsafeMutableTransferBox(false)
+        let upgraderCbFired = UnsafeMutableTransferBox(false)
 
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"]) { req in
-            upgradeRequest = req
-            XCTAssert(upgradeHandlerCbFired)
-            upgraderCbFired = true
+            upgradeRequest.wrappedValue = req
+            XCTAssert(upgradeHandlerCbFired.wrappedValue)
+            upgraderCbFired.wrappedValue = true
         }
 
         let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
                                                                                extraHandlers: []) { (context) in
             // This is called before the upgrader gets called.
-            XCTAssertNil(upgradeRequest)
-            upgradeHandlerCbFired = true
+            XCTAssertNil(upgradeRequest.wrappedValue)
+            upgradeHandlerCbFired.wrappedValue = true
 
             // We're closing the connection now.
             context.close(promise: nil)
@@ -469,8 +475,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // At this time we want to assert that everything got called. Their own callbacks assert
         // that the ordering was correct.
-        XCTAssert(upgradeHandlerCbFired)
-        XCTAssert(upgraderCbFired)
+        XCTAssert(upgradeHandlerCbFired.wrappedValue)
+        XCTAssert(upgraderCbFired.wrappedValue)
 
         // We also want to confirm that the upgrade handler is no longer in the pipeline.
         try connectedServer.pipeline.assertDoesNotContainUpgrader()
@@ -532,22 +538,22 @@ class HTTPServerUpgradeTestCase: XCTestCase {
     }
 
     func testUpgradeRespectsClientPreference() throws {
-        var upgradeRequest: HTTPRequestHead? = nil
-        var upgradeHandlerCbFired = false
-        var upgraderCbFired = false
+        let upgradeRequest = UnsafeMutableTransferBox<HTTPRequestHead?>(nil)
+        let upgradeHandlerCbFired = UnsafeMutableTransferBox(false)
+        let upgraderCbFired = UnsafeMutableTransferBox(false)
 
         let explodingUpgrader = ExplodingUpgrader(forProtocol: "exploder")
         let successfulUpgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"]) { req in
-            upgradeRequest = req
-            XCTAssert(upgradeHandlerCbFired)
-            upgraderCbFired = true
+            upgradeRequest.wrappedValue = req
+            XCTAssert(upgradeHandlerCbFired.wrappedValue)
+            upgraderCbFired.wrappedValue = true
         }
 
         let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
                                                                                extraHandlers: []) { context in
             // This is called before the upgrader gets called.
-            XCTAssertNil(upgradeRequest)
-            upgradeHandlerCbFired = true
+            XCTAssertNil(upgradeRequest.wrappedValue)
+            upgradeHandlerCbFired.wrappedValue = true
 
             // We're closing the connection now.
             context.close(promise: nil)
@@ -575,8 +581,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // At this time we want to assert that everything got called. Their own callbacks assert
         // that the ordering was correct.
-        XCTAssert(upgradeHandlerCbFired)
-        XCTAssert(upgraderCbFired)
+        XCTAssert(upgradeHandlerCbFired.wrappedValue)
+        XCTAssert(upgraderCbFired.wrappedValue)
 
         // We also want to confirm that the upgrade handler is no longer in the pipeline.
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
@@ -585,15 +591,15 @@ class HTTPServerUpgradeTestCase: XCTestCase {
     func testUpgradeFiresUserEvent() throws {
         // The user event is fired last, so we don't see it until both other callbacks
         // have fired.
-        let eventSaver = UserEventSaver<HTTPServerUpgradeEvents>()
+        let eventSaver = UnsafeTransfer(UserEventSaver<HTTPServerUpgradeEvents>())
 
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in
-            XCTAssertEqual(eventSaver.events.count, 0)
+            XCTAssertEqual(eventSaver.wrappedValue.events.count, 0)
         }
 
         let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                               extraHandlers: [eventSaver]) { context in
-            XCTAssertEqual(eventSaver.events.count, 0)
+                                                                               extraHandlers: [eventSaver.wrappedValue]) { context in
+            XCTAssertEqual(eventSaver.wrappedValue.events.count, 0)
             context.close(promise: nil)
         }
         defer {
@@ -620,14 +626,14 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         // At this time we should have received one user event. We schedule this onto the
         // event loop to guarantee thread safety.
         XCTAssertNoThrow(try connectedServer.eventLoop.scheduleTask(deadline: .now()) {
-            XCTAssertEqual(eventSaver.events.count, 1)
-            if case .upgradeComplete(let proto, let req) = eventSaver.events[0] {
+            XCTAssertEqual(eventSaver.wrappedValue.events.count, 1)
+            if case .upgradeComplete(let proto, let req) = eventSaver.wrappedValue.events[0] {
                 XCTAssertEqual(proto, "myproto")
                 XCTAssertEqual(req.method, .OPTIONS)
                 XCTAssertEqual(req.uri, "*")
                 XCTAssertEqual(req.version, .http1_1)
             } else {
-                XCTFail("Unexpected event: \(eventSaver.events[0])")
+                XCTFail("Unexpected event: \(eventSaver.wrappedValue.events[0])")
             }
         }.futureResult.wait())
 
@@ -636,23 +642,23 @@ class HTTPServerUpgradeTestCase: XCTestCase {
     }
 
     func testUpgraderCanRejectUpgradeForPersonalReasons() throws {
-        var upgradeRequest: HTTPRequestHead? = nil
-        var upgradeHandlerCbFired = false
-        var upgraderCbFired = false
+        let upgradeRequest = UnsafeMutableTransferBox<HTTPRequestHead?>(nil)
+        let upgradeHandlerCbFired = UnsafeMutableTransferBox(false)
+        let upgraderCbFired = UnsafeMutableTransferBox(false)
 
         let explodingUpgrader = UpgraderSaysNo(forProtocol: "noproto")
         let successfulUpgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"]) { req in
-            upgradeRequest = req
-            XCTAssert(upgradeHandlerCbFired)
-            upgraderCbFired = true
+            upgradeRequest.wrappedValue = req
+            XCTAssert(upgradeHandlerCbFired.wrappedValue)
+            upgraderCbFired.wrappedValue = true
         }
         let errorCatcher = ErrorSaver()
 
         let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
                                                                                extraHandlers: [errorCatcher]) { context in
             // This is called before the upgrader gets called.
-            XCTAssertNil(upgradeRequest)
-            upgradeHandlerCbFired = true
+            XCTAssertNil(upgradeRequest.wrappedValue)
+            upgradeHandlerCbFired.wrappedValue = true
 
             // We're closing the connection now.
             context.close(promise: nil)
@@ -680,8 +686,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // At this time we want to assert that everything got called. Their own callbacks assert
         // that the ordering was correct.
-        XCTAssert(upgradeHandlerCbFired)
-        XCTAssert(upgraderCbFired)
+        XCTAssert(upgradeHandlerCbFired.wrappedValue)
+        XCTAssert(upgraderCbFired.wrappedValue)
 
         // We also want to confirm that the upgrade handler is no longer in the pipeline.
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
@@ -1089,9 +1095,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
     func testUpgradeWithUpgradePayloadInlineWithRequestWorks() throws {
         enum ReceivedTheWrongThingError: Error { case error }
-        var upgradeRequest: HTTPRequestHead? = nil
-        var upgradeHandlerCbFired = false
-        var upgraderCbFired = false
+        let upgradeRequest = UnsafeMutableTransferBox<HTTPRequestHead?>(nil)
+        let upgradeHandlerCbFired = UnsafeMutableTransferBox(false)
+        let upgraderCbFired = UnsafeMutableTransferBox(false)
         
         class CheckWeReadInlineAndExtraData: ChannelDuplexHandler {
             typealias InboundIn = ByteBuffer
@@ -1161,9 +1167,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
         
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"]) { req in
-            upgradeRequest = req
-            XCTAssert(upgradeHandlerCbFired)
-            upgraderCbFired = true
+            upgradeRequest.wrappedValue = req
+            XCTAssert(upgradeHandlerCbFired.wrappedValue)
+            upgraderCbFired.wrappedValue = true
         }
         
         let promiseGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -1176,8 +1182,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
                                                                                extraHandlers: []) { (context) in
             // This is called before the upgrader gets called.
-            XCTAssertNil(upgradeRequest)
-            upgradeHandlerCbFired = true
+            XCTAssertNil(upgradeRequest.wrappedValue)
+            upgradeHandlerCbFired.wrappedValue = true
 
             _ = context.channel.pipeline.addHandler(CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
                                                                                   secondByteDonePromise: secondByteDonePromise,
@@ -1215,8 +1221,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         
         // At this time we want to assert that everything got called. Their own callbacks assert
         // that the ordering was correct.
-        XCTAssert(upgradeHandlerCbFired)
-        XCTAssert(upgraderCbFired)
+        XCTAssert(upgradeHandlerCbFired.wrappedValue)
+        XCTAssert(upgraderCbFired.wrappedValue)
         
         // We also want to confirm that the upgrade handler is no longer in the pipeline.
         try connectedServer.pipeline.assertDoesNotContainUpgrader()
@@ -1324,9 +1330,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
     }
 
     func testWeTolerateUpgradeFuturesFromWrongEventLoops() throws {
-        var upgradeRequest: HTTPRequestHead? = nil
-        var upgradeHandlerCbFired = false
-        var upgraderCbFired = false
+        let upgradeRequest = UnsafeMutableTransferBox<HTTPRequestHead?>(nil)
+        let upgradeHandlerCbFired = UnsafeMutableTransferBox(false)
+        let upgraderCbFired = UnsafeMutableTransferBox(false)
         let otherELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try otherELG.syncShutdownGracefully())
@@ -1338,16 +1344,16 @@ class HTTPServerUpgradeTestCase: XCTestCase {
                                             // this is the wrong EL
                                             otherELG.next().makeSucceededFuture($1)
         }) { req in
-            upgradeRequest = req
-            XCTAssert(upgradeHandlerCbFired)
-            upgraderCbFired = true
+            upgradeRequest.wrappedValue = req
+            XCTAssert(upgradeHandlerCbFired.wrappedValue)
+            upgraderCbFired.wrappedValue = true
         }
 
         let (group, _, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
                                                                                extraHandlers: []) { (context) in
                                                                                 // This is called before the upgrader gets called.
-            XCTAssertNil(upgradeRequest)
-            upgradeHandlerCbFired = true
+            XCTAssertNil(upgradeRequest.wrappedValue)
+            upgradeHandlerCbFired.wrappedValue = true
 
             // We're closing the connection now.
             context.close(promise: nil)
@@ -1375,8 +1381,8 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // At this time we want to assert that everything got called. Their own callbacks assert
         // that the ordering was correct.
-        XCTAssert(upgradeHandlerCbFired)
-        XCTAssert(upgraderCbFired)
+        XCTAssert(upgradeHandlerCbFired.wrappedValue)
+        XCTAssert(upgraderCbFired.wrappedValue)
 
         // We also want to confirm that the upgrade handler is no longer in the pipeline.
         try connectedServer.pipeline.assertDoesNotContainUpgrader()

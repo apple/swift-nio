@@ -116,8 +116,9 @@ class WebSocketServerEndToEndTests: XCTestCase {
     private func createTestFixtures(upgraders: [NIOWebSocketServerUpgrader]) -> (loop: EmbeddedEventLoop, serverChannel: EmbeddedChannel, clientChannel: EmbeddedChannel) {
         let loop = EmbeddedEventLoop()
         let serverChannel = EmbeddedChannel(loop: loop)
-        let upgradeConfig = (upgraders: upgraders as [HTTPServerProtocolUpgrader], completionHandler: { (context: ChannelHandlerContext) in } )
-        XCTAssertNoThrow(try serverChannel.pipeline.configureHTTPServerPipeline(withServerUpgrade: upgradeConfig).wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.configureHTTPServerPipeline(
+            withServerUpgrade: (upgraders: upgraders as [HTTPServerProtocolUpgrader], completionHandler: { (context: ChannelHandlerContext) in } )
+        ).wait())
         let clientChannel = EmbeddedChannel(loop: loop)
         return (loop: loop, serverChannel: serverChannel, clientChannel: clientChannel)
     }
