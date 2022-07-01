@@ -301,8 +301,9 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-extension NIOHTTPServerRequestAggregator: @unchecked Sendable {}
+#if swift(>=5.6)
+@available(*, unavailable)
+extension NIOHTTPServerRequestAggregator: Sendable {}
 #endif
 
 /// A `ChannelInboundHandler` that handles HTTP chunked `HTTPClientResponsePart`
@@ -402,7 +403,7 @@ public final class NIOHTTPClientResponseAggregator: ChannelInboundHandler, Remov
     }
 }
 
-
-#if swift(>=5.5) && canImport(_Concurrency)
-extension NIOHTTPClientResponseAggregator: @unchecked Sendable {}
+#if swift(>=5.6)
+@available(*, unavailable)
+extension NIOHTTPClientResponseAggregator: Sendable {}
 #endif

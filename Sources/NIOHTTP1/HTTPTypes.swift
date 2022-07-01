@@ -36,7 +36,7 @@ internal enum KeepAliveState {
 
 /// A representation of the request line and header fields of a HTTP request.
 public struct HTTPRequestHead: Equatable {
-    fileprivate final class _Storage {
+    private final class _Storage {
         var method: HTTPMethod
         var uri: String
         var version: HTTPVersion
@@ -123,11 +123,6 @@ public struct HTTPRequestHead: Equatable {
     }
 }
 
-#if swift(>=5.6)
-@available(*, unavailable)
-extension HTTPRequestHead._Storage: Sendable {}
-#endif
-
 #if swift(>=5.5) && canImport(_Concurrency)
 extension HTTPRequestHead: @unchecked Sendable {}
 #endif
@@ -180,7 +175,7 @@ extension HTTPResponseHead {
 
 /// A representation of the status line and header fields of a HTTP response.
 public struct HTTPResponseHead: Equatable {
-    fileprivate final class _Storage {
+    private final class _Storage {
         var status: HTTPResponseStatus
         var version: HTTPVersion
         init(status: HTTPResponseStatus, version: HTTPVersion) {
@@ -240,11 +235,6 @@ public struct HTTPResponseHead: Equatable {
         }
     }
 }
-
-#if swift(>=5.6)
-@available(*, unavailable)
-extension HTTPResponseHead._Storage: Sendable {}
-#endif
 
 #if swift(>=5.5) && canImport(_Concurrency)
 extension HTTPResponseHead: @unchecked Sendable {}
