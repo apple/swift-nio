@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIOConcurrencyHelpers
+import Atomics
 @testable import NIOCore
 import NIOEmbedded
 import NIOPosix
@@ -148,8 +148,8 @@ class ChannelPipelineTest: XCTestCase {
 
         let handler = DummyHandler()
         defer {
-            XCTAssertFalse(handler.handlerAddedCalled.load())
-            XCTAssertFalse(handler.handlerRemovedCalled.load())
+            XCTAssertFalse(handler.handlerAddedCalled.load(ordering: .relaxed))
+            XCTAssertFalse(handler.handlerRemovedCalled.load(ordering: .relaxed))
         }
         XCTAssertThrowsError(try channel.pipeline.addHandler(handler).wait()) { error in
             XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
@@ -157,15 +157,15 @@ class ChannelPipelineTest: XCTestCase {
     }
 
     private final class DummyHandler: ChannelHandler {
-        let handlerAddedCalled = NIOAtomic<Bool>.makeAtomic(value: false)
-        let handlerRemovedCalled = NIOAtomic<Bool>.makeAtomic(value: false)
+        let handlerAddedCalled = ManagedAtomic(false)
+        let handlerRemovedCalled = ManagedAtomic(false)
 
         public func handlerAdded(context: ChannelHandlerContext) {
-            handlerAddedCalled.store(true)
+            handlerAddedCalled.store(true, ordering: .relaxed)
         }
 
         public func handlerRemoved(context: ChannelHandlerContext) {
-            handlerRemovedCalled.store(true)
+            handlerRemovedCalled.store(true, ordering: .relaxed)
         }
     }
 

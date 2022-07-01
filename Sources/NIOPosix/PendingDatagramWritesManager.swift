@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIOConcurrencyHelpers
+import Atomics
 
 private struct PendingDatagramWrite {
     var data: ByteBuffer
@@ -400,7 +400,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private var state = PendingDatagramWritesState()
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
-    internal let channelWritabilityFlag: NIOAtomic<Bool> = .makeAtomic(value: true)
+    internal let channelWritabilityFlag = ManagedAtomic<Bool>(true)
     internal var publishedWritability = true
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true
@@ -452,7 +452,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         assert(self.isOpen)
         self.state.append(pendingWrite)
 
-        if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
+        if self.state.bytes > waterMark.high &&
+            channelWritabilityFlag.compareExchange(expected: true, desired: false, ordering: .relaxed).exchanged {
             // Returns false to signal the Channel became non-writable and we need to notify the user.
             self.publishedWritability = false
             return false
@@ -550,7 +551,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         let (promise, result) = self.state.didWrite(data, messages: messages)
 
         if self.state.bytes < waterMark.low {
-            channelWritabilityFlag.store(true)
+            channelWritabilityFlag.store(true, ordering: .relaxed)
         }
 
         self.fulfillPromise(promise)

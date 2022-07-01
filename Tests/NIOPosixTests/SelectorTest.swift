@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import XCTest
 import NIOCore
 @testable import NIOPosix
-import NIOConcurrencyHelpers
-import XCTest
+import Atomics
 
 class SelectorTest: XCTestCase {
 
@@ -394,20 +394,20 @@ class SelectorTest: XCTestCase {
                                               protocol: 0,
                                               socketVector: &socketFDs))
 
-        let numberFires = NIOAtomic<Int>.makeAtomic(value: 0)
+        let numberFires = ManagedAtomic(0)
         let el = group.next() as! SelectableEventLoop
         let channelHasBeenClosedPromise = el.makePromise(of: Void.self)
         let channel = try SocketChannel(socket: FakeSocket(hasBeenClosedPromise: channelHasBeenClosedPromise,
                                                            socket: socketFDs[0]), eventLoop: el)
         let sched = el.scheduleRepeatedTask(initialDelay: .microseconds(delayToUseInMicroSeconds),
                                             delay: .microseconds(delayToUseInMicroSeconds)) { (_: RepeatedTask) in
-            numberFires.add(1)
+            numberFires.wrappingIncrement(ordering: .relaxed)
         }
         XCTAssertNoThrow(try el.submit {
             // EL tick 1: this is used to
             //   - actually arm the timer (timerfd_settime)
             //   - set the channel registration up
-            if numberFires.load() > 0 {
+            if numberFires.load(ordering: .relaxed) > 0 {
                 print("WARNING: This test hit a race and this result doesn't mean it actually worked." +
                       " This should really only ever happen in very bizarre conditions.")
             }
@@ -429,7 +429,7 @@ class SelectorTest: XCTestCase {
         // EL tick 3: happens in the background here. We will likely lose the timer signal because of the
         // `deregistrationsHappened` workaround in `Selector.swift` and we expect to pick it up again when we enter
         // `epoll_wait`/`kevent` next. This however only works if the timer event is level triggered.
-        assert(numberFires.load() > 5, within: .seconds(1), "timer only fired \(numberFires.load()) times")
+        assert(numberFires.load(ordering: .relaxed) > 5, within: .seconds(1), "timer only fired \(numberFires.load(ordering: .relaxed)) times")
         sched.cancel()
         XCTAssertNoThrow(try channelHasBeenClosedPromise.futureResult.wait())
     }
