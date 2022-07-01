@@ -15,7 +15,7 @@
 import XCTest
 import NIOCore
 @testable import NIOPosix
-import NIOConcurrencyHelpers
+import Atomics
 
 
 public final class AcceptBackoffHandlerTest: XCTestCase {
@@ -204,9 +204,9 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
 
         let readCountHandler = ReadCountHandler()
 
-        let backoffProviderCalled = NIOAtomic<Int>.makeAtomic(value: 0)
+        let backoffProviderCalled = ManagedAtomic(0)
         let serverChannel = try setupChannel(group: group, readCountHandler: readCountHandler, backoffProvider: { err in
-            if backoffProviderCalled.add(1) == 0 {
+            if backoffProviderCalled.loadThenWrappingIncrement(ordering: .relaxed) == 0 {
                 return .seconds(1)
             }
             return .seconds(2)
@@ -234,7 +234,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
 
         XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
 
-        XCTAssertEqual(2, backoffProviderCalled.load())
+        XCTAssertEqual(2, backoffProviderCalled.load(ordering: .relaxed))
     }
 
     private final class ReadCountHandler: ChannelOutboundHandler {

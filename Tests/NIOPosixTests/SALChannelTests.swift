@@ -15,7 +15,7 @@
 import XCTest
 import NIOCore
 @testable import NIOPosix
-import NIOConcurrencyHelpers
+import Atomics
 
 final class SALChannelTest: XCTestCase, SALTest {
     var group: MultiThreadedEventLoopGroup!
@@ -68,7 +68,7 @@ final class SALChannelTest: XCTestCase, SALTest {
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
         var buffer = ByteBuffer(string: "12")
 
-        let writableNotificationStepExpectation = NIOAtomic<Int>.makeAtomic(value: 0)
+        let writableNotificationStepExpectation = ManagedAtomic(0)
 
         final class DoWriteFromWritabilityChangedNotification: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
@@ -76,16 +76,16 @@ final class SALChannelTest: XCTestCase, SALTest {
 
             var numberOfCalls = 0
 
-            var writableNotificationStepExpectation: NIOAtomic<Int>
+            var writableNotificationStepExpectation: ManagedAtomic<Int>
 
-            init(writableNotificationStepExpectation: NIOAtomic<Int>) {
+            init(writableNotificationStepExpectation: ManagedAtomic<Int>) {
                 self.writableNotificationStepExpectation = writableNotificationStepExpectation
             }
 
             func channelWritabilityChanged(context: ChannelHandlerContext) {
                 self.numberOfCalls += 1
 
-                XCTAssertEqual(self.writableNotificationStepExpectation.load(),
+                XCTAssertEqual(self.writableNotificationStepExpectation.load(ordering: .relaxed),
                                numberOfCalls)
                 switch self.numberOfCalls {
                 case 1:
@@ -100,7 +100,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                     buffer.writeString("ABC")
 
                     // We expect another channelWritabilityChanged notification
-                    XCTAssertTrue(self.writableNotificationStepExpectation.compareAndExchange(expected: 2, desired: 3))
+                    XCTAssertTrue(self.writableNotificationStepExpectation.compareExchange(expected: 2, desired: 3, ordering: .relaxed).exchanged)
                     context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
                 case 3:
                     // Next, we should go to false because we never send all the bytes.
@@ -134,7 +134,7 @@ final class SALChannelTest: XCTestCase, SALTest {
             }
 
             // Before sending back the writable notification, we know that that'll trigger a Channel writability change
-            XCTAssertTrue(writableNotificationStepExpectation.compareAndExchange(expected: 1, desired: 2))
+            XCTAssertTrue(writableNotificationStepExpectation.compareExchange(expected: 1, desired: 2, ordering: .relaxed).exchanged)
             let writableEvent = SelectorEvent(io: [.write],
                                               registration: NIORegistration(channel: .socketChannel(channel),
                                                                             interested:  [.write],
@@ -157,7 +157,7 @@ final class SALChannelTest: XCTestCase, SALTest {
 
             // This time, we'll make the write write everything which should also lead to a final channelWritability
             // change.
-            XCTAssertTrue(writableNotificationStepExpectation.compareAndExchange(expected: 3, desired: 4))
+            XCTAssertTrue(writableNotificationStepExpectation.compareExchange(expected: 3, desired: 4, ordering: .relaxed).exchanged)
             try self.assertWrite(expectedFD: .max,
                                  expectedBytes: buffer,
                                  return: .processed(2))
@@ -177,7 +177,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 channel.pipeline.addHandler(DoWriteFromWritabilityChangedNotification(writableNotificationStepExpectation: writableNotificationStepExpectation))
             }.flatMap {
                 // This write should cause a Channel writability change.
-                XCTAssertTrue(writableNotificationStepExpectation.compareAndExchange(expected: 0, desired: 1))
+                XCTAssertTrue(writableNotificationStepExpectation.compareExchange(expected: 0, desired: 1, ordering: .relaxed).exchanged)
                 return channel.writeAndFlush(buffer)
             }
         }.salWait())

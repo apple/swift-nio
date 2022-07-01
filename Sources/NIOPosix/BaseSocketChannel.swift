@@ -14,6 +14,7 @@
 
 import NIOCore
 import NIOConcurrencyHelpers
+import Atomics
 
 private struct SocketChannelLifecycleManager {
     // MARK: Types
@@ -35,7 +36,7 @@ private struct SocketChannelLifecycleManager {
     // MARK: properties
     private let eventLoop: EventLoop
     // this is queried from the Channel, ie. must be thread-safe
-    internal let isActiveAtomic: NIOAtomic<Bool>
+    internal let isActiveAtomic: ManagedAtomic<Bool>
     // these are only to be accessed on the EventLoop
 
     // have we seen the `.readEOF` notification
@@ -50,9 +51,9 @@ private struct SocketChannelLifecycleManager {
             self.eventLoop.assertInEventLoop()
             switch (oldValue, self.currentState) {
             case (_, .activated):
-                self.isActiveAtomic.store(true)
+                self.isActiveAtomic.store(true, ordering: .relaxed)
             case (.activated, _):
-                self.isActiveAtomic.store(false)
+                self.isActiveAtomic.store(false, ordering: .relaxed)
             default:
                 ()
             }
@@ -63,7 +64,7 @@ private struct SocketChannelLifecycleManager {
     // isActiveAtomic needs to be injected as it's accessed from arbitrary threads and `SocketChannelLifecycleManager` is usually held mutable
     internal init(
         eventLoop: EventLoop,
-        isActiveAtomic: NIOAtomic<Bool>,
+        isActiveAtomic: ManagedAtomic<Bool>,
         supportReconnect: Bool
     ) {
         self.eventLoop = eventLoop
@@ -238,7 +239,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     private let closePromise: EventLoopPromise<Void>
     internal let selectableEventLoop: SelectableEventLoop
     private let _offEventLoopLock = Lock()
-    private let isActiveAtomic: NIOAtomic<Bool> = .makeAtomic(value: false)
+    private let isActiveAtomic: ManagedAtomic<Bool> = .init(false)
     // just a thread-safe way of having something to print about the socket from any thread
     internal let socketDescription: String
 
@@ -345,7 +346,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     // This is `Channel` API so must be thread-safe.
     public var isActive: Bool {
-        return self.isActiveAtomic.load()
+        return self.isActiveAtomic.load(ordering: .relaxed)
     }
 
     // This is `Channel` API so must be thread-safe.

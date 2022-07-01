@@ -15,6 +15,8 @@
 
 import PackageDescription
 
+let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
+
 var targets: [PackageDescription.Target] = [
     .target(name: "NIOCore",
             dependencies: ["NIOConcurrencyHelpers", "CNIOLinux", "CNIOWindows"]),
@@ -22,14 +24,16 @@ var targets: [PackageDescription.Target] = [
     .target(name: "NIOEmbedded",
             dependencies: ["NIOCore",
                            "NIOConcurrencyHelpers",
-                           "_NIODataStructures"]),
+                           "_NIODataStructures",
+                           swiftAtomics]),
     .target(name: "NIOPosix",
             dependencies: ["CNIOLinux",
                            "CNIODarwin",
                            "CNIOWindows",
                            "NIOConcurrencyHelpers",
                            "NIOCore",
-                           "_NIODataStructures"]),
+                           "_NIODataStructures",
+                           swiftAtomics]),
     .target(name: "NIO",
             dependencies: ["NIOCore",
                            "NIOEmbedded",
@@ -87,7 +91,7 @@ var targets: [PackageDescription.Target] = [
                       dependencies: ["NIOPosix", "NIOCore"],
                       exclude: ["README.md"]),
     .target(name: "NIOTestUtils",
-            dependencies: ["NIOPosix", "NIOCore", "NIOEmbedded", "NIOHTTP1"]),
+            dependencies: ["NIOPosix", "NIOCore", "NIOEmbedded", "NIOHTTP1", swiftAtomics]),
     .executableTarget(name: "NIOCrashTester",
             dependencies: ["NIOPosix", "NIOCore", "NIOEmbedded", "NIOHTTP1", "NIOWebSocket", "NIOFoundationCompat"]),
     .executableTarget(name: "NIOAsyncAwaitDemo",
@@ -135,6 +139,7 @@ let package = Package(
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.0.2"),
     ],
     targets: targets
 )

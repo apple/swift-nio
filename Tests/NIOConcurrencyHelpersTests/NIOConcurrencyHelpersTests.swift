@@ -239,6 +239,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testLargeContendedNIOAtomicSum() {
         let noAsyncs: UInt64 = 50
         let noCounts: UInt64 = 2_000
@@ -267,6 +268,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertEqual(sumOfIntegers(until: noAsyncs) * noCounts, ai.load())
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testCompareAndExchangeBoolNIOAtomic() {
         let ab = NIOAtomic<Bool>.makeAtomic(value: true)
 
@@ -280,6 +282,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertTrue(ab.compareAndExchange(expected: false, desired: true))
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testAllOperationsBoolNIOAtomic() {
         let ab = NIOAtomic<Bool>.makeAtomic(value: false)
         XCTAssertEqual(false, ab.load())
@@ -296,6 +299,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         XCTAssertFalse(ab.compareAndExchange(expected: false, desired: true))
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testCompareAndExchangeUIntsNIOAtomic() {
         func testFor<T: NIOAtomicPrimitive & FixedWidthInteger & UnsignedInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -326,6 +330,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testCompareAndExchangeIntsNIOAtomic() {
         func testFor<T: NIOAtomicPrimitive & FixedWidthInteger & SignedInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -357,6 +362,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(Int.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testAddSubNIOAtomic() {
         func testFor<T: NIOAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -395,6 +401,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testExchangeNIOAtomic() {
         func testFor<T: NIOAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -426,6 +433,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
+    @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testLoadStoreNIOAtomic() {
         func testFor<T: NIOAtomicPrimitive & FixedWidthInteger>(_ value: T.Type) {
             let zero: T = 0
@@ -1039,6 +1047,7 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
     }
 }
 
+@available(*, deprecated, message: "deprecated because it is used to test deprecated functionality")
 fileprivate class IntHolderWithDeallocationTracking {
     private(set) var value: Int
     let allDeallocations: NIOAtomic<Int>
