@@ -16,7 +16,7 @@ import XCTest
 import NIOCore
 @testable import NIOPosix
 import NIOTestUtils
-import NIOConcurrencyHelpers
+import Atomics
 
 class StreamChannelTest: XCTestCase {
     var buffer: ByteBuffer! = nil
@@ -309,21 +309,21 @@ class StreamChannelTest: XCTestCase {
         class FailOnReadHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
-            let areReadsOkayNow: NIOAtomic<Bool>
+            let areReadsOkayNow: ManagedAtomic<Bool>
 
-            init(areReadOkayNow: NIOAtomic<Bool>) {
+            init(areReadOkayNow: ManagedAtomic<Bool>) {
                 self.areReadsOkayNow = areReadOkayNow
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                guard self.areReadsOkayNow.load() else {
+                guard self.areReadsOkayNow.load(ordering: .relaxed) else {
                     XCTFail("unexpected read of \(self.unwrapInboundIn(data))")
                     return
                 }
             }
 
             func channelReadComplete(context: ChannelHandlerContext) {
-                guard self.areReadsOkayNow.load() else {
+                guard self.areReadsOkayNow.load(ordering: .relaxed) else {
                     XCTFail("unexpected readComplete")
                     return
                 }
@@ -331,11 +331,11 @@ class StreamChannelTest: XCTestCase {
         }
 
         func runTest(receiver: Channel, sender: Channel) throws {
-            let sends = NIOAtomic<Int>.makeAtomic(value: 0)
+            let sends = ManagedAtomic(0)
             precondition(receiver.eventLoop !== sender.eventLoop,
                          "this test cannot run if sender and receiver live on the same EventLoop. \(receiver)")
             XCTAssertNoThrow(try receiver.setOption(ChannelOptions.autoRead, value: false).wait())
-            let areReadsOkayNow: NIOAtomic<Bool> = .makeAtomic(value: false)
+            let areReadsOkayNow = ManagedAtomic(false)
             XCTAssertNoThrow(try receiver.pipeline.addHandler(FailOnReadHandler(areReadOkayNow: areReadsOkayNow)).wait())
 
             // We will immediately send exactly the amount of data that fits in the receiver's receive buffer.
@@ -350,14 +350,14 @@ class StreamChannelTest: XCTestCase {
                     // we send one byte at a time. Sending the receive buffer will trigger the EVFILT_EXCEPT loop
                     // (rdar://53656794) for UNIX Domain Sockets and the additional 1 byte send loop will also pretty
                     // reliably trigger it for TCP sockets.
-                    let myBuffer = allBuffer.readSlice(length: sends.load() == 0 ? receiveBufferSize : 1)!
+                    let myBuffer = allBuffer.readSlice(length: sends.load(ordering: .relaxed) == 0 ? receiveBufferSize : 1)!
                     sender.writeAndFlush(myBuffer).map {
-                        sends.add(1)
+                        sends.wrappingIncrement(ordering: .relaxed)
                         sender.eventLoop.scheduleTask(in: .microseconds(1)) {
                             send()
                         }
                     }.whenFailure { error in
-                        XCTAssert(areReadsOkayNow.load(), "error before the channel should go down")
+                        XCTAssert(areReadsOkayNow.load(ordering: .relaxed), "error before the channel should go down")
                         guard case .some(.ioOnClosedChannel) = error as? ChannelError else {
                             XCTFail("unexpected error: \(error)")
                             return
@@ -373,11 +373,11 @@ class StreamChannelTest: XCTestCase {
                 let eventLoop = (receiver.eventLoop as! SelectableEventLoop)
                 XCTAssertNoThrow(try eventLoop._selector.testsOnly_withUnsafeSelectorFD { fd in
                         try assertNoSelectorChanges(fd: fd, selector:eventLoop._selector)
-                    }, "after \(sends.load()) sends, we got an unexpected selector event for \(receiver)")
+                    }, "after \(sends.load(ordering: .relaxed)) sends, we got an unexpected selector event for \(receiver)")
                 usleep(10000)
             }
             // We'll soon close the channels, so reads are now acceptable (from the EOF that we may read).
-            XCTAssertTrue(areReadsOkayNow.compareAndExchange(expected: false, desired: true))
+            XCTAssertTrue(areReadsOkayNow.compareExchange(expected: false, desired: true, ordering: .relaxed).exchanged)
         }
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(forceSeparateEventLoops: true, runTest))
     }

@@ -15,6 +15,27 @@
 /// `NIOClientTCPBootstrapProtocol` is implemented by various underlying transport mechanisms. Typically,
 /// this will be the BSD Sockets API implemented by `ClientBootstrap`.
 public protocol NIOClientTCPBootstrapProtocol {
+    #if swift(>=5.7)
+    /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
+    /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// The connected `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
+    ///
+    /// - warning: The `handler` closure may be invoked _multiple times_ so it's usually the right choice to instantiate
+    ///            `ChannelHandler`s within `handler`. The reason `handler` may be invoked multiple times is that to
+    ///            successfully set up a connection multiple connections might be setup in the process. Assuming a
+    ///            hostname that resolves to both IPv4 and IPv6 addresses, NIO will follow
+    ///            [_Happy Eyeballs_](https://en.wikipedia.org/wiki/Happy_Eyeballs) and race both an IPv4 and an IPv6
+    ///            connection. It is possible that both connections get fully established before the IPv4 connection
+    ///            will be closed again because the IPv6 connection 'won the race'. Therefore the `channelInitializer`
+    ///            might be called multiple times and it's important not to share stateful `ChannelHandler`s in more
+    ///            than one `Channel`.
+    ///
+    /// - parameters:
+    ///     - handler: A closure that initializes the provided `Channel`.
+    @preconcurrency
+    func channelInitializer(_ handler: @escaping @Sendable (Channel) -> EventLoopFuture<Void>) -> Self
+    #else
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
@@ -33,7 +54,18 @@ public protocol NIOClientTCPBootstrapProtocol {
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
     func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self
-
+    #endif
+    
+    #if swift(>=5.7)
+    /// Sets the protocol handlers that will be added to the front of the `ChannelPipeline` right after the
+    /// `channelInitializer` has been called.
+    ///
+    /// Per bootstrap, you can only set the `protocolHandlers` once. Typically, `protocolHandlers` are used for the TLS
+    /// implementation. Most notably, `NIOClientTCPBootstrap`, NIO's "universal bootstrap" abstraction, uses
+    /// `protocolHandlers` to add the required `ChannelHandler`s for many TLS implementations.
+    @preconcurrency
+    func protocolHandlers(_ handlers: @escaping @Sendable () -> [ChannelHandler]) -> Self
+    #else
     /// Sets the protocol handlers that will be added to the front of the `ChannelPipeline` right after the
     /// `channelInitializer` has been called.
     ///
@@ -41,6 +73,7 @@ public protocol NIOClientTCPBootstrapProtocol {
     /// implementation. Most notably, `NIOClientTCPBootstrap`, NIO's "universal bootstrap" abstraction, uses
     /// `protocolHandlers` to add the required `ChannelHandler`s for many TLS implementations.
     func protocolHandlers(_ handlers: @escaping () -> [ChannelHandler]) -> Self
+    #endif
 
     /// Specifies a `ChannelOption` to be applied to the `SocketChannel`.
     ///

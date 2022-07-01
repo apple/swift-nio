@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 #if compiler(>=5.5.2) && canImport(_Concurrency)
+import Atomics
 import Dispatch
 import _NIODataStructures
 import NIOCore
@@ -62,9 +63,9 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
 
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     /// As we need to access this from any thread, we store this as an atomic.
-    private let _now = NIOAtomic<UInt64>.makeAtomic(value: 0)
+    private let _now = ManagedAtomic<UInt64>(0)
     internal var now: NIODeadline {
-        return NIODeadline.uptimeNanoseconds(self._now.load())
+        return NIODeadline.uptimeNanoseconds(self._now.load(ordering: .relaxed))
     }
 
     /// This is used to derive an identifier for this loop.
@@ -80,7 +81,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
     // arbitrary threads. This is required by the EventLoop protocol and cannot be avoided.
     // Specifically, Scheduled<T> creation requires us to be able to define the cancellation
     // operation, so the task ID has to be created early.
-    private let scheduledTaskCounter = NIOAtomic<UInt64>.makeAtomic(value: 0)
+    private let scheduledTaskCounter = ManagedAtomic<UInt64>(0)
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>()
 
     /// Keep track of where promises are allocated to ensure we can identify their source if they leak.
@@ -143,7 +144,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
     @discardableResult
     public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise()
-        let taskID = self.scheduledTaskCounter.add(1)
+        let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
             if self.inEventLoop {
@@ -270,7 +271,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
 
                     // Set the time correctly before we call into user code, then
                     // call in for all tasks.
-                    self._now.store(nextTask.readyTime.uptimeNanoseconds)
+                    self._now.store(nextTask.readyTime.uptimeNanoseconds, ordering: .relaxed)
 
                     for task in tasks {
                         task.task()
@@ -280,7 +281,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
                 }
 
                 // Finally ensure we got the time right.
-                self._now.store(newTime.uptimeNanoseconds)
+                self._now.store(newTime.uptimeNanoseconds, ordering: .relaxed)
 
                 continuation.resume()
             }
@@ -311,7 +312,7 @@ public final class NIOAsyncEmbeddedEventLoop: EventLoop, @unchecked Sendable {
     internal func drainScheduledTasksByRunningAllCurrentlyScheduledTasks() {
         var currentlyScheduledTasks = self.scheduledTasks
         while let nextTask = currentlyScheduledTasks.pop() {
-            self._now.store(nextTask.readyTime.uptimeNanoseconds)
+            self._now.store(nextTask.readyTime.uptimeNanoseconds, ordering: .relaxed)
             nextTask.task()
         }
         // Just fail all the remaining scheduled tasks. Despite having run all the tasks that were

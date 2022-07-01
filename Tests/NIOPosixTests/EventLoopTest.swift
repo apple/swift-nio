@@ -15,6 +15,7 @@ import XCTest
 @testable import NIOCore
 import NIOEmbedded
 @testable import NIOPosix
+import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
 
@@ -145,14 +146,14 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
 
-        let counter = NIOAtomic<Int>.makeAtomic(value: 0)
+        let counter = ManagedAtomic<Int>(0)
         let loop = eventLoopGroup.next()
         let allDone = DispatchGroup()
         allDone.enter()
         loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
             XCTAssertTrue(loop.inEventLoop)
-            let initialValue = counter.load()
-            counter.add(1)
+            let initialValue = counter.load(ordering: .relaxed)
+            counter.wrappingIncrement(ordering: .relaxed)
             if initialValue == 0 {
                 XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
             } else if initialValue == count {
@@ -163,7 +164,7 @@ public final class EventLoopTest : XCTestCase {
 
         allDone.wait()
 
-        XCTAssertEqual(counter.load(), count + 1)
+        XCTAssertEqual(counter.load(ordering: .relaxed), count + 1)
         XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay + Int64(count) * delay)
     }
 
@@ -657,12 +658,12 @@ public final class EventLoopTest : XCTestCase {
         class AssertHandler: ChannelInboundHandler {
             typealias InboundIn = Any
 
-            let groupIsShutdown = NIOAtomic.makeAtomic(value: false)
-            let removed = NIOAtomic.makeAtomic(value: false)
+            let groupIsShutdown = ManagedAtomic(false)
+            let removed = ManagedAtomic(false)
 
             public func handlerRemoved(context: ChannelHandlerContext) {
-                XCTAssertFalse(groupIsShutdown.load())
-                XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
+                XCTAssertFalse(groupIsShutdown.load(ordering: .relaxed))
+                XCTAssertTrue(removed.compareExchange(expected: false, desired: true, ordering: .relaxed).exchanged)
             }
         }
 
@@ -679,16 +680,16 @@ public final class EventLoopTest : XCTestCase {
                 channel.connect(to: serverSocket.localAddress!)
             }
         }.wait() as Void)
-        let closeFutureFulfilledEventually = NIOAtomic<Bool>.makeAtomic(value: false)
+        let closeFutureFulfilledEventually = ManagedAtomic(false)
         XCTAssertFalse(channel.closeFuture.isFulfilled)
         channel.closeFuture.whenSuccess {
-            XCTAssertTrue(closeFutureFulfilledEventually.compareAndExchange(expected: false, desired: true))
+            XCTAssertTrue(closeFutureFulfilledEventually.compareExchange(expected: false, desired: true, ordering: .relaxed).exchanged)
         }
         XCTAssertNoThrow(try group.syncShutdownGracefully())
-        XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
-        XCTAssertTrue(assertHandler.removed.load())
+        XCTAssertTrue(assertHandler.groupIsShutdown.compareExchange(expected: false, desired: true, ordering: .relaxed).exchanged)
+        XCTAssertTrue(assertHandler.removed.load(ordering: .relaxed))
         XCTAssertFalse(channel.isActive)
-        XCTAssertTrue(closeFutureFulfilledEventually.load())
+        XCTAssertTrue(closeFutureFulfilledEventually.load(ordering: .relaxed))
     }
 
     public func testScheduleMultipleTasks() throws {
@@ -1026,11 +1027,11 @@ public final class EventLoopTest : XCTestCase {
         final class ExecuteSomethingOnEventLoop: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
-            static let numberOfInstances = NIOAtomic<Int>.makeAtomic(value: 0)
+            static let numberOfInstances = ManagedAtomic<Int>(0)
             let groupToNotify: DispatchGroup
 
             init(groupToNotify: DispatchGroup) {
-                XCTAssertEqual(0, ExecuteSomethingOnEventLoop.numberOfInstances.add(1))
+                XCTAssertEqual(0, ExecuteSomethingOnEventLoop.numberOfInstances.loadThenWrappingIncrement(ordering: .relaxed))
                 self.groupToNotify = groupToNotify
             }
 
@@ -1565,10 +1566,10 @@ fileprivate class EventLoopWithoutPreSucceededFuture: EventLoop {
 
 final class EventLoopGroupOf3WithoutAnAnyImplementation: EventLoopGroup {
     private let eventloops = [EmbeddedEventLoop(), EmbeddedEventLoop(), EmbeddedEventLoop()]
-    private let nextID = NIOAtomic<UInt64>.makeAtomic(value: 0)
+    private let nextID = ManagedAtomic<UInt64>(0)
 
     func next() -> EventLoop {
-        return self.eventloops[Int(self.nextID.add(1) % UInt64(self.eventloops.count))]
+        return self.eventloops[Int(self.nextID.loadThenWrappingIncrement(ordering: .relaxed) % UInt64(self.eventloops.count))]
     }
 
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
