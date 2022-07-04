@@ -17,7 +17,7 @@ import NIOCore
 ///
 /// A full HTTP request is made up of a response header encoded by `.head`
 /// and an optional `.body`.
-public struct NIOHTTPServerRequestFull {
+public struct NIOHTTPServerRequestFull: NIOSendable {
     public var head: HTTPRequestHead
     public var body: ByteBuffer?
 
@@ -33,7 +33,7 @@ extension NIOHTTPServerRequestFull: Equatable {}
 ///
 /// A full HTTP response is made up of a response header encoded by `.head`
 /// and an optional `.body`.
-public struct NIOHTTPClientResponseFull {
+public struct NIOHTTPClientResponseFull: NIOSendable {
     public var head: HTTPResponseHead
     public var body: ByteBuffer?
 
@@ -69,7 +69,7 @@ public struct NIOHTTPObjectAggregatorError: Error, Equatable {
     public static let unexpectedMessageEnd = NIOHTTPObjectAggregatorError(base: .unexpectedMessageEnd)
 }
 
-public struct NIOHTTPObjectAggregatorEvent: Hashable {
+public struct NIOHTTPObjectAggregatorEvent: Hashable, NIOSendable {
     private enum Base {
         case httpExpectationFailed
         case httpFrameTooLong
@@ -301,6 +301,11 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
     }
 }
 
+#if swift(>=5.6)
+@available(*, unavailable)
+extension NIOHTTPServerRequestAggregator: Sendable {}
+#endif
+
 /// A `ChannelInboundHandler` that handles HTTP chunked `HTTPClientResponsePart`
 /// messages by aggregating individual message chunks into a single
 /// `NIOHTTPClientResponseFull`.
@@ -397,3 +402,8 @@ public final class NIOHTTPClientResponseAggregator: ChannelInboundHandler, Remov
         self.buffer = context.channel.allocator.buffer(capacity: 0)
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension NIOHTTPClientResponseAggregator: Sendable {}
+#endif

@@ -71,3 +71,8 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
         context.write(data, promise: promise)
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension HTTPServerProtocolErrorHandler: Sendable {}
+#endif
