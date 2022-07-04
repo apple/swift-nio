@@ -19,7 +19,7 @@ public enum HTTPServerUpgradeErrors: Error {
 }
 
 /// User events that may be fired by the `HTTPServerProtocolUpgrader`.
-public enum HTTPServerUpgradeEvents {
+public enum HTTPServerUpgradeEvents: NIOSendable {
     /// Fired when HTTP upgrade has completed and the
     /// `HTTPServerProtocolUpgrader` is about to remove itself from the
     /// `ChannelPipeline`.
@@ -319,6 +319,10 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                               on: context.eventLoop)
     }
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+extension HTTPServerUpgradeHandler: @unchecked Sendable {}
+#endif
 
 extension HTTPServerUpgradeHandler {
     /// The state of the upgrade handler.

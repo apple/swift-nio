@@ -123,6 +123,10 @@ public struct HTTPRequestHead: Equatable {
     }
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension HTTPRequestHead: @unchecked Sendable {}
+#endif
+
 /// The parts of a complete HTTP message, either request or response.
 ///
 /// A HTTP message is made up of a request or status line with several headers,
@@ -134,6 +138,10 @@ public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
     case body(BodyT)
     case end(HTTPHeaders?)
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+extension HTTPPart: Sendable where HeadT: Sendable, BodyT: Sendable {}
+#endif
 
 extension HTTPPart: Equatable {}
 
@@ -228,6 +236,10 @@ public struct HTTPResponseHead: Equatable {
     }
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension HTTPResponseHead: @unchecked Sendable {}
+#endif
+
 extension HTTPResponseHead {
     /// Determines if the head is purely informational. If a head is informational another head will follow this
     /// head eventually.
@@ -286,7 +298,7 @@ extension HTTPHeaders {
 /// field when needed. It also supports recomposing headers to a maximally joined
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
-public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral {
+public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral, NIOSendable {
     @usableFromInline
     internal var headers: [(String, String)]
     internal var keepAliveState: KeepAliveState = .unknown
@@ -601,7 +613,7 @@ extension HTTPHeaders: Equatable {
     }
 }
 
-public enum HTTPMethod: Equatable {
+public enum HTTPMethod: Equatable, NIOSendable {
     internal enum HasBody {
         case yes
         case no
@@ -660,7 +672,7 @@ public enum HTTPMethod: Equatable {
 }
 
 /// A structure representing a HTTP version.
-public struct HTTPVersion: Equatable {
+public struct HTTPVersion: Equatable, NIOSendable {
     /// Create a HTTP version.
     ///
     /// - Parameter major: The major version number.
@@ -1056,7 +1068,7 @@ extension HTTPResponseStatus {
 }
 
 /// A HTTP response status code.
-public enum HTTPResponseStatus {
+public enum HTTPResponseStatus: NIOSendable {
     /* use custom if you want to use a non-standard response code or
      have it available in a (UInt, String) pair from a higher-level web framework. */
     case custom(code: UInt, reasonPhrase: String)
