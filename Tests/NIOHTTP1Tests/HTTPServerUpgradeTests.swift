@@ -14,7 +14,7 @@
 
 import XCTest
 import Dispatch
-@testable import NIOCore
+import NIOCore
 import NIOEmbedded
 @testable import NIOPosix
 @testable import NIOHTTP1
