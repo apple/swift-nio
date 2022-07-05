@@ -115,6 +115,10 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     }
 }
 
+#if swift(>=5.6)
+@available(*, unavailable)
+extension WebSocketFrameEncoder: Sendable {}
+#endif
 
 extension ByteBuffer {
     fileprivate mutating func prependFrameHeaderIfPossible(_ frameHeader: FrameHeader) -> Bool {

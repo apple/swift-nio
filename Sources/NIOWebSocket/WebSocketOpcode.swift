@@ -12,8 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOCore
+
 /// An operation code for a websocket frame.
-public struct WebSocketOpcode {
+public struct WebSocketOpcode: NIOSendable {
     fileprivate let networkRepresentation: UInt8
 
     public static let continuation = WebSocketOpcode(rawValue: 0x0)

@@ -34,7 +34,7 @@ private extension UInt8 {
 /// predictable binary sequences into websocket data streams. This structure provides
 /// a more convenient method of interacting with a masking key than simply by passing
 /// around a four-tuple.
-public struct WebSocketMaskingKey {
+public struct WebSocketMaskingKey: NIOSendable {
     @usableFromInline internal let _key: (UInt8, UInt8, UInt8, UInt8)
 
     public init?<T: Collection>(_ buffer: T) where T.Element == UInt8 {
@@ -323,6 +323,10 @@ public struct WebSocketFrame {
     }
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension WebSocketFrame: @unchecked Sendable {}
+#endif
+
 extension WebSocketFrame: Equatable {}
 
 extension WebSocketFrame {
@@ -341,6 +345,11 @@ extension WebSocketFrame {
         }
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension WebSocketFrame._Storage: Sendable {}
+#endif
 
 extension WebSocketFrame._Storage: Equatable {
     static func ==(lhs: WebSocketFrame._Storage, rhs: WebSocketFrame._Storage) -> Bool {

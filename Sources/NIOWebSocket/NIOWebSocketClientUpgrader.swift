@@ -98,6 +98,11 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     }
 }
 
+#if swift(>=5.6)
+@available(*, unavailable)
+extension NIOWebSocketClientUpgrader: Sendable {}
+#endif
+
 extension NIOWebSocketClientUpgrader {
     /// Generates a random WebSocket Request Key by generating 16 bytes randomly and encoding them as a base64 string as defined in RFC6455 https://tools.ietf.org/html/rfc6455#section-4.1
     /// - Parameter generator: the `RandomNumberGenerator` used as a the source of randomness
