@@ -279,3 +279,9 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
         }
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension NIOWebSocketServerUpgrader: Sendable {}
+#endif
+

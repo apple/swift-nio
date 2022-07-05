@@ -136,3 +136,8 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
         self.accumulatedFrameSize = 0
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension NIOWebSocketFrameAggregator: Sendable {}
+#endif
