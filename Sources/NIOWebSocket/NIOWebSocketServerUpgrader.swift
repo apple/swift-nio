@@ -62,6 +62,13 @@ fileprivate extension HTTPHeaders {
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
 public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
+    #if swift(>=5.7)
+    private typealias ShouldUpgrade = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
+    private typealias UpgradePipelineHandler = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
+    #else
+    private typealias ShouldUpgrade = (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
+    private typealias UpgradePipelineHandler = (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
+    #endif
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
 
@@ -70,11 +77,12 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     /// which NIO requires. We check for these manually.
     public let requiredUpgradeHeaders: [String] = []
 
-    private let shouldUpgrade: (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
-    private let upgradePipelineHandler: (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
+    private let shouldUpgrade: ShouldUpgrade
+    private let upgradePipelineHandler: UpgradePipelineHandler
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
 
+    #if swift(>=5.7)
     /// Create a new `NIOWebSocketServerUpgrader`.
     ///
     /// - parameters:
@@ -91,13 +99,43 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     ///         websocket protocol. This only needs to add the user handlers: the
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
-    public convenience init(automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
-                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
+    @preconcurrency
+    public convenience init(
+        automaticErrorHandling: Bool = true,
+        shouldUpgrade: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
+        upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
+    ) {
         self.init(maxFrameSize: 1 << 14, automaticErrorHandling: automaticErrorHandling,
                   shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
     }
+    #else
+    /// Create a new `NIOWebSocketServerUpgrader`.
+    ///
+    /// - parameters:
+    ///     - automaticErrorHandling: Whether the pipeline should automatically handle protocol
+    ///         errors by sending error responses and closing the connection. Defaults to `true`,
+    ///         may be set to `false` if the user wishes to handle their own errors.
+    ///     - shouldUpgrade: A callback that determines whether the websocket request should be
+    ///         upgraded. This callback is responsible for creating a `HTTPHeaders` object with
+    ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
+    ///         and `Sec-WebSocket-Accept` headers, which this upgrader will handle. Should return
+    ///         an `EventLoopFuture` containing `nil` if the upgrade should be refused.
+    ///     - upgradePipelineHandler: A function that will be called once the upgrade response is
+    ///         flushed, and that is expected to mutate the `Channel` appropriately to handle the
+    ///         websocket protocol. This only needs to add the user handlers: the
+    ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
+    ///         pipeline automatically.
+    public convenience init(
+        automaticErrorHandling: Bool = true,
+        shouldUpgrade: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
+        upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
+    ) {
+        self.init(maxFrameSize: 1 << 14, automaticErrorHandling: automaticErrorHandling,
+                  shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
+    }
+    #endif
 
-
+    #if swift(>=5.7)
     /// Create a new `NIOWebSocketServerUpgrader`.
     ///
     /// - parameters:
@@ -118,8 +156,62 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     ///         websocket protocol. This only needs to add the user handlers: the
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
-    public init(maxFrameSize: Int, automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
-                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
+    @preconcurrency
+    public convenience init(
+        maxFrameSize: Int,
+        automaticErrorHandling: Bool = true,
+        shouldUpgrade: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
+        upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
+    ) {
+        self.init(
+            _maxFrameSize: maxFrameSize,
+            automaticErrorHandling: automaticErrorHandling,
+            shouldUpgrade: shouldUpgrade,
+            upgradePipelineHandler: upgradePipelineHandler
+        )
+    }
+    #else
+    /// Create a new `NIOWebSocketServerUpgrader`.
+    ///
+    /// - parameters:
+    ///     - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
+    ///         remote peer. WebSockets in principle allows frame sizes up to `2**64` bytes, but
+    ///         this is an objectively unreasonable maximum value (on AMD64 systems it is not
+    ///         possible to even. Users may set this to any value up to `UInt32.max`.
+    ///     - automaticErrorHandling: Whether the pipeline should automatically handle protocol
+    ///         errors by sending error responses and closing the connection. Defaults to `true`,
+    ///         may be set to `false` if the user wishes to handle their own errors.
+    ///     - shouldUpgrade: A callback that determines whether the websocket request should be
+    ///         upgraded. This callback is responsible for creating a `HTTPHeaders` object with
+    ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
+    ///         and `Sec-WebSocket-Accept` headers, which this upgrader will handle. Should return
+    ///         an `EventLoopFuture` containing `nil` if the upgrade should be refused.
+    ///     - upgradePipelineHandler: A function that will be called once the upgrade response is
+    ///         flushed, and that is expected to mutate the `Channel` appropriately to handle the
+    ///         websocket protocol. This only needs to add the user handlers: the
+    ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
+    ///         pipeline automatically.
+    public convenience init(
+        maxFrameSize: Int,
+        automaticErrorHandling: Bool = true,
+        shouldUpgrade: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
+        upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
+    ) {
+        self.init(
+            _maxFrameSize: maxFrameSize,
+            automaticErrorHandling: automaticErrorHandling,
+            shouldUpgrade: shouldUpgrade,
+            upgradePipelineHandler: upgradePipelineHandler
+        )
+    }
+    #endif
+    
+    private init(
+        _maxFrameSize maxFrameSize: Int,
+        automaticErrorHandling: Bool,
+        shouldUpgrade: @escaping ShouldUpgrade,
+        upgradePipelineHandler: @escaping UpgradePipelineHandler
+    ) {
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.shouldUpgrade = shouldUpgrade
         self.upgradePipelineHandler = upgradePipelineHandler
