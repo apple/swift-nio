@@ -115,7 +115,7 @@ default:
     connectTarget = .ip(host: defaultHost, sendPort: defaultServerPort, listeningPort: defaultListeningPort)
 }
 
-let remoteAddress = { () -> SocketAddress in
+let remoteAddress = { @Sendable () -> SocketAddress in
     switch connectTarget {
     case .ip(let host, let sendPort, _):
         return try SocketAddress.makeAddressResolvingHost(host, port: sendPort)

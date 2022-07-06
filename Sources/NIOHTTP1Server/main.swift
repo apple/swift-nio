@@ -179,7 +179,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             ()
         case .end:
             self.state.requestComplete()
-            context.eventLoop.scheduleTask(in: delay) { () -> Void in
+            context.eventLoop.iKnowIAmOnThisEventLoop().scheduleTask(in: delay) { () -> Void in
                 var buf = context.channel.allocator.buffer(capacity: string.utf8.count)
                 buf.writeString(string)
                 context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
@@ -204,8 +204,8 @@ private final class HTTPHandler: ChannelInboundHandler {
                 self.buffer.clear()
                 self.continuousCount += 1
                 self.buffer.writeString("line \(self.continuousCount)\n")
-                context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
-                    context.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
+                context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).iKnowIAmOnTheEventLoopOfThisFuture().map {
+                    context.eventLoop.iKnowIAmOnThisEventLoop().scheduleTask(in: .milliseconds(400), doNext)
                 }.whenFailure { (_: Error) in
                     self.completeResponse(context, trailers: nil, promise: nil)
                 }
@@ -229,9 +229,9 @@ private final class HTTPHandler: ChannelInboundHandler {
                 self.buffer.clear()
                 self.buffer.writeString(strings[self.continuousCount])
                 self.continuousCount += 1
-                context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenSuccess {
+                context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).iKnowIAmOnTheEventLoopOfThisFuture().whenSuccess {
                     if self.continuousCount < strings.count {
-                        context.eventLoop.scheduleTask(in: delay, doNext)
+                        context.eventLoop.iKnowIAmOnThisEventLoop().scheduleTask(in: delay, doNext)
                     } else {
                         self.completeResponse(context, trailers: nil, promise: nil)
                     }
@@ -326,10 +326,10 @@ private final class HTTPHandler: ChannelInboundHandler {
             }
             let path = self.htdocsPath + "/" + path
             let fileHandleAndRegion = self.fileIO.openFile(path: path, eventLoop: context.eventLoop)
-            fileHandleAndRegion.whenFailure {
+            fileHandleAndRegion.iKnowIAmOnTheEventLoopOfThisFuture().whenFailure {
                 sendErrorResponse(request: request, $0)
             }
-            fileHandleAndRegion.whenSuccess { (file, region) in
+            fileHandleAndRegion.iKnowIAmOnTheEventLoopOfThisFuture().whenSuccess { (file, region) in
                 switch ioMethod {
                 case .nonblockingFileIO:
                     var responseStarted = false
@@ -347,7 +347,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                                         context.write(self.wrapOutboundOut(.head(response)), promise: nil)
                                                     }
                                                     return context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
-                    }.flatMap { () -> EventLoopFuture<Void> in
+                    }.iKnowIAmOnTheEventLoopOfThisFuture().flatMap { () -> EventLoopFuture<Void> in
                         let p = context.eventLoop.makePromise(of: Void.self)
                         self.completeResponse(context, trailers: nil, promise: p)
                         return p.futureResult
@@ -369,7 +369,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 case .sendfile:
                     let response = responseHead(request: request, fileRegion: region)
                     context.write(self.wrapOutboundOut(.head(response)), promise: nil)
-                    context.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).flatMap {
+                    context.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).iKnowIAmOnTheEventLoopOfThisFuture().flatMap {
                         let p = context.eventLoop.makePromise(of: Void.self)
                         self.completeResponse(context, trailers: nil, promise: p)
                         return p.futureResult
@@ -392,7 +392,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
         let promise = self.keepAlive ? promise : (promise ?? context.eventLoop.makePromise())
         if !self.keepAlive {
-            promise!.futureResult.whenComplete { (_: Result<Void, Error>) in context.close(promise: nil) }
+            promise!.futureResult.iKnowIAmOnTheEventLoopOfThisFuture().whenComplete { (_: Result<Void, Error>) in context.close(promise: nil) }
         }
         self.handler = nil
 
@@ -518,7 +518,7 @@ let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let threadPool = NIOThreadPool(numberOfThreads: 6)
 threadPool.start()
 
-func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
+@Sendable func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
     return channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
         channel.pipeline.addHandler(HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
     }
