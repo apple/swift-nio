@@ -166,6 +166,11 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
     }
 }
 
+#if swift(>=5.6)
+@available(*, unavailable)
+extension HTTPRequestEncoder: Sendable {}
+#endif
+
 /// A `ChannelOutboundHandler` that can serialize HTTP responses.
 ///
 /// This channel handler is used to translate messages from a series of
@@ -197,6 +202,11 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
         }
     }
 }
+
+#if swift(>=5.6)
+@available(*, unavailable)
+extension HTTPResponseEncoder: Sendable {}
+#endif
 
 private extension ByteBuffer {
     private mutating func write(status: HTTPResponseStatus) {

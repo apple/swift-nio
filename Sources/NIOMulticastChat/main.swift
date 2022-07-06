@@ -46,20 +46,19 @@ private final class ChatMessageEncoder: ChannelOutboundHandler {
 
 
 // We allow users to specify the interface they want to use here.
-var targetDevice: NIONetworkDevice? = nil
-if let interfaceAddress = CommandLine.arguments.dropFirst().first,
-   let targetAddress = try? SocketAddress(ipAddress: interfaceAddress, port: 0) {
-    for device in try! System.enumerateDevices() {
-        if device.address == targetAddress {
-            targetDevice = device
-            break
+let targetDevice: NIONetworkDevice? = {
+    if let interfaceAddress = CommandLine.arguments.dropFirst().first,
+       let targetAddress = try? SocketAddress(ipAddress: interfaceAddress, port: 0) {
+        for device in try! System.enumerateDevices() {
+            if device.address == targetAddress {
+                return device
+            }
         }
-    }
-
-    if targetDevice == nil {
         fatalError("Could not find device for \(interfaceAddress)")
     }
-}
+    return nil
+}()
+
 
 // For this chat protocol we temporarily squat on 224.1.0.26. This is a reserved multicast IPv4 address,
 // so your machine is unlikely to have already joined this group. That helps properly demonstrate correct

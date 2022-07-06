@@ -19,7 +19,7 @@ public enum HTTPServerUpgradeErrors: Error {
 }
 
 /// User events that may be fired by the `HTTPServerProtocolUpgrader`.
-public enum HTTPServerUpgradeEvents {
+public enum HTTPServerUpgradeEvents: NIOSendable {
     /// Fired when HTTP upgrade has completed and the
     /// `HTTPServerProtocolUpgrader` is about to remove itself from the
     /// `ChannelPipeline`.
@@ -63,8 +63,14 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
     public typealias InboundOut = HTTPServerRequestPart
     public typealias OutboundOut = HTTPServerResponsePart
 
+    #if swift(>=5.7)
+    private typealias UpgradeCompletionHandler =  @Sendable (ChannelHandlerContext) -> Void
+    #else
+    private typealias UpgradeCompletionHandler =  (ChannelHandlerContext) -> Void
+    #endif
+    
     private let upgraders: [String: HTTPServerProtocolUpgrader]
-    private let upgradeCompletionHandler: (ChannelHandlerContext) -> Void
+    private let upgradeCompletionHandler: UpgradeCompletionHandler
 
     private let httpEncoder: HTTPResponseEncoder?
     private let extraHTTPHandlers: [RemovableChannelHandler]
@@ -76,6 +82,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
     private var upgradeState: UpgradeState = .idle
     private var receivedMessages: CircularBuffer<NIOAny> = CircularBuffer()
 
+    #if swift(>=5.7)
     /// Create a `HTTPServerUpgradeHandler`.
     ///
     /// - Parameter upgraders: All `HTTPServerProtocolUpgrader` objects that this pipeline will be able
@@ -87,7 +94,43 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
     ///     this should include the `HTTPDecoder`, but should also include any other handler that cannot tolerate
     ///     receiving non-HTTP data.
     /// - Parameter upgradeCompletionHandler: A block that will be fired when HTTP upgrade is complete.
-    public init(upgraders: [HTTPServerProtocolUpgrader], httpEncoder: HTTPResponseEncoder, extraHTTPHandlers: [RemovableChannelHandler], upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
+    @preconcurrency
+    public convenience init(
+        upgraders: [HTTPServerProtocolUpgrader],
+        httpEncoder: HTTPResponseEncoder,
+        extraHTTPHandlers: [RemovableChannelHandler],
+        upgradeCompletionHandler: @escaping @Sendable (ChannelHandlerContext) -> Void
+    ) {
+        self.init(_upgraders: upgraders, httpEncoder: httpEncoder, extraHTTPHandlers: extraHTTPHandlers, upgradeCompletionHandler: upgradeCompletionHandler)
+    }
+    #else
+    /// Create a `HTTPServerUpgradeHandler`.
+    ///
+    /// - Parameter upgraders: All `HTTPServerProtocolUpgrader` objects that this pipeline will be able
+    ///     to use to handle HTTP upgrade.
+    /// - Parameter httpEncoder: The `HTTPResponseEncoder` encoding responses from this handler and which will
+    ///     be removed from the pipeline once the upgrade response is sent. This is used to ensure
+    ///     that the pipeline will be in a clean state after upgrade.
+    /// - Parameter extraHTTPHandlers: Any other handlers that are directly related to handling HTTP. At the very least
+    ///     this should include the `HTTPDecoder`, but should also include any other handler that cannot tolerate
+    ///     receiving non-HTTP data.
+    /// - Parameter upgradeCompletionHandler: A block that will be fired when HTTP upgrade is complete.
+    public convenience init(
+        upgraders: [HTTPServerProtocolUpgrader],
+        httpEncoder: HTTPResponseEncoder,
+        extraHTTPHandlers: [RemovableChannelHandler],
+        upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
+    ) {
+        self.init(_upgraders: upgraders, httpEncoder: httpEncoder, extraHTTPHandlers: extraHTTPHandlers, upgradeCompletionHandler: upgradeCompletionHandler)
+    }
+    #endif
+    
+    private init(
+        _upgraders upgraders: [HTTPServerProtocolUpgrader],
+        httpEncoder: HTTPResponseEncoder,
+        extraHTTPHandlers: [RemovableChannelHandler],
+        upgradeCompletionHandler: @escaping UpgradeCompletionHandler
+    ) {
         var upgraderMap = [String: HTTPServerProtocolUpgrader]()
         for upgrader in upgraders {
             upgraderMap[upgrader.supportedProtocol.lowercased()] = upgrader
@@ -319,6 +362,10 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                               on: context.eventLoop)
     }
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+extension HTTPServerUpgradeHandler: @unchecked Sendable {}
+#endif
 
 extension HTTPServerUpgradeHandler {
     /// The state of the upgrade handler.
