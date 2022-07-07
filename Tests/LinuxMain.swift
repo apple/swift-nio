@@ -50,6 +50,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(AddressedEnvelopeTests.allTests),
              testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
              testCase(AsyncSequenceCollectTests.allTests),
+             testCase(AsyncTestingChannelTests.allTests),
              testCase(Base64Test.allTests),
              testCase(BaseObjectTest.allTests),
              testCase(BlockingIOThreadPoolTest.allTests),
