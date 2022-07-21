@@ -146,7 +146,7 @@ class HTTPTest: XCTestCase {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
                 buf.writeString("\(c)")
-                writeFutures.append(chan.eventLoop.makeSucceededFuture(()).flatMapThrowing {
+                writeFutures.append(chan.eventLoop.makeSucceededFuture(()).flatMapThrowing { [buf] in
                     try chan.writeInbound(buf)
                 })
             }
