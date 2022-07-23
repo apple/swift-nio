@@ -137,6 +137,21 @@ public struct ByteBufferView: RandomAccessCollection, NIOSendable {
         let iterator = self[self.endIndex..<self.endIndex].makeIterator()
         return (iterator, bytesToWrite)
     }
+
+    @inlinable
+    public func _failEarlyRangeCheck(_ index: Index, bounds: Range<Index>) {
+        precondition(bounds.lowerBound <= index && index < bounds.upperBound)
+    }
+    
+    @inlinable
+    public func _failEarlyRangeCheck(_ index: Index, bounds: ClosedRange<Index>) {
+        precondition(bounds.lowerBound <= index && index <= bounds.upperBound)
+    }
+    
+    @inlinable
+    public func _failEarlyRangeCheck(_ range: Range<Index>, bounds: Range<Index>) {
+        precondition(bounds.lowerBound <= range.lowerBound && range.upperBound <= bounds.upperBound)
+    }
 }
 
 extension ByteBufferView: MutableCollection {}
