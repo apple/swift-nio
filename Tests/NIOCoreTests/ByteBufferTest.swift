@@ -2075,10 +2075,10 @@ class ByteBufferTest: XCTestCase {
         self.buf.clear()
         self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
         self.buf.setBytes([UInt8(0x59)], at: 1000)
-        let view = self.buf.viewBytes(at: 5, length: 1010)
-        XCTAssertTrue(view.contains(UInt8(0x4E)))
-        XCTAssertTrue(view.contains(UInt8(0x59)))
-        XCTAssertFalse(view.contains(UInt8(0x3F)))
+        let view: ByteBufferView?  = self.buf.viewBytes(at: 5, length: 1010)
+        XCTAssertTrue(view?.contains(UInt8(0x4E)) == true)
+        XCTAssertTrue(view?.contains(UInt8(0x59)) == true)
+        XCTAssertTrue(view?.contains(UInt8(0x3F)) == false)
     }
 
     func testByteBuffersCanBeInitializedFromByteBufferViews() throws {
