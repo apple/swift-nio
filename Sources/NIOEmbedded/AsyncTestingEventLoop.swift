@@ -54,8 +54,7 @@ import NIOConcurrencyHelpers
 /// There is a tricky requirement around waiting for `EventLoopFuture`s when working with this
 /// event loop. Simply calling `.wait()` from the test thread will never complete. This is because
 /// `wait` calls `loop.execute` under the hood, and that callback cannot execute without calling
-/// `loop.run()`. As a result, if you need to await an `EventLoopFuture` created on this loop you
-/// should use `awaitFuture`.
+/// `loop.run()`.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     // This type is `@unchecked Sendable` because of the use of `taskNumber`. This
