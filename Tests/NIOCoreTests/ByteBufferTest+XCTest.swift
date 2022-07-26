@@ -158,6 +158,7 @@ extension ByteBufferTest {
                 ("testBufferViewEmpty", testBufferViewEmpty),
                 ("testBufferViewFirstIndex", testBufferViewFirstIndex),
                 ("testBufferViewLastIndex", testBufferViewLastIndex),
+                ("testBufferViewContains", testBufferViewContains),
                 ("testByteBuffersCanBeInitializedFromByteBufferViews", testByteBuffersCanBeInitializedFromByteBufferViews),
                 ("testReserveCapacityWhenOversize", testReserveCapacityWhenOversize),
                 ("testReserveCapacitySameCapacity", testReserveCapacitySameCapacity),
