@@ -53,10 +53,15 @@ typealias ThreadInitializer = (NIOThread) -> Void
 ///            test. A good place to start a `MultiThreadedEventLoopGroup` is the `setUp` method of your `XCTestCase`
 ///            subclass, a good place to shut it down is the `tearDown` method.
 public final class MultiThreadedEventLoopGroup: EventLoopGroup {
-
+    #if swift(>=5.7)
+    private typealias ShutdownGracefullyCallback = @Sendable (Error?) -> Void
+    #else
+    private typealias ShutdownGracefullyCallback = (Error?) -> Void
+    #endif
+    
     private enum RunState {
         case running
-        case closing([(DispatchQueue, (Error?) -> Void)])
+        case closing([(DispatchQueue, ShutdownGracefullyCallback)])
         case closed(Error?)
     }
 
@@ -238,7 +243,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     }
     #endif
     
-    private func _shutdownGracefully(queue: DispatchQueue, _ handler: @escaping (Error?) -> Void) {
+    private func _shutdownGracefully(queue: DispatchQueue, _ handler: @escaping ShutdownGracefullyCallback) {
         // This method cannot perform its final cleanup using EventLoopFutures, because it requires that all
         // our event loops still be alive, and they may not be. Instead, we use Dispatch to manage
         // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
@@ -293,28 +298,28 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             for loop in self.eventLoops {
                 loop.syncFinaliseClose(joinThread: true)
             }
-            var overallError: Error?
-            var queueCallbackPairs: [(DispatchQueue, (Error?) -> Void)]? = nil
-            self.shutdownLock.withLock {
+            let (overallError, queueCallbackPairs): (Error?, [(DispatchQueue, ShutdownGracefullyCallback)]) = self.shutdownLock.withLock {
                 switch self.runState {
                 case .closed, .running:
                     preconditionFailure("MultiThreadedEventLoopGroup in illegal state when closing: \(self.runState)")
                 case .closing(let callbacks):
-                    queueCallbackPairs = callbacks
-                    switch result {
-                    case .success:
-                        overallError = nil
-                    case .failure(let error):
-                        overallError = error
-                    }
+                    let overallError: Error? = {
+                        switch result {
+                        case .success:
+                            return nil
+                        case .failure(let error):
+                            return error
+                        }
+                    }()
                     self.runState = .closed(overallError)
+                    return (overallError, callbacks)
                 }
             }
 
             queue.async {
                 handler(overallError)
             }
-            for queueCallbackPair in queueCallbackPairs! {
+            for queueCallbackPair in queueCallbackPairs {
                 queueCallbackPair.0.async {
                     queueCallbackPair.1(overallError)
                 }
