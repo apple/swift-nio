@@ -347,6 +347,22 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
         XCTAssertNil(value)
     }
 
+    func testTaskCancel_whenStreaming_andTaskIsAlreadyCancelled() async {
+        let task: Task<Int?, Never> = Task {
+            // We are sleeping here to allow some time for us to cancel the task.
+            // Once the Task is cancelled we will call `next()`
+            try? await Task.sleep(nanoseconds: 1_000_000)
+            let iterator = self.sequence.makeAsyncIterator()
+            return await iterator.next()
+        }
+
+        task.cancel()
+
+        let value = await task.value
+
+        XCTAssertNil(value)
+    }
+
     // MARK: - Next
 
     func testNext_whenInitial_whenDemand() async throws {

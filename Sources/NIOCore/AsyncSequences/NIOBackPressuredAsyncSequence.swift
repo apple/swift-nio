@@ -379,36 +379,36 @@ extension NIOBackPressuredAsyncSequence {
         /* fileprivate */ internal func next() async -> Element? {
             // We are locking manually here since we want to hold the lock
             // across the suspension point.
-            self.lock.lock()
+            await withTaskCancellationHandler {
+                self.lock.lock()
 
-            let action = self.stateMachine.next()
+                let action = self.stateMachine.next()
 
-            switch action {
-            case .returnElement(let element):
-                self.lock.unlock()
-                return element
+                switch action {
+                case .returnElement(let element):
+                    self.lock.unlock()
+                    return element
 
-            case .returnElementAndCallDemand(let element):
-                self.delegate?.demand()
-                self.lock.unlock()
+                case .returnElementAndCallDemand(let element):
+                    self.delegate?.demand()
+                    self.lock.unlock()
 
-                return element
+                    return element
 
-            case .returnElementAndCallDidTerminate(let element):
-                self.delegate?.didTerminate()
-                self.delegate = nil
-                self.lock.unlock()
+                case .returnElementAndCallDidTerminate(let element):
+                    self.delegate?.didTerminate()
+                    self.delegate = nil
+                    self.lock.unlock()
 
-                return element
+                    return element
 
-            case .returnNil:
-                self.lock.unlock()
-                return nil
+                case .returnNil:
+                    self.lock.unlock()
+                    return nil
 
-            case .suspendTask:
-                // It is safe to hold the lock across this method
-                // since the closure is guaranteed to be run straight away
-                return await withTaskCancellationHandler {
+                case .suspendTask:
+                    // It is safe to hold the lock across this method
+                    // since the closure is guaranteed to be run straight away
                     return await withCheckedContinuation { continuation in
                         let action = self.stateMachine.next(for: continuation)
 
@@ -421,21 +421,21 @@ extension NIOBackPressuredAsyncSequence {
                             self.lock.unlock()
                         }
                     }
-                } onCancel: {
-                    self.lock.withLockVoid {
-                        let action = self.stateMachine.cancelled()
+                }
+            } onCancel: {
+                self.lock.withLockVoid {
+                    let action = self.stateMachine.cancelled()
 
-                        switch action {
-                        case .callDidTerminate:
-                            self.delegate?.didTerminate()
+                    switch action {
+                    case .callDidTerminate:
+                        self.delegate?.didTerminate()
 
-                        case .resumeContinuationWithNilAndCallDidTerminate(let continuation):
-                            continuation.resume(returning: nil)
-                            self.delegate?.didTerminate()
+                    case .resumeContinuationWithNilAndCallDidTerminate(let continuation):
+                        continuation.resume(returning: nil)
+                        self.delegate?.didTerminate()
 
-                        case .none:
-                            break
-                        }
+                    case .none:
+                        break
                     }
                 }
             }
@@ -823,9 +823,10 @@ extension NIOBackPressuredAsyncSequence {
         mutating func cancelled() -> CancelledAction {
             switch self.state {
             case .initial:
-                // If we are still in the initial state it means that nobody called
-                // next() yet. As long as nobody called next() we can't receive a Task cancellation
-                preconditionFailure("We should not receive a cancellation if we are in the initial state")
+                // This can happen if the `Task` that calls `next()` is already cancelled.
+                self.state = .finished
+
+                return .callDidTerminate
 
             case .streaming(_, _, .some(let continuation), _, _):
                 // We have an outstanding continuation that needs to resumed
