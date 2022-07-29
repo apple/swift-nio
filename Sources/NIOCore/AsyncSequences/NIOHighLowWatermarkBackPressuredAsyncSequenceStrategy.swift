@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -37,7 +37,7 @@ public struct NIOHighLowWatermarkBackPressuredAsyncSequenceStrategy: NIOBackPres
         bufferDepth < self.highWatermark
     }
 
-    public mutating func didNext(bufferDepth: Int) -> Bool {
+    public mutating func didConsume(bufferDepth: Int) -> Bool {
         // We start demanding again once we are below the low watermark
         bufferDepth < self.lowWatermark
     }

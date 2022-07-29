@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -18,37 +18,37 @@ import NIOConcurrencyHelpers
 /// A protocol for the back-pressure strategy of the ``NIOBackPressuredAsyncSequence``.
 ///
 /// A back-pressure strategy is invoked when new elements are yielded to the sequence or
-/// when an ``NIOBackPressuredAsyncSequence/AsyncIterator`` requested the next value. The responsibility of the strategy is
-/// to determine wether more elements need to be demanded .
+/// when a ``NIOBackPressuredAsyncSequence/AsyncIterator`` requested the next value. The responsibility of the strategy is
+/// to determine whether more elements need to be demanded .
 ///
 /// If more elements need to be requested, either the ``NIOBackPressuredAsyncSequenceSourceDelegate/demand()``
 /// method will be called or a ``NIOBackPressuredAsyncSequence/Source/YieldResult`` will be returned that indicates
-/// to demand more.
+/// more demand.
 ///
 /// - Important: The methods of this protocol are guaranteed to be called serially. Furthermore, the implementation of these
-/// methods should not do any locking or call out to any other Task/Thread.
+/// methods **MUST NOT** do any locking or call out to any other Task/Thread.
 public protocol NIOBackPressuredAsyncSequenceStrategy {
-    /// This method is called after new elements were yielded to the source.
+    /// This method is called after new elements were yielded by the producer to the source.
     ///
     /// - Parameter bufferDepth: The current depth of the internal buffer.
-    /// - Returns: Returns wether more elements should be demanded.
+    /// - Returns: Returns whether more elements should be demanded.
     mutating func didYield(bufferDepth: Int) -> Bool
 
-    /// This method is called after `next` was called on an iterator of the ``NIOBackPressuredAsyncSequence``.
+    /// This method is called after the `Subscriber` consumed an element.
+    /// More specifically this method is called after `next` was called on an iterator of the ``NIOBackPressuredAsyncSequence``.
     ///
     /// - Parameter bufferDepth: The current depth of the internal buffer.
-    /// - Returns: Returns wether new elements should be demanded.
-    mutating func didNext(bufferDepth: Int) -> Bool
+    /// - Returns: Returns whether new elements should be demanded.
+    mutating func didConsume(bufferDepth: Int) -> Bool
 }
 
 /// The delegate of ``NIOBackPressuredAsyncSequence``.
-///
-/// - Important: All methods of this protocol are called inside the `Lock` of the ``NIOBackPressuredAsyncSequence``.
-/// We expect users to enqueue their work and return immediately.
-/// Users **MUST NOT** call any methods on the ``NIOBackPressuredAsyncSequence/Source`` from within these methods.
 public protocol NIOBackPressuredAsyncSequenceDelegate {
     /// This method is called once the back-pressure strategy of the ``NIOBackPressuredAsyncSequence`` determined
     /// that elements from the source need to be demanded and there is no outstanding demand.
+    ///
+    /// - Important: This is only called as a result of a `Subscriber` is calling ``NIOBackPressuredAsyncSequence/AsyncIterator/next()``.
+    /// It is never called as a result of a producer calling ``NIOBackPressuredAsyncSequence/Source/yield(_:)``.
     func demand()
 
     /// This method is called once the ``NIOBackPressuredAsyncSequence`` is terminated.
@@ -67,6 +67,9 @@ public protocol NIOBackPressuredAsyncSequenceDelegate {
 /// (e.g. elements from a ``Channel`` pipeline) into the _asynchronous_ world.
 /// Furthermore, it provides facilities to implement a back-pressure strategy which
 /// observes the number of elements that are yielded and demanded. This allows to signal the source to request more data.
+///
+/// - Important: This sequence is a unicast sequence that only supports a single ``NIOBackPressuredAsyncSequence/AsyncIterator``.
+/// If you try to create more than one iterator it will result in a `fatalError`.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public struct NIOBackPressuredAsyncSequence<
     Element,
@@ -74,7 +77,7 @@ public struct NIOBackPressuredAsyncSequence<
     Delegate: NIOBackPressuredAsyncSequenceDelegate
 > {
     /// Simple struct for the return type of ``NIOBackPressuredAsyncSequence/makeSourceAndSequence(backPressureStrategy:delegate:)``.
-    public struct Initialized {
+    public struct NewSequence {
         /// The source of the ``NIOBackPressuredAsyncSequence`` used to yield and finish.
         public let source: Source
         /// The actual sequence which should be passed to the consumer.
@@ -127,7 +130,7 @@ public struct NIOBackPressuredAsyncSequence<
     public static func makeSourceAndSequence(
         backPressureStrategy: Strategy,
         delegate: Delegate
-    ) -> Initialized {
+    ) -> NewSequence {
         let sequence = Self(
             backPressureStrategy: backPressureStrategy,
             delegate: delegate
@@ -200,6 +203,9 @@ extension NIOBackPressuredAsyncSequence {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOBackPressuredAsyncSequence {
+    /// A struct to interface between the synchronous code of the producer and the asynchronous `Subscriber`.
+    /// This type allows the producer to synchronously `yield` new elements to the ``NIOBackPressuredAsyncSequence``
+    /// and to `finish` the sequence.
     public struct Source {
         @usableFromInline
         /* fileprivate */ internal let storage: Storage
@@ -211,28 +217,50 @@ extension NIOBackPressuredAsyncSequence {
 
         /// The result of a call to ``NIOBackPressuredAsyncSequence/Source/yield(_:)``.
         public enum YieldResult: Hashable {
-            /// Indicates that the caller should demand more elements.
-            case demandMore
-            /// Indicates that the caller should stop demanding.
-            case stopDemanding
+            /// Indicates that the caller should produce more elements.
+            case produceMore
+            /// Indicates that the caller should stop producing elements.
+            case stopProducing
             /// Indicates that the yielded elements have been dropped because the sequence already terminated.
             case dropped
         }
 
-        /// Yields a new element to the sequence.
+        /// Yields a sequence of new elements to the ``NIOBackPressuredAsyncSequence``.
         ///
         /// If there is an ``NIOBackPressuredAsyncSequence/AsyncIterator`` awaiting the next element, it will get resumed right away.
         /// Otherwise, the element will get buffered.
         ///
+        /// If the ``NIOBackPressuredAsyncSequence`` is terminated this will drop the elements
+        /// and return ``YieldResult/dropped``.
+        ///
         /// This can be called more than once and returns to the caller immediately
         /// without blocking for any awaiting consumption from the iteration.
         ///
-        /// - Parameter element: The element to yield to the stream.
+        /// - Parameter sequence: The sequence to yield.
         /// - Returns: A ``NIOBackPressuredAsyncSequence/Source/YieldResult`` that indicates if the yield was successfull
         /// and if more elements should be demanded.
         @inlinable
         public func yield<S: Sequence>(_ sequence: S) -> YieldResult where S.Element == Element {
             self.storage.yield(sequence)
+        }
+
+        /// Yields a new elements to the ``NIOBackPressuredAsyncSequence``.
+        ///
+        /// If there is an ``NIOBackPressuredAsyncSequence/AsyncIterator`` awaiting the next element, it will get resumed right away.
+        /// Otherwise, the element will get buffered.
+        ///
+        /// If the ``NIOBackPressuredAsyncSequence`` is terminated this will drop the elements
+        /// and return ``YieldResult/dropped``.
+        ///
+        /// This can be called more than once and returns to the caller immediately
+        /// without blocking for any awaiting consumption from the iteration.
+        ///
+        /// - Parameter element: The element to yield.
+        /// - Returns: A ``NIOBackPressuredAsyncSequence/Source/YieldResult`` that indicates if the yield was successfull
+        /// and if more elements should be demanded.
+        @inlinable
+        public func yield(_ element: Element) -> YieldResult {
+            self.yield(CollectionOfOne(element))
         }
 
         /// Finishes the sequence.
@@ -277,19 +305,21 @@ extension NIOBackPressuredAsyncSequence {
 
         @inlinable
         /* fileprivate */ internal func sequenceDeinitialized() {
-            self.lock.withLock {
+            let delegate = self.lock.withLock {
                 let action = self.stateMachine.sequenceDeinitialized()
 
                 switch action {
                 case .callDidTerminate:
-                    self.delegate?.didTerminate()
+                    let delegate = self.delegate
                     self.delegate = nil
-                    return
+                    return delegate
 
                 case .none:
-                    return
+                    return nil
                 }
             }
+
+            delegate?.didTerminate()
         }
 
         @inlinable
@@ -306,20 +336,22 @@ extension NIOBackPressuredAsyncSequence {
 
         @inlinable
         /* fileprivate */ internal func iteratorDeinitialized() {
-            self.lock.withLock {
+            let delegate = self.lock.withLock {
                 let action = self.stateMachine.iteratorDeinitialized()
 
                 switch action {
                 case .callDidTerminate:
-                    self.delegate?.didTerminate()
+                    let delegate = self.delegate
                     self.delegate = nil
 
-                    return
+                    return delegate
 
                 case .none:
-                    return
+                    return nil
                 }
             }
+
+            delegate?.didTerminate()
         }
 
         @inlinable
@@ -329,50 +361,62 @@ extension NIOBackPressuredAsyncSequence {
 
                 switch action {
                 case .returnDemandMore:
-                    return .demandMore
+                    return .produceMore
 
                 case .returnStopDemanding:
-                    return .stopDemanding
+                    return .stopProducing
 
                 case .returnDropped:
                     return .dropped
 
                 case .resumeContinuationAndReturnDemandMore(let continuation, let element):
+                    // It is safe to resume the continuation while holding the lock
+                    // since the task will get enqueued on its executor and the resume method
+                    // is returning immediately
                     continuation.resume(returning: element)
 
-                    return .demandMore
+                    return .produceMore
 
                 case .resumeContinuationAndReturnStopDemanding(let continuation, let element):
+                    // It is safe to resume the continuation while holding the lock
+                    // since the task will get enqueued on its executor and the resume method
+                    // is returning immediately
                     continuation.resume(returning: element)
 
-                    return .stopDemanding
+                    return .stopProducing
                 }
             }
         }
 
         @inlinable
         /* fileprivate */ internal func finish() {
-            self.lock.withLock {
+            let delegate = self.lock.withLock {
                 let action = self.stateMachine.finish()
 
                 switch action {
                 case .callDidTerminate:
-                    self.delegate?.didTerminate()
+                    let delegate = self.delegate
                     self.delegate = nil
 
-                    return
+                    return delegate
 
                 case .resumeContinuationWithNilAndCallDidTerminate(let continuation):
-                    self.delegate?.didTerminate()
+                    let delegate = self.delegate
                     self.delegate = nil
+
+                    // It is safe to resume the continuation while holding the lock
+                    // since the task will get enqueued on its executor and the resume method
+                    // is returning immediately
                     continuation.resume(returning: nil)
 
-                    return
+                    return delegate
 
                 case .none:
-                    return
+                    return nil
                 }
             }
+
+            delegate?.didTerminate()
         }
 
         @inlinable
@@ -390,16 +434,19 @@ extension NIOBackPressuredAsyncSequence {
                     return element
 
                 case .returnElementAndCallDemand(let element):
-                    self.delegate?.demand()
+                    let delegate = self.delegate
                     self.lock.unlock()
+
+                    delegate?.demand()
 
                     return element
 
                 case .returnElementAndCallDidTerminate(let element):
-                    self.delegate?.didTerminate()
+                    let delegate = self.delegate
                     self.delegate = nil
                     self.lock.unlock()
 
+                    delegate?.didTerminate()
                     return element
 
                 case .returnNil:
@@ -414,8 +461,10 @@ extension NIOBackPressuredAsyncSequence {
 
                         switch action {
                         case .callDemand:
-                            self.delegate?.demand()
+                            let delegate = delegate
                             self.lock.unlock()
+
+                            delegate?.demand()
 
                         case .none:
                             self.lock.unlock()
@@ -423,21 +472,29 @@ extension NIOBackPressuredAsyncSequence {
                     }
                 }
             } onCancel: {
-                self.lock.withLockVoid {
+                let delegate = self.lock.withLock {
                     let action = self.stateMachine.cancelled()
 
                     switch action {
                     case .callDidTerminate:
-                        self.delegate?.didTerminate()
+                        let delegate = self.delegate
+                        self.delegate = nil
+
+                        return delegate
 
                     case .resumeContinuationWithNilAndCallDidTerminate(let continuation):
                         continuation.resume(returning: nil)
-                        self.delegate?.didTerminate()
+                        let delegate = self.delegate
+                        self.delegate = nil
+
+                        return delegate
 
                     case .none:
-                        break
+                        return nil
                     }
                 }
+
+                delegate?.didTerminate()
             }
         }
     }
@@ -489,6 +546,7 @@ extension NIOBackPressuredAsyncSequence {
         /// it is a customizable extension of the state machine.
         ///
         /// - Parameter backPressureStrategy: The back-pressure strategy.
+        @inlinable
         init(backPressureStrategy: Strategy) {
             self.state = .initial(
                 backPressureStrategy: backPressureStrategy,
@@ -654,8 +712,6 @@ extension NIOBackPressuredAsyncSequence {
         mutating func yield<S: Sequence>(_ sequence: S) -> YieldAction where S.Element == Element {
             switch self.state {
             case .initial(var backPressureStrategy, let iteratorInitialized):
-                self.state = .modifying
-
                 let buffer = CircularBuffer<Element>(sequence)
                 let shouldDemandMore = backPressureStrategy.didYield(bufferDepth: buffer.count)
 
@@ -892,7 +948,7 @@ extension NIOBackPressuredAsyncSequence {
                 if let element = buffer.popFirst() {
                     // We have an element to fulfil the demand right away.
 
-                    let shouldDemand = backPressureStrategy.didNext(bufferDepth: buffer.count)
+                    let shouldDemand = backPressureStrategy.didConsume(bufferDepth: buffer.count)
 
                     self.state = .streaming(
                         backPressureStrategy: backPressureStrategy,
@@ -976,7 +1032,7 @@ extension NIOBackPressuredAsyncSequence {
                 precondition(buffer.isEmpty)
 
                 self.state = .modifying
-                let shouldDemand = backPressureStrategy.didNext(bufferDepth: buffer.count)
+                let shouldDemand = backPressureStrategy.didConsume(bufferDepth: buffer.count)
 
                 self.state = .streaming(
                     backPressureStrategy: backPressureStrategy,

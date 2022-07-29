@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -29,7 +29,7 @@ private final class MockNIOElementStreamBackPressureStrategy: NIOBackPressuredAs
 
     var didNextCallCount = 0
     var didNextHandler: ((Int) -> Bool)?
-    func didNext(bufferDepth: Int) -> Bool {
+    func didConsume(bufferDepth: Int) -> Bool {
         self.didNextCallCount += 1
         if let didNextHandler = self.didNextHandler {
             return didNextHandler(bufferDepth)
@@ -110,8 +110,8 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
         }
         let iterator = self.sequence.makeAsyncIterator()
 
-        XCTAssertEqual(self.source.yield([1, 2, 3]), .demandMore)
-        XCTAssertEqual(self.source.yield([4, 5, 6]), .stopDemanding)
+        XCTAssertEqual(self.source.yield([1, 2, 3]), .produceMore)
+        XCTAssertEqual(self.source.yield([4, 5, 6]), .stopProducing)
         XCTAssertEqual(self.delegate.demandCallCount, 0)
         XCTAssertEqualWithoutAutoclosure(await iterator.next(), 1)
         XCTAssertEqualWithoutAutoclosure(await iterator.next(), 2)
@@ -120,7 +120,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
         XCTAssertEqual(self.delegate.demandCallCount, 0)
         XCTAssertEqualWithoutAutoclosure(await iterator.next(), 5)
         XCTAssertEqual(self.delegate.demandCallCount, 1)
-        XCTAssertEqual(self.source.yield([7, 8, 9, 10, 11]), .stopDemanding)
+        XCTAssertEqual(self.source.yield([7, 8, 9, 10, 11]), .stopProducing)
     }
 
     // MARK: - Yield
@@ -130,7 +130,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
         let result = self.source.yield([1])
 
         XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
-        XCTAssertEqual(result, .stopDemanding)
+        XCTAssertEqual(result, .stopProducing)
     }
 
     func testYield_whenInitial_andDemandMore() async {
@@ -138,7 +138,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
         let result = self.source.yield([1])
 
         XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
-        XCTAssertEqual(result, .demandMore)
+        XCTAssertEqual(result, .produceMore)
     }
 
     func testYield_whenStreaming_andSuspended_andStopDemanding() async throws {
@@ -152,7 +152,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         let result = self.source.yield([1])
 
-        XCTAssertEqual(result, .stopDemanding)
+        XCTAssertEqual(result, .stopProducing)
         XCTAssertEqualWithoutAutoclosure(await element, 1)
         XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
     }
@@ -168,7 +168,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         let result = self.source.yield([1])
 
-        XCTAssertEqual(result, .demandMore)
+        XCTAssertEqual(result, .produceMore)
         XCTAssertEqualWithoutAutoclosure(await element, 1)
         XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
     }
@@ -187,7 +187,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         let result = self.source.yield([])
 
-        XCTAssertEqual(result, .stopDemanding)
+        XCTAssertEqual(result, .stopProducing)
         XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
     }
 
@@ -205,7 +205,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         let result = self.source.yield([])
 
-        XCTAssertEqual(result, .demandMore)
+        XCTAssertEqual(result, .produceMore)
         XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
     }
 
@@ -216,7 +216,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         let result = self.source.yield([1])
 
-        XCTAssertEqual(result, .stopDemanding)
+        XCTAssertEqual(result, .stopProducing)
         XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 2)
     }
 
@@ -227,7 +227,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         let result = self.source.yield([1])
 
-        XCTAssertEqual(result, .demandMore)
+        XCTAssertEqual(result, .produceMore)
         XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 2)
     }
 
