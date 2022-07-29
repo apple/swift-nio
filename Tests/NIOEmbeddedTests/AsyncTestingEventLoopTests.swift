@@ -12,25 +12,30 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIOConcurrencyHelpers
 @testable import NIOEmbedded
 import XCTest
+import NIOConcurrencyHelpers
+#if compiler(>=5.6)
+@preconcurrency import Atomics
+#else
+import Atomics
+#endif
 
 private class EmbeddedTestError: Error { }
 
-final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
+final class NIOAsyncTestingEventLoopTests: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() throws {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let callbackRan = NIOAtomic<Bool>.makeAtomic(value: false)
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let callbackRan = ManagedAtomic(false)
+            let loop = NIOAsyncTestingEventLoop()
             try await loop.executeInContext {
-                loop.execute { callbackRan.store(true) }
-                XCTAssertFalse(callbackRan.load())
+                loop.execute { callbackRan.store(true, ordering: .relaxed) }
+                XCTAssertFalse(callbackRan.load(ordering: .relaxed))
             }
             await loop.run()
-            XCTAssertTrue(callbackRan.load())
+            XCTAssertTrue(callbackRan.load(ordering: .relaxed))
         }
         #else
         throw XCTSkip()
@@ -41,18 +46,18 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let runCount = NIOAtomic<Int>.makeAtomic(value: 0)
-            let loop = NIOAsyncEmbeddedEventLoop()
-            loop.execute { runCount.add(1) }
-            loop.execute { runCount.add(1) }
-            loop.execute { runCount.add(1) }
+            let runCount = ManagedAtomic(0)
+            let loop = NIOAsyncTestingEventLoop()
+            loop.execute { runCount.wrappingIncrement(ordering: .relaxed) }
+            loop.execute { runCount.wrappingIncrement(ordering: .relaxed) }
+            loop.execute { runCount.wrappingIncrement(ordering: .relaxed) }
 
             try await loop.executeInContext {
-                XCTAssertEqual(runCount.load(), 0)
+                XCTAssertEqual(runCount.load(ordering: .relaxed), 3)
             }
             await loop.run()
             try await loop.executeInContext {
-                XCTAssertEqual(runCount.load(), 3)
+                XCTAssertEqual(runCount.load(ordering: .relaxed), 3)
             }
         }
         #else
@@ -64,31 +69,31 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let sentinel = NIOAtomic<Int>.makeAtomic(value: 0)
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let sentinel = ManagedAtomic(0)
+            let loop = NIOAsyncTestingEventLoop()
 
             loop.execute {
                 // This should execute first.
-                XCTAssertEqual(sentinel.load(), 0)
-                sentinel.store(1)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 0)
+                sentinel.store(1, ordering: .relaxed)
                 loop.execute {
-                    // This should execute third.
-                    XCTAssertEqual(sentinel.load(), 2)
-                    sentinel.store(3)
+                    // This should execute second
+                    let loaded = sentinel.loadThenWrappingIncrement(ordering: .relaxed)
+                    XCTAssertEqual(loaded, 1)
                 }
             }
             loop.execute {
-                // This should execute second.
-                XCTAssertEqual(sentinel.load(), 1)
-                sentinel.store(2)
+                // This should execute third
+                let loaded = sentinel.loadThenWrappingIncrement(ordering: .relaxed)
+                XCTAssertEqual(loaded, 2)
             }
 
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 0)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 3)
             }
             await loop.run()
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 3)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 3)
             }
         }
         #else
@@ -96,26 +101,76 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #endif
     }
 
-    func testTasksSubmittedAfterRunDontRun() throws {
+    func testExecuteRunsImmediately() throws {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let callbackRan = NIOAtomic<Bool>.makeAtomic(value: false)
-            let loop = NIOAsyncEmbeddedEventLoop()
-            loop.execute { callbackRan.store(true) }
+            let callbackRan = ManagedAtomic(false)
+            let loop = NIOAsyncTestingEventLoop()
+            loop.execute { callbackRan.store(true, ordering: .relaxed) }
 
             try await loop.executeInContext {
-                XCTAssertFalse(callbackRan.load())
+                XCTAssertTrue(callbackRan.load(ordering: .relaxed))
             }
-            await loop.run()
-            loop.execute { callbackRan.store(false) }
+            loop.execute { callbackRan.store(false, ordering: .relaxed) }
 
             try await loop.executeInContext {
-                XCTAssertTrue(callbackRan.load())
+                XCTAssertFalse(callbackRan.load(ordering: .relaxed))
+            }
+            try await loop.executeInContext {
+                XCTAssertFalse(callbackRan.load(ordering: .relaxed))
+            }
+        }
+        #else
+        throw XCTSkip()
+        #endif
+    }
+
+    func testTasksScheduledAfterRunDontRun() throws {
+        #if compiler(>=5.5.2) && canImport(_Concurrency)
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        XCTAsyncTest {
+            let callbackRan = ManagedAtomic(false)
+            let loop = NIOAsyncTestingEventLoop()
+            loop.scheduleTask(deadline: loop.now) { callbackRan.store(true, ordering: .relaxed) }
+
+            try await loop.executeInContext {
+                XCTAssertFalse(callbackRan.load(ordering: .relaxed))
+            }
+            await loop.run()
+            loop.scheduleTask(deadline: loop.now) { callbackRan.store(false, ordering: .relaxed) }
+
+            try await loop.executeInContext {
+                XCTAssertTrue(callbackRan.load(ordering: .relaxed))
             }
             await loop.run()
             try await loop.executeInContext {
-                XCTAssertFalse(callbackRan.load())
+                XCTAssertFalse(callbackRan.load(ordering: .relaxed))
+            }
+        }
+        #else
+        throw XCTSkip()
+        #endif
+    }
+
+    func testSubmitRunsImmediately() throws {
+        #if compiler(>=5.5.2) && canImport(_Concurrency)
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        XCTAsyncTest {
+            let callbackRan = ManagedAtomic(false)
+            let loop = NIOAsyncTestingEventLoop()
+            _ = loop.submit { callbackRan.store(true, ordering: .relaxed) }
+
+            try await loop.executeInContext {
+                XCTAssertTrue(callbackRan.load(ordering: .relaxed))
+            }
+            _ = loop.submit { callbackRan.store(false, ordering: .relaxed) }
+
+            try await loop.executeInContext {
+                XCTAssertFalse(callbackRan.load(ordering: .relaxed))
+            }
+            try await loop.executeInContext {
+                XCTAssertFalse(callbackRan.load(ordering: .relaxed))
             }
         }
         #else
@@ -127,16 +182,16 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let callbackRan = NIOAtomic<Bool>.makeAtomic(value: false)
-            let loop = NIOAsyncEmbeddedEventLoop()
-            loop.execute { callbackRan.store(true) }
+            let callbackRan = ManagedAtomic(false)
+            let loop = NIOAsyncTestingEventLoop()
+            loop.scheduleTask(deadline: loop.now) { callbackRan.store(true, ordering: .relaxed) }
 
             try await loop.executeInContext {
-                XCTAssertFalse(callbackRan.load())
+                XCTAssertFalse(callbackRan.load(ordering: .relaxed))
             }
             XCTAssertNoThrow(try loop.syncShutdownGracefully())
             try await loop.executeInContext {
-                XCTAssertTrue(callbackRan.load())
+                XCTAssertTrue(callbackRan.load(ordering: .relaxed))
             }
         }
         #else
@@ -148,16 +203,16 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let callbackRan = NIOAtomic<Bool>.makeAtomic(value: false)
-            let loop = NIOAsyncEmbeddedEventLoop()
-            loop.execute { callbackRan.store(true) }
+            let callbackRan = ManagedAtomic(false)
+            let loop = NIOAsyncTestingEventLoop()
+            loop.scheduleTask(deadline: loop.now) { callbackRan.store(true, ordering: .relaxed) }
 
             try await loop.executeInContext {
-                XCTAssertFalse(callbackRan.load())
+                XCTAssertFalse(callbackRan.load(ordering: .relaxed))
             }
             await loop.shutdownGracefully()
             try await loop.executeInContext {
-                XCTAssertTrue(callbackRan.load())
+                XCTAssertTrue(callbackRan.load(ordering: .relaxed))
             }
         }
         #else
@@ -169,30 +224,30 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let callbackCount = NIOAtomic<Int>.makeAtomic(value: 0)
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let callbackCount = ManagedAtomic(0)
+            let loop = NIOAsyncTestingEventLoop()
             _ = loop.scheduleTask(in: .nanoseconds(5)) {
-                callbackCount.add(1)
+                callbackCount.loadThenWrappingIncrement(ordering: .relaxed)
             }
 
             try await loop.executeInContext {
-                XCTAssertEqual(callbackCount.load(), 0)
+                XCTAssertEqual(callbackCount.load(ordering: .relaxed), 0)
             }
             await loop.advanceTime(by: .nanoseconds(4))
             try await loop.executeInContext {
-                XCTAssertEqual(callbackCount.load(), 0)
+                XCTAssertEqual(callbackCount.load(ordering: .relaxed), 0)
             }
             await loop.advanceTime(by: .nanoseconds(1))
             try await loop.executeInContext {
-                XCTAssertEqual(callbackCount.load(), 1)
+                XCTAssertEqual(callbackCount.load(ordering: .relaxed), 1)
             }
             await loop.advanceTime(by: .nanoseconds(1))
             try await loop.executeInContext {
-                XCTAssertEqual(callbackCount.load(), 1)
+                XCTAssertEqual(callbackCount.load(ordering: .relaxed), 1)
             }
             await loop.advanceTime(by: .hours(1))
             try await loop.executeInContext {
-                XCTAssertEqual(callbackCount.load(), 1)
+                XCTAssertEqual(callbackCount.load(ordering: .relaxed), 1)
             }
         }
         #else
@@ -204,21 +259,21 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let sentinel = NIOAtomic.makeAtomic(value: 0)
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let sentinel = ManagedAtomic(0)
+            let loop = NIOAsyncTestingEventLoop()
             for index in 1...10 {
                 _ = loop.scheduleTask(in: .nanoseconds(Int64(index))) {
-                    sentinel.store(index)
+                    sentinel.store(index, ordering: .relaxed)
                 }
             }
 
             for val in 1...10 {
                 try await loop.executeInContext {
-                    XCTAssertEqual(sentinel.load(), val - 1)
+                    XCTAssertEqual(sentinel.load(ordering: .relaxed), val - 1)
                 }
                 await loop.advanceTime(by: .nanoseconds(1))
                 try await loop.executeInContext {
-                    XCTAssertEqual(sentinel.load(), val)
+                    XCTAssertEqual(sentinel.load(ordering: .relaxed), val)
                 }
             }
         }
@@ -231,22 +286,22 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let sentinel = NIOAtomic.makeAtomic(value: 0)
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let sentinel = ManagedAtomic(0)
+            let loop = NIOAsyncTestingEventLoop()
             _ = loop.scheduleTask(in: .nanoseconds(5)) {
-                sentinel.store(1)
+                sentinel.store(1, ordering: .relaxed)
                 loop.execute {
-                    sentinel.store(2)
+                    sentinel.store(2, ordering: .relaxed)
                 }
             }
 
             await loop.advanceTime(by: .nanoseconds(4))
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 0)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 0)
             }
             await loop.advanceTime(by: .nanoseconds(1))
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 2)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 2)
             }
         }
         #else
@@ -258,41 +313,41 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let sentinel = NIOAtomic.makeAtomic(value: 0)
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let sentinel = ManagedAtomic(0)
+            let loop = NIOAsyncTestingEventLoop()
             _ = loop.scheduleTask(in: .nanoseconds(5)) {
-                sentinel.store(1)
+                sentinel.store(1, ordering: .relaxed)
                 _ = loop.scheduleTask(in: .nanoseconds(3)) {
-                    sentinel.store(2)
+                    sentinel.store(2, ordering: .relaxed)
                 }
                 _ = loop.scheduleTask(in: .nanoseconds(5)) {
-                    sentinel.store(3)
+                    sentinel.store(3, ordering: .relaxed)
                 }
             }
 
             await loop.advanceTime(by: .nanoseconds(4))
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 0)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 0)
             }
             await loop.advanceTime(by: .nanoseconds(1))
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 1)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 1)
             }
             await loop.advanceTime(by: .nanoseconds(2))
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 1)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 1)
             }
             await loop.advanceTime(by: .nanoseconds(1))
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 2)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 2)
             }
             await loop.advanceTime(by: .nanoseconds(1))
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 2)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 2)
             }
             await loop.advanceTime(by: .nanoseconds(1))
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 3)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 3)
             }
         }
         #else
@@ -304,20 +359,20 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let sentinel = NIOAtomic.makeAtomic(value: 0)
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let sentinel = ManagedAtomic(0)
+            let loop = NIOAsyncTestingEventLoop()
             loop.execute {
-                XCTAssertEqual(sentinel.load(), 0)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 0)
                 _ = loop.scheduleTask(in: .nanoseconds(5)) {
-                    XCTAssertEqual(sentinel.load(), 1)
-                    sentinel.store(2)
+                    XCTAssertEqual(sentinel.load(ordering: .relaxed), 1)
+                    sentinel.store(2, ordering: .relaxed)
                 }
-                loop.execute { sentinel.store(1) }
+                loop.execute { sentinel.store(1, ordering: .relaxed) }
             }
 
             await loop.advanceTime(by: .nanoseconds(5))
             try await loop.executeInContext {
-                XCTAssertEqual(sentinel.load(), 2)
+                XCTAssertEqual(sentinel.load(ordering: .relaxed), 2)
             }
         }
         #else
@@ -329,7 +384,7 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let loop = NIOAsyncTestingEventLoop()
             let task = loop.scheduleTask(in: .nanoseconds(10), { XCTFail("Cancelled task ran") })
             _ = loop.scheduleTask(in: .nanoseconds(5)) {
                 task.cancel()
@@ -346,15 +401,15 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let fired = NIOAtomic.makeAtomic(value: false)
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let fired = ManagedAtomic(false)
+            let loop = NIOAsyncTestingEventLoop()
             let task = loop.scheduleTask(in: .nanoseconds(5)) { true }
-            task.futureResult.whenSuccess { fired.store($0) }
+            task.futureResult.whenSuccess { fired.store($0, ordering: .relaxed) }
 
             await loop.advanceTime(by: .nanoseconds(4))
-            XCTAssertFalse(fired.load())
+            XCTAssertFalse(fired.load(ordering: .relaxed))
             await loop.advanceTime(by: .nanoseconds(1))
-            XCTAssertTrue(fired.load())
+            XCTAssertTrue(fired.load(ordering: .relaxed))
         }
         #else
         throw XCTSkip()
@@ -366,8 +421,8 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let err = EmbeddedTestError()
-            let fired = NIOAtomic.makeAtomic(value: false)
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let fired = ManagedAtomic(false)
+            let loop = NIOAsyncTestingEventLoop()
             let task = loop.scheduleTask(in: .nanoseconds(5)) {
                 throw err
             }
@@ -376,13 +431,13 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
             }.recover { caughtErr in
                 XCTAssertTrue(err === caughtErr as? EmbeddedTestError)
             }.whenComplete { (_: Result<Void, Error>) in
-                fired.store(true)
+                fired.store(true, ordering: .relaxed)
             }
 
             await loop.advanceTime(by: .nanoseconds(4))
-            XCTAssertFalse(fired.load())
+            XCTAssertFalse(fired.load(ordering: .relaxed))
             await loop.advanceTime(by: .nanoseconds(1))
-            XCTAssertTrue(fired.load())
+            XCTAssertTrue(fired.load(ordering: .relaxed))
         }
         #else
         throw XCTSkip()
@@ -393,15 +448,15 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            // This test validates that the ordering of task firing on NIOAsyncEmbeddedEventLoop via
+            // This test validates that the ordering of task firing on NIOAsyncTestingEventLoop via
             // advanceTime(by:) is the same as on MultiThreadedEventLoopGroup: specifically, that tasks run via
             // schedule that expire "now" all run at the same time, and that any work they schedule is run
             // after all such tasks expire.
-            let loop = NIOAsyncEmbeddedEventLoop()
+            let loop = NIOAsyncTestingEventLoop()
             let lock = Lock()
             var firstScheduled: Scheduled<Void>? = nil
             var secondScheduled: Scheduled<Void>? = nil
-            let orderingCounter = NIOAtomic.makeAtomic(value: 0)
+            let orderingCounter = ManagedAtomic(0)
 
             // Here's the setup. First, we'll set up two scheduled tasks to fire in 5 nanoseconds. Each of these
             // will attempt to cancel the other, but the first one scheduled will fire first. Additionally, each will execute{} a single
@@ -469,7 +524,7 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
             await loop.advanceTime(by: .nanoseconds(10))
 
             // Now the final value should be 6.
-            XCTAssertEqual(orderingCounter.load(), 6)
+            XCTAssertEqual(orderingCounter.load(ordering: .relaxed), 6)
         }
         #else
         throw XCTSkip()
@@ -480,7 +535,7 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = NIOAsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncTestingEventLoop()
             defer {
                 XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
             }
@@ -500,27 +555,8 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
             let scheduled = make()
             scheduled.cancel()
             assert(weakThing == nil, within: .seconds(1))
-            await XCTAssertThrowsError(try await eventLoop.awaitFuture(scheduled.futureResult, timeout: .seconds(1))) { error in
+            await XCTAssertThrowsError(try await scheduled.futureResult.get()) { error in
                 XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
-            }
-        }
-        #else
-        throw XCTSkip()
-        #endif
-    }
-
-    func testWaitingForFutureCanTimeOut() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
-        XCTAsyncTest {
-            let eventLoop = NIOAsyncEmbeddedEventLoop()
-            defer {
-                XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
-            }
-            let promise = eventLoop.makePromise(of: Void.self)
-
-            await XCTAssertThrowsError(try await eventLoop.awaitFuture(promise.futureResult, timeout: .milliseconds(1))) { error in
-                XCTAssertEqual(NIOAsyncEmbeddedEventLoopError.timeoutAwaitingFuture, error as? NIOAsyncEmbeddedEventLoopError)
             }
         }
         #else
@@ -532,22 +568,22 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = NIOAsyncEmbeddedEventLoop()
-            let tasksRun = NIOAtomic.makeAtomic(value: 0)
+            let eventLoop = NIOAsyncTestingEventLoop()
+            let tasksRun = ManagedAtomic(0)
             let startTime = eventLoop.now
 
             eventLoop.scheduleTask(in: .nanoseconds(3141592)) {
                 XCTAssertEqual(eventLoop.now, startTime + .nanoseconds(3141592))
-                tasksRun.add(1)
+                tasksRun.wrappingIncrement(ordering: .relaxed)
             }
 
             eventLoop.scheduleTask(in: .seconds(3141592)) {
                 XCTAssertEqual(eventLoop.now, startTime + .seconds(3141592))
-                tasksRun.add(1)
+                tasksRun.wrappingIncrement(ordering: .relaxed)
             }
 
             await eventLoop.shutdownGracefully()
-            XCTAssertEqual(tasksRun.load(), 2)
+            XCTAssertEqual(tasksRun.load(ordering: .relaxed), 2)
         }
         #else
         throw XCTSkip()
@@ -558,19 +594,19 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = NIOAsyncEmbeddedEventLoop()
-            let tasksRun = NIOAtomic.makeAtomic(value: 0)
+            let eventLoop = NIOAsyncTestingEventLoop()
+            let tasksRun = ManagedAtomic(0)
 
             func scheduleNowAndIncrement() {
                 eventLoop.scheduleTask(in: .nanoseconds(0)) {
-                    tasksRun.add(1)
+                    tasksRun.wrappingIncrement(ordering: .relaxed)
                     scheduleNowAndIncrement()
                 }
             }
 
             scheduleNowAndIncrement()
             await eventLoop.shutdownGracefully()
-            XCTAssertEqual(tasksRun.load(), 1)
+            XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
         }
         #else
         throw XCTSkip()
@@ -581,16 +617,16 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = NIOAsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncTestingEventLoop()
             let deadline = NIODeadline.uptimeNanoseconds(0) + .seconds(42)
 
-            let tasksRun = NIOAtomic.makeAtomic(value: 0)
+            let tasksRun = ManagedAtomic(0)
             eventLoop.scheduleTask(deadline: deadline) {
-                tasksRun.add(1)
+                tasksRun.loadThenWrappingIncrement(ordering: .relaxed)
             }
 
             await eventLoop.advanceTime(to: deadline)
-            XCTAssertEqual(tasksRun.load(), 1)
+            XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
         }
         #else
         throw XCTSkip()
@@ -601,24 +637,24 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = NIOAsyncEmbeddedEventLoop()
+            let eventLoop = NIOAsyncTestingEventLoop()
 
-            let tasksRun = NIOAtomic.makeAtomic(value: 0)
+            let tasksRun = ManagedAtomic(0)
             eventLoop.scheduleTask(deadline: .uptimeNanoseconds(0) + .seconds(42)) {
-                tasksRun.add(1)
+                tasksRun.loadThenWrappingIncrement(ordering: .relaxed)
             }
 
             // t=40s
             await eventLoop.advanceTime(to: .uptimeNanoseconds(0) + .seconds(40))
-            XCTAssertEqual(tasksRun.load(), 0)
+            XCTAssertEqual(tasksRun.load(ordering: .relaxed), 0)
 
             // t=40s (still)
             await eventLoop.advanceTime(to: .distantPast)
-            XCTAssertEqual(tasksRun.load(), 0)
+            XCTAssertEqual(tasksRun.load(ordering: .relaxed), 0)
 
             // t=42s
             await eventLoop.advanceTime(by: .seconds(2))
-            XCTAssertEqual(tasksRun.load(), 1)
+            XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
         }
         #else
         throw XCTSkip()
@@ -629,26 +665,26 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = NIOAsyncEmbeddedEventLoop()
-            let counter = NIOAtomic.makeAtomic(value: 0)
+            let eventLoop = NIOAsyncTestingEventLoop()
+            let counter = ManagedAtomic(0)
 
             eventLoop.execute {
-                let original = counter.add(1)
+                let original = counter.loadThenWrappingIncrement(ordering: .relaxed)
                 XCTAssertEqual(original, 0)
             }
 
             eventLoop.execute {
-                let original = counter.add(1)
+                let original = counter.loadThenWrappingIncrement(ordering: .relaxed)
                 XCTAssertEqual(original, 1)
             }
 
             eventLoop.execute {
-                let original = counter.add(1)
+                let original = counter.loadThenWrappingIncrement(ordering: .relaxed)
                 XCTAssertEqual(original, 2)
             }
 
             await eventLoop.run()
-            XCTAssertEqual(counter.load(), 3)
+            XCTAssertEqual(counter.load(ordering: .relaxed), 3)
         }
         #else
         throw XCTSkip()
@@ -659,26 +695,26 @@ final class NIOAsyncEmbeddedEventLoopTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
-            let eventLoop = NIOAsyncEmbeddedEventLoop()
-            let counter = NIOAtomic.makeAtomic(value: 0)
+            let eventLoop = NIOAsyncTestingEventLoop()
+            let counter = ManagedAtomic(0)
 
             eventLoop.scheduleTask(in: .seconds(1)) {
-                let original = counter.add(1)
+                let original = counter.loadThenWrappingIncrement(ordering: .relaxed)
                 XCTAssertEqual(original, 1)
             }
 
             eventLoop.scheduleTask(in: .milliseconds(1)) {
-                let original = counter.add(1)
+                let original = counter.loadThenWrappingIncrement(ordering: .relaxed)
                 XCTAssertEqual(original, 0)
             }
 
             eventLoop.scheduleTask(in: .seconds(1)) {
-                let original = counter.add(1)
+                let original = counter.loadThenWrappingIncrement(ordering: .relaxed)
                 XCTAssertEqual(original, 2)
             }
 
             await eventLoop.advanceTime(by: .seconds(1))
-            XCTAssertEqual(counter.load(), 3)
+            XCTAssertEqual(counter.load(ordering: .relaxed), 3)
         }
         #else
         throw XCTSkip()

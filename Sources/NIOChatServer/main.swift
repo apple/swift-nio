@@ -85,7 +85,7 @@ final class ChatHandler: ChannelInboundHandler {
         var buffer = context.channel.allocator.buffer(capacity: read.readableBytes + 64)
         buffer.writeString("(\(context.remoteAddress!)) - ")
         buffer.writeBuffer(&read)
-        self.channelsSyncQueue.async {
+        self.channelsSyncQueue.async { [buffer] in
             // broadcast the message to all the connected clients except the one that wrote it.
             self.writeToAll(channels: self.channels.filter { id != $0.key }, buffer: buffer)
         }
@@ -108,6 +108,11 @@ final class ChatHandler: ChannelInboundHandler {
         channels.forEach { $0.value.writeAndFlush(buffer, promise: nil) }
     }
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+/// access to the internal state is protected by `channelsSyncQueue`
+extension ChatHandler: @unchecked Sendable {}
+#endif
 
 // We need to share the same ChatHandler for all as it keeps track of all
 // connected clients. For this ChatHandler MUST be thread-safe!

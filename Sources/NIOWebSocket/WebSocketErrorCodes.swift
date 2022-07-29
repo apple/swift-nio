@@ -19,7 +19,7 @@ import NIOCore
 /// This enum provides names to all non-reserved code numbers,
 /// to avoid users needing to remember the specific numerical values
 /// of those codes.
-public enum WebSocketErrorCode {
+public enum WebSocketErrorCode: NIOSendable {
     /// Indicates a normal closure, meaning that the purpose for
     /// which the connection was established has been fulfilled.
     /// Corresponds to code 1000.

@@ -15,6 +15,7 @@
 import NIOCore
 import NIOConcurrencyHelpers
 import Dispatch
+import Atomics
 
 struct NIORegistration: Registration {
     enum ChannelType {
@@ -33,7 +34,7 @@ struct NIORegistration: Registration {
     var registrationID: SelectorRegistrationID
 }
 
-private let nextEventLoopGroupID = NIOAtomic.makeAtomic(value: 0)
+private let nextEventLoopGroupID = ManagedAtomic(0)
 
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
 typealias ThreadInitializer = (NIOThread) -> Void
@@ -52,17 +53,22 @@ typealias ThreadInitializer = (NIOThread) -> Void
 ///            test. A good place to start a `MultiThreadedEventLoopGroup` is the `setUp` method of your `XCTestCase`
 ///            subclass, a good place to shut it down is the `tearDown` method.
 public final class MultiThreadedEventLoopGroup: EventLoopGroup {
-
+    #if swift(>=5.7)
+    private typealias ShutdownGracefullyCallback = @Sendable (Error?) -> Void
+    #else
+    private typealias ShutdownGracefullyCallback = (Error?) -> Void
+    #endif
+    
     private enum RunState {
         case running
-        case closing([(DispatchQueue, (Error?) -> Void)])
+        case closing([(DispatchQueue, ShutdownGracefullyCallback)])
         case closed(Error?)
     }
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
 
     private let myGroupID: Int
-    private let index = NIOAtomic<Int>.makeAtomic(value: 0)
+    private let index = ManagedAtomic<Int>(0)
     private var eventLoops: [SelectableEventLoop]
     private let shutdownLock: Lock = Lock()
     private var runState: RunState = .running
@@ -148,7 +154,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///     - threadInitializers: The `ThreadInitializer`s to use.
     internal init(threadInitializers: [ThreadInitializer],
                   selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration> = NIOPosix.Selector<NIORegistration>.init) {
-        let myGroupID = nextEventLoopGroupID.add(1)
+        let myGroupID = nextEventLoopGroupID.loadThenWrappingIncrement(ordering: .relaxed)
         self.myGroupID = myGroupID
         var idx = 0
         self.eventLoops = [] // Just so we're fully initialised and can vend `self` to the `SelectableEventLoop`.
@@ -187,7 +193,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///
     /// - returns: The next `EventLoop` to use.
     public func next() -> EventLoop {
-        return eventLoops[abs(index.add(1) % eventLoops.count)]
+        return eventLoops[abs(index.loadThenWrappingIncrement(ordering: .relaxed) % eventLoops.count)]
     }
 
     /// Returns the current `EventLoop` if we are on an `EventLoop` of this `MultiThreadedEventLoopGroup` instance.
@@ -206,6 +212,22 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
     }
 
+    #if swift(>=5.7)
+    /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
+    /// shut down and release their resources.
+    ///
+    /// Even though calling `shutdownGracefully` more than once should be avoided, it is safe to do so and execution
+    /// of the `handler` is guaranteed.
+    ///
+    /// - parameters:
+    ///    - queue: The `DispatchQueue` to run `handler` on when the shutdown operation completes.
+    ///    - handler: The handler which is called after the shutdown operation completes. The parameter will be `nil`
+    ///               on success and contain the `Error` otherwise.
+    @preconcurrency
+    public func shutdownGracefully(queue: DispatchQueue, _ handler: @escaping @Sendable (Error?) -> Void) {
+        self._shutdownGracefully(queue: queue, handler)
+    }
+    #else
     /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
     /// shut down and release their resources.
     ///
@@ -217,6 +239,11 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///    - handler: The handler which is called after the shutdown operation completes. The parameter will be `nil`
     ///               on success and contain the `Error` otherwise.
     public func shutdownGracefully(queue: DispatchQueue, _ handler: @escaping (Error?) -> Void) {
+        self._shutdownGracefully(queue: queue, handler)
+    }
+    #endif
+    
+    private func _shutdownGracefully(queue: DispatchQueue, _ handler: @escaping ShutdownGracefullyCallback) {
         // This method cannot perform its final cleanup using EventLoopFutures, because it requires that all
         // our event loops still be alive, and they may not be. Instead, we use Dispatch to manage
         // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
@@ -271,28 +298,28 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             for loop in self.eventLoops {
                 loop.syncFinaliseClose(joinThread: true)
             }
-            var overallError: Error?
-            var queueCallbackPairs: [(DispatchQueue, (Error?) -> Void)]? = nil
-            self.shutdownLock.withLock {
+            let (overallError, queueCallbackPairs): (Error?, [(DispatchQueue, ShutdownGracefullyCallback)]) = self.shutdownLock.withLock {
                 switch self.runState {
                 case .closed, .running:
                     preconditionFailure("MultiThreadedEventLoopGroup in illegal state when closing: \(self.runState)")
                 case .closing(let callbacks):
-                    queueCallbackPairs = callbacks
-                    switch result {
-                    case .success:
-                        overallError = nil
-                    case .failure(let error):
-                        overallError = error
-                    }
+                    let overallError: Error? = {
+                        switch result {
+                        case .success:
+                            return nil
+                        case .failure(let error):
+                            return error
+                        }
+                    }()
                     self.runState = .closed(overallError)
+                    return (overallError, callbacks)
                 }
             }
 
             queue.async {
                 handler(overallError)
             }
-            for queueCallbackPair in queueCallbackPairs! {
+            for queueCallbackPair in queueCallbackPairs {
                 queueCallbackPair.0.async {
                     queueCallbackPair.1(overallError)
                 }
@@ -330,6 +357,10 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
     }
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+extension MultiThreadedEventLoopGroup: @unchecked Sendable {}
+#endif
 
 extension MultiThreadedEventLoopGroup: CustomStringConvertible {
     public var description: String {
