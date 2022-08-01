@@ -75,7 +75,7 @@ public struct NIOBackPressuredAsyncSequence<
     Element,
     Strategy: NIOBackPressuredAsyncSequenceStrategy,
     Delegate: NIOBackPressuredAsyncSequenceDelegate
-> {
+>: NIOSendable {
     /// Simple struct for the return type of ``NIOBackPressuredAsyncSequence/makeSourceAndSequence(backPressureStrategy:delegate:)``.
     public struct NewSequence {
         /// The source of the ``NIOBackPressuredAsyncSequence`` used to yield and finish.
@@ -96,8 +96,10 @@ public struct NIOBackPressuredAsyncSequence<
     /// This class is needed to hook the deinit to observe once all references to the ``NIOBackPressuredAsyncSequence`` are dropped.
     ///
     /// If we get move-only types we should be able to drop this class and use the `deinit` of the ``AsyncIterator`` struct itself.
+    ///
+    /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` itself.
     @usableFromInline
-    /* fileprivate */ internal final class InternalClass {
+    /* fileprivate */ internal final class InternalClass: @unchecked NIOSendable {
         @usableFromInline
         internal let storage: Storage
 

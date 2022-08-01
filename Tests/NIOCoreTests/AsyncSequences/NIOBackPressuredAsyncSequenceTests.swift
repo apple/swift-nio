@@ -146,7 +146,8 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
-        async let element = self.sequence.first { _ in true }
+        let sequence = try XCTUnwrap(self.sequence)
+        async let element = sequence.first { _ in true }
         try await Task.sleep(nanoseconds: 1_000_000)
         XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
 
@@ -162,7 +163,8 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
-        async let element = self.sequence.first { _ in true }
+        let sequence = try XCTUnwrap(self.sequence)
+        async let element = sequence.first { _ in true }
         try await Task.sleep(nanoseconds: 1_000_000)
         XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
 
@@ -178,9 +180,10 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
-            _ = await self.sequence.first { _ in true }
+            _ = await sequence.first { _ in true }
         }
         try await Task.sleep(nanoseconds: 1_000_000)
         XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
@@ -196,9 +199,10 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
-            _ = await self.sequence.first { _ in true }
+            _ = await sequence.first { _ in true }
         }
         try await Task.sleep(nanoseconds: 1_000_000)
         XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
@@ -251,7 +255,8 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
     func testFinish_whenStreaming_andSuspended() async throws {
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
-        async let element = self.sequence.first { _ in true }
+        let sequence = try XCTUnwrap(self.sequence)
+        async let element = sequence.first { _ in true }
         try await Task.sleep(nanoseconds: 1_000_000)
 
         self.source.finish()
@@ -298,8 +303,9 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
     func testTaskCancel_whenStreaming_andSuspended() async throws {
         // We are registering our demand and sleeping a bit to make
         // sure our task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
         let task: Task<Int?, Never> = Task {
-            let iterator = self.sequence.makeAsyncIterator()
+            let iterator = sequence.makeAsyncIterator()
             return await iterator.next()
         }
         try await Task.sleep(nanoseconds: 1_000_000)
@@ -314,8 +320,9 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
     func testTaskCancel_whenStreaming_andNotSuspended() async throws {
         // We are registering our demand and sleeping a bit to make
         // sure our task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
         let task: Task<Int?, Never> = Task {
-            let iterator = self.sequence.makeAsyncIterator()
+            let iterator = sequence.makeAsyncIterator()
             return await iterator.next()
         }
         try await Task.sleep(nanoseconds: 1_000_000)
@@ -332,8 +339,9 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
     func testTaskCancel_whenSourceFinished() async throws {
         // We are registering our demand and sleeping a bit to make
         // sure our task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
         let task: Task<Int?, Never> = Task {
-            let iterator = self.sequence.makeAsyncIterator()
+            let iterator = sequence.makeAsyncIterator()
             return await iterator.next()
         }
         try await Task.sleep(nanoseconds: 1_000_000)
@@ -347,12 +355,13 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
         XCTAssertNil(value)
     }
 
-    func testTaskCancel_whenStreaming_andTaskIsAlreadyCancelled() async {
+    func testTaskCancel_whenStreaming_andTaskIsAlreadyCancelled() async throws {
+        let sequence = try XCTUnwrap(self.sequence)
         let task: Task<Int?, Never> = Task {
             // We are sleeping here to allow some time for us to cancel the task.
             // Once the Task is cancelled we will call `next()`
             try? await Task.sleep(nanoseconds: 1_000_000)
-            let iterator = self.sequence.makeAsyncIterator()
+            let iterator = sequence.makeAsyncIterator()
             return await iterator.next()
         }
 
@@ -369,9 +378,10 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
         self.backPressureStrategy.didNextHandler = { _ in true }
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
-            _ = await self.sequence.first { _ in true }
+            _ = await sequence.first { _ in true }
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
@@ -383,9 +393,10 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
         self.backPressureStrategy.didNextHandler = { _ in false }
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
-            _ = await self.sequence.first { _ in true }
+            _ = await sequence.first { _ in true }
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
@@ -399,9 +410,10 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
-            _ = await self.sequence.first { _ in true }
+            _ = await sequence.first { _ in true }
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
@@ -415,9 +427,10 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
-            _ = await self.sequence.first { _ in true }
+            _ = await sequence.first { _ in true }
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
