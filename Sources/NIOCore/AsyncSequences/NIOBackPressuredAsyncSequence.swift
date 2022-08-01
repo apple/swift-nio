@@ -305,7 +305,7 @@ extension NIOBackPressuredAsyncSequence {
 
         @inlinable
         /* fileprivate */ internal func sequenceDeinitialized() {
-            let delegate = self.lock.withLock {
+            let delegate: Delegate? = self.lock.withLock {
                 let action = self.stateMachine.sequenceDeinitialized()
 
                 switch action {
@@ -336,7 +336,7 @@ extension NIOBackPressuredAsyncSequence {
 
         @inlinable
         /* fileprivate */ internal func iteratorDeinitialized() {
-            let delegate = self.lock.withLock {
+            let delegate: Delegate? = self.lock.withLock {
                 let action = self.stateMachine.iteratorDeinitialized()
 
                 switch action {
@@ -390,7 +390,7 @@ extension NIOBackPressuredAsyncSequence {
 
         @inlinable
         /* fileprivate */ internal func finish() {
-            let delegate = self.lock.withLock {
+            let delegate: Delegate? = self.lock.withLock {
                 let action = self.stateMachine.finish()
 
                 switch action {
@@ -472,7 +472,7 @@ extension NIOBackPressuredAsyncSequence {
                     }
                 }
             } onCancel: {
-                let delegate = self.lock.withLock {
+                let delegate: Delegate? = self.lock.withLock {
                     let action = self.stateMachine.cancelled()
 
                     switch action {
