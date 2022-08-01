@@ -19,11 +19,11 @@ import NIOConcurrencyHelpers
 ///
 /// A back-pressure strategy is invoked when new elements are yielded to the sequence or
 /// when a ``NIOBackPressuredAsyncSequence/AsyncIterator`` requested the next value. The responsibility of the strategy is
-/// to determine whether more elements need to be demanded .
+/// to determine whether more elements need to be produced .
 ///
-/// If more elements need to be requested, either the ``NIOBackPressuredAsyncSequenceSourceDelegate/demand()``
+/// If more elements need to be produced, either the ``NIOBackPressuredAsyncSequenceDelegate/produceMore()``
 /// method will be called or a ``NIOBackPressuredAsyncSequence/Source/YieldResult`` will be returned that indicates
-/// more demand.
+/// to produce more.
 ///
 /// - Important: The methods of this protocol are guaranteed to be called serially. Furthermore, the implementation of these
 /// methods **MUST NOT** do any locking or call out to any other Task/Thread.
@@ -31,25 +31,25 @@ public protocol NIOBackPressuredAsyncSequenceStrategy {
     /// This method is called after new elements were yielded by the producer to the source.
     ///
     /// - Parameter bufferDepth: The current depth of the internal buffer.
-    /// - Returns: Returns whether more elements should be demanded.
+    /// - Returns: Returns whether more elements should be produced.
     mutating func didYield(bufferDepth: Int) -> Bool
 
     /// This method is called after the `Subscriber` consumed an element.
     /// More specifically this method is called after `next` was called on an iterator of the ``NIOBackPressuredAsyncSequence``.
     ///
     /// - Parameter bufferDepth: The current depth of the internal buffer.
-    /// - Returns: Returns whether new elements should be demanded.
+    /// - Returns: Returns whether the producer should produce more elements.
     mutating func didConsume(bufferDepth: Int) -> Bool
 }
 
 /// The delegate of ``NIOBackPressuredAsyncSequence``.
 public protocol NIOBackPressuredAsyncSequenceDelegate {
     /// This method is called once the back-pressure strategy of the ``NIOBackPressuredAsyncSequence`` determined
-    /// that elements from the source need to be demanded and there is no outstanding demand.
+    /// that the producer needs to produce more elements.
     ///
     /// - Important: This is only called as a result of a `Subscriber` is calling ``NIOBackPressuredAsyncSequence/AsyncIterator/next()``.
     /// It is never called as a result of a producer calling ``NIOBackPressuredAsyncSequence/Source/yield(_:)``.
-    func demand()
+    func produceMore()
 
     /// This method is called once the ``NIOBackPressuredAsyncSequence`` is terminated.
     ///
@@ -66,7 +66,7 @@ public protocol NIOBackPressuredAsyncSequenceDelegate {
 /// The goal of this sequence is to bridge a stream of elements from the _synchronous_ world
 /// (e.g. elements from a ``Channel`` pipeline) into the _asynchronous_ world.
 /// Furthermore, it provides facilities to implement a back-pressure strategy which
-/// observes the number of elements that are yielded and demanded. This allows to signal the source to request more data.
+/// observes the number of elements that are yielded and consumed. This allows to signal the source to request more data.
 ///
 /// - Important: This sequence is a unicast sequence that only supports a single ``NIOBackPressuredAsyncSequence/AsyncIterator``.
 /// If you try to create more than one iterator it will result in a `fatalError`.
@@ -240,7 +240,7 @@ extension NIOBackPressuredAsyncSequence {
         ///
         /// - Parameter sequence: The sequence to yield.
         /// - Returns: A ``NIOBackPressuredAsyncSequence/Source/YieldResult`` that indicates if the yield was successfull
-        /// and if more elements should be demanded.
+        /// and if more elements should be produced.
         @inlinable
         public func yield<S: Sequence>(_ sequence: S) -> YieldResult where S.Element == Element {
             self.storage.yield(sequence)
@@ -259,7 +259,7 @@ extension NIOBackPressuredAsyncSequence {
         ///
         /// - Parameter element: The element to yield.
         /// - Returns: A ``NIOBackPressuredAsyncSequence/Source/YieldResult`` that indicates if the yield was successfull
-        /// and if more elements should be demanded.
+        /// and if more elements should be produced.
         @inlinable
         public func yield(_ element: Element) -> YieldResult {
             self.yield(CollectionOfOne(element))
@@ -362,16 +362,16 @@ extension NIOBackPressuredAsyncSequence {
                 let action = self.stateMachine.yield(sequence)
 
                 switch action {
-                case .returnDemandMore:
+                case .returnProduceMore:
                     return .produceMore
 
-                case .returnStopDemanding:
+                case .returnStopProducing:
                     return .stopProducing
 
                 case .returnDropped:
                     return .dropped
 
-                case .resumeContinuationAndReturnDemandMore(let continuation, let element):
+                case .resumeContinuationAndReturnProduceMore(let continuation, let element):
                     // It is safe to resume the continuation while holding the lock
                     // since the task will get enqueued on its executor and the resume method
                     // is returning immediately
@@ -379,7 +379,7 @@ extension NIOBackPressuredAsyncSequence {
 
                     return .produceMore
 
-                case .resumeContinuationAndReturnStopDemanding(let continuation, let element):
+                case .resumeContinuationAndReturnStopProducing(let continuation, let element):
                     // It is safe to resume the continuation while holding the lock
                     // since the task will get enqueued on its executor and the resume method
                     // is returning immediately
@@ -435,11 +435,11 @@ extension NIOBackPressuredAsyncSequence {
                     self.lock.unlock()
                     return element
 
-                case .returnElementAndCallDemand(let element):
+                case .returnElementAndCallProduceMore(let element):
                     let delegate = self.delegate
                     self.lock.unlock()
 
-                    delegate?.demand()
+                    delegate?.produceMore()
 
                     return element
 
@@ -462,11 +462,11 @@ extension NIOBackPressuredAsyncSequence {
                         let action = self.stateMachine.next(for: continuation)
 
                         switch action {
-                        case .callDemand:
+                        case .callProduceMore:
                             let delegate = delegate
                             self.lock.unlock()
 
-                            delegate?.demand()
+                            delegate?.produceMore()
 
                         case .none:
                             self.lock.unlock()
@@ -690,19 +690,19 @@ extension NIOBackPressuredAsyncSequence {
         /// Actions returned by `yield()`.
         @usableFromInline
         enum YieldAction {
-            /// Indicates that ``NIOBackPressuredAsyncSequence/Source/YieldResult/demandMore`` should be returned.
-            case returnDemandMore
-            /// Indicates that ``NIOBackPressuredAsyncSequence/Source/YieldResult/stopDemanding`` should be returned.
-            case returnStopDemanding
+            /// Indicates that ``NIOBackPressuredAsyncSequence/Source/YieldResult/produceMore`` should be returned.
+            case returnProduceMore
+            /// Indicates that ``NIOBackPressuredAsyncSequence/Source/YieldResult/stopProducing`` should be returned.
+            case returnStopProducing
             /// Indicates that the continuation should be resumed and
-            /// ``NIOBackPressuredAsyncSequence/Source/YieldResult/demandMore`` should be returned.
-            case resumeContinuationAndReturnDemandMore(
+            /// ``NIOBackPressuredAsyncSequence/Source/YieldResult/produceMore`` should be returned.
+            case resumeContinuationAndReturnProduceMore(
                 continuation: CheckedContinuation<Element?, Never>,
                 element: Element
             )
             /// Indicates that the continuation should be resumed and
-            /// ``NIOBackPressuredAsyncSequence/Source/YieldResult/stopDemanding`` should be returned.
-            case resumeContinuationAndReturnStopDemanding(
+            /// ``NIOBackPressuredAsyncSequence/Source/YieldResult/stopProducing`` should be returned.
+            case resumeContinuationAndReturnStopProducing(
                 continuation: CheckedContinuation<Element?, Never>,
                 element: Element
             )
@@ -710,22 +710,22 @@ extension NIOBackPressuredAsyncSequence {
             case returnDropped
 
             @usableFromInline
-            init(shouldDemandMore: Bool, continuationAndElement: (CheckedContinuation<Element?, Never>, Element)? = nil) {
-                switch (shouldDemandMore, continuationAndElement) {
+            init(shouldProduceMore: Bool, continuationAndElement: (CheckedContinuation<Element?, Never>, Element)? = nil) {
+                switch (shouldProduceMore, continuationAndElement) {
                 case (true, .none):
-                    self = .returnDemandMore
+                    self = .returnProduceMore
 
                 case (false, .none):
-                    self = .returnStopDemanding
+                    self = .returnStopProducing
 
                 case (true, .some((let continuation, let element))):
-                    self = .resumeContinuationAndReturnDemandMore(
+                    self = .resumeContinuationAndReturnProduceMore(
                         continuation: continuation,
                         element: element
                     )
 
                 case (false, .some((let continuation, let element))):
-                    self = .resumeContinuationAndReturnStopDemanding(
+                    self = .resumeContinuationAndReturnStopProducing(
                         continuation: continuation,
                         element: element
                     )
@@ -738,17 +738,17 @@ extension NIOBackPressuredAsyncSequence {
             switch self.state {
             case .initial(var backPressureStrategy, let iteratorInitialized):
                 let buffer = CircularBuffer<Element>(sequence)
-                let shouldDemandMore = backPressureStrategy.didYield(bufferDepth: buffer.count)
+                let shouldProduceMore = backPressureStrategy.didYield(bufferDepth: buffer.count)
 
                 self.state = .streaming(
                     backPressureStrategy: backPressureStrategy,
                     buffer: buffer,
                     continuation: nil,
-                    hasOutstandingDemand: shouldDemandMore,
+                    hasOutstandingDemand: shouldProduceMore,
                     iteratorInitialized: iteratorInitialized
                 )
 
-                return .init(shouldDemandMore: shouldDemandMore)
+                return .init(shouldProduceMore: shouldProduceMore)
 
             case .streaming(var backPressureStrategy, var buffer, .some(let continuation), _, let iteratorInitialized):
                 // The buffer should always be empty if we hold a continuation
@@ -758,7 +758,7 @@ extension NIOBackPressuredAsyncSequence {
 
                 buffer.append(contentsOf: sequence)
                 let element = buffer.popFirst()
-                let shouldDemandMore = backPressureStrategy.didYield(bufferDepth: buffer.count)
+                let shouldProduceMore = backPressureStrategy.didYield(bufferDepth: buffer.count)
 
                 if let element = element {
                     // We have an element and can resume the continuation
@@ -766,39 +766,39 @@ extension NIOBackPressuredAsyncSequence {
                         backPressureStrategy: backPressureStrategy,
                         buffer: buffer,
                         continuation: nil, // Setting this to nil since we are resuming the continuation
-                        hasOutstandingDemand: shouldDemandMore,
+                        hasOutstandingDemand: shouldProduceMore,
                         iteratorInitialized: iteratorInitialized
                     )
 
-                    return .init(shouldDemandMore: shouldDemandMore, continuationAndElement: (continuation, element))
+                    return .init(shouldProduceMore: shouldProduceMore, continuationAndElement: (continuation, element))
                 } else {
                     self.state = .streaming(
                         backPressureStrategy: backPressureStrategy,
                         buffer: buffer,
                         continuation: continuation,
-                        hasOutstandingDemand: shouldDemandMore,
+                        hasOutstandingDemand: shouldProduceMore,
                         iteratorInitialized: iteratorInitialized
                     )
 
                     // This is weird somebody yielded an empty sequence but we can handle it
-                    return .init(shouldDemandMore: shouldDemandMore)
+                    return .init(shouldProduceMore: shouldProduceMore)
                 }
 
             case .streaming(var backPressureStrategy, var buffer, continuation: .none, _, let iteratorInitialized):
                 self.state = .modifying
 
                 buffer.append(contentsOf: sequence)
-                let shouldDemandMore = backPressureStrategy.didYield(bufferDepth: buffer.count)
+                let shouldProduceMore = backPressureStrategy.didYield(bufferDepth: buffer.count)
 
                 self.state = .streaming(
                     backPressureStrategy: backPressureStrategy,
                     buffer: buffer,
                     continuation: nil,
-                    hasOutstandingDemand: shouldDemandMore,
+                    hasOutstandingDemand: shouldProduceMore,
                     iteratorInitialized: iteratorInitialized
                 )
 
-                return .init(shouldDemandMore: shouldDemandMore)
+                return .init(shouldProduceMore: shouldProduceMore)
 
             case .sourceFinished, .finished:
                 // If the source has finished we are dropping the elements.
@@ -914,8 +914,8 @@ extension NIOBackPressuredAsyncSequence {
             /// Indicates that the element should be returned to the caller.
             case returnElement(Element)
             /// Indicates that the element should be returned to the caller and
-            /// that ``NIOBackPressuredAsyncSequenceDelegate/demand()`` should be called.
-            case returnElementAndCallDemand(Element)
+            /// that ``NIOBackPressuredAsyncSequenceDelegate/produceMore()`` should be called.
+            case returnElementAndCallProduceMore(Element)
             /// Indicates that the element should be returned to the caller and
             /// that ``NIOBackPressuredAsyncSequenceDelegate/didTerminate()`` should be called.
             case returnElementAndCallDidTerminate(Element)
@@ -951,19 +951,19 @@ extension NIOBackPressuredAsyncSequence {
                 if let element = buffer.popFirst() {
                     // We have an element to fulfil the demand right away.
 
-                    let shouldDemand = backPressureStrategy.didConsume(bufferDepth: buffer.count)
+                    let shouldProduceMore = backPressureStrategy.didConsume(bufferDepth: buffer.count)
 
                     self.state = .streaming(
                         backPressureStrategy: backPressureStrategy,
                         buffer: buffer,
                         continuation: nil,
-                        hasOutstandingDemand: shouldDemand,
+                        hasOutstandingDemand: shouldProduceMore,
                         iteratorInitialized: iteratorInitialized
                     )
 
-                    if shouldDemand && !hasOutstandingDemand {
+                    if shouldProduceMore && !hasOutstandingDemand {
                         // We didn't have any demand but now we do, so we need to inform the delegate.
-                        return .returnElementAndCallDemand(element)
+                        return .returnElementAndCallProduceMore(element)
                     } else {
                         // We don't have any new demand, so we can just return the element.
                         return .returnElement(element)
@@ -1018,8 +1018,8 @@ extension NIOBackPressuredAsyncSequence {
         /// Actions returned by `next(for:)`.
         @usableFromInline
         enum NextForContinuationAction {
-            /// Indicates that ``NIOBackPressuredAsyncSequenceDelegate/demand()`` should be called.
-            case callDemand
+            /// Indicates that ``NIOBackPressuredAsyncSequenceDelegate/produceMore()`` should be called.
+            case callProduceMore
             /// Indicates that nothing should be done.
             case none
         }
@@ -1035,18 +1035,18 @@ extension NIOBackPressuredAsyncSequence {
                 precondition(buffer.isEmpty)
 
                 self.state = .modifying
-                let shouldDemand = backPressureStrategy.didConsume(bufferDepth: buffer.count)
+                let shouldProduceMore = backPressureStrategy.didConsume(bufferDepth: buffer.count)
 
                 self.state = .streaming(
                     backPressureStrategy: backPressureStrategy,
                     buffer: buffer,
                     continuation: continuation,
-                    hasOutstandingDemand: shouldDemand,
+                    hasOutstandingDemand: shouldProduceMore,
                     iteratorInitialized: iteratorInitialized
                 )
 
-                if shouldDemand && !hasOutstandingDemand {
-                    return .callDemand
+                if shouldProduceMore && !hasOutstandingDemand {
+                    return .callProduceMore
                 } else {
                     return .none
                 }

@@ -41,7 +41,7 @@ private final class MockNIOElementStreamBackPressureStrategy: NIOBackPressuredAs
 private final class MockNIOBackPressuredStreamSourceDelegate: NIOBackPressuredAsyncSequenceDelegate {
     var demandCallCount = 0
     var demandHandler: (() -> Void)?
-    func demand() {
+    func produceMore() {
         self.demandCallCount += 1
         if let demandHandler = self.demandHandler {
             return demandHandler()
