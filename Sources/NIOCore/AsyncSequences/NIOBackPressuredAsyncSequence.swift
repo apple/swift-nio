@@ -706,6 +706,29 @@ extension NIOBackPressuredAsyncSequence {
             )
             /// Indicates that the yielded elements have been dropped.
             case returnDropped
+
+            @usableFromInline
+            init(shouldDemandMore: Bool, continuationAndElement: (CheckedContinuation<Element?, Never>, Element)? = nil) {
+                switch (shouldDemandMore, continuationAndElement) {
+                case (true, .none):
+                    self = .returnDemandMore
+
+                case (false, .none):
+                    self = .returnStopDemanding
+
+                case (true, .some((let continuation, let element))):
+                    self = .resumeContinuationAndReturnDemandMore(
+                        continuation: continuation,
+                        element: element
+                    )
+
+                case (false, .some((let continuation, let element))):
+                    self = .resumeContinuationAndReturnStopDemanding(
+                        continuation: continuation,
+                        element: element
+                    )
+                }
+            }
         }
 
         @inlinable
@@ -723,11 +746,7 @@ extension NIOBackPressuredAsyncSequence {
                     iteratorInitialized: iteratorInitialized
                 )
 
-                if shouldDemandMore {
-                    return .returnDemandMore
-                } else {
-                    return .returnStopDemanding
-                }
+                return .init(shouldDemandMore: shouldDemandMore)
 
             case .streaming(var backPressureStrategy, var buffer, .some(let continuation), _, let iteratorInitialized):
                 // The buffer should always be empty if we hold a continuation
@@ -749,17 +768,7 @@ extension NIOBackPressuredAsyncSequence {
                         iteratorInitialized: iteratorInitialized
                     )
 
-                    if shouldDemandMore {
-                        return .resumeContinuationAndReturnDemandMore(
-                            continuation: continuation,
-                            element: element
-                        )
-                    } else {
-                        return .resumeContinuationAndReturnStopDemanding(
-                            continuation: continuation,
-                            element: element
-                        )
-                    }
+                    return .init(shouldDemandMore: shouldDemandMore, continuationAndElement: (continuation, element))
                 } else {
                     self.state = .streaming(
                         backPressureStrategy: backPressureStrategy,
@@ -770,11 +779,7 @@ extension NIOBackPressuredAsyncSequence {
                     )
 
                     // This is weird somebody yielded an empty sequence but we can handle it
-                    if shouldDemandMore {
-                        return .returnDemandMore
-                    } else {
-                        return .returnStopDemanding
-                    }
+                    return .init(shouldDemandMore: shouldDemandMore)
                 }
 
             case .streaming(var backPressureStrategy, var buffer, continuation: .none, _, let iteratorInitialized):
@@ -791,11 +796,7 @@ extension NIOBackPressuredAsyncSequence {
                     iteratorInitialized: iteratorInitialized
                 )
 
-                if shouldDemandMore {
-                    return .returnDemandMore
-                } else {
-                    return .returnStopDemanding
-                }
+                return .init(shouldDemandMore: shouldDemandMore)
 
             case .sourceFinished, .finished:
                 // If the source has finished we are dropping the elements.
