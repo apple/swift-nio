@@ -13,12 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #if compiler(>=5.5.2) && canImport(_Concurrency)
-/// A high-low watermarked back-pressure strategy for a ``NIOBackPressuredAsyncSequence``.
+/// A high-low watermarked back-pressure strategy for a ``NIOAsyncSequenceProducer``.
 ///
 /// This strategy does the following:
 /// - On yield it keeps on demanding more as long as the `highWatermark` isn't reached.
 /// - On next it starts to demand once the the `lowWatermark` is reached.
-public struct NIOHighLowWatermarkBackPressuredAsyncSequenceStrategy: NIOBackPressuredAsyncSequenceStrategy {
+public struct NIOHighLowWatermarkAsyncSequenceProducerBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy {
     private let lowWatermark: Int
     private let highWatermark: Int
 

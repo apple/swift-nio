@@ -16,7 +16,7 @@ import NIOCore
 import XCTest
 
 #if compiler(>=5.5.2) && canImport(_Concurrency)
-private final class MockNIOElementStreamBackPressureStrategy: NIOBackPressuredAsyncSequenceStrategy {
+private final class MockNIOElementStreamBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy, @unchecked Sendable {
     var didYieldCallCount = 0
     var didYieldHandler: ((Int) -> Bool)?
     func didYield(bufferDepth: Int) -> Bool {
@@ -38,7 +38,7 @@ private final class MockNIOElementStreamBackPressureStrategy: NIOBackPressuredAs
     }
 }
 
-private final class MockNIOBackPressuredStreamSourceDelegate: NIOBackPressuredAsyncSequenceDelegate {
+private final class MockNIOBackPressuredStreamSourceDelegate: NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
     var demandCallCount = 0
     var demandHandler: (() -> Void)?
     func produceMore() {
@@ -58,15 +58,15 @@ private final class MockNIOBackPressuredStreamSourceDelegate: NIOBackPressuredAs
     }
 }
 
-final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
+final class NIOAsyncSequenceProducerTests: XCTestCase {
     private var backPressureStrategy: MockNIOElementStreamBackPressureStrategy!
     private var delegate: MockNIOBackPressuredStreamSourceDelegate!
-    private var sequence: NIOBackPressuredAsyncSequence<
+    private var sequence: NIOAsyncSequenceProducer<
         Int,
         MockNIOElementStreamBackPressureStrategy,
         MockNIOBackPressuredStreamSourceDelegate
     >!
-    private var source: NIOBackPressuredAsyncSequence<
+    private var source: NIOAsyncSequenceProducer<
         Int,
         MockNIOElementStreamBackPressureStrategy,
         MockNIOBackPressuredStreamSourceDelegate
@@ -77,7 +77,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         self.backPressureStrategy = .init()
         self.delegate = .init()
-        let result = NIOBackPressuredAsyncSequence<
+        let result = NIOAsyncSequenceProducer<
             Int,
             MockNIOElementStreamBackPressureStrategy,
             MockNIOBackPressuredStreamSourceDelegate
@@ -191,7 +191,7 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
         let result = self.source.yield([])
 
         XCTAssertEqual(result, .stopProducing)
-        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
+        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 0)
     }
 
     func testYieldEmptySequence_whenStreaming_andSuspended_andDemandMore() async throws {
@@ -209,8 +209,8 @@ final class NIOBackPressuredAsyncSequenceTests: XCTestCase {
 
         let result = self.source.yield([])
 
-        XCTAssertEqual(result, .produceMore)
-        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
+        XCTAssertEqual(result, .stopProducing)
+        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 0)
     }
 
     func testYield_whenStreaming_andNotSuspended_andStopDemanding() async throws {
