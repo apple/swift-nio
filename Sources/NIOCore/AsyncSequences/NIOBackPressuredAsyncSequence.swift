@@ -117,6 +117,11 @@ public struct NIOBackPressuredAsyncSequence<
     @usableFromInline
     /* private */ internal let internalClass: InternalClass
 
+    @usableFromInline
+    /* private */ internal var storage: Storage {
+        self.internalClass.storage
+    }
+
     /// Initializes a new ``NIOBackPressuredAsyncSequence`` and a ``NIOBackPressuredAsyncSequence/Source``.
     ///
     /// - Important: This method returns a tuple containing a ``NIOBackPressuredAsyncSequence/Source`` and
@@ -137,7 +142,7 @@ public struct NIOBackPressuredAsyncSequence<
             backPressureStrategy: backPressureStrategy,
             delegate: delegate
         )
-        let source = Source(storage: sequence.internalClass.storage)
+        let source = Source(storage: sequence.storage)
 
         return .init(source: source, sequence: sequence)
     }
@@ -523,7 +528,7 @@ extension NIOBackPressuredAsyncSequence {
                 iteratorInitialized: Bool
             )
 
-            /// The sate once the underlying source signalled that it is finished.
+            /// The state once the underlying source signalled that it is finished.
             case sourceFinished(
                 buffer: CircularBuffer<Element>,
                 iteratorInitialized: Bool
