@@ -77,11 +77,8 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         self.backPressureStrategy = .init()
         self.delegate = .init()
-        let result = NIOAsyncSequenceProducer<
-            Int,
-            MockNIOElementStreamBackPressureStrategy,
-            MockNIOBackPressuredStreamSourceDelegate
-        >.makeSourceAndSequence(
+        let result = NIOAsyncSequenceProducer.makeSequence(
+            of: Int.self,
             backPressureStrategy: self.backPressureStrategy,
             delegate: self.delegate
         )
