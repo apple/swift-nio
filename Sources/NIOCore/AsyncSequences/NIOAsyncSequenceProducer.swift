@@ -31,14 +31,16 @@ import NIOConcurrencyHelpers
 public protocol NIOAsyncSequenceProducerBackPressureStrategy: Sendable {
     /// This method is called after new elements were yielded by the producer to the source.
     ///
-    /// - Parameter bufferDepth: The current depth of the internal buffer.
+    /// - Parameter bufferDepth: The current depth of the internal buffer of the sequence. The buffer contains all
+    /// the yielded but not yet consumed elements.
     /// - Returns: Returns whether more elements should be produced.
     mutating func didYield(bufferDepth: Int) -> Bool
 
-    /// This method is called after the `Subscriber` consumed an element.
+    /// This method is called after the subscriber consumed an element.
     /// More specifically this method is called after `next` was called on an iterator of the ``NIOAsyncSequenceProducer``.
     ///
-    /// - Parameter bufferDepth: The current depth of the internal buffer.
+    /// - Parameter bufferDepth: The current depth of the internal buffer of the sequence. The buffer contains all
+    /// the yielded but not yet consumed elements.
     /// - Returns: Returns whether the producer should produce more elements.
     mutating func didConsume(bufferDepth: Int) -> Bool
 }
@@ -48,7 +50,7 @@ public protocol NIOAsyncSequenceProducerDelegate: Sendable {
     /// This method is called once the back-pressure strategy of the ``NIOAsyncSequenceProducer`` determined
     /// that the producer needs to produce more elements.
     ///
-    /// - Important: This is only called as a result of a `Subscriber` is calling ``NIOAsyncSequenceProducer/AsyncIterator/next()``.
+    /// - Important: This is only called as a result of a subscriber is calling ``NIOAsyncSequenceProducer/AsyncIterator/next()``.
     /// It is never called as a result of a producer calling ``NIOAsyncSequenceProducer/Source/yield(_:)``.
     func produceMore()
 
@@ -57,7 +59,7 @@ public protocol NIOAsyncSequenceProducerDelegate: Sendable {
     /// Termination happens if:
     /// - The ``NIOAsyncSequenceProducer/AsyncIterator`` is deinited.
     /// - The ``NIOAsyncSequenceProducer`` deinited and no iterator is alive.
-    /// - The `Subscriber`'s `Task` is cancelled.
+    /// - The subscriber's `Task` is cancelled.
     /// - The source finished and all remaining buffered elements have been consumed.
     func didTerminate()
 }
@@ -104,7 +106,7 @@ public struct NIOAsyncSequenceProducer<
     ///
     /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
     @usableFromInline
-    /* fileprivate */ internal final class InternalClass: @unchecked NIOSendable {
+    /* fileprivate */ internal final class InternalClass: @unchecked Sendable {
         @usableFromInline
         internal let storage: Storage
 
@@ -215,7 +217,7 @@ extension NIOAsyncSequenceProducer {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncSequenceProducer {
-    /// A struct to interface between the synchronous code of the producer and the asynchronous `Subscriber`.
+    /// A struct to interface between the synchronous code of the producer and the asynchronous subscriber.
     /// This type allows the producer to synchronously `yield` new elements to the ``NIOAsyncSequenceProducer``
     /// and to `finish` the sequence.
     public struct Source {
@@ -248,11 +250,11 @@ extension NIOAsyncSequenceProducer {
         /// This can be called more than once and returns to the caller immediately
         /// without blocking for any awaiting consumption from the iteration.
         ///
-        /// - Parameter sequence: The sequence to yield.
-        /// - Returns: A ``NIOAsyncSequenceProducer/Source/YieldResult`` that indicates if the yield was successfull
+        /// - Parameter contentsOf: The sequence to yield.
+        /// - Returns: A ``NIOAsyncSequenceProducer/Source/YieldResult`` that indicates if the yield was successful
         /// and if more elements should be produced.
         @inlinable
-        public func yield<S: Sequence>(_ sequence: S) -> YieldResult where S.Element == Element {
+        public func yield<S: Sequence>(contentsOf sequence: S) -> YieldResult where S.Element == Element {
             self.storage.yield(sequence)
         }
 
@@ -268,11 +270,11 @@ extension NIOAsyncSequenceProducer {
         /// without blocking for any awaiting consumption from the iteration.
         ///
         /// - Parameter element: The element to yield.
-        /// - Returns: A ``NIOAsyncSequenceProducer/Source/YieldResult`` that indicates if the yield was successfull
+        /// - Returns: A ``NIOAsyncSequenceProducer/Source/YieldResult`` that indicates if the yield was successful
         /// and if more elements should be produced.
         @inlinable
         public func yield(_ element: Element) -> YieldResult {
-            self.yield(CollectionOfOne(element))
+            self.yield(contentsOf: CollectionOfOne(element))
         }
 
         /// Finishes the sequence.
@@ -337,12 +339,7 @@ extension NIOAsyncSequenceProducer {
         @inlinable
         /* fileprivate */ internal func iteratorInitialized() {
             self.lock.withLock {
-                let action = self.stateMachine.iteratorInitialized()
-
-                switch action {
-                case .none:
-                    return
-                }
+                self.stateMachine.iteratorInitialized()
             }
         }
 
@@ -433,8 +430,6 @@ extension NIOAsyncSequenceProducer {
 
         @inlinable
         /* fileprivate */ internal func next() async -> Element? {
-            // We are locking manually here since we want to hold the lock
-            // across the suspension point.
             await withTaskCancellationHandler {
                 self.lock.lock()
 
@@ -603,15 +598,8 @@ extension NIOAsyncSequenceProducer {
             }
         }
 
-        /// Actions returned by `iteratorInitialized()`.
-        @usableFromInline
-        enum IteratorInitializedAction {
-            /// Indicates that nothing should be done.
-            case none
-        }
-
         @inlinable
-        mutating func iteratorInitialized() -> IteratorInitializedAction {
+        mutating func iteratorInitialized() {
             switch self.state {
             case .initial(_, iteratorInitialized: true),
                  .streaming(_, _, _, _, iteratorInitialized: true),
@@ -626,8 +614,6 @@ extension NIOAsyncSequenceProducer {
                     iteratorInitialized: true
                 )
 
-                return .none
-
             case .streaming(let backPressureStrategy, let buffer, let continuation, let hasOutstandingDemand, false):
                 // The first and only iterator was initialized.
                 self.state = .streaming(
@@ -638,8 +624,6 @@ extension NIOAsyncSequenceProducer {
                     iteratorInitialized: true
                 )
 
-                return .none
-
             case .sourceFinished(let buffer, false):
                 // The first and only iterator was initialized.
                 self.state = .sourceFinished(
@@ -647,13 +631,11 @@ extension NIOAsyncSequenceProducer {
                     iteratorInitialized: true
                 )
 
-                return .none
-
             case .finished:
                 // It is strange that an iterator is created after we are finished
                 // but it can definitely happen, e.g.
                 // Sequence.init -> source.finish -> sequence.makeAsyncIterator
-                return .none
+                break
 
             case .modifying:
                 preconditionFailure("Invalid state")
@@ -769,6 +751,13 @@ extension NIOAsyncSequenceProducer {
                 buffer.append(contentsOf: sequence)
 
                 guard let element = buffer.popFirst() else {
+                    self.state = .streaming(
+                        backPressureStrategy: backPressureStrategy,
+                        buffer: buffer,
+                        continuation: continuation,
+                        hasOutstandingDemand: hasOutstandingDemand,
+                        iteratorInitialized: iteratorInitialized
+                    )
                     return .init(shouldProduceMore: hasOutstandingDemand)
                 }
 
@@ -1061,4 +1050,9 @@ extension NIOAsyncSequenceProducer {
         }
     }
 }
+
+/// The ``NIOAsyncSequenceProducer/AsyncIterator`` MUST NOT be shared across `Task`s. With marking this as
+/// unavailable we are explicitly declaring this.
+@available(*, unavailable)
+extension NIOAsyncSequenceProducer.AsyncIterator: Sendable {}
 #endif
