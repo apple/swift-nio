@@ -19,30 +19,28 @@
 /// - On yield it keeps on demanding more as long as the `highWatermark` isn't reached.
 /// - On next it starts to demand once the the `lowWatermark` is reached.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension NIOAsyncSequenceProducer {
-    public struct HighLowWatermarkBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy {
-        private let lowWatermark: Int
-        private let highWatermark: Int
+public struct NIOAsyncSequenceProducerHighLowWatermarkBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy {
+    private let lowWatermark: Int
+    private let highWatermark: Int
 
-        /// Initializes a new ``HighLowWatermarkBackPressureStrategy``.
-        ///
-        /// - Parameters:
-        ///   - lowWatermark: The low watermark where demand should start.
-        ///   - highWatermark: The high watermark where demand should be stopped.
-        public init(lowWatermark: Int, highWatermark: Int) {
-            self.lowWatermark = lowWatermark
-            self.highWatermark = highWatermark
-        }
+    /// Initializes a new ``NIOAsyncSequenceProducerHighLowWatermarkBackPressureStrategy``.
+    ///
+    /// - Parameters:
+    ///   - lowWatermark: The low watermark where demand should start.
+    ///   - highWatermark: The high watermark where demand should be stopped.
+    public init(lowWatermark: Int, highWatermark: Int) {
+        self.lowWatermark = lowWatermark
+        self.highWatermark = highWatermark
+    }
 
-        public mutating func didYield(bufferDepth: Int) -> Bool {
-            // We are demanding more until we reach the high watermark
-            bufferDepth < self.highWatermark
-        }
+    public mutating func didYield(bufferDepth: Int) -> Bool {
+        // We are demanding more until we reach the high watermark
+        bufferDepth < self.highWatermark
+    }
 
-        public mutating func didConsume(bufferDepth: Int) -> Bool {
-            // We start demanding again once we are below the low watermark
-            bufferDepth < self.lowWatermark
-        }
+    public mutating func didConsume(bufferDepth: Int) -> Bool {
+        // We start demanding again once we are below the low watermark
+        bufferDepth < self.lowWatermark
     }
 }
 #endif

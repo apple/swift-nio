@@ -91,9 +91,9 @@ public struct NIOAsyncSequenceProducer<
     /// Simple struct for the return type of ``NIOAsyncSequenceProducer/makeSequence(of:backPressureStrategy:delegate:)``.
     ///
     /// This struct contains two properties:
-    /// 1. The ``NIOAsyncSequenceProducer/NewSequence/source`` which should be retained by the producer and is used
+    /// 1. The ``source`` which should be retained by the producer and is used
     /// to yield new elements to the sequence.
-    /// 2. The ``NIOAsyncSequenceProducer/NewSequence/sequence`` which is the actual ``Swift/AsyncSequence`` and
+    /// 2. The ``sequence`` which is the actual ``Swift/AsyncSequence`` and
     /// should be passed to the consumer.
     public struct NewSequence {
         /// The source of the ``NIOAsyncSequenceProducer`` used to yield and finish.
