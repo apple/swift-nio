@@ -75,7 +75,7 @@ extension SocketAddressError {
 public enum SocketAddress: CustomStringConvertible, NIOSendable {
 
     /// A single IPv4 address for `SocketAddress`.
-    public struct IPv4Address: NIOSendable {
+    public struct IPv4Address {
         private let _storage: Box<(address: sockaddr_in, host: String)>
 
         /// The libc socket address for an IPv4 address.
@@ -90,7 +90,7 @@ public enum SocketAddress: CustomStringConvertible, NIOSendable {
     }
 
     /// A single IPv6 address for `SocketAddress`.
-    public struct IPv6Address: NIOSendable {
+    public struct IPv6Address {
         private let _storage: Box<(address: sockaddr_in6, host: String)>
 
         /// The libc socket address for an IPv6 address.
@@ -559,6 +559,16 @@ extension SocketAddress: Equatable {
         }
     }
 }
+
+#if compiler(>=5.5.2)
+extension SocketAddress.IPv4Address: Sendable {}
+extension SocketAddress.IPv6Address: Sendable {}
+#elseif compiler(>=5.5)
+// Implicit conformance of tuples to Sendable interacts poorly with conditional conformance of Sendable in Swift <=5.5.1
+// https://github.com/apple/swift/issues/57346
+extension SocketAddress.IPv4Address: @unchecked Sendable {}
+extension SocketAddress.IPv6Address: @unchecked Sendable {}
+#endif
 
 /// We define an extension on `SocketAddress` that gives it an elementwise hashable conformance, using
 /// only the elements defined on the structure in their man pages (excluding lengths).
