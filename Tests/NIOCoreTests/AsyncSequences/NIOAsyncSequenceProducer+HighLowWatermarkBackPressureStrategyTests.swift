@@ -15,6 +15,7 @@
 import NIOCore
 import XCTest
 
+#if compiler(>=5.5.2) && canImport(_Concurrency)
 final class NIOAsyncSequenceProducerHighLowWatermarkBackPressureStrategyTests: XCTestCase {
     private var strategy: NIOAsyncSequenceProducerHighLowWatermarkBackPressureStrategy!
 
@@ -57,3 +58,4 @@ final class NIOAsyncSequenceProducerHighLowWatermarkBackPressureStrategyTests: X
         XCTAssertFalse(self.strategy.didConsume(bufferDepth: 5))
     }
 }
+#endif
