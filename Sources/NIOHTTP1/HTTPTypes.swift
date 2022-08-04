@@ -298,7 +298,7 @@ extension HTTPHeaders {
 /// field when needed. It also supports recomposing headers to a maximally joined
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
-public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral, NIOSendable {
+public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral {
     @usableFromInline
     internal var headers: [(String, String)]
     internal var keepAliveState: KeepAliveState = .unknown
@@ -496,6 +496,14 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
         return result.flatMap { $0.split(separator: ",").map { $0.trimWhitespace() } }
     }
 }
+
+#if compiler(>=5.5.2)
+extension HTTPHeaders: Sendable {}
+#elseif compiler(>=5.5)
+// Implicit conformance of tuples to Sendable interacts poorly with conditional conformance of Sendable in Swift <=5.5.1
+// https://github.com/apple/swift/issues/57346
+extension HTTPHeaders: @unchecked Sendable {}
+#endif
 
 extension HTTPHeaders {
 
