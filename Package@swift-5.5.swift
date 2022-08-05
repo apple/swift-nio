@@ -1,4 +1,4 @@
-// swift-tools-version:5.6
+// swift-tools-version:5.5
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -16,10 +16,11 @@
 import PackageDescription
 
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
+let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 
 var targets: [PackageDescription.Target] = [
     .target(name: "NIOCore",
-            dependencies: ["NIOConcurrencyHelpers", "CNIOLinux", "CNIOWindows"]),
+            dependencies: ["NIOConcurrencyHelpers", "CNIOLinux", "CNIOWindows", swiftCollections]),
     .target(name: "_NIODataStructures"),
     .target(name: "NIOEmbedded",
             dependencies: ["NIOCore",
@@ -140,7 +141,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.0.2"),
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
     ],
     targets: targets
 )

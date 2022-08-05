@@ -59,6 +59,8 @@ services:
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=98
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=12200
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=168050
+      - FORCE_TEST_DISCOVERY=--enable-test-discovery
+      # - WARN_AS_ERROR_ARG=-Xswiftc -warnings-as-errors
       # - SANITIZER_ARG=--sanitize=thread # TSan broken still
 
   performance-test:
