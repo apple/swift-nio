@@ -1068,6 +1068,7 @@ extension NIOAsyncSequenceProducer {
 
 /// The ``NIOAsyncSequenceProducer/AsyncIterator`` MUST NOT be shared across `Task`s. With marking this as
 /// unavailable we are explicitly declaring this.
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncSequenceProducer.AsyncIterator: Sendable {}
 #endif
