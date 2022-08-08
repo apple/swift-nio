@@ -105,7 +105,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
         let sequence = try XCTUnwrap(self.sequence)
-        let element = try await withThrowingTaskGroup(of: Int?.self) { group in
+        let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
                 try await sequence.first { _ in true }
             }
@@ -117,7 +117,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
             XCTAssertEqual(result, .stopProducing)
 
-            return try await group.next()
+            return try await group.next() ?? nil
         }
 
         XCTAssertEqual(element, 1)
@@ -130,7 +130,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
         let sequence = try XCTUnwrap(self.sequence)
-        let element = try await withThrowingTaskGroup(of: Int?.self) { group in
+        let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
                 try await sequence.first { _ in true }
             }
@@ -142,7 +142,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
             XCTAssertEqual(result, .produceMore)
 
-            return try await group.next()
+            return try await group.next() ?? nil
         }
 
         XCTAssertEqual(element, 1)
@@ -240,7 +240,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
         let sequence = try XCTUnwrap(self.sequence)
-        let element = try await withThrowingTaskGroup(of: Int?.self) { group in
+        let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
                 let element = try await sequence.first { _ in true }
                 return element
@@ -263,7 +263,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         self.source.finish()
 
         let sequence = try XCTUnwrap(self.sequence)
-        let element = try await withThrowingTaskGroup(of: Int?.self) { group in
+        let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
                 return try await sequence.first { _ in true }
             }
@@ -283,12 +283,12 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
 
         let sequence = try XCTUnwrap(self.sequence)
-        let element = try await withThrowingTaskGroup(of: Int?.self) { group in
+        let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
                 return try await sequence.first { _ in true }
             }
 
-            return try await group.next()
+            return try await group.next() ?? nil
         }
 
         XCTAssertEqual(element, 1)
@@ -328,17 +328,16 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
         let sequence = try XCTUnwrap(self.sequence)
-        await XCTAssertThrowsError(try await withThrowingTaskGroup(of: Int?.self) { group in
+        await XCTAssertThrowsError(try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                let element = try await sequence.first { _ in true }
-                return element
+                _ = try await sequence.first { _ in true }
             }
 
             try await Task.sleep(nanoseconds: 1_000_000)
 
             self.source.finish(ChannelError.alreadyClosed)
 
-            return try await group.next() ?? nil
+            try await group.next()
         }) { error in
             XCTAssertEqual(error as? ChannelError, .alreadyClosed)
         }
@@ -352,12 +351,12 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         self.source.finish(ChannelError.alreadyClosed)
 
         let sequence = try XCTUnwrap(self.sequence)
-        await XCTAssertThrowsError(try await withThrowingTaskGroup(of: Int?.self) { group in
+        await XCTAssertThrowsError(try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                return try await sequence.first { _ in true }
+                _ = try await sequence.first { _ in true }
             }
 
-            return try await group.next() ?? nil
+            try await group.next()
         }) { error in
             XCTAssertEqual(error as? ChannelError, .alreadyClosed)
         }

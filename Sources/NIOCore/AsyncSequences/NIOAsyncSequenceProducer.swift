@@ -188,12 +188,7 @@ extension NIOAsyncSequenceProducer {
 
         @inlinable
         public func next() async -> Element? {
-            do {
-                return try await self.throwingIterator.next()
-            } catch {
-                // We should never get an error here since our Failure type is `Never`
-                preconditionFailure("NIOAsyncSequenceProducer received an error from the underlying sequence")
-            }
+            return try! await self.throwingIterator.next()
         }
     }
 }
