@@ -16,11 +16,8 @@ ENV LANGUAGE en_US.UTF-8
 RUN apt-get update && apt-get install -y wget
 RUN apt-get update && apt-get install -y lsof dnsutils netcat-openbsd net-tools curl jq # used by integration tests
 
-# ruby and jazzy for docs generation
+# ruby
 RUN apt-get update && apt-get install -y ruby ruby-dev libsqlite3-dev build-essential
-# jazzy no longer works on xenial as ruby is too old.
-RUN if [ "${ubuntu_version}" = "focal" ] ; then echo "gem: --no-document" > ~/.gemrc ; fi
-RUN if [ "${ubuntu_version}" = "focal" ] ; then gem install jazzy ; fi
 
 # tools
 RUN mkdir -p $HOME/.tools
