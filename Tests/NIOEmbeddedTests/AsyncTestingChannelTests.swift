@@ -606,7 +606,7 @@ class AsyncTestingChannelTests: XCTestCase {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
-        try channel.embeddedEventLoop.submit {
+        try channel.testingEventLoop.submit {
             let options = channel.syncOptions
             XCTAssertNotNil(options)
             // Unconditionally returns true.

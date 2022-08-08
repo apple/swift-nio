@@ -97,7 +97,7 @@ public final class NIOAsyncTestingChannel: Channel {
         }
     }
 
-    /// `WrongTypeError` is throws if you use `readInbound` or `readOutbound` and request a certain type but the first
+    /// `WrongTypeError` is thrown if you use `readInbound` or `readOutbound` and request a certain type but the first
     /// item in the respective buffer is of a different type.
     public struct WrongTypeError: Error, Equatable {
         /// The type you expected.
@@ -131,12 +131,12 @@ public final class NIOAsyncTestingChannel: Channel {
 
     /// - see: `Channel.eventLoop`
     public var eventLoop: EventLoop {
-        return self.embeddedEventLoop
+        return self.testingEventLoop
     }
 
     /// Returns the `NIOAsyncTestingEventLoop` that this `NIOAsyncTestingChannel` uses. This will return the same instance as
     /// `NIOAsyncTestingChannel.eventLoop` but as the concrete `NIOAsyncTestingEventLoop` rather than as `EventLoop` existential.
-    public let embeddedEventLoop: NIOAsyncTestingEventLoop
+    public let testingEventLoop: NIOAsyncTestingEventLoop
 
     /// `nil` because `NIOAsyncTestingChannel`s don't have parents.
     public let parent: Channel? = nil
@@ -227,14 +227,14 @@ public final class NIOAsyncTestingChannel: Channel {
         }
 
         // This can never actually throw.
-        try! await self.embeddedEventLoop.executeInContext {
-            self.embeddedEventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
+        try! await self.testingEventLoop.executeInContext {
+            self.testingEventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
         }
-        await self.embeddedEventLoop.run()
+        await self.testingEventLoop.run()
         try await throwIfErrorCaught()
 
         // This can never actually throw.
-        return try! await self.embeddedEventLoop.executeInContext {
+        return try! await self.testingEventLoop.executeInContext {
             let c = self.channelcore!
             if c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty {
                 return .clean
@@ -273,7 +273,7 @@ public final class NIOAsyncTestingChannel: Channel {
     ///         `ChannelHandler`.
     @inlinable
     public func readOutbound<T>(as type: T.Type = T.self) async throws -> T? {
-        try await self.embeddedEventLoop.executeInContext {
+        try await self.testingEventLoop.executeInContext {
             try self._readFromBuffer(buffer: &self.channelcore.outboundBuffer)
         }
     }
@@ -290,7 +290,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - note: `NIOAsyncTestingChannel.writeInbound` will fire data through the `ChannelPipeline` using `fireChannelRead`.
     @inlinable
     public func readInbound<T>(as type: T.Type = T.self) async throws -> T? {
-        try await self.embeddedEventLoop.executeInContext {
+        try await self.testingEventLoop.executeInContext {
             try self._readFromBuffer(buffer: &self.channelcore.inboundBuffer)
         }
     }
@@ -306,7 +306,7 @@ public final class NIOAsyncTestingChannel: Channel {
     //             all the way.
     @inlinable
     @discardableResult public func writeInbound<T>(_ data: T) async throws -> BufferState {
-        try await self.embeddedEventLoop.executeInContext {
+        try await self.testingEventLoop.executeInContext {
             self.pipeline.fireChannelRead(NIOAny(data))
             self.pipeline.fireChannelReadComplete()
             try self._throwIfErrorCaught()
@@ -328,7 +328,7 @@ public final class NIOAsyncTestingChannel: Channel {
     @discardableResult public func writeOutbound<T>(_ data: T) async throws -> BufferState {
         try await self.writeAndFlush(NIOAny(data))
 
-        return try await self.embeddedEventLoop.executeInContext {
+        return try await self.testingEventLoop.executeInContext {
             return self.channelcore.outboundBuffer.isEmpty ? .empty : .full(self.channelcore.outboundBuffer)
         }
     }
@@ -337,14 +337,14 @@ public final class NIOAsyncTestingChannel: Channel {
     ///
     /// The `NIOAsyncTestingChannel` will store an error if some error travels the `ChannelPipeline` all the way past its end.
     public func throwIfErrorCaught() async throws {
-        try await self.embeddedEventLoop.executeInContext {
+        try await self.testingEventLoop.executeInContext {
             try self._throwIfErrorCaught()
         }
     }
 
     @usableFromInline
     func _throwIfErrorCaught() throws {
-        self.embeddedEventLoop.preconditionInEventLoop()
+        self.testingEventLoop.preconditionInEventLoop()
         if let error = self.channelcore.error {
             self.channelcore.error = nil
             throw error
@@ -353,7 +353,7 @@ public final class NIOAsyncTestingChannel: Channel {
 
     @inlinable
     func _readFromBuffer<T>(buffer: inout CircularBuffer<NIOAny>) throws -> T? {
-        self.embeddedEventLoop.preconditionInEventLoop()
+        self.testingEventLoop.preconditionInEventLoop()
 
         if buffer.isEmpty {
             return nil
@@ -372,7 +372,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - parameters:
     ///     - loop: The `NIOAsyncTestingEventLoop` to use.
     public init(loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) {
-        self.embeddedEventLoop = loop
+        self.testingEventLoop = loop
         self._pipeline = ChannelPipeline(channel: self)
         self.channelcore = EmbeddedChannelCore(pipeline: self._pipeline, eventLoop: self.eventLoop)
     }
