@@ -474,7 +474,7 @@ class AsyncTestingChannelTests: XCTestCase {
 
             let buf = ByteBuffer(bytes: [1])
             let writeFuture = channel.write(buf)
-            try await XCTAsyncAssertNil(await channel.readOutbound())
+            try await XCTAsyncAssertNil(await channel.readOutbound(as: ByteBuffer.self))
             XCTAssertFalse(writeFuture.isFulfilled)
             channel.flush()
             try await XCTAsyncAssertNotNil(await channel.readOutbound(as: ByteBuffer.self))
