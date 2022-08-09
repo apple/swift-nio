@@ -18,8 +18,8 @@ services:
   test:
     image: swift-nio:20.04-5.5
     environment:
-      - MAX_ALLOCS_ALLOWED_1000_addHandlers=45050
-      - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=38050
+      - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
+      - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlercontext=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlername=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlertype=9050
