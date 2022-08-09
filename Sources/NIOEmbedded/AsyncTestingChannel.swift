@@ -272,7 +272,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - note: `NIOAsyncTestingChannel.writeOutbound` will `write` data through the `ChannelPipeline`, starting with last
     ///         `ChannelHandler`.
     @inlinable
-    public func readOutbound<T>(as type: T.Type = T.self) async throws -> T? {
+    public func readOutbound<T: Sendable>(as type: T.Type = T.self) async throws -> T? {
         try await self.testingEventLoop.executeInContext {
             try self._readFromBuffer(buffer: &self.channelcore.outboundBuffer)
         }
@@ -289,7 +289,7 @@ public final class NIOAsyncTestingChannel: Channel {
     ///
     /// - note: `NIOAsyncTestingChannel.writeInbound` will fire data through the `ChannelPipeline` using `fireChannelRead`.
     @inlinable
-    public func readInbound<T>(as type: T.Type = T.self) async throws -> T? {
+    public func readInbound<T: Sendable>(as type: T.Type = T.self) async throws -> T? {
         try await self.testingEventLoop.executeInContext {
             try self._readFromBuffer(buffer: &self.channelcore.inboundBuffer)
         }
@@ -305,7 +305,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - returns: The state of the inbound buffer which contains all the events that travelled the `ChannelPipeline`
     //             all the way.
     @inlinable
-    @discardableResult public func writeInbound<T>(_ data: T) async throws -> BufferState {
+    @discardableResult public func writeInbound<T: Sendable>(_ data: T) async throws -> BufferState {
         try await self.testingEventLoop.executeInContext {
             self.pipeline.fireChannelRead(NIOAny(data))
             self.pipeline.fireChannelReadComplete()
@@ -325,7 +325,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - returns: The state of the outbound buffer which contains all the events that travelled the `ChannelPipeline`
     //             all the way.
     @inlinable
-    @discardableResult public func writeOutbound<T>(_ data: T) async throws -> BufferState {
+    @discardableResult public func writeOutbound<T: Sendable>(_ data: T) async throws -> BufferState {
         try await self.writeAndFlush(NIOAny(data))
 
         return try await self.testingEventLoop.executeInContext {
