@@ -121,7 +121,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// If the last `ChannelHandler` explicitly (by calling `fireChannelRead`) or implicitly (by not implementing
     /// `channelRead`) sends inbound data into the end of the ``NIOAsyncTestingChannel``, it will be held in the
     /// ``NIOAsyncTestingChannel``'s inbound buffer. Similarly for `write` on the outbound side. The state of the respective
-    /// buffer will be returned from ``writeInbound(_:)``/``writeOutbound`` as a ``BufferState``.
+    /// buffer will be returned from ``writeInbound(_:)``/``writeOutbound(_:)`` as a ``BufferState``.
     public enum BufferState {
         /// The buffer is empty.
         case empty
