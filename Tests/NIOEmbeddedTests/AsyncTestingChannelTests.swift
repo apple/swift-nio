@@ -37,16 +37,16 @@ class AsyncTestingChannelTests: XCTestCase {
     func testEmptyInit() throws {
         #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
-        XCTAsyncTest {
-            class Handler: ChannelInboundHandler {
-                typealias InboundIn = Never
-            }
 
-            let channel = NIOAsyncTestingChannel()
-            XCTAssertThrowsError(try channel.pipeline.handler(type: Handler.self).wait()) { e in
-                XCTAssertEqual(e as? ChannelPipelineError, .notFound)
-            }
+        class Handler: ChannelInboundHandler {
+            typealias InboundIn = Never
         }
+
+        let channel = NIOAsyncTestingChannel()
+        XCTAssertThrowsError(try channel.pipeline.handler(type: Handler.self).wait()) { e in
+            XCTAssertEqual(e as? ChannelPipelineError, .notFound)
+        }
+
         #else
         throw XCTSkip()
         #endif
@@ -632,6 +632,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 }
 
+#if compiler(>=5.5.2) && canImport(_Concurrency)
 fileprivate func XCTAsyncAssertTrue(_ predicate: @autoclosure () async throws -> Bool, file: StaticString = #file, line: UInt = #line) async rethrows {
     let result = try await predicate()
     XCTAssertTrue(result, file: file, line: line)
@@ -661,3 +662,4 @@ fileprivate func XCTAsyncAssertNotNil(_ expression: @autoclosure () async throws
     let result = try await expression()
     XCTAssertNotNil(result, file: file, line: line)
 }
+#endif
