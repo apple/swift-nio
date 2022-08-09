@@ -505,4 +505,17 @@ public final class NIOAsyncTestingChannel: Channel {
     }
 }
 
+// MARK: Unchecked sendable
+//
+// Both of these types are unchecked Sendable because strictly, they aren't. This is
+// because they contain NIOAny, a non-Sendable type. In this instance, we tolerate the moving
+// of this object across threads because in the overwhelming majority of cases the data types
+// in a channel pipeline _are_ `Sendable`, and because these objects only carry NIOAnys in cases
+// where the `Channel` itself no longer holds a reference to these objects.
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension NIOAsyncTestingChannel.LeftOverState: @unchecked Sendable { }
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable { }
+
 #endif
