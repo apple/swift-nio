@@ -119,8 +119,8 @@ class AsyncTestingChannelTests: XCTestCase {
 
             try await XCTAsyncAssertTrue(await channel.writeOutbound(buf).isFull)
             try await XCTAsyncAssertEqual(buf, await channel.readOutbound())
-            try await XCTAsyncAssertNil(await channel.readOutbound())
-            try await XCTAsyncAssertNil(await channel.readInbound())
+            try await XCTAsyncAssertNil(await channel.readOutbound(as: ByteBuffer.self))
+            try await XCTAsyncAssertNil(await channel.readInbound(as: ByteBuffer.self))
 
             var bufB = channel.allocator.buffer(capacity: 1024)
             bufB.writeString("again")
@@ -128,8 +128,8 @@ class AsyncTestingChannelTests: XCTestCase {
             try await XCTAsyncAssertTrue(await channel.writeOutbound(bufB).isFull)
             try await XCTAsyncAssertTrue(await channel.finish().hasLeftOvers)
             try await XCTAsyncAssertEqual(bufB, await channel.readOutbound())
-            try await XCTAsyncAssertNil(await channel.readOutbound())
-            try await XCTAsyncAssertNil(await channel.readInbound())
+            try await XCTAsyncAssertNil(await channel.readOutbound(as: ByteBuffer.self))
+            try await XCTAsyncAssertNil(await channel.readInbound(as: ByteBuffer.self))
         }
         #else
         throw XCTSkip()
@@ -147,8 +147,8 @@ class AsyncTestingChannelTests: XCTestCase {
             try await XCTAsyncAssertTrue(await channel.writeInbound(buf).isFull)
             try await XCTAsyncAssertTrue(await channel.finish().hasLeftOvers)
             try await XCTAsyncAssertEqual(buf, await channel.readInbound())
-            try await XCTAsyncAssertNil(await channel.readInbound())
-            try await XCTAsyncAssertNil(await channel.readOutbound())
+            try await XCTAsyncAssertNil(await channel.readInbound(as: ByteBuffer.self))
+            try await XCTAsyncAssertNil(await channel.readOutbound(as: ByteBuffer.self))
         }
         #else
         throw XCTSkip()
@@ -165,8 +165,8 @@ class AsyncTestingChannelTests: XCTestCase {
 
             try await XCTAsyncAssertTrue(await channel.writeInbound(buf).isFull)
             try await XCTAsyncAssertEqual(buf, await channel.readInbound())
-            try await XCTAsyncAssertNil(await channel.readInbound())
-            try await XCTAsyncAssertNil(await channel.readOutbound())
+            try await XCTAsyncAssertNil(await channel.readInbound(as: ByteBuffer.self))
+            try await XCTAsyncAssertNil(await channel.readOutbound(as: ByteBuffer.self))
 
             var bufB = channel.allocator.buffer(capacity: 1024)
             bufB.writeString("again")
@@ -174,8 +174,8 @@ class AsyncTestingChannelTests: XCTestCase {
             try await XCTAsyncAssertTrue(await channel.writeInbound(bufB).isFull)
             try await XCTAsyncAssertTrue(await channel.finish().hasLeftOvers)
             try await XCTAsyncAssertEqual(bufB, await channel.readInbound())
-            try await XCTAsyncAssertNil(await channel.readInbound())
-            try await XCTAsyncAssertNil(await channel.readOutbound())
+            try await XCTAsyncAssertNil(await channel.readInbound(as: ByteBuffer.self))
+            try await XCTAsyncAssertNil(await channel.readOutbound(as: ByteBuffer.self))
         }
         #else
         throw XCTSkip()
@@ -263,40 +263,24 @@ class AsyncTestingChannelTests: XCTestCase {
             let channel = NIOAsyncTestingChannel()
 
             let buffer = channel.allocator.buffer(capacity: 0)
-            let ioData = IOData.byteBuffer(buffer)
-            let fileHandle = NIOFileHandle(descriptor: -1)
-            let fileRegion = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 0)
-            defer {
-                XCTAssertNoThrow(_ = try fileHandle.takeDescriptorOwnership())
-            }
 
             try await XCTAsyncAssertTrue(await channel.writeOutbound(buffer).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeOutbound(ioData).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeOutbound(fileHandle).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeOutbound(fileRegion).isFull)
             try await XCTAsyncAssertTrue(await channel.writeOutbound(
                 AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
                                               data: buffer)).isFull)
             try await XCTAsyncAssertTrue(await channel.writeOutbound(buffer).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeOutbound(ioData).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeOutbound(fileRegion).isFull)
 
 
             try await XCTAsyncAssertTrue(await channel.writeInbound(buffer).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeInbound(ioData).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeInbound(fileHandle).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeInbound(fileRegion).isFull)
             try await XCTAsyncAssertTrue(await channel.writeInbound(
                 AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
                                               data: buffer)).isFull)
             try await XCTAsyncAssertTrue(await channel.writeInbound(buffer).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeInbound(ioData).isFull)
-            try await XCTAsyncAssertTrue(await channel.writeInbound(fileRegion).isFull)
 
-            func check<Expected, Actual>(expected: Expected.Type,
-                                         actual: Actual.Type,
-                                         file: StaticString = #file,
-                                         line: UInt = #line) async {
+            func check<Expected: Sendable, Actual>(expected: Expected.Type,
+                                                   actual: Actual.Type,
+                                                   file: StaticString = #file,
+                                                   line: UInt = #line) async {
                 do {
                     _ = try await channel.readOutbound(as: Expected.self)
                     XCTFail("this should have failed", file: (file), line: line)
@@ -319,13 +303,8 @@ class AsyncTestingChannelTests: XCTestCase {
             }
 
             await check(expected: Never.self, actual: IOData.self)
-            await check(expected: Never.self, actual: IOData.self)
-            await check(expected: Never.self, actual: NIOFileHandle.self)
-            await check(expected: Never.self, actual: IOData.self)
-            await check(expected: Never.self, actual: AddressedEnvelope<ByteBuffer>.self)
-            await check(expected: NIOFileHandle.self, actual: IOData.self)
-            await check(expected: NIOFileHandle.self, actual: IOData.self)
-            await check(expected: ByteBuffer.self, actual: IOData.self)
+            await check(expected: ByteBuffer.self, actual: AddressedEnvelope<ByteBuffer>.self)
+            await check(expected: AddressedEnvelope<ByteBuffer>.self, actual: IOData.self)
         }
         #else
         throw XCTSkip()
