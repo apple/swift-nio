@@ -18,8 +18,8 @@ services:
   test:
     image: swift-nio:20.04-5.5
     environment:
-      - MAX_ALLOCS_ALLOWED_1000_addHandlers=45050
-      - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=38050
+      - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
+      - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlercontext=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlername=9050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlertype=9050
@@ -28,7 +28,7 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_copying_bytebufferview_to_array=1050
       - MAX_ALLOCS_ALLOWED_1000_copying_circularbuffer_to_array=1050
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=9050
-      - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=35
+      - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=37
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=30400
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=4050
       - MAX_ALLOCS_ALLOWED_1000_tcpconnections=158050

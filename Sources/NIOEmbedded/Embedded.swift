@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
+import NIOConcurrencyHelpers
 import Dispatch
 import _NIODataStructures
 import NIOCore
@@ -235,11 +237,29 @@ public final class EmbeddedEventLoop: EventLoop {
 
 @usableFromInline
 class EmbeddedChannelCore: ChannelCore {
-    var isOpen: Bool = true
-    var isActive: Bool = false
+    var isOpen: Bool {
+        get {
+            return self._isOpen.load(ordering: .sequentiallyConsistent)
+        }
+        set {
+            self._isOpen.store(newValue, ordering: .sequentiallyConsistent)
+        }
+    }
 
-    var eventLoop: EventLoop
-    var closePromise: EventLoopPromise<Void>
+    var isActive: Bool {
+        get {
+            return self._isActive.load(ordering: .sequentiallyConsistent)
+        }
+        set {
+            self._isActive.store(newValue, ordering: .sequentiallyConsistent)
+        }
+    }
+
+    private let _isOpen = ManagedAtomic(true)
+    private let _isActive = ManagedAtomic(false)
+
+    let eventLoop: EventLoop
+    let closePromise: EventLoopPromise<Void>
     var error: Optional<Error>
 
     private let pipeline: ChannelPipeline
@@ -273,16 +293,19 @@ class EmbeddedChannelCore: ChannelCore {
 
     @usableFromInline
     func localAddress0() throws -> SocketAddress {
+        self.eventLoop.preconditionInEventLoop()
         throw ChannelError.operationUnsupported
     }
 
     @usableFromInline
     func remoteAddress0() throws -> SocketAddress {
+        self.eventLoop.preconditionInEventLoop()
         throw ChannelError.operationUnsupported
     }
 
     @usableFromInline
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        self.eventLoop.preconditionInEventLoop()
         guard self.isOpen else {
             promise?.fail(ChannelError.alreadyClosed)
             return
@@ -304,11 +327,13 @@ class EmbeddedChannelCore: ChannelCore {
 
     @usableFromInline
     func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.eventLoop.preconditionInEventLoop()
         promise?.succeed(())
     }
 
     @usableFromInline
     func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.eventLoop.preconditionInEventLoop()
         isActive = true
         promise?.succeed(())
         self.pipeline.syncOperations.fireChannelActive()
@@ -316,12 +341,14 @@ class EmbeddedChannelCore: ChannelCore {
 
     @usableFromInline
     func register0(promise: EventLoopPromise<Void>?) {
+        self.eventLoop.preconditionInEventLoop()
         promise?.succeed(())
         self.pipeline.syncOperations.fireChannelRegistered()
     }
 
     @usableFromInline
     func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+        self.eventLoop.preconditionInEventLoop()
         isActive = true
         register0(promise: promise)
         self.pipeline.syncOperations.fireChannelActive()
@@ -329,11 +356,13 @@ class EmbeddedChannelCore: ChannelCore {
 
     @usableFromInline
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+        self.eventLoop.preconditionInEventLoop()
         self.pendingOutboundBuffer.append((data, promise))
     }
 
     @usableFromInline
     func flush0() {
+        self.eventLoop.preconditionInEventLoop()
         self.pendingOutboundBuffer.mark()
 
         while self.pendingOutboundBuffer.hasMark, let dataAndPromise = self.pendingOutboundBuffer.popFirst() {
@@ -344,25 +373,30 @@ class EmbeddedChannelCore: ChannelCore {
 
     @usableFromInline
     func read0() {
+        self.eventLoop.preconditionInEventLoop()
         // NOOP
     }
 
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
+        self.eventLoop.preconditionInEventLoop()
         promise?.fail(ChannelError.operationUnsupported)
     }
 
     @usableFromInline
     func channelRead0(_ data: NIOAny) {
+        self.eventLoop.preconditionInEventLoop()
         addToBuffer(buffer: &inboundBuffer, data: data)
     }
 
     public func errorCaught0(error: Error) {
+        self.eventLoop.preconditionInEventLoop()
         if self.error == nil {
             self.error = error
         }
     }
 
     private func addToBuffer<T>(buffer: inout CircularBuffer<T>, data: T) {
+        self.eventLoop.preconditionInEventLoop()
         buffer.append(data)
     }
 }
