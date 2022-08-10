@@ -580,29 +580,24 @@ class AsyncWebSocketServerEndToEndTests: XCTestCase {
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
         
-        do {
-            try await asyncInteractInMemory(client, server, eventLoop: loop)
-        } catch {
-            XCTFail("Should not throw")
+        await XCTAssertNoThrowWithResult(try await asyncInteractInMemory(client, server, eventLoop: loop))
+
+        XCTAsyncTest {
+            await loop.run()
+                
+            do {
+                let response = try await client.readAllInboundBuffers().allAsString()
+                assertResponseIs(response: response,
+                                                  expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                                                  expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
+            } catch {
+                XCTFail("Should not fail")
+            }
         }
         
-        await loop.run()
-            
-        do {
-            assertResponseIs(response: try await client.readAllInboundBuffers().allAsString(),
-                                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                                              expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
-        } catch {
-            XCTFail("Should not fail")
-        }
-        
-        do {
-            _ = try await client.finish()
-            _ = try await server.finish()
-            await loop.shutdownGracefully()
-        } catch {
-            XCTFail("Should not throw any errors")
-        }
+        _ = await XCTAssertNoThrowWithResult(try await client.finish())
+        _ = await XCTAssertNoThrowWithResult(try await server.finish())
+        await XCTAssertNoThrowWithResult(await loop.shutdownGracefully())
     }
     
     func testUpgradeWithProtocolName() async throws {
