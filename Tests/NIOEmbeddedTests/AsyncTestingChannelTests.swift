@@ -562,11 +562,11 @@ class AsyncTestingChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
-            let invocations = ManagedAtomic(0)
+            let invocations = AtomicCounter()
 
             @Sendable func recursivelyScheduleAndIncrement() {
                 channel.pipeline.eventLoop.scheduleTask(deadline: .distantFuture) {
-                    invocations.wrappingIncrement(ordering: .relaxed)
+                    invocations.increment()
                     recursivelyScheduleAndIncrement()
                 }
             }
@@ -574,7 +574,7 @@ class AsyncTestingChannelTests: XCTestCase {
             recursivelyScheduleAndIncrement()
 
             _ = try await channel.finish()
-            XCTAssertEqual(invocations.load(ordering: .relaxed), 1)
+            XCTAssertEqual(invocations.load(), 1)
         }
         #else
         throw XCTSkip()
@@ -640,5 +640,20 @@ fileprivate func XCTAsyncAssertNil(_ expression: @autoclosure () async throws ->
 fileprivate func XCTAsyncAssertNotNil(_ expression: @autoclosure () async throws -> Any?, file: StaticString = #file, line: UInt = #line) async rethrows {
     let result = try await expression()
     XCTAssertNotNil(result, file: file, line: line)
+}
+
+/// A simple atomic counter.
+final class AtomicCounter: @unchecked Sendable {
+    // This class has to be `@unchecked Sendable` because ManagedAtomic
+    // is not sendable.
+    private let baseCounter = ManagedAtomic(0)
+
+    func increment() {
+        self.baseCounter.wrappingIncrement(ordering: .relaxed)
+    }
+
+    func load() -> Int {
+        self.baseCounter.load(ordering: .relaxed)
+    }
 }
 #endif
