@@ -283,11 +283,7 @@ extension NIOThrowingAsyncSequenceProducer {
         /* private */ internal let lock = Lock()
         /// The state machine.
         @usableFromInline
-        /* private */ internal var stateMachine: NIOAsyncSequenceProducerStateMachine<
-            Element,
-            Failure,
-            Strategy
-        >
+        /* private */ internal var stateMachine: StateMachine
         /// The delegate.
         @usableFromInline
         /* private */ internal var delegate: Delegate?
@@ -500,11 +496,7 @@ extension NIOThrowingAsyncSequenceProducer {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOThrowingAsyncSequenceProducer {
     @usableFromInline
-    /* private */ internal struct NIOAsyncSequenceProducerStateMachine<
-        Element: Sendable,
-        Failure: Error,
-        Strategy: NIOAsyncSequenceProducerBackPressureStrategy
-    > {
+    /* private */ internal struct StateMachine {
         @usableFromInline
         /* private */ internal enum State {
             /// The initial state before either a call to `yield()` or a call to `next()` happened
