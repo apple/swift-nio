@@ -581,20 +581,13 @@ class AsyncWebSocketServerEndToEndTests: XCTestCase {
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
         
         await XCTAssertNoThrowWithResult(try await asyncInteractInMemory(client, server, eventLoop: loop))
-
-        XCTAsyncTest {
-            await loop.run()
-                
-            do {
-                let response = try await client.readAllInboundBuffers().allAsString()
-                assertResponseIs(response: response,
-                                                  expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                                                  expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
-            } catch {
-                XCTFail("Should not fail")
-            }
-        }
         
+        await loop.run()
+        
+        await XCTAssertNoThrowWithResult(assertResponseIs(response: try await client.readAllInboundBuffers().allAsString(),
+                                                          expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                                                          expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"]))
+
         _ = await XCTAssertNoThrowWithResult(try await client.finish())
         _ = await XCTAssertNoThrowWithResult(try await server.finish())
         await XCTAssertNoThrowWithResult(await loop.shutdownGracefully())
