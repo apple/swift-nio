@@ -48,7 +48,7 @@ extension WebSocketServerEndToEndTests {
 extension AsyncWebSocketServerEndToEndTests {
 
    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   static var allTests : [(String, (AsyncWebSocketServerEndToEndTests) -> () throws -> Void)] {
+   static var allTests : [(String, (AsyncWebSocketServerEndToEndTests) -> () async throws -> Void)] {
       return [
                 ("testBasicUpgradeDance", testBasicUpgradeDance),
                 ("testUpgradeWithProtocolName", testUpgradeWithProtocolName),
