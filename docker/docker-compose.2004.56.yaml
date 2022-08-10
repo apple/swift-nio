@@ -28,7 +28,7 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_copying_bytebufferview_to_array=1050
       - MAX_ALLOCS_ALLOWED_1000_copying_circularbuffer_to_array=1050
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=9050
-      - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=35
+      - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=37
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=30400
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=4050
       - MAX_ALLOCS_ALLOWED_1000_tcpconnections=154050
