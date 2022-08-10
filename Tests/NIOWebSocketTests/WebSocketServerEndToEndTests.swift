@@ -38,6 +38,26 @@ extension EmbeddedChannel {
     }
 }
 
+extension NIOAsyncTestingChannel {
+    func readAllInboundBuffers() async throws -> ByteBuffer {
+        var buffer = self.allocator.buffer(capacity: 100)
+        while var writtenData: ByteBuffer = try await self.readInbound() {
+            buffer.writeBuffer(&writtenData)
+        }
+        
+        return buffer
+    }
+    
+    func finishAcceptingAlreadyClosed() async throws {
+        do {
+            let result = try await self.finish().isClean
+            XCTAssertTrue(result)
+        } catch ChannelError.alreadyClosed {
+            // ok
+        }
+    }
+}
+
 extension ByteBuffer {
     func allAsString() -> String {
         return self.getString(at: self.readerIndex, length: self.readableBytes)!
@@ -45,6 +65,12 @@ extension ByteBuffer {
 }
 
 extension EmbeddedChannel {
+    func writeString(_ string: String) -> EventLoopFuture<Void> {
+        return self.writeAndFlush(self.allocator.buffer(string: string))
+    }
+}
+
+extension NIOAsyncTestingChannel {
     func writeString(_ string: String) -> EventLoopFuture<Void> {
         return self.writeAndFlush(self.allocator.buffer(string: string))
     }
@@ -552,7 +578,7 @@ class AsyncWebSocketServerEndToEndTests: XCTestCase {
         let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])
         
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
-        XCTAssertNoThrow(try client.write(upgradeRequest).wait())
+        XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
         
         do {
             try await asyncInteractInMemory(client, server, eventLoop: loop)
@@ -561,9 +587,9 @@ class AsyncWebSocketServerEndToEndTests: XCTestCase {
         }
         
         await loop.run()
-        
+            
         do {
-            assertResponseIs(response: try await client.readInbound(as: String.self)!,
+            assertResponseIs(response: try await client.readAllInboundBuffers().allAsString(),
                                               expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                                               expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
         } catch {
