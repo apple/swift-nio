@@ -163,14 +163,14 @@ extension Soundness {
                     case .excludeExtension:
                         self.excludedExtensions.append(value)
                     case .excludeDirectory:
-                        self.excludedDirectories.append(URL(filePath: value))
+                        self.excludedDirectories.append(URL(_filePath: value))
                     case .excludeFile:
-                        self.excludedFiles.append(URL(filePath: value))
+                        self.excludedFiles.append(URL(_filePath: value))
                     }
 
                 } else {
                     // Not a flag/option: must be arguments
-                    self.files.append(contentsOf: arguments[index...].map { URL(filePath: $0) })
+                    self.files.append(contentsOf: arguments[index...].map { URL(_filePath: $0) })
                     break
                 }
                 arguments.formIndex(after: &index)
@@ -199,6 +199,32 @@ extension Soundness.Options {
         return self.excludedFiles.contains(url)
             || self.excludedExtensions.contains(url.pathExtension)
             || self.excludedDirectories.contains { url.absoluteString.utf8.starts(with: $0.absoluteString.utf8) }
+    }
+}
+
+extension URL {
+    @available(macOS 13.0, *)
+    init(_filePath: String) {
+        // 'init(fileURLWithPath)' is deprecated on macOS, but 'init(filePath:)' hasn't made it
+        // to swift-corelibs-foundation.
+        // https://github.com/apple/swift-corelibs-foundation/issues/4623
+        #if os(macOS)
+        self = .init(filePath: _filePath)
+        #else
+        self = .init(fileURLWithPath: _filePath)
+        #endif
+    }
+
+    @available(macOS 13.0, *)
+    var _path: String {
+        // 'path' is deprecated on macOS, but 'path(percentEncoded:)' hasn't made it
+        // to swift-corelibs-foundation.
+        // https://github.com/apple/swift-corelibs-foundation/issues/4623
+        #if os(macOS)
+        return self.path(percentEncoded: false)
+        #else
+        return self.path
+        #endif
     }
 }
 

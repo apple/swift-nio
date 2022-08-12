@@ -37,7 +37,7 @@ struct CopyrightCheck {
         return try await withThrowingTaskGroup(of: SoundnessResult?.self) { group in
             for url in self.options.files {
                 group.addTask {
-                    let path = url.path(percentEncoded: false)
+                    let path = url._path
 
                     if self.options.shouldIgnore(url: url) {
                         return .skipped(path)
