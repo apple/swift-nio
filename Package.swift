@@ -97,6 +97,7 @@ var targets: [PackageDescription.Target] = [
             dependencies: ["NIOPosix", "NIOCore", "NIOEmbedded", "NIOHTTP1", "NIOWebSocket", "NIOFoundationCompat"]),
     .executableTarget(name: "NIOAsyncAwaitDemo",
             dependencies: ["NIOPosix", "NIOCore", "NIOHTTP1"]),
+    .executableTarget(name: "NIOSoundness", dependencies: []),
     .testTarget(name: "NIOCoreTests",
                 dependencies: ["NIOCore", "NIOEmbedded", "NIOFoundationCompat"]),
     .testTarget(name: "NIOBetaTests",
@@ -138,6 +139,7 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
+        .executable(name: "nio-soundness", targets: ["NIOSoundness"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.0.2"),
