@@ -627,4 +627,134 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
+#if !os(Windows)
+    /// Returns information about a file at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - note: If `path` is a symlink, information about the link, not the file it points to.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to get information about.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` containing file information.
+    public func lstat(path: String, eventLoop: EventLoop) -> EventLoopFuture<stat> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            var s = stat()
+            try Posix.lstat(pathname: path, outStat: &s)
+            return s
+        }
+    }
+
+    /// Creates a symbolic link to a  `destination` file  at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the link.
+    ///     - destination: Target path where this link will point to.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` which is fulfilled if the rename was successful or fails on error.
+    public func symlink(path: String, to destination: String, eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            try Posix.symlink(pathname: path, destination: destination)
+        }
+    }
+
+    /// Returns target of the symbolic link at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the link to read.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` containing link target.
+    public func readlink(path: String, eventLoop: EventLoop) -> EventLoopFuture<String> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            let maxLength = Int(PATH_MAX)
+            let pointer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: maxLength)
+            defer {
+                pointer.deallocate()
+            }
+            let length = try Posix.readlink(pathname: path, outPath: pointer.baseAddress!, outPathSize: maxLength)
+            return String(decoding: UnsafeRawBufferPointer(pointer).prefix(length), as: UTF8.self)
+        }
+    }
+
+    /// Removes symbolic link at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the link to remove.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` which is fulfilled if the rename was successful or fails on error.
+    public func unlink(path: String, eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            try Posix.unlink(pathname: path)
+        }
+    }
+
+    /// List contents of the directory at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the directory to list the content of.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` containing the directory entries.
+    public func listDirectory(path: String, eventLoop: EventLoop) -> EventLoopFuture<[NIODirectoryEntry]> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            let dir = try Posix.opendir(pathname: path)
+            var entries: [NIODirectoryEntry] = []
+            do {
+                while let entry = try Posix.readdir(dir: dir) {
+                    let name = withUnsafeBytes(of: entry.pointee.d_name) { pointer -> String in
+                        let ptr = pointer.baseAddress!.assumingMemoryBound(to: CChar.self)
+                        return String(cString: ptr)
+                    }
+                    entries.append(NIODirectoryEntry(ino: UInt64(entry.pointee.d_ino), type: entry.pointee.d_type, name: name))
+                }
+                try? Posix.closedir(dir: dir)
+            } catch {
+                try? Posix.closedir(dir: dir)
+                throw error
+            }
+            return entries
+        }
+    }
+
+    /// Renames the file at `path` to `newName` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to be renamed.
+    ///     - newName: New file name.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` which is fulfilled if the rename was successful or fails on error.
+    public func rename(path: String, newName: String, eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            try Posix.rename(pathname: path, newName: newName)
+        }
+    }
+
+    /// Removes the file at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to be removed.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` which is fulfilled if the remove was successful or fails on error.
+    public func remove(path: String, eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            try Posix.remove(pathname: path)
+        }
+    }
+#endif
 }
+
+#if !os(Windows)
+/// A `NIODirectoryEntry` represents a single directory entry.
+public struct NIODirectoryEntry: Hashable {
+    // File number of entry
+    public var ino: UInt64
+    // File type
+    public var type: UInt8
+    // File name
+    public var name: String
+
+    public init(ino: UInt64, type: UInt8, name: String) {
+        self.ino = ino
+        self.type = type
+        self.name = name
+    }
+}
+#endif
