@@ -29,17 +29,13 @@ else
   printf "\033[0;32mokay.\033[0m\n"
 fi
 
-printf "=> Building soundness tool... "
-swift build -c release --product nio-soundness > /dev/null
-printf "\033[0;32mokay.\033[0m\n"
-
 printf "=> Checking for unacceptable language... "
-${root}/.build/release/nio-soundness check-language \
+swift package plugin check-nio-soundness check-language \
   --exclude-file ${root}/CODE_OF_CONDUCT.md \
   ${root}/**/*
 
 printf "=> Checking license headers... "
-${root}/.build/release/nio-soundness check-license-header \
+swift package plugin check-nio-soundness check-license-header \
   --exclude-extension txt \
   --exclude-extension md \
   --exclude-extension resolved \

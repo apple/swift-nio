@@ -97,7 +97,6 @@ var targets: [PackageDescription.Target] = [
             dependencies: ["NIOPosix", "NIOCore", "NIOEmbedded", "NIOHTTP1", "NIOWebSocket", "NIOFoundationCompat"]),
     .executableTarget(name: "NIOAsyncAwaitDemo",
             dependencies: ["NIOPosix", "NIOCore", "NIOHTTP1"]),
-    .executableTarget(name: "NIOSoundness", dependencies: []),
     .testTarget(name: "NIOCoreTests",
                 dependencies: ["NIOCore", "NIOEmbedded", "NIOFoundationCompat"]),
     .testTarget(name: "NIOBetaTests",
@@ -122,6 +121,13 @@ var targets: [PackageDescription.Target] = [
                 dependencies: ["NIOCore", "NIOFoundationCompat"]),
     .testTarget(name: "NIOTests",
                 dependencies: ["NIO"]),
+    .plugin(name: "NIOSoundness",
+            capability: .command(
+                intent: .custom(
+                    verb: "check-nio-soundness",
+                    description: "Validates inputs files pass the NIO soundness check."
+                )
+            )),
 ]
 
 let package = Package(
@@ -139,7 +145,7 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .executable(name: "nio-soundness", targets: ["NIOSoundness"]),
+        .plugin(name: "nio-soundness", targets: ["NIOSoundness"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.0.2"),

@@ -12,62 +12,55 @@
 //
 //===----------------------------------------------------------------------===//
 #if swift(>=5.7)
+import PackagePlugin
 import Foundation
 
 @main
 @available(macOS 13.0, *)
-struct Soundness {
-    static func main() async throws {
-        do {
-            // Drop the executable
-            let args = CommandLine.arguments.dropFirst()
+struct Soundness: CommandPlugin {
+    func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
+        // Check for help first.
+        if arguments.contains("--help") {
+            print(Self.helpText)
+            return
+        }
 
-            // Check for help first.
-            if args.contains("--help") {
-                print(Self.helpText)
-                return
+        guard let command = arguments.first.flatMap({ Soundness.Check(rawValue: $0) }) else {
+            throw SoundnessError.missingCommand
+        }
+
+        let options = try Self.Options(parsing: arguments.dropFirst()) // drop the command.
+
+        let results: [SoundnessResult]
+
+        switch command {
+        case .licenseHeader:
+            let copyright = CopyrightCheck(options: options)
+            results = try await copyright.check()
+        case .language:
+            let language = LanguageCheck(options: options)
+            results = try await language.check()
+        }
+
+        // Grab all failures and print them last so they're more discoverable.
+        var failures: [SoundnessResult] = []
+
+        for result in results {
+            if result.isFailure {
+                failures.append(result)
+            } else if options.verbose {
+                print(result)
             }
+        }
 
-            guard let command = args.first.flatMap({ Soundness.Check(rawValue: $0) }) else {
-                throw SoundnessError.missingCommand
+        if failures.isEmpty {
+            print("Checked \(results.count) files, no problems found.")
+        } else {
+            print("Checked \(results.count) files, found \(failures.count) issue(s):")
+            for problem in failures {
+                print(problem)
             }
-
-            let options = try Self.Options(parsing: args.dropFirst()) // drop the command.
-
-            let results: [SoundnessResult]
-
-            switch command {
-            case .licenseHeader:
-                let copyright = CopyrightCheck(options: options)
-                results = try await copyright.check()
-            case .language:
-                let language = LanguageCheck(options: options)
-                results = try await language.check()
-            }
-
-            // Grab all failures and print them last so they're more discoverable.
-            var failures: [SoundnessResult] = []
-
-            for result in results {
-                if result.isFailure {
-                    failures.append(result)
-                } else if options.verbose {
-                    print(result)
-                }
-            }
-
-            if failures.isEmpty {
-                print("Checked \(results.count) files, no problems found.")
-            } else {
-                print("Checked \(results.count) files, found \(failures.count) issue(s):")
-                for problem in failures {
-                    print(problem)
-                }
-                throw Soundness.SoundnessError.soundnessFailed
-            }
-        } catch {
-            print(error)
-            exit(1)
+            throw Soundness.SoundnessError.soundnessFailed
         }
     }
 
@@ -240,13 +233,19 @@ extension FileManager {
     }
 }
 #else
+import PackagePlugin
 import Foundation
 
 @main
-struct Soundness {
-    static func main() async throws {
-        print("nio-soundness requires Swift >= 5.7")
-        exit(1)
+struct Soundness: CommandPlugin {
+    struct UnsupportedVersion: Error, CustomStringConvertible {
+        var description: String {
+            return "nio-soundness requires Swift >= 5.7"
+        }
+    }
+
+    func performCommand(context: PluginContext, arguments: [String]) async throws {
+        throw UnsupportedVersion()
     }
 }
 #endif // swift(>=5.7)
