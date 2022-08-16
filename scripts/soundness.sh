@@ -32,12 +32,12 @@ fi
 soundness_files=$(find ${root} -name ".*" -prune -o -print)
 
 printf "=> Checking for unacceptable language... "
-swift package check-nio-soundness check-language \
+swift package plugin check-nio-soundness check-language \
   --exclude-file ${root}/CODE_OF_CONDUCT.md \
   ${soundness_files}
 
 printf "=> Checking license headers... "
-swift package check-nio-soundness check-license-header \
+swift package plugin check-nio-soundness check-license-header \
   --exclude-extension txt \
   --exclude-extension md \
   --exclude-extension resolved \
