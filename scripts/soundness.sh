@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 ##===----------------------------------------------------------------------===##
 ##
 ## This source file is part of the SwiftNIO open source project
@@ -14,8 +14,8 @@
 ##===----------------------------------------------------------------------===##
 
 set -eu
-here="$( cd "$( dirname "${(%):-%N}" )" && pwd )"
-root="${here}/.."
+here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+root="$(realpath ${here}/..)"
 
 printf "=> Checking linux tests... "
 FIRST_OUT="$(git status --porcelain)"
@@ -29,13 +29,15 @@ else
   printf "\033[0;32mokay.\033[0m\n"
 fi
 
+soundness_files=$(find ${root} -name ".*" -prune -o -print)
+
 printf "=> Checking for unacceptable language... "
-swift package plugin check-nio-soundness check-language \
+swift package check-nio-soundness check-language \
   --exclude-file ${root}/CODE_OF_CONDUCT.md \
-  ${root}/**/*
+  ${soundness_files}
 
 printf "=> Checking license headers... "
-swift package plugin check-nio-soundness check-license-header \
+swift package check-nio-soundness check-license-header \
   --exclude-extension txt \
   --exclude-extension md \
   --exclude-extension resolved \
@@ -50,4 +52,4 @@ swift package plugin check-nio-soundness check-license-header \
   --exclude-file ${root}/dev/git.commit.template \
   --exclude-file ${root}/scripts/generate_linux_tests.rb \
   --exclude-directory ${root}/docker \
-  ${root}/**/*
+  ${soundness_files}
