@@ -216,7 +216,7 @@ extension ChannelPipeline {
     }
 }
 
-public struct NIOTooManyBytesError: Error {
+public struct NIOTooManyBytesError: Error, Hashable {
      public init() {}
  }
 
