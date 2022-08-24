@@ -373,7 +373,7 @@ class ChannelPipelineTest: XCTestCase {
         try channel.pipeline.addHandler(MarkingInboundHandler(number: 6)).wait()
         try channel.pipeline.addHandler(WriteOnReadHandler()).wait()
 
-        try channel.writeInbound([])
+        try channel.writeInbound([Int]())
         loop.run()
         XCTAssertNoThrow(XCTAssertEqual([2, 6], try channel.readInbound()!))
 
