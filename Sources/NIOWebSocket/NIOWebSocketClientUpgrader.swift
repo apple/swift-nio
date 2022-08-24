@@ -25,12 +25,6 @@ public typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader
 /// pipeline to remove the HTTP `ChannelHandler`s.
 public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     
-    #if swift(>=5.7)
-    private typealias UpgradePipelineHandler = @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
-    #else
-    private typealias UpgradePipelineHandler = (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
-    #endif
-    
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
     /// None of the websocket headers are actually defined as 'required'.
@@ -39,54 +33,18 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     private let requestKey: String
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
-    private let upgradePipelineHandler: UpgradePipelineHandler
+    private let upgradePipelineHandler: (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
 
-    #if swift(>=5.7)
     /// - Parameters:
     ///   - requestKey: sent to the server in the `Sec-WebSocket-Key` HTTP header. Default is random request key.
     ///   - maxFrameSize: largest incoming `WebSocketFrame` size in bytes. Default is 16,384 bytes.
     ///   - automaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
     ///   - upgradePipelineHandler: called once the upgrade was successful
-    @preconcurrency
-    public convenience init(
-        requestKey: String = randomRequestKey(),
-        maxFrameSize: Int = 1 << 14,
-        automaticErrorHandling: Bool = true,
-        upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
-    ) {
-        self.init(
-            _requestKey: requestKey,
-            maxFrameSize: maxFrameSize,
-            automaticErrorHandling: automaticErrorHandling,
-            upgradePipelineHandler: upgradePipelineHandler
-        )
-    }
-    #else
-    /// - Parameters:
-    ///   - requestKey: sent to the server in the `Sec-WebSocket-Key` HTTP header. Default is random request key.
-    ///   - maxFrameSize: largest incoming `WebSocketFrame` size in bytes. Default is 16,384 bytes.
-    ///   - automaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
-    ///   - upgradePipelineHandler: called once the upgrade was successful
-    public convenience init(
+    public init(
         requestKey: String = randomRequestKey(),
         maxFrameSize: Int = 1 << 14,
         automaticErrorHandling: Bool = true,
         upgradePipelineHandler: @escaping (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
-    ) {
-        self.init(
-            _requestKey: requestKey,
-            maxFrameSize: maxFrameSize,
-            automaticErrorHandling: automaticErrorHandling,
-            upgradePipelineHandler: upgradePipelineHandler
-        )
-    }
-    #endif
-    
-    private init(
-        _requestKey requestKey: String,
-        maxFrameSize: Int,
-        automaticErrorHandling: Bool,
-        upgradePipelineHandler: @escaping UpgradePipelineHandler
     ) {
         precondition(requestKey != "", "The request key must contain a valid Sec-WebSocket-Key")
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
