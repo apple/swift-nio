@@ -92,15 +92,9 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
     public typealias InboundIn = HTTPClientResponsePart
     public typealias InboundOut = HTTPClientResponsePart
     
-    #if swift(>=5.7)
-    private typealias UpgradeCompletionHandler = @Sendable (ChannelHandlerContext) -> Void
-    #else
-    private typealias UpgradeCompletionHandler = (ChannelHandlerContext) -> Void
-    #endif
-    
     private var upgraders: [NIOHTTPClientProtocolUpgrader]
     private let httpHandlers: [RemovableChannelHandler]
-    private let upgradeCompletionHandler: UpgradeCompletionHandler
+    private let upgradeCompletionHandler: (ChannelHandlerContext) -> Void
     
     /// Whether we've already seen the first response from our initial upgrade request.
     private var seenFirstResponse = false
@@ -109,27 +103,6 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
     
     private var receivedMessages: CircularBuffer<NIOAny> = CircularBuffer()
     
-    #if swift(>=5.7)
-    /// Create a `HTTPClientUpgradeHandler`.
-    ///
-    /// - Parameter upgraders: All `HTTPClientProtocolUpgrader` objects that will add their upgrade request
-    ///     headers and handle the upgrade if there is a response for their protocol. They should be placed in
-    ///     order of the preference for the upgrade.
-    /// - Parameter httpHandlers: All `RemovableChannelHandler` objects which will be removed from the pipeline
-    ///     once the upgrade response is sent. This is used to ensure that the pipeline will be in a clean state
-    ///     after the upgrade. It should include any handlers that are directly related to handling HTTP.
-    ///     At the very least this should include the `HTTPEncoder` and `HTTPDecoder`, but should also include
-    ///     any other handler that cannot tolerate receiving non-HTTP data.
-    /// - Parameter upgradeCompletionHandler: A closure that will be fired when HTTP upgrade is complete.
-    @preconcurrency
-    public convenience init(
-        upgraders: [NIOHTTPClientProtocolUpgrader],
-        httpHandlers: [RemovableChannelHandler],
-        upgradeCompletionHandler: @escaping @Sendable (ChannelHandlerContext) -> Void
-    ) {
-        self.init(_upgraders: upgraders, httpHandlers: httpHandlers, upgradeCompletionHandler: upgradeCompletionHandler)
-    }
-    #else
     /// Create a `HTTPClientUpgradeHandler`.
     ///
     /// - Parameter upgraders: All `HTTPClientProtocolUpgrader` objects that will add their upgrade request
@@ -148,12 +121,11 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
     ) {
         self.init(_upgraders: upgraders, httpHandlers: httpHandlers, upgradeCompletionHandler: upgradeCompletionHandler)
     }
-    #endif
     
     private init(
         _upgraders upgraders: [NIOHTTPClientProtocolUpgrader],
         httpHandlers: [RemovableChannelHandler],
-        upgradeCompletionHandler: @escaping UpgradeCompletionHandler
+        upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
     ) {
         precondition(upgraders.count > 0, "A minimum of one protocol upgrader must be specified.")
 

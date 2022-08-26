@@ -98,26 +98,15 @@ public final class SNIHandler: ByteToMessageDecoder {
     public var cumulationBuffer: Optional<ByteBuffer>
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
-    #if swift(>=5.7)
-    private let completionHandler: @Sendable (SNIResult) -> EventLoopFuture<Void>
-    #else
+
     private let completionHandler: (SNIResult) -> EventLoopFuture<Void>
-    #endif
     private var waitingForUser: Bool
     
-    #if swift(>=5.7)
-    @preconcurrency public init(sniCompleteHandler: @Sendable @escaping (SNIResult) -> EventLoopFuture<Void>) {
-        self.cumulationBuffer = nil
-        self.completionHandler = sniCompleteHandler
-        self.waitingForUser = false
-    }
-    #else
     public init(sniCompleteHandler: @escaping (SNIResult) -> EventLoopFuture<Void>) {
         self.cumulationBuffer = nil
         self.completionHandler = sniCompleteHandler
         self.waitingForUser = false
     }
-    #endif
 
     public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
         context.fireChannelRead(NIOAny(buffer))
