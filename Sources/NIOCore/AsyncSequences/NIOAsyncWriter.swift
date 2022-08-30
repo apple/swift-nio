@@ -39,6 +39,9 @@ public protocol NIOAsyncWriterDelegate: Sendable {
     /// - ``NIOAsyncWriter/finish(with:)`` is called.
     ///
     /// - Note: This is guaranteed to be called _exactly_ once.
+    ///
+    /// - Parameter failure: The failure that terminated the ``NIOAsyncWriter``. If the writer was terminated without an
+    /// error this value is `nil`.
     func didTerminate(failure: Failure?)
 }
 
@@ -53,6 +56,28 @@ public struct NIOAsyncWriterError: Error, Hashable {
     @usableFromInline
     let _code: _Code
 
+    @usableFromInline
+    var file: String
+
+    @usableFromInline
+    var line: Int
+
+    @inlinable
+    init(_code: _Code, file: String = #fileID, line: Int = #line) {
+        self._code = _code
+        self.file = file
+        self.line = line
+    }
+
+    public static func == (lhs: NIOAsyncWriterError, rhs: NIOAsyncWriterError) -> Bool {
+        return lhs._code == rhs._code
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self._code)
+    }
+
+    /// Indicates that the ``NIOAsyncWriter`` has already finished and is not accepting any more writes.
     public static let alreadyFinished: Self = .init(_code: .alreadyFinished)
 }
 
@@ -514,11 +539,11 @@ extension NIOAsyncWriter {
 
                 if newWritability {
                     // We became writable again. This means we have to resume all the continuations
-                    // and yield the values
+                    // and yield the values.
 
-                    // We are taking the whole array of suspended yields and allocate a new empty one
+                    // We are taking the whole array of suspended yields and allocate a new empty one.
                     // As a performance optimization we could always keep two arrays and switch between
-                    // them but I don't think this is the performance critical part
+                    // them but I don't think this is the performance critical part.
                     let yields = suspendedYields
 
                     self._state = .streaming(
@@ -607,7 +632,7 @@ extension NIOAsyncWriter {
 
             case .finished:
                 // We are already finished and still tried to write something
-                return .throwError(NIOAsyncWriterError.alreadyFinished)
+                return .throwError(NIOAsyncWriterError(_code: .alreadyFinished))
 
             case .modifying:
                 preconditionFailure("Invalid state")
@@ -696,6 +721,7 @@ extension NIOAsyncWriter {
                     )
 
                 } else {
+                    self._state = .modifying
                     // There is no suspended yield. This can mean that we either already yielded
                     // or that the call to `yield` is coming afterwards. We need to store
                     // the ID here. However, if the yield already happened we will never remove the
