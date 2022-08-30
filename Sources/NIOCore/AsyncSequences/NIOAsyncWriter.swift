@@ -274,22 +274,22 @@ extension NIOAsyncWriter {
 
         @inlinable
         /* fileprivate */ internal func writerDeinitialized() {
-            let _delegate: Delegate? = self._lock.withLock {
+            let delegate: Delegate? = self._lock.withLock {
                 let action = self._stateMachine.writerDeinitialized()
 
                 switch action {
                 case .callDidTerminate:
-                    let _delegate = self._delegate
+                    let delegate = self._delegate
                     self._delegate = nil
 
-                    return _delegate
+                    return delegate
 
                 case .none:
                     return nil
                 }
             }
 
-            _delegate?.didTerminate(failure: nil)
+            delegate?.didTerminate(failure: nil)
         }
 
         @inlinable
@@ -301,10 +301,10 @@ extension NIOAsyncWriter {
 
             switch action {
             case .callDidYieldAndResumeContinuations(let suspendedYields):
-                let _delegate = self._delegate
+                let delegate = self._delegate
                 self._lock.unlock()
 
-                _delegate?.didYield(contentsOf: suspendedYields.lazy.map { $0.elements }.flatMap { $0 })
+                delegate?.didYield(contentsOf: suspendedYields.lazy.map { $0.elements }.flatMap { $0 })
                 suspendedYields.forEach { $0.continuation.resume() }
 
             case .none:
@@ -327,9 +327,9 @@ extension NIOAsyncWriter {
 
                 switch action {
                 case .callDidYield:
-                    let _delegate = self._delegate
+                    let delegate = self._delegate
                     self._lock.unlock()
-                    _delegate?.didYield(contentsOf: sequence)
+                    delegate?.didYield(contentsOf: sequence)
 
                 case .throwError(let error):
                     self._lock.unlock()
@@ -361,32 +361,32 @@ extension NIOAsyncWriter {
 
         @inlinable
         /* fileprivate */ internal func finish(with failure: Failure?) {
-            let _delegate: Delegate? = self._lock.withLock {
+            let delegate: Delegate? = self._lock.withLock {
                 let action = self._stateMachine.finish()
 
                 switch action {
                 case .callDidTerminate:
-                    let _delegate = self._delegate
+                    let delegate = self._delegate
                     self._delegate = nil
 
-                    return _delegate
+                    return delegate
 
                 case .resumeContinuationsWithErrorAndCallDidTerminate(let suspendedYields, let error):
-                    let _delegate = self._delegate
+                    let delegate = self._delegate
                     self._delegate = nil
                     // It is safe to resume the continuation while holding the lock
                     // since the task will get enqueued on its executor and the resume method
                     // is returning immediately
                     suspendedYields.forEach { $0.continuation.resume(throwing: error) }
 
-                    return _delegate
+                    return delegate
 
                 case .none:
                     return nil
                 }
             }
 
-            _delegate?.didTerminate(failure: failure)
+            delegate?.didTerminate(failure: failure)
         }
     }
 }
