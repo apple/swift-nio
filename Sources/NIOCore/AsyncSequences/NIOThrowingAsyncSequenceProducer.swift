@@ -299,21 +299,21 @@ extension NIOThrowingAsyncSequenceProducer {
 
         @inlinable
         /* fileprivate */ internal func sequenceDeinitialized() {
-            let _delegate: Delegate? = self._lock.withLock {
+            let delegate: Delegate? = self._lock.withLock {
                 let action = self._stateMachine.sequenceDeinitialized()
 
                 switch action {
                 case .callDidTerminate:
-                    let _delegate = self._delegate
+                    let delegate = self._delegate
                     self._delegate = nil
-                    return _delegate
+                    return delegate
 
                 case .none:
                     return nil
                 }
             }
 
-            _delegate?.didTerminate()
+            delegate?.didTerminate()
         }
 
         @inlinable
@@ -325,22 +325,22 @@ extension NIOThrowingAsyncSequenceProducer {
 
         @inlinable
         /* fileprivate */ internal func iteratorDeinitialized() {
-            let _delegate: Delegate? = self._lock.withLock {
+            let delegate: Delegate? = self._lock.withLock {
                 let action = self._stateMachine.iteratorDeinitialized()
 
                 switch action {
                 case .callDidTerminate:
-                    let _delegate = self._delegate
+                    let delegate = self._delegate
                     self._delegate = nil
 
-                    return _delegate
+                    return delegate
 
                 case .none:
                     return nil
                 }
             }
 
-            _delegate?.didTerminate()
+            delegate?.didTerminate()
         }
 
         @inlinable
@@ -379,12 +379,12 @@ extension NIOThrowingAsyncSequenceProducer {
 
         @inlinable
         /* fileprivate */ internal func finish(_ failure: Failure?) {
-            let _delegate: Delegate? = self._lock.withLock {
+            let delegate: Delegate? = self._lock.withLock {
                 let action = self._stateMachine.finish(failure)
 
                 switch action {
                 case .resumeContinuationWithFailureAndCallDidTerminate(let continuation, let failure):
-                    let _delegate = self._delegate
+                    let delegate = self._delegate
                     self._delegate = nil
 
                     // It is safe to resume the continuation while holding the lock
@@ -397,14 +397,14 @@ extension NIOThrowingAsyncSequenceProducer {
                         continuation.resume(returning: nil)
                     }
 
-                    return _delegate
+                    return delegate
 
                 case .none:
                     return nil
                 }
             }
 
-            _delegate?.didTerminate()
+            delegate?.didTerminate()
         }
 
         @inlinable
@@ -420,19 +420,19 @@ extension NIOThrowingAsyncSequenceProducer {
                     return element
 
                 case .returnElementAndCallProduceMore(let element):
-                    let _delegate = self._delegate
+                    let delegate = self._delegate
                     self._lock.unlock()
 
-                    _delegate?.produceMore()
+                    delegate?.produceMore()
 
                     return element
 
                 case .returnFailureAndCallDidTerminate(let failure):
-                    let _delegate = self._delegate
+                    let delegate = self._delegate
                     self._delegate = nil
                     self._lock.unlock()
 
-                    _delegate?.didTerminate()
+                    delegate?.didTerminate()
 
                     switch failure {
                     case .some(let error):
@@ -454,10 +454,10 @@ extension NIOThrowingAsyncSequenceProducer {
 
                         switch action {
                         case .callProduceMore:
-                            let _delegate = _delegate
+                            let delegate = _delegate
                             self._lock.unlock()
 
-                            _delegate?.produceMore()
+                            delegate?.produceMore()
 
                         case .none:
                             self._lock.unlock()
@@ -465,29 +465,29 @@ extension NIOThrowingAsyncSequenceProducer {
                     }
                 }
             } onCancel: {
-                let _delegate: Delegate? = self._lock.withLock {
+                let delegate: Delegate? = self._lock.withLock {
                     let action = self._stateMachine.cancelled()
 
                     switch action {
                     case .callDidTerminate:
-                        let _delegate = self._delegate
+                        let delegate = self._delegate
                         self._delegate = nil
 
-                        return _delegate
+                        return delegate
 
                     case .resumeContinuationWithNilAndCallDidTerminate(let continuation):
                         continuation.resume(returning: nil)
-                        let _delegate = self._delegate
+                        let delegate = self._delegate
                         self._delegate = nil
 
-                        return _delegate
+                        return delegate
 
                     case .none:
                         return nil
                     }
                 }
 
-                _delegate?.didTerminate()
+                delegate?.didTerminate()
             }
         }
     }
