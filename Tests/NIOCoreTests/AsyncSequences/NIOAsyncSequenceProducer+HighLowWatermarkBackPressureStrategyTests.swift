@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if compiler(>=5.5.2) && canImport(_Concurrency)
 import NIOCore
 import XCTest
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 final class NIOAsyncSequenceProducerBackPressureStrategiesHighLowWatermarkTests: XCTestCase {
     private var strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark!
 
