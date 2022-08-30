@@ -896,6 +896,17 @@ extension EventLoop {
         }
     }
 
+    /// Creates and returns a new `EventLoopFuture` that is marked as succeeded or failed with the value returned by `body`.
+    ///
+    /// - Parameters:
+    ///   - body: The function that is used to complete the `EventLoopFuture`
+    /// - Returns: A completed `EventLoopFuture`.
+    @inlinable
+    public func makeCompletedFuture<Success>(withResultOf body: () throws -> Success) -> EventLoopFuture<Success> {
+        let trans = Result(catching: body)
+        return self.makeCompletedFuture(trans)
+    }
+
     /// An `EventLoop` forms a singular `EventLoopGroup`, returning itself as the 'next' `EventLoop`.
     ///
     /// - returns: Itself, because an `EventLoop` forms a singular `EventLoopGroup`.

@@ -1407,6 +1407,25 @@ public final class EventLoopTest : XCTestCase {
         }
     }
 
+    func testMakeCompletedFutureWithResultOf() {
+        let eventLoop = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+        }
+
+        XCTAssertEqual(try eventLoop.makeCompletedFuture(withResultOf: { "foo" }).wait(), "foo")
+
+        struct DummyError: Error {}
+        func throwError() throws {
+            throw DummyError()
+        }
+
+        let future = eventLoop.makeCompletedFuture(withResultOf: throwError)
+        XCTAssertThrowsError(try future.wait()) { error in
+            XCTAssertTrue(error is DummyError)
+        }
+    }
+
     func testMakeCompletedVoidFuture() {
         let eventLoop = EventLoopWithPreSucceededFuture()
         defer {
