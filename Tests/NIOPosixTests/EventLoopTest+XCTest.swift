@@ -84,6 +84,7 @@ extension EventLoopTest {
                 ("testEventLoopsWithoutPreSucceededFuturesDoNotCacheThem", testEventLoopsWithoutPreSucceededFuturesDoNotCacheThem),
                 ("testSelectableEventLoopHasPreSucceededFuturesOnlyOnTheEventLoop", testSelectableEventLoopHasPreSucceededFuturesOnlyOnTheEventLoop),
                 ("testMakeCompletedFuture", testMakeCompletedFuture),
+                ("testMakeCompletedFutureWithResultOf", testMakeCompletedFutureWithResultOf),
                 ("testMakeCompletedVoidFuture", testMakeCompletedVoidFuture),
                 ("testEventLoopGroupsWithoutAnyImplementationAreValid", testEventLoopGroupsWithoutAnyImplementationAreValid),
                 ("testCallingAnyOnAnMTELGThatIsNotSelfDoesNotReturnItself", testCallingAnyOnAnMTELGThatIsNotSelfDoesNotReturnItself),
