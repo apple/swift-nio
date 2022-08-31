@@ -28,6 +28,7 @@ extension HTTPResponseStatusTests {
    static var allTests : [(String, (HTTPResponseStatusTests) -> () throws -> Void)] {
       return [
                 ("testHTTPResponseStatusFromStatusCode", testHTTPResponseStatusFromStatusCode),
+                ("testHTTPResponseStatusCodeAndReason", testHTTPResponseStatusCodeAndReason),
            ]
    }
 }
