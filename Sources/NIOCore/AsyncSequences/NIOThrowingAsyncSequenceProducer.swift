@@ -62,10 +62,8 @@ public struct NIOThrowingAsyncSequenceProducer<
     /// This class is needed to hook the deinit to observe once all references to the ``NIOThrowingAsyncSequenceProducer`` are dropped.
     ///
     /// If we get move-only types we should be able to drop this class and use the `deinit` of the ``AsyncIterator`` struct itself.
-    ///
-    /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
     @usableFromInline
-    /* fileprivate */ internal final class InternalClass: @unchecked Sendable {
+    /* fileprivate */ internal final class InternalClass: Sendable {
         @usableFromInline
         internal let _storage: Storage
 
@@ -143,10 +141,8 @@ extension NIOThrowingAsyncSequenceProducer {
         /// This class is needed to hook the deinit to observe once all references to an instance of the ``AsyncIterator`` are dropped.
         ///
         /// If we get move-only types we should be able to drop this class and use the `deinit` of the ``AsyncIterator`` struct itself.
-        ///
-        /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
         @usableFromInline
-        /* private */ internal final class InternalClass: @unchecked Sendable {
+        /* private */ internal final class InternalClass: Sendable {
             @usableFromInline
             /* private */ internal let _storage: Storage
 
@@ -193,7 +189,7 @@ extension NIOThrowingAsyncSequenceProducer {
         ///
         /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
         @usableFromInline
-        /* fileprivate */ internal final class InternalClass: @unchecked Sendable {
+        /* fileprivate */ internal final class InternalClass: Sendable {
             @usableFromInline
             internal let _storage: Storage
 

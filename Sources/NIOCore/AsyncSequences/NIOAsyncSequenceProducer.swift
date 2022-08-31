@@ -205,7 +205,7 @@ extension NIOAsyncSequenceProducer {
         ///
         /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
         @usableFromInline
-        /* fileprivate */ internal final class InternalClass: @unchecked Sendable {
+        /* fileprivate */ internal final class InternalClass: Sendable {
             @usableFromInline
             typealias ThrowingSource = NIOThrowingAsyncSequenceProducer<
                 Element,
