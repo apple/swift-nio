@@ -185,13 +185,20 @@ extension NIOThrowingAsyncSequenceProducer {
     /// A struct to interface between the synchronous code of the producer and the asynchronous consumer.
     /// This type allows the producer to synchronously `yield` new elements to the ``NIOThrowingAsyncSequenceProducer``
     /// and to `finish` the sequence.
-    public struct Source {
+    ///
+    /// - Important: When a ``Source`` gets deinitilized it calls ``Source/finish()``. This will resume any
+    /// suspended continuation. 
+    public final class Source: Sendable {
         @usableFromInline
         /* fileprivate */ internal let _storage: Storage
 
         @usableFromInline
         /* fileprivate */ internal init(storage: Storage) {
             self._storage = storage
+        }
+
+        deinit {
+            self.finish()
         }
 
         /// The result of a call to ``NIOThrowingAsyncSequenceProducer/Source/yield(_:)``.
