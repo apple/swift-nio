@@ -1311,6 +1311,12 @@ extension HTTPRequestHead: CustomStringConvertible {
     }
 }
 
+extension HTTPResponseStatus: CustomStringConvertible {
+    public var description: String {
+        return "\(self.code) \(self.reasonPhrase)"
+    }
+}
+
 extension HTTPResponseHead: CustomStringConvertible {
     public var description: String {
         return "HTTPResponseHead { version: \(self.version), status: \(self.status), headers: \(self.headers) }"
