@@ -1945,10 +1945,15 @@ reexecute:
       }
             
       case s_rtcm_start:
-        STRICT_CHECK(ch != '\x93');
-        p -= 3;
-        UPDATE_STATE(s_headers_almost_done);
-        break;
+            if (ch == '\x93') {
+                p -= 3;
+                UPDATE_STATE(s_headers_almost_done);
+            } else {
+                /* Not a RTCM header and not a tokenizable header character */
+                SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
+                RETURN(p - data - 1); /* Error */
+            }
+            break;
 
       case s_headers_done:
       {
