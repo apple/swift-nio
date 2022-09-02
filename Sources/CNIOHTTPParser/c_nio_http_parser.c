@@ -886,6 +886,7 @@ reexecute:
             
       case s_res_IC:
         STRICT_CHECK(ch != 'Y');
+        parser->is_icy = 1;
         parser->http_major = 1;
         parser->http_minor = 1;
         UPDATE_STATE(s_res_http_end);
@@ -1301,6 +1302,11 @@ reexecute:
            * the second \n to denote the end of headers*/
           UPDATE_STATE(s_headers_almost_done);
           REEXECUTE();
+        }
+
+        if (parser->is_icy && ch == '\xC3') {
+          UPDATE_STATE(s_rtcm_start);
+          break;
         }
 
         c = TOKEN(ch);
@@ -1811,10 +1817,6 @@ reexecute:
           }
           UPDATE_STATE(s_header_value_start);
           REEXECUTE();
-        /* RTCM body start **/
-        } else if (ch == '\xC3') {
-            UPDATE_STATE(s_rtcm_start);
-            break;
         }
 
         /* finished the header */
@@ -1962,15 +1964,15 @@ reexecute:
       }
             
       case s_rtcm_start:
-            if (ch == '\x93') {
-                p -= 3;
-                UPDATE_STATE(s_headers_almost_done);
-            } else {
-                /* Not a RTCM header and not a tokenizable header character */
-                SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
-                RETURN(p - data - 1); /* Error */
-            }
-            break;
+        if (ch == '\x93') {
+          p -= 3;
+          UPDATE_STATE(s_headers_almost_done);
+        } else {
+          /* Not a RTCM header and not a tokenizable header character */
+          SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
+          RETURN(p - data - 1); /* Error */
+        }
+        break;
 
       case s_headers_done:
       {
