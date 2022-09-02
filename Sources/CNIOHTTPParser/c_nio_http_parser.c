@@ -289,16 +289,19 @@ enum state
   , s_res_HT
   , s_res_HTT
   , s_res_HTTP
-    , s_res_S
-    , s_res_SO
-    , s_res_SOU
-    , s_res_SOUR
-    , s_res_SOURC
-    , s_res_SOURCE
-    , s_res_SOURCET
-    , s_res_SOURCETA
-    , s_res_SOURCETAB
-    , s_res_SOURCETABL
+  , s_res_S
+  , s_res_SO
+  , s_res_SOU
+  , s_res_SOUR
+  , s_res_SOURC
+  , s_res_SOURCE
+  , s_res_SOURCET
+  , s_res_SOURCETA
+  , s_res_SOURCETAB
+  , s_res_SOURCETABL
+  , s_res_I
+  , s_res_IC
+    
   , s_res_http_major
   , s_res_http_dot
   , s_res_http_minor
@@ -793,6 +796,8 @@ reexecute:
           UPDATE_STATE(s_res_H);
         } else if (ch == 'S') {
             UPDATE_STATE(s_res_S);
+        } else if (ch == 'I') {
+            UPDATE_STATE(s_res_I);
         } else {
           SET_ERRNO(HPE_INVALID_CONSTANT);
           goto error;
@@ -869,6 +874,18 @@ reexecute:
         
       case s_res_SOURCETABL:
         STRICT_CHECK(ch != 'E');
+        parser->http_major = 1;
+        parser->http_minor = 1;
+        UPDATE_STATE(s_res_http_end);
+        break;
+
+      case s_res_I:
+        STRICT_CHECK(ch != 'C');
+        UPDATE_STATE(s_res_IC);
+        break;
+            
+      case s_res_IC:
+        STRICT_CHECK(ch != 'Y');
         parser->http_major = 1;
         parser->http_minor = 1;
         UPDATE_STATE(s_res_http_end);

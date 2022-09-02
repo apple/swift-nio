@@ -36,6 +36,7 @@ extension HTTPDecoderTest {
                 ("testDoesNotDecodeHTTP2XResponse", testDoesNotDecodeHTTP2XResponse),
                 ("testToleratesHTTP13Response", testToleratesHTTP13Response),
                 ("testToleratesSourcetableResponse", testToleratesSourcetableResponse),
+                ("testToleratesIcyResponse", testToleratesIcyResponse),
                 ("testToleratesEarlyRTCMBodyResponse", testToleratesEarlyRTCMBodyResponse),
                 ("testNonRTCMFalseAlarmResponse", testNonRTCMFalseAlarmResponse),
                 ("testCorrectlyMaintainIndicesWhenDiscardReadBytes", testCorrectlyMaintainIndicesWhenDiscardReadBytes),
