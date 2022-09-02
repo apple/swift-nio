@@ -204,7 +204,7 @@ class HTTPDecoderTest: XCTestCase {
         // We tolerate SOURCETABLE responses due to NTRIP revision 1.
         // says that these should be treated like HTTP/1.1 by our users.
         var buffer = channel.allocator.buffer(capacity: 64)
-        buffer.writeStaticString("HTTP/1.1 200 OK\r\nServer: whatever\r\nÓ")
+        buffer.writeStaticString("ICY 200 OK\r\nÓ")
 
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertNoThrow(try channel.finish())
