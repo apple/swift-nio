@@ -289,16 +289,16 @@ enum state
   , s_res_HT
   , s_res_HTT
   , s_res_HTTP
-    , s_res_S
-    , s_res_SO
-    , s_res_SOU
-    , s_res_SOUR
-    , s_res_SOURC
-    , s_res_SOURCE
-    , s_res_SOURCET
-    , s_res_SOURCETA
-    , s_res_SOURCETAB
-    , s_res_SOURCETABL
+  , s_res_S
+  , s_res_SO
+  , s_res_SOU
+  , s_res_SOUR
+  , s_res_SOURC
+  , s_res_SOURCE
+  , s_res_SOURCET
+  , s_res_SOURCETA
+  , s_res_SOURCETAB
+  , s_res_SOURCETABL
   , s_res_http_major
   , s_res_http_dot
   , s_res_http_minor
