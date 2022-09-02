@@ -62,10 +62,8 @@ public struct NIOThrowingAsyncSequenceProducer<
     /// This class is needed to hook the deinit to observe once all references to the ``NIOThrowingAsyncSequenceProducer`` are dropped.
     ///
     /// If we get move-only types we should be able to drop this class and use the `deinit` of the ``AsyncIterator`` struct itself.
-    ///
-    /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
     @usableFromInline
-    /* fileprivate */ internal final class InternalClass: @unchecked Sendable {
+    /* fileprivate */ internal final class InternalClass: Sendable {
         @usableFromInline
         internal let _storage: Storage
 
@@ -143,10 +141,8 @@ extension NIOThrowingAsyncSequenceProducer {
         /// This class is needed to hook the deinit to observe once all references to an instance of the ``AsyncIterator`` are dropped.
         ///
         /// If we get move-only types we should be able to drop this class and use the `deinit` of the ``AsyncIterator`` struct itself.
-        ///
-        /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
         @usableFromInline
-        /* private */ internal final class InternalClass: @unchecked Sendable {
+        /* private */ internal final class InternalClass: Sendable {
             @usableFromInline
             /* private */ internal let _storage: Storage
 
@@ -185,13 +181,41 @@ extension NIOThrowingAsyncSequenceProducer {
     /// A struct to interface between the synchronous code of the producer and the asynchronous consumer.
     /// This type allows the producer to synchronously `yield` new elements to the ``NIOThrowingAsyncSequenceProducer``
     /// and to `finish` the sequence.
-    public struct Source {
+    ///
+    /// - Note: This struct has reference semantics. Once all copies of a source have been dropped ``NIOThrowingAsyncSequenceProducer/Source/finish()``.
+    /// This will resume any suspended continuation.
+    public struct Source: Sendable {
+        /// This class is needed to hook the deinit to observe once all references to the ``NIOThrowingAsyncSequenceProducer/Source`` are dropped.
+        ///
+        /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
         @usableFromInline
-        /* fileprivate */ internal let _storage: Storage
+        /* fileprivate */ internal final class InternalClass: Sendable {
+            @usableFromInline
+            internal let _storage: Storage
+
+            @inlinable
+            init(storage: Storage) {
+                self._storage = storage
+            }
+
+            @inlinable
+            deinit {
+                // We need to call finish here to resume any suspended continuation.
+                self._storage.finish(nil)
+            }
+        }
+
+        @usableFromInline
+        /* private */ internal let _internalClass: InternalClass
+
+        @usableFromInline
+        /* private */ internal var _storage: Storage {
+            self._internalClass._storage
+        }
 
         @usableFromInline
         /* fileprivate */ internal init(storage: Storage) {
-            self._storage = storage
+            self._internalClass = .init(storage: storage)
         }
 
         /// The result of a call to ``NIOThrowingAsyncSequenceProducer/Source/yield(_:)``.
