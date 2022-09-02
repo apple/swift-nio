@@ -352,6 +352,8 @@ enum state
   , s_chunk_size
   , s_chunk_parameters
   , s_chunk_size_almost_done
+    
+  , s_rtcm_start
 
   , s_headers_almost_done
   , s_headers_done
@@ -1792,6 +1794,10 @@ reexecute:
           }
           UPDATE_STATE(s_header_value_start);
           REEXECUTE();
+        /* RTCM body start **/
+        } else if (ch == '\xC3') {
+            UPDATE_STATE(s_rtcm_start);
+            break;
         }
 
         /* finished the header */
@@ -1937,6 +1943,12 @@ reexecute:
 
         REEXECUTE();
       }
+            
+      case s_rtcm_start:
+        STRICT_CHECK(ch != '\x93');
+        p -= 3;
+        UPDATE_STATE(s_headers_almost_done);
+        break;
 
       case s_headers_done:
       {
