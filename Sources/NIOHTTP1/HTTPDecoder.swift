@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,11 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-#if compiler(>=5.1)
-@_implementationOnly import CNIOHTTPParser
-#else
-import CNIOHTTPParser
-#endif
+@_implementationOnly import CNIOLLHTTP
 
 private extension UnsafeMutablePointer where Pointee == http_parser {
     /// Returns the `KeepAliveState` for the current message that is parsed.

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// adaptions for http_parser to make it more straightforward to use from Swift
+// adaptions for llhttp to make it more straightforward to use from Swift
 
-#ifndef C_NIO_HTTP_PARSER_SWIFT
-#define C_NIO_HTTP_PARSER_SWIFT
+#ifndef C_NIO_LLHTTP_SWIFT
+#define C_NIO_LLHTTP_SWIFT
 
-#include "c_nio_http_parser.h"
+#include "c_nio_llhttp.h"
 
 static inline size_t c_nio_http_parser_execute_swift(http_parser *parser,
                                                      const http_parser_settings *settings,
