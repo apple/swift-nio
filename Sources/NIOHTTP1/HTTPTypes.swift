@@ -790,16 +790,28 @@ public enum HTTPParserError: Error {
     case trailingGarbage
     /* from CHTTPParser */
     case invalidEOFState
+
+    @available(*, deprecated, message: "Cannot be thrown")
     case headerOverflow
     case closedConnection
     case invalidVersion
     case invalidStatus
     case invalidMethod
     case invalidURL
+
+    @available(*, deprecated, message: "Cannot be thrown")
     case invalidHost
+
+    @available(*, deprecated, message: "Cannot be thrown")
     case invalidPort
+
+    @available(*, deprecated, message: "Cannot be thrown")
     case invalidPath
+
+    @available(*, deprecated, message: "Cannot be thrown")
     case invalidQueryString
+
+    @available(*, deprecated, message: "Cannot be thrown")
     case invalidFragment
     case lfExpected
     case invalidHeaderToken

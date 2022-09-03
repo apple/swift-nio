@@ -78,18 +78,6 @@ class HTTPDecoderTest: XCTestCase {
         self.loop.run()
     }
 
-    func testToleratesHTTP13Request() throws {
-        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
-
-        // We tolerate higher versions of HTTP/1 than we know about because RFC 7230
-        // says that these should be treated like HTTP/1.1 by our users.
-        var buffer = channel.allocator.buffer(capacity: 64)
-        buffer.writeStaticString("GET / HTTP/1.3\r\nHost: whatever\r\n\r\n")
-
-        XCTAssertNoThrow(try channel.writeInbound(buffer))
-        XCTAssertNoThrow(try channel.finish())
-    }
-
     func testDoesNotDecodeRealHTTP09Response() throws {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
@@ -144,22 +132,6 @@ class HTTPDecoderTest: XCTestCase {
         }
 
         self.loop.run()
-    }
-
-    func testToleratesHTTP13Response() throws {
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
-
-        // We need to prime the decoder by seeing a GET request.
-        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http2, method: .GET, uri: "/")))
-
-        // We tolerate higher versions of HTTP/1 than we know about because RFC 7230
-        // says that these should be treated like HTTP/1.1 by our users.
-        var buffer = channel.allocator.buffer(capacity: 64)
-        buffer.writeStaticString("HTTP/1.3 200 OK\r\nServer: whatever\r\n\r\n")
-
-        XCTAssertNoThrow(try channel.writeInbound(buffer))
-        XCTAssertNoThrow(try channel.finish())
     }
 
     func testCorrectlyMaintainIndicesWhenDiscardReadBytes() throws {
