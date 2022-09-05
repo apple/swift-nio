@@ -161,6 +161,70 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertNoThrow(try channel.finish())
     }
+    
+    func testToleratesSourcetableResponse() throws {
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
+
+        // We need to prime the decoder by seeing a GET request.
+        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http2, method: .GET, uri: "/")))
+
+        // We tolerate SOURCETABLE responses due to NTRIP revision 1.
+        // says that these should be treated like HTTP/1.1 by our users.
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.writeStaticString("SOURCETABLE 200 OK\r\nServer: whatever\r\n\r\n")
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.finish())
+    }
+    
+    func testToleratesIcyResponse() throws {
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
+
+        // We need to prime the decoder by seeing a GET request.
+        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http2, method: .GET, uri: "/")))
+
+        // We tolerate SOURCETABLE responses due to NTRIP revision 1.
+        // says that these should be treated like HTTP/1.1 by our users.
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.writeStaticString("ICY 200 OK\r\n\r\n")
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testToleratesEarlyRTCMBodyResponse() throws {
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
+
+        // We need to prime the decoder by seeing a GET request.
+        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http2, method: .GET, uri: "/")))
+
+        // We tolerate SOURCETABLE responses due to NTRIP revision 1.
+        // says that these should be treated like HTTP/1.1 by our users.
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.writeStaticString("ICY 200 OK\r\nÓ")
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.finish())
+    }
+    
+    func testNonRTCMFalseAlarmResponse() throws {
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
+
+        // We need to prime the decoder by seeing a GET request.
+        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http2, method: .GET, uri: "/")))
+
+        // We tolerate SOURCETABLE responses due to NTRIP revision 1.
+        // says that these should be treated like HTTP/1.1 by our users.
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.writeStaticString("HTTP/1.1 200 OK\r\n\u{C3}Header: whatever\r\n\r\n")
+        XCTAssertThrowsError(try channel.writeInbound(buffer), "invalid character in header", {error in
+            XCTAssertEqual(error as? HTTPParserError, HTTPParserError.invalidHeaderToken, "Unexpected error")
+        })
+    }
 
     func testCorrectlyMaintainIndicesWhenDiscardReadBytes() throws {
         class Receiver: ChannelInboundHandler {

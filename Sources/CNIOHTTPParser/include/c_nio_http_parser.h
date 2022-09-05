@@ -309,6 +309,7 @@ struct http_parser {
                                           * `Content-Length` and
                                           * `Transfer-Encoding: chunked` set */
   unsigned int lenient_http_headers : 1;
+  unsigned int is_icy : 1; /* Set if an icy response **/
 
   uint32_t nread;          /* # bytes read in various scenarios */
   uint64_t content_length; /* # bytes in body. `(uint64_t) -1` (all bits one)

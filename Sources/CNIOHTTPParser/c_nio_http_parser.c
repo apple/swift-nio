@@ -289,6 +289,19 @@ enum state
   , s_res_HT
   , s_res_HTT
   , s_res_HTTP
+  , s_res_S
+  , s_res_SO
+  , s_res_SOU
+  , s_res_SOUR
+  , s_res_SOURC
+  , s_res_SOURCE
+  , s_res_SOURCET
+  , s_res_SOURCETA
+  , s_res_SOURCETAB
+  , s_res_SOURCETABL
+  , s_res_I
+  , s_res_IC
+    
   , s_res_http_major
   , s_res_http_dot
   , s_res_http_minor
@@ -342,6 +355,8 @@ enum state
   , s_chunk_size
   , s_chunk_parameters
   , s_chunk_size_almost_done
+    
+  , s_rtcm_start
 
   , s_headers_almost_done
   , s_headers_done
@@ -779,6 +794,10 @@ reexecute:
 
         if (ch == 'H') {
           UPDATE_STATE(s_res_H);
+        } else if (ch == 'S') {
+            UPDATE_STATE(s_res_S);
+        } else if (ch == 'I') {
+            UPDATE_STATE(s_res_I);
         } else {
           SET_ERRNO(HPE_INVALID_CONSTANT);
           goto error;
@@ -806,6 +825,71 @@ reexecute:
       case s_res_HTTP:
         STRICT_CHECK(ch != '/');
         UPDATE_STATE(s_res_http_major);
+        break;
+            
+      case s_res_S:
+        STRICT_CHECK(ch != 'O');
+        UPDATE_STATE(s_res_SO);
+        break;
+
+      case s_res_SO:
+        STRICT_CHECK(ch != 'U');
+        UPDATE_STATE(s_res_SOU);
+        break;
+        
+      case s_res_SOU:
+        STRICT_CHECK(ch != 'R');
+        UPDATE_STATE(s_res_SOUR);
+        break;
+        
+      case s_res_SOUR:
+        STRICT_CHECK(ch != 'C');
+        UPDATE_STATE(s_res_SOURC);
+        break;
+        
+      case s_res_SOURC:
+        STRICT_CHECK(ch != 'E');
+        UPDATE_STATE(s_res_SOURCE);
+        break;
+        
+      case s_res_SOURCE:
+        STRICT_CHECK(ch != 'T');
+        UPDATE_STATE(s_res_SOURCET);
+        break;
+        
+      case s_res_SOURCET:
+        STRICT_CHECK(ch != 'A');
+        UPDATE_STATE(s_res_SOURCETA);
+        break;
+        
+      case s_res_SOURCETA:
+        STRICT_CHECK(ch != 'B');
+        UPDATE_STATE(s_res_SOURCETAB);
+        break;
+        
+      case s_res_SOURCETAB:
+        STRICT_CHECK(ch != 'L');
+        UPDATE_STATE(s_res_SOURCETABL);
+        break;
+        
+      case s_res_SOURCETABL:
+        STRICT_CHECK(ch != 'E');
+        parser->http_major = 1;
+        parser->http_minor = 1;
+        UPDATE_STATE(s_res_http_end);
+        break;
+
+      case s_res_I:
+        STRICT_CHECK(ch != 'C');
+        UPDATE_STATE(s_res_IC);
+        break;
+            
+      case s_res_IC:
+        STRICT_CHECK(ch != 'Y');
+        parser->is_icy = 1;
+        parser->http_major = 1;
+        parser->http_minor = 1;
+        UPDATE_STATE(s_res_http_end);
         break;
 
       case s_res_http_major:
@@ -1218,6 +1302,11 @@ reexecute:
            * the second \n to denote the end of headers*/
           UPDATE_STATE(s_headers_almost_done);
           REEXECUTE();
+        }
+
+        if (parser->is_icy && ch == '\xC3') {
+          UPDATE_STATE(s_rtcm_start);
+          break;
         }
 
         c = TOKEN(ch);
@@ -1873,6 +1962,17 @@ reexecute:
 
         REEXECUTE();
       }
+            
+      case s_rtcm_start:
+        if (ch == '\x93') {
+          p -= 3;
+          UPDATE_STATE(s_headers_almost_done);
+        } else {
+          /* Not a RTCM header and not a tokenizable header character */
+          SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
+          RETURN(p - data - 1); /* Error */
+        }
+        break;
 
       case s_headers_done:
       {
