@@ -45,12 +45,12 @@ This product contains a derivation of the Tony Stone's 'process_test_files.rb'.
 
 ---
 
-This product contains NodeJS's http-parser.
+This product contains NodeJS's llhttp.
 
   * LICENSE (MIT):
-    * https://github.com/nodejs/http-parser/blob/master/LICENSE-MIT
+    * https://github.com/nodejs/llhttp/blob/master/LICENSE-MIT
   * HOMEPAGE:
-    * https://github.com/nodejs/http-parser
+    * https://github.com/nodejs/llhttp
 
 ---
 
