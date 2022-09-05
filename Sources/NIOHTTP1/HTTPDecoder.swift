@@ -373,9 +373,9 @@ private class BetterHTTPParser {
                 let startPointer = bytes.baseAddress! + self.httpParserOffset
                 let bytesToRead = bytes.count - self.httpParserOffset
 
-                rc = c_nio_llhttp_execute(parserPtr,
-                                          startPointer,
-                                          bytesToRead)
+                rc = c_nio_llhttp_execute_swift(parserPtr,
+                                                startPointer,
+                                                bytesToRead)
 
                 if rc == HPE_PAUSED_UPGRADE {
                     // This is a special pause. We don't need to stop here (our other code will prevent us

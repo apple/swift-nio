@@ -19,11 +19,10 @@
 
 #include "c_nio_llhttp.h"
 
-//static inline size_t c_nio_http_parser_execute_swift(http_parser *parser,
-//                                                     const http_parser_settings *settings,
-//                                                     const void *data,
-//                                                     size_t len) {
-//    return c_nio_http_parser_execute(parser, settings, (const char *)data, len);
-//}
+static inline llhttp_errno_t c_nio_llhttp_execute_swift(llhttp_t *parser,
+                                                        const void *data,
+                                                        size_t len) {
+    return c_nio_llhttp_execute(parser, (const char *)data, len);
+}
 
 #endif
