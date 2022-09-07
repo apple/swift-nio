@@ -142,6 +142,7 @@ def createLinuxMain(testsDirectory, allTestSubDirectories, files)
     file.write header(fileName)
     file.write "\n"
 
+    file.write "#if !compiler(>=5.5)\n"
     file.write "#if os(Linux) || os(FreeBSD) || os(Android)\n"
     for testSubDirectory in allTestSubDirectories.sort { |x, y| x <=> y }
       file.write '   @testable import ' + testSubDirectory + "\n"
@@ -171,6 +172,9 @@ def createLinuxMain(testsDirectory, allTestSubDirectories, files)
     file.write "    }\n"
     file.write "}\n"
     file.write "(LinuxMainRunnerImpl() as LinuxMainRunner).run()\n"
+    file.write "#endif\n"
+    file.write "#else\n"
+    file.write "#error(\"on Swift 5.5 and newer, --enable-test-discovery is required\")\n"
     file.write "#endif\n"
   end
 end
