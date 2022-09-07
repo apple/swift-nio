@@ -20,7 +20,7 @@ import NIOConcurrencyHelpers
 /// Furthermore, the delegate gets informed when the ``NIOAsyncWriter`` terminated.
 ///
 /// - Important: The methods on the delegate are called while a lock inside of the ``NIOAsyncWriter`` is held. This is done to
-/// guarantee that the ordering of the writes. However, this means you **MUST** avoid calling ``NIOAsyncWriter/Sink/setWritability(to:)``
+/// guarantee the ordering of the writes. However, this means you **MUST** avoid calling ``NIOAsyncWriter/Sink/setWritability(to:)``
 /// from within ``NIOAsyncWriterDelegate/didYield(contentsOf:)`` or ``NIOAsyncWriterDelegate/didTerminate(failure:)``.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public protocol NIOAsyncWriterDelegate: Sendable {
@@ -34,6 +34,8 @@ public protocol NIOAsyncWriterDelegate: Sendable {
     /// If the ``NIOAsyncWriter`` was writable when the sequence was yielded, the sequence will be forwarded
     /// right away to the delegate. If the ``NIOAsyncWriter`` was _NOT_ writable then the sequence will be buffered
     /// until the ``NIOAsyncWriter`` becomes writable again.
+    ///
+    /// - Important: You **MUST** avoid calling ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
     func didYield<S: Sequence>(contentsOf sequence: S) where S.Element == Element
 
     /// This method is called once the ``NIOAsyncWriter`` is terminated.
@@ -47,6 +49,8 @@ public protocol NIOAsyncWriterDelegate: Sendable {
     ///
     /// - Parameter failure: The failure that terminated the ``NIOAsyncWriter``. If the writer was terminated without an
     /// error this value is `nil`.
+    ///
+    /// - Important: You **MUST** avoid calling ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
     func didTerminate(failure: Failure?)
 }
 
