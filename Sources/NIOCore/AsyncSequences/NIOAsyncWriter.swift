@@ -20,7 +20,7 @@ import NIOConcurrencyHelpers
 /// Furthermore, the delegate gets informed when the ``NIOAsyncWriter`` terminated.
 ///
 /// - Important: The methods on the delegate are called while a lock inside of the ``NIOAsyncWriter`` is held. This is done to
-/// guarantee the ordering of the writes. However, this means you **MUST** avoid calling ``NIOAsyncWriter/Sink/setWritability(to:)``
+/// guarantee the ordering of the writes. However, this means you **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)``
 /// from within ``NIOAsyncWriterDelegate/didYield(contentsOf:)`` or ``NIOAsyncWriterDelegate/didTerminate(failure:)``.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public protocol NIOAsyncWriterDelegate: Sendable {
@@ -35,7 +35,7 @@ public protocol NIOAsyncWriterDelegate: Sendable {
     /// right away to the delegate. If the ``NIOAsyncWriter`` was _NOT_ writable then the sequence will be buffered
     /// until the ``NIOAsyncWriter`` becomes writable again.
     ///
-    /// - Important: You **MUST** avoid calling ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
+    /// - Important: You **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
     func didYield<S: Sequence>(contentsOf sequence: S) where S.Element == Element
 
     /// This method is called once the ``NIOAsyncWriter`` is terminated.
@@ -50,15 +50,15 @@ public protocol NIOAsyncWriterDelegate: Sendable {
     /// - Parameter failure: The failure that terminated the ``NIOAsyncWriter``. If the writer was terminated without an
     /// error this value is `nil`.
     ///
-    /// - Important: You **MUST** avoid calling ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
+    /// - Important: You **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
     func didTerminate(failure: Failure?)
 }
 
 /// Errors thrown by the ``NIOAsyncWriter``.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public struct NIOAsyncWriterError: Error, Hashable {
+public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
     @usableFromInline
-    internal enum _Code: Hashable, Sendable {
+    internal enum _Code: String, Hashable, Sendable {
         case alreadyFinished
     }
 
@@ -93,15 +93,20 @@ public struct NIOAsyncWriterError: Error, Hashable {
     public static func alreadyFinished(file: String = #fileID, line: Int = #line) -> Self {
         .init(_code: .alreadyFinished, file: file, line: line)
     }
+
+    @inlinable
+    public var description: String {
+        "NIOAsyncWriterError.\(self._code.rawValue)"
+    }
 }
 
 /// A ``NIOAsyncWriter`` is a type used to bridge elements from the Swift Concurrency domain into
 /// a synchronous world. The `Task`s that are yielding to the ``NIOAsyncWriter`` are the producers.
 /// Whereas the ``NIOAsyncWriterDelegate`` is the consumer.
 ///
-/// Additionally, the ``NIOAsyncWriter`` allows the consumer to toggle the writability by calling ``NIOAsyncWriter/Sink/toggleWritability()``.
+/// Additionally, the ``NIOAsyncWriter`` allows the consumer to set the writability by calling ``NIOAsyncWriter/Sink/setWritability(to:)()``.
 /// This allows the implementation of flow control on the consumer side. Any call to ``NIOAsyncWriter/yield(contentsOf:)`` or ``NIOAsyncWriter/yield(_:)``
-/// will suspend if the ``NIOAsyncWriter`` is not writable and only be resumed after the ``NIOAsyncWriter`` becomes writable again.
+/// will suspend if the ``NIOAsyncWriter`` is not writable and will be resumed after the ``NIOAsyncWriter`` becomes writable again.
 ///
 /// - Note: It is recommended to never directly expose this type from APIs, but rather wrap it. This is due to the fact that
 /// this type has three generic parameters where at least two should be known statically and it is really awkward to spell out this type.
@@ -117,10 +122,10 @@ public struct NIOAsyncWriter<
     /// Simple struct for the return type of ``NIOAsyncWriter/makeWriter(elementType:failureType:isWritable:delegate:)``.
     ///
     /// This struct contains two properties:
-    /// 1. The ``sink`` which should be retained by the consumer and is used to toggle the writability.
+    /// 1. The ``sink`` which should be retained by the consumer and is used to set the writability.
     /// 2. The ``writer`` which is the actual ``NIOAsyncWriter`` and should be passed to the producer.
     public struct NewWriter {
-        /// The ``sink`` which should be retained by the consumer and is used to toggle the writability.
+        /// The ``sink`` which should be retained by the consumer and is used to set the writability.
         public let sink: Sink
         /// The ``writer`` which is the actual ``NIOAsyncWriter`` and should be passed to the producer.
         public let writer: NIOAsyncWriter
@@ -138,8 +143,6 @@ public struct NIOAsyncWriter<
     /// This class is needed to hook the deinit to observe once all references to the ``NIOAsyncWriter`` are dropped.
     ///
     /// If we get move-only types we should be able to drop this class and use the `deinit` of the ``NIOAsyncWriter`` struct itself.
-    ///
-    /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
     @usableFromInline
     /* fileprivate */ internal final class InternalClass: Sendable {
         @usableFromInline
@@ -167,7 +170,7 @@ public struct NIOAsyncWriter<
     /// Initializes a new ``NIOAsyncWriter`` and a ``NIOAsyncWriter/Sink``.
     ///
     /// - Important: This method returns a struct containing a ``NIOAsyncWriter/Sink`` and
-    /// a ``NIOAsyncWriter``. The sink MUST be held by the caller and is used to toggle the writability.
+    /// a ``NIOAsyncWriter``. The sink MUST be held by the caller and is used to set the writability.
     /// The writer MUST be passed to the actual producer and MUST NOT be held by the
     /// caller. This is due to the fact that deiniting the sequence is used as part of a trigger to terminate the underlying sink.
     ///
@@ -265,7 +268,7 @@ public struct NIOAsyncWriter<
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncWriter {
-    /// The underlying sink of the ``NIOAsyncWriter``. This type allows to toggle the writability of the ``NIOAsyncWriter``.
+    /// The underlying sink of the ``NIOAsyncWriter``. This type allows to set the writability of the ``NIOAsyncWriter``.
     public struct Sink {
         @usableFromInline
         /* private */ internal let _storage: Storage
@@ -536,9 +539,9 @@ extension NIOAsyncWriter {
             }
         }
 
-        /// Actions returned by `toggleWritability()`.
+        /// Actions returned by `setWritability()`.
         @usableFromInline
-        enum ToggleWritabilityAction {
+        enum SetWritabilityAction {
             /// Indicates that ``NIOAsyncWriterDelegate/didYield(contentsOf:)`` should be called
             /// and all continuations should be resumed.
             case callDidYieldAndResumeContinuations(Delegate, [SuspendedYield])
@@ -547,7 +550,7 @@ extension NIOAsyncWriter {
         }
 
         @inlinable
-        /* fileprivate */ internal mutating func setWritability(to newWritability: Bool) -> ToggleWritabilityAction {
+        /* fileprivate */ internal mutating func setWritability(to newWritability: Bool) -> SetWritabilityAction {
             switch self._state {
             case .initial(_, let delegate):
                 // We just need to store the new writability state
