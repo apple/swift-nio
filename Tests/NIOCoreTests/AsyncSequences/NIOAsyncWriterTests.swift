@@ -269,7 +269,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.writer.finish()
 
         await XCTAssertThrowsError(try await self.writer.yield("message1")) { error in
-            XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished)
+            XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished())
         }
         XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
     }
@@ -359,7 +359,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         XCTAssertEqual(self.delegate.didYieldCallCount, 0)
         await XCTAssertThrowsError(try await task.value) { error in
-            XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished)
+            XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished())
         }
     }
 
