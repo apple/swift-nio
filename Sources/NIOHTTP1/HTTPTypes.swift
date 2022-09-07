@@ -790,8 +790,6 @@ public enum HTTPParserError: Error {
     case trailingGarbage
     /* from CHTTPParser */
     case invalidEOFState
-
-    @available(*, deprecated, message: "Cannot be thrown")
     case headerOverflow
     case closedConnection
     case invalidVersion

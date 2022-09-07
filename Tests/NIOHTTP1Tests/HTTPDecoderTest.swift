@@ -917,4 +917,79 @@ class HTTPDecoderTest: XCTestCase {
             XCTAssertEqual(.invalidEOFState, error as? HTTPParserError)
         }
     }
+
+    func testDecodingLongHeaderFieldNames() {
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+
+        var buffer = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\n")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+
+        buffer.clear()
+        buffer.writeRepeatingByte(UInt8(ascii: "x"), count: 1024)
+
+        for _ in 0..<80 {
+            XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+            XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+        }
+
+        let lastByte = buffer.readSlice(length: 1)!
+        XCTAssertThrowsError(try self.channel.writeInbound(lastByte)) { error in
+            XCTAssertEqual(error as? HTTPParserError, .headerOverflow)
+        }
+
+        // We know we'll see an error, we can safely drop it.
+        _ = try? self.channel.finish()
+    }
+
+    func testDecodingLongHeaderFieldValues() {
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+
+        var buffer = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\nx: ")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+
+        buffer.clear()
+        buffer.writeRepeatingByte(UInt8(ascii: "x"), count: 1024)
+
+        for _ in 0..<80 {
+            XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+            XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+        }
+
+        let lastByte = buffer.readSlice(length: 1)!
+        XCTAssertThrowsError(try self.channel.writeInbound(lastByte)) { error in
+            XCTAssertEqual(error as? HTTPParserError, .headerOverflow)
+        }
+
+        // We know we'll see an error, we can safely drop it.
+        _ = try? self.channel.finish()
+    }
+
+    func testDecodingLongURLs() {
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+
+        var buffer = ByteBuffer(string: "GET ")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+
+        buffer.clear()
+        buffer.writeRepeatingByte(UInt8(ascii: "x"), count: 1024)
+
+        for _ in 0..<80 {
+            XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+            XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+        }
+
+        let lastByte = buffer.readSlice(length: 1)!
+        XCTAssertThrowsError(try self.channel.writeInbound(lastByte)) { error in
+            XCTAssertEqual(error as? HTTPParserError, .headerOverflow)
+        }
+
+        // We know we'll see an error, we can safely drop it.
+        _ = try? self.channel.finish()
+    }
 }

@@ -58,6 +58,9 @@ extension HTTPDecoderTest {
                 ("testRefusesRequestSmugglingAttempt", testRefusesRequestSmugglingAttempt),
                 ("testTrimsTrailingOWS", testTrimsTrailingOWS),
                 ("testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable", testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable),
+                ("testDecodingLongHeaderFieldNames", testDecodingLongHeaderFieldNames),
+                ("testDecodingLongHeaderFieldValues", testDecodingLongHeaderFieldValues),
+                ("testDecodingLongURLs", testDecodingLongURLs),
            ]
    }
 }

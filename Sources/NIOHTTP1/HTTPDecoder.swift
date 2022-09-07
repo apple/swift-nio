@@ -34,6 +34,10 @@ private enum HTTPDecodingState {
 }
 
 private class BetterHTTPParser {
+    /// Maximum size of a HTTP header field name or value.
+    /// This number is derived largely from the historical behaviour of NIO.
+    private static let maximumHeaderFieldSize = 80 * 1024
+
     var delegate: HTTPDecoderDelegate! = nil
     private var parser: llhttp_t? = llhttp_t() // nil if unaccessible because reference passed away exclusively
     private var settings: UnsafeMutablePointer<llhttp_settings_t>
@@ -66,8 +70,7 @@ private class BetterHTTPParser {
             return 0
         }
         self.settings.pointee.on_header_field = { opaque, bytes, len in
-            BetterHTTPParser.fromOpaque(opaque).didReceiveHeaderFieldData(UnsafeRawBufferPointer(start: bytes, count: len))
-            return 0
+            return BetterHTTPParser.fromOpaque(opaque).didReceiveHeaderFieldData(UnsafeRawBufferPointer(start: bytes, count: len))
         }
         self.settings.pointee.on_header_value = { opaque, bytes, len in
             return BetterHTTPParser.fromOpaque(opaque).didReceiveHeaderValueData(UnsafeRawBufferPointer(start: bytes, count: len))
@@ -77,8 +80,7 @@ private class BetterHTTPParser {
             return 0
         }
         self.settings.pointee.on_url = { opaque, bytes, len in
-            BetterHTTPParser.fromOpaque(opaque).didReceiveURLData(UnsafeRawBufferPointer(start: bytes, count: len))
-            return 0
+            return BetterHTTPParser.fromOpaque(opaque).didReceiveURLData(UnsafeRawBufferPointer(start: bytes, count: len))
         }
         self.settings.pointee.on_chunk_complete = { opaque in
             BetterHTTPParser.fromOpaque(opaque).didReceiveChunkCompleteNotification()
@@ -147,7 +149,7 @@ private class BetterHTTPParser {
         self.delegate.didReceiveBody(bytes)
     }
 
-    private func didReceiveHeaderFieldData(_ bytes: UnsafeRawBufferPointer) {
+    private func didReceiveHeaderFieldData(_ bytes: UnsafeRawBufferPointer) -> CInt {
         switch self.decodingState {
         case .headerName, .trailerName:
             ()
@@ -175,7 +177,7 @@ private class BetterHTTPParser {
         case .beforeMessageBegin:
             preconditionFailure()
         }
-        self.currentFieldByteLength += bytes.count
+        return self.validateHeaderLength(bytes.count)
     }
 
     private func didReceiveHeaderValueData(_ bytes: UnsafeRawBufferPointer) -> CInt {
@@ -196,8 +198,7 @@ private class BetterHTTPParser {
             case .beforeMessageBegin, .afterMessageBegin, .headersComplete, .url:
                 preconditionFailure()
             }
-            self.currentFieldByteLength += bytes.count
-            return 0
+            return self.validateHeaderLength(bytes.count)
         } catch {
             self.richerError = error
             return -1
@@ -208,7 +209,7 @@ private class BetterHTTPParser {
         // we don't do anything special here because we'll need the whole 'head' anyway
     }
 
-    private func didReceiveURLData(_ bytes: UnsafeRawBufferPointer) {
+    private func didReceiveURLData(_ bytes: UnsafeRawBufferPointer) -> CInt {
         switch self.decodingState {
         case .url:
             ()
@@ -217,7 +218,7 @@ private class BetterHTTPParser {
         case .beforeMessageBegin, .headersComplete, .headerName, .headerValue, .trailerName, .trailerValue:
             preconditionFailure()
         }
-        self.currentFieldByteLength += bytes.count
+        return self.validateHeaderLength(bytes.count)
     }
 
     private func didReceiveChunkCompleteNotification() {
@@ -345,6 +346,16 @@ private class BetterHTTPParser {
             Unmanaged<BetterHTTPParser>.fromOpaque(selfRef!).release()
             parserPtr.pointee.data = UnsafeMutableRawPointer(bitPattern: 0xdedbeef)
         }
+    }
+
+    private func validateHeaderLength(_ newLength: Int) -> CInt {
+        self.currentFieldByteLength += newLength
+        if self.currentFieldByteLength > Self.maximumHeaderFieldSize {
+            self.richerError = HTTPParserError.headerOverflow
+            return -1
+        }
+
+        return 0
     }
 
     @inline(__always) // this need to be optimised away
