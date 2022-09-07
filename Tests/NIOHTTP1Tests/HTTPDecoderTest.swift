@@ -919,6 +919,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testDecodingLongHeaderFieldNames() {
+        // Our maximum field size is 80kB, so we're going to write an 80kB + 1 byte field name to confirm it fails.
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         var buffer = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\n")
@@ -944,6 +945,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testDecodingLongHeaderFieldValues() {
+        // Our maximum field size is 80kB, so we're going to write an 80kB + 1 byte field value to confirm it fails.
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         var buffer = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\nx: ")
@@ -969,6 +971,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testDecodingLongURLs() {
+        // Our maximum field size is 80kB, so we're going to write an 80kB + 1 byte URL to confirm it fails.
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         var buffer = ByteBuffer(string: "GET ")
