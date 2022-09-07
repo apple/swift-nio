@@ -122,6 +122,36 @@ final class NIOAsyncWriterTests: XCTestCase {
         XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
     }
 
+    // MARK: - SinkDeinitialized
+
+    func testSinkDeinitialized_whenInitial() async throws {
+        self.sink = nil
+
+        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+    }
+
+    func testSinkDeinitialized_whenStreaming() async throws {
+        Task { [writer] in
+            try await writer!.yield("message1")
+        }
+
+        try await Task.sleep(nanoseconds: 1_000_000)
+
+        self.sink = nil
+
+        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+    }
+
+    func testSinkDeinitialized_whenFinished() async throws {
+        self.writer.finish()
+
+        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+
+        self.sink = nil
+
+        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+    }
+
     // MARK: - ToggleWritability
 
     func testSetWritability_whenInitial() async throws {

@@ -269,13 +269,38 @@ public struct NIOAsyncWriter<
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncWriter {
     /// The underlying sink of the ``NIOAsyncWriter``. This type allows to set the writability of the ``NIOAsyncWriter``.
+    ///
+    /// - Important: Once all copies to the ``NIOAsyncWriter/Sink`` are destroyed the ``NIOAsyncWriter`` will get finished.
     public struct Sink {
+        /// This class is needed to hook the deinit to observe once all references to the ``NIOAsyncWriter/Sink`` are dropped.
         @usableFromInline
-        /* private */ internal let _storage: Storage
+        /* fileprivate */ internal final class InternalClass: Sendable {
+            @usableFromInline
+            /* fileprivate */ internal let _storage: Storage
+
+            @inlinable
+            init(storage: Storage) {
+                self._storage = storage
+            }
+
+            @inlinable
+            deinit {
+                // We need to call finish here to resume any suspended continuation.
+                self._storage.finish(with: nil)
+            }
+        }
+
+        @usableFromInline
+        /* private */ internal let _internalClass: InternalClass
+
+        @usableFromInline
+        /* private */ internal var _storage: Storage {
+            self._internalClass._storage
+        }
 
         @inlinable
         init(storage: Storage) {
-            self._storage = storage
+            self._internalClass = .init(storage: storage)
         }
 
         /// Sets the writability of the ``NIOAsyncWriter``.
