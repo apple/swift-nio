@@ -12,22 +12,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if compiler(>=5.5.2) && canImport(_Concurrency)
 import NIOCore
 import XCTest
+import DequeModule
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 private struct SomeError: Error, Hashable {}
 
-private final class MockAsyncWriterDelegate: NIOAsyncWriterDelegate, @unchecked Sendable {
+private final class MockAsyncWriterDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
     typealias Element = String
     typealias Failure = SomeError
 
     var didYieldCallCount = 0
-    var didYieldHandler: ((AnySequence<String>) -> Void)?
-    func didYield<S: Sequence>(contentsOf sequence: S) where S.Element == String {
+    var didYieldHandler: ((Deque<String>) -> Void)?
+    func didYield(contentsOf sequence: Deque<String>) {
         self.didYieldCallCount += 1
         if let didYieldHandler = self.didYieldHandler {
-            didYieldHandler(AnySequence(sequence))
+            didYieldHandler(sequence)
         }
     }
 
@@ -90,6 +91,36 @@ final class NIOAsyncWriterTests: XCTestCase {
         try await task3.value
 
         XCTAssertEqual(self.delegate.didYieldCallCount, 30)
+    }
+
+    func testWriterCoalescesWrites() async throws {
+        var writes = [Deque<String>]()
+        self.delegate.didYieldHandler = {
+            writes.append($0)
+        }
+        self.sink.setWritability(to: false)
+
+        let task1 = Task { [writer] in
+            try await writer!.yield("message1")
+        }
+        task1.cancel()
+        try await task1.value
+
+        let task2 = Task { [writer] in
+            try await writer!.yield("message2")
+        }
+        task2.cancel()
+        try await task2.value
+
+        let task3 = Task { [writer] in
+            try await writer!.yield("message3")
+        }
+        task3.cancel()
+        try await task3.value
+
+        self.sink.setWritability(to: true)
+
+        XCTAssertEqual(writes, [Deque(["message1", "message2", "message3"])])
     }
 
     // MARK: - WriterDeinitialized
@@ -289,10 +320,8 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         task.cancel()
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
-        await XCTAssertThrowsError(try await task.value) { error in
-            XCTAssertTrue(error is CancellationError)
-        }
+        await XCTAssertNoThrow(try await task.value)
+        XCTAssertEqual(self.delegate.didYieldCallCount, 2)
     }
 
     func testYield_whenFinished() async throws {
@@ -317,11 +346,9 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         task.cancel()
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 0)
+        await XCTAssertNoThrow(try await task.value)
+        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
         XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
-        await XCTAssertThrowsError(try await task.value) { error in
-            XCTAssertTrue(error is CancellationError)
-        }
     }
 
     func testCancel_whenStreaming_andCancelBeforeYield() async throws {
@@ -339,11 +366,10 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         task.cancel()
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+
+        await XCTAssertNoThrow(try await task.value)
+        XCTAssertEqual(self.delegate.didYieldCallCount, 2)
         XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
-        await XCTAssertThrowsError(try await task.value) { error in
-            XCTAssertTrue(error is CancellationError)
-        }
     }
 
     func testCancel_whenStreaming_andCancelAfterSuspendedYield() async throws {
@@ -362,11 +388,12 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         task.cancel()
 
+        await XCTAssertNoThrow(try await task.value)
         XCTAssertEqual(self.delegate.didYieldCallCount, 1)
         XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
-        await XCTAssertThrowsError(try await task.value) { error in
-            XCTAssertTrue(error is CancellationError)
-        }
+
+        self.sink.setWritability(to: true)
+        XCTAssertEqual(self.delegate.didYieldCallCount, 2)
     }
 
     func testCancel_whenFinished() async throws {
