@@ -27,6 +27,7 @@ import Glibc
 /// of lock is safe to use with `libpthread`-based threading models, such as the
 /// one used by NIO. On Windows, the lock is based on the substantially similar
 /// `SRWLOCK` type.
+@available(*, deprecated, renamed: "NIOLock")
 public final class Lock {
 #if os(Windows)
     fileprivate let mutex: UnsafeMutablePointer<SRWLOCK> =
@@ -89,6 +90,7 @@ public final class Lock {
     }
 }
 
+@available(*, deprecated, renamed: "NIOLock")
 extension Lock {
     /// Acquire the lock for the duration of the given block.
     ///
@@ -120,7 +122,7 @@ extension Lock {
 /// until the state variable is set to a specific value to acquire the lock.
 public final class ConditionLock<T: Equatable> {
     private var _value: T
-    private let mutex: Lock
+    private let mutex: NIOLock
 #if os(Windows)
     private let cond: UnsafeMutablePointer<CONDITION_VARIABLE> =
         UnsafeMutablePointer.allocate(capacity: 1)
@@ -134,7 +136,7 @@ public final class ConditionLock<T: Equatable> {
     /// - Parameter value: The initial value to give the state variable.
     public init(value: T) {
         self._value = value
-        self.mutex = Lock()
+        self.mutex = NIOLock()
 #if os(Windows)
         InitializeConditionVariable(self.cond)
 #else
@@ -186,13 +188,15 @@ public final class ConditionLock<T: Equatable> {
             if self._value == wantedValue {
                 break
             }
+            self.mutex.withLockPrimitive { mutex in
 #if os(Windows)
-            let result = SleepConditionVariableSRW(self.cond, self.mutex.mutex, INFINITE, 0)
-            precondition(result, "\(#function) failed in SleepConditionVariableSRW with error \(GetLastError())")
+                let result = SleepConditionVariableSRW(self.cond, mutex, INFINITE, 0)
+                precondition(result, "\(#function) failed in SleepConditionVariableSRW with error \(GetLastError())")
 #else
-            let err = pthread_cond_wait(self.cond, self.mutex.mutex)
-            precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
+                let err = pthread_cond_wait(self.cond, mutex)
+                precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
 #endif
+            }
         }
     }
 
@@ -244,18 +248,20 @@ public final class ConditionLock<T: Equatable> {
                                   tv_nsec: Int(allNSecs % nsecPerSec))
         assert(timeoutAbs.tv_nsec >= 0 && timeoutAbs.tv_nsec < Int(nsecPerSec))
         assert(timeoutAbs.tv_sec >= curTime.tv_sec)
-        while true {
-            if self._value == wantedValue {
-                return true
-            }
-            switch pthread_cond_timedwait(self.cond, self.mutex.mutex, &timeoutAbs) {
-            case 0:
-                continue
-            case ETIMEDOUT:
-                self.unlock()
-                return false
-            case let e:
-                fatalError("caught error \(e) when calling pthread_cond_timedwait")
+        return self.mutex.withLockPrimitive { mutex -> Bool in
+            while true {
+                if self._value == wantedValue {
+                    return true
+                }
+                switch pthread_cond_timedwait(self.cond, mutex, &timeoutAbs) {
+                case 0:
+                    continue
+                case ETIMEDOUT:
+                    self.unlock()
+                    return false
+                case let e:
+                    fatalError("caught error \(e) when calling pthread_cond_timedwait")
+                }
             }
         }
 #endif
@@ -288,6 +294,7 @@ internal func debugOnly(_ body: () -> Void) {
 }
 
 #if compiler(>=5.5) && canImport(_Concurrency)
+@available(*, deprecated, renamed: "NIOLock")
 extension Lock: Sendable {
 
 }

@@ -1186,7 +1186,7 @@ extension EventLoopGroup {
     public func syncShutdownGracefully() throws {
         self._preconditionSafeToSyncShutdown(file: #file, line: #line)
 
-        let errorStorageLock = Lock()
+        let errorStorageLock = NIOLock()
         var errorStorage: Error? = nil
         let continuation = DispatchWorkItem {}
         self.shutdownGracefully { error in

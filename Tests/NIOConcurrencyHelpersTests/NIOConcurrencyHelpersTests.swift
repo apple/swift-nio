@@ -461,7 +461,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
 
     func testLockMutualExclusion() {
-        let l = Lock()
+        let l = NIOLock()
 
         var x = 1
         let q = DispatchQueue(label: "q")
@@ -493,7 +493,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     }
 
     func testWithLockMutualExclusion() {
-        let l = Lock()
+        let l = NIOLock()
 
         var x = 1
         let q = DispatchQueue(label: "q")

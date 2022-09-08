@@ -395,7 +395,7 @@ extension NIOAsyncWriter {
 
         /// The lock that protects our state.
         @usableFromInline
-        /* private */ internal let _lock = Lock()
+        /* private */ internal let _lock = NIOLock()
         /// The counter used to assign an ID to all our yields.
         @usableFromInline
         /* private */ internal let _yieldIDGenerator = YieldIDGenerator()

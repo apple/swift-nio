@@ -453,7 +453,7 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             // schedule that expire "now" all run at the same time, and that any work they schedule is run
             // after all such tasks expire.
             let loop = NIOAsyncTestingEventLoop()
-            let lock = Lock()
+            let lock = NIOLock()
             var firstScheduled: Scheduled<Void>? = nil
             var secondScheduled: Scheduled<Void>? = nil
             let orderingCounter = ManagedAtomic(0)
@@ -472,7 +472,7 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             //
             // To validate the ordering, we'll use a counter.
 
-            lock.withLockVoid {
+            lock.withLock { () -> Void in
                 firstScheduled = loop.scheduleTask(in: .nanoseconds(5)) {
                     let second = lock.withLock { () -> Scheduled<Void>? in
                         XCTAssertNotNil(firstScheduled)
@@ -496,7 +496,7 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 }
 
                 secondScheduled = loop.scheduleTask(in: .nanoseconds(5)) {
-                    lock.withLockVoid {
+                    lock.withLock { () -> Void in
                         secondScheduled = nil
                         XCTAssertNil(firstScheduled)
                         XCTAssertNil(secondScheduled)

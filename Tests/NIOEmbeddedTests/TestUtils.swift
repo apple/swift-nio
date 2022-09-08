@@ -43,7 +43,7 @@ extension EventLoopFuture {
             }
             return fulfilled
         } else {
-            let lock = Lock()
+            let lock = NIOLock()
             let group = DispatchGroup()
             var fulfilled = false // protected by lock
 

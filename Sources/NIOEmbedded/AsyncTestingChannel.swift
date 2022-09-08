@@ -194,7 +194,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /*private but usableFromInline */ var channelcore: EmbeddedChannelCore!
 
     /// Guards any of the getters/setters that can be accessed from any thread.
-    private let stateLock: Lock = Lock()
+    private let stateLock: NIOLock = NIOLock()
 
     // Guarded by `stateLock`
     private var _isWritable: Bool = true
@@ -223,7 +223,7 @@ public final class NIOAsyncTestingChannel: Channel {
             return self.stateLock.withLock { self._isWritable }
         }
         set {
-            self.stateLock.withLockVoid {
+            self.stateLock.withLock { () -> Void in
                 self._isWritable = newValue
             }
         }
@@ -235,7 +235,7 @@ public final class NIOAsyncTestingChannel: Channel {
             return self.stateLock.withLock { self._localAddress }
         }
         set {
-            self.stateLock.withLockVoid {
+            self.stateLock.withLock { () -> Void in
                 self._localAddress = newValue
             }
         }
@@ -247,7 +247,7 @@ public final class NIOAsyncTestingChannel: Channel {
             return self.stateLock.withLock { self._remoteAddress }
         }
         set {
-            self.stateLock.withLockVoid {
+            self.stateLock.withLock { () -> Void in
                 self._remoteAddress = newValue
             }
         }

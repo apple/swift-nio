@@ -353,12 +353,12 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 ///
 /// We use this to keep track of where promises come from in the `NIOAsyncTestingEventLoop`.
 private class PromiseCreationStore {
-    private let lock = Lock()
+    private let lock = NIOLock()
     private var promiseCreationStore: [_NIOEventLoopFutureIdentifier: (file: StaticString, line: UInt)] = [:]
 
     func promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
-        self.lock.withLockVoid {
+        self.lock.withLock { () -> Void in
             self.promiseCreationStore[futureIdentifier] = (file: file, line: line)
         }
     }

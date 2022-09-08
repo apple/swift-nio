@@ -65,7 +65,7 @@ public final class NIOThreadPool {
         case running(CircularBuffer<WorkItem>)
     }
     private let semaphore = DispatchSemaphore(value: 0)
-    private let lock = Lock()
+    private let lock = NIOLock()
     private var threads: [NIOThread]? = nil // protected by `lock`
     private var state: State = .stopped
     private let numberOfThreads: Int
@@ -313,7 +313,7 @@ extension NIOThreadPool {
     #endif
 
     public func syncShutdownGracefully() throws {
-        let errorStorageLock = Lock()
+        let errorStorageLock = NIOLock()
         var errorStorage: Swift.Error? = nil
         let continuation = DispatchWorkItem {}
         self.shutdownGracefully { error in
