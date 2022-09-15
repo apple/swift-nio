@@ -3,20 +3,20 @@ version: "3"
 services:
 
   runtime-setup:
-    image: swift-nio:20.04-5.7
+    image: swift-nio:22.04-5.7
     build:
       args:
         ubuntu_version: "jammy"
         swift_version: "5.7"
 
   unit-tests:
-    image: swift-nio:20.04-5.7
+    image: swift-nio:22.04-5.7
 
   integration-tests:
-    image: swift-nio:20.04-5.7
+    image: swift-nio:22.04-5.7
 
   test:
-    image: swift-nio:20.04-5.7
+    image: swift-nio:22.04-5.7
     environment:
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
@@ -64,13 +64,13 @@ services:
       # - SANITIZER_ARG=--sanitize=thread # TSan broken still
 
   performance-test:
-    image: swift-nio:20.04-5.7
+    image: swift-nio:22.04-5.7
 
   shell:
-    image: swift-nio:20.04-5.7
+    image: swift-nio:22.04-5.7
 
   echo:
-    image: swift-nio:20.04-5.7
+    image: swift-nio:22.04-5.7
 
   http:
-    image: swift-nio:20.04-5.7
+    image: swift-nio:22.04-5.7

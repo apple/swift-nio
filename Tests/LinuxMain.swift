@@ -37,14 +37,11 @@ import XCTest
    @testable import NIOTests
    @testable import NIOWebSocketTests
 
-// This protocol is necessary so we can call the 'run' method (on an existential of this protocol)
-// without the compiler noticing that we're calling a deprecated function.
-// This hack exists so we can deprecate individual tests which test deprecated functionality without
-// getting a compiler warning...
-protocol LinuxMainRunner { func run() }
-class LinuxMainRunnerImpl: LinuxMainRunner {
+@available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+@main
+class LinuxMainRunner {
    @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
-   func run() {
+   static func main() {
        XCTMain([
              testCase(AcceptBackoffHandlerTest.allTests),
              testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
@@ -146,7 +143,6 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
         ])
     }
 }
-(LinuxMainRunnerImpl() as LinuxMainRunner).run()
 #endif
 #else
 #error("on Swift 5.5 and newer, --enable-test-discovery is required")

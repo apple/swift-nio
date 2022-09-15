@@ -148,14 +148,11 @@ def createLinuxMain(testsDirectory, allTestSubDirectories, files)
       file.write '   @testable import ' + testSubDirectory + "\n"
     end
     file.write "\n"
-    file.write "// This protocol is necessary so we can call the 'run' method (on an existential of this protocol)\n"
-    file.write "// without the compiler noticing that we're calling a deprecated function.\n"
-    file.write "// This hack exists so we can deprecate individual tests which test deprecated functionality without\n"
-    file.write "// getting a compiler warning...\n"
-    file.write "protocol LinuxMainRunner { func run() }\n"
-    file.write "class LinuxMainRunnerImpl: LinuxMainRunner {\n"
+    file.write '@available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")' + "\n"
+    file.write "@main\n"
+    file.write "class LinuxMainRunner {\n"
     file.write '   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")' + "\n"
-    file.write "   func run() {\n"
+    file.write "   static func main() {\n"
     file.write "       XCTMain([\n"
 
     testCases = []
@@ -171,7 +168,6 @@ def createLinuxMain(testsDirectory, allTestSubDirectories, files)
     file.write "        ])\n"
     file.write "    }\n"
     file.write "}\n"
-    file.write "(LinuxMainRunnerImpl() as LinuxMainRunner).run()\n"
     file.write "#endif\n"
     file.write "#else\n"
     file.write "#error(\"on Swift 5.5 and newer, --enable-test-discovery is required\")\n"
