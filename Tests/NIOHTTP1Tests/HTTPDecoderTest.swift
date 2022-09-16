@@ -995,4 +995,35 @@ class HTTPDecoderTest: XCTestCase {
         // We know we'll see an error, we can safely drop it.
         _ = try? self.channel.finish()
     }
+
+    func testDecodingRTSPQueries() {
+        let queries = [
+            "DESCRIBE", "ANNOUNCE", "SETUP", "PLAY", "PAUSE",
+            "TEARDOWN", "GET_PARAMETER", "SET_PARAMETER", "REDIRECT",
+            "RECORD", "FLUSH"
+        ]
+
+        for query in queries {
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            defer {
+                _ = try? channel.finish()
+            }
+
+            let bytes = ByteBuffer(string: "\(query) / RTSP/1.1\r\nHost: example.com\r\nContent-Length: 0\r\n\r\n")
+            XCTAssertNoThrow(try channel.writeInbound(bytes), "Error writing \(query)")
+
+            var maybeHead: HTTPServerRequestPart? = nil
+            var maybeEnd: HTTPServerRequestPart? = nil
+
+            XCTAssertNoThrow(maybeHead = try channel.readInbound())
+            XCTAssertNoThrow(maybeEnd = try channel.readInbound())
+
+            guard case .some(.head(let head)) = maybeHead, case .some(.end(nil)) = maybeEnd else {
+                XCTFail("Did not receive correct bytes for \(query)")
+                continue
+            }
+
+            XCTAssertEqual(head.method, .RAW(value: query))
+        }
+    }
 }

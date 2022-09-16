@@ -61,6 +61,7 @@ extension HTTPDecoderTest {
                 ("testDecodingLongHeaderFieldNames", testDecodingLongHeaderFieldNames),
                 ("testDecodingLongHeaderFieldValues", testDecodingLongHeaderFieldValues),
                 ("testDecodingLongURLs", testDecodingLongURLs),
+                ("testDecodingRTSPQueries", testDecodingRTSPQueries),
            ]
    }
 }
