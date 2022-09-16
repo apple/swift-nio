@@ -911,8 +911,32 @@ extension HTTPMethod {
         case HTTP_SOURCE:
             // This isn't ideal really.
             return .RAW(value: "SOURCE")
+        case HTTP_PRI:
+            return .RAW(value: "PRI")
+        case HTTP_DESCRIBE:
+            return .RAW(value: "DESCRIBE")
+        case HTTP_ANNOUNCE:
+            return .RAW(value: "ANNOUNCE")
+        case HTTP_SETUP:
+            return .RAW(value: "SETUP")
+        case HTTP_PLAY:
+            return .RAW(value: "PLAY")
+        case HTTP_PAUSE:
+            return .RAW(value: "PAUSE")
+        case HTTP_TEARDOWN:
+            return .RAW(value: "TEARDOWN")
+        case HTTP_GET_PARAMETER:
+            return .RAW(value: "GET_PARAMETER")
+        case HTTP_SET_PARAMETER:
+            return .RAW(value: "SET_PARAMETER")
+        case HTTP_REDIRECT:
+            return .RAW(value: "REDIRECT")
+        case HTTP_RECORD:
+            return .RAW(value: "RECORD")
+        case HTTP_FLUSH:
+            return .RAW(value: "FLUSH")
         default:
-            fatalError("Unexpected http_method \(httpParserMethod)")
+            return .RAW(value: String(cString: c_nio_llhttp_method_name(httpParserMethod)))
         }
     }
 }
