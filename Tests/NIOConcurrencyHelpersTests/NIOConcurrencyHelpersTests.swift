@@ -1007,6 +1007,23 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         doIt()
         XCTAssertEqual(iterations + 1, allDeallocations.load())
     }
+
+    func testNIOLockedValueBox() {
+        struct State {
+            var count: Int = 0
+        }
+
+        let lv = NIOLockedValueBox<State>(State())
+        spawnAndJoinRacingThreads(count: 50) { _ in
+            for _ in 0..<1000 {
+                lv.withNIOLockedValueBox { state in
+                    state.count += 1
+                }
+            }
+        }
+
+        XCTAssertEqual(50_000, lv.withNIOLockedValueBox { $0.count })
+    }
 }
 
 func spawnAndJoinRacingThreads(count: Int, _ body: @escaping (Int) -> Void) {
