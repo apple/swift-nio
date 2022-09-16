@@ -78,18 +78,6 @@ class HTTPDecoderTest: XCTestCase {
         self.loop.run()
     }
 
-    func testToleratesHTTP13Request() throws {
-        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
-
-        // We tolerate higher versions of HTTP/1 than we know about because RFC 7230
-        // says that these should be treated like HTTP/1.1 by our users.
-        var buffer = channel.allocator.buffer(capacity: 64)
-        buffer.writeStaticString("GET / HTTP/1.3\r\nHost: whatever\r\n\r\n")
-
-        XCTAssertNoThrow(try channel.writeInbound(buffer))
-        XCTAssertNoThrow(try channel.finish())
-    }
-
     func testDoesNotDecodeRealHTTP09Response() throws {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
@@ -144,22 +132,6 @@ class HTTPDecoderTest: XCTestCase {
         }
 
         self.loop.run()
-    }
-
-    func testToleratesHTTP13Response() throws {
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
-
-        // We need to prime the decoder by seeing a GET request.
-        try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http2, method: .GET, uri: "/")))
-
-        // We tolerate higher versions of HTTP/1 than we know about because RFC 7230
-        // says that these should be treated like HTTP/1.1 by our users.
-        var buffer = channel.allocator.buffer(capacity: 64)
-        buffer.writeStaticString("HTTP/1.3 200 OK\r\nServer: whatever\r\n\r\n")
-
-        XCTAssertNoThrow(try channel.writeInbound(buffer))
-        XCTAssertNoThrow(try channel.finish())
     }
 
     func testCorrectlyMaintainIndicesWhenDiscardReadBytes() throws {
@@ -943,6 +915,115 @@ class HTTPDecoderTest: XCTestCase {
 
         XCTAssertThrowsError(try self.channel.finish()) { error in
             XCTAssertEqual(.invalidEOFState, error as? HTTPParserError)
+        }
+    }
+
+    func testDecodingLongHeaderFieldNames() {
+        // Our maximum field size is 80kB, so we're going to write an 80kB + 1 byte field name to confirm it fails.
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+
+        var buffer = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\n")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+
+        buffer.clear()
+        buffer.writeRepeatingByte(UInt8(ascii: "x"), count: 1024)
+
+        for _ in 0..<80 {
+            XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+            XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+        }
+
+        let lastByte = buffer.readSlice(length: 1)!
+        XCTAssertThrowsError(try self.channel.writeInbound(lastByte)) { error in
+            XCTAssertEqual(error as? HTTPParserError, .headerOverflow)
+        }
+
+        // We know we'll see an error, we can safely drop it.
+        _ = try? self.channel.finish()
+    }
+
+    func testDecodingLongHeaderFieldValues() {
+        // Our maximum field size is 80kB, so we're going to write an 80kB + 1 byte field value to confirm it fails.
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+
+        var buffer = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\nx: ")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+
+        buffer.clear()
+        buffer.writeRepeatingByte(UInt8(ascii: "x"), count: 1024)
+
+        for _ in 0..<80 {
+            XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+            XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+        }
+
+        let lastByte = buffer.readSlice(length: 1)!
+        XCTAssertThrowsError(try self.channel.writeInbound(lastByte)) { error in
+            XCTAssertEqual(error as? HTTPParserError, .headerOverflow)
+        }
+
+        // We know we'll see an error, we can safely drop it.
+        _ = try? self.channel.finish()
+    }
+
+    func testDecodingLongURLs() {
+        // Our maximum field size is 80kB, so we're going to write an 80kB + 1 byte URL to confirm it fails.
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+
+        var buffer = ByteBuffer(string: "GET ")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+
+        buffer.clear()
+        buffer.writeRepeatingByte(UInt8(ascii: "x"), count: 1024)
+
+        for _ in 0..<80 {
+            XCTAssertNoThrow(try self.channel.writeInbound(buffer))
+            XCTAssertNoThrow(XCTAssertNil(try self.channel.readInbound(as: HTTPServerRequestPart.self)))
+        }
+
+        let lastByte = buffer.readSlice(length: 1)!
+        XCTAssertThrowsError(try self.channel.writeInbound(lastByte)) { error in
+            XCTAssertEqual(error as? HTTPParserError, .headerOverflow)
+        }
+
+        // We know we'll see an error, we can safely drop it.
+        _ = try? self.channel.finish()
+    }
+
+    func testDecodingRTSPQueries() {
+        let queries = [
+            "DESCRIBE", "ANNOUNCE", "SETUP", "PLAY", "PAUSE",
+            "TEARDOWN", "GET_PARAMETER", "SET_PARAMETER", "REDIRECT",
+            "RECORD", "FLUSH"
+        ]
+
+        for query in queries {
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            defer {
+                _ = try? channel.finish()
+            }
+
+            let bytes = ByteBuffer(string: "\(query) / RTSP/1.1\r\nHost: example.com\r\nContent-Length: 0\r\n\r\n")
+            XCTAssertNoThrow(try channel.writeInbound(bytes), "Error writing \(query)")
+
+            var maybeHead: HTTPServerRequestPart? = nil
+            var maybeEnd: HTTPServerRequestPart? = nil
+
+            XCTAssertNoThrow(maybeHead = try channel.readInbound())
+            XCTAssertNoThrow(maybeEnd = try channel.readInbound())
+
+            guard case .some(.head(let head)) = maybeHead, case .some(.end(nil)) = maybeEnd else {
+                XCTFail("Did not receive correct bytes for \(query)")
+                continue
+            }
+
+            XCTAssertEqual(head.method, .RAW(value: query))
         }
     }
 }

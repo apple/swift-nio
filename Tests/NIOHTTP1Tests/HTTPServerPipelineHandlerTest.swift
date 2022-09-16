@@ -737,7 +737,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             var state: State = .errorExpected
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
-                XCTAssertEqual(HTTPParserError.headerOverflow, error as? HTTPParserError)
+                XCTAssertEqual(HTTPParserError.unknown, error as? HTTPParserError)
                 XCTAssertEqual(.errorExpected, self.state)
                 self.state = .done
             }
@@ -751,7 +751,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(HTTPServerProtocolErrorHandler()).wait())
         XCTAssertNoThrow(try self.channel.pipeline.addHandler(handler).wait())
 
-        self.channel.pipeline.fireErrorCaught(HTTPParserError.headerOverflow)
+        self.channel.pipeline.fireErrorCaught(HTTPParserError.unknown)
 
         XCTAssertEqual(.done, handler.state)
     }
