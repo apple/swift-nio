@@ -32,7 +32,7 @@ func measureAndPrint<B: Benchmark>(desc: String, benchmark bench: B) throws {
 
 #if compiler(>=5.5.2) && canImport(_Concurrency)
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-protocol AsyncBenchmark: AnyObject {
+protocol AsyncBenchmark: AnyObject, Sendable {
     func setUp() async throws
     func tearDown()
     func run() async throws -> Int

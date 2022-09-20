@@ -28,27 +28,24 @@ struct NoOpDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
     func didTerminate(error: Never?) {}
 }
 
+// This is unchecked Sendable because the Sink is not Sendable but the Sink is thread safe
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-final class NIOAsyncWriterSingleWritesBenchmark: AsyncBenchmark {
+final class NIOAsyncWriterSingleWritesBenchmark: AsyncBenchmark, @unchecked Sendable {
     private let iterations: Int
-    private var delegate: NoOpDelegate!
-    private var writer: NIOAsyncWriter<Int, Never, NoOpDelegate>!
-    private var sink: NIOAsyncWriter<Int, Never, NoOpDelegate>.Sink!
+    private let delegate: NoOpDelegate
+    private let writer: NIOAsyncWriter<Int, Never, NoOpDelegate>
+    private let sink: NIOAsyncWriter<Int, Never, NoOpDelegate>.Sink
 
     init(iterations: Int) {
         self.iterations = iterations
-    }
-
-    func setUp() async throws {
         self.delegate = .init()
         let newWriter = NIOAsyncWriter<Int, Never, NoOpDelegate>.makeWriter(isWritable: true, delegate: self.delegate)
         self.writer = newWriter.writer
         self.sink = newWriter.sink
     }
 
-    func tearDown() {
-        self.writer = nil
-    }
+    func setUp() async throws {}
+    func tearDown() {}
 
     func run() async throws -> Int {
         for i in 0..<self.iterations {
