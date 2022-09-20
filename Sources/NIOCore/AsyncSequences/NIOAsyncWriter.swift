@@ -22,7 +22,7 @@ import DequeModule
 ///
 /// - Important: The methods on the delegate are called while a lock inside of the ``NIOAsyncWriter`` is held. This is done to
 /// guarantee the ordering of the writes. However, this means you **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)``
-/// from within ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` or ``NIOAsyncWriterSinkDelegate/didTerminate(failure:)``.
+/// from within ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` or ``NIOAsyncWriterSinkDelegate/didTerminate(error:)``.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public protocol NIOAsyncWriterSinkDelegate: Sendable {
     /// The `Element` type of the delegate and the writer.
@@ -106,7 +106,7 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
 /// a synchronous world. The `Task`s that are yielding to the ``NIOAsyncWriter`` are the producers.
 /// Whereas the ``NIOAsyncWriterSinkDelegate`` is the consumer.
 ///
-/// Additionally, the ``NIOAsyncWriter`` allows the consumer to set the writability by calling ``NIOAsyncWriter/Sink/setWritability(to:)()``.
+/// Additionally, the ``NIOAsyncWriter`` allows the consumer to set the writability by calling ``NIOAsyncWriter/Sink/setWritability(to:)``.
 /// This allows the implementation of flow control on the consumer side. Any call to ``NIOAsyncWriter/yield(contentsOf:)`` or ``NIOAsyncWriter/yield(_:)``
 /// will suspend if the ``NIOAsyncWriter`` is not writable and will be resumed after the ``NIOAsyncWriter`` becomes writable again.
 ///
@@ -114,11 +114,11 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
 /// this type has three generic parameters where at least two should be known statically and it is really awkward to spell out this type.
 /// Moreover, having a wrapping type allows to optimize this to specialized calls if all generic types are known.
 ///
-/// - Note: This struct has reference semantics. Once all copies of a writer have been dropped ``NIOAsyncWriterSinkDelegate/didTerminate(failure:)`` will be called.
+/// - Note: This struct has reference semantics. Once all copies of a writer have been dropped ``NIOAsyncWriterSinkDelegate/didTerminate(error:)`` will be called.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public struct NIOAsyncWriter<
-    Element: Sendable,
-    Failure: Error,
+    Element,
+    Failure,
     Delegate: NIOAsyncWriterSinkDelegate
 >: Sendable where Delegate.Element == Element, Delegate.Failure == Failure {
     /// Simple struct for the return type of ``NIOAsyncWriter/makeWriter(elementType:failureType:isWritable:delegate:)``.
@@ -236,7 +236,7 @@ public struct NIOAsyncWriter<
     /// will be resumed.
     ///
     /// If the ``NIOAsyncWriter`` is finished while a call to ``NIOAsyncWriter/yield(_:)`` is suspended the
-    /// call will throw a ``NIOAsyncWriterError/alreadyFinished`` error.
+    /// call will throw a ``NIOAsyncWriterError/alreadyFinished(file:line:)`` error.
     ///
     /// This can be called more than once and from multiple `Task`s at the same time.
     ///
@@ -249,7 +249,7 @@ public struct NIOAsyncWriter<
     /// Finishes the writer.
     ///
     /// Calling this function signals the writer that any suspended or subsequent calls to ``NIOAsyncWriter/yield(contentsOf:)``
-    /// or ``NIOAsyncWriter/yield(_:)`` will return a ``NIOAsyncWriterError/alreadyFinished`` error.
+    /// or ``NIOAsyncWriter/yield(_:)`` will return a ``NIOAsyncWriterError/alreadyFinished(file:line:)`` error.
     ///
     /// - Note: Calling this function more than once has no effect.
     @inlinable
@@ -260,7 +260,7 @@ public struct NIOAsyncWriter<
     /// Finishes the writer.
     ///
     /// Calling this function signals the writer that any suspended or subsequent calls to ``NIOAsyncWriter/yield(contentsOf:)``
-    /// or ``NIOAsyncWriter/yield(_:)`` will return a ``NIOAsyncWriterError/alreadyFinished`` error.
+    /// or ``NIOAsyncWriter/yield(_:)`` will return a ``NIOAsyncWriterError/alreadyFinished(file:line:)`` error.
     ///
     /// - Note: Calling this function more than once has no effect.
     /// - Parameter error: The failure indicating why the writer finished.
@@ -322,7 +322,7 @@ extension NIOAsyncWriter {
         /// Finishes the sink which will result in the ``NIOAsyncWriter`` being finished.
         ///
         /// Calling this function signals the writer that any suspended or subsequent calls to ``NIOAsyncWriter/yield(contentsOf:)``
-        /// or ``NIOAsyncWriter/yield(_:)`` will return a ``NIOAsyncWriterError/alreadyFinished`` error.
+        /// or ``NIOAsyncWriter/yield(_:)`` will return a ``NIOAsyncWriterError/alreadyFinished(file:line:)`` error.
         ///
         /// - Note: Calling this function more than once has no effect.
         @inlinable
