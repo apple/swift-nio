@@ -22,10 +22,10 @@ struct NoOpDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
     let counter = ManagedAtomic(0)
 
     func didYield(contentsOf sequence: Deque<Int>) {
-        counter.wrappingIncrement(by: sequence.count, ordering: .sequentiallyConsistent)
+        counter.wrappingIncrement(by: sequence.count, ordering: .relaxed)
     }
 
-    func didTerminate(failure: Never?) {}
+    func didTerminate(error: Never?) {}
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)

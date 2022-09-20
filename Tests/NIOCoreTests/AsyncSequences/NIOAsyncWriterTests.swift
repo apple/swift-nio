@@ -34,10 +34,10 @@ private final class MockAsyncWriterDelegate: NIOAsyncWriterSinkDelegate, @unchec
 
     var didTerminateCallCount = 0
     var didTerminateHandler: ((Failure?) -> Void)?
-    func didTerminate(failure: Failure?) {
+    func didTerminate(error: Failure?) {
         self.didTerminateCallCount += 1
         if let didTerminateHandler = self.didTerminateHandler {
-            didTerminateHandler(failure)
+            didTerminateHandler(error)
         }
     }
 }
@@ -429,7 +429,7 @@ final class NIOAsyncWriterTests: XCTestCase {
     }
 
     func testFinish_whenInitial_andFailure() async throws {
-        self.writer.finish(with: SomeError())
+        self.writer.finish(error: SomeError())
 
         XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
     }

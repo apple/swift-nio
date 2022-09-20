@@ -45,15 +45,15 @@ public protocol NIOAsyncWriterSinkDelegate: Sendable {
     /// Termination happens if:
     /// - The ``NIOAsyncWriter`` is deinited.
     /// - ``NIOAsyncWriter/finish()`` is called.
-    /// - ``NIOAsyncWriter/finish(with:)`` is called.
+    /// - ``NIOAsyncWriter/finish(error:)`` is called.
     ///
     /// - Note: This is guaranteed to be called _exactly_ once.
     ///
-    /// - Parameter failure: The failure that terminated the ``NIOAsyncWriter``. If the writer was terminated without an
+    /// - Parameter error: The failure that terminated the ``NIOAsyncWriter``. If the writer was terminated without an
     /// error this value is `nil`.
     ///
     /// - Important: You **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
-    func didTerminate(failure: Failure?)
+    func didTerminate(error: Failure?)
 }
 
 /// Errors thrown by the ``NIOAsyncWriter``.
@@ -117,8 +117,8 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
 /// - Note: This struct has reference semantics. Once all copies of a writer have been dropped ``NIOAsyncWriterSinkDelegate/didTerminate(failure:)`` will be called.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public struct NIOAsyncWriter<
-    Element,
-    Failure,
+    Element: Sendable,
+    Failure: Error,
     Delegate: NIOAsyncWriterSinkDelegate
 >: Sendable where Delegate.Element == Element, Delegate.Failure == Failure {
     /// Simple struct for the return type of ``NIOAsyncWriter/makeWriter(elementType:failureType:isWritable:delegate:)``.
@@ -132,7 +132,7 @@ public struct NIOAsyncWriter<
         /// The ``writer`` which is the actual ``NIOAsyncWriter`` and should be passed to the producer.
         public let writer: NIOAsyncWriter
 
-        @usableFromInline
+        @inlinable
         /* fileprivate */ internal init(
             sink: Sink,
             writer: NIOAsyncWriter
@@ -164,7 +164,7 @@ public struct NIOAsyncWriter<
     @usableFromInline
     /* private */ internal let _internalClass: InternalClass
 
-    @usableFromInline
+    @inlinable
     /* private */ internal var _storage: Storage {
         self._internalClass._storage
     }
@@ -198,7 +198,7 @@ public struct NIOAsyncWriter<
         return .init(sink: sink, writer: writer)
     }
 
-    @usableFromInline
+    @inlinable
     /* private */ internal init(
         isWritable: Bool,
         delegate: Delegate
@@ -230,9 +230,9 @@ public struct NIOAsyncWriter<
 
     /// Yields an element to the ``NIOAsyncWriter``.
     ///
-    /// If the ``NIOAsyncWriter`` is writable the sequence will get forwarded to the ``NIOAsyncWriterSinkDelegate`` immediately.
-    /// Otherwise, the sequence will be buffered and the call to ``NIOAsyncWriter/yield(_:)`` will get suspended until the ``NIOAsyncWriter``
-    /// becomes writable again. If the calling `Task` gets cancelled at any point the call to ``NIOAsyncWriter/yield(contentsOf:)``
+    /// If the ``NIOAsyncWriter`` is writable the element will get forwarded to the ``NIOAsyncWriterSinkDelegate`` immediately.
+    /// Otherwise, the element will be buffered and the call to ``NIOAsyncWriter/yield(_:)`` will get suspended until the ``NIOAsyncWriter``
+    /// becomes writable again. If the calling `Task` gets cancelled at any point the call to ``NIOAsyncWriter/yield(_:)``
     /// will be resumed.
     ///
     /// If the ``NIOAsyncWriter`` is finished while a call to ``NIOAsyncWriter/yield(_:)`` is suspended the
@@ -254,7 +254,7 @@ public struct NIOAsyncWriter<
     /// - Note: Calling this function more than once has no effect.
     @inlinable
     public func finish() {
-        self._storage.finish(with: nil)
+        self._storage.finish(error: nil)
     }
 
     /// Finishes the writer.
@@ -263,10 +263,10 @@ public struct NIOAsyncWriter<
     /// or ``NIOAsyncWriter/yield(_:)`` will return a ``NIOAsyncWriterError/alreadyFinished`` error.
     ///
     /// - Note: Calling this function more than once has no effect.
-    /// - Parameter failure: The failure indicating why the writer finished.
+    /// - Parameter error: The failure indicating why the writer finished.
     @inlinable
-    public func finish(with failure: Failure) {
-        self._storage.finish(with: failure)
+    public func finish(error: Failure) {
+        self._storage.finish(error: error)
     }
 }
 
@@ -290,14 +290,14 @@ extension NIOAsyncWriter {
             @inlinable
             deinit {
                 // We need to call finish here to resume any suspended continuation.
-                self._storage.finish(with: nil)
+                self._storage.finish(error: nil)
             }
         }
 
         @usableFromInline
         /* private */ internal let _internalClass: InternalClass
 
-        @usableFromInline
+        @inlinable
         /* private */ internal var _storage: Storage {
             self._internalClass._storage
         }
@@ -314,6 +314,7 @@ extension NIOAsyncWriter {
         /// subsequent calls to ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` will suspend.
         ///
         /// - Parameter writability: The new writability of the ``NIOAsyncWriter``.
+        @inlinable
         public func setWritability(to writability: Bool) {
             self._storage.setWritability(to: writability)
         }
@@ -326,7 +327,7 @@ extension NIOAsyncWriter {
         /// - Note: Calling this function more than once has no effect.
         @inlinable
         public func finish() {
-            self._storage.finish(with: nil)
+            self._storage.finish(error: nil)
         }
     }
 }
@@ -353,7 +354,7 @@ extension NIOAsyncWriter {
                 }
 
                 @inlinable
-                static func == (lhs: NIOAsyncWriter<Element, Failure, Delegate>.Storage.YieldIDGenerator.YieldID, rhs: NIOAsyncWriter<Element, Failure, Delegate>.Storage.YieldIDGenerator.YieldID) -> Bool {
+                static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.value == rhs.value
                 }
             }
@@ -380,7 +381,7 @@ extension NIOAsyncWriter {
         @usableFromInline
         /* private */ internal var _stateMachine: StateMachine
 
-        @usableFromInline
+        @inlinable
         /* fileprivate */ internal init(
             isWritable: Bool,
             delegate: Delegate
@@ -398,7 +399,7 @@ extension NIOAsyncWriter {
                     // We are calling the delegate while holding lock. This can lead to potential crashes
                     // if the delegate calls `setWritability` reentrantly. However, we call this
                     // out in the docs of the delegate
-                    delegate.didTerminate(failure: nil)
+                    delegate.didTerminate(error: nil)
 
                 case .none:
                     break
@@ -485,7 +486,7 @@ extension NIOAsyncWriter {
         }
 
         @inlinable
-        /* fileprivate */ internal func finish(with failure: Failure?) {
+        /* fileprivate */ internal func finish(error: Failure?) {
             self._lock.withLock {
                 let action = self._stateMachine.finish()
 
@@ -494,17 +495,17 @@ extension NIOAsyncWriter {
                     // We are calling the delegate while holding lock. This can lead to potential crashes
                     // if the delegate calls `setWritability` reentrantly. However, we call this
                     // out in the docs of the delegate
-                    delegate.didTerminate(failure: failure)
+                    delegate.didTerminate(error: error)
 
-                case .resumeContinuationsWithErrorAndCallDidTerminate(let delegate, let suspendedYields, let error):
+                case .resumeContinuationsWithErrorAndCallDidTerminate(let delegate, let suspendedYields, let continuationError):
                     // We are calling the delegate while holding lock. This can lead to potential crashes
                     // if the delegate calls `setWritability` reentrantly. However, we call this
                     // out in the docs of the delegate
-                    delegate.didTerminate(failure: failure)
+                    delegate.didTerminate(error: error)
 
                     // It is safe to resume the continuations while holding the lock since resume
                     // is immediately returning and just enqueues the Job on the executor
-                    suspendedYields.forEach { $0.continuation.resume(throwing: error) }
+                    suspendedYields.forEach { $0.continuation.resume(throwing: continuationError) }
 
                 case .none:
                     break
@@ -531,7 +532,7 @@ extension NIOAsyncWriter {
             @usableFromInline
             var continuation: CheckedContinuation<Void, Error>
 
-            @usableFromInline
+            @inlinable
             init(yieldID: YieldID, continuation: CheckedContinuation<Void, Error>) {
                 self.yieldID = yieldID
                 self.continuation = continuation
@@ -570,6 +571,7 @@ extension NIOAsyncWriter {
         @usableFromInline
         /* private */ internal var _state: State
 
+        @inlinable
         init(
             isWritable: Bool,
             delegate: Delegate
@@ -695,7 +697,7 @@ extension NIOAsyncWriter {
             /// Indicates the given error should be thrown.
             case throwError(Error)
 
-            @usableFromInline
+            @inlinable
             init(isWritable: Bool, delegate: Delegate) {
                 if isWritable {
                     self = .callDidYield(delegate)
