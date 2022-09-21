@@ -90,9 +90,9 @@ internal final class SelectableEventLoop: EventLoop {
 
     private let canBeShutdownIndividually: Bool
     @usableFromInline
-    internal let _tasksLock = Lock()
-    private let _externalStateLock = Lock()
-    private var externalStateLock: Lock {
+    internal let _tasksLock = NIOLock()
+    private let _externalStateLock = NIOLock()
+    private var externalStateLock: NIOLock {
         // The assert is here to check that we never try to read the external state on the EventLoop unless we're
         // shutting down.
         assert(!self.inEventLoop || self.internalState != .runningAndAcceptingNewRegistrations,
@@ -123,7 +123,7 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
 
-    private let promiseCreationStoreLock = Lock()
+    private let promiseCreationStoreLock = NIOLock()
     private var _promiseCreationStore: [_NIOEventLoopFutureIdentifier: (file: StaticString, line: UInt)] = [:]
 
     @usableFromInline
@@ -289,7 +289,7 @@ Further information:
 
         let taskId = task.id
         let scheduled = Scheduled(promise: promise, cancellationTask: {
-            self._tasksLock.withLockVoid {
+            self._tasksLock.withLock { () -> Void in
                 self._scheduledTasks.removeFirst(where: { $0.id == taskId })
             }
             // We don't need to wake up the selector here, the scheduled task will never be picked up. Waking up the
@@ -330,7 +330,7 @@ Further information:
             precondition(self._validInternalStateToScheduleTasks,
                          "BUG IN NIO (please report): EventLoop is shutdown, yet we're on the EventLoop.")
 
-            self._tasksLock.withLockVoid {
+            self._tasksLock.withLock { () -> Void in
                 self._scheduledTasks.push(task)
             }
         } else {
@@ -440,7 +440,7 @@ Further information:
             repeat { // We may need to do multiple rounds of this because failing tasks may lead to more work.
                 scheduledTasksCopy.removeAll(keepingCapacity: true)
 
-                self._tasksLock.withLockVoid {
+                self._tasksLock.withLock { () -> Void in
                     // In this state we never want the selector to be woken again, so we pretend we're permanently running.
                     self._pendingTaskPop = true
 
@@ -479,7 +479,7 @@ Further information:
             try withAutoReleasePool {
                 try self._selector.whenReady(
                     strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask),
-                    onLoopBegin: { self._tasksLock.withLockVoid { self._pendingTaskPop = true } }
+                    onLoopBegin: { self._tasksLock.withLock { () -> Void in self._pendingTaskPop = true } }
                 ) { ev in
                     switch ev.registration.channel {
                     case .serverSocketChannel(let chan):
@@ -504,7 +504,7 @@ Further information:
             // We need to ensure we process all tasks, even if a task added another task again
             while true {
                 // TODO: Better locking
-                self._tasksLock.withLockVoid {
+                self._tasksLock.withLock { () -> Void in
                     if !self._scheduledTasks.isEmpty {
                         // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
                         let now: NIODeadline = .now()

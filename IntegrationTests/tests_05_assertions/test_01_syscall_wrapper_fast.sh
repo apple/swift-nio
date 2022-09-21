@@ -26,14 +26,14 @@ elif [[ "$(uname -s)" == "Linux" ]]; then
     swift_binary=$(which swiftc)
 fi
 
-cp "$here/../../Sources/NIOConcurrencyHelpers/lock.swift" "$tmp"
+cp "$here/../../Sources/NIOConcurrencyHelpers/"{lock,NIOLock}.swift "$tmp"
 cat > "$tmp/main.swift" <<"EOF"
-let l = Lock()
+let l = NIOLock()
 l.lock()
 l.lock()
 EOF
 
-"$swift_binary" -o "$tmp/test" "$tmp/main.swift" "$tmp/lock.swift"
+"$swift_binary" -o "$tmp/test" "$tmp/main.swift" "$tmp/"{lock,NIOLock}.swift
 if "$tmp/test"; then
     fail "should have crashed"
 else

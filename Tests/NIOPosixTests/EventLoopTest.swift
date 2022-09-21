@@ -1164,7 +1164,7 @@ public final class EventLoopTest : XCTestCase {
     func testTakeOverThreadAndAlsoTakeItBack() {
         let currentNIOThread = NIOThread.current
         let currentNSThread = Thread.current
-        let lock = Lock()
+        let lock = NIOLock()
         var hasBeenShutdown = false
         let allDoneGroup = DispatchGroup()
         allDoneGroup.enter()

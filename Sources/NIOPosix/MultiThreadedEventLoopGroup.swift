@@ -70,7 +70,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private let myGroupID: Int
     private let index = ManagedAtomic<Int>(0)
     private var eventLoops: [SelectableEventLoop]
-    private let shutdownLock: Lock = Lock()
+    private let shutdownLock: NIOLock = NIOLock()
     private var runState: RunState = .running
 
     private static func runTheLoop(thread: NIOThread,
@@ -104,7 +104,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                                                 parentGroup: MultiThreadedEventLoopGroup,
                                                 selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
                                                 initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
-        let lock = Lock()
+        let lock = NIOLock()
         /* the `loopUpAndRunningGroup` is done by the calling thread when the EventLoop has been created and was written to `_loop` */
         let loopUpAndRunningGroup = DispatchGroup()
 

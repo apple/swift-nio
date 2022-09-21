@@ -17,7 +17,7 @@ import NIOPosix
 import Dispatch
 import NIOConcurrencyHelpers
 
-final class LockBenchmark: Benchmark {
+final class NIOLockBenchmark: Benchmark {
     private let numberOfThreads: Int
     private let lockOperationsPerThread: Int
     private let threadPool: NIOThreadPool
@@ -27,7 +27,7 @@ final class LockBenchmark: Benchmark {
     private let sem3 = DispatchSemaphore(value: 0)
     private var opsDone = 0
 
-    private let lock = Lock()
+    private let lock = NIOLock()
     
     init(numberOfThreads: Int, lockOperationsPerThread: Int) {
         self.numberOfThreads = numberOfThreads

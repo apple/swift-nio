@@ -25,7 +25,7 @@ public struct NIOLockedValueBox<Value> {
     @usableFromInline
     internal final class _Storage {
         @usableFromInline
-        internal let _lock = Lock()
+        internal let _lock = NIOLock()
         
         @usableFromInline
         internal var _value: Value

@@ -496,7 +496,7 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
     }
     let channelEL = group.next()
 
-    let lock = Lock()
+    let lock = NIOLock()
     var ret: [T] = []
     _ = try forEachCrossConnectedStreamChannelPair(file: (file), line: line) { (chan1: Channel, chan2: Channel) throws -> Void in
         var innerRet: [T] = [try body(chan1)]
@@ -692,7 +692,7 @@ extension EventLoopFuture {
             }
             return fulfilled
         } else {
-            let lock = Lock()
+            let lock = NIOLock()
             let group = DispatchGroup()
             var fulfilled = false // protected by lock
 

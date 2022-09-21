@@ -304,7 +304,7 @@ extension NIOThrowingAsyncSequenceProducer {
     /* fileprivate */ internal final class Storage: @unchecked Sendable {
         /// The lock that protects our state.
         @usableFromInline
-        /* private */ internal let _lock = Lock()
+        /* private */ internal let _lock = NIOLock()
         /// The state machine.
         @usableFromInline
         /* private */ internal var _stateMachine: StateMachine

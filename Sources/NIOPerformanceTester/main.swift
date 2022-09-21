@@ -1016,7 +1016,7 @@ try measureAndPrint(
 
 try measureAndPrint(
     desc: "lock_1_thread_10M_ops",
-    benchmark: LockBenchmark(
+    benchmark: NIOLockBenchmark(
         numberOfThreads: 1,
         lockOperationsPerThread: 10_000_000
     )
@@ -1024,7 +1024,7 @@ try measureAndPrint(
 
 try measureAndPrint(
     desc: "lock_2_threads_10M_ops",
-    benchmark: LockBenchmark(
+    benchmark: NIOLockBenchmark(
         numberOfThreads: 2,
         lockOperationsPerThread: 5_000_000
     )
@@ -1032,7 +1032,7 @@ try measureAndPrint(
 
 try measureAndPrint(
     desc: "lock_4_threads_10M_ops",
-    benchmark: LockBenchmark(
+    benchmark: NIOLockBenchmark(
         numberOfThreads: 4,
         lockOperationsPerThread: 2_500_000
     )
@@ -1041,7 +1041,7 @@ try measureAndPrint(
 
 try measureAndPrint(
     desc: "lock_8_threads_10M_ops",
-    benchmark: LockBenchmark(
+    benchmark: NIOLockBenchmark(
         numberOfThreads: 8,
         lockOperationsPerThread: 1_250_000
     )
