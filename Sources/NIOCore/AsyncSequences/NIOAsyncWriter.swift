@@ -41,15 +41,16 @@ public protocol NIOAsyncWriterSinkDelegate: Sendable {
     /// This method is called once the ``NIOAsyncWriter`` is terminated.
     ///
     /// Termination happens if:
-    /// - The ``NIOAsyncWriter`` is deinited and all elements have been delivered to the delegate.
-    /// - ``NIOAsyncWriter/finish()`` is called and all elements have been delivered to the delegate.
-    /// - ``NIOAsyncWriter/finish(error:)`` is called and all elements have been delivered to the delegate.
+    /// - The ``NIOAsyncWriter`` is deinited and all yielded elements have been delivered to the delegate.
+    /// - ``NIOAsyncWriter/finish()`` is called and all yielded elements have been delivered to the delegate.
+    /// - ``NIOAsyncWriter/finish(error:)`` is called and all yielded elements have been delivered to the delegate.
     /// - ``NIOAsyncWriter/Sink/finish()`` or ``NIOAsyncWriter/Sink/finish(error:)`` is called.
     ///
     /// - Note: This is guaranteed to be called _exactly_ once.
     ///
     /// - Parameter error: The error that terminated the ``NIOAsyncWriter``. If the writer was terminated without an
-    /// error this value is `nil`.
+    /// error this value is `nil`. This can be either the error passed to ``NIOAsyncWriter/finish(error:)`` or
+    /// to ``NIOAsyncWriter/Sink/finish(error:)``.
     ///
     /// - Important: You **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
     func didTerminate(error: Error?)
@@ -107,10 +108,11 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
 ///
 /// Additionally, the ``NIOAsyncWriter`` allows the consumer to set the writability by calling ``NIOAsyncWriter/Sink/setWritability(to:)``.
 /// This allows the implementation of flow control on the consumer side. Any call to ``NIOAsyncWriter/yield(contentsOf:)`` or ``NIOAsyncWriter/yield(_:)``
-/// will suspend if the ``NIOAsyncWriter`` is not writable and will be resumed after the ``NIOAsyncWriter`` becomes writable again.
+/// will suspend if the ``NIOAsyncWriter`` is not writable and will be resumed after the ``NIOAsyncWriter`` becomes writable again
+/// or if the ``NIOAsyncWriter`` has finished.
 ///
 /// - Note: It is recommended to never directly expose this type from APIs, but rather wrap it. This is due to the fact that
-/// this type has three generic parameters where at least two should be known statically and it is really awkward to spell out this type.
+/// this type has two generic parameters where at least the `Delegate` should be known statically and it is really awkward to spell out this type.
 /// Moreover, having a wrapping type allows to optimize this to specialized calls if all generic types are known.
 ///
 /// - Note: This struct has reference semantics. Once all copies of a writer have been dropped ``NIOAsyncWriterSinkDelegate/didTerminate(error:)`` will be called.
@@ -125,7 +127,7 @@ public struct NIOAsyncWriter<
     /// 1. The ``sink`` which should be retained by the consumer and is used to set the writability.
     /// 2. The ``writer`` which is the actual ``NIOAsyncWriter`` and should be passed to the producer.
     public struct NewWriter {
-        /// The ``sink`` which should be retained by the consumer and is used to set the writability.
+        /// The ``sink`` which **MUST** be retained by the consumer and is used to set the writability.
         public let sink: Sink
         /// The ``writer`` which is the actual ``NIOAsyncWriter`` and should be passed to the producer.
         public let writer: NIOAsyncWriter
@@ -141,8 +143,6 @@ public struct NIOAsyncWriter<
     }
 
     /// This class is needed to hook the deinit to observe once all references to the ``NIOAsyncWriter`` are dropped.
-    ///
-    /// If we get move-only types we should be able to drop this class and use the `deinit` of the ``NIOAsyncWriter`` struct itself.
     @usableFromInline
     /* fileprivate */ internal final class InternalClass: Sendable {
         @usableFromInline
@@ -213,8 +213,12 @@ public struct NIOAsyncWriter<
     /// becomes writable again. If the calling `Task` gets cancelled at any point the call to ``NIOAsyncWriter/yield(contentsOf:)``
     /// will be resumed.
     ///
-    /// If the ``NIOAsyncWriter`` is finished while a call to ``NIOAsyncWriter/yield(contentsOf:)`` is suspended the
-    /// call will throw a ``NIOAsyncWriterError/alreadyFinished`` error.
+    /// If the ``NIOAsyncWriter/finish()`` or ``NIOAsyncWriter/finish(error:)`` method is called while a call to
+    /// ``NIOAsyncWriter/yield(contentsOf:)`` is suspended then the call will be resumed and the yielded sequence will be kept buffered.
+    ///
+    /// If the ``NIOAsyncWriter/Sink/finish()`` or ``NIOAsyncWriter/Sink/finish(error:)`` method is called while
+    /// a call to ``NIOAsyncWriter/yield(contentsOf:)`` is suspended then the call will be resumed with an error and the
+    /// yielded sequence is dropped.
     ///
     /// This can be called more than once and from multiple `Task`s at the same time.
     ///
@@ -231,8 +235,12 @@ public struct NIOAsyncWriter<
     /// becomes writable again. If the calling `Task` gets cancelled at any point the call to ``NIOAsyncWriter/yield(_:)``
     /// will be resumed.
     ///
-    /// If the ``NIOAsyncWriter`` is finished while a call to ``NIOAsyncWriter/yield(_:)`` is suspended the
-    /// call will throw a ``NIOAsyncWriterError/alreadyFinished(file:line:)`` error.
+    /// If the ``NIOAsyncWriter/finish()`` or ``NIOAsyncWriter/finish(error:)`` method is called while a call to
+    /// ``NIOAsyncWriter/yield(_:)`` is suspended then the call will be resumed and the yielded sequence will be kept buffered.
+    ///
+    /// If the ``NIOAsyncWriter/Sink/finish()`` or ``NIOAsyncWriter/Sink/finish(error:)`` method is called while
+    /// a call to ``NIOAsyncWriter/yield(_:)`` is suspended then the call will be resumed with an error and the
+    /// yielded sequence is dropped.
     ///
     /// This can be called more than once and from multiple `Task`s at the same time.
     ///
@@ -249,7 +257,7 @@ public struct NIOAsyncWriter<
     /// or ``NIOAsyncWriter/yield(_:)`` will throw.
     ///
     /// Any element that have been yielded elements before the writer has been finished which have not been delivered yet are continued
-    /// to be buffered and will be delivered once the sink becomes writable again.
+    /// to be buffered and will be delivered once the writer becomes writable again.
     ///
     /// - Note: Calling this function more than once has no effect.
     @inlinable
@@ -264,7 +272,7 @@ public struct NIOAsyncWriter<
     /// or ``NIOAsyncWriter/yield(_:)`` will throw.
     ///
     /// Any element that have been yielded elements before the writer has been finished which have not been delivered yet are continued
-    /// to be buffered and will be delivered once the sink becomes writable again.
+    /// to be buffered and will be delivered once the writer becomes writable again.
     ///
     /// - Note: Calling this function more than once has no effect.
     /// - Parameter error: The error indicating why the writer finished.
