@@ -20,7 +20,7 @@ let swiftCollections: PackageDescription.Target.Dependency = .product(name: "Deq
 
 var targets: [PackageDescription.Target] = [
     .target(name: "NIOCore",
-            dependencies: ["NIOConcurrencyHelpers", "CNIOLinux", "CNIOWindows", swiftCollections]),
+            dependencies: ["NIOConcurrencyHelpers", "CNIOLinux", "CNIOWindows", swiftCollections, swiftAtomics]),
     .target(name: "_NIODataStructures"),
     .target(name: "NIOEmbedded",
             dependencies: ["NIOCore",

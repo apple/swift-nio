@@ -62,6 +62,37 @@ public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void
     }
 }
 
+#if compiler(>=5.5.2) && canImport(_Concurrency)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
+    func measureOne(_ fn: () async throws -> Int) async rethrows -> Double {
+        let start = DispatchTime.now().uptimeNanoseconds
+        _ = try await fn()
+        let end = DispatchTime.now().uptimeNanoseconds
+        return Double(end - start) / Double(TimeAmount.seconds(1).nanoseconds)
+    }
+
+    _ = try await measureOne(fn) /* pre-heat and throw away */
+    var measurements = Array(repeating: 0.0, count: 10)
+    for i in 0..<10 {
+        measurements[i] = try await measureOne(fn)
+    }
+
+    return measurements
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+public func measureAndPrint(desc: String, fn: () async throws -> Int) async rethrows -> Void {
+    if limitSet.isEmpty || limitSet.contains(desc) {
+        print("measuring\(warning): \(desc): ", terminator: "")
+        let measurements = try await measure(fn)
+        print(measurements.reduce(into: "") { $0.append("\($1), ") })
+    } else {
+        print("skipping '\(desc)', limit set = \(limitSet)")
+    }
+}
+#endif
+
 // MARK: Utilities
 
 private final class SimpleHTTPServer: ChannelInboundHandler {
@@ -1053,3 +1084,14 @@ try measureAndPrint(
         iterations: 1_000_000
     )
 )
+
+#if compiler(>=5.5.2) && canImport(_Concurrency)
+if #available(macOS 10.15, *) {
+    try measureAndPrint(
+        desc: "asyncwriter_single_writes_1M_times",
+        benchmark: NIOAsyncWriterSingleWritesBenchmark(
+            iterations: 1_000_000
+        )
+    )
+}
+#endif
