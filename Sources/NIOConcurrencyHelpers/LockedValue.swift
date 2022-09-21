@@ -14,7 +14,7 @@
 
 /// Provides locked access to `Value`.
 ///
-/// - note: ``NIOLockedValueBox`` has reference semantics and holds the ``Value``
+/// - note: ``NIOLockedValueBox`` has reference semantics and holds the `Value`
 ///         alongside a lock behind a reference.
 ///
 /// This is no different than creating a ``Lock`` and protecting all
