@@ -25,7 +25,7 @@ struct NoOpDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
         counter.wrappingIncrement(by: sequence.count, ordering: .relaxed)
     }
 
-    func didTerminate(error: Never?) {}
+    func didTerminate(error: Error?) {}
 }
 
 // This is unchecked Sendable because the Sink is not Sendable but the Sink is thread safe
@@ -33,13 +33,13 @@ struct NoOpDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
 final class NIOAsyncWriterSingleWritesBenchmark: AsyncBenchmark, @unchecked Sendable {
     private let iterations: Int
     private let delegate: NoOpDelegate
-    private let writer: NIOAsyncWriter<Int, Never, NoOpDelegate>
-    private let sink: NIOAsyncWriter<Int, Never, NoOpDelegate>.Sink
+    private let writer: NIOAsyncWriter<Int, NoOpDelegate>
+    private let sink: NIOAsyncWriter<Int, NoOpDelegate>.Sink
 
     init(iterations: Int) {
         self.iterations = iterations
         self.delegate = .init()
-        let newWriter = NIOAsyncWriter<Int, Never, NoOpDelegate>.makeWriter(isWritable: true, delegate: self.delegate)
+        let newWriter = NIOAsyncWriter<Int, NoOpDelegate>.makeWriter(isWritable: true, delegate: self.delegate)
         self.writer = newWriter.writer
         self.sink = newWriter.sink
     }
