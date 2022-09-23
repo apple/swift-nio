@@ -1016,13 +1016,13 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         let lv = NIOLockedValueBox<State>(State())
         spawnAndJoinRacingThreads(count: 50) { _ in
             for _ in 0..<1000 {
-                lv.withNIOLockedValueBox { state in
+                lv.withLockedValue { state in
                     state.count += 1
                 }
             }
         }
 
-        XCTAssertEqual(50_000, lv.withNIOLockedValueBox { $0.count })
+        XCTAssertEqual(50_000, lv.withLockedValue { $0.count })
     }
 }
 

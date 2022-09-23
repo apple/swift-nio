@@ -36,7 +36,7 @@ public struct NIOLockedValueBox<Value> {
     }
     
     @usableFromInline
-    internal var _storage: _Storage
+    internal let _storage: _Storage
 
     /// Initialize the `Value`.
     public init(_ value: Value) {
@@ -45,9 +45,14 @@ public struct NIOLockedValueBox<Value> {
 
     /// Access the `Value`, allowing mutation of it.
     @inlinable
-    public func withNIOLockedValueBox<T>(_ mutate: (inout Value) throws -> T) rethrows -> T {
+    public func withLockedValue<T>(_ mutate: (inout Value) throws -> T) rethrows -> T {
         return try self._storage._lock.withLock {
             return try mutate(&self._storage._value)
         }
     }
 }
+
+#if compiler(>=5.5) && canImport(_Concurrency)
+extension NIOLockedValueBox: Sendable where Value: Sendable {}
+extension NIOLockedValueBox._Storage: @unchecked Sendable {}
+#endif
