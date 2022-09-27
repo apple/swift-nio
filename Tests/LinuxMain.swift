@@ -84,6 +84,7 @@ class LinuxMainRunnerImpl: LinuxMainRunner {
              testCase(HTTPClientUpgradeTestCase.allTests),
              testCase(HTTPDecoderLengthTest.allTests),
              testCase(HTTPDecoderTest.allTests),
+             testCase(HTTPHeaderValidationTests.allTests),
              testCase(HTTPHeadersTest.allTests),
              testCase(HTTPRequestEncoderTests.allTests),
              testCase(HTTPResponseEncoderTests.allTests),

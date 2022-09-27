@@ -65,7 +65,10 @@ var targets: [PackageDescription.Target] = [
     .executableTarget(name: "NIOHTTP1Client",
                       dependencies: ["NIOPosix", "NIOCore", "NIOHTTP1", "NIOConcurrencyHelpers"],
                       exclude: ["README.md"]),
-    .target(name: "CNIOLLHTTP"),
+    .target(
+        name: "CNIOLLHTTP",
+        cSettings: [.define("LLHTTP_STRICT_MODE")]
+    ),
     .target(name: "NIOTLS", dependencies: ["NIO", "NIOCore"]),
     .executableTarget(name: "NIOChatServer",
                       dependencies: ["NIOPosix", "NIOCore", "NIOConcurrencyHelpers"],

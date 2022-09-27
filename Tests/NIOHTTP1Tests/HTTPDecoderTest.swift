@@ -1026,4 +1026,233 @@ class HTTPDecoderTest: XCTestCase {
             XCTAssertEqual(head.method, .RAW(value: query))
         }
     }
+
+    func testDecodingInvalidHeaderFieldNames() throws {
+        // The spec in [RFC 9110](https://httpwg.org/specs/rfc9110.html#fields.values) defines the valid
+        // characters as the following:
+        //
+        // ```
+        // field-name     = token
+        //
+        // token          = 1*tchar
+        //
+        // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+        //                / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+        //                / DIGIT / ALPHA
+        //                ; any VCHAR, except delimiters
+        let weirdAllowedFieldName = "!#$%&'*+-.^_`|~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+        let goodRequest = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\n\(weirdAllowedFieldName): present\r\n\r\n")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(goodRequest))
+
+        var maybeHead: HTTPServerRequestPart?
+        var maybeEnd: HTTPServerRequestPart?
+
+        XCTAssertNoThrow(maybeHead = try self.channel.readInbound())
+        XCTAssertNoThrow(maybeEnd = try self.channel.readInbound())
+        guard case .some(.head(let head)) = maybeHead, case .some(.end) = maybeEnd else {
+            XCTFail("didn't receive head & end")
+            return
+        }
+        XCTAssertEqual(head.headers[weirdAllowedFieldName], ["present"])
+
+        // Now confirm all other bytes are rejected.
+        for byte in UInt8(0)...UInt8(255) {
+            // Skip bytes that we already believe are allowed, or that will affect the parse.
+            if weirdAllowedFieldName.utf8.contains(byte) || byte == UInt8(ascii: ":") {
+                continue
+            }
+            let forbiddenFieldName = weirdAllowedFieldName + String(decoding: [byte], as: UTF8.self)
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            let badRequest = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\n\(forbiddenFieldName): present\r\n\r\n")
+
+            XCTAssertThrowsError(
+                try channel.writeInbound(badRequest),
+                "Incorrectly tolerated character in header field name: \(String(decoding: [byte], as: UTF8.self))"
+            ) { error in
+                XCTAssertEqual(error as? HTTPParserError, .invalidHeaderToken)
+            }
+            _ = try? channel.finish()
+        }
+    }
+
+    func testDecodingInvalidTrailerFieldNames() throws {
+        // The spec in [RFC 9110](https://httpwg.org/specs/rfc9110.html#fields.values) defines the valid
+        // characters as the following:
+        //
+        // ```
+        // field-name     = token
+        //
+        // token          = 1*tchar
+        //
+        // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+        //                / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+        //                / DIGIT / ALPHA
+        //                ; any VCHAR, except delimiters
+        let weirdAllowedFieldName = "!#$%&'*+-.^_`|~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+        let request = ByteBuffer(string: "POST / HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n")
+
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+        let goodTrailers = ByteBuffer(string: "\(weirdAllowedFieldName): present\r\n\r\n")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(request))
+        XCTAssertNoThrow(try self.channel.writeInbound(goodTrailers))
+
+        var maybeHead: HTTPServerRequestPart?
+        var maybeEnd: HTTPServerRequestPart?
+
+        XCTAssertNoThrow(maybeHead = try self.channel.readInbound())
+        XCTAssertNoThrow(maybeEnd = try self.channel.readInbound())
+        guard case .some(.head) = maybeHead, case .some(.end(.some(let trailers))) = maybeEnd else {
+            XCTFail("didn't receive head & end")
+            return
+        }
+        XCTAssertEqual(trailers[weirdAllowedFieldName], ["present"])
+
+        // Now confirm all other bytes are rejected.
+        for byte in UInt8(0)...UInt8(255) {
+            // Skip bytes that we already believe are allowed, or that will affect the parse.
+            if weirdAllowedFieldName.utf8.contains(byte) || byte == UInt8(ascii: ":") {
+                continue
+            }
+            let forbiddenFieldName = weirdAllowedFieldName + String(decoding: [byte], as: UTF8.self)
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            let badTrailers = ByteBuffer(string: "\(forbiddenFieldName): present\r\n\r\n")
+
+            XCTAssertNoThrow(try channel.writeInbound(request))
+
+            XCTAssertThrowsError(
+                try channel.writeInbound(badTrailers),
+                "Incorrectly tolerated character in trailer field name: \(String(decoding: [byte], as: UTF8.self))"
+            ) { error in
+                XCTAssertEqual(error as? HTTPParserError, .invalidHeaderToken)
+            }
+            _ = try? channel.finish()
+        }
+    }
+
+    func testDecodingInvalidHeaderFieldValues() throws {
+        // We reject all ASCII control characters except HTAB and tolerate everything else.
+        let weirdAllowedFieldValue = "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+        let goodRequest = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\nWeird-Field: \(weirdAllowedFieldValue)\r\n\r\n")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(goodRequest))
+
+        var maybeHead: HTTPServerRequestPart?
+        var maybeEnd: HTTPServerRequestPart?
+
+        XCTAssertNoThrow(maybeHead = try self.channel.readInbound())
+        XCTAssertNoThrow(maybeEnd = try self.channel.readInbound())
+        guard case .some(.head(let head)) = maybeHead, case .some(.end) = maybeEnd else {
+            XCTFail("didn't receive head & end")
+            return
+        }
+        XCTAssertEqual(head.headers["Weird-Field"], [weirdAllowedFieldValue])
+
+        // Now confirm all other bytes in the ASCII range are rejected.
+        for byte in UInt8(0)..<UInt8(128) {
+            // Skip bytes that we already believe are allowed, or that will affect the parse.
+            if weirdAllowedFieldValue.utf8.contains(byte) || byte == UInt8(ascii: "\r") || byte == UInt8(ascii: "\n") {
+                continue
+            }
+            let forbiddenFieldValue = weirdAllowedFieldValue + String(decoding: [byte], as: UTF8.self)
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            let badRequest = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\nWeird-Field: \(forbiddenFieldValue)\r\n\r\n")
+
+            XCTAssertThrowsError(
+                try channel.writeInbound(badRequest),
+                "Incorrectly tolerated character in header field value: \(String(decoding: [byte], as: UTF8.self))"
+            ) { error in
+                XCTAssertEqual(error as? HTTPParserError, .invalidHeaderToken)
+            }
+            _ = try? channel.finish()
+        }
+
+        // All the bytes outside the ASCII range are fine though.
+        for byte in UInt8(128)...UInt8(255) {
+            let evenWeirderAllowedValue = weirdAllowedFieldValue + String(decoding: [byte], as: UTF8.self)
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            let weirdGoodRequest = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\nWeird-Field: \(evenWeirderAllowedValue)\r\n\r\n")
+
+            XCTAssertNoThrow(try channel.writeInbound(weirdGoodRequest))
+            XCTAssertNoThrow(maybeHead = try channel.readInbound())
+            XCTAssertNoThrow(maybeEnd = try channel.readInbound())
+            guard case .some(.head(let head)) = maybeHead, case .some(.end) = maybeEnd else {
+                XCTFail("didn't receive head & end for \(byte)")
+                return
+            }
+            XCTAssertEqual(head.headers["Weird-Field"], [evenWeirderAllowedValue])
+
+            _ = try? channel.finish()
+        }
+    }
+
+    func testDecodingInvalidTrailerFieldValues() throws {
+        // We reject all ASCII control characters except HTAB and tolerate everything else.
+        let weirdAllowedFieldValue = "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+
+        let request = ByteBuffer(string: "POST / HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n")
+
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
+        let goodTrailers = ByteBuffer(string: "Weird-Field: \(weirdAllowedFieldValue)\r\n\r\n")
+
+        XCTAssertNoThrow(try self.channel.writeInbound(request))
+        XCTAssertNoThrow(try self.channel.writeInbound(goodTrailers))
+
+        var maybeHead: HTTPServerRequestPart?
+        var maybeEnd: HTTPServerRequestPart?
+
+        XCTAssertNoThrow(maybeHead = try self.channel.readInbound())
+        XCTAssertNoThrow(maybeEnd = try self.channel.readInbound())
+        guard case .some(.head) = maybeHead, case .some(.end(.some(let trailers))) = maybeEnd else {
+            XCTFail("didn't receive head & end")
+            return
+        }
+        XCTAssertEqual(trailers["Weird-Field"], [weirdAllowedFieldValue])
+
+        // Now confirm all other bytes in the ASCII range are rejected.
+        for byte in UInt8(0)..<UInt8(128) {
+            // Skip bytes that we already believe are allowed, or that will affect the parse.
+            if weirdAllowedFieldValue.utf8.contains(byte) || byte == UInt8(ascii: "\r") || byte == UInt8(ascii: "\n") {
+                continue
+            }
+            let forbiddenFieldValue = weirdAllowedFieldValue + String(decoding: [byte], as: UTF8.self)
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            let badTrailers = ByteBuffer(string: "Weird-Field: \(forbiddenFieldValue)\r\n\r\n")
+
+            XCTAssertNoThrow(try channel.writeInbound(request))
+
+            XCTAssertThrowsError(
+                try channel.writeInbound(badTrailers),
+                "Incorrectly tolerated character in trailer field value: \(String(decoding: [byte], as: UTF8.self))"
+            ) { error in
+                XCTAssertEqual(error as? HTTPParserError, .invalidHeaderToken)
+            }
+            _ = try? channel.finish()
+        }
+
+        // All the bytes outside the ASCII range are fine though.
+        for byte in UInt8(128)...UInt8(255) {
+            let evenWeirderAllowedValue = weirdAllowedFieldValue + String(decoding: [byte], as: UTF8.self)
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            let weirdGoodTrailers = ByteBuffer(string: "Weird-Field: \(evenWeirderAllowedValue)\r\n\r\n")
+
+            XCTAssertNoThrow(try channel.writeInbound(request))
+            XCTAssertNoThrow(try channel.writeInbound(weirdGoodTrailers))
+            XCTAssertNoThrow(maybeHead = try channel.readInbound())
+            XCTAssertNoThrow(maybeEnd = try channel.readInbound())
+            guard case .some(.head) = maybeHead, case .some(.end(.some(let trailers))) = maybeEnd else {
+                XCTFail("didn't receive head & end for \(byte)")
+                return
+            }
+            XCTAssertEqual(trailers["Weird-Field"], [evenWeirderAllowedValue])
+
+            _ = try? channel.finish()
+        }
+    }
 }
