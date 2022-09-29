@@ -1,3 +1,8 @@
+---
+name: Bug Report
+about: File a bug report to help us improve
+---
+
 ### Expected behavior
 _[what you expected to happen]_
 
