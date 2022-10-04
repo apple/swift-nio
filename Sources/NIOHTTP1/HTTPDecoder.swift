@@ -113,6 +113,9 @@ private class BetterHTTPParser {
         }
         self.settings.pointee.on_message_complete = { opaque in
             BetterHTTPParser.fromOpaque(opaque).didReceiveMessageCompleteNotification()
+            // Temporary workaround for https://github.com/nodejs/llhttp/issues/202, should be removed
+            // when that issue is fixed. We're tracking the work in https://github.com/apple/swift-nio/issues/2274.
+            opaque?.pointee.content_length = 0
             return 0
         }
         self.withExclusiveHTTPParser { parserPtr in
