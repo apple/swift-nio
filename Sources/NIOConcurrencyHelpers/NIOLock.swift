@@ -75,7 +75,7 @@ public struct NIOLock {
         
         internal func unlock() {
 #if os(Windows)
-            ReleaseSRWLockExclusive(self._storage.mutex)
+            ReleaseSRWLockExclusive(self.mutex)
 #else
             let err = pthread_mutex_unlock(self.mutex)
             precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")

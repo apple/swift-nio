@@ -221,7 +221,7 @@ public final class ConditionLock<T: Equatable> {
             }
 
             let dwWaitStart = timeGetTime()
-            if !SleepConditionVariableSRW(self.cond, self.mutex.mutex,
+            if !SleepConditionVariableSRW(self.cond, self.mutex._storage.mutex,
                                           dwMilliseconds, 0) {
                 let dwError = GetLastError()
                 if (dwError == ERROR_TIMEOUT) {
