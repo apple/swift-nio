@@ -548,7 +548,7 @@ extension NIOThrowingAsyncSequenceProducer {
             /// The state once there can be no outstanding demand. This can happen if:
             /// 1. The ``NIOThrowingAsyncSequenceProducer/AsyncIterator`` was deinited
             /// 2. The underlying source finished and all buffered elements have been consumed
-            case finished
+            case finished(iteratorInitialized: Bool)
 
             /// Internal state to avoid CoW.
             case modifying
@@ -588,7 +588,7 @@ extension NIOThrowingAsyncSequenceProducer {
                  .streaming(_, _, _, _, iteratorInitialized: false),
                  .sourceFinished(_, iteratorInitialized: false, _):
                 // No iterator was created so we can transition to finished right away.
-                self._state = .finished
+                self._state = .finished(iteratorInitialized: false)
 
                 return .callDidTerminate
 
@@ -614,7 +614,8 @@ extension NIOThrowingAsyncSequenceProducer {
             switch self._state {
             case .initial(_, iteratorInitialized: true),
                  .streaming(_, _, _, _, iteratorInitialized: true),
-                 .sourceFinished(_, iteratorInitialized: true, _):
+                 .sourceFinished(_, iteratorInitialized: true, _),
+                 .finished(iteratorInitialized: true):
                 // Our sequence is a unicast sequence and does not support multiple AsyncIterator's
                 fatalError("NIOThrowingAsyncSequenceProducer allows only a single AsyncIterator to be created")
 
@@ -643,11 +644,11 @@ extension NIOThrowingAsyncSequenceProducer {
                     failure: failure
                 )
 
-            case .finished:
+            case .finished(iteratorInitialized: false):
                 // It is strange that an iterator is created after we are finished
                 // but it can definitely happen, e.g.
                 // Sequence.init -> source.finish -> sequence.makeAsyncIterator
-                break
+                self._state = .finished(iteratorInitialized: true)
 
             case .modifying:
                 preconditionFailure("Invalid state")
@@ -677,7 +678,7 @@ extension NIOThrowingAsyncSequenceProducer {
                  .sourceFinished(_, iteratorInitialized: true, _):
                 // An iterator was created and deinited. Since we only support
                 // a single iterator we can now transition to finish and inform the delegate.
-                self._state = .finished
+                self._state = .finished(iteratorInitialized: true)
 
                 return .callDidTerminate
 
@@ -835,13 +836,13 @@ extension NIOThrowingAsyncSequenceProducer {
 
                 return .none
 
-            case .streaming(_, let buffer, .some(let continuation), _, _):
+            case .streaming(_, let buffer, .some(let continuation), _, let iteratorInitialized):
                 // We have a continuation, this means our buffer must be empty
                 // Furthermore, we can now transition to finished
                 // and resume the continuation with the failure
                 precondition(buffer.isEmpty, "Expected an empty buffer")
 
-                self._state = .finished
+                self._state = .finished(iteratorInitialized: iteratorInitialized)
 
                 return .resumeContinuationWithFailureAndCallDidTerminate(continuation, failure)
 
@@ -878,21 +879,21 @@ extension NIOThrowingAsyncSequenceProducer {
         @inlinable
         mutating func cancelled() -> CancelledAction {
             switch self._state {
-            case .initial:
+            case .initial(_, let iteratorInitialized):
                 // This can happen if the `Task` that calls `next()` is already cancelled.
-                self._state = .finished
+                self._state = .finished(iteratorInitialized: iteratorInitialized)
 
                 return .callDidTerminate
 
-            case .streaming(_, _, .some(let continuation), _, _):
+            case .streaming(_, _, .some(let continuation), _, let iteratorInitialized):
                 // We have an outstanding continuation that needs to resumed
                 // and we can transition to finished here and inform the delegate
-                self._state = .finished
+                self._state = .finished(iteratorInitialized: iteratorInitialized)
 
                 return .resumeContinuationWithNilAndCallDidTerminate(continuation)
 
-            case .streaming(_, _, continuation: .none, _, _):
-                self._state = .finished
+            case .streaming(_, _, continuation: .none, _, let iteratorInitialized):
+                self._state = .finished(iteratorInitialized: iteratorInitialized)
 
                 return .callDidTerminate
 
@@ -994,7 +995,7 @@ extension NIOThrowingAsyncSequenceProducer {
                     return .returnElement(element)
                 } else {
                     // We are returning the queued failure now and can transition to finished
-                    self._state = .finished
+                    self._state = .finished(iteratorInitialized: iteratorInitialized)
 
                     return .returnFailureAndCallDidTerminate(failure)
                 }
