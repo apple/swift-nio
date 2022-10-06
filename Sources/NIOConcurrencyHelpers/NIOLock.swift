@@ -141,7 +141,6 @@ extension NIOLock {
         return try body()
     }
 
-    // specialise Void return (for performance)
     @inlinable
     public func withLockVoid(_ body: () throws -> Void) rethrows -> Void {
         try self.withLock(body)
