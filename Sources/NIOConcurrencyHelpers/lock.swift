@@ -88,10 +88,7 @@ public final class Lock {
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
 #endif
     }
-}
 
-@available(*, deprecated, renamed: "NIOLock")
-extension Lock {
     /// Acquire the lock for the duration of the given block.
     ///
     /// This convenience method should be preferred to `lock` and `unlock` in
@@ -294,7 +291,7 @@ internal func debugOnly(_ body: () -> Void) {
 }
 
 #if compiler(>=5.5) && canImport(_Concurrency)
-@available(*, deprecated, renamed: "NIOLock")
+@available(*, deprecated)
 extension Lock: Sendable {
 
 }
