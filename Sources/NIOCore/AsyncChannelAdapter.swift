@@ -12,6 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+@usableFromInline
+enum PendingReadState {
+    // Not .stopProducing
+    case canRead
+
+    // .stopProducing but not read()
+    case readBlocked
+
+    // .stopProducing and read()
+    case pendingRead
+}
+
 #if compiler(>=5.5.2) && canImport(_Concurrency)
 import NIOConcurrencyHelpers
 
@@ -23,192 +35,127 @@ import NIOConcurrencyHelpers
 /// construction. These types are `public` only to allow other `Channel`s to
 /// override the implementation of that method.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public final class NIOAsyncChannelAdapterHandler<InboundIn>: ChannelDuplexHandler {
+public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable, ChannelDuplexHandler {
     public typealias OutboundIn = Any
     public typealias OutboundOut = Any
 
+    @usableFromInline
+    typealias Source = NIOThrowingAsyncSequenceProducer<InboundIn, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelAdapterHandler<InboundIn>>.Source
+
     // The initial buffer is just using a lock. We'll do something better later if profiling
     // shows it's necessary.
-    @usableFromInline let config: NIOInboundChannelStreamConfig
-    @usableFromInline let _lock: Lock
-    @usableFromInline var _state: StreamState
+    @usableFromInline var source: Source?
+
+    @usableFromInline var context: ChannelHandlerContext?
+
+    @usableFromInline var buffer: [InboundIn] = []
+
+    @usableFromInline var pendingReadState: PendingReadState = .canRead
+
+    @usableFromInline let loop: EventLoop
 
     @inlinable
-    public init(config: NIOInboundChannelStreamConfig) {
-        self.config = config
-        self._lock = Lock()
-        self._state = .bufferingWithoutPendingRead(CircularBuffer(initialCapacity: config.bufferSize))
+    internal init(loop: EventLoop) {
+        self.loop = loop
+    }
+
+    @inlinable
+    public func handlerAdded(context: ChannelHandlerContext) {
+        self.context = context
+    }
+
+    @inlinable
+    public func handlerRemoved(context: ChannelHandlerContext) {
+        self.context = nil
     }
 
     @inlinable
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        // TODO: This should really be done a little differently, with a single big append in the channelReadComplete to reduce
-        // lock contention.
-        var promise: EventLoopPromise<Void>? = nil
-        if self.config.forwardReads {
-            let readPromise = context.eventLoop.makePromise(of: Void.self)
-            readPromise.futureResult.whenSuccess {
-                // This is less than ideal because we pay no attention to read(), but I didn't really
-                // want to manage the complexity of that right now. We should be wary of this though
-                // as it might cause gnarly bugs in the future.
-                context.fireChannelRead(data)
-                context.fireChannelReadComplete()
-            }
-            promise = readPromise
+        self.buffer.append(self.unwrapInboundIn(data))
+    }
+
+    @inlinable
+    public func channelReadComplete(context: ChannelHandlerContext) {
+        if self.buffer.isEmpty {
+            return
         }
-        self._receiveNewEvent(.channelRead(self.unwrapInboundIn(data), promise))
+
+        let result = self.source!.yield(contentsOf: self.buffer)
+        switch result {
+        case .produceMore:
+            ()
+        case .stopProducing:
+            if self.pendingReadState != .pendingRead {
+                self.pendingReadState = .readBlocked
+            }
+        case .dropped:
+            fatalError("TODO: can this happen?")
+        }
+        self.buffer.removeAll(keepingCapacity: true)
     }
 
     @inlinable
     public func channelInactive(context: ChannelHandlerContext) {
-        self._receiveNewEvent(.eof)
+        // TODO: make this less nasty
+        self.channelReadComplete(context: context)
+        self.source!.finish()
     }
 
     @inlinable
-    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
-        if let event = event as? ChannelEvent, event == .inputClosed {
-            self._receiveNewEvent(.eof)
-        }
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
+        // TODO: make this less nasty
+        self.channelReadComplete(context: context)
+        self.source!.finish(error)
     }
 
     @inlinable
     public func read(context: ChannelHandlerContext) {
-        let continueReading: Bool = self._lock.withLock {
-            switch self._state {
-            case .bufferingWithPendingRead:
-                return false
-            case .waitingForBuffer:
-                return true
-            case .bufferingWithoutPendingRead(let buffer):
-                if buffer.count >= self.config.bufferSize {
-                    // TODO: Rewrite this to avoid promises.
-                    let promise = context.eventLoop.makePromise(of: Void.self)
-                    promise.futureResult.whenComplete { result in
-                        self._delayedRead(result: result, context: context)
-                    }
-                    self._state = .bufferingWithPendingRead(buffer, promise)
-                    return false
-                } else {
-                    return true
-                }
-            }
-        }
-
-        if continueReading {
+        switch self.pendingReadState {
+        case .canRead:
             context.read()
+        case .readBlocked:
+            self.pendingReadState = .pendingRead
+        case .pendingRead:
+            ()
         }
     }
 
     @inlinable
-    func _delayedRead(result: Result<Void, Error>, context: ChannelHandlerContext) {
-        self._lock.withLockVoid {
-            switch self._state {
-            case .bufferingWithPendingRead(let buffer, _):
-                self._state = .bufferingWithoutPendingRead(buffer)
-            case .bufferingWithoutPendingRead, .waitingForBuffer:
-                preconditionFailure()
-            }
+    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        switch event {
+        case is ChannelShouldQuiesceEvent:
+            fatalError("What do we do here?")
+        case ChannelEvent.inputClosed:
+            // TODO: make this less nasty
+            self.channelReadComplete(context: context)
+            self.source!.finish()
+        default:
+            context.fireUserInboundEventTriggered(event)
         }
+    }
+}
 
-        switch result {
-        case .success:
-            context.read()
-        case .failure:
-            context.close(promise: nil)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension NIOAsyncChannelAdapterHandler: NIOAsyncSequenceProducerDelegate {
+    public func didTerminate() {
+        self.loop.execute {
+            self.source = nil
+
+            // Wedges the read open forever, we'll never read again.
+            self.pendingReadState = .pendingRead
         }
     }
 
-    @inlinable
-    func _receiveNewEvent(_ event: InboundMessage) {
-        self._lock.withLockVoid {
-            switch self._state {
-            case .bufferingWithPendingRead(var buffer, let promise):
-                // Weird, but let's tolerate it.
-                buffer.append(event)
-                self._state = .bufferingWithPendingRead(buffer, promise)
-            case .bufferingWithoutPendingRead(var buffer):
-                buffer.append(event)
-                self._state = .bufferingWithoutPendingRead(buffer)
-            case .waitingForBuffer(let buffer, let continuation):
-                precondition(buffer.count == 0)
-                self._state = .bufferingWithoutPendingRead(buffer)
-                // DANGER: This is only safe if we aren't a custom executor. Otherwise this is
-                // v. bad. We should decide if it matters.
-                continuation.resume(returning: event)
-            }
-        }
-    }
-
-    @inlinable
-    func loadEvent() async -> InboundMessage {
-        let result: (InboundMessage, EventLoopPromise<Void>?)?
-        result = self._lock.withLock {
-            switch self._state {
-            case .bufferingWithoutPendingRead(var buffer):
-                if buffer.count > 0 {
-                    let result = buffer.removeFirst()
-                    self._state = .bufferingWithoutPendingRead(buffer)
-                    return (result, nil)
-                } else {
-                    return nil
-                }
-            case .bufferingWithPendingRead(var buffer, let promise):
-                // No matter what happens here, we need to complete this promise.
-                if buffer.count > 0 {
-                    let result = buffer.removeFirst()
-                    self._state = .bufferingWithoutPendingRead(buffer)
-                    return (result, promise)
-                } else {
-                    return nil
-                }
-            case .waitingForBuffer:
-                preconditionFailure("Should never be async nexting twice.")
-            }
-        }
-
-        if let result = result {
-            result.1?.succeed(())
-            return result.0
-        } else {
-            return await self._loadEventSlowPath()
-        }
-    }
-
-    @inlinable
-    func _loadEventSlowPath() async -> InboundMessage {
-        return await withCheckedContinuation { (continuation: CheckedContinuation<InboundMessage, Never>) in
-            let result: (InboundMessage?, EventLoopPromise<Void>?) = self._lock.withLock {
-                switch self._state {
-                case .bufferingWithoutPendingRead(var buffer):
-                    if let result = buffer.popFirst() {
-                        // In the time between dropping the lock and getting it back we got some data. We can satisfy immediately.
-                        self._state = .bufferingWithoutPendingRead(buffer)
-                        return (result, nil)
-                    } else {
-                        self._state = .waitingForBuffer(buffer, continuation)
-                        return (nil, nil)
-                    }
-
-                case .bufferingWithPendingRead(var buffer, let promise):
-                    // No matter what happens here, we need to complete this promise.
-                    if let result = buffer.popFirst() {
-                        self._state = .bufferingWithoutPendingRead(buffer)
-                        return (result, promise)
-                    } else {
-                        self._state = .waitingForBuffer(buffer, continuation)
-                        return (nil, promise)
-                    }
-
-                case .waitingForBuffer:
-                    preconditionFailure("Should never be async nexting twice")
-                }
-            }
-
-            if let message = result.0 {
-                continuation.resume(returning: message)
-            }
-            if let promise = result.1 {
-                promise.succeed(())
+    public func produceMore() {
+        self.loop.execute {
+            switch self.pendingReadState {
+            case .readBlocked:
+                self.pendingReadState = .canRead
+            case .pendingRead:
+                self.pendingReadState = .canRead
+                self.context?.read()
+            case .canRead:
+                ()
             }
         }
     }
@@ -235,11 +182,18 @@ extension NIOAsyncChannelAdapterHandler {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public struct NIOInboundChannelStream<InboundIn>: @unchecked Sendable {
-    @usableFromInline let _handler: NIOAsyncChannelAdapterHandler<InboundIn>
+    @usableFromInline
+    typealias Producer = NIOThrowingAsyncSequenceProducer<InboundIn, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelAdapterHandler<InboundIn>>
+
+    @usableFromInline let _producer: Producer
 
     @inlinable
-    public init(_ handler: NIOAsyncChannelAdapterHandler<InboundIn>) {
-        self._handler = handler
+    public init(_ channel: Channel, lowWatermark: Int, highWatermark: Int) async throws {
+        let handler = NIOAsyncChannelAdapterHandler<InboundIn>(loop: channel.eventLoop)
+        let sequence = Producer.makeSequence(backPressureStrategy: .init(lowWatermark: lowWatermark, highWatermark: highWatermark), delegate: handler)
+        handler.source = sequence.source
+        try await channel.pipeline.addHandler(handler)
+        self._producer = sequence.sequence
     }
 }
 
@@ -247,50 +201,22 @@ public struct NIOInboundChannelStream<InboundIn>: @unchecked Sendable {
 extension NIOInboundChannelStream: AsyncSequence {
     public typealias Element = InboundIn
 
-    public class AsyncIterator: AsyncIteratorProtocol {
-        @usableFromInline let _handler: NIOAsyncChannelAdapterHandler<InboundIn>
+    public struct AsyncIterator: AsyncIteratorProtocol {
+        @usableFromInline var _iterator: Producer.AsyncIterator
 
         @inlinable
-        init(_ handler: NIOAsyncChannelAdapterHandler<InboundIn>) {
-            self._handler = handler
+        init(_ iterator: Producer.AsyncIterator) {
+            self._iterator = iterator
         }
 
         @inlinable public func next() async throws -> Element? {
-            switch await self._handler.loadEvent() {
-            case .channelRead(let message, let promise):
-                promise?.succeed(())
-                return message
-            case .eof:
-                return nil
-            }
+            return try await self._iterator.next()
         }
     }
 
     @inlinable
     public func makeAsyncIterator() -> AsyncIterator {
-        return AsyncIterator(self._handler)
-    }
-}
-
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public struct NIOInboundChannelStreamConfig {
-    /// The size of the backpressure buffer to use.
-    ///
-    /// The larger this buffer, the higher the throughput will be, but the
-    /// higher the peak latencies will be. Tuning buffer sizes is a complex
-    /// art.
-    public var bufferSize: Int
-
-    /// Whether `channelRead`s should be forwarded to the rest of the
-    /// `ChannelPipeline` after they're delivered to the stream. This is
-    /// generally set to `false` because it imposes a performance cost, but
-    /// some `Channel`s require this for correct functionality.
-    public var forwardReads: Bool
-
-    @inlinable
-    public init(bufferSize: Int, forwardReads: Bool = false) {
-        self.bufferSize = bufferSize
-        self.forwardReads = forwardReads
+        return AsyncIterator(self._producer.makeAsyncIterator())
     }
 }
 #endif
