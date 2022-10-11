@@ -47,16 +47,22 @@ public protocol NIOAsyncSequenceProducerBackPressureStrategy: Sendable {
 }
 
 /// The delegate of ``NIOAsyncSequenceProducer``.
+///
+/// - Important: The calls to ``NIOAsyncSequenceProducerDelegate/produceMore()`` and ``NIOAsyncSequenceProducerDelegate/didTerminate()``
+/// are being done on arbitrary threads. To ensure that your conforming type is able to implement back-pressure correctly your must synchronize
+/// your calls to ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)`` and callbacks on this delegate.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public protocol NIOAsyncSequenceProducerDelegate: Sendable {
     /// This method is called once the back-pressure strategy of the ``NIOAsyncSequenceProducer`` determined
-    /// that the producer needs to produce more elements.
+    /// that the producer needs to start producing more elements.
     ///
     /// - Note: ``NIOAsyncSequenceProducerDelegate/produceMore()`` will never be called after
     /// ``NIOAsyncSequenceProducerDelegate/didTerminate()`` was called.
     ///
     /// - Important: This is only called as a result of the consumer calling ``NIOAsyncSequenceProducer/AsyncIterator/next()``.
     /// It is never called as a result of a producer calling ``NIOAsyncSequenceProducer/Source/yield(_:)``.
+    /// Furthermore, it will also only be called if ``NIOAsyncSequenceProducer/Source/yield(_:)`` returned a
+    /// ``NIOAsyncSequenceProducer/Source/YieldResult/stopProducing`` to indicate that new elements should be produced now.
     func produceMore()
 
     /// This method is called once the ``NIOAsyncSequenceProducer`` is terminated.
@@ -244,7 +250,8 @@ extension NIOAsyncSequenceProducer {
 
         /// The result of a call to ``NIOAsyncSequenceProducer/Source/yield(_:)``.
         public enum YieldResult: Hashable {
-            /// Indicates that the caller should produce more elements.
+            /// Indicates that the caller should produce more elements for now. The delegate's ``NIOAsyncSequenceProducerDelegate/produceMore()``
+            /// method will get called once production should be resumed.
             case produceMore
             /// Indicates that the caller should stop producing elements.
             case stopProducing
