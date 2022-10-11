@@ -47,10 +47,19 @@ public protocol NIOAsyncSequenceProducerBackPressureStrategy: Sendable {
 }
 
 /// The delegate of ``NIOAsyncSequenceProducer``.
+///
+/// - Important: The calls to ``NIOAsyncSequenceProducerDelegate/produceMore()`` and ``NIOAsyncSequenceProducerDelegate/didTerminate()``
+/// are being done on arbitrary threads. To ensure that your conforming type is able to implement back-pressure correctly your must synchronize
+/// your calls to ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)`` and callbacks on this delegate.
+/// We recommend dispatching from the arbitrary thread that called ``NIOAsyncSequenceProducerDelegate/produceMore()`` and ``NIOAsyncSequenceProducerDelegate/didTerminate()``
+/// onto the thread that is calling ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)``.
+/// This way you synchronize the receiving the result of a yield call and the callbacks of the delegate on the same thread.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public protocol NIOAsyncSequenceProducerDelegate: Sendable {
     /// This method is called once the back-pressure strategy of the ``NIOAsyncSequenceProducer`` determined
-    /// that the producer needs to produce more elements.
+    /// that the producer needs to start producing more elements. Furthermore, it will also only be called if ``NIOAsyncSequenceProducer/Source/yield(_:)``
+    /// returned a ``NIOAsyncSequenceProducer/Source/YieldResult/stopProducing`` to indicate that new elements should be produced now.
+    /// Except, in the case where ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)`` has never been called.
     ///
     /// - Note: ``NIOAsyncSequenceProducerDelegate/produceMore()`` will never be called after
     /// ``NIOAsyncSequenceProducerDelegate/didTerminate()`` was called.
@@ -244,9 +253,11 @@ extension NIOAsyncSequenceProducer {
 
         /// The result of a call to ``NIOAsyncSequenceProducer/Source/yield(_:)``.
         public enum YieldResult: Hashable {
-            /// Indicates that the caller should produce more elements.
+            /// Indicates that the caller should produce more elements for now. The delegate's ``NIOAsyncSequenceProducerDelegate/produceMore()``
+            /// will **NOT** get called, since the demand was already signalled through this ``YieldResult``
             case produceMore
-            /// Indicates that the caller should stop producing elements.
+            /// Indicates that the caller should stop producing elements. The delegate's ``NIOAsyncSequenceProducerDelegate/produceMore()``
+            /// will get called once production should be resumed.
             case stopProducing
             /// Indicates that the yielded elements have been dropped because the sequence already terminated.
             case dropped
