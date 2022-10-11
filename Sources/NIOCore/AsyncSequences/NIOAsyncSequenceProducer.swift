@@ -51,6 +51,9 @@ public protocol NIOAsyncSequenceProducerBackPressureStrategy: Sendable {
 /// - Important: The calls to ``NIOAsyncSequenceProducerDelegate/produceMore()`` and ``NIOAsyncSequenceProducerDelegate/didTerminate()``
 /// are being done on arbitrary threads. To ensure that your conforming type is able to implement back-pressure correctly your must synchronize
 /// your calls to ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)`` and callbacks on this delegate.
+/// We recommend dispatching from the arbitrary thread that called ``NIOAsyncSequenceProducerDelegate/produceMore()`` and ``NIOAsyncSequenceProducerDelegate/didTerminate()``
+/// onto the thread that is calling ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)``.
+/// This way you synchronize the receiving the result of a yield call and the callbacks of the delegate on the same thread.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public protocol NIOAsyncSequenceProducerDelegate: Sendable {
     /// This method is called once the back-pressure strategy of the ``NIOAsyncSequenceProducer`` determined
