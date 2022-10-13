@@ -27,7 +27,6 @@ fileprivate struct TestCase {
 
 final class AsyncSequenceCollectTests: XCTestCase {
     func testAsyncSequenceCollect() {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let testCases = [
@@ -159,11 +158,8 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 }
             }
         }
-        #endif
     }
 }
-
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 struct AsyncSequenceFromSyncSequence<Wrapped: Sequence>: AsyncSequence {
@@ -189,5 +185,3 @@ extension Sequence {
         .init(wrapped: self)
     }
 }
-
-#endif

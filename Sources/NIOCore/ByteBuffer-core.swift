@@ -1068,9 +1068,7 @@ extension ByteBuffer: Hashable {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension ByteBuffer: @unchecked Sendable {}
-#endif
 
 extension ByteBuffer {
     /// Modify this `ByteBuffer` if this `ByteBuffer` is known to uniquely own its storage.

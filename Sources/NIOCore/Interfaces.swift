@@ -348,9 +348,7 @@ public struct NIONetworkDevice {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension NIONetworkDevice: @unchecked Sendable {}
-#endif
 
 extension NIONetworkDevice {
     fileprivate final class Backing {

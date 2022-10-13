@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if compiler(>=5.5.2) && canImport(_Concurrency)
+
 import Atomics
 import Dispatch
 import _NIODataStructures
@@ -375,5 +375,3 @@ private class PromiseCreationStore {
         precondition(self.promiseCreationStore.isEmpty, "NIOAsyncTestingEventLoop freed with uncompleted promises!")
     }
 }
-
-#endif

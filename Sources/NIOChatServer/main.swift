@@ -109,10 +109,8 @@ final class ChatHandler: ChannelInboundHandler {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 /// access to the internal state is protected by `channelsSyncQueue`
 extension ChatHandler: @unchecked Sendable {}
-#endif
 
 // We need to share the same ChatHandler for all as it keeps track of all
 // connected clients. For this ChatHandler MUST be thread-safe!

@@ -378,9 +378,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension NIOHTTPClientUpgradeHandler: @unchecked Sendable {}
-#endif
 
 extension NIOHTTPClientUpgradeHandler {
     /// The state of the upgrade handler.

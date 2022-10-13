@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 import NIOCore
 import XCTest
 
@@ -58,4 +57,3 @@ final class NIOAsyncSequenceProducerBackPressureStrategiesHighLowWatermarkTests:
         XCTAssertFalse(self.strategy.didConsume(bufferDepth: 5))
     }
 }
-#endif

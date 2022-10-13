@@ -11,7 +11,7 @@ It's like [Netty](https://netty.io), but written for Swift.
 
 The SwiftNIO project is split across multiple repositories:
 
-Repository | NIO 2 (Swift 5.5+)
+Repository | NIO 2 (Swift 5.5.2+)
 --- | ---
 [https://github.com/apple/swift-nio][repo-nio] <br> SwiftNIO core | `from: "2.0.0"`
 [https://github.com/apple/swift-nio-ssl][repo-nio-ssl] <br> TLS (SSL) support | `from: "2.0.0"`
@@ -70,14 +70,14 @@ Redis | ✅ | ❌ | [mordil/swift-redi-stack](https://gitlab.com/Mordil/swift-re
 
 This is the current version of SwiftNIO and will be supported for the foreseeable future.
 
-The most recent versions of SwiftNIO support Swift 5.5 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
+The most recent versions of SwiftNIO support Swift 5.5.2 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
 
 SwiftNIO            | Minimum Swift Version
 --------------------|----------------------
 `2.0.0 ..< 2.30.0`  | 5.0
 `2.30.0 ..< 2.40.0` | 5.2
 `2.40.0 ..< 2.43.0` | 5.4
-`2.43.0 ...`        | 5.5
+`2.43.0 ...`        | 5.5.2
 
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.

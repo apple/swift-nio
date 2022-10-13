@@ -252,9 +252,7 @@ public final class NIOThreadPool {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension NIOThreadPool: @unchecked Sendable {}
-#endif
 
 extension NIOThreadPool {
     

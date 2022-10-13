@@ -147,7 +147,5 @@ extension NIOLock {
     }
 }
 
-#if compiler(>=5.5) && canImport(_Concurrency)
 extension NIOLock: Sendable {}
 extension NIOLock._Storage: Sendable {}
-#endif

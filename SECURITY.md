@@ -18,7 +18,7 @@ team would create the following patch releases:
 * NIO 2.42. + plus next patch release to address the issue for projects that support
   Swift 5.4 and later
 * mainline + plus next patch release to address the issue for projects that support
-  Swift 5.5 and later
+  Swift 5.5.2 and later
 
 SwiftNIO 1.x is considered end of life and will not receive any security patches.
 

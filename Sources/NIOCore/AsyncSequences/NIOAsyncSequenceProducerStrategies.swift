@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 public enum NIOAsyncSequenceProducerBackPressureStrategies {
     /// A high-low watermarked back-pressure strategy for a ``NIOAsyncSequenceProducer``.
     ///
@@ -46,4 +45,3 @@ public enum NIOAsyncSequenceProducerBackPressureStrategies {
         }
     }
 }
-#endif

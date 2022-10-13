@@ -323,9 +323,7 @@ public struct WebSocketFrame {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension WebSocketFrame: @unchecked Sendable {}
-#endif
 
 extension WebSocketFrame: Equatable {}
 

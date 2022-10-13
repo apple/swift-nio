@@ -325,9 +325,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension HTTPServerUpgradeHandler: @unchecked Sendable {}
-#endif
 
 extension HTTPServerUpgradeHandler {
     /// The state of the upgrade handler.

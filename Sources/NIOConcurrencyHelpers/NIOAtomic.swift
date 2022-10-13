@@ -313,9 +313,5 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     }
 }
 
-#if compiler(>=5.5) && canImport(_Concurrency)
 @available(*, deprecated)
-extension NIOAtomic: Sendable {
-
-}
-#endif
+extension NIOAtomic: Sendable {}

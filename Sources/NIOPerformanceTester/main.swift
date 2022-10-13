@@ -62,7 +62,6 @@ public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void
     }
 }
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
     func measureOne(_ fn: () async throws -> Int) async rethrows -> Double {
@@ -91,7 +90,6 @@ public func measureAndPrint(desc: String, fn: () async throws -> Int) async reth
         print("skipping '\(desc)', limit set = \(limitSet)")
     }
 }
-#endif
 
 // MARK: Utilities
 
@@ -1085,7 +1083,6 @@ try measureAndPrint(
     )
 )
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 if #available(macOS 10.15, *) {
     try measureAndPrint(
         desc: "asyncwriter_single_writes_1M_times",
@@ -1094,4 +1091,3 @@ if #available(macOS 10.15, *) {
         )
     )
 }
-#endif

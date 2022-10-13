@@ -46,9 +46,7 @@ private final class BlockingQueue<Element> {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension BlockingQueue: @unchecked Sendable where Element: Sendable {}
-#endif
 
 
 private final class WebServerHandler: ChannelDuplexHandler {

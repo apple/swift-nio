@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 import NIOCore
 import DequeModule
 import Atomics
@@ -54,4 +53,3 @@ final class NIOAsyncWriterSingleWritesBenchmark: AsyncBenchmark, @unchecked Send
         return self.delegate.counter.load(ordering: .sequentiallyConsistent)
     }
 }
-#endif
