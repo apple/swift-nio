@@ -33,7 +33,7 @@ private let sniHostNameType: UInt8 = 0
 /// contains the hostname received in the SNI extension. If `fallback`,
 /// then either we could not parse the SNI extension or it was not there
 /// at all.
-public enum SNIResult: Equatable, NIOSendable {
+public enum SNIResult: Equatable, Sendable {
     case fallback
     case hostname(String)
 }

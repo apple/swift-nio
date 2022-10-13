@@ -26,7 +26,7 @@ import NIOCore
 ///
 /// Exactly what to do when falling back is the responsibility of a specific
 /// implementation.
-public enum ALPNResult: Equatable, NIOSendable {
+public enum ALPNResult: Equatable, Sendable {
     /// ALPN negotiation succeeded. The associated value is the ALPN token that
     /// was negotiated.
     case negotiated(String)

@@ -191,4 +191,4 @@ extension MarkedCircularBuffer: RandomAccessCollection {
 
 }
 
-extension MarkedCircularBuffer: NIOSendable where Element: NIOSendable {}
+extension MarkedCircularBuffer: Sendable where Element: Sendable {}

@@ -1862,7 +1862,7 @@ extension ChannelHandlerContext {
     /// A `RemovalToken` is handed to a `RemovableChannelHandler` when its `removeHandler` function is invoked. A
     /// `RemovableChannelHandler` is then required to remove itself from the `ChannelPipeline`. The removal process
     /// is finalized by handing the `RemovalToken` to the `ChannelHandlerContext.leavePipeline` function.
-    public struct RemovalToken: NIOSendable {
+    public struct RemovalToken: Sendable {
         internal let promise: EventLoopPromise<Void>?
     }
 

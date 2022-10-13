@@ -372,7 +372,7 @@ extension EventCounterHandler: ChannelDuplexHandler {
 
 #if compiler(>=5.6) && canImport(_Concurrency)
 // This is a workaround before ManagedAtomic gets Sendable conformance. Once the support
-// is ready, we should remove '@preconcurrency import' and declare NIOSendable directly.
+// is ready, we should remove '@preconcurrency import' and declare Sendable directly.
 extension EventCounterHandler: Sendable {
 
 }

@@ -38,7 +38,7 @@ private extension Array where Element == EventLoopFuture<Channel> {
 }
 
 /// An error that occurred during connection to a given target.
-public struct SingleConnectionFailure: NIOSendable {
+public struct SingleConnectionFailure: Sendable {
     /// The target we were trying to connect to when we encountered the error.
     public let target: SocketAddress
 

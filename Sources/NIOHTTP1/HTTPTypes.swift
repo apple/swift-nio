@@ -609,7 +609,7 @@ extension HTTPHeaders: Equatable {
     }
 }
 
-public enum HTTPMethod: Equatable, NIOSendable {
+public enum HTTPMethod: Equatable, Sendable {
     internal enum HasBody {
         case yes
         case no
@@ -668,7 +668,7 @@ public enum HTTPMethod: Equatable, NIOSendable {
 }
 
 /// A structure representing a HTTP version.
-public struct HTTPVersion: Equatable, NIOSendable {
+public struct HTTPVersion: Equatable, Sendable {
     /// Create a HTTP version.
     ///
     /// - Parameter major: The major version number.
@@ -1074,7 +1074,7 @@ extension HTTPResponseStatus {
 }
 
 /// A HTTP response status code.
-public enum HTTPResponseStatus: NIOSendable {
+public enum HTTPResponseStatus: Sendable {
     /* use custom if you want to use a non-standard response code or
      have it available in a (UInt, String) pair from a higher-level web framework. */
     case custom(code: UInt, reasonPhrase: String)

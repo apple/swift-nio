@@ -15,7 +15,7 @@
 import NIOCore
 
 /// Common user events sent by all TLS implementations.
-public enum TLSUserEvent: Equatable, NIOSendable {
+public enum TLSUserEvent: Equatable, Sendable {
     /// The TLS handshake has completed. If ALPN or NPN were used,
     /// the negotiated protocol is provided as `negotiatedProtocol`.
     case handshakeCompleted(negotiatedProtocol: String?)

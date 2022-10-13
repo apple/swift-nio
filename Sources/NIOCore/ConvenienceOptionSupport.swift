@@ -82,7 +82,7 @@ extension ChannelOptions.Types.ConvenienceOptionValue where ValueType == () {
 // MARK: TCP - data
 extension ChannelOptions {
     /// A TCP channel option which can be applied to a bootstrap using convenience notation.
-    public struct TCPConvenienceOption: Hashable, NIOSendable {
+    public struct TCPConvenienceOption: Hashable, Sendable {
         fileprivate var data: ConvenienceOption
         
         private init(_ data: ConvenienceOption) {
@@ -116,7 +116,7 @@ extension ChannelOptions.TCPConvenienceOption {
 
 extension ChannelOptions {
     /// A set of `TCPConvenienceOption`s
-    public struct TCPConvenienceOptions: ExpressibleByArrayLiteral, Hashable, NIOSendable {
+    public struct TCPConvenienceOptions: ExpressibleByArrayLiteral, Hashable, Sendable {
         var allowLocalEndpointReuse = false
         var disableAutoRead = false
         var allowRemoteHalfClosure = false

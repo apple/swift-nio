@@ -14,7 +14,7 @@
 
 
 /// State of the current decoding process.
-public enum DecodingState: NIOSendable {
+public enum DecodingState: Sendable {
     /// Continue decoding.
     case `continue`
 

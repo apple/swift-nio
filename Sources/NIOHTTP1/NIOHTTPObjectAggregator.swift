@@ -17,7 +17,7 @@ import NIOCore
 ///
 /// A full HTTP request is made up of a response header encoded by `.head`
 /// and an optional `.body`.
-public struct NIOHTTPServerRequestFull: NIOSendable {
+public struct NIOHTTPServerRequestFull: Sendable {
     public var head: HTTPRequestHead
     public var body: ByteBuffer?
 
@@ -33,7 +33,7 @@ extension NIOHTTPServerRequestFull: Equatable {}
 ///
 /// A full HTTP response is made up of a response header encoded by `.head`
 /// and an optional `.body`.
-public struct NIOHTTPClientResponseFull: NIOSendable {
+public struct NIOHTTPClientResponseFull: Sendable {
     public var head: HTTPResponseHead
     public var body: ByteBuffer?
 
@@ -69,7 +69,7 @@ public struct NIOHTTPObjectAggregatorError: Error, Equatable {
     public static let unexpectedMessageEnd = NIOHTTPObjectAggregatorError(base: .unexpectedMessageEnd)
 }
 
-public struct NIOHTTPObjectAggregatorEvent: Hashable, NIOSendable {
+public struct NIOHTTPObjectAggregatorEvent: Hashable, Sendable {
     private enum Base {
         case httpExpectationFailed
         case httpFrameTooLong

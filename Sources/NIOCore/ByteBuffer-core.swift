@@ -34,7 +34,7 @@ extension _ByteBufferSlice: Equatable {}
 /// 24 bits (the upper bound is still 32). Before constructing, you need to make sure the lower bound actually
 /// fits within 24 bits, otherwise the behaviour is undefined.
 @usableFromInline
-struct _ByteBufferSlice: NIOSendable {
+struct _ByteBufferSlice: Sendable {
     @usableFromInline private(set) var upperBound: ByteBuffer._Index
     @usableFromInline private(set) var _begin: _UInt24
     @inlinable var lowerBound: ByteBuffer._Index {
@@ -72,7 +72,7 @@ extension _ByteBufferSlice: CustomStringConvertible {
 /// `malloc`, `realloc` and `free`.
 ///
 /// - note: `ByteBufferAllocator` is thread-safe.
-public struct ByteBufferAllocator: NIOSendable {
+public struct ByteBufferAllocator: Sendable {
 
     /// Create a fresh `ByteBufferAllocator`. In the future the allocator might use for example allocation pools and
     /// therefore it's recommended to reuse `ByteBufferAllocators` where possible instead of creating fresh ones in

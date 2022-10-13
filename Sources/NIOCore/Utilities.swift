@@ -52,7 +52,7 @@ final class Box<T> {
     init(_ value: T) { self.value = value }
 }
 
-extension Box: NIOSendable where T: NIOSendable {}
+extension Box: Sendable where T: Sendable {}
 
 public enum System {
     /// A utility function that returns an estimate of the number of *logical* cores
