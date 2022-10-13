@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2018-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2018-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -30,11 +30,9 @@ extension HTTPDecoderTest {
                 ("testDoesNotDecodeRealHTTP09Request", testDoesNotDecodeRealHTTP09Request),
                 ("testDoesNotDecodeFakeHTTP09Request", testDoesNotDecodeFakeHTTP09Request),
                 ("testDoesNotDecodeHTTP2XRequest", testDoesNotDecodeHTTP2XRequest),
-                ("testToleratesHTTP13Request", testToleratesHTTP13Request),
                 ("testDoesNotDecodeRealHTTP09Response", testDoesNotDecodeRealHTTP09Response),
                 ("testDoesNotDecodeFakeHTTP09Response", testDoesNotDecodeFakeHTTP09Response),
                 ("testDoesNotDecodeHTTP2XResponse", testDoesNotDecodeHTTP2XResponse),
-                ("testToleratesHTTP13Response", testToleratesHTTP13Response),
                 ("testCorrectlyMaintainIndicesWhenDiscardReadBytes", testCorrectlyMaintainIndicesWhenDiscardReadBytes),
                 ("testDropExtraBytes", testDropExtraBytes),
                 ("testDontDropExtraBytesRequest", testDontDropExtraBytesRequest),
@@ -60,6 +58,16 @@ extension HTTPDecoderTest {
                 ("testRefusesRequestSmugglingAttempt", testRefusesRequestSmugglingAttempt),
                 ("testTrimsTrailingOWS", testTrimsTrailingOWS),
                 ("testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable", testMassiveChunkDoesNotBufferAndGivesUsHoweverMuchIsAvailable),
+                ("testDecodingLongHeaderFieldNames", testDecodingLongHeaderFieldNames),
+                ("testDecodingLongHeaderFieldValues", testDecodingLongHeaderFieldValues),
+                ("testDecodingLongURLs", testDecodingLongURLs),
+                ("testDecodingRTSPQueries", testDecodingRTSPQueries),
+                ("testDecodingInvalidHeaderFieldNames", testDecodingInvalidHeaderFieldNames),
+                ("testDecodingInvalidTrailerFieldNames", testDecodingInvalidTrailerFieldNames),
+                ("testDecodingInvalidHeaderFieldValues", testDecodingInvalidHeaderFieldValues),
+                ("testDecodingInvalidTrailerFieldValues", testDecodingInvalidTrailerFieldValues),
+                ("testDecodeAfterHEADResponse", testDecodeAfterHEADResponse),
+                ("testDecodeAfterHEADResponseChunked", testDecodeAfterHEADResponseChunked),
            ]
    }
 }

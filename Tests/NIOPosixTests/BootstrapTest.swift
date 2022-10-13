@@ -21,7 +21,7 @@ import XCTest
 class BootstrapTest: XCTestCase {
     var group: MultiThreadedEventLoopGroup!
     var groupBag: [MultiThreadedEventLoopGroup]? = nil // protected by `self.lock`
-    let lock = Lock()
+    let lock = NIOLock()
 
     override func setUp() {
         XCTAssertNil(self.group)

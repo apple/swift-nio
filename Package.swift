@@ -20,7 +20,7 @@ let swiftCollections: PackageDescription.Target.Dependency = .product(name: "Deq
 
 var targets: [PackageDescription.Target] = [
     .target(name: "NIOCore",
-            dependencies: ["NIOConcurrencyHelpers", "CNIOLinux", "CNIOWindows", swiftCollections]),
+            dependencies: ["NIOConcurrencyHelpers", "CNIOLinux", "CNIOWindows", swiftCollections, swiftAtomics]),
     .target(name: "_NIODataStructures"),
     .target(name: "NIOEmbedded",
             dependencies: ["NIOCore",
@@ -52,7 +52,7 @@ var targets: [PackageDescription.Target] = [
     .target(name: "NIOConcurrencyHelpers",
             dependencies: ["CNIOAtomics"]),
     .target(name: "NIOHTTP1",
-            dependencies: ["NIO", "NIOCore", "NIOConcurrencyHelpers", "CNIOHTTPParser"]),
+            dependencies: ["NIO", "NIOCore", "NIOConcurrencyHelpers", "CNIOLLHTTP"]),
     .executableTarget(name: "NIOEchoServer",
                       dependencies: ["NIOPosix", "NIOCore", "NIOConcurrencyHelpers"],
                       exclude: ["README.md"]),
@@ -65,7 +65,10 @@ var targets: [PackageDescription.Target] = [
     .executableTarget(name: "NIOHTTP1Client",
                       dependencies: ["NIOPosix", "NIOCore", "NIOHTTP1", "NIOConcurrencyHelpers"],
                       exclude: ["README.md"]),
-    .target(name: "CNIOHTTPParser"),
+    .target(
+        name: "CNIOLLHTTP",
+        cSettings: [.define("LLHTTP_STRICT_MODE")]
+    ),
     .target(name: "NIOTLS", dependencies: ["NIO", "NIOCore"]),
     .executableTarget(name: "NIOChatServer",
                       dependencies: ["NIOPosix", "NIOCore", "NIOConcurrencyHelpers"],

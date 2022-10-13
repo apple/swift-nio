@@ -47,10 +47,19 @@ public protocol NIOAsyncSequenceProducerBackPressureStrategy: Sendable {
 }
 
 /// The delegate of ``NIOAsyncSequenceProducer``.
+///
+/// - Important: The calls to ``NIOAsyncSequenceProducerDelegate/produceMore()`` and ``NIOAsyncSequenceProducerDelegate/didTerminate()``
+/// are being done on arbitrary threads. To ensure that your conforming type is able to implement back-pressure correctly your must synchronize
+/// your calls to ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)`` and callbacks on this delegate.
+/// We recommend dispatching from the arbitrary thread that called ``NIOAsyncSequenceProducerDelegate/produceMore()`` and ``NIOAsyncSequenceProducerDelegate/didTerminate()``
+/// onto the thread that is calling ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)``.
+/// This way you synchronize the receiving the result of a yield call and the callbacks of the delegate on the same thread.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public protocol NIOAsyncSequenceProducerDelegate: Sendable {
     /// This method is called once the back-pressure strategy of the ``NIOAsyncSequenceProducer`` determined
-    /// that the producer needs to produce more elements.
+    /// that the producer needs to start producing more elements. Furthermore, it will also only be called if ``NIOAsyncSequenceProducer/Source/yield(_:)``
+    /// returned a ``NIOAsyncSequenceProducer/Source/YieldResult/stopProducing`` to indicate that new elements should be produced now.
+    /// Except, in the case where ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)`` has never been called.
     ///
     /// - Note: ``NIOAsyncSequenceProducerDelegate/produceMore()`` will never be called after
     /// ``NIOAsyncSequenceProducerDelegate/didTerminate()`` was called.
@@ -90,7 +99,7 @@ public struct NIOAsyncSequenceProducer<
     Strategy: NIOAsyncSequenceProducerBackPressureStrategy,
     Delegate: NIOAsyncSequenceProducerDelegate
 >: Sendable {
-    /// Simple struct for the return type of ``NIOAsyncSequenceProducer/makeSequence(of:backPressureStrategy:delegate:)``.
+    /// Simple struct for the return type of ``NIOAsyncSequenceProducer/makeSequence(elementType:backPressureStrategy:delegate:)``.
     ///
     /// This struct contains two properties:
     /// 1. The ``source`` which should be retained by the producer and is used
@@ -198,52 +207,75 @@ extension NIOAsyncSequenceProducer {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncSequenceProducer {
     /// A struct to interface between the synchronous code of the producer and the asynchronous consumer.
-    /// This type allows the producer to synchronously `yield` new elements to the ``NIOThrowingAsyncSequenceProducer``
+    /// This type allows the producer to synchronously `yield` new elements to the ``NIOAsyncSequenceProducer``
     /// and to `finish` the sequence.
     public struct Source {
+        /// This class is needed to hook the deinit to observe once all references to the ``NIOAsyncSequenceProducer/Source`` are dropped.
+        ///
+        /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
         @usableFromInline
-        /* fileprivate */ internal let _throwingSource: NIOThrowingAsyncSequenceProducer<
-            Element,
-            Never,
-            Strategy,
-            Delegate
-        >.Source
-
-        @usableFromInline
-        /* fileprivate */ internal init(
-            throwingSource: NIOThrowingAsyncSequenceProducer<
+        /* fileprivate */ internal final class InternalClass: Sendable {
+            @usableFromInline
+            typealias ThrowingSource = NIOThrowingAsyncSequenceProducer<
                 Element,
                 Never,
                 Strategy,
                 Delegate
             >.Source
-        ) {
-            self._throwingSource = throwingSource
+
+            @usableFromInline
+            /* fileprivate */ internal let _throwingSource: ThrowingSource
+
+            @inlinable
+            init(throwingSource: ThrowingSource) {
+                self._throwingSource = throwingSource
+            }
+
+            @inlinable
+            deinit {
+                // We need to call finish here to resume any suspended continuation.
+                self._throwingSource.finish()
+            }
         }
 
-        /// The result of a call to ``NIOThrowingAsyncSequenceProducer/Source/yield(_:)``.
+        @usableFromInline
+        /* private */ internal let _internalClass: InternalClass
+
+        @usableFromInline
+        /* private */ internal var _throwingSource: InternalClass.ThrowingSource {
+            self._internalClass._throwingSource
+        }
+
+        @usableFromInline
+        /* fileprivate */ internal init(throwingSource: InternalClass.ThrowingSource) {
+            self._internalClass = .init(throwingSource: throwingSource)
+        }
+
+        /// The result of a call to ``NIOAsyncSequenceProducer/Source/yield(_:)``.
         public enum YieldResult: Hashable {
-            /// Indicates that the caller should produce more elements.
+            /// Indicates that the caller should produce more elements for now. The delegate's ``NIOAsyncSequenceProducerDelegate/produceMore()``
+            /// will **NOT** get called, since the demand was already signalled through this ``YieldResult``
             case produceMore
-            /// Indicates that the caller should stop producing elements.
+            /// Indicates that the caller should stop producing elements. The delegate's ``NIOAsyncSequenceProducerDelegate/produceMore()``
+            /// will get called once production should be resumed.
             case stopProducing
             /// Indicates that the yielded elements have been dropped because the sequence already terminated.
             case dropped
         }
 
-        /// Yields a sequence of new elements to the ``NIOThrowingAsyncSequenceProducer``.
+        /// Yields a sequence of new elements to the ``NIOAsyncSequenceProducer``.
         ///
-        /// If there is an ``NIOThrowingAsyncSequenceProducer/AsyncIterator`` awaiting the next element, it will get resumed right away.
+        /// If there is an ``NIOAsyncSequenceProducer/AsyncIterator`` awaiting the next element, it will get resumed right away.
         /// Otherwise, the element will get buffered.
         ///
-        /// If the ``NIOThrowingAsyncSequenceProducer`` is terminated this will drop the elements
+        /// If the ``NIOAsyncSequenceProducer`` is terminated this will drop the elements
         /// and return ``YieldResult/dropped``.
         ///
         /// This can be called more than once and returns to the caller immediately
         /// without blocking for any awaiting consumption from the iteration.
         ///
         /// - Parameter contentsOf: The sequence to yield.
-        /// - Returns: A ``NIOThrowingAsyncSequenceProducer/Source/YieldResult`` that indicates if the yield was successful
+        /// - Returns: A ``NIOAsyncSequenceProducer/Source/YieldResult`` that indicates if the yield was successful
         /// and if more elements should be produced.
         @inlinable
         public func yield<S: Sequence>(contentsOf sequence: S) -> YieldResult where S.Element == Element {
@@ -257,19 +289,19 @@ extension NIOAsyncSequenceProducer {
             }
         }
 
-        /// Yields a new elements to the ``NIOThrowingAsyncSequenceProducer``.
+        /// Yields a new elements to the ``NIOAsyncSequenceProducer``.
         ///
-        /// If there is an ``NIOThrowingAsyncSequenceProducer/AsyncIterator`` awaiting the next element, it will get resumed right away.
+        /// If there is an ``NIOAsyncSequenceProducer/AsyncIterator`` awaiting the next element, it will get resumed right away.
         /// Otherwise, the element will get buffered.
         ///
-        /// If the ``NIOThrowingAsyncSequenceProducer`` is terminated this will drop the elements
+        /// If the ``NIOAsyncSequenceProducer`` is terminated this will drop the elements
         /// and return ``YieldResult/dropped``.
         ///
         /// This can be called more than once and returns to the caller immediately
         /// without blocking for any awaiting consumption from the iteration.
         ///
         /// - Parameter element: The element to yield.
-        /// - Returns: A ``NIOThrowingAsyncSequenceProducer/Source/YieldResult`` that indicates if the yield was successful
+        /// - Returns: A ``NIOAsyncSequenceProducer/Source/YieldResult`` that indicates if the yield was successful
         /// and if more elements should be produced.
         @inlinable
         public func yield(_ element: Element) -> YieldResult {
@@ -280,8 +312,8 @@ extension NIOAsyncSequenceProducer {
         ///
         /// Calling this function signals the sequence that there won't be any subsequent elements yielded.
         ///
-        /// If there are still buffered elements and there is an ``NIOThrowingAsyncSequenceProducer/AsyncIterator`` consuming the sequence,
-        /// then termination of the sequence only happens once all elements have been consumed by the ``NIOThrowingAsyncSequenceProducer/AsyncIterator``.
+        /// If there are still buffered elements and there is an ``NIOAsyncSequenceProducer/AsyncIterator`` consuming the sequence,
+        /// then termination of the sequence only happens once all elements have been consumed by the ``NIOAsyncSequenceProducer/AsyncIterator``.
         /// Otherwise, the buffered elements will be dropped.
         ///
         /// - Note: Calling this function more than once has no effect.

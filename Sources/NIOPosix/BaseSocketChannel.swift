@@ -238,7 +238,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     internal let socket: SocketType
     private let closePromise: EventLoopPromise<Void>
     internal let selectableEventLoop: SelectableEventLoop
-    private let _offEventLoopLock = Lock()
+    private let _offEventLoopLock = NIOLock()
     private let isActiveAtomic: ManagedAtomic<Bool> = .init(false)
     // just a thread-safe way of having something to print about the socket from any thread
     internal let socketDescription: String

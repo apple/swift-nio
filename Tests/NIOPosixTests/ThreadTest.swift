@@ -260,7 +260,7 @@ class ThreadTest: XCTestCase {
             }
         }
         var globalTSVs: [ThreadSpecificVariable<SomeClass>] = []
-        let globalTSVLock = Lock()
+        let globalTSVLock = NIOLock()
         ({
             let tsv = ThreadSpecificVariable<SomeClass>()
             globalTSVLock.withLock {

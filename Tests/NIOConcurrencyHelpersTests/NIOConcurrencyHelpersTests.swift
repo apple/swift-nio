@@ -461,7 +461,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
 
     func testLockMutualExclusion() {
-        let l = Lock()
+        let l = NIOLock()
 
         var x = 1
         let q = DispatchQueue(label: "q")
@@ -493,7 +493,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     }
 
     func testWithLockMutualExclusion() {
-        let l = Lock()
+        let l = NIOLock()
 
         var x = 1
         let q = DispatchQueue(label: "q")
@@ -1006,6 +1006,23 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
         doIt()
         XCTAssertEqual(iterations + 1, allDeallocations.load())
+    }
+
+    func testNIOLockedValueBox() {
+        struct State {
+            var count: Int = 0
+        }
+
+        let lv = NIOLockedValueBox<State>(State())
+        spawnAndJoinRacingThreads(count: 50) { _ in
+            for _ in 0..<1000 {
+                lv.withLockedValue { state in
+                    state.count += 1
+                }
+            }
+        }
+
+        XCTAssertEqual(50_000, lv.withLockedValue { $0.count })
     }
 }
 

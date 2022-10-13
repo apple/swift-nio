@@ -30,6 +30,11 @@ public enum IOData {
 /// `IOData` objects are comparable just like the values they wrap.
 extension IOData: Equatable {}
 
+#if swift(>=5.6)
+@available(*, unavailable)
+extension IOData: Sendable {}
+#endif
+
 /// `IOData` provide a number of readable bytes.
 extension IOData {
     /// Returns the number of readable bytes in this `IOData`.

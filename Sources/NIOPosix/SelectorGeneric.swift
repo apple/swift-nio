@@ -131,7 +131,7 @@ internal class Selector<R: Registration>  {
     // The rules for `self.selectorFD`, `self.eventFD`, and `self.timerFD`:
     // reads: `self.externalSelectorFDLock` OR access from the EventLoop thread
     // writes: `self.externalSelectorFDLock` AND access from the EventLoop thread
-    let externalSelectorFDLock = Lock()
+    let externalSelectorFDLock = NIOLock()
     var selectorFD: CInt = -1 // -1 == we're closed
 
     // Here we add the stored properties that are used by the specific backends

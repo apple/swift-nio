@@ -27,7 +27,7 @@ class NIOThreadPoolTest: XCTestCase {
         }
 
         var allThreadNames: Set<String> = []
-        let lock = Lock()
+        let lock = NIOLock()
         let threadNameCollectionSem = DispatchSemaphore(value: 0)
         let threadBlockingSem = DispatchSemaphore(value: 0)
 
@@ -74,14 +74,14 @@ class NIOThreadPoolTest: XCTestCase {
 
         // The lock here is arguably redundant with the dispatchgroup, but let's make
         // this test thread-safe even if I screw up.
-        let lock = Lock()
+        let lock = NIOLock()
         var threadOne = Thread?.none
         var threadTwo = Thread?.none
 
         completionGroup.enter()
         pool.submit { s in
             precondition(s == .active)
-            lock.withLockVoid {
+            lock.withLock { () -> Void in
                 XCTAssertEqual(threadOne, nil)
                 threadOne = Thread.current
             }
@@ -93,7 +93,7 @@ class NIOThreadPoolTest: XCTestCase {
         completionGroup.enter()
         pool.submit { s in
             precondition(s == .active)
-            lock.withLockVoid {
+            lock.withLock { () -> Void in
                 XCTAssertEqual(threadTwo, nil)
                 threadTwo = Thread.current
             }
@@ -102,7 +102,7 @@ class NIOThreadPoolTest: XCTestCase {
 
         completionGroup.wait()
 
-        lock.withLockVoid {
+        lock.withLock { () -> Void in
             XCTAssertNotNil(threadOne)
             XCTAssertNotNil(threadTwo)
             XCTAssertEqual(threadOne, threadTwo)

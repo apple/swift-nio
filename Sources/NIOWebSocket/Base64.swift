@@ -40,14 +40,14 @@ internal struct Base64 {
     // nearest multiple of four.
     let base64StringLength = ((bytes.count + 2) / 3) * 4
     let alphabet = Base64.encodeBase64
-    
+
     return String(customUnsafeUninitializedCapacity: base64StringLength) { backingStorage in
       var input = bytes.makeIterator()
       var offset = 0
       while let firstByte = input.next() {
         let secondByte = input.next()
         let thirdByte = input.next()
-        
+
         backingStorage[offset] = Base64.encode(alphabet: alphabet, firstByte: firstByte)
         backingStorage[offset + 1] = Base64.encode(alphabet: alphabet, firstByte: firstByte, secondByte: secondByte)
         backingStorage[offset + 2] = Base64.encode(alphabet: alphabet, secondByte: secondByte, thirdByte: thirdByte)
@@ -57,9 +57,9 @@ internal struct Base64 {
       return offset
     }
   }
-  
+
   // MARK: Internal
-  
+
   // The base64 unicode table.
   @usableFromInline
   static let encodeBase64: [UInt8] = [
@@ -80,7 +80,7 @@ internal struct Base64 {
     UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"),
     UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "+"), UInt8(ascii: "/"),
   ]
-  
+
   static let encodePaddingCharacter: UInt8 = UInt8(ascii: "=")
 
   @usableFromInline
@@ -150,7 +150,7 @@ extension String {
 // enhancement on Apple platforms.
 #if (compiler(>=5.3) && !(os(macOS) || os(iOS) || os(tvOS) || os(watchOS))) || compiler(>=5.4)
 extension String {
-    
+
   @inlinable
   init(customUnsafeUninitializedCapacity capacity: Int,
      initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows {

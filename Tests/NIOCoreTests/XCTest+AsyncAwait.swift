@@ -90,6 +90,19 @@ internal func XCTAssertThrowsError<T>(
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+internal func XCTAssertNoThrow<T>(
+    _ expression: @autoclosure () async throws -> T,
+    file: StaticString = #file,
+    line: UInt = #line
+) async {
+    do {
+        _ = try await expression()
+    } catch {
+        XCTFail("Expression did throw error", file: file, line: line)
+    }
+}
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal func XCTAssertNoThrowWithResult<Result>(
     _ expression: @autoclosure () async throws -> Result,
     file: StaticString = #file,

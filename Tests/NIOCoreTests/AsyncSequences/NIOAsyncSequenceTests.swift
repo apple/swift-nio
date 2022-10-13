@@ -299,6 +299,74 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
     }
 
+    // MARK: - Source Deinited
+
+    func testSourceDeinited_whenInitial() async {
+        self.source = nil
+
+        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+    }
+
+    func testSourceDeinited_whenStreaming_andSuspended() async throws {
+        // We are registering our demand and sleeping a bit to make
+        // sure the other child task runs when the demand is registered
+        let sequence = try XCTUnwrap(self.sequence)
+        let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
+            group.addTask {
+                let element = await sequence.first { _ in true }
+                return element
+            }
+
+            try await Task.sleep(nanoseconds: 1_000_000)
+
+            self.source = nil
+
+            return try await group.next() ?? nil
+        }
+
+        XCTAssertEqual(element, nil)
+        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+    }
+
+    func testSourceDeinited_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
+        _ = self.source.yield(contentsOf: [])
+
+        self.source = nil
+
+        let sequence = try XCTUnwrap(self.sequence)
+        let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
+            group.addTask {
+                return await sequence.first { _ in true }
+            }
+
+            return try await group.next() ?? nil
+        }
+
+        XCTAssertNil(element)
+        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+    }
+
+    func testSourceDeinited_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
+        _ = self.source.yield(contentsOf: [1])
+
+        self.source = nil
+
+        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+
+        let sequence = try XCTUnwrap(self.sequence)
+        let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
+            group.addTask {
+                return await sequence.first { _ in true }
+            }
+
+            return try await group.next() ?? nil
+        }
+
+        XCTAssertEqual(element, 1)
+
+        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+    }
+
     // MARK: - Task cancel
 
     func testTaskCancel_whenStreaming_andSuspended() async throws {
