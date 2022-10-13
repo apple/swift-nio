@@ -339,7 +339,7 @@ class SocketAddressTest: XCTestCase {
         pathBytes.withUnsafeBufferPointer { srcPtr in
             withUnsafeMutablePointer(to: &addr.sun_path) { dstPtr in
                 dstPtr.withMemoryRebound(to: UInt8.self, capacity: srcPtr.count) { dstPtr in
-                    dstPtr.assign(from: srcPtr.baseAddress!, count: srcPtr.count)
+                    dstPtr.update(from: srcPtr.baseAddress!, count: srcPtr.count)
                 }
             }
         }
@@ -571,3 +571,11 @@ class SocketAddressTest: XCTestCase {
         }
     }
 }
+
+#if swift(<5.8)
+extension UnsafeMutablePointer {
+    func update(from source: UnsafePointer<Pointee>, count: Int) {
+        self.assign(from: source, count: count)
+    }
+}
+#endif
