@@ -2165,7 +2165,7 @@ extension EventLoopFuture {
 /// This is used only when attempting to provide high-fidelity diagnostics of leaked
 /// `EventLoopFuture`s. It is entirely opaque and can only be stored in a simple
 /// tracking data structure.
-public struct _NIOEventLoopFutureIdentifier: Hashable, NIOSendable {
+public struct _NIOEventLoopFutureIdentifier: Hashable, Sendable {
     private var opaqueID: UInt
 
     @usableFromInline
@@ -2184,9 +2184,9 @@ public struct _NIOEventLoopFutureIdentifier: Hashable, NIOSendable {
 }
 
 // EventLoopPromise is a reference type, but by its very nature is Sendable.
-extension EventLoopPromise: NIOSendable { }
+extension EventLoopPromise: Sendable { }
 
 // EventLoopFuture is a reference type, but it is Sendable. However, we enforce
 // that by way of the guarantees of the EventLoop protocol, so the compiler cannot
 // check it.
-extension EventLoopFuture: @unchecked NIOSendable { }
+extension EventLoopFuture: @unchecked Sendable { }

@@ -72,7 +72,7 @@ extension SocketAddressError {
 }
 
 /// Represent a socket address to which we may want to connect or bind.
-public enum SocketAddress: CustomStringConvertible, NIOSendable {
+public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// A single IPv4 address for `SocketAddress`.
     public struct IPv4Address {
@@ -105,7 +105,7 @@ public enum SocketAddress: CustomStringConvertible, NIOSendable {
     }
 
     /// A single Unix socket address for `SocketAddress`.
-    public struct UnixSocketAddress: NIOSendable {
+    public struct UnixSocketAddress: Sendable {
         private let _storage: Box<sockaddr_un>
 
         /// The libc socket address for a Unix Domain Socket.

@@ -42,7 +42,7 @@ public enum NIOThreadPoolError {
 public final class NIOThreadPool {
 
     /// The state of the `WorkItem`.
-    public enum WorkItemState: NIOSendable {
+    public enum WorkItemState: Sendable {
         /// The `WorkItem` is active now and in process by the `NIOThreadPool`.
         case active
         /// The `WorkItem` was cancelled and will not be processed by the `NIOThreadPool`.

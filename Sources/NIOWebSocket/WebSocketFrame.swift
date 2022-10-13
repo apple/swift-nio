@@ -34,7 +34,7 @@ private extension UInt8 {
 /// predictable binary sequences into websocket data streams. This structure provides
 /// a more convenient method of interacting with a masking key than simply by passing
 /// around a four-tuple.
-public struct WebSocketMaskingKey: NIOSendable {
+public struct WebSocketMaskingKey: Sendable {
     @usableFromInline internal let _key: (UInt8, UInt8, UInt8, UInt8)
 
     public init?<T: Collection>(_ buffer: T) where T.Element == UInt8 {

@@ -12,11 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if swift(>=5.5) && canImport(_Concurrency)
+@available(*, deprecated, renamed: "Sendable")
 public typealias NIOSendable = Swift.Sendable
-#else
-public typealias NIOSendable = Any
-#endif
 
 #if swift(>=5.6)
 @preconcurrency public protocol NIOPreconcurrencySendable: Sendable {}

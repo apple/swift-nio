@@ -19,7 +19,7 @@ public enum HTTPServerUpgradeErrors: Error {
 }
 
 /// User events that may be fired by the `HTTPServerProtocolUpgrader`.
-public enum HTTPServerUpgradeEvents: NIOSendable {
+public enum HTTPServerUpgradeEvents: Sendable {
     /// Fired when HTTP upgrade has completed and the
     /// `HTTPServerProtocolUpgrader` is about to remove itself from the
     /// `ChannelPipeline`.

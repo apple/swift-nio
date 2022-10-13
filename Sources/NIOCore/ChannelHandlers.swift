@@ -170,7 +170,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     public typealias OutboundOut = NIOAny
 
     ///A user event triggered by IdleStateHandler when a Channel is idle.
-    public enum IdleStateEvent: NIOSendable {
+    public enum IdleStateEvent: Sendable {
         /// Will be triggered when no write was performed for the specified amount of time
         case write
         /// Will be triggered when no read was performed for the specified amount of time

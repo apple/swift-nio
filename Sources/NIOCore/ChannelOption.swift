@@ -69,7 +69,7 @@ extension ChannelOptions {
         /// `SocketOption` allows users to specify configuration settings that are directly applied to the underlying socket file descriptor.
         ///
         /// Valid options are typically found in the various man pages like `man 4 tcp`.
-        public struct SocketOption: ChannelOption, Equatable, NIOSendable {
+        public struct SocketOption: ChannelOption, Equatable, Sendable {
             public typealias Value = (SocketOptionValue)
 
             public var optionLevel: NIOBSDSocket.OptionLevel
@@ -116,14 +116,14 @@ extension ChannelOptions {
         }
 
         /// `AllocatorOption` allows to specify the `ByteBufferAllocator` to use.
-        public struct AllocatorOption: ChannelOption, NIOSendable {
+        public struct AllocatorOption: ChannelOption, Sendable {
             public typealias Value = ByteBufferAllocator
 
             public init() {}
         }
 
         /// `RecvAllocatorOption` allows users to specify the `RecvByteBufferAllocator` to use.
-        public struct RecvAllocatorOption: ChannelOption, NIOSendable {
+        public struct RecvAllocatorOption: ChannelOption, Sendable {
             public typealias Value = RecvByteBufferAllocator
 
             public init() {}
@@ -131,7 +131,7 @@ extension ChannelOptions {
 
         /// `AutoReadOption` allows users to configure if a `Channel` should automatically call `Channel.read` again once all data was read from the transport or
         /// if the user is responsible to call `Channel.read` manually.
-        public struct AutoReadOption: ChannelOption, NIOSendable {
+        public struct AutoReadOption: ChannelOption, Sendable {
             public typealias Value = Bool
 
             public init() {}
@@ -140,7 +140,7 @@ extension ChannelOptions {
         /// `WriteSpinOption` allows users to configure the number of repetitions of a only partially successful write call before considering the `Channel` not writable.
         /// Setting this option to `0` means that we only issue one write call and if that call does not write all the bytes,
         /// we consider the `Channel` not writable.
-        public struct WriteSpinOption: ChannelOption, NIOSendable {
+        public struct WriteSpinOption: ChannelOption, Sendable {
             public typealias Value = UInt
 
             public init() {}
@@ -148,14 +148,14 @@ extension ChannelOptions {
 
         /// `MaxMessagesPerReadOption` allows users to configure the maximum number of read calls to the underlying transport are performed before wait again until
         /// there is more to read and be notified.
-        public struct MaxMessagesPerReadOption: ChannelOption, NIOSendable {
+        public struct MaxMessagesPerReadOption: ChannelOption, Sendable {
             public typealias Value = UInt
 
             public init() {}
         }
 
         /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
-        public struct BacklogOption: ChannelOption, NIOSendable {
+        public struct BacklogOption: ChannelOption, Sendable {
             public typealias Value = Int32
 
             public init() {}
@@ -185,20 +185,20 @@ extension ChannelOptions {
         /// On all other platforms, setting it has no effect.
         ///
         /// Set this option to 0 to disable vector reads and to use serial reads instead.
-        public struct DatagramVectorReadMessageCountOption: ChannelOption, NIOSendable {
+        public struct DatagramVectorReadMessageCountOption: ChannelOption, Sendable {
             public typealias Value = Int
 
             public init() { }
         }
         
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
-        public struct ExplicitCongestionNotificationsOption: ChannelOption, NIOSendable {
+        public struct ExplicitCongestionNotificationsOption: ChannelOption, Sendable {
             public typealias Value = Bool
             public init() {}
         }
 
         /// The watermark used to detect when `Channel.isWritable` returns `true` or `false`.
-        public struct WriteBufferWaterMark: NIOSendable {
+        public struct WriteBufferWaterMark: Sendable {
             /// The low mark setting for a `Channel`.
             ///
             /// When the amount of buffered bytes in the `Channel`s outbound buffer drops below this value the `Channel` will be
@@ -231,7 +231,7 @@ extension ChannelOptions {
         /// `Channel.isWritable` will return `false`. Once we were able to write some data out of the outbound buffer and the amount of bytes queued
         /// falls below `WriteBufferWaterMark.low` the `Channel` will become writable again. Once this happens `Channel.writable` will return
         /// `true` again. These writability changes are also propagated through the `ChannelPipeline` and so can be intercepted via `ChannelInboundHandler.channelWritabilityChanged`.
-        public struct WriteBufferWaterMarkOption: ChannelOption, NIOSendable {
+        public struct WriteBufferWaterMarkOption: ChannelOption, Sendable {
             public typealias Value = WriteBufferWaterMark
 
             public init() {}
@@ -239,7 +239,7 @@ extension ChannelOptions {
 
         /// `ConnectTimeoutOption` allows users to configure the `TimeAmount` after which a connect will fail if it was not established in the meantime. May be
         /// `nil`, in which case the connection attempt will never time out.
-        public struct ConnectTimeoutOption: ChannelOption, NIOSendable {
+        public struct ConnectTimeoutOption: ChannelOption, Sendable {
             public typealias Value = TimeAmount?
 
             public init() {}
@@ -250,14 +250,14 @@ extension ChannelOptions {
         /// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
         /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
         /// and no more data will be received.
-        public struct AllowRemoteHalfClosureOption: ChannelOption, NIOSendable {
+        public struct AllowRemoteHalfClosureOption: ChannelOption, Sendable {
             public typealias Value = Bool
 
             public init() {}
         }
 
         /// When set to true IP level Packet Info information will be reported through `AddressedEnvelope.Metadata` for UDP packets.
-        public struct ReceivePacketInfo: ChannelOption, NIOSendable {
+        public struct ReceivePacketInfo: ChannelOption, Sendable {
             public typealias Value = Bool
             public init() {}
         }

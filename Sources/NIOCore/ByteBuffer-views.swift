@@ -16,7 +16,7 @@
 ///
 /// A `ByteBufferView` is useful whenever a `Collection where Element == UInt8` representing a portion of a
 /// `ByteBuffer` is needed.
-public struct ByteBufferView: RandomAccessCollection, NIOSendable {
+public struct ByteBufferView: RandomAccessCollection, Sendable {
     public typealias Element = UInt8
     public typealias Index = Int
     public typealias SubSequence = ByteBufferView

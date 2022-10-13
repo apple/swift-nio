@@ -96,7 +96,7 @@ public enum NIOBSDSocket {
 
 extension NIOBSDSocket {
     /// Specifies the addressing scheme that the socket can use.
-    public struct AddressFamily: RawRepresentable, NIOSendable {
+    public struct AddressFamily: RawRepresentable, Sendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -113,7 +113,7 @@ extension NIOBSDSocket.AddressFamily: Hashable {
 
 extension NIOBSDSocket {
     /// Specifies the type of protocol that the socket can use.
-    public struct ProtocolFamily: RawRepresentable, NIOSendable {
+    public struct ProtocolFamily: RawRepresentable, Sendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -130,7 +130,7 @@ extension NIOBSDSocket.ProtocolFamily: Hashable {
 
 extension NIOBSDSocket {
     /// Defines socket option levels.
-    public struct OptionLevel: RawRepresentable, NIOSendable {
+    public struct OptionLevel: RawRepresentable, Sendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {
@@ -147,7 +147,7 @@ extension NIOBSDSocket.OptionLevel: Hashable {
 
 extension NIOBSDSocket {
     /// Defines configuration option names.
-    public struct Option: RawRepresentable, NIOSendable {
+    public struct Option: RawRepresentable, Sendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         public init(rawValue: RawValue) {

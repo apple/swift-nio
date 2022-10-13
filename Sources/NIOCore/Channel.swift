@@ -398,7 +398,7 @@ public enum DatagramChannelError {
 }
 
 /// An `Channel` related event that is passed through the `ChannelPipeline` to notify the user.
-public enum ChannelEvent: Equatable, NIOSendable {
+public enum ChannelEvent: Equatable, Sendable {
     /// `ChannelOptions.allowRemoteHalfClosure` is `true` and input portion of the `Channel` was closed.
     case inputClosed
     /// Output portion of the `Channel` was closed.
@@ -410,7 +410,7 @@ public enum ChannelEvent: Equatable, NIOSendable {
 /// The action(s) that should be taken after receiving this event are both application and protocol dependent. If the
 /// protocol supports a notion of requests and responses, it might make sense to stop accepting new requests but finish
 /// processing the request currently in flight.
-public struct ChannelShouldQuiesceEvent: NIOSendable {
+public struct ChannelShouldQuiesceEvent: Sendable {
     public init() {
     }
 }
