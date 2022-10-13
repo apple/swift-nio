@@ -53,9 +53,7 @@ extension ChannelOptions.Types {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension ChannelOptions.Types.ConvenienceOptionValue: Sendable where ValueType: Sendable {}
-#endif
 
 extension ChannelOptions.Types.ConvenienceOptionValue where ValueType == () {
     /// Convenience method working with bool options as bool values for set.

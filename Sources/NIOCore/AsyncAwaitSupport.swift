@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
-
 extension EventLoopFuture {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
     ///
@@ -332,5 +330,3 @@ struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSeq
         self.iterator
     }
 }
-
-#endif

@@ -25,7 +25,6 @@ private class EmbeddedTestError: Error { }
 
 final class NIOAsyncTestingEventLoopTests: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = ManagedAtomic(false)
@@ -37,13 +36,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             await loop.run()
             XCTAssertTrue(callbackRan.load(ordering: .relaxed))
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testExecuteWillRunAllTasks() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let runCount = ManagedAtomic(0)
@@ -60,13 +55,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertEqual(runCount.load(ordering: .relaxed), 3)
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testExecuteWillRunTasksAddedRecursively() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = ManagedAtomic(0)
@@ -96,13 +87,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertEqual(sentinel.load(ordering: .relaxed), 3)
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testExecuteRunsImmediately() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = ManagedAtomic(false)
@@ -121,13 +108,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertFalse(callbackRan.load(ordering: .relaxed))
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testTasksScheduledAfterRunDontRun() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = ManagedAtomic(false)
@@ -148,13 +131,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertFalse(callbackRan.load(ordering: .relaxed))
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testSubmitRunsImmediately() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = ManagedAtomic(false)
@@ -173,13 +152,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertFalse(callbackRan.load(ordering: .relaxed))
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testSyncShutdownGracefullyRunsTasks() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = ManagedAtomic(false)
@@ -194,13 +169,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertTrue(callbackRan.load(ordering: .relaxed))
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testShutdownGracefullyRunsTasks() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackRan = ManagedAtomic(false)
@@ -215,13 +186,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertTrue(callbackRan.load(ordering: .relaxed))
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testCanControlTime() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let callbackCount = ManagedAtomic(0)
@@ -250,13 +217,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertEqual(callbackCount.load(ordering: .relaxed), 1)
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testCanScheduleMultipleTasks() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = ManagedAtomic(0)
@@ -277,13 +240,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 }
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testExecutedTasksFromScheduledOnesAreRun() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = ManagedAtomic(0)
@@ -304,13 +263,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertEqual(sentinel.load(ordering: .relaxed), 2)
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testScheduledTasksFromScheduledTasksProperlySchedule() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = ManagedAtomic(0)
@@ -350,13 +305,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertEqual(sentinel.load(ordering: .relaxed), 3)
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testScheduledTasksFromExecutedTasks() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let sentinel = ManagedAtomic(0)
@@ -375,13 +326,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertEqual(sentinel.load(ordering: .relaxed), 2)
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testCancellingScheduledTasks() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let loop = NIOAsyncTestingEventLoop()
@@ -392,13 +339,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
 
             await loop.advanceTime(by: .nanoseconds(20))
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testScheduledTasksFuturesFire() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let fired = ManagedAtomic(false)
@@ -411,13 +354,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             await loop.advanceTime(by: .nanoseconds(1))
             XCTAssertTrue(fired.load(ordering: .relaxed))
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testScheduledTasksFuturesError() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let err = EmbeddedTestError()
@@ -439,13 +378,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             await loop.advanceTime(by: .nanoseconds(1))
             XCTAssertTrue(fired.load(ordering: .relaxed))
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testTaskOrdering() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             // This test validates that the ordering of task firing on NIOAsyncTestingEventLoop via
@@ -526,13 +461,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             // Now the final value should be 6.
             XCTAssertEqual(orderingCounter.load(ordering: .relaxed), 6)
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testCancelledScheduledTasksDoNotHoldOnToRunClosure() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let eventLoop = NIOAsyncTestingEventLoop()
@@ -559,13 +490,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
             }
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testDrainScheduledTasks() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let eventLoop = NIOAsyncTestingEventLoop()
@@ -585,13 +512,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             await eventLoop.shutdownGracefully()
             XCTAssertEqual(tasksRun.load(ordering: .relaxed), 2)
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testDrainScheduledTasksDoesNotRunNewlyScheduledTasks() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let eventLoop = NIOAsyncTestingEventLoop()
@@ -608,13 +531,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             await eventLoop.shutdownGracefully()
             XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testAdvanceTimeToDeadline() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let eventLoop = NIOAsyncTestingEventLoop()
@@ -628,13 +547,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             await eventLoop.advanceTime(to: deadline)
             XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testWeCantTimeTravelByAdvancingTimeToThePast() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let eventLoop = NIOAsyncTestingEventLoop()
@@ -656,13 +571,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             await eventLoop.advanceTime(by: .seconds(2))
             XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testExecuteInOrder() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let eventLoop = NIOAsyncTestingEventLoop()
@@ -686,13 +597,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             await eventLoop.run()
             XCTAssertEqual(counter.load(ordering: .relaxed), 3)
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 
     func testScheduledTasksInOrder() throws {
-        #if compiler(>=5.5.2) && canImport(_Concurrency)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let eventLoop = NIOAsyncTestingEventLoop()
@@ -716,8 +623,5 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             await eventLoop.advanceTime(by: .seconds(1))
             XCTAssertEqual(counter.load(ordering: .relaxed), 3)
         }
-        #else
-        throw XCTSkip()
-        #endif
     }
 }

@@ -15,7 +15,6 @@
 import NIOCore
 import XCTest
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 final class MockNIOElementStreamBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy, @unchecked Sendable {
     var didYieldCallCount = 0
     var didYieldHandler: ((Int) -> Bool)?
@@ -622,5 +621,3 @@ fileprivate func XCTAssertEqualWithoutAutoclosure<T>(
     let result = expression1 == expression2
     XCTAssertTrue(result, message(), file: file, line: line)
 }
-
-#endif

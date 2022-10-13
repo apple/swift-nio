@@ -228,9 +228,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension ThreadSpecificVariable: @unchecked Sendable where Value: Sendable {}
-#endif
 
 extension NIOThread: Equatable {
     static func ==(lhs: NIOThread, rhs: NIOThread) -> Bool {

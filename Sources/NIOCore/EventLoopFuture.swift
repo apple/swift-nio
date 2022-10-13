@@ -2186,11 +2186,7 @@ public struct _NIOEventLoopFutureIdentifier: Hashable, NIOSendable {
 // EventLoopPromise is a reference type, but by its very nature is Sendable.
 extension EventLoopPromise: NIOSendable { }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-
 // EventLoopFuture is a reference type, but it is Sendable. However, we enforce
 // that by way of the guarantees of the EventLoop protocol, so the compiler cannot
 // check it.
 extension EventLoopFuture: @unchecked NIOSendable { }
-
-#endif

@@ -26,9 +26,7 @@ struct UnsafeTransfer<Wrapped> {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension UnsafeTransfer: @unchecked Sendable {}
-#endif
 
 extension UnsafeTransfer: Equatable where Wrapped: Equatable {}
 extension UnsafeTransfer: Hashable where Wrapped: Hashable {}
@@ -46,6 +44,5 @@ final class UnsafeMutableTransferBox<Wrapped> {
         self.wrappedValue = wrappedValue
     }
 }
-#if swift(>=5.5) && canImport(_Concurrency)
+
 extension UnsafeMutableTransferBox: @unchecked Sendable {}
-#endif

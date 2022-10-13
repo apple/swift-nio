@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 import DequeModule
 import NIOConcurrencyHelpers
 
@@ -1059,4 +1058,3 @@ extension NIOThrowingAsyncSequenceProducer {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOThrowingAsyncSequenceProducer.AsyncIterator: Sendable {}
-#endif

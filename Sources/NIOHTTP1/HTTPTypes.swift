@@ -123,9 +123,7 @@ public struct HTTPRequestHead: Equatable {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension HTTPRequestHead: @unchecked Sendable {}
-#endif
 
 /// The parts of a complete HTTP message, either request or response.
 ///
@@ -139,9 +137,7 @@ public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
     case end(HTTPHeaders?)
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension HTTPPart: Sendable where HeadT: Sendable, BodyT: Sendable {}
-#endif
 
 extension HTTPPart: Equatable {}
 
@@ -236,9 +232,7 @@ public struct HTTPResponseHead: Equatable {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension HTTPResponseHead: @unchecked Sendable {}
-#endif
 
 extension HTTPResponseHead {
     /// Determines if the head is purely informational. If a head is informational another head will follow this
@@ -497,13 +491,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     }
 }
 
-#if compiler(>=5.5.2)
 extension HTTPHeaders: Sendable {}
-#elseif compiler(>=5.5)
-// Implicit conformance of tuples to Sendable interacts poorly with conditional conformance of Sendable in Swift <=5.5.1
-// https://github.com/apple/swift/issues/57346
-extension HTTPHeaders: @unchecked Sendable {}
-#endif
 
 extension HTTPHeaders {
 

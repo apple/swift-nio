@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 import Atomics
 import DequeModule
 import NIOConcurrencyHelpers
@@ -1065,4 +1064,3 @@ extension NIOAsyncWriter {
         }
     }
 }
-#endif

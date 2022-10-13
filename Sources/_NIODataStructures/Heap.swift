@@ -264,9 +264,5 @@ extension Heap: Sequence {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-
 extension Heap: Sendable where Element: Sendable {}
 extension HeapIterator: Sendable where Element: Sendable {}
-
-#endif

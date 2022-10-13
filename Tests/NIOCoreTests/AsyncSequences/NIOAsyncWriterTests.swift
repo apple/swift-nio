@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 import DequeModule
 import NIOCore
 import XCTest
@@ -529,4 +528,3 @@ final class NIOAsyncWriterTests: XCTestCase {
         XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
     }
 }
-#endif

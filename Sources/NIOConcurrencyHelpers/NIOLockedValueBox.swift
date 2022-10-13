@@ -52,7 +52,5 @@ public struct NIOLockedValueBox<Value> {
     }
 }
 
-#if compiler(>=5.5) && canImport(_Concurrency)
 extension NIOLockedValueBox: Sendable where Value: Sendable {}
 extension NIOLockedValueBox._Storage: @unchecked Sendable {}
-#endif
