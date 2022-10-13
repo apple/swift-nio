@@ -337,7 +337,7 @@ have a few prerequisites installed on your system.
 
 ### Linux
 
-- Swift 5.5 or newer from [swift.org/download](https://swift.org/download/#releases). We always recommend to use the latest released version.
+- Swift 5.5.2 or newer from [swift.org/download](https://swift.org/download/#releases). We always recommend to use the latest released version.
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
