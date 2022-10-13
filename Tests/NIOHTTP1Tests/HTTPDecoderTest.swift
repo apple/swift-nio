@@ -1255,4 +1255,132 @@ class HTTPDecoderTest: XCTestCase {
             _ = try? channel.finish()
         }
     }
+
+    func testDecodeAfterHEADResponse() throws {
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHTTPClientHandlers()
+        defer {
+            _ = try? channel.finish()
+        }
+
+        let headRequest = HTTPRequestHead(version: .http1_1, method: .HEAD, uri: "/")
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(headRequest)))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
+
+        // Send a response.
+        let goodResponse = ByteBuffer(string: "HTTP/1.1 200 OK\r\nServer: foo\r\nContent-Length: 4\r\n\r\n")
+        XCTAssertNoThrow(try channel.writeInbound(goodResponse))
+
+        var maybeParsedHead: HTTPClientResponsePart?
+        var maybeEnd: HTTPClientResponsePart?
+
+        XCTAssertNoThrow(maybeParsedHead = try channel.readInbound())
+        XCTAssertNoThrow(maybeEnd = try channel.readInbound())
+        guard case .some(.head(let head)) = maybeParsedHead else {
+            XCTFail("Expected head, got \(String(describing: maybeParsedHead))")
+            return
+        }
+        guard case .some(.end(nil)) = maybeEnd else {
+            XCTFail("Expected end, got \(String(describing: maybeEnd))")
+            return
+        }
+        XCTAssertEqual(head.status, .ok)
+
+        // Send a GET request
+        let secondHeadRequest = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/")
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(secondHeadRequest)))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
+
+        // Send a response.
+        let goodResponseWithContent = ByteBuffer(string: "HTTP/1.1 200 OK\r\nServer: foo\r\nContent-Length: 4\r\n\r\nGood")
+        XCTAssertNoThrow(try channel.writeInbound(goodResponseWithContent))
+
+        var maybeBody: HTTPClientResponsePart?
+
+        XCTAssertNoThrow(maybeParsedHead = try channel.readInbound())
+        XCTAssertNoThrow(maybeBody = try channel.readInbound())
+        XCTAssertNoThrow(maybeEnd = try channel.readInbound())
+        guard case .some(.head(let secondHead)) = maybeParsedHead else {
+            XCTFail("Expected head, got \(String(describing: maybeParsedHead))")
+            return
+        }
+        guard case .some(.body(let body)) = maybeBody else {
+            XCTFail("Expected body, got \(String(describing: maybeBody))")
+            return
+        }
+        guard case .some(.end(nil)) = maybeEnd else {
+            XCTFail("Expected end, got \(String(describing: maybeEnd))")
+            return
+        }
+        XCTAssertEqual(secondHead.status, .ok)
+        XCTAssertEqual(body, ByteBuffer(string: "Good"))
+
+        // Should not throw.
+        channel.pipeline.fireChannelActive()
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+    }
+
+    func testDecodeAfterHEADResponseChunked() throws {
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHTTPClientHandlers()
+        defer {
+            _ = try? channel.finish()
+        }
+
+        let headRequest = HTTPRequestHead(version: .http1_1, method: .HEAD, uri: "/")
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(headRequest)))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
+
+        // Send a response.
+        let goodResponse = ByteBuffer(string: "HTTP/1.1 200 OK\r\nServer: foo\r\nTransfer-Encoding: chunked\r\n\r\n")
+        XCTAssertNoThrow(try channel.writeInbound(goodResponse))
+
+        var maybeParsedHead: HTTPClientResponsePart?
+        var maybeEnd: HTTPClientResponsePart?
+
+        XCTAssertNoThrow(maybeParsedHead = try channel.readInbound())
+        XCTAssertNoThrow(maybeEnd = try channel.readInbound())
+        guard case .some(.head(let head)) = maybeParsedHead else {
+            XCTFail("Expected head, got \(String(describing: maybeParsedHead))")
+            return
+        }
+        guard case .some(.end(nil)) = maybeEnd else {
+            XCTFail("Expected end, got \(String(describing: maybeEnd))")
+            return
+        }
+        XCTAssertEqual(head.status, .ok)
+
+        // Send a GET request
+        let secondHeadRequest = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/")
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(secondHeadRequest)))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
+
+        // Send a response.
+        let goodResponseWithContent = ByteBuffer(string: "HTTP/1.1 200 OK\r\nServer: foo\r\nContent-Length: 4\r\n\r\nGood")
+        XCTAssertNoThrow(try channel.writeInbound(goodResponseWithContent))
+
+        var maybeBody: HTTPClientResponsePart?
+
+        XCTAssertNoThrow(maybeParsedHead = try channel.readInbound())
+        XCTAssertNoThrow(maybeBody = try channel.readInbound())
+        XCTAssertNoThrow(maybeEnd = try channel.readInbound())
+        guard case .some(.head(let secondHead)) = maybeParsedHead else {
+            XCTFail("Expected head, got \(String(describing: maybeParsedHead))")
+            return
+        }
+        guard case .some(.body(let body)) = maybeBody else {
+            XCTFail("Expected body, got \(String(describing: maybeBody))")
+            return
+        }
+        guard case .some(.end(nil)) = maybeEnd else {
+            XCTFail("Expected end, got \(String(describing: maybeEnd))")
+            return
+        }
+        XCTAssertEqual(secondHead.status, .ok)
+        XCTAssertEqual(body, ByteBuffer(string: "Good"))
+
+        // Should not throw.
+        channel.pipeline.fireChannelActive()
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+    }
 }

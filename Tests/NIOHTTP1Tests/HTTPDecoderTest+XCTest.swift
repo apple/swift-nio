@@ -66,6 +66,8 @@ extension HTTPDecoderTest {
                 ("testDecodingInvalidTrailerFieldNames", testDecodingInvalidTrailerFieldNames),
                 ("testDecodingInvalidHeaderFieldValues", testDecodingInvalidHeaderFieldValues),
                 ("testDecodingInvalidTrailerFieldValues", testDecodingInvalidTrailerFieldValues),
+                ("testDecodeAfterHEADResponse", testDecodeAfterHEADResponse),
+                ("testDecodeAfterHEADResponseChunked", testDecodeAfterHEADResponseChunked),
            ]
    }
 }
