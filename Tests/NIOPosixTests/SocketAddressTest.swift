@@ -331,7 +331,6 @@ class SocketAddressTest: XCTestCase {
         XCTAssertNotEqual(third, first)
     }
 
-
     func testUnixSocketAddressIgnoresTrailingJunk() throws {
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
@@ -344,8 +343,6 @@ class SocketAddressTest: XCTestCase {
                 }
             }
         }
-
-
 
         let first = SocketAddress(addr)
 
