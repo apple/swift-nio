@@ -541,7 +541,7 @@ public final class SocketChannelTest : XCTestCase {
             })
         XCTAssertNoThrow(try socket.close())
     }
-    
+
     func testInstantTCPConnectionResetThrowsError() throws {
         #if !os(Linux) && !os(Android)
             // This test checks that we correctly fail with an error rather than
@@ -590,10 +590,10 @@ public final class SocketChannelTest : XCTestCase {
             XCTAssertNoThrow(try clientSocket.setOption(level: .socket, name: .so_linger, value: linger(l_onoff: 1, l_linger: 0)))
             XCTAssertNoThrow(try clientSocket.connect(to: serverChannel.localAddress!))
             XCTAssertNoThrow(try clientSocket.close())
-        
+
             // Trigger accept() in the server
             serverChannel.read()
-        
+
             // Wait for the server to have something
             XCTAssertThrowsError(try serverPromise.futureResult.wait()) { error in
                 XCTAssert(error is NIOFcntlFailedError)
@@ -857,13 +857,13 @@ public final class SocketChannelTest : XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        
+
         class WaitForChannelInactiveHandler: ChannelInboundHandler {
             typealias InboundIn = Never
             typealias OutboundOut = ByteBuffer
-            
+
             let channelInactivePromise: EventLoopPromise<Void>
-            
+
             init(channelInactivePromise: EventLoopPromise<Void>) {
                 self.channelInactivePromise = channelInactivePromise
             }
@@ -873,7 +873,7 @@ public final class SocketChannelTest : XCTestCase {
                 buffer.writeString(String(repeating: "x", count: 517))
                 context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
             }
-            
+
             func channelInactive(context: ChannelHandlerContext) {
                 self.channelInactivePromise.succeed(())
                 context.fireChannelInactive()
@@ -904,6 +904,42 @@ public final class SocketChannelTest : XCTestCase {
         XCTAssertNoThrow(try client.closeFuture.wait())
         g.wait()
         XCTAssertNoThrow(try serverSocket.close())
+    }
+
+    func testSimpleMPTCP() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        let serverChannel: Channel
+
+        do {
+            serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+                .enableMPTCP(true)
+                .bind(host: "127.0.0.1", port: 0)
+                .wait())
+        } catch let error as IOError {
+            // Older Linux kernel versions don't support MPTCP, which is fine.
+            XCTAssertEqual(error.errnoCode, EPROTONOSUPPORT, "Unexpected error: \(error)")
+            return
+        }
+
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .enableMPTCP(true)
+            .connect(to: serverChannel.localAddress!)
+            .wait())
+
+        do {
+            let serverInfo = try (serverChannel as? SocketOptionProvider)?.getMPTCPInfo().wait()
+            let clientInfo = try (clientChannel as? SocketOptionProvider)?.getMPTCPInfo().wait()
+
+            XCTAssertNotNil(serverInfo)
+            XCTAssertNotNil(clientInfo)
+        } catch let error as IOError {
+            // Some Linux kernel versions do support MPTCP but don't support the MPTCP_INFO
+            // option.
+            XCTAssertEqual(error.errnoCode, EOPNOTSUPP, "Unexpected error: \(error)")
+            return
+        }
     }
 }
 

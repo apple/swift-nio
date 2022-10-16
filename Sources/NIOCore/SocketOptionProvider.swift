@@ -15,6 +15,7 @@
 import Darwin
 #elseif os(Linux) || os(Android)
 import Glibc
+import CNIOLinux
 #elseif os(Windows)
 import WinSDK
 #endif
@@ -280,6 +281,18 @@ extension SocketOptionProvider {
         ///     any error that occurred while retrieving the socket option.
         public func getTCPConnectionInfo() -> EventLoopFuture<tcp_connection_info> {
             return self.unsafeGetSocketOption(level: .tcp, name: .tcp_connection_info)
+        }
+    #endif
+
+    #if os(Linux)
+        /// Gets the value of the socket option MPTCP_INFO.
+        ///
+        /// This socket option cannot be set.
+        ///
+        /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+        ///     any error that occurred while retrieving the socket option.
+        public func getMPTCPInfo() -> EventLoopFuture<mptcp_info> {
+            return self.unsafeGetSocketOption(level: .mptcp, name: .mptcp_info)
         }
     #endif
 }
