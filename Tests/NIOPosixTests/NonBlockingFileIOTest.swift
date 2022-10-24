@@ -896,4 +896,96 @@ class NonBlockingFileIOTest: XCTestCase {
             self.wait(for: [expectation], timeout: 1.0)
         }
     }
+
+    func testLStat() throws {
+        XCTAssertNoThrow(try withTemporaryFile(content: "hello, world") { _, path in
+            let stat = try self.fileIO.lstat(path: path, eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(12, stat.st_size)
+            XCTAssertEqual(S_IFREG, S_IFMT & stat.st_mode)
+        })
+
+        XCTAssertNoThrow(try withTemporaryDirectory { path in
+            let stat = try self.fileIO.lstat(path: path, eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(S_IFDIR, S_IFMT & stat.st_mode)
+        })
+    }
+
+    func testSymlink() {
+        XCTAssertNoThrow(try withTemporaryFile(content: "hello, world") { _, path in
+            let symlink = "\(path).symlink"
+            XCTAssertNoThrow(try self.fileIO.symlink(path: symlink, to: path, eventLoop: self.eventLoop).wait())
+
+            XCTAssertEqual(path, try self.fileIO.readlink(path: symlink, eventLoop: self.eventLoop).wait())
+            let stat = try self.fileIO.lstat(path: symlink, eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(S_IFLNK, S_IFMT & stat.st_mode)
+
+            XCTAssertNoThrow(try self.fileIO.unlink(path: symlink, eventLoop: self.eventLoop).wait())
+            XCTAssertThrowsError(try self.fileIO.lstat(path: symlink, eventLoop: self.eventLoop).wait()) { error in
+                XCTAssertEqual(ENOENT, (error as? IOError)?.errnoCode)
+            }
+        })
+    }
+
+    func testListDirectory() {
+        XCTAssertNoThrow(try withTemporaryDirectory { path in
+            let file = "\(path)/file"
+            let handle = try self.fileIO.openFile(path: file,
+                                                  mode: .write,
+                                                  flags: .allowFileCreation(),
+                                                  eventLoop: self.eventLoop).wait()
+            defer {
+                try? handle.close()
+            }
+
+            let list = try self.fileIO.listDirectory(path: path, eventLoop: self.eventLoop).wait()
+            XCTAssertEqual([".", "..", "file"], list.sorted(by: { $0.name < $1.name }).map(\.name))
+        })
+    }
+
+    func testRename() {
+        XCTAssertNoThrow(try withTemporaryDirectory { path in
+            let file = "\(path)/file"
+            let handle = try self.fileIO.openFile(path: file,
+                                                  mode: .write,
+                                                  flags: .allowFileCreation(),
+                                                  eventLoop: self.eventLoop).wait()
+            defer {
+                try? handle.close()
+            }
+
+            let stat = try self.fileIO.lstat(path: file, eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(S_IFREG, S_IFMT & stat.st_mode)
+
+            let new = "\(path).new"
+            XCTAssertNoThrow(try self.fileIO.rename(path: file, newName: new, eventLoop: self.eventLoop).wait())
+
+            let stat2 = try self.fileIO.lstat(path: new, eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(S_IFREG, S_IFMT & stat2.st_mode)
+
+            XCTAssertThrowsError(try self.fileIO.lstat(path: file, eventLoop: self.eventLoop).wait()) { error in
+                XCTAssertEqual(ENOENT, (error as? IOError)?.errnoCode)
+            }
+        })
+    }
+
+    func testRemove() {
+        XCTAssertNoThrow(try withTemporaryDirectory { path in
+            let file = "\(path)/file"
+            let handle = try self.fileIO.openFile(path: file,
+                                                  mode: .write,
+                                                  flags: .allowFileCreation(),
+                                                  eventLoop: self.eventLoop).wait()
+            defer {
+                try? handle.close()
+            }
+
+            let stat = try self.fileIO.lstat(path: file, eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(S_IFREG, S_IFMT & stat.st_mode)
+
+            XCTAssertNoThrow(try self.fileIO.remove(path: file, eventLoop: self.eventLoop).wait())
+            XCTAssertThrowsError(try self.fileIO.lstat(path: file, eventLoop: self.eventLoop).wait()) { error in
+                XCTAssertEqual(ENOENT, (error as? IOError)?.errnoCode)
+            }
+        })
+    }
 }

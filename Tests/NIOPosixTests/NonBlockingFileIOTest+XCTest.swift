@@ -70,6 +70,11 @@ extension NonBlockingFileIOTest {
                 ("testReadChunkedFromOffsetFileRegion", testReadChunkedFromOffsetFileRegion),
                 ("testReadManyChunks", testReadManyChunks),
                 ("testThrowsErrorOnUnstartedPool", testThrowsErrorOnUnstartedPool),
+                ("testLStat", testLStat),
+                ("testSymlink", testSymlink),
+                ("testListDirectory", testListDirectory),
+                ("testRename", testRename),
+                ("testRemove", testRemove),
            ]
    }
 }

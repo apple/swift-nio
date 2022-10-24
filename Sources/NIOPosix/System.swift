@@ -110,11 +110,27 @@ private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointe
 #if os(Linux)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = stat
+private let sysLstat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = lstat
+private let sysSymlink: @convention(c) (UnsafePointer<CChar>, UnsafePointer<CChar>) -> CInt = symlink
+private let sysReadlink: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<CChar>, Int) -> CLong = readlink
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>) -> CInt = unlink
+private let sysOpendir: @convention(c) (UnsafePointer<CChar>) -> OpaquePointer? = opendir
+private let sysReaddir: @convention(c) (OpaquePointer) -> UnsafeMutablePointer<dirent>? = readdir
+private let sysClosedir: @convention(c) (OpaquePointer) -> CInt = closedir
+private let sysRename: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = rename
+private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
 #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(Android)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = stat
+private let sysLstat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = lstat
+private let sysSymlink: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = symlink
+private let sysReadlink: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<CChar>?, Int) -> CLong = readlink
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>?) -> CInt = unlink
+private let sysOpendir: @convention(c) (UnsafePointer<CChar>?) -> UnsafeMutablePointer<DIR>? = opendir
+private let sysReaddir: @convention(c) (UnsafeMutablePointer<DIR>?) -> UnsafeMutablePointer<dirent>? = readdir
+private let sysClosedir: @convention(c) (UnsafeMutablePointer<DIR>?) -> CInt = closedir
+private let sysRename: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = rename
+private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
 #endif
 #if os(Linux) || os(Android)
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
@@ -249,6 +265,75 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
     }
 }
 
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+@inline(__always)
+@discardableResult
+internal func syscall<T>(where function: String = #function,
+                         _ body: () throws -> UnsafeMutablePointer<T>?)
+        throws -> UnsafeMutablePointer<T> {
+    while true {
+        if let res = try body() {
+            return res
+        } else {
+            let err = errno
+            switch err {
+            case EINTR:
+                continue
+            default:
+                preconditionIsNotUnacceptableErrno(err: err, where: function)
+                throw IOError(errnoCode: err, reason: function)
+            }
+        }
+    }
+}
+#elseif os(Linux) || os(Android)
+@inline(__always)
+@discardableResult
+internal func syscall(where function: String = #function,
+                      _ body: () throws -> OpaquePointer?)
+            throws -> OpaquePointer {
+    while true {
+        if let res = try body() {
+            return res
+        } else {
+            let err = errno
+            switch err {
+            case EINTR:
+                continue
+            default:
+                preconditionIsNotUnacceptableErrno(err: err, where: function)
+                throw IOError(errnoCode: err, reason: function)
+            }
+        }
+    }
+}
+#endif
+
+#if !os(Windows)
+@inline(__always)
+@discardableResult
+internal func syscallOptional<T>(where function: String = #function,
+                                 _ body: () throws -> UnsafeMutablePointer<T>?)
+        throws -> UnsafeMutablePointer<T>? {
+    while true {
+        errno = 0
+        if let res = try body() {
+            return res
+        } else {
+            let err = errno
+            switch err {
+            case 0:
+                return nil
+            case EINTR:
+                continue
+            default:
+                preconditionIsNotUnacceptableErrno(err: err, where: function)
+                throw IOError(errnoCode: err, reason: function)
+            }
+        }
+    }
+}
+#endif
 
 /*
  * Sorry, we really try hard to not use underscored attributes. In this case
@@ -644,9 +729,88 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func unlink(pathname: String) throws {
+    internal static func lstat(pathname: String, outStat: UnsafeMutablePointer<stat>) throws {
+        _ = try syscall(blocking: false) {
+            sysLstat(pathname, outStat)
+        }
+    }
+
+    @inline(never)
+    public static func symlink(pathname: String, destination: String) throws {
+        _ = try syscall(blocking: false) {
+            sysSymlink(destination, pathname)
+        }
+    }
+
+    @inline(never)
+    public static func readlink(pathname: String, outPath: UnsafeMutablePointer<CChar>, outPathSize: Int) throws -> CLong {
+        return try syscall(blocking: false) {
+            sysReadlink(pathname, outPath, outPathSize)
+        }.result
+    }
+
+    @inline(never)
+    public static func unlink(pathname: String) throws {
         _ = try syscall(blocking: false) {
             sysUnlink(pathname)
+        }
+    }
+
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    @inline(never)
+    public static func opendir(pathname: String) throws -> UnsafeMutablePointer<DIR> {
+        return try syscall {
+            sysOpendir(pathname)
+        }
+    }
+
+    @inline(never)
+    public static func readdir(dir: UnsafeMutablePointer<DIR>) throws -> UnsafeMutablePointer<dirent>? {
+        return try syscallOptional {
+            sysReaddir(dir)
+        }
+    }
+
+    @inline(never)
+    public static func closedir(dir: UnsafeMutablePointer<DIR>) throws {
+        _ = try syscall(blocking: true) {
+            sysClosedir(dir)
+        }
+    }
+#elseif os(Linux) || os(FreeBSD) || os(Android)
+    @inline(never)
+    public static func opendir(pathname: String) throws -> OpaquePointer {
+        return try syscall {
+            sysOpendir(pathname)
+        }
+    }
+
+    @inline(never)
+    public static func readdir(dir: OpaquePointer) throws -> UnsafeMutablePointer<dirent>? {
+        return try syscallOptional {
+            sysReaddir(dir)
+        }
+    }
+
+    @inline(never)
+    public static func closedir(dir: OpaquePointer) throws {
+        _ = try syscall(blocking: true) {
+            sysClosedir(dir)
+        }
+    }
+#endif
+
+    @inline(never)
+    public static func rename(pathname: String, newName: String) throws {
+        _ = try syscall(blocking: true) {
+            sysRename(pathname, newName)
+        }
+    }
+
+    @inline(never)
+    public static func remove(pathname: String) throws {
+        _ = try syscall(blocking: true) {
+            sysRemove(pathname)
         }
     }
 
