@@ -69,6 +69,29 @@ class ChannelOptionStorageTest: XCTestCase {
                            return option.1 as! SocketOptionValue
                        })
     }
+
+    func testClearingOptions() throws {
+        var cos = ChannelOptions.Storage()
+        let optionsCollector = OptionsCollectingChannel()
+        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 2)
+        cos.append(key: ChannelOptions.socketOption(.so_keepalive), value: 3)
+        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 4)
+        cos.append(key: ChannelOptions.socketOption(.so_rcvbuf), value: 5)
+        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 6)
+        cos.remove(key: ChannelOptions.socketOption(.so_reuseaddr))
+        XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
+        XCTAssertEqual(2, optionsCollector.allOptions.count)
+        XCTAssertEqual([ChannelOptions.socketOption(.so_keepalive),
+                        ChannelOptions.socketOption(.so_rcvbuf)],
+                       optionsCollector.allOptions.map { option in
+                           return option.0 as! ChannelOptions.Types.SocketOption
+                       })
+        XCTAssertEqual([SocketOptionValue(3), SocketOptionValue(5)],
+                       optionsCollector.allOptions.map { option in
+                           return option.1 as! SocketOptionValue
+                       })
+    }
 }
 
 class OptionsCollectingChannel: Channel {
