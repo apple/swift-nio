@@ -926,6 +926,24 @@ class NonBlockingFileIOTest: XCTestCase {
         })
     }
 
+    func testCreateDirectory() {
+        XCTAssertNoThrow(try withTemporaryDirectory { path in
+            let dir = "\(path)/f1/f2///f3"
+            XCTAssertNoThrow(try self.fileIO.createDirectory(path: dir, withIntermediateDirectories: true, mode: S_IRWXU, eventLoop: self.eventLoop).wait())
+
+            let stat = try self.fileIO.lstat(path: dir, eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(S_IFDIR, S_IFMT & stat.st_mode)
+
+            XCTAssertNoThrow(try self.fileIO.createDirectory(path: "\(dir)/f4", withIntermediateDirectories: false, mode: S_IRWXU, eventLoop: self.eventLoop).wait())
+
+            let stat2 = try self.fileIO.lstat(path: dir, eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(S_IFDIR, S_IFMT & stat2.st_mode)
+
+            let dir3 = "\(path)/f4/."
+            XCTAssertNoThrow(try self.fileIO.createDirectory(path: dir3, withIntermediateDirectories: true, mode: S_IRWXU, eventLoop: self.eventLoop).wait())
+        })
+    }
+
     func testListDirectory() {
         XCTAssertNoThrow(try withTemporaryDirectory { path in
             let file = "\(path)/file"
