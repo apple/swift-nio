@@ -128,10 +128,16 @@ private let sysSymlink: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CCh
 private let sysReadlink: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<CChar>?, Int) -> CLong = readlink
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>?) -> CInt = unlink
 private let sysMkdir: @convention(c) (UnsafePointer<CChar>?, mode_t) -> CInt = mkdir
+#if os(Android)
+private let sysOpendir: @convention(c) (UnsafePointer<CChar>?) -> OpaquePointer? = opendir
+private let sysReaddir: @convention(c) (OpaquePointer?) -> UnsafeMutablePointer<dirent>? = readdir
+private let sysClosedir: @convention(c) (OpaquePointer?) -> CInt = closedir
+#else
 private let sysMkpath: @convention(c) (UnsafePointer<CChar>?, mode_t) -> CInt = mkpath_np
 private let sysOpendir: @convention(c) (UnsafePointer<CChar>?) -> UnsafeMutablePointer<DIR>? = opendir
 private let sysReaddir: @convention(c) (UnsafeMutablePointer<DIR>?) -> UnsafeMutablePointer<dirent>? = readdir
 private let sysClosedir: @convention(c) (UnsafeMutablePointer<DIR>?) -> CInt = closedir
+#endif
 private let sysRename: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = rename
 private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
 #endif
