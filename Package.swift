@@ -102,8 +102,6 @@ var targets: [PackageDescription.Target] = [
             dependencies: ["NIOPosix", "NIOCore", "NIOHTTP1"]),
     .testTarget(name: "NIOCoreTests",
                 dependencies: ["NIOCore", "NIOEmbedded", "NIOFoundationCompat"]),
-    .testTarget(name: "NIOBetaTests",
-                dependencies: ["_NIOBeta"]),
     .testTarget(name: "NIOEmbeddedTests",
                 dependencies: ["NIOConcurrencyHelpers", "NIOCore", "NIOEmbedded"]),
     .testTarget(name: "NIOPosixTests",

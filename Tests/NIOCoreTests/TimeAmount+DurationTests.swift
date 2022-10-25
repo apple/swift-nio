@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-@testable import _NIOBeta
 import XCTest
 
 class TimeAmountDurationTests: XCTestCase {
