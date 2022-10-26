@@ -24,7 +24,6 @@ import XCTest
 
 #if !compiler(>=5.5)
 #if os(Linux) || os(FreeBSD) || os(Android)
-   @testable import NIOBetaTests
    @testable import NIOConcurrencyHelpersTests
    @testable import NIOCoreTests
    @testable import NIODataStructuresTests

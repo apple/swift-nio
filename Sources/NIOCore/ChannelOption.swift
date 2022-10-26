@@ -190,7 +190,7 @@ extension ChannelOptions {
 
             public init() { }
         }
-        
+
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
         public struct ExplicitCongestionNotificationsOption: ChannelOption, Sendable {
             public typealias Value = Bool
@@ -311,7 +311,7 @@ public struct ChannelOptions {
 
     /// - seealso: `DatagramVectorReadMessageCountOption`
     public static let datagramVectorReadMessageCount = Types.DatagramVectorReadMessageCountOption()
-    
+
     /// - seealso: `ExplicitCongestionNotificationsOption`
     public static let explicitCongestionNotification = Types.ExplicitCongestionNotificationsOption()
 
@@ -382,6 +382,20 @@ extension ChannelOptions {
             applyNext()
 
             return applyPromise.futureResult
+        }
+
+        /// Remove all options with the given `key`.
+        ///
+        /// Calling this function has the effect of removing all instances of a ``ChannelOption``
+        /// from the ``ChannelOptions/Storage``, as if none had been added. This is useful in rare
+        /// cases where a bootstrap knows that some configuration must purge options of a certain kind.
+        ///
+        /// - parameters:
+        ///     - key: The ``ChannelOption`` to remove.
+        public mutating func remove<Option: ChannelOption>(key: Option) {
+            self._storage.removeAll(where: { existingKey, _ in
+                (existingKey as? Option) == key
+            })
         }
     }
 }

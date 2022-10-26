@@ -687,6 +687,82 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
+    private func createDirectory0(_ path: String, mode: NIOPOSIXFileMode) throws {
+        let pathView = path.utf8
+        if pathView.isEmpty {
+            return
+        }
+
+        // Fail fast if not a directory or file exists
+        do {
+            var s = stat()
+            try Posix.stat(pathname: path, outStat: &s)
+            if (S_IFMT & s.st_mode) == S_IFDIR {
+                return
+            }
+            throw IOError(errnoCode: ENOTDIR, reason: "Not a directory")
+        } catch let error as IOError where error.errnoCode == ENOENT {
+            // if directory does not exist we can proceed with creating it
+        }
+
+        // Slow path, check that all intermediate directories exist recursively
+
+        // Trim any trailing path separators
+        var index = pathView.index(before: pathView.endIndex)
+        let pathSeparator = UInt8(ascii: "/")
+        while index != pathView.startIndex && pathView[index] == pathSeparator {
+            index = pathView.index(before: index)
+        }
+
+        // Find first non-trailing path separator if it exists
+        while index != pathView.startIndex && pathView[index] != pathSeparator {
+            index = pathView.index(before: index)
+        }
+
+        // If non-trailing path separator is found, create parent directory
+        if index > pathView.startIndex {
+            try self.createDirectory0(String(Substring(pathView.prefix(upTo: index))), mode: mode)
+        }
+
+        do {
+            try Posix.mkdir(pathname: path, mode: mode)
+        } catch {
+            // If user tries to create a path like `/some/path/.` it may fail, as path will be created
+            // by the recursive call. Checks if directory exists and re-throw the error if it does not
+            do {
+                var s = stat()
+                try Posix.lstat(pathname: path, outStat: &s)
+                if (S_IFMT & s.st_mode) == S_IFDIR {
+                    return
+                }
+            } catch {
+                // fallthrough
+            }
+            throw error
+        }
+    }
+
+    /// Creates directory at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the directory to be created.
+    ///     - withIntermediateDirectories: Whether intermediate directories should be created.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` which is fulfilled if the rename was successful or fails on error.
+    public func createDirectory(path: String, withIntermediateDirectories createIntermediates: Bool = false, mode: NIOPOSIXFileMode, eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            if createIntermediates {
+                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                try Posix.mkpath_np(pathname: path, mode: mode)
+                #else
+                try self.createDirectory0(path, mode: mode)
+                #endif
+            } else {
+                try Posix.mkdir(pathname: path, mode: mode)
+            }
+        }
+    }
+
     /// List contents of the directory at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:

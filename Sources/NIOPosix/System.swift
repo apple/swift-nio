@@ -114,6 +114,7 @@ private let sysLstat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer
 private let sysSymlink: @convention(c) (UnsafePointer<CChar>, UnsafePointer<CChar>) -> CInt = symlink
 private let sysReadlink: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<CChar>, Int) -> CLong = readlink
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>) -> CInt = unlink
+private let sysMkdir: @convention(c) (UnsafePointer<CChar>, mode_t) -> CInt = mkdir
 private let sysOpendir: @convention(c) (UnsafePointer<CChar>) -> OpaquePointer? = opendir
 private let sysReaddir: @convention(c) (OpaquePointer) -> UnsafeMutablePointer<dirent>? = readdir
 private let sysClosedir: @convention(c) (OpaquePointer) -> CInt = closedir
@@ -126,9 +127,17 @@ private let sysLstat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointe
 private let sysSymlink: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = symlink
 private let sysReadlink: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<CChar>?, Int) -> CLong = readlink
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>?) -> CInt = unlink
+private let sysMkdir: @convention(c) (UnsafePointer<CChar>?, mode_t) -> CInt = mkdir
+#if os(Android)
+private let sysOpendir: @convention(c) (UnsafePointer<CChar>?) -> OpaquePointer? = opendir
+private let sysReaddir: @convention(c) (OpaquePointer?) -> UnsafeMutablePointer<dirent>? = readdir
+private let sysClosedir: @convention(c) (OpaquePointer?) -> CInt = closedir
+#else
+private let sysMkpath: @convention(c) (UnsafePointer<CChar>?, mode_t) -> CInt = mkpath_np
 private let sysOpendir: @convention(c) (UnsafePointer<CChar>?) -> UnsafeMutablePointer<DIR>? = opendir
 private let sysReaddir: @convention(c) (UnsafeMutablePointer<DIR>?) -> UnsafeMutablePointer<dirent>? = readdir
 private let sysClosedir: @convention(c) (UnsafeMutablePointer<DIR>?) -> CInt = closedir
+#endif
 private let sysRename: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = rename
 private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
 #endif
@@ -756,7 +765,21 @@ internal enum Posix {
         }
     }
 
+    @inline(never)
+    public static func mkdir(pathname: String, mode: mode_t) throws {
+        _ = try syscall(blocking: false) {
+            sysMkdir(pathname, mode)
+        }
+    }
+
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    @inline(never)
+    public static func mkpath_np(pathname: String, mode: mode_t) throws {
+        _ = try syscall(blocking: false) {
+            sysMkpath(pathname, mode)
+        }
+    }
+
     @inline(never)
     public static func opendir(pathname: String) throws -> UnsafeMutablePointer<DIR> {
         return try syscall {

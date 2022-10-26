@@ -72,6 +72,7 @@ extension NonBlockingFileIOTest {
                 ("testThrowsErrorOnUnstartedPool", testThrowsErrorOnUnstartedPool),
                 ("testLStat", testLStat),
                 ("testSymlink", testSymlink),
+                ("testCreateDirectory", testCreateDirectory),
                 ("testListDirectory", testListDirectory),
                 ("testRename", testRename),
                 ("testRemove", testRemove),
