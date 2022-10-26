@@ -99,3 +99,66 @@ public func measure(identifier: String, _ body: () -> Int) {
         return body()
     }
 }
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+func measureAll(_ fn: @escaping () async -> Int) -> [[String: Int]] {
+    func measureOne(throwAway: Bool = false, _ fn: @escaping () async -> Int) -> [String: Int]? {
+        func run(_ fn: @escaping () async -> Int) {
+            let group = DispatchGroup()
+            group.enter()
+            Task {
+                _ = await fn()
+                group.leave()
+            }
+            group.wait()
+        }
+        AtomicCounter.reset_free_counter()
+        AtomicCounter.reset_malloc_counter()
+        AtomicCounter.reset_malloc_bytes_counter()
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        autoreleasepool {
+            run(fn)
+        }
+#else
+        run(fn)
+#endif
+        waitForThreadsToQuiesce(shouldReachZero: !throwAway)
+        let frees = AtomicCounter.read_free_counter()
+        let mallocs = AtomicCounter.read_malloc_counter()
+        let mallocedBytes = AtomicCounter.read_malloc_bytes_counter()
+        if mallocs - frees < 0 {
+            print("WARNING: negative remaining allocation count, skipping.")
+            return nil
+        }
+        return [
+            "total_allocations": mallocs,
+            "total_allocated_bytes": mallocedBytes,
+            "remaining_allocations": mallocs - frees
+        ]
+    }
+
+    _ = measureOne(throwAway: true, fn) /* pre-heat and throw away */
+
+    var measurements: [[String: Int]] = []
+    for _ in 0..<10 {
+        if let results = measureOne(fn) {
+            measurements.append(results)
+        }
+    }
+    return measurements
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+func measureAndPrint(desc: String, fn: @escaping () async -> Int) -> Void {
+    let measurements = measureAll(fn)
+    for k in measurements[0].keys {
+        let vs = measurements.map { $0[k]! }
+        print("\(desc).\(k): \(vs.min() ?? -1)")
+    }
+    print("DEBUG: \(measurements)")
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+public func measure(identifier: String, _ body: @escaping () async -> Int) {
+    measureAndPrint(desc: identifier, fn: body)
+}

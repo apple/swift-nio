@@ -1090,4 +1090,11 @@ if #available(macOS 10.15, *) {
             iterations: 1_000_000
         )
     )
+
+    try measureAndPrint(
+        desc: "asyncsequenceproducer_consume_1M_times",
+        benchmark: NIOAsyncSequenceProducerBenchmark(
+            iterations: 1_000_000
+        )
+    )
 }
