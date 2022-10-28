@@ -66,7 +66,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
     private let upgraders: [String: HTTPServerProtocolUpgrader]
     private let upgradeCompletionHandler: (ChannelHandlerContext) -> Void
 
-    private let httpEncoder: HTTPResponseEncoder?
+    private let httpEncoder: HTTPResponseEncoder
     private let extraHTTPHandlers: [RemovableChannelHandler]
 
     /// Whether we've already seen the first request.
@@ -176,7 +176,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         self.handleUpgrade(context: context, request: request, requestedProtocols: requestedProtocols)
             .hop(to: context.eventLoop) // the user might return a future from another EventLoop.
             .whenSuccess { callback in
-                assert(context.eventLoop.inEventLoop)
+                context.eventLoop.assertInEventLoop()
                 if let callback = callback {
                     self.gotUpgrader(upgrader: callback)
                 } else {
@@ -235,17 +235,22 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                 self.removeExtraHandlers(context: context).flatMap {
                     self.sendUpgradeResponse(context: context, upgradeRequest: request, responseHeaders: finalResponseHeaders)
                 }.flatMap {
-                    self.removeHandler(context: context, handler: self.httpEncoder)
-                }.map {
+                    context.pipeline.removeHandler(self.httpEncoder)
+                }.flatMap { () -> EventLoopFuture<Void> in
                     self.upgradeCompletionHandler(context)
-                }.flatMap {
-                    upgrader.upgrade(context: context, upgradeRequest: request)
-                }.map {
-                    context.fireUserInboundEventTriggered(HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
-                    self.upgradeState = .upgradeComplete
-                }.whenComplete { (_: Result<Void, Error>) in
-                    // When we remove ourselves we'll be delivering any buffered data.
-                    context.pipeline.removeHandler(context: context, promise: nil)
+                    return upgrader.upgrade(context: context, upgradeRequest: request)
+                }.whenComplete { result in
+                    switch result {
+                    case .success:
+                        context.fireUserInboundEventTriggered(HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
+                        self.upgradeState = .upgradeComplete
+                        // When we remove ourselves we'll be delivering any buffered data.
+                        context.pipeline.removeHandler(context: context, promise: nil)
+
+                    case .failure(let error):
+                        // Remain in the '.upgrading' state.
+                        context.fireErrorCaught(error)
+                    }
                 }
             }
         }.flatMapError { error in
@@ -303,15 +308,6 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
     /// Builds the initial mandatory HTTP headers for HTTP upgrade responses.
     private func buildUpgradeHeaders(`protocol`: String) -> HTTPHeaders {
         return HTTPHeaders([("connection", "upgrade"), ("upgrade", `protocol`)])
-    }
-
-    /// Removes the given channel handler from the channel pipeline.
-    private func removeHandler(context: ChannelHandlerContext, handler: RemovableChannelHandler?) -> EventLoopFuture<Void> {
-        if let handler = handler {
-            return context.pipeline.removeHandler(handler)
-        } else {
-            return context.eventLoop.makeSucceededFuture(())
-        }
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
