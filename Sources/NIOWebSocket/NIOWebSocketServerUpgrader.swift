@@ -61,7 +61,10 @@ fileprivate extension HTTPHeaders {
 ///
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
-public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
+public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unchecked Sendable {
+    // This type *is* Sendable but we can't express that properly until Swift 5.7. In the meantime
+    // the conformance is `@unchecked`.
+
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
 
@@ -76,6 +79,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
     private let automaticErrorHandling: Bool
 
     #if swift(>=5.7)
+    // FIXME: remove @unchecked when 5.7 is the minimum supported version.
     /// Create a new `NIOWebSocketServerUpgrader`.
     ///
     /// - parameters:
@@ -221,9 +225,3 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader {
         }
     }
 }
-
-#if swift(>=5.6)
-@available(*, unavailable)
-extension NIOWebSocketServerUpgrader: Sendable {}
-#endif
-
