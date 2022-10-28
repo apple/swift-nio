@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -259,6 +259,33 @@ private class SuccessfulUpgrader: HTTPServerProtocolUpgrader {
     public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         self.onUpgradeComplete(upgradeRequest)
         return context.eventLoop.makeSucceededFuture(())
+    }
+}
+
+private class DelayedUnsuccessfulUpgrader: HTTPServerProtocolUpgrader {
+    let supportedProtocol: String
+    let requiredUpgradeHeaders: [String]
+
+    private var upgradePromise: EventLoopPromise<Void>?
+
+    init(forProtocol `protocol`: String) {
+        self.supportedProtocol = `protocol`
+        self.requiredUpgradeHeaders = []
+    }
+
+    func buildUpgradeResponse(channel: Channel,
+                              upgradeRequest: HTTPRequestHead,
+                              initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
+        return channel.eventLoop.makeSucceededFuture([:])
+    }
+
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+        self.upgradePromise = context.eventLoop.makePromise()
+        return self.upgradePromise!.futureResult
+    }
+
+    func unblockUpgrade(withError error: Error) {
+        self.upgradePromise!.fail(error)
     }
 }
 
@@ -1386,5 +1413,132 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         // We also want to confirm that the upgrade handler is no longer in the pipeline.
         try connectedServer.pipeline.assertDoesNotContainUpgrader()
+    }
+
+    func testFailingToRemoveExtraHandlersThrowsError() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try? channel.finish())
+        }
+
+        let encoder = HTTPResponseEncoder()
+        let handlers: [RemovableChannelHandler] = [HTTPServerPipelineHandler(), HTTPServerProtocolErrorHandler()]
+        let upgradeHandler = HTTPServerUpgradeHandler(upgraders: [SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: [], onUpgradeComplete: { _ in })],
+                                                      httpEncoder: encoder,
+                                                      extraHTTPHandlers: handlers,
+                                                      upgradeCompletionHandler: { _ in })
+
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(encoder))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandlers(handlers))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(upgradeHandler))
+
+        let userEventSaver = UserEventSaver<HTTPServerUpgradeEvents>()
+        let dataRecorder = DataRecorder<HTTPServerRequestPart>()
+        XCTAssertNoThrow(try channel.pipeline.addHandler(userEventSaver).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(dataRecorder).wait())
+
+        // Remove one of the extra handlers.
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(handlers.last!).wait())
+
+        let head = HTTPServerRequestPart.head(.init(version: .http1_1, method: .GET, uri: "/foo", headers: ["upgrade": "myproto"]))
+        XCTAssertNoThrow(try channel.writeInbound(head))
+        XCTAssertThrowsError(try channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
+            XCTAssertEqual(error as? ChannelPipelineError, .notFound)
+        }
+
+        // Upgrade didn't complete, so no user event.
+        XCTAssertTrue(userEventSaver.events.isEmpty)
+        // Nothing should have been forwarded.
+        XCTAssertTrue(dataRecorder.receivedData().isEmpty)
+        // The upgrade handler should still be in the pipeline.
+        try channel.pipeline.assertContainsUpgrader()
+    }
+
+    func testFailedUpgradeResponseWriteThrowsError() throws {
+        final class FailAllWritesHandler: ChannelOutboundHandler {
+            typealias OutboundIn = NIOAny
+            struct FailAllWritesError: Error {}
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                promise?.fail(FailAllWritesError())
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try? channel.finish())
+        }
+
+        let encoder = HTTPResponseEncoder()
+        let handler = HTTPServerUpgradeHandler(upgraders: [SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { _ in }],
+                                               httpEncoder: encoder,
+                                               extraHTTPHandlers: []) { (_: ChannelHandlerContext) in
+            ()
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.addHandler(FailAllWritesHandler()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(encoder).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+
+        let userEventSaver = UserEventSaver<HTTPServerUpgradeEvents>()
+        let dataRecorder = DataRecorder<HTTPServerRequestPart>()
+        XCTAssertNoThrow(try channel.pipeline.addHandler(userEventSaver).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(dataRecorder).wait())
+
+        let head = HTTPServerRequestPart.head(.init(version: .http1_1, method: .GET, uri: "/foo", headers: ["upgrade": "myproto"]))
+        XCTAssertNoThrow(try channel.writeInbound(head))
+        XCTAssertThrowsError(try channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
+            XCTAssert(error is FailAllWritesHandler.FailAllWritesError)
+        }
+
+        // Upgrade didn't complete, so no user event.
+        XCTAssertTrue(userEventSaver.events.isEmpty)
+        // Nothing should have been forwarded.
+        XCTAssertTrue(dataRecorder.receivedData().isEmpty)
+        // The upgrade handler should still be in the pipeline.
+        try channel.pipeline.assertContainsUpgrader()
+    }
+
+    func testFailedUpgraderThrowsError() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try? channel.finish())
+        }
+
+        struct ImAfraidICantDoThatDave: Error {}
+
+        let upgrader = DelayedUnsuccessfulUpgrader(forProtocol: "myproto")
+        let encoder = HTTPResponseEncoder()
+        let handler = HTTPServerUpgradeHandler(upgraders: [upgrader],
+                                               httpEncoder: encoder,
+                                               extraHTTPHandlers: []) { (_: ChannelHandlerContext) in
+            // no-op.
+            ()
+        }
+
+        let userEventSaver = UserEventSaver<HTTPServerUpgradeEvents>()
+        let dataRecorder = DataRecorder<HTTPServerRequestPart>()
+
+        XCTAssertNoThrow(try channel.pipeline.addHandler(encoder).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(userEventSaver).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(dataRecorder).wait())
+
+        let head = HTTPServerRequestPart.head(.init(version: .http1_1, method: .GET, uri: "/foo", headers: ["upgrade": "myproto"]))
+        XCTAssertNoThrow(try channel.writeInbound(head))
+        XCTAssertNoThrow(try channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Write another head, on a successful upgrade it will be unbuffered.
+        XCTAssertNoThrow(try channel.writeInbound(head))
+
+        // Unblock the upgrade.
+        upgrader.unblockUpgrade(withError: ImAfraidICantDoThatDave())
+
+        // Upgrade didn't complete, so no user event.
+        XCTAssertTrue(userEventSaver.events.isEmpty)
+        // Nothing should have been forwarded.
+        XCTAssertTrue(dataRecorder.receivedData().isEmpty)
+        // The upgrade handler should still be in the pipeline.
+        try channel.pipeline.assertContainsUpgrader()
     }
 }
