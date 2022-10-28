@@ -49,6 +49,9 @@ extension HTTPServerUpgradeTestCase {
                 ("testDeliversBytesWhenRemovedDuringPartialUpgrade", testDeliversBytesWhenRemovedDuringPartialUpgrade),
                 ("testDeliversBytesWhenReentrantlyCalledInChannelReadCompleteOnRemoval", testDeliversBytesWhenReentrantlyCalledInChannelReadCompleteOnRemoval),
                 ("testWeTolerateUpgradeFuturesFromWrongEventLoops", testWeTolerateUpgradeFuturesFromWrongEventLoops),
+                ("testFailingToRemoveExtraHandlersThrowsError", testFailingToRemoveExtraHandlersThrowsError),
+                ("testFailedUpgradeResponseWriteThrowsError", testFailedUpgradeResponseWriteThrowsError),
+                ("testFailedUpgraderThrowsError", testFailedUpgraderThrowsError),
            ]
    }
 }
