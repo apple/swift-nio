@@ -42,8 +42,6 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
     @usableFromInline
     typealias Source = NIOThrowingAsyncSequenceProducer<InboundIn, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelAdapterHandler<InboundIn>>.Source
 
-    // The initial buffer is just using a lock. We'll do something better later if profiling
-    // shows it's necessary.
     @usableFromInline var source: Source?
 
     @usableFromInline var context: ChannelHandlerContext?
@@ -158,25 +156,6 @@ extension NIOAsyncChannelAdapterHandler: NIOAsyncSequenceProducerDelegate {
                 ()
             }
         }
-    }
-}
-
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension NIOAsyncChannelAdapterHandler {
-    @usableFromInline
-    enum InboundMessage {
-        case channelRead(InboundIn, EventLoopPromise<Void>?)
-        case eof
-    }
-}
-
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension NIOAsyncChannelAdapterHandler {
-    @usableFromInline
-    enum StreamState {
-        case bufferingWithoutPendingRead(CircularBuffer<InboundMessage>)
-        case bufferingWithPendingRead(CircularBuffer<InboundMessage>, EventLoopPromise<Void>)
-        case waitingForBuffer(CircularBuffer<InboundMessage>, CheckedContinuation<InboundMessage, Never>)
     }
 }
 
