@@ -257,7 +257,7 @@ public final class ChannelTests: XCTestCase {
                                    expectedFileWritabilities: [(Int, Int)]?,
                                    returns: [NIOPosix.IOResult<Int>],
                                    promiseStates: [[Bool]],
-                                   file: StaticString = #file,
+                                   file: StaticString = #filePath,
                                    line: UInt = #line) throws -> OverallWriteResult {
         var everythingState = 0
         var singleState = 0
@@ -1961,7 +1961,7 @@ public final class ChannelTests: XCTestCase {
     }
 
     func testAppropriateAndInappropriateOperationsForUnregisteredSockets() throws {
-        func checkThatItThrowsInappropriateOperationForState(file: StaticString = #file, line: UInt = #line, _ body: () throws -> Void) {
+        func checkThatItThrowsInappropriateOperationForState(file: StaticString = #filePath, line: UInt = #line, _ body: () throws -> Void) {
             XCTAssertThrowsError(try body(), file: (file), line: line) { error in
                 XCTAssertEqual(.inappropriateOperationForState, error as? ChannelError)
             }
@@ -1971,7 +1971,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try elg.syncShutdownGracefully())
         }
 
-        func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #file, line: UInt = #line,  _ body: (Channel) throws -> Void) {
+        func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #filePath, line: UInt = #line,  _ body: (Channel) throws -> Void) {
             XCTAssertNoThrow(try {
                 let el = elg.next() as! SelectableEventLoop
                 let channels: [Channel] = (skipDatagram ? [] : [try DatagramChannel(eventLoop: el, protocolFamily: .inet)]) +

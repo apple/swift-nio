@@ -262,7 +262,7 @@ class EmbeddedChannelTest: XCTestCase {
 
         func check<Expected, Actual>(expected: Expected.Type,
                                      actual: Actual.Type,
-                                     file: StaticString = #file,
+                                     file: StaticString = #filePath,
                                      line: UInt = #line) {
             do {
                 _ = try channel.readOutbound(as: Expected.self)

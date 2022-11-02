@@ -18,7 +18,7 @@ import NIOCore
 import NIOConcurrencyHelpers
 
 // FIXME: Duplicated with NIO
-func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
+func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #filePath, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
@@ -65,7 +65,7 @@ internal func XCTAssertCompareAndSwapSucceeds<Type: AtomicValue>(
     storage: ManagedAtomic<Type>,
     expected: Type,
     desired: Type,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
 ) {
     let result = storage.compareExchange(expected: expected, desired: desired, ordering: .relaxed)

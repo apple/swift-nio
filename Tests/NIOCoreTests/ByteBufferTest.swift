@@ -1164,7 +1164,7 @@ class ByteBufferTest: XCTestCase {
         buf.reserveCapacity(1024)
         buf.writeStaticString("hello world, just some trap bytes here")
 
-        func testIndexAndLengthFunc<T>(_ body: (Int, Int) -> T?, file: StaticString = #file, line: UInt = #line) {
+        func testIndexAndLengthFunc<T>(_ body: (Int, Int) -> T?, file: StaticString = #filePath, line: UInt = #line) {
             XCTAssertNil(body(Int.max, 1), file: (file), line: line)
             XCTAssertNil(body(Int.max - 1, 2), file: (file), line: line)
             XCTAssertNil(body(1, Int.max), file: (file), line: line)
@@ -1175,7 +1175,7 @@ class ByteBufferTest: XCTestCase {
             XCTAssertNil(body(Int.min, Int.max), file: (file), line: line)
         }
 
-        func testIndexOrLengthFunc<T>(_ body: (Int) -> T?, file: StaticString = #file, line: UInt = #line) {
+        func testIndexOrLengthFunc<T>(_ body: (Int) -> T?, file: StaticString = #filePath, line: UInt = #line) {
             XCTAssertNil(body(Int.max))
             XCTAssertNil(body(Int.max - 1))
             XCTAssertNil(body(Int.min))

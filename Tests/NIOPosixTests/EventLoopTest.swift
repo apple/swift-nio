@@ -532,7 +532,7 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertNoThrow(try serverChannelUp.futureResult.wait())
 
         let g = DispatchGroup()
-        let q = DispatchQueue(label: "\(#file)/\(#line)")
+        let q = DispatchQueue(label: "\(#filePath)/\(#line)")
         g.enter()
         // Now we're going to start closing the event loop. This should not immediately succeed.
         loop.initiateClose(queue: q) { result in

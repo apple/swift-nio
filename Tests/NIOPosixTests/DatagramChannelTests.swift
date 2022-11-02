@@ -920,7 +920,7 @@ class DatagramChannelTests: XCTestCase {
         to destinationChannel: Channel,
         wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool,
         resultsIn expectedResult: Result<Void, Error>,
-        file: StaticString = #file,
+        file: StaticString = #filePath,
         line: UInt = #line
     ) throws {
         // Wrap data in AddressedEnvelope if required.
@@ -964,7 +964,7 @@ class DatagramChannelTests: XCTestCase {
         to destinationChannel: Channel,
         wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool,
         resultsIn expectedResult: Result<Void, Error>,
-        file: StaticString = #file,
+        file: StaticString = #filePath,
         line: UInt = #line
     ) throws {
         try self.assertSending(

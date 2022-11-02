@@ -234,7 +234,7 @@ class AsyncTestingChannelTests: XCTestCase {
 
             func check<Expected: Sendable, Actual>(expected: Expected.Type,
                                                    actual: Actual.Type,
-                                                   file: StaticString = #file,
+                                                   file: StaticString = #filePath,
                                                    line: UInt = #line) async {
                 do {
                     _ = try await channel.readOutbound(as: Expected.self)
@@ -507,18 +507,23 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 }
 
+<<<<<<< Updated upstream
 fileprivate func XCTAsyncAssertTrue(_ predicate: @autoclosure () async throws -> Bool, file: StaticString = #file, line: UInt = #line) async rethrows {
+=======
+#if compiler(>=5.5.2) && canImport(_Concurrency)
+fileprivate func XCTAsyncAssertTrue(_ predicate: @autoclosure () async throws -> Bool, file: StaticString = #filePath, line: UInt = #line) async rethrows {
+>>>>>>> Stashed changes
     let result = try await predicate()
     XCTAssertTrue(result, file: file, line: line)
 }
 
-fileprivate func XCTAsyncAssertEqual<Element: Equatable>(_ lhs: @autoclosure () async throws -> Element, _ rhs: @autoclosure () async throws -> Element, file: StaticString = #file, line: UInt = #line) async rethrows {
+fileprivate func XCTAsyncAssertEqual<Element: Equatable>(_ lhs: @autoclosure () async throws -> Element, _ rhs: @autoclosure () async throws -> Element, file: StaticString = #filePath, line: UInt = #line) async rethrows {
     let lhsResult = try await lhs()
     let rhsResult = try await rhs()
     XCTAssertEqual(lhsResult, rhsResult, file: file, line: line)
 }
 
-fileprivate func XCTAsyncAssertThrowsError<ResultType>(_ expression: @autoclosure () async throws -> ResultType, file: StaticString = #file, line: UInt = #line, _ callback: Optional<(Error) -> Void> = nil) async {
+fileprivate func XCTAsyncAssertThrowsError<ResultType>(_ expression: @autoclosure () async throws -> ResultType, file: StaticString = #filePath, line: UInt = #line, _ callback: Optional<(Error) -> Void> = nil) async {
     do {
         let _ = try await expression()
         XCTFail("Did not throw", file: file, line: line)
@@ -527,12 +532,12 @@ fileprivate func XCTAsyncAssertThrowsError<ResultType>(_ expression: @autoclosur
     }
 }
 
-fileprivate func XCTAsyncAssertNil(_ expression: @autoclosure () async throws -> Any?, file: StaticString = #file, line: UInt = #line) async rethrows {
+fileprivate func XCTAsyncAssertNil(_ expression: @autoclosure () async throws -> Any?, file: StaticString = #filePath, line: UInt = #line) async rethrows {
     let result = try await expression()
     XCTAssertNil(result, file: file, line: line)
 }
 
-fileprivate func XCTAsyncAssertNotNil(_ expression: @autoclosure () async throws -> Any?, file: StaticString = #file, line: UInt = #line) async rethrows {
+fileprivate func XCTAsyncAssertNotNil(_ expression: @autoclosure () async throws -> Any?, file: StaticString = #filePath, line: UInt = #line) async rethrows {
     let result = try await expression()
     XCTAssertNotNil(result, file: file, line: line)
 }

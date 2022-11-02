@@ -33,7 +33,7 @@ extension EmbeddedChannel {
 extension ChannelPipeline {
     
     fileprivate func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
-                                                                   file: StaticString = #file,
+                                                                   file: StaticString = #filePath,
                                                                    line: UInt = #line) throws {
         XCTAssertThrowsError(try self.context(handlerType: handlerType).wait(), file: (file), line: line) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)

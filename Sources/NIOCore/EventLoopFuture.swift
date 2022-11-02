@@ -1235,7 +1235,7 @@ extension EventLoopFuture {
     /// - returns: The value of the `EventLoopFuture` when it completes.
     /// - throws: The error value of the `EventLoopFuture` if it errors.
     @inlinable
-    public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value {
+    public func wait(file: StaticString = #fileID, line: UInt = #line) throws -> Value {
         self.eventLoop._preconditionSafeToWait(file: file, line: line)
 
         let v: UnsafeMutableTransferBox<Result<Value, Error>?> = .init(nil)
