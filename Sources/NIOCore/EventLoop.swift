@@ -686,7 +686,7 @@ extension EventLoop {
     
     @inlinable
     func _submit<T>(_ task: @escaping SubmitCallback<T>) -> EventLoopFuture<T> {
-        let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
+        let promise: EventLoopPromise<T> = makePromise(file: #fileID, line: #line)
 
         self.execute {
             do {
@@ -749,7 +749,7 @@ extension EventLoop {
     @preconcurrency
     public func flatScheduleTask<T>(
         deadline: NIODeadline,
-        file: StaticString = #file,
+        file: StaticString = #fileID,
         line: UInt = #line,
         _ task: @escaping @Sendable () throws -> EventLoopFuture<T>
     ) -> Scheduled<T> {
@@ -769,7 +769,7 @@ extension EventLoop {
     @inlinable
     public func flatScheduleTask<T>(
         deadline: NIODeadline,
-        file: StaticString = #file,
+        file: StaticString = #fileID,
         line: UInt = #line,
         _ task: @escaping () throws -> EventLoopFuture<T>
     ) -> Scheduled<T> {
@@ -786,7 +786,7 @@ extension EventLoop {
         line: UInt,
         _ task: @escaping FlatScheduleTaskDelayCallback<T>
     ) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = self.makePromise(file:#file, line: line)
+        let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
 
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
@@ -807,7 +807,7 @@ extension EventLoop {
     @preconcurrency
     public func flatScheduleTask<T>(
         in delay: TimeAmount,
-        file: StaticString = #file,
+        file: StaticString = #fileID,
         line: UInt = #line,
         _ task: @escaping @Sendable () throws -> EventLoopFuture<T>
     ) -> Scheduled<T> {
@@ -827,7 +827,7 @@ extension EventLoop {
     @inlinable
     public func flatScheduleTask<T>(
         in delay: TimeAmount,
-        file: StaticString = #file,
+        file: StaticString = #fileID,
         line: UInt = #line,
         _ task: @escaping () throws -> EventLoopFuture<T>
     ) -> Scheduled<T> {
@@ -852,7 +852,7 @@ extension EventLoop {
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.
     @inlinable
-    public func makePromise<T>(of type: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
+    public func makePromise<T>(of type: T.Type = T.self, file: StaticString = #fileID, line: UInt = #line) -> EventLoopPromise<T> {
         return EventLoopPromise<T>(eventLoop: self, file: file, line: line)
     }
 
@@ -1069,7 +1069,7 @@ extension EventLoop {
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
     @inlinable
-    public func assertInEventLoop(file: StaticString = #file, line: UInt = #line) {
+    public func assertInEventLoop(file: StaticString = #fileID, line: UInt = #line) {
         debugOnly {
             self.preconditionInEventLoop(file: file, line: line)
         }
@@ -1081,7 +1081,7 @@ extension EventLoop {
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
     @inlinable
-    public func assertNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
+    public func assertNotInEventLoop(file: StaticString = #fileID, line: UInt = #line) {
         debugOnly {
             self.preconditionNotInEventLoop(file: file, line: line)
         }
@@ -1089,13 +1089,13 @@ extension EventLoop {
 
     /// Checks the necessary condition of currently running on the called `EventLoop` for making forward progress.
     @inlinable
-    public func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
+    public func preconditionInEventLoop(file: StaticString = #fileID, line: UInt = #line) {
         precondition(self.inEventLoop, file: file, line: line)
     }
 
     /// Checks the necessary condition of currently _not_ running on the called `EventLoop` for making forward progress.
     @inlinable
-    public func preconditionNotInEventLoop(file: StaticString = #file, line: UInt = #line) {
+    public func preconditionNotInEventLoop(file: StaticString = #fileID, line: UInt = #line) {
         precondition(!self.inEventLoop, file: file, line: line)
     }
 }
@@ -1184,7 +1184,7 @@ extension EventLoopGroup {
     #endif
     
     public func syncShutdownGracefully() throws {
-        self._preconditionSafeToSyncShutdown(file: #file, line: #line)
+        self._preconditionSafeToSyncShutdown(file: #fileID, line: #line)
 
         let errorStorageLock = NIOLock()
         var errorStorage: Error? = nil

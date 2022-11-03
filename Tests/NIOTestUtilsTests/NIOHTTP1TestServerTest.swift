@@ -353,7 +353,7 @@ private final class TestHTTPHandler: ChannelInboundHandler {
 }
 
 extension HTTPServerRequestPart {
-    func assertHead(expectedURI: String, file: StaticString = #file, line: UInt = #line) {
+    func assertHead(expectedURI: String, file: StaticString = #filePath, line: UInt = #line) {
         switch self {
         case .head(let head):
             XCTAssertEqual(.GET, head.method)
@@ -364,7 +364,7 @@ extension HTTPServerRequestPart {
         }
     }
 
-    func assertBody(expectedMessage: String, file: StaticString = #file, line: UInt = #line) {
+    func assertBody(expectedMessage: String, file: StaticString = #filePath, line: UInt = #line) {
         switch self {
         case .body(let buffer):
             // Note that the test server coalesces the body parts for us.
@@ -375,7 +375,7 @@ extension HTTPServerRequestPart {
         }
     }
 
-    func assertEnd(file: StaticString = #file, line: UInt = #line) {
+    func assertEnd(file: StaticString = #filePath, line: UInt = #line) {
         switch self {
         case .end(_):
             ()
@@ -415,7 +415,7 @@ func assert(_ condition: @autoclosure () -> Bool,
             within time: TimeAmount,
             testInterval: TimeAmount? = nil,
             _ message: String = "condition not satisfied in time",
-            file: StaticString = #file, line: UInt = #line) {
+            file: StaticString = #filePath, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
@@ -432,7 +432,7 @@ func assert(_ condition: @autoclosure () -> Bool,
 func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T,
                                defaultValue: T? = nil,
                                message: String? = nil,
-                               file: StaticString = #file,
+                               file: StaticString = #filePath,
                                line: UInt = #line) throws -> T {
     do {
         return try body()

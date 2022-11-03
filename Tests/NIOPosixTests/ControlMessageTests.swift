@@ -93,7 +93,7 @@ class ControlMessageTests: XCTestCase {
 
     private func assertBuffersNonOverlapping(_ b1: UnsafeMutableRawBufferPointer,
                                              _ b2: UnsafeMutableRawBufferPointer,
-                                             file: StaticString = #file,
+                                             file: StaticString = #filePath,
                                              line: UInt = #line) {
         XCTAssert((b1.baseAddress! < b2.baseAddress! && (b1.baseAddress! + b1.count) <= b2.baseAddress!) ||
                   (b2.baseAddress! < b1.baseAddress! && (b2.baseAddress! + b2.count) <= b1.baseAddress!),

@@ -90,7 +90,7 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
         }
     }
 
-    private func testActualReadBytes(mayGrow: Bool, actualReadBytes: Int, expectedCapacity: Int, file: StaticString = #file, line: UInt = #line) {
+    private func testActualReadBytes(mayGrow: Bool, actualReadBytes: Int, expectedCapacity: Int, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(mayGrow, adaptive.record(actualReadBytes: actualReadBytes), "unexpected value for mayGrow", file: file, line: line)
         let buffer = adaptive.buffer(allocator: allocator)
         XCTAssertEqual(expectedCapacity, buffer.capacity, "unexpected capacity", file: file, line: line)

@@ -890,7 +890,7 @@ final class AccumulateAllReads: ChannelInboundHandler {
     }
 }
 
-private func assertNoSelectorChanges(fd: CInt, selector: NIOPosix.Selector<NIORegistration>, file: StaticString = #file, line: UInt = #line) throws {
+private func assertNoSelectorChanges(fd: CInt, selector: NIOPosix.Selector<NIORegistration>, file: StaticString = #filePath, line: UInt = #line) throws {
     struct UnexpectedSelectorChanges: Error, CustomStringConvertible {
         let description: String
     }

@@ -108,7 +108,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                            expectedVectorWritabilities: [[(Int, SocketAddress)]]?,
                                            returns: [Result<NIOPosix.IOResult<Int>, Error>],
                                            promiseStates: [[Bool]],
-                                           file: StaticString = #file,
+                                           file: StaticString = #filePath,
                                            line: UInt = #line) throws -> OverallWriteResult {
         var everythingState = 0
         var singleState = 0

@@ -106,7 +106,7 @@ extension ChannelOutboundInvoker {
     ///
     /// - returns: the future which will be notified once the operation completes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func register(file: StaticString = #file, line: UInt = #line) async throws {
+    public func register(file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.register(file: file, line: line).get()
     }
 
@@ -115,7 +115,7 @@ extension ChannelOutboundInvoker {
     ///     - to: the `SocketAddress` to which we should bind the `Channel`.
     /// - returns: the future which will be notified once the operation completes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func bind(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) async throws {
+    public func bind(to address: SocketAddress, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.bind(to: address, file: file, line: line).get()
     }
 
@@ -124,7 +124,7 @@ extension ChannelOutboundInvoker {
     ///     - to: the `SocketAddress` to which we should connect the `Channel`.
     /// - returns: the future which will be notified once the operation completes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func connect(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) async throws {
+    public func connect(to address: SocketAddress, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.connect(to: address, file: file, line: line).get()
     }
 
@@ -134,7 +134,7 @@ extension ChannelOutboundInvoker {
     ///     - data: the data to write
     /// - returns: the future which will be notified once the `write` operation completes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func writeAndFlush(_ data: NIOAny, file: StaticString = #file, line: UInt = #line) async throws {
+    public func writeAndFlush(_ data: NIOAny, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.writeAndFlush(data, file: file, line: line).get()
     }
 
@@ -144,7 +144,7 @@ extension ChannelOutboundInvoker {
     ///     - mode: the `CloseMode` that is used
     /// - returns: the future which will be notified once the operation completes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func close(mode: CloseMode = .all, file: StaticString = #file, line: UInt = #line) async throws {
+    public func close(mode: CloseMode = .all, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.close(mode: mode, file: file, line: line).get()
     }
 
@@ -154,7 +154,7 @@ extension ChannelOutboundInvoker {
     ///     - event: the event itself.
     /// - returns: the future which will be notified once the operation completes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func triggerUserOutboundEvent(_ event: Any, file: StaticString = #file, line: UInt = #line) async throws {
+    public func triggerUserOutboundEvent(_ event: Any, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.triggerUserOutboundEvent(event, file: file, line: line).get()
     }
 }

@@ -512,7 +512,7 @@ class EventLoopFutureTest : XCTestCase {
     func testOrderOfFutureCompletion() throws {
         let eventLoop = EmbeddedEventLoop()
         var state = 0
-        let p: EventLoopPromise<Void> = EventLoopPromise(eventLoop: eventLoop, file: #file, line: #line)
+        let p: EventLoopPromise<Void> = EventLoopPromise(eventLoop: eventLoop, file: #filePath, line: #line)
         p.futureResult.map {
             XCTAssertEqual(state, 0)
             state += 1

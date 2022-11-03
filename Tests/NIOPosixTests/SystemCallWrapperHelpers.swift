@@ -121,5 +121,5 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
     }
     testAssertFunction(directCallTime * (1.0 + Double(allowedOverheadPercent)/100) > withSystemCallWrappersTime,
                        "Posix wrapper adds more than \(allowedOverheadPercent)% overhead (with wrapper: \(withSystemCallWrappersTime), without: \(directCallTime)",
-                       #file, #line)
+                       #filePath, #line)
 }

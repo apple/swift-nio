@@ -254,7 +254,7 @@ func assertSetGetOptionOnOpenAndClosed<Option: ChannelOption>(channel: Channel, 
     }
 }
 
-func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue: T? = nil, message: String? = nil, file: StaticString = #file, line: UInt = #line) throws -> T {
+func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue: T? = nil, message: String? = nil, file: StaticString = #filePath, line: UInt = #line) throws -> T {
     do {
         return try body()
     } catch {
@@ -291,7 +291,7 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
     """
 }
 
-func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
+func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #filePath, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
@@ -306,15 +306,15 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
 }
 
 func getBoolSocketOption(channel: Channel, level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option,
-                         file: StaticString = #file, line: UInt = #line) throws -> Bool {
+                         file: StaticString = #filePath, line: UInt = #line) throws -> Bool {
     return try assertNoThrowWithValue(channel.getOption(ChannelOptions.Types.SocketOption(level: level, name: name)), file: (file), line: line).wait() != 0
 }
 
-func assertSuccess<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
+func assertSuccess<Value>(_ result: Result<Value, Error>, file: StaticString = #filePath, line: UInt = #line) {
     guard case .success = result else { return XCTFail("Expected result to be successful", file: (file), line: line) }
 }
 
-func assertFailure<Value>(_ result: Result<Value, Error>, file: StaticString = #file, line: UInt = #line) {
+func assertFailure<Value>(_ result: Result<Value, Error>, file: StaticString = #filePath, line: UInt = #line) {
     guard case .failure = result else { return XCTFail("Expected result to be a failure", file: (file), line: line) }
 }
 
@@ -487,7 +487,7 @@ final class FulfillOnFirstEventHandler: ChannelDuplexHandler {
     }
 }
 
-func forEachActiveChannelType<T>(file: StaticString = #file,
+func forEachActiveChannelType<T>(file: StaticString = #filePath,
                                  line: UInt = #line,
                                  _ body: @escaping (Channel) throws -> T) throws -> [T] {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -527,7 +527,7 @@ func forEachActiveChannelType<T>(file: StaticString = #file,
 
 func withTCPServerChannel<R>(bindTarget: SocketAddress? = nil,
                              group: EventLoopGroup,
-                             file: StaticString = #file,
+                             file: StaticString = #filePath,
                              line: UInt = #line,
                              _ body: (Channel) throws -> R) throws -> R {
     let server = try ServerBootstrap(group: group)
@@ -546,7 +546,7 @@ func withTCPServerChannel<R>(bindTarget: SocketAddress? = nil,
 
 func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
                                            forceSeparateEventLoops: Bool = false,
-                                           file: StaticString = #file,
+                                           file: StaticString = #filePath,
                                            line: UInt = #line,
                                            _ body: (Channel, Channel) throws -> R) throws -> R {
     let serverGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -596,7 +596,7 @@ func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
 }
 
 func withCrossConnectedTCPChannels<R>(forceSeparateEventLoops: Bool = false,
-                                      file: StaticString = #file,
+                                      file: StaticString = #filePath,
                                       line: UInt = #line,
                                       _ body: (Channel, Channel) throws -> R) throws -> R {
     return try withCrossConnectedSockAddrChannels(bindTarget: .init(ipAddress: "127.0.0.1", port: 0),
@@ -605,7 +605,7 @@ func withCrossConnectedTCPChannels<R>(forceSeparateEventLoops: Bool = false,
 }
 
 func withCrossConnectedUnixDomainSocketChannels<R>(forceSeparateEventLoops: Bool = false,
-                                                   file: StaticString = #file,
+                                                   file: StaticString = #filePath,
                                                    line: UInt = #line,
                                                    _ body: (Channel, Channel) throws -> R) throws -> R {
     return try withTemporaryDirectory { tempDir in
@@ -617,7 +617,7 @@ func withCrossConnectedUnixDomainSocketChannels<R>(forceSeparateEventLoops: Bool
 }
 
 func withCrossConnectedPipeChannels<R>(forceSeparateEventLoops: Bool = false,
-                                       file: StaticString = #file,
+                                       file: StaticString = #filePath,
                                        line: UInt = #line,
                                        _ body: (Channel, Channel) throws -> R) throws -> R {
     let channel1Group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -672,7 +672,7 @@ func withCrossConnectedPipeChannels<R>(forceSeparateEventLoops: Bool = false,
 }
 
 func forEachCrossConnectedStreamChannelPair<R>(forceSeparateEventLoops: Bool = false,
-                                               file: StaticString = #file,
+                                               file: StaticString = #filePath,
                                                line: UInt = #line,
                                                _ body: (Channel, Channel) throws -> R) throws -> [R] {
     let r1 = try withCrossConnectedTCPChannels(forceSeparateEventLoops: forceSeparateEventLoops, body)

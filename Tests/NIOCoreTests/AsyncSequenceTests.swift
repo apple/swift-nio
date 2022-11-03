@@ -18,7 +18,7 @@ fileprivate struct TestCase {
     var buffers: [[UInt8]]
     var file: StaticString
     var line: UInt
-    init(_ buffers: [[UInt8]], file: StaticString = #file, line: UInt = #line) {
+    init(_ buffers: [[UInt8]], file: StaticString = #filePath, line: UInt = #line) {
         self.buffers = buffers
         self.file = file
         self.line = line
