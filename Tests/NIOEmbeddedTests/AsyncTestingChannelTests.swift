@@ -507,12 +507,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 }
 
-<<<<<<< Updated upstream
-fileprivate func XCTAsyncAssertTrue(_ predicate: @autoclosure () async throws -> Bool, file: StaticString = #file, line: UInt = #line) async rethrows {
-=======
-#if compiler(>=5.5.2) && canImport(_Concurrency)
 fileprivate func XCTAsyncAssertTrue(_ predicate: @autoclosure () async throws -> Bool, file: StaticString = #filePath, line: UInt = #line) async rethrows {
->>>>>>> Stashed changes
     let result = try await predicate()
     XCTAssertTrue(result, file: file, line: line)
 }

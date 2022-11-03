@@ -786,7 +786,7 @@ extension EventLoop {
         line: UInt,
         _ task: @escaping FlatScheduleTaskDelayCallback<T>
     ) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = self.makePromise(file:#fileID, line: line)
+        let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
 
         scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
