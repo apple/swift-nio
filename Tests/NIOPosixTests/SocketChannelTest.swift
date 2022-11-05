@@ -913,10 +913,10 @@ public final class SocketChannelTest : XCTestCase {
         let serverChannel: Channel
 
         do {
-            serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            serverChannel = try ServerBootstrap(group: group)
                 .enableMPTCP(true)
                 .bind(host: "127.0.0.1", port: 0)
-                .wait())
+                .wait()
         } catch let error as IOError {
             // Older Linux kernel versions don't support MPTCP, which is fine.
             XCTAssertEqual(error.errnoCode, EPROTONOSUPPORT, "Unexpected error: \(error)")
