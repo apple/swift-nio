@@ -175,7 +175,7 @@ extension ByteBufferView: RangeReplaceableCollection {
 
     /// Writes a sequence of bytes to the underlying `ByteBuffer`.
     @inlinable
-    public mutating func append<Bytes: Sequence>(contentsOf bytes:Bytes) where Bytes.Element == UInt8 {
+    public mutating func append<Bytes: Sequence>(contentsOf bytes: Bytes) where Bytes.Element == UInt8 {
         self._buffer.writeBytes(bytes)
     }
 
