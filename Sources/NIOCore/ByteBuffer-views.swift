@@ -158,6 +158,27 @@ extension ByteBufferView: RangeReplaceableCollection {
         self = ByteBufferView(ByteBuffer())
     }
 
+    /// Reserves enough space in the underlying `ByteBuffer` to store the specified
+    /// number of bytes.
+    ///
+    /// See the documentation for ``ByteBuffer.reserveCapacity(_:)`` for more details.
+    @inlinable
+    public mutating func reserveCapacity(_ minimumCapacity: Int) {
+        self._buffer.reserveCapacity(minimumCapacity)
+    }
+
+    /// Writes a single byte to the underlying `ByteBuffer`.
+    @inlinable
+    public mutating func append(_ byte: UInt8) {
+        self._buffer.writeBytes(CollectionOfOne<UInt8>(byte))
+    }
+
+    /// Writes a sequence of bytes to the underlying `ByteBuffer`.
+    @inlinable
+    public mutating func append<Bytes: Sequence>(contentsOf bytes:Bytes) where Bytes.Element == UInt8 {
+        self._buffer.writeBytes(bytes)
+    }
+
     @inlinable
     public mutating func replaceSubrange<C: Collection>(_ subrange: Range<Index>, with newElements: C) where ByteBufferView.Element == C.Element {
         precondition(subrange.startIndex >= self.startIndex && subrange.endIndex <= self.endIndex,
