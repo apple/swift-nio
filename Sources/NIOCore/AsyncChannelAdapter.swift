@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+import DequeModule
 
 @usableFromInline
 enum PendingReadState {
@@ -155,6 +156,106 @@ extension NIOAsyncChannelAdapterHandler: NIOAsyncSequenceProducerDelegate {
             case .canRead:
                 ()
             }
+        }
+    }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+public final class NIOAsyncChannelWriterHandler<OutboundOut>: @unchecked Sendable, ChannelDuplexHandler {
+    public typealias InboundIn = Any
+    public typealias InboundOut = Any
+    public typealias OutboundIn = Any
+    public typealias OutboundOut = OutboundOut
+
+    @usableFromInline
+    typealias Sink = NIOAsyncWriter<OutboundOut, NIOAsyncChannelWriterHandler<OutboundOut>>.Sink
+
+    @usableFromInline
+    var sink: Sink?
+
+    @usableFromInline
+    var context: ChannelHandlerContext?
+
+    @usableFromInline
+    let loop: EventLoop
+
+    @usableFromInline
+    var bufferedWrites: Deque<OutboundOut>
+
+    @usableFromInline
+    var isWriting: Bool
+
+    @inlinable
+    init(loop: EventLoop) {
+        self.loop = loop
+        self.bufferedWrites = Deque()
+        self.isWriting = false
+    }
+
+    @inlinable
+    func doOutboundWrites() {
+        guard !self.isWriting else {
+            // We've already got a write happening, no need to do anything more here.
+            return
+        }
+
+        self.isWriting = true
+
+        while let nextWrite = self.bufferedWrites.popFirst() {
+            self.context?.write(self.wrapOutboundOut(nextWrite), promise: nil)
+        }
+
+        self.isWriting = false
+        self.context?.flush()
+    }
+
+    public func handlerAdded(context: ChannelHandlerContext) {
+        self.context = context
+    }
+
+    public func handlerRemoved(context: ChannelHandlerContext) {
+        self.context = nil
+        self.sink = nil
+        self.bufferedWrites.removeAll()
+    }
+
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
+        self.sink?.finish(error: error)
+    }
+
+    public func channelInactive(context: ChannelHandlerContext) {
+        self.sink?.finish()
+    }
+
+    public func channelWritabilityChanged(context: ChannelHandlerContext) {
+        self.sink?.setWritability(to: context.channel.isWritable)
+    }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension NIOAsyncChannelWriterHandler: NIOAsyncWriterSinkDelegate {
+    public typealias Element = OutboundOut
+
+    @inlinable
+    public func didYield(contentsOf sequence: Deque<OutboundOut>) {
+        // This is always called from an async context, so we must loop-hop.
+        self.loop.execute {
+            if self.bufferedWrites.isEmpty {
+                self.bufferedWrites = sequence
+            } else {
+                self.bufferedWrites.append(contentsOf: sequence)
+            }
+
+            self.doOutboundWrites()
+        }
+    }
+
+    @inlinable
+    public func didTerminate(error: Error?) {
+        // TODO: how do we spot full closure here?
+        // This always called from an async context, so we must loop-hop.
+        self.loop.execute {
+            self.context?.close(mode: .output, promise: nil)
         }
     }
 }
