@@ -17,7 +17,7 @@ import NIOConcurrencyHelpers
 import Dispatch
 import _NIODataStructures
 import NIOCore
-
+import DequeModule
 
 internal struct EmbeddedScheduledTask {
     let id: UInt64
@@ -281,6 +281,10 @@ class EmbeddedChannelCore: ChannelCore {
     /// Contains the flushed items that went into the `Channel` (and on a regular channel would have hit the network).
     @usableFromInline
     var outboundBuffer: CircularBuffer<NIOAny> = CircularBuffer()
+    
+    /// Contains observers that want to consume the first element that would be appended to the `outboundBuffer`
+    @usableFromInline
+    var outboundBufferConsumer: Deque<(NIOAny) -> Void> = []
 
     /// Contains the unflushed items that went into the `Channel`
     @usableFromInline
@@ -290,6 +294,10 @@ class EmbeddedChannelCore: ChannelCore {
     /// regular `Channel` these items would be lost.
     @usableFromInline
     var inboundBuffer: CircularBuffer<NIOAny> = CircularBuffer()
+    
+    /// Contains observers that want to consume the first element that would be appended to the `inboundBuffer`
+    @usableFromInline
+    var inboundBufferConsumer: Deque<(NIOAny) -> Void> = []
 
     @usableFromInline
     func localAddress0() throws -> SocketAddress {
@@ -366,7 +374,11 @@ class EmbeddedChannelCore: ChannelCore {
         self.pendingOutboundBuffer.mark()
 
         while self.pendingOutboundBuffer.hasMark, let dataAndPromise = self.pendingOutboundBuffer.popFirst() {
-            self.addToBuffer(buffer: &self.outboundBuffer, data: dataAndPromise.0)
+            self.addToBuffer(
+                buffer: &self.outboundBuffer,
+                consumer: &self.outboundBufferConsumer,
+                data: dataAndPromise.0
+            )
             dataAndPromise.1?.succeed(())
         }
     }
@@ -385,7 +397,11 @@ class EmbeddedChannelCore: ChannelCore {
     @usableFromInline
     func channelRead0(_ data: NIOAny) {
         self.eventLoop.preconditionInEventLoop()
-        addToBuffer(buffer: &inboundBuffer, data: data)
+        self.addToBuffer(
+            buffer: &self.inboundBuffer,
+            consumer: &self.inboundBufferConsumer,
+            data: data
+        )
     }
 
     public func errorCaught0(error: Error) {
@@ -395,9 +411,17 @@ class EmbeddedChannelCore: ChannelCore {
         }
     }
 
-    private func addToBuffer<T>(buffer: inout CircularBuffer<T>, data: T) {
+    private func addToBuffer(
+        buffer: inout CircularBuffer<NIOAny>,
+        consumer: inout Deque<(NIOAny) -> Void>,
+        data: NIOAny
+    ) {
         self.eventLoop.preconditionInEventLoop()
-        buffer.append(data)
+        if let consume = consumer.popFirst() {
+            consume(data)
+        } else {
+            buffer.append(data)
+        }
     }
 }
 

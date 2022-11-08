@@ -69,6 +69,84 @@ class AsyncTestingChannelTests: XCTestCase {
             XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler2").wait())
         }
     }
+    
+    func testWaitForInboundWrite() throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        XCTAsyncTest {
+            let channel = NIOAsyncTestingChannel()
+            let task = Task {
+                try await XCTAsyncAssertEqual(try await channel.waitForInboundWrite(), 1)
+                try await XCTAsyncAssertEqual(try await channel.waitForInboundWrite(), 2)
+                try await XCTAsyncAssertEqual(try await channel.waitForInboundWrite(), 3)
+            }
+            
+            try await channel.writeInbound(1)
+            try await channel.writeInbound(2)
+            try await channel.writeInbound(3)
+            try await task.value
+        }
+    }
+    
+    func testWaitForMultipleInboundWritesInParallel() throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        XCTAsyncTest {
+            let channel = NIOAsyncTestingChannel()
+            let task = Task {
+                let task1 = Task { try await channel.waitForInboundWrite(as: Int.self) }
+                let task2 = Task { try await channel.waitForInboundWrite(as: Int.self) }
+                let task3 = Task { try await channel.waitForInboundWrite(as: Int.self) }
+                try await XCTAsyncAssertEqual(Set([
+                    try await task1.value,
+                    try await task2.value,
+                    try await task3.value,
+                ]), [1, 2, 3])
+            }
+            
+            try await channel.writeInbound(1)
+            try await channel.writeInbound(2)
+            try await channel.writeInbound(3)
+            try await task.value
+        }
+    }
+    
+    func testWaitForOutboundWrite() throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        XCTAsyncTest {
+            let channel = NIOAsyncTestingChannel()
+            let task = Task {
+                try await XCTAsyncAssertEqual(try await channel.waitForOutboundWrite(), 1)
+                try await XCTAsyncAssertEqual(try await channel.waitForOutboundWrite(), 2)
+                try await XCTAsyncAssertEqual(try await channel.waitForOutboundWrite(), 3)
+            }
+            
+            try await channel.writeOutbound(1)
+            try await channel.writeOutbound(2)
+            try await channel.writeOutbound(3)
+            try await task.value
+        }
+    }
+    
+    func testWaitForMultipleOutboundWritesInParallel() throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        XCTAsyncTest {
+            let channel = NIOAsyncTestingChannel()
+            let task = Task {
+                let task1 = Task { try await channel.waitForOutboundWrite(as: Int.self) }
+                let task2 = Task { try await channel.waitForOutboundWrite(as: Int.self) }
+                let task3 = Task { try await channel.waitForOutboundWrite(as: Int.self) }
+                try await XCTAsyncAssertEqual(Set([
+                    try await task1.value,
+                    try await task2.value,
+                    try await task3.value,
+                ]), [1, 2, 3])
+            }
+            
+            try await channel.writeOutbound(1)
+            try await channel.writeOutbound(2)
+            try await channel.writeOutbound(3)
+            try await task.value
+        }
+    }
 
     func testWriteOutboundByteBuffer() throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
