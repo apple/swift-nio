@@ -261,6 +261,10 @@ public final class ServerBootstrap {
     /// failing if the system does not support it. Users are recommended to
     /// only enable this in response to configuration or feature detection.
     ///
+    /// > Note: Enabling this setting will re-enable Nagle's algorithm, even if it
+    /// > had been disabled. This is a temporary workaround for a Linux kernel
+    /// > limitation.
+    ///
     /// - parameters:
     ///     - value: Whether to enable MPTCP or not.
     public func enableMPTCP(_ value: Bool) -> Self {
@@ -693,6 +697,10 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     /// This option is only supported on some systems, and will lead to bind
     /// failing if the system does not support it. Users are recommended to
     /// only enable this in response to configuration or feature detection.
+    ///
+    /// > Note: Enabling this setting will re-enable Nagle's algorithm, even if it
+    /// > had been disabled. This is a temporary workaround for a Linux kernel
+    /// > limitation.
     ///
     /// - parameters:
     ///     - value: Whether to enable MPTCP or not.
