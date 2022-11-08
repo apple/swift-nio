@@ -158,25 +158,32 @@ extension ByteBufferView: RangeReplaceableCollection {
         self = ByteBufferView(ByteBuffer())
     }
 
-    /// Reserves enough space in the underlying `ByteBuffer` to store the specified
-    /// number of bytes.
+    /// Reserves enough space in the underlying `ByteBuffer` such that this view can
+    /// store the specified number of bytes without reallocation.
     ///
     /// See the documentation for ``ByteBuffer.reserveCapacity(_:)`` for more details.
     @inlinable
     public mutating func reserveCapacity(_ minimumCapacity: Int) {
-        self._buffer.reserveCapacity(minimumCapacity)
+        let additionalCapacity = minimumCapacity - self.count
+        if additionalCapacity > 0 {
+            self._buffer.reserveCapacity(self._buffer.capacity + additionalCapacity)
+        }
     }
 
     /// Writes a single byte to the underlying `ByteBuffer`.
     @inlinable
     public mutating func append(_ byte: UInt8) {
-        self._buffer.writeBytes(CollectionOfOne<UInt8>(byte))
+        self._buffer.setBytes(CollectionOfOne<UInt8>(byte), at: self.endIndex)
+        self._range = self._range.startIndex ..< self._range.endIndex.advanced(by: 1)
+        self._buffer.moveWriterIndex(to: self.endIndex)
     }
 
     /// Writes a sequence of bytes to the underlying `ByteBuffer`.
     @inlinable
     public mutating func append<Bytes: Sequence>(contentsOf bytes: Bytes) where Bytes.Element == UInt8 {
-        self._buffer.writeBytes(bytes)
+        let written = self._buffer.setBytes(bytes, at: self.endIndex)
+        self._range = self._range.startIndex ..< self._range.endIndex.advanced(by: written)
+        self._buffer.moveWriterIndex(to: self.endIndex)
     }
 
     @inlinable
@@ -214,7 +221,6 @@ extension ByteBufferView: RangeReplaceableCollection {
             let additionalByteCount = newElements.count - subrange.count
             self._buffer.moveWriterIndex(forwardBy: additionalByteCount)
             self._range = self._range.startIndex ..< self._range.endIndex.advanced(by: additionalByteCount)
-
         }
     }
 }
