@@ -173,7 +173,12 @@ extension ByteBufferView: RangeReplaceableCollection {
     /// Writes a single byte to the underlying `ByteBuffer`.
     @inlinable
     public mutating func append(_ byte: UInt8) {
-        self._buffer.setBytes(CollectionOfOne<UInt8>(byte), at: self.endIndex)
+        // ``CollectionOfOne`` has no witness for
+        // ``Sequence.withContiguousStorageIfAvailable(_:)``. so we do this instead:
+        Swift.withUnsafeBytes(of: byte)
+        {
+            self._buffer.setBytes($0, at: self.endIndex)
+        }
         self._range = self._range.startIndex ..< self._range.endIndex.advanced(by: 1)
         self._buffer.moveWriterIndex(to: self.endIndex)
     }
