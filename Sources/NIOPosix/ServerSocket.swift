@@ -30,10 +30,12 @@ import NIOCore
     ///
     /// - parameters:
     ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
+    ///     - protocolSubtype: The subtype of the protocol, corresponding to the `protocol`
+    ///         argument to the socket syscall. Defaults to 0.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: NIOBSDSocket.ProtocolFamily, setNonBlocking: Bool = false) throws {
-        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: .stream, setNonBlocking: setNonBlocking)
+    init(protocolFamily: NIOBSDSocket.ProtocolFamily, protocolSubtype: Int = 0, setNonBlocking: Bool = false) throws {
+        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: .stream, protocolSubtype: protocolSubtype, setNonBlocking: setNonBlocking)
         switch protocolFamily {
         case .unix:
             cleanupOnClose = true
@@ -119,7 +121,7 @@ import NIOCore
             return sock
         }
     }
-    
+
     /// Close the socket.
     ///
     /// After the socket was closed all other methods will throw an `IOError` when called.

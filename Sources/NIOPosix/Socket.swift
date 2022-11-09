@@ -32,10 +32,12 @@ typealias IOVector = iovec
     /// - parameters:
     ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
     ///     - type: The type of the socket to create.
+    ///     - protocolSubtype: The subtype of the protocol, corresponding to the `protocol`
+    ///         argument to the socket syscall. Defaults to 0.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: NIOBSDSocket.ProtocolFamily, type: NIOBSDSocket.SocketType, setNonBlocking: Bool = false) throws {
-        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
+    init(protocolFamily: NIOBSDSocket.ProtocolFamily, type: NIOBSDSocket.SocketType, protocolSubtype: Int = 0, setNonBlocking: Bool = false) throws {
+        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: type, protocolSubtype: protocolSubtype, setNonBlocking: setNonBlocking)
         try super.init(socket: sock)
     }
 
@@ -249,12 +251,12 @@ typealias IOVector = iovec
                         return try NIOBSDSocket.recvmsg(socket: fd, msgHdr: messageHeader, flags: 0)
                     }
                 }
-                
+
                 // Only look at the control bytes if all is good.
                 if case .processed = result {
                     controlBytes.receivedControlMessages = UnsafeControlMessageCollection(messageHeader: messageHeader)
                 }
-                
+
                 return result
             }
         }

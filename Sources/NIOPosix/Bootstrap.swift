@@ -90,6 +90,7 @@ public final class ServerBootstrap {
     internal var _serverChannelOptions: ChannelOptions.Storage
     @usableFromInline
     internal var _childChannelOptions: ChannelOptions.Storage
+    private var enableMPTCP: Bool
 
     /// Create a `ServerBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -147,8 +148,9 @@ public final class ServerBootstrap {
         self.serverChannelInit = nil
         self.childChannelInit = nil
         self._serverChannelOptions.append(key: ChannelOptions.tcpOption(.tcp_nodelay), value: 1)
+        self.enableMPTCP = false
     }
-    
+
     #if swift(>=5.7)
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
@@ -179,7 +181,7 @@ public final class ServerBootstrap {
         return self
     }
     #endif
-    
+
     #if swift(>=5.7)
     /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`. Note that if the `initializer` fails then the error will be
@@ -253,6 +255,30 @@ public final class ServerBootstrap {
         return self
     }
 
+    /// Enables multi-path TCP support.
+    ///
+    /// This option is only supported on some systems, and will lead to bind
+    /// failing if the system does not support it. Users are recommended to
+    /// only enable this in response to configuration or feature detection.
+    ///
+    /// > Note: Enabling this setting will re-enable Nagle's algorithm, even if it
+    /// > had been disabled. This is a temporary workaround for a Linux kernel
+    /// > limitation.
+    ///
+    /// - parameters:
+    ///     - value: Whether to enable MPTCP or not.
+    public func enableMPTCP(_ value: Bool) -> Self {
+        self.enableMPTCP = value
+
+        // This is a temporary workaround until we get some stable Linux kernel
+        // versions that support TCP_NODELAY and MPTCP.
+        if value {
+            self._serverChannelOptions.remove(key: ChannelOptions.tcpOption(.tcp_nodelay))
+        }
+
+        return self
+    }
+
     /// Bind the `ServerSocketChannel` to `host` and `port`.
     ///
     /// - parameters:
@@ -281,7 +307,7 @@ public final class ServerBootstrap {
             try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
         }
     }
-    
+
     /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
@@ -315,7 +341,10 @@ public final class ServerBootstrap {
     /// - parameters:
     ///     - descriptor: The _Unix file descriptor_ representing the bound stream socket.
     public func withBoundSocket(_ socket: NIOBSDSocket.Handle) -> EventLoopFuture<Channel> {
-        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerSocketChannel {
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
+            if enableMPTCP {
+                throw ChannelError.operationUnsupported
+            }
             return try ServerSocketChannel(socket: socket, eventLoop: eventLoop, group: childEventLoopGroup)
         }
         return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
@@ -332,10 +361,11 @@ public final class ServerBootstrap {
         } catch {
             return group.next().makeFailedFuture(error)
         }
-        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerSocketChannel {
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
             return try ServerSocketChannel(eventLoop: eventLoop,
                                            group: childEventLoopGroup,
-                                           protocolFamily: address.protocol)
+                                           protocolFamily: address.protocol,
+                                           enableMPTCP: enableMPTCP)
         }
 
         return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
@@ -345,7 +375,7 @@ public final class ServerBootstrap {
         }
     }
 
-    private func bind0(makeServerChannel: (_ eventLoop: SelectableEventLoop, _ childGroup: EventLoopGroup) throws -> ServerSocketChannel, _ register: @escaping (EventLoop, ServerSocketChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
+    private func bind0(makeServerChannel: (_ eventLoop: SelectableEventLoop, _ childGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel, _ register: @escaping (EventLoop, ServerSocketChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
         let childEventLoopGroup = self.childGroup
         let serverChannelOptions = self._serverChannelOptions
@@ -355,7 +385,7 @@ public final class ServerBootstrap {
 
         let serverChannel: ServerSocketChannel
         do {
-            serverChannel = try makeServerChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup)
+            serverChannel = try makeServerChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup, self.enableMPTCP)
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
@@ -522,6 +552,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Optional<Resolver>
     private var bindTarget: Optional<SocketAddress>
+    private var enableMPTCP: Bool
 
     /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -555,8 +586,9 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         self.protocolHandlers = nil
         self.resolver = nil
         self.bindTarget = nil
+        self.enableMPTCP = false
     }
-    
+
     #if swift(>=5.7)
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
@@ -603,7 +635,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         return self
     }
     #endif
-    
+
     #if swift(>=5.7)
     /// Sets the protocol handlers that will be added to the front of the `ChannelPipeline` right after the
     /// `channelInitializer` has been called.
@@ -660,6 +692,30 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         return self
     }
 
+    /// Enables multi-path TCP support.
+    ///
+    /// This option is only supported on some systems, and will lead to bind
+    /// failing if the system does not support it. Users are recommended to
+    /// only enable this in response to configuration or feature detection.
+    ///
+    /// > Note: Enabling this setting will re-enable Nagle's algorithm, even if it
+    /// > had been disabled. This is a temporary workaround for a Linux kernel
+    /// > limitation.
+    ///
+    /// - parameters:
+    ///     - value: Whether to enable MPTCP or not.
+    public func enableMPTCP(_ value: Bool) -> Self {
+        self.enableMPTCP = value
+
+        // This is a temporary workaround until we get some stable Linux kernel
+        // versions that support TCP_NODELAY and MPTCP.
+        if value {
+            self._channelOptions.remove(key: ChannelOptions.tcpOption(.tcp_nodelay))
+        }
+
+        return self
+    }
+
     /// Bind the `SocketChannel` to `address`.
     ///
     /// Using `bind` is not necessary unless you need the local address to be bound to a specific address.
@@ -675,7 +731,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 
     func makeSocketChannel(eventLoop: EventLoop,
                            protocolFamily: NIOBSDSocket.ProtocolFamily) throws -> SocketChannel {
-        return try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
+        return try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily, enableMPTCP: self.enableMPTCP)
     }
 
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
@@ -913,7 +969,7 @@ public final class DatagramBootstrap {
         self.group = group
         self.channelInitializer = nil
     }
-    
+
     #if swift(>=5.7)
     /// Initialize the bound `DatagramChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
@@ -1002,7 +1058,7 @@ public final class DatagramBootstrap {
             return try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
         }
     }
-    
+
     /// Bind the `DatagramChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
@@ -1173,7 +1229,7 @@ public final class NIOPipeBootstrap {
         self.group = group
         self.channelInitializer = nil
     }
-    
+
     #if swift(>=5.7)
     /// Initialize the connected `PipeChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.

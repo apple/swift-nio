@@ -27,6 +27,29 @@
 #include <netinet/ip.h>
 #include "liburing_nio.h"
 
+#if __has_include(<linux/mptcp.h>)
+#include <linux/mptcp.h>
+#else
+// A backported copy of the mptcp_info structure to make programming against
+// an uncertain linux kernel easier.
+struct mptcp_info {
+    uint8_t    mptcpi_subflows;
+    uint8_t    mptcpi_add_addr_signal;
+    uint8_t    mptcpi_add_addr_accepted;
+    uint8_t    mptcpi_subflows_max;
+    uint8_t    mptcpi_add_addr_signal_max;
+    uint8_t    mptcpi_add_addr_accepted_max;
+    uint32_t   mptcpi_flags;
+    uint32_t   mptcpi_token;
+    uint64_t   mptcpi_write_seq;
+    uint64_t   mptcpi_snd_una;
+    uint64_t   mptcpi_rcv_nxt;
+    uint8_t    mptcpi_local_addr_used;
+    uint8_t    mptcpi_local_addr_max;
+    uint8_t    mptcpi_csum_enabled;
+};
+#endif
+
 // Some explanation is required here.
 //
 // Due to SR-6772, we cannot get Swift code to directly see any of the mmsg structures or
