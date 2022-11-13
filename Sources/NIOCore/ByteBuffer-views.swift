@@ -175,20 +175,17 @@ extension ByteBufferView: RangeReplaceableCollection {
     public mutating func append(_ byte: UInt8) {
         // ``CollectionOfOne`` has no witness for
         // ``Sequence.withContiguousStorageIfAvailable(_:)``. so we do this instead:
-        Swift.withUnsafeBytes(of: byte)
-        {
-            self._buffer.setBytes($0, at: self.endIndex)
-        }
-        self._range = self._range.startIndex ..< self._range.endIndex.advanced(by: 1)
-        self._buffer.moveWriterIndex(to: self.endIndex)
+        self._buffer.setInteger(byte, at: self._range.upperBound)
+        self._range = self._range.lowerBound ..< self._range.upperBound.advanced(by: 1)
+        self._buffer.moveWriterIndex(to: self._range.upperBound)
     }
 
     /// Writes a sequence of bytes to the underlying `ByteBuffer`.
     @inlinable
     public mutating func append<Bytes: Sequence>(contentsOf bytes: Bytes) where Bytes.Element == UInt8 {
-        let written = self._buffer.setBytes(bytes, at: self.endIndex)
-        self._range = self._range.startIndex ..< self._range.endIndex.advanced(by: written)
-        self._buffer.moveWriterIndex(to: self.endIndex)
+        let written = self._buffer.setBytes(bytes, at: self._range.upperBound)
+        self._range = self._range.lowerBound ..< self._range.upperBound.advanced(by: written)
+        self._buffer.moveWriterIndex(to: self._range.upperBound)
     }
 
     @inlinable
