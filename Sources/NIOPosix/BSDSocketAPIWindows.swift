@@ -439,6 +439,13 @@ extension NIOBSDSocket {
 
         return .processed(Int(nNumberOfBytesToWrite))
     }
+
+    // The protocol subtype for MPTCP.
+    // Returns nil if mptcp is not supported.
+    static var mptcpProtocolSubtype: Int? {
+        // MPTCP not supported on Windows.
+        return nil
+    }
 }
 
 extension NIOBSDSocket {

@@ -236,6 +236,11 @@ extension NIOBSDSocket.OptionLevel {
                 NIOBSDSocket.OptionLevel(rawValue: IPPROTO_TCP)
     #endif
 
+    /// Socket options that apply to MPTCP sockets.
+    ///
+    /// These only work on Linux currently.
+    public static let mptcp = NIOBSDSocket.OptionLevel(rawValue: 284)
+
     /// Socket options that apply to all sockets.
     public static let socket: NIOBSDSocket.OptionLevel =
             NIOBSDSocket.OptionLevel(rawValue: SOL_SOCKET)
@@ -314,6 +319,15 @@ extension NIOBSDSocket.Option {
             NIOBSDSocket.Option(rawValue: TCP_CONNECTION_INFO)
 }
 #endif
+
+// MPTCP options
+//
+// These values are hardcoded as they're fairly new, and not available in all
+// header files yet.
+extension NIOBSDSocket.Option {
+    /// Get info about an MPTCP connection
+    public static let mptcp_info = NIOBSDSocket.Option(rawValue: 1)
+}
 
 // Socket Options
 extension NIOBSDSocket.Option {

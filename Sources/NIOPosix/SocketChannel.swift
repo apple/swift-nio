@@ -50,8 +50,15 @@ extension ByteBuffer {
 final class SocketChannel: BaseStreamSocketChannel<Socket> {
     private var connectTimeout: TimeAmount? = nil
 
-    init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
-        let socket = try Socket(protocolFamily: protocolFamily, type: .stream, setNonBlocking: true)
+    init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
+        var protocolSubtype = 0
+        if enableMPTCP {
+            guard let subtype = NIOBSDSocket.mptcpProtocolSubtype else {
+                throw ChannelError.operationUnsupported
+            }
+            protocolSubtype = subtype
+        }
+        let socket = try Socket(protocolFamily: protocolFamily, type: .stream, protocolSubtype: protocolSubtype, setNonBlocking: true)
         try super.init(socket: socket, parent: nil, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
@@ -154,8 +161,15 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool { return false }
 
-    convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
-        try self.init(serverSocket: try ServerSocket(protocolFamily: protocolFamily, setNonBlocking: true), eventLoop: eventLoop, group: group)
+    convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
+        var protocolSubtype = 0
+        if enableMPTCP {
+            guard let subtype = NIOBSDSocket.mptcpProtocolSubtype else {
+                throw ChannelError.operationUnsupported
+            }
+            protocolSubtype = subtype
+        }
+        try self.init(serverSocket: try ServerSocket(protocolFamily: protocolFamily, protocolSubtype: protocolSubtype, setNonBlocking: true), eventLoop: eventLoop, group: group)
     }
 
     init(serverSocket: ServerSocket, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {

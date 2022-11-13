@@ -362,6 +362,39 @@ public final class NIOAsyncTestingChannel: Channel {
             try self._readFromBuffer(buffer: &self.channelcore.outboundBuffer)
         }
     }
+    
+    /// This method is similar to ``NIOAsyncTestingChannel/readOutbound(as:)`` but will wait if the outbound buffer is empty.
+    /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s outbound buffer. If the
+    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown, if there
+    /// are no elements in the outbound buffer, `nil` will be returned.
+    ///
+    /// Data hits the ``NIOAsyncTestingChannel``'s outbound buffer when data was written using `write`, then `flush`ed, and
+    /// then travelled the `ChannelPipeline` all the way to the front. For data to hit the outbound buffer, the very
+    /// first `ChannelHandler` must have written and flushed it either explicitly (by calling
+    /// `ChannelHandlerContext.write` and `flush`) or implicitly by not implementing `write`/`flush`.
+    ///
+    /// - note: Outbound events travel the `ChannelPipeline` _back to front_.
+    /// - note: ``NIOAsyncTestingChannel/writeOutbound(_:)`` will `write` data through the `ChannelPipeline`, starting with last
+    ///         `ChannelHandler`.
+    public func waitForOutboundWrite<T: Sendable>(as type: T.Type = T.self) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            self.testingEventLoop.execute {
+                do {
+                    if let element: T = try self._readFromBuffer(buffer: &self.channelcore.outboundBuffer) {
+                        continuation.resume(returning: element)
+                        return
+                    }
+                    self.channelcore.outboundBufferConsumer.append { element in
+                        continuation.resume(with: Result {
+                            try self._cast(element)
+                        })
+                    }
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
 
     /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s inbound buffer. If the
     /// first element was of a different type than requested, ``WrongTypeError`` will be thrown, if there
@@ -377,6 +410,37 @@ public final class NIOAsyncTestingChannel: Channel {
     public func readInbound<T: Sendable>(as type: T.Type = T.self) async throws -> T? {
         try await self.testingEventLoop.executeInContext {
             try self._readFromBuffer(buffer: &self.channelcore.inboundBuffer)
+        }
+    }
+    
+    /// This method is similar to ``NIOAsyncTestingChannel/readInbound(as:)`` but will wait if the inbound buffer is empty.
+    /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s inbound buffer. If the
+    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown, if there
+    /// are no elements in the outbound buffer, this method will wait until an element is in the inbound buffer.
+    ///
+    /// Data hits the ``NIOAsyncTestingChannel``'s inbound buffer when data was send through the pipeline using `fireChannelRead`
+    /// and then travelled the `ChannelPipeline` all the way to the back. For data to hit the inbound buffer, the
+    /// last `ChannelHandler` must have send the event either explicitly (by calling
+    /// `ChannelHandlerContext.fireChannelRead`) or implicitly by not implementing `channelRead`.
+    ///
+    /// - note: ``NIOAsyncTestingChannel/writeInbound(_:)`` will fire data through the `ChannelPipeline` using `fireChannelRead`.
+    public func waitForInboundWrite<T: Sendable>(as type: T.Type = T.self) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            self.testingEventLoop.execute {
+                do {
+                    if let element: T = try self._readFromBuffer(buffer: &self.channelcore.inboundBuffer) {
+                        continuation.resume(returning: element)
+                        return
+                    }
+                    self.channelcore.inboundBufferConsumer.append { element in
+                        continuation.resume(with: Result {
+                            try self._cast(element)
+                        })
+                    }
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
         }
     }
 
@@ -435,6 +499,7 @@ public final class NIOAsyncTestingChannel: Channel {
             throw error
         }
     }
+    
 
     @inlinable
     func _readFromBuffer<T>(buffer: inout CircularBuffer<NIOAny>) throws -> T? {
@@ -443,9 +508,13 @@ public final class NIOAsyncTestingChannel: Channel {
         if buffer.isEmpty {
             return nil
         }
-        let elem = buffer.removeFirst()
-        guard let t = self._channelCore.tryUnwrapData(elem, as: T.self) else {
-            throw WrongTypeError(expected: T.self, actual: type(of: self._channelCore.tryUnwrapData(elem, as: Any.self)!))
+        return try self._cast(buffer.removeFirst(), to: T.self)
+    }
+    
+    @inlinable
+    func _cast<T>(_ element: NIOAny, to: T.Type = T.self) throws -> T {
+        guard let t = self._channelCore.tryUnwrapData(element, as: T.self) else {
+            throw WrongTypeError(expected: T.self, actual: type(of: self._channelCore.tryUnwrapData(element, as: Any.self)!))
         }
         return t
     }
