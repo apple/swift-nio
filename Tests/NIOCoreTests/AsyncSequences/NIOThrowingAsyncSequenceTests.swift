@@ -495,7 +495,11 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
-            return try await iterator.next()
+            let element = try await iterator.next()
+            
+            // Sleeping here to give the other Task a chance to cancel this one.
+            try? await Task.sleep(nanoseconds: 1_000_000)
+            return element
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
