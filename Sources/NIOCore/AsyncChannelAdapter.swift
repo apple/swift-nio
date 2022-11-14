@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+#if compiler(>=5.5.2) && canImport(_Concurrency)
 import DequeModule
 
 @usableFromInline
@@ -24,9 +25,6 @@ enum PendingReadState {
     // .stopProducing and read()
     case pendingRead
 }
-
-#if compiler(>=5.5.2) && canImport(_Concurrency)
-import NIOConcurrencyHelpers
 
 /// A `ChannelHandler` that is used to transform the inbound portion of a NIO
 /// `Channel` into an `AsyncSequence` that supports backpressure.
