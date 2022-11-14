@@ -906,43 +906,48 @@ public final class SocketChannelTest : XCTestCase {
         XCTAssertNoThrow(try serverSocket.close())
     }
 
+
     func testSimpleMPTCP() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+        #if os(Linux)
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverChannel: Channel
+            let serverChannel: Channel
 
-        do {
-            serverChannel = try ServerBootstrap(group: group)
-                .enableMPTCP(true)
-                .bind(host: "127.0.0.1", port: 0)
-                .wait()
-        } catch let error as IOError {
-            // Older Linux kernel versions don't support MPTCP, which is fine.
-            if error.errnoCode != EINVAL && error.errnoCode != EPROTONOSUPPORT {
-                XCTFail("Unexpected error: \(error)")
+            do {
+                serverChannel = try ServerBootstrap(group: group)
+                    .enableMPTCP(true)
+                    .bind(host: "127.0.0.1", port: 0)
+                    .wait()
+            } catch let error as IOError {
+                // Older Linux kernel versions don't support MPTCP, which is fine.
+                if error.errnoCode != EINVAL && error.errnoCode != EPROTONOSUPPORT {
+                    XCTFail("Unexpected error: \(error)")
+                }
+                return
             }
-            return
-        }
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .enableMPTCP(true)
-            .connect(to: serverChannel.localAddress!)
-            .wait())
+            let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+                .enableMPTCP(true)
+                .connect(to: serverChannel.localAddress!)
+                .wait())
 
-        do {
-            let serverInfo = try (serverChannel as? SocketOptionProvider)?.getMPTCPInfo().wait()
-            let clientInfo = try (clientChannel as? SocketOptionProvider)?.getMPTCPInfo().wait()
+            do {
+                let serverInfo = try (serverChannel as? SocketOptionProvider)?.getMPTCPInfo().wait()
+                let clientInfo = try (clientChannel as? SocketOptionProvider)?.getMPTCPInfo().wait()
 
-            XCTAssertNotNil(serverInfo)
-            XCTAssertNotNil(clientInfo)
-        } catch let error as IOError {
-            // Some Linux kernel versions do support MPTCP but don't support the MPTCP_INFO
-            // option.
-            XCTAssertEqual(error.errnoCode, EOPNOTSUPP, "Unexpected error: \(error)")
-            return
-        }
+                XCTAssertNotNil(serverInfo)
+                XCTAssertNotNil(clientInfo)
+            } catch let error as IOError {
+                // Some Linux kernel versions do support MPTCP but don't support the MPTCP_INFO
+                // option.
+                XCTAssertEqual(error.errnoCode, EOPNOTSUPP, "Unexpected error: \(error)")
+                return
+            }
+
+        #endif
     }
+
 }
 
 class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler {
