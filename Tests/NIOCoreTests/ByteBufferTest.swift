@@ -2019,6 +2019,36 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual([0x0, 0x1, 0x2, 0xa, 0xb], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
     }
 
+    func testBufferViewAppend() throws {
+        self.buf.writeBytes([0x0, 0x1, 0x2, 0x3])
+
+        var view = ByteBufferView(self.buf)
+        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0x3]))
+
+        view.append(0xa)
+        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0x3, 0xa]))
+
+        var modifiedBuf = ByteBuffer(view)
+        XCTAssertEqual(self.buf.readerIndex, modifiedBuf.readerIndex)
+        XCTAssertEqual(self.buf.writerIndex + 1, modifiedBuf.writerIndex)
+        XCTAssertEqual([0x0, 0x1, 0x2, 0x3, 0xa], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
+    }
+
+    func testBufferViewAppendContentsOf() throws {
+        self.buf.writeBytes([0x0, 0x1, 0x2, 0x3])
+
+        var view = ByteBufferView(self.buf)
+        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0x3]))
+
+        view.append(contentsOf: [0xa, 0xb])
+        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0x3, 0xa, 0xb]))
+
+        var modifiedBuf = ByteBuffer(view)
+        XCTAssertEqual(self.buf.readerIndex, modifiedBuf.readerIndex)
+        XCTAssertEqual(self.buf.writerIndex + 2, modifiedBuf.writerIndex)
+        XCTAssertEqual([0x0, 0x1, 0x2, 0x3, 0xa, 0xb], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
+    }
+
     func testBufferViewEmpty() throws {
         self.buf.writeBytes([0, 1, 2])
 

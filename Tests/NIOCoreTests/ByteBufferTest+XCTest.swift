@@ -155,6 +155,8 @@ extension ByteBufferTest {
                 ("testBufferViewReplaceSubrangeWithEqualLengthBytes", testBufferViewReplaceSubrangeWithEqualLengthBytes),
                 ("testBufferViewReplaceSubrangeWithFewerBytes", testBufferViewReplaceSubrangeWithFewerBytes),
                 ("testBufferViewReplaceSubrangeWithMoreBytes", testBufferViewReplaceSubrangeWithMoreBytes),
+                ("testBufferViewAppend", testBufferViewAppend),
+                ("testBufferViewAppendContentsOf", testBufferViewAppendContentsOf),
                 ("testBufferViewEmpty", testBufferViewEmpty),
                 ("testBufferViewFirstIndex", testBufferViewFirstIndex),
                 ("testBufferViewLastIndex", testBufferViewLastIndex),
