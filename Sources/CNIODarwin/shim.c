@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <netinet/ip.h>
+#include <netinet/in.h>
 
 int CNIODarwin_sendmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vlen, int flags) {
     // Some quick error checking. If vlen can't fit into int, we bail.
