@@ -122,8 +122,8 @@ extension NIOBSDSocket {
 
     static func socket(domain af: NIOBSDSocket.ProtocolFamily,
                        type: NIOBSDSocket.SocketType,
-                       `protocol`: CInt) throws -> NIOBSDSocket.Handle {
-        return try Posix.socket(domain: af, type: type, protocol: `protocol`)
+                       protocolSubtype: NIOBSDSocket.ProtocolSubtype) throws -> NIOBSDSocket.Handle {
+        return try Posix.socket(domain: af, type: type, protocolSubtype: protocolSubtype)
     }
 
     static func recvmmsg(socket: NIOBSDSocket.Handle,
@@ -212,10 +212,10 @@ extension NIOBSDSocket {
 
     // The protocol subtype for MPTCP.
     // Returns nil if mptcp is not supported.
-    static var mptcpProtocolSubtype: Int? {
+    static var mptcpProtocolSubtype: NIOBSDSocket.ProtocolSubtype? {
         #if os(Linux)
         // Defined by the linux kernel, this is IPPROTO_MPTCP.
-        return 262
+        return .init(rawValue: 262)
         #else
         return nil
         #endif

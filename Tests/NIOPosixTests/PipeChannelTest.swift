@@ -146,7 +146,7 @@ final class PipeChannelTest: XCTestCase {
         var socketPair: [CInt] = [-1, -1]
         XCTAssertNoThrow(try socketPair.withUnsafeMutableBufferPointer { socketPairPtr in
             precondition(socketPairPtr.count == 2)
-            try Posix.socketpair(domain: .local, type: .stream, protocol: 0, socketVector: socketPairPtr.baseAddress)
+            try Posix.socketpair(domain: .local, type: .stream, protocolSubtype: .ip, socketVector: socketPairPtr.baseAddress)
         })
         defer {
             XCTAssertNoThrow(try socketPair.filter { $0 > 0 }.forEach(Posix.close(descriptor:)))

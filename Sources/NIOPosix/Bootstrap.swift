@@ -1085,7 +1085,8 @@ public final class DatagramBootstrap {
         }
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop,
-                                       protocolFamily: address.protocol)
+                                       protocolFamily: address.protocol,
+                                       protocolSubtype: .ip)
         }
         return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             channel.register().flatMap {
@@ -1132,7 +1133,8 @@ public final class DatagramBootstrap {
         }
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop,
-                                       protocolFamily: address.protocol)
+                                       protocolFamily: address.protocol,
+                                       protocolSubtype: .ip)
         }
         return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             channel.register().flatMap {
@@ -1181,6 +1183,7 @@ public final class DatagramBootstrap {
 @available(*, unavailable)
 extension DatagramBootstrap: Sendable {}
 #endif
+
 
 /// A `NIOPipeBootstrap` is an easy way to bootstrap a `PipeChannel` which uses two (uni-directional) UNIX pipes
 /// and makes a `Channel` out of them.

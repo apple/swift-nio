@@ -360,8 +360,8 @@ extension NIOBSDSocket {
     @inline(never)
     static func socket(domain af: NIOBSDSocket.ProtocolFamily,
                        type: NIOBSDSocket.SocketType,
-                       `protocol`: CInt) throws -> NIOBSDSocket.Handle {
-        let socket: NIOBSDSocket.Handle = WinSDK.socket(af.rawValue, type.rawValue, `protocol`)
+                       protocolSubtype: NIOBSDSocket.ProtocolSubtype) throws -> NIOBSDSocket.Handle {
+        let socket: NIOBSDSocket.Handle = WinSDK.socket(af.rawValue, type.rawValue, protocolSubtype.rawValue)
         if socket == WinSDK.INVALID_SOCKET {
             throw IOError(winsock: WSAGetLastError(), reason: "socket")
         }

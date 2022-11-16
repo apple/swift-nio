@@ -36,8 +36,18 @@ typealias IOVector = iovec
     ///         argument to the socket syscall. Defaults to 0.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: NIOBSDSocket.ProtocolFamily, type: NIOBSDSocket.SocketType, protocolSubtype: Int = 0, setNonBlocking: Bool = false) throws {
-        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: type, protocolSubtype: protocolSubtype, setNonBlocking: setNonBlocking)
+    init(
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        type: NIOBSDSocket.SocketType,
+        protocolSubtype: NIOBSDSocket.ProtocolSubtype = .ip,
+        setNonBlocking: Bool = false
+    ) throws {
+        let sock = try BaseSocket.makeSocket(
+            protocolFamily: protocolFamily,
+            type: type,
+            protocolSubtype: protocolSubtype,
+            setNonBlocking: setNonBlocking
+        )
         try super.init(socket: sock)
     }
 

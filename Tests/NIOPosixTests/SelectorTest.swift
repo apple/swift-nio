@@ -40,7 +40,7 @@ class SelectorTest: XCTestCase {
             XCTAssertNoThrow(try selector.close())
         }
 
-        let socket1 = try Socket(protocolFamily: .inet, type: .stream)
+        let socket1 = try Socket(protocolFamily: .inet, type: .stream, protocolSubtype: .ip)
         defer {
             if socket1.isOpen {
                 XCTAssertNoThrow(try socket1.close())
@@ -48,7 +48,7 @@ class SelectorTest: XCTestCase {
         }
         try socket1.setNonBlocking()
 
-        let socket2 = try Socket(protocolFamily: .inet, type: .stream)
+        let socket2 = try Socket(protocolFamily: .inet, type: .stream, protocolSubtype: .ip)
         defer {
             if socket2.isOpen {
                 XCTAssertNoThrow(try socket2.close())
@@ -391,7 +391,7 @@ class SelectorTest: XCTestCase {
         var socketFDs: [CInt] = [-1, -1]
         XCTAssertNoThrow(try Posix.socketpair(domain: .local,
                                               type: .stream,
-                                              protocol: 0,
+                                              protocolSubtype: .ip,
                                               socketVector: &socketFDs))
 
         let numberFires = ManagedAtomic(0)
