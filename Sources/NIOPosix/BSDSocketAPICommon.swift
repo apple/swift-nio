@@ -132,7 +132,7 @@ extension NIOBSDSocket {
     /// called "Protocol" to identify the next level protocol.  This is an 8
     /// bit field.  In Internet Protocol version 6 (IPv6) [RFC8200], this field
     /// is called the "Next Header" field.
-    public struct ProtocolSubtype: RawRepresentable {
+    public struct ProtocolSubtype: RawRepresentable, Hashable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
         
