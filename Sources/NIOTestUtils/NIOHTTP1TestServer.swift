@@ -306,10 +306,8 @@ extension NIOHTTP1TestServer {
     }
 }
 
-#if swift(>=5.6)
-@available(*, unavailable)
-extension NIOHTTP1TestServer: Sendable {}
-#endif
+// All mutable state is protected through `eventLoop`
+extension NIOHTTP1TestServer: @unchecked Sendable {}
 
 // MARK: - API for HTTP server
 extension NIOHTTP1TestServer {
