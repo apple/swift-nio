@@ -284,14 +284,8 @@ echo "Hello SwiftNIO" | nc localhost 9999
 
 If all goes well, you'll see the message echoed back to you.
 
-To work on SwiftNIO in Xcode 11+, you can just open the `Package.swift`
+To work on SwiftNIO in Xcode, you can just open the `Package.swift`
 file in Xcode and use Xcode's support for SwiftPM Packages.
-
-If you want to develop SwiftNIO with Xcode 10, you have to generate an Xcode project:
-
-```bash
-swift package generate-xcodeproj
-```
 
 ### An alternative: using `docker-compose`
 
@@ -377,10 +371,3 @@ dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 [repo-nio-ssl]: https://github.com/apple/swift-nio-ssl
 [repo-nio-transport-services]: https://github.com/apple/swift-nio-transport-services
 [repo-nio-ssh]: https://github.com/apple/swift-nio-ssh
-
-### Speeding up testing
-It's possible to run the test suite in parallel, it can save significant time if you have a larger multi-core machine, just add `--parallel` when running the tests. This can speed up the run time of the test suite by 30x or more.
-
-```
-swift test --parallel
-```
