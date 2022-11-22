@@ -162,12 +162,15 @@ class BaseSocket: BaseSocketProtocol {
     /// - parameters:
     ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
     ///     - type: The type of the socket to create.
-    ///     - protocolSubtype: The subtype of the protocol, corresponding to the `protocol`
-    ///         argument to the socket syscall. Defaults to 0.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - returns: the file descriptor of the socket that was created.
     /// - throws: An `IOError` if creation of the socket failed.
-    static func makeSocket(protocolFamily: NIOBSDSocket.ProtocolFamily, type: NIOBSDSocket.SocketType, protocolSubtype: Int = 0, setNonBlocking: Bool = false) throws -> NIOBSDSocket.Handle {
+    static func makeSocket(
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        type: NIOBSDSocket.SocketType,
+        protocolSubtype: NIOBSDSocket.ProtocolSubtype,
+        setNonBlocking: Bool = false
+    ) throws -> NIOBSDSocket.Handle {
         var sockType: CInt = type.rawValue
         #if os(Linux)
         if setNonBlocking {
@@ -176,7 +179,7 @@ class BaseSocket: BaseSocketProtocol {
         #endif
         let sock = try NIOBSDSocket.socket(domain: protocolFamily,
                                            type: NIOBSDSocket.SocketType(rawValue: sockType),
-                                           protocol: CInt(protocolSubtype))
+                                           protocolSubtype: protocolSubtype)
         #if !os(Linux)
         if setNonBlocking {
             do {
@@ -205,7 +208,7 @@ class BaseSocket: BaseSocketProtocol {
         }
         return sock
     }
-
+    
     /// Cleanup the unix domain socket.
     ///
     /// Deletes the associated file if it exists and has socket type. Does nothing if pathname does not exist.

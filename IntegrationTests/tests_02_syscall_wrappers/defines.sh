@@ -48,6 +48,7 @@ EOF
         "$here/../../Sources/NIOPosix/BSDSocketAPIPosix.swift" \
         "$here/../../Sources/NIOPosix/System.swift" \
         "$here/../../Sources/NIOCore/IO.swift" \
+        "$here/../../Sources/NIOCore/IPProtocol.swift" \
         "$here/../../Sources/NIOCore/NIOSendable.swift" \
         "$tmpdir/syscallwrapper/Sources/syscallwrapper"
     cp "$here/../../Sources/NIOPosix/IO.swift" "$tmpdir/syscallwrapper/Sources/syscallwrapper/NIOPosixIO.swift"
