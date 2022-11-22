@@ -139,7 +139,7 @@ extension NIOBSDSocket {
 }
 
 extension NIOBSDSocket.ProtocolSubtype {
-    static let ip = Self(rawValue: 0)
+    static let `default` = Self(rawValue: 0)
 }
 
 extension NIOBSDSocket.ProtocolSubtype {

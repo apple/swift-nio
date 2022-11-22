@@ -39,7 +39,7 @@ typealias IOVector = iovec
     init(
         protocolFamily: NIOBSDSocket.ProtocolFamily,
         type: NIOBSDSocket.SocketType,
-        protocolSubtype: NIOBSDSocket.ProtocolSubtype = .ip,
+        protocolSubtype: NIOBSDSocket.ProtocolSubtype = .default,
         setNonBlocking: Bool = false
     ) throws {
         let sock = try BaseSocket.makeSocket(

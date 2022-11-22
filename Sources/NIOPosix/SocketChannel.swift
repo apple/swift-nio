@@ -51,7 +51,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     private var connectTimeout: TimeAmount? = nil
 
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
-        var protocolSubtype = NIOBSDSocket.ProtocolSubtype.ip
+        var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
             guard let subtype = NIOBSDSocket.mptcpProtocolSubtype else {
                 throw ChannelError.operationUnsupported
@@ -162,7 +162,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     override public var isWritable: Bool { return false }
 
     convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
-        var protocolSubtype = NIOBSDSocket.ProtocolSubtype.ip
+        var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
             guard let subtype = NIOBSDSocket.mptcpProtocolSubtype else {
                 throw ChannelError.operationUnsupported

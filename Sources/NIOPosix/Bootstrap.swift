@@ -1086,7 +1086,7 @@ public final class DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop,
                                        protocolFamily: address.protocol,
-                                       protocolSubtype: .ip)
+                                       protocolSubtype: .default)
         }
         return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             channel.register().flatMap {
@@ -1134,7 +1134,7 @@ public final class DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop,
                                        protocolFamily: address.protocol,
-                                       protocolSubtype: .ip)
+                                       protocolSubtype: .default)
         }
         return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             channel.register().flatMap {

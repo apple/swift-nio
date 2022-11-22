@@ -381,7 +381,7 @@ class DatagramChannelTests: XCTestCase {
 
             init(error: Int32) throws {
                 self.error = error
-                try super.init(protocolFamily: .inet, type: .datagram, protocolSubtype: .ip)
+                try super.init(protocolFamily: .inet, type: .datagram, protocolSubtype: .default)
             }
 
             override func recvmsg(pointer: UnsafeMutableRawBufferPointer,
@@ -538,7 +538,7 @@ class DatagramChannelTests: XCTestCase {
         }
         let channel = try DatagramChannel(eventLoop: group.next() as! SelectableEventLoop,
                                           protocolFamily: .inet,
-                                          protocolSubtype: .ip)
+                                          protocolSubtype: .default)
         XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
             if let error = error as? ChannelError {
                 XCTAssertEqual(ChannelError.operationUnsupported, error)

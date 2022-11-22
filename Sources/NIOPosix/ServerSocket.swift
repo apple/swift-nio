@@ -34,7 +34,7 @@ import NIOCore
     ///         argument to the socket syscall. Defaults to 0.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: NIOBSDSocket.ProtocolFamily, protocolSubtype: NIOBSDSocket.ProtocolSubtype = .ip, setNonBlocking: Bool = false) throws {
+    init(protocolFamily: NIOBSDSocket.ProtocolFamily, protocolSubtype: NIOBSDSocket.ProtocolSubtype = .default, setNonBlocking: Bool = false) throws {
         let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: .stream, protocolSubtype: protocolSubtype, setNonBlocking: setNonBlocking)
         switch protocolFamily {
         case .unix:
