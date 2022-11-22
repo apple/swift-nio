@@ -26,6 +26,13 @@ public struct NIOIPProtocol: RawRepresentable, Hashable {
     }
 }
 
+extension NIOIPProtocol {
+    /// - precondition: `rawValue` must fit into an `UInt8`
+    public init(_ rawValue: Int) {
+        self.init(rawValue: UInt8(rawValue))
+    }
+}
+
 // Subset of https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml with an RFC
 extension NIOIPProtocol {
     /// IPv6 Hop-by-Hop Option - [RFC8200]
