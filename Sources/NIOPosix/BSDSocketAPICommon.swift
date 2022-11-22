@@ -140,6 +140,16 @@ extension NIOBSDSocket {
 
 extension NIOBSDSocket.ProtocolSubtype {
     static let `default` = Self(rawValue: 0)
+    /// The protocol subtype for MPTCP.
+    /// - returns: nil if MPTCP is not supported.
+    static var mptcp: Self? {
+        #if os(Linux)
+        // Defined by the linux kernel, this is IPPROTO_MPTCP.
+        return .init(rawValue: 262)
+        #else
+        return nil
+        #endif
+    }
 }
 
 extension NIOBSDSocket.ProtocolSubtype {

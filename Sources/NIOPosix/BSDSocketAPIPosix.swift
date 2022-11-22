@@ -209,17 +209,6 @@ extension NIOBSDSocket {
             throw err
         }
     }
-
-    // The protocol subtype for MPTCP.
-    // Returns nil if mptcp is not supported.
-    static var mptcpProtocolSubtype: NIOBSDSocket.ProtocolSubtype? {
-        #if os(Linux)
-        // Defined by the linux kernel, this is IPPROTO_MPTCP.
-        return .init(rawValue: 262)
-        #else
-        return nil
-        #endif
-    }
 }
 
 #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)

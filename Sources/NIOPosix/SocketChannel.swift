@@ -53,7 +53,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
         var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
-            guard let subtype = NIOBSDSocket.mptcpProtocolSubtype else {
+            guard let subtype = NIOBSDSocket.ProtocolSubtype.mptcp else {
                 throw ChannelError.operationUnsupported
             }
             protocolSubtype = subtype
@@ -164,7 +164,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
         var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
-            guard let subtype = NIOBSDSocket.mptcpProtocolSubtype else {
+            guard let subtype = NIOBSDSocket.ProtocolSubtype.mptcp else {
                 throw ChannelError.operationUnsupported
             }
             protocolSubtype = subtype
