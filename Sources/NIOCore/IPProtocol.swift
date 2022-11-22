@@ -112,8 +112,59 @@ extension NIOIPProtocol {
     public static let ethernet = Self(rawValue: 143)
     /// AGGFRAG encapsulation payload for ESP - [RFC-ietf-ipsecme-iptfs-19]
     public static let aggfrag = Self(rawValue: 144)
-    /// Use for experimentation and testing (253) - [RFC3692]
-    public static let useForExperimentationAndTesting1 = Self(rawValue: 253)
-    /// Use for experimentation and testing (254) - [RFC3692]
-    public static let useForExperimentationAndTesting2 = Self(rawValue: 254)
+}
+
+extension NIOIPProtocol: CustomStringConvertible {
+    private var name: String? {
+        switch self {
+        case .hopopt: return "IPv6 Hop-by-Hop Option"
+        case .icmp: return "Internet Control Message"
+        case .igmp: return "Internet Group Management"
+        case .ggp: return "Gateway-to-Gateway"
+        case .ipv4: return "IPv4 encapsulation"
+        case .st: return "Stream"
+        case .tcp: return "Transmission Control"
+        case .egp: return "Exterior Gateway Protocol"
+        case .nvpIi: return "Network Voice Protocol"
+        case .udp: return "User Datagram"
+        case .hmp: return "Host Monitoring"
+        case .rdp: return "Reliable Data Protocol"
+        case .irtp: return "Internet Reliable Transaction"
+        case .isoTp4: return "ISO Transport Protocol Class 4"
+        case .netblt: return "Bulk Data Transfer Protocol"
+        case .dccp: return "Datagram Congestion Control Protocol"
+        case .ipv6: return "IPv6 encapsulation"
+        case .rsvp: return "Reservation Protocol"
+        case .gre: return "Generic Routing Encapsulation"
+        case .dsr: return "Dynamic Source Routing Protocol"
+        case .esp: return "Encap Security Payload"
+        case .ah: return "Authentication Header"
+        case .narp: return "NBMA Address Resolution Protocol"
+        case .ipv6Icmp: return "ICMP for IPv6"
+        case .ipv6Nonxt: return "No Next Header for IPv6"
+        case .ipv6Opts: return "Destination Options for IPv6"
+        case .eigrp: return "EIGRP"
+        case .ospfigp: return "OSPFIGP"
+        case .etherip: return "Ethernet-within-IP Encapsulation"
+        case .encap: return "Encapsulation Header"
+        case .pim: return "Protocol Independent Multicast"
+        case .ipcomp: return "IP Payload Compression Protocol"
+        case .vrrp: return "Virtual Router Redundancy Protocol"
+        case .l2tp: return "Layer Two Tunneling Protocol"
+        case .fc: return "Fibre Channel"
+        case .manet: return "MANET Protocols"
+        case .hip: return "Host Identity Protocol"
+        case .shim6: return "Shim6 Protocol"
+        case .wesp: return "Wrapped Encapsulating Security Payload"
+        case .rohc: return "Robust Header Compression"
+        case .ethernet: return "Ethernet"
+        case .aggfrag: return "AGGFRAG encapsulation payload for ESP"
+        default: return nil
+        }
+    }
+    
+    public var description: String {
+        let name = self.name ?? "Unknown Protocol"
+        return "\(name) - \(rawValue)"
+    }
 }
