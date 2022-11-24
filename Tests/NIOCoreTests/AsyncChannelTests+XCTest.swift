@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2022 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -28,6 +28,12 @@ extension AsyncChannelTests {
    static var allTests : [(String, (AsyncChannelTests) -> () throws -> Void)] {
       return [
                 ("testAsyncChannelBasicFunctionality", testAsyncChannelBasicFunctionality),
+                ("testAsyncChannelBasicWrites", testAsyncChannelBasicWrites),
+                ("testDroppingTheWriterClosesTheWriteSideOfTheChannel", testDroppingTheWriterClosesTheWriteSideOfTheChannel),
+                ("testReadsArePropagated", testReadsArePropagated),
+                ("testErrorsArePropagatedButAfterReads", testErrorsArePropagatedButAfterReads),
+                ("testErrorsArePropagatedToWriters", testErrorsArePropagatedToWriters),
+                ("testChannelBecomingNonWritableDelaysWriters", testChannelBecomingNonWritableDelaysWriters),
            ]
    }
 }

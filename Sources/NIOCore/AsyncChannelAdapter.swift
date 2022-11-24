@@ -72,10 +72,13 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
     @inlinable
     public func channelReadComplete(context: ChannelHandlerContext) {
         if self.buffer.isEmpty {
+            context.fireChannelReadComplete()
             return
         }
 
         guard let source = self.source else {
+            self.buffer.removeAll()
+            context.fireChannelReadComplete()
             return
         }
 
@@ -91,6 +94,7 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
             fatalError("TODO: can this happen?")
         }
         self.buffer.removeAll(keepingCapacity: true)
+        context.fireChannelReadComplete()
     }
 
     @inlinable
@@ -98,6 +102,7 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
         // TODO: make this less nasty
         self.channelReadComplete(context: context)
         self.source?.finish()
+        context.fireChannelInactive()
     }
 
     @inlinable
@@ -105,6 +110,7 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
         // TODO: make this less nasty
         self.channelReadComplete(context: context)
         self.source?.finish(error)
+        context.fireErrorCaught(error)
     }
 
     @inlinable
@@ -129,8 +135,10 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
             self.channelReadComplete(context: context)
             self.source?.finish()
         default:
-            context.fireUserInboundEventTriggered(event)
+            ()
         }
+
+        context.fireUserInboundEventTriggered(event)
     }
 }
 
@@ -232,14 +240,17 @@ public final class NIOAsyncChannelWriterHandler<OutboundOut>: @unchecked Sendabl
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         self.sink?.finish(error: error)
+        context.fireErrorCaught(error)
     }
 
     public func channelInactive(context: ChannelHandlerContext) {
         self.sink?.finish()
+        context.fireChannelInactive()
     }
 
     public func channelWritabilityChanged(context: ChannelHandlerContext) {
         self.sink?.setWritability(to: context.channel.isWritable)
+        context.fireChannelWritabilityChanged()
     }
 }
 
