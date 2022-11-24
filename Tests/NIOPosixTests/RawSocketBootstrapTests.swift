@@ -14,20 +14,24 @@
 
 import XCTest
 import NIOCore
-import NIOPosix
-
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-import Glibc
-#endif
+@testable import NIOPosix
 
 extension NIOIPProtocol {
     static let reservedForTesting = Self(rawValue: 253)
 }
 
+// lazily try's to create a raw socket and caches the error if it fails
+private let cachedRawSocketAPICheck = Result<Void, Error> {
+    let socket = try Socket(protocolFamily: .inet, type: .raw, protocolSubtype: .init(NIOIPProtocol.reservedForTesting), setNonBlocking: true)
+    try socket.close()
+}
+
 func XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI(file: StaticString = #filePath, line: UInt = #line) throws {
-    try XCTSkipIf(geteuid() != 0, "Raw Socket API requires root privileges", file: file, line: line)
+    do {
+        try cachedRawSocketAPICheck.get()
+    } catch let error as IOError where error.errnoCode == EPERM {
+        throw XCTSkip("Raw Socket API requires higher privileges: \(error)", file: file, line: line)
+    }
 }
 
 final class RawSocketBootstrapTests: XCTestCase {
