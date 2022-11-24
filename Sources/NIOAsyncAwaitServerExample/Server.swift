@@ -70,21 +70,16 @@ final class Server {
         // saturating the average small to medium sized machine.
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
-        let serverChannelAndStream: ChannelAndStream<Channel>
+        let serverChannel: NIOAsyncChannel<Channel, Never>
         do {
             // Inside this do block we want to catch any errors from creating the bootstrap.
             // We still have to tidy up, so we can't just let this throw from here.
-            serverChannelAndStream = try await self.makeServerChannel(group: group)
+            serverChannel = try await self.makeServerChannel(group: group)
         } catch {
             // Couldn't create the server channel. We're done here. Shut down the loop and go home.
             try await group.shutdownGracefully()
             throw error
         }
-
-        // We split these two apart here to avoid capturing more than we want to
-        // in any given closure.
-        let serverChannel = serverChannelAndStream.channel
-        let serverChannelStream = serverChannelAndStream.stream
 
         // We now have the server channel and the stream, we can start our work. First, though,
         // we need to prepare to handle cancellation.
@@ -99,7 +94,7 @@ final class Server {
             // to a new child Task in a TaskGroup. These Tasks will be responsible for running the
             // child connections.
             try await withThrowingTaskGroup(of: Void.self) { taskGroup in
-                for try await childChannel in serverChannelStream {
+                for try await childChannel in serverChannel.inboundStream {
                     taskGroup.addTask {
                         await Self.handleChildChannel(childChannel)
                     }
@@ -108,7 +103,7 @@ final class Server {
         } onCancel: {
             // This is a nice property of NIO: we can do this without actually
             // awaiting it.
-            serverChannel.close(promise: nil)
+            serverChannel.channel.close(promise: nil)
         }
 
         // In our final step, we shut the loop down gracefully. This isn't necessary at
@@ -117,7 +112,7 @@ final class Server {
         try await group.shutdownGracefully()
     }
 
-    private func makeServerChannel(group: EventLoopGroup) async throws -> ChannelAndStream<Channel> {
+    private func makeServerChannel(group: EventLoopGroup) async throws -> NIOAsyncChannel<Channel, Never> {
         // We create a server bootstrap, as normal. Note that we don't add any
         // application handlers using the channel initializers. If we had protocol
         // handlers (such as the HTTP encoders and decoders) we would add them here,
@@ -133,10 +128,7 @@ final class Server {
             // We set the buffer size to maxMessagesPerRead. This is a nice middle ground: it ensures a
             // full read will fit in an empty buffer nicely.
             let maxMessagesPerRead = try await channel.getOption(ChannelOptions.maxMessagesPerRead).get()
-            let config = NIOInboundChannelStreamConfig(bufferSize: Int(maxMessagesPerRead))
-            let stream = try await channel.makeAsyncStream(of: Channel.self, config: config)
-
-            return ChannelAndStream(channel: channel, stream: stream)
+            return try await NIOAsyncChannel(wrapping: channel)
         } catch {
             // If creating the stream fails, we have to clean up the server channel here. We suppress any errors
             // from close: they will just obscure the real problem.
@@ -160,8 +152,7 @@ final class Server {
                 // Again, we wrap the channel in a stream, and again, we use maxMessagesPerRead as our buffer
                 // size.
                 let bufferSize = try await channel.getOption(ChannelOptions.maxMessagesPerRead).get()
-                let config = NIOInboundChannelStreamConfig(bufferSize: Int(bufferSize))
-                let inboundMessageStream = try await channel.makeAsyncStream(of: ByteBuffer.self, config: config)
+                let asyncChannel = try await NIOAsyncChannel(wrapping: channel, inboundIn: ByteBuffer.self, outboundOut: ByteBuffer.self)
 
                 // And here's our business logic! As we're a TCP echo server, we just echo the bytes back
                 // to the client.
@@ -169,8 +160,8 @@ final class Server {
                 // For extra credit, let me pose an interview question I once received: with the pattern
                 // below, it's possible for us to accidentally livelock the connection. How, and how could
                 // we change our business logic to fix it?
-                for try await message in inboundMessageStream {
-                    try await channel.writeAndFlush(message)
+                for try await message in asyncChannel.inboundStream {
+                    try await asyncChannel.writeAndFlush(message)
                 }
             } catch {
                 // In a real server we'd log the error here, but I didn't want to add swift-log
@@ -185,11 +176,5 @@ final class Server {
             channel.close(promise: nil)
         }
     }
-}
-
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-fileprivate struct ChannelAndStream<InboundIn> {
-    var channel: Channel
-    var stream: NIOInboundChannelStream<InboundIn>
 }
 #endif

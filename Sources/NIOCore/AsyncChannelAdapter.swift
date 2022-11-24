@@ -28,11 +28,6 @@ enum PendingReadState {
 
 /// A `ChannelHandler` that is used to transform the inbound portion of a NIO
 /// `Channel` into an `AsyncSequence` that supports backpressure.
-///
-/// Users should not construct this type directly: instead, they should use the
-/// `Channel.makeAsyncStream(of:config:)` method to use the `Channel`'s preferred
-/// construction. These types are `public` only to allow other `Channel`s to
-/// override the implementation of that method.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable, ChannelDuplexHandler {
     public typealias OutboundIn = Any
@@ -69,6 +64,9 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
     @inlinable
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         self.buffer.append(self.unwrapInboundIn(data))
+
+        // We forward on reads here to enable better channel composition.
+        context.fireChannelRead(data)
     }
 
     @inlinable
@@ -166,7 +164,10 @@ public final class NIOAsyncChannelWriterHandler<OutboundOut>: @unchecked Sendabl
     public typealias OutboundOut = OutboundOut
 
     @usableFromInline
-    typealias Sink = NIOAsyncWriter<OutboundOut, NIOAsyncChannelWriterHandler<OutboundOut>>.Sink
+    typealias Writer = NIOAsyncWriter<OutboundOut, NIOAsyncChannelWriterHandler<OutboundOut>>
+
+    @usableFromInline
+    typealias Sink = Writer.Sink
 
     @usableFromInline
     var sink: Sink?
@@ -188,6 +189,14 @@ public final class NIOAsyncChannelWriterHandler<OutboundOut>: @unchecked Sendabl
         self.loop = loop
         self.bufferedWrites = Deque()
         self.isWriting = false
+    }
+
+    @inlinable
+    static func makeHandler(loop: EventLoop) -> (NIOAsyncChannelWriterHandler<OutboundOut>, Writer) {
+        let handler = NIOAsyncChannelWriterHandler<OutboundOut>(loop: loop)
+        let writerComponents = Writer.makeWriter(elementType: OutboundOut.self, isWritable: true, delegate: handler)
+        handler.sink = writerComponents.sink
+        return (handler, writerComponents.writer)
     }
 
     @inlinable

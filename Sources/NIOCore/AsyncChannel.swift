@@ -34,15 +34,31 @@
 /// protocol-specific logic (such as parsers and encoders) and those that implement business
 /// logic. Protocol-specific logic should be implemented as a ``ChannelHandler``, while business
 /// logic should use ``NIOAsyncChannel`` to consume and produce data to the network.
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public final class NIOAsyncChannel<InboundIn, OutboundOut>: Sendable {
     /// The underlying channel being wrapped by this ``NIOAsyncChannel``.
     public let channel: Channel
 
+    public let inboundStream: NIOInboundChannelStream<InboundIn>
+
+    @usableFromInline
+    let outboundWriter: NIOAsyncChannelWriterHandler<OutboundOut>.Writer
+
     @inlinable
-    public init(wrapping channel: Channel, inboundIn: InboundIn.Type = InboundIn.self, outboundOut: OutboundOut.Type = OutboundOut.self) {
+    public init(wrapping channel: Channel, inboundIn: InboundIn.Type = InboundIn.self, outboundOut: OutboundOut.Type = OutboundOut.self) async throws {
         self.channel = channel
 
-        // TODO: setup
+        // TODO: Make configurable
+        // TODO: Reduce the number of loop hops here
+        self.inboundStream = try await NIOInboundChannelStream<InboundIn>(channel, lowWatermark: 0, highWatermark: 100)
+        let (handler, writer) = NIOAsyncChannelWriterHandler<OutboundOut>.makeHandler(loop: channel.eventLoop)
+        try await channel.pipeline.addHandler(handler)
+        self.outboundWriter = writer
+    }
+
+    @inlinable
+    public func writeAndFlush(_ data: OutboundOut) async throws {
+        try await self.outboundWriter.yield(data)
     }
 }
 #endif
