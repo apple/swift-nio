@@ -75,7 +75,11 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
             return
         }
 
-        let result = self.source!.yield(contentsOf: self.buffer)
+        guard let source = self.source else {
+            return
+        }
+
+        let result = source.yield(contentsOf: self.buffer)
         switch result {
         case .produceMore:
             ()
@@ -93,14 +97,14 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
     public func channelInactive(context: ChannelHandlerContext) {
         // TODO: make this less nasty
         self.channelReadComplete(context: context)
-        self.source!.finish()
+        self.source?.finish()
     }
 
     @inlinable
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         // TODO: make this less nasty
         self.channelReadComplete(context: context)
-        self.source!.finish(error)
+        self.source?.finish(error)
     }
 
     @inlinable
@@ -123,7 +127,7 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
         case ChannelEvent.inputClosed:
             // TODO: make this less nasty
             self.channelReadComplete(context: context)
-            self.source!.finish()
+            self.source?.finish()
         default:
             context.fireUserInboundEventTriggered(event)
         }
