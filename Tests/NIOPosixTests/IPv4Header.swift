@@ -266,7 +266,7 @@ extension IPv4Header: CustomStringConvertible {
         Total Length: \(totalLength) bytes
         Identification: \(identification)
         Flags: \(String(flags, radix: 2))
-        Fragment Offset: \(fragmentOffset) Bytes
+        Fragment Offset: \(fragmentOffset) bytes
         Time to Live: \(timeToLive)
         Protocol: \(`protocol`)
         Header Checksum: \(headerChecksum) (\(isValidChecksum() ? "valid" : "*not* valid"))
