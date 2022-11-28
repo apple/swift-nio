@@ -37,7 +37,7 @@ extension IPv4Address: CustomStringConvertible {
 struct IPv4Header: Hashable {
     static let size: Int = 20
     
-    private var versionAndIhl: UInt8
+    fileprivate var versionAndIhl: UInt8
     var version: UInt8 {
         get {
             versionAndIhl >> 4
@@ -58,7 +58,7 @@ struct IPv4Header: Hashable {
             assert(newValue == internetHeaderLength)
         }
     }
-    private var dscpAndEcn: UInt8
+    fileprivate var dscpAndEcn: UInt8
     var differentiatedServicesCodePoint: UInt8 {
         get {
             dscpAndEcn >> 2
@@ -81,7 +81,7 @@ struct IPv4Header: Hashable {
     }
     var totalLength: UInt16
     var identification: UInt16
-    private var flagsAndFragmentOffset: UInt16
+    fileprivate var flagsAndFragmentOffset: UInt16
     var flags: UInt8 {
         get {
             UInt8(flagsAndFragmentOffset >> 13)
@@ -108,59 +108,30 @@ struct IPv4Header: Hashable {
     var sourceIpAddress: IPv4Address
     var destinationIpAddress: IPv4Address
     
-    init?(buffer: inout ByteBuffer) {
-        #if canImport(Darwin)
-        guard
-            let versionAndIhl: UInt8 = buffer.readInteger(),
-            let dscpAndEcn: UInt8 = buffer.readInteger(),
-            // On BSD, the total length is in host byte order
-            let totalLength: UInt16 = buffer.readInteger(endianness: .host),
-            let identification: UInt16 = buffer.readInteger(),
-            // fragmentOffset is in host byte order as well but it is always zero in our tests
-            // and fragmentOffset is 13 bits in size so we can't just use readInteger(endianness: .host)
-            let flagsAndFragmentOffset: UInt16 = buffer.readInteger(),
-            let timeToLive: UInt8 = buffer.readInteger(),
-            let `protocol`: UInt8 = buffer.readInteger(),
-            let headerChecksum: UInt16 = buffer.readInteger(),
-            let sourceIpAddress: UInt32 = buffer.readInteger(),
-            let destinationIpAddress: UInt32 = buffer.readInteger()
-        else { return nil }
-        #elseif os(Linux)
-        guard let (
-            versionAndIhl,
-            dscpAndEcn,
-            totalLength,
-            identification,
-            flagsAndFragmentOffset,
-            timeToLive,
-            `protocol`,
-            headerChecksum,
-            sourceIpAddress,
-            destinationIpAddress
-        ) = buffer.readMultipleIntegers(as: (
-            UInt8,
-            UInt8,
-            UInt16,
-            UInt16,
-            UInt16,
-            UInt8,
-            UInt8,
-            UInt16,
-            UInt32,
-            UInt32
-        ).self) else { return nil }
-        #endif
+    fileprivate init(
+        versionAndIhl: UInt8,
+        dscpAndEcn: UInt8,
+        totalLength: UInt16,
+        identification: UInt16,
+        flagsAndFragmentOffset: UInt16,
+        timeToLive: UInt8,
+        `protocol`: NIOIPProtocol,
+        headerChecksum: UInt16,
+        sourceIpAddress: IPv4Address,
+        destinationIpAddress: IPv4Address
+    ) {
         self.versionAndIhl = versionAndIhl
         self.dscpAndEcn = dscpAndEcn
         self.totalLength = totalLength
         self.identification = identification
         self.flagsAndFragmentOffset = flagsAndFragmentOffset
         self.timeToLive = timeToLive
-        self.`protocol` = .init(rawValue: `protocol`)
+        self.`protocol` = `protocol`
         self.headerChecksum = headerChecksum
-        self.sourceIpAddress = .init(rawValue: sourceIpAddress)
-        self.destinationIpAddress = .init(rawValue: destinationIpAddress)
+        self.sourceIpAddress = sourceIpAddress
+        self.destinationIpAddress = destinationIpAddress
     }
+    
     init() {
         self.versionAndIhl = 0
         self.dscpAndEcn = 0
@@ -205,44 +176,112 @@ struct IPv4Header: Hashable {
         ].reduce(UInt16(0), onesComplementAdd)
         return sum == 0
     }
-    
-    func write(to buffer: inout ByteBuffer) {
-        assert({
-            var buffer = ByteBuffer()
-            self._write(to: &buffer)
-            let newValue = Self(buffer: &buffer)
-            return self == newValue
-        }())
-        self._write(to: &buffer)
-    }
-    
-    private func _write(to buffer: inout ByteBuffer) {
+}
+
+extension ByteBuffer {
+    @discardableResult
+    mutating func readIPv4Header() -> IPv4Header? {
         #if canImport(Darwin)
-        buffer.writeInteger(versionAndIhl)
-        buffer.writeInteger(dscpAndEcn)
-        // On BSD, the total length needs to be in host byte order
-        buffer.writeInteger(totalLength, endianness: .host)
-        buffer.writeInteger(identification)
-        // fragmentOffset needs to be in host byte order as well but it is always zero in our tests
-        // and fragmentOffset is 13 bits in size so we can't just use writeInteger(endianness: .host)
-        buffer.writeInteger(flagsAndFragmentOffset)
-        buffer.writeInteger(timeToLive)
-        buffer.writeInteger(`protocol`.rawValue)
-        buffer.writeInteger(headerChecksum)
-        buffer.writeInteger(sourceIpAddress.rawValue)
-        buffer.writeInteger(destinationIpAddress.rawValue)
+        var initialState = self
+        guard
+            let versionAndIhl: UInt8 = self.readInteger(),
+            let dscpAndEcn: UInt8 = self.readInteger(),
+            // On BSD, the total length is in host byte order
+            let totalLength: UInt16 = self.readInteger(endianness: .host),
+            let identification: UInt16 = self.readInteger(),
+            // fragmentOffset is in host byte order as well but it is always zero in our tests
+            // and fragmentOffset is 13 bits in size so we can't just use readInteger(endianness: .host)
+            let flagsAndFragmentOffset: UInt16 = self.readInteger(),
+            let timeToLive: UInt8 = self.readInteger(),
+            let `protocol`: UInt8 = self.readInteger(),
+            let headerChecksum: UInt16 = self.readInteger(),
+            let sourceIpAddress: UInt32 = self.readInteger(),
+            let destinationIpAddress: UInt32 = self.readInteger()
+        else {
+            self = initialState
+            return nil
+        }
         #elseif os(Linux)
-        buffer.writeMultipleIntegers(
+        guard let (
             versionAndIhl,
             dscpAndEcn,
             totalLength,
             identification,
             flagsAndFragmentOffset,
             timeToLive,
-            `protocol`.rawValue,
+            `protocol`,
             headerChecksum,
-            sourceIpAddress.rawValue,
-            destinationIpAddress.rawValue
+            sourceIpAddress,
+            destinationIpAddress
+        ) = self.readMultipleIntegers(as: (
+            UInt8,
+            UInt8,
+            UInt16,
+            UInt16,
+            UInt16,
+            UInt8,
+            UInt8,
+            UInt16,
+            UInt32,
+            UInt32
+        ).self) else { return nil }
+        #endif
+        return .init(
+            versionAndIhl: versionAndIhl,
+            dscpAndEcn: dscpAndEcn,
+            totalLength: totalLength,
+            identification: identification,
+            flagsAndFragmentOffset: flagsAndFragmentOffset,
+            timeToLive: timeToLive,
+            protocol: .init(rawValue: `protocol`),
+            headerChecksum: headerChecksum,
+            sourceIpAddress: .init(rawValue: sourceIpAddress),
+            destinationIpAddress: .init(rawValue: destinationIpAddress)
+        )
+    }
+}
+
+extension ByteBuffer {
+    @discardableResult
+    mutating func writeIPv4Header(_ header: IPv4Header) -> Int {
+        assert({
+            var buffer = ByteBuffer()
+            buffer._writeIPv4Header(header: header)
+            let newValue = Self(buffer: buffer)
+            return self == newValue
+        }())
+        return self._writeIPv4Header(header: header)
+    }
+    
+    @discardableResult
+    private mutating func _writeIPv4Header(header: IPv4Header) -> Int {
+        #if canImport(Darwin)
+        let firstPart = self.writeInteger(header.versionAndIhl) +
+            self.writeInteger(header.dscpAndEcn) +
+            // On BSD, the total length needs to be in host byte order
+            self.writeInteger(header.totalLength, endianness: .host)
+        let secondPart = self.writeInteger(header.identification) +
+            // fragmentOffset needs to be in host byte order as well but it is always zero in our tests
+            // and fragmentOffset is 13 bits in size so we can't just use writeInteger(endianness: .host)
+            self.writeInteger(header.flagsAndFragmentOffset) +
+            self.writeInteger(header.timeToLive)
+        let thirdPart = self.writeInteger(header.`protocol`.rawValue) +
+            self.writeInteger(header.headerChecksum) +
+            self.writeInteger(header.sourceIpAddress.rawValue)
+        let forthPart = self.writeInteger(header.destinationIpAddress.rawValue)
+        return firstPart + secondPart + thirdPart + forthPart
+        #elseif os(Linux)
+        return self.writeMultipleIntegers(
+            header.versionAndIhl,
+            header.dscpAndEcn,
+            header.totalLength,
+            header.identification,
+            header.flagsAndFragmentOffset,
+            header.timeToLive,
+            header.`protocol`.rawValue,
+            header.headerChecksum,
+            header.sourceIpAddress.rawValue,
+            header.destinationIpAddress.rawValue
         )
         #endif
     }

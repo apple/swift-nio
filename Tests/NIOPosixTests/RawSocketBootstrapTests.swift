@@ -58,7 +58,7 @@ final class RawSocketBootstrapTests: XCTestCase {
         
         let receivedMessages = Set(try channel.waitForDatagrams(count: 10).map { envelop -> String in
             var data = envelop.data
-            let header = try XCTUnwrap(IPv4Header(buffer: &data))
+            let header = try XCTUnwrap(data.readIPv4Header())
             XCTAssertEqual(header.version, 4)
             XCTAssertEqual(header.protocol, .reservedForTesting)
             #if canImport(Darwin)
@@ -111,7 +111,7 @@ final class RawSocketBootstrapTests: XCTestCase {
         
         let receivedMessages = Set(try readChannel.waitForDatagrams(count: 10).map { envelop -> String in
             var data = envelop.data
-            let header = try XCTUnwrap(IPv4Header(buffer: &data))
+            let header = try XCTUnwrap(data.readIPv4Header())
             XCTAssertEqual(header.version, 4)
             XCTAssertEqual(header.protocol, .reservedForTesting)
             #if canImport(Darwin)
@@ -159,7 +159,7 @@ final class RawSocketBootstrapTests: XCTestCase {
             header.destinationIpAddress = .init(127, 0, 0, 1)
             header.sourceIpAddress = .init(127, 0, 0, 1)
             header.setChecksum()
-            header.write(to: &packet)
+            packet.writeIPv4Header(header)
             packet.writeImmutableBuffer(message)
             _ = try channel.write(AddressedEnvelope(
                 remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0),
@@ -170,7 +170,7 @@ final class RawSocketBootstrapTests: XCTestCase {
         
         let receivedMessages = Set(try channel.waitForDatagrams(count: 10).map { envelop -> String in
             var data = envelop.data
-            let header = try XCTUnwrap(IPv4Header(buffer: &data))
+            let header = try XCTUnwrap(data.readIPv4Header())
             XCTAssertEqual(header.version, 4)
             XCTAssertEqual(header.protocol, .reservedForTesting)
             #if canImport(Darwin)
