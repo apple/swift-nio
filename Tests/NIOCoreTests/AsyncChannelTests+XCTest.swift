@@ -36,6 +36,7 @@ extension AsyncChannelTests {
                 ("testChannelBecomingNonWritableDelaysWriters", testChannelBecomingNonWritableDelaysWriters),
                 ("testBufferDropsReadsIfTheReaderIsGone", testBufferDropsReadsIfTheReaderIsGone),
                 ("testRemovingTheHandlerTerminatesTheInboundStream", testRemovingTheHandlerTerminatesTheInboundStream),
+                ("testManagingBackpressure", testManagingBackpressure),
            ]
    }
 }

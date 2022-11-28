@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+import Atomics
 import NIOConcurrencyHelpers
 import NIOCore
 import NIOEmbedded
@@ -222,9 +223,116 @@ final class AsyncChannelTests: XCTestCase {
             XCTAssertEqual(reads, ["hello"])
         }
     }
+
+    func testManagingBackpressure() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        XCTAsyncTest(timeout: 5) {
+            let channel = NIOAsyncTestingChannel()
+            let readCounter = ReadCounter()
+            try await channel.pipeline.addHandler(readCounter)
+            let wrapped = try await NIOAsyncChannel(wrapping: channel, backpressureStrategy: .init(lowWatermark: 2, highWatermark: 4), inboundIn: Void.self, outboundOut: Never.self )
+
+            // Attempt to read. This should succeed an arbitrary number of times.
+            XCTAssertEqual(readCounter.readCount, 0)
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+            }
+            XCTAssertEqual(readCounter.readCount, 3)
+
+            // Push 3 elements into the buffer. Reads continue to work.
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelReadComplete()
+
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+            }
+            XCTAssertEqual(readCounter.readCount, 6)
+
+            // Add one more element into the buffer. This should flip our backpressure mode, and the reads should now be delayed.
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelReadComplete()
+
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+            }
+            XCTAssertEqual(readCounter.readCount, 6)
+
+            // More elements don't help.
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelReadComplete()
+
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+            }
+            XCTAssertEqual(readCounter.readCount, 6)
+
+            // Now consume three elements from the pipeline. This should not unbuffer the read, as 3 elements remain.
+            let reader = wrapped.inboundStream.makeAsyncIterator()
+            for _ in 0..<3 {
+                try await XCTAsyncAssertNotNil(try await reader.next())
+            }
+            await channel.testingEventLoop.run()
+            XCTAssertEqual(readCounter.readCount, 6)
+
+            // Removing the next element should trigger an automatic read.
+            try await XCTAsyncAssertNotNil(try await reader.next())
+            await channel.testingEventLoop.run()
+            XCTAssertEqual(readCounter.readCount, 7)
+
+            // Reads now work again, even if more data arrives.
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelReadComplete()
+
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+            }
+            XCTAssertEqual(readCounter.readCount, 13)
+
+            // The next reads arriving pushes us past the limit again.
+            // This time we won't read.
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelReadComplete()
+            }
+            XCTAssertEqual(readCounter.readCount, 13)
+
+            // This time we'll consume 4 more elements, and we won't find a read at all.
+            for _ in 0..<4 {
+                try await XCTAsyncAssertNotNil(try await reader.next())
+            }
+            await channel.testingEventLoop.run()
+            XCTAssertEqual(readCounter.readCount, 13)
+
+            // But the next reads work fine.
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+            }
+            XCTAssertEqual(readCounter.readCount, 16)
+        }
+    }
+
 }
 
-final class CloseRecorder: ChannelOutboundHandler {
+final fileprivate class CloseRecorder: ChannelOutboundHandler {
     typealias OutboundIn = Any
     typealias OutboundOut = Any
 
@@ -241,7 +349,7 @@ final class CloseRecorder: ChannelOutboundHandler {
     }
 }
 
-final class CloseSuppressor: ChannelOutboundHandler {
+final fileprivate class CloseSuppressor: ChannelOutboundHandler {
     typealias OutboundIn = Any
     typealias OutboundOut = Any
 
@@ -251,12 +359,28 @@ final class CloseSuppressor: ChannelOutboundHandler {
     }
 }
 
+final fileprivate class ReadCounter: ChannelOutboundHandler, @unchecked Sendable {
+    typealias OutboundIn = Any
+    typealias OutboundOut = Any
+
+    private let _readCount = ManagedAtomic(0)
+
+    var readCount: Int {
+        self._readCount.load(ordering: .acquiring)
+    }
+
+    func read(context: ChannelHandlerContext) {
+        self._readCount.wrappingIncrement(ordering: .releasing)
+        context.read()
+    }
+}
+
 fileprivate enum TestError: Error {
     case bang
 }
 
 extension Array {
-    init<AS: AsyncSequence>(_ sequence: AS) async throws where AS.Element == Self.Element {
+    fileprivate init<AS: AsyncSequence>(_ sequence: AS) async throws where AS.Element == Self.Element {
         self = []
 
         for try await nextElement in sequence {
