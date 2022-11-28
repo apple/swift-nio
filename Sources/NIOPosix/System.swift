@@ -602,17 +602,15 @@ internal enum Posix {
 
     @inline(never)
     internal static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> IOResult<ssize_t> {
-        let cappedSize = size < Int32.max ? size : size_t(Int32.max)
         return try syscallForbiddingEINVAL {
-            sysRead(descriptor, pointer, cappedSize)
+            sysRead(descriptor, pointer, size)
         }
     }
 
     @inline(never)
     internal static func pread(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t, offset: off_t) throws -> IOResult<ssize_t> {
-        let cappedSize = size < Int32.max ? size : size_t(Int32.max)
         return try syscallForbiddingEINVAL {
-            sysPread(descriptor, pointer, cappedSize, offset)
+            sysPread(descriptor, pointer, size, offset)
         }
     }
 
