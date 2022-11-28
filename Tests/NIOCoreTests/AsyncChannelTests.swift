@@ -188,7 +188,7 @@ final class AsyncChannelTests: XCTestCase {
             try await channel.pipeline.addHandler(CloseSuppressor()).get()
             do {
                 // Create the NIOAsyncChannel, then drop it. The handler will still be in the pipeline.
-                let wrapped = try await NIOAsyncChannel(wrapping: channel, inboundIn: Sentinel.self, outboundOut: Never.self)
+                _ = try await NIOAsyncChannel(wrapping: channel, inboundIn: Sentinel.self, outboundOut: Never.self)
             }
 
             weak var sentinel: Sentinel? = nil

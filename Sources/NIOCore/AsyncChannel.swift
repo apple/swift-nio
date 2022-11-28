@@ -45,12 +45,16 @@ public final class NIOAsyncChannel<InboundIn, OutboundOut>: Sendable {
     let outboundWriter: NIOAsyncChannelWriterHandler<OutboundOut>.Writer
 
     @inlinable
-    public init(wrapping channel: Channel, inboundIn: InboundIn.Type = InboundIn.self, outboundOut: OutboundOut.Type = OutboundOut.self) async throws {
+    public init(
+        wrapping channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        inboundIn: InboundIn.Type = InboundIn.self,
+        outboundOut: OutboundOut.Type = OutboundOut.self
+    ) async throws {
         self.channel = channel
 
-        // TODO: Make configurable
         // TODO: Reduce the number of loop hops here
-        self.inboundStream = try await NIOInboundChannelStream<InboundIn>(channel, lowWatermark: 0, highWatermark: 100)
+        self.inboundStream = try await NIOInboundChannelStream<InboundIn>(channel, backpressureStrategy: backpressureStrategy)
         let (handler, writer) = NIOAsyncChannelWriterHandler<OutboundOut>.makeHandler(loop: channel.eventLoop)
         try await channel.pipeline.addHandler(handler)
         self.outboundWriter = writer

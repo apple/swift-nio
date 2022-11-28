@@ -290,12 +290,27 @@ public struct NIOInboundChannelStream<InboundIn>: @unchecked Sendable {
     @usableFromInline let _producer: Producer
 
     @inlinable
-    public init(_ channel: Channel, lowWatermark: Int, highWatermark: Int) async throws {
-        let handler = NIOAsyncChannelAdapterHandler<InboundIn>(loop: channel.eventLoop)
-        let sequence = Producer.makeSequence(backPressureStrategy: .init(lowWatermark: lowWatermark, highWatermark: highWatermark), delegate: handler)
-        handler.source = sequence.source
-        try await channel.pipeline.addHandler(handler)
-        self._producer = sequence.sequence
+    public init(_ channel: Channel, backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?) async throws {
+        self._producer = try await channel.eventLoop.submit {
+            let handler = NIOAsyncChannelAdapterHandler<InboundIn>(loop: channel.eventLoop)
+            let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
+
+            if let userProvided = backpressureStrategy {
+                strategy = userProvided
+            } else if let syncOptions = channel.syncOptions {
+                let maxReads = Int(Swift.min(UInt(Int.max), try syncOptions.getOption(ChannelOptions.maxMessagesPerRead)))
+                strategy = .init(lowWatermark: maxReads / 4, highWatermark: maxReads)
+            } else {
+                // Fallback strategy. These numbers are really just arbitrary. The odds that we can't get
+                // a syncOptions is very low.
+                strategy = .init(lowWatermark: 25, highWatermark: 100)
+            }
+
+            let sequence = Producer.makeSequence(backPressureStrategy: strategy, delegate: handler)
+            handler.source = sequence.source
+            try channel.pipeline.syncOperations.addHandler(handler)
+            return sequence.sequence
+        }.get()
     }
 }
 
