@@ -29,9 +29,13 @@ enum ProducingState {
 /// A `ChannelHandler` that is used to transform the inbound portion of a NIO
 /// `Channel` into an `AsyncSequence` that supports backpressure.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable, ChannelDuplexHandler, RemovableChannelHandler {
-    public typealias OutboundIn = Any
-    public typealias OutboundOut = Any
+@usableFromInline
+internal final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable, ChannelDuplexHandler, RemovableChannelHandler {
+    @usableFromInline
+    typealias OutboundIn = Any
+
+    @usableFromInline
+    typealias OutboundOut = Any
 
     @usableFromInline
     typealias Source = NIOThrowingAsyncSequenceProducer<InboundIn, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelAdapterHandler<InboundIn>>.Source
@@ -47,23 +51,23 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
     @usableFromInline let loop: EventLoop
 
     @inlinable
-    internal init(loop: EventLoop) {
+    init(loop: EventLoop) {
         self.loop = loop
     }
 
     @inlinable
-    public func handlerAdded(context: ChannelHandlerContext) {
+    func handlerAdded(context: ChannelHandlerContext) {
         self.context = context
     }
 
     @inlinable
-    public func handlerRemoved(context: ChannelHandlerContext) {
+    func handlerRemoved(context: ChannelHandlerContext) {
         self._completeStream(context: context)
         self.context = nil
     }
 
     @inlinable
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         self.buffer.append(self.unwrapInboundIn(data))
 
         // We forward on reads here to enable better channel composition.
@@ -71,25 +75,25 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
     }
 
     @inlinable
-    public func channelReadComplete(context: ChannelHandlerContext) {
+    func channelReadComplete(context: ChannelHandlerContext) {
         self._deliverReads(context: context)
         context.fireChannelReadComplete()
     }
 
     @inlinable
-    public func channelInactive(context: ChannelHandlerContext) {
+    func channelInactive(context: ChannelHandlerContext) {
         self._completeStream(context: context)
         context.fireChannelInactive()
     }
 
     @inlinable
-    public func errorCaught(context: ChannelHandlerContext, error: Error) {
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
         self._completeStream(with: error, context: context)
         context.fireErrorCaught(error)
     }
 
     @inlinable
-    public func read(context: ChannelHandlerContext) {
+    func read(context: ChannelHandlerContext) {
         switch self.producingState {
         case .keepProducing:
             context.read()
@@ -101,7 +105,7 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
     }
 
     @inlinable
-    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case ChannelEvent.inputClosed:
             self._completeStream(context: context)
@@ -113,7 +117,7 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
     }
 
     @inlinable
-    internal func _completeStream(with error: Error? = nil, context: ChannelHandlerContext) {
+    func _completeStream(with error: Error? = nil, context: ChannelHandlerContext) {
         guard let source = self.source else {
             return
         }
@@ -131,7 +135,7 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
     }
 
     @inlinable
-    internal func _deliverReads(context: ChannelHandlerContext) {
+    func _deliverReads(context: ChannelHandlerContext) {
         if self.buffer.isEmpty {
             return
         }
@@ -156,7 +160,8 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncChannelAdapterHandler: NIOAsyncSequenceProducerDelegate {
-    public func didTerminate() {
+    @inlinable
+    func didTerminate() {
         self.loop.execute {
             self.source = nil
 
@@ -165,7 +170,8 @@ extension NIOAsyncChannelAdapterHandler: NIOAsyncSequenceProducerDelegate {
         }
     }
 
-    public func produceMore() {
+    @inlinable
+    func produceMore() {
         self.loop.execute {
             switch self.producingState {
             case .producingPaused:
@@ -182,11 +188,11 @@ extension NIOAsyncChannelAdapterHandler: NIOAsyncSequenceProducerDelegate {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
-internal final class NIOAsyncChannelWriterHandler<OutboundOut>: @unchecked Sendable, ChannelDuplexHandler {
-    public typealias InboundIn = Any
-    public typealias InboundOut = Any
-    public typealias OutboundIn = Any
-    public typealias OutboundOut = OutboundOut
+internal final class NIOAsyncChannelWriterHandler<OutboundOut>: @unchecked Sendable, ChannelDuplexHandler, RemovableChannelHandler {
+    @usableFromInline typealias InboundIn = Any
+    @usableFromInline typealias InboundOut = Any
+    @usableFromInline typealias OutboundIn = Any
+    @usableFromInline typealias OutboundOut = OutboundOut
 
     @usableFromInline
     typealias Writer = NIOAsyncWriter<OutboundOut, NIOAsyncChannelWriterHandler<OutboundOut>>
@@ -225,26 +231,31 @@ internal final class NIOAsyncChannelWriterHandler<OutboundOut>: @unchecked Senda
         context.flush()
     }
 
-    public func handlerAdded(context: ChannelHandlerContext) {
+    @inlinable
+    func handlerAdded(context: ChannelHandlerContext) {
         self.context = context
     }
 
-    public func handlerRemoved(context: ChannelHandlerContext) {
+    @inlinable
+    func handlerRemoved(context: ChannelHandlerContext) {
         self.context = nil
         self.sink = nil
     }
 
-    public func errorCaught(context: ChannelHandlerContext, error: Error) {
+    @inlinable
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
         self.sink?.finish(error: error)
         context.fireErrorCaught(error)
     }
 
-    public func channelInactive(context: ChannelHandlerContext) {
+    @inlinable
+    func channelInactive(context: ChannelHandlerContext) {
         self.sink?.finish()
         context.fireChannelInactive()
     }
 
-    public func channelWritabilityChanged(context: ChannelHandlerContext) {
+    @inlinable
+    func channelWritabilityChanged(context: ChannelHandlerContext) {
         self.sink?.setWritability(to: context.channel.isWritable)
         context.fireChannelWritabilityChanged()
     }
@@ -252,10 +263,11 @@ internal final class NIOAsyncChannelWriterHandler<OutboundOut>: @unchecked Senda
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncChannelWriterHandler: NIOAsyncWriterSinkDelegate {
-    public typealias Element = OutboundOut
+    @usableFromInline
+    typealias Element = OutboundOut
 
     @inlinable
-    public func didYield(contentsOf sequence: Deque<OutboundOut>) {
+    func didYield(contentsOf sequence: Deque<OutboundOut>) {
         // This is always called from an async context, so we must loop-hop.
         // Because we always loop-hop, we're always at the top of a stack frame. As this
         // is the only source of writes for us, and as this channel handler doesn't implement
@@ -273,7 +285,7 @@ extension NIOAsyncChannelWriterHandler: NIOAsyncWriterSinkDelegate {
     }
 
     @inlinable
-    public func didTerminate(error: Error?) {
+    func didTerminate(error: Error?) {
         // TODO: how do we spot full closure here?
         // This always called from an async context, so we must loop-hop.
         self.loop.execute {

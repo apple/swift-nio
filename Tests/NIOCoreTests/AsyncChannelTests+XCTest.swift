@@ -37,6 +37,7 @@ extension AsyncChannelTests {
                 ("testBufferDropsReadsIfTheReaderIsGone", testBufferDropsReadsIfTheReaderIsGone),
                 ("testRemovingTheHandlerTerminatesTheInboundStream", testRemovingTheHandlerTerminatesTheInboundStream),
                 ("testManagingBackpressure", testManagingBackpressure),
+                ("testRemovingWriterHandlerDropsWritesGracefully", testRemovingWriterHandlerDropsWritesGracefully),
            ]
    }
 }

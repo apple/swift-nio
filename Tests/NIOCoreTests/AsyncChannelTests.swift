@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import Atomics
 import NIOConcurrencyHelpers
-import NIOCore
+@testable import NIOCore
 import NIOEmbedded
 import XCTest
 
@@ -330,6 +330,33 @@ final class AsyncChannelTests: XCTestCase {
         }
     }
 
+    func testRemovingWriterHandlerDropsWritesGracefully() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        XCTAsyncTest(timeout: 5) {
+            let channel = NIOAsyncTestingChannel()
+            let wrapped = try await NIOAsyncChannel(wrapping: channel, inboundIn: Never.self, outboundOut: Sentinel.self)
+
+            // Dodgy as hell here, we're going to remove the write handler from the pipeline.
+            try await channel.pipeline.context(handlerType: NIOAsyncChannelWriterHandler<Sentinel>.self).flatMap {
+                channel.pipeline.removeHandler(context: $0)
+            }.get()
+
+            // Now we're going to try to write a `Sentinel` value.
+            weak var sentinel: Sentinel? = nil
+            do {
+                let strongSentinel: Sentinel? = Sentinel()
+                sentinel = strongSentinel!
+
+                await XCTAssertThrowsError(try await wrapped.writeAndFlush(strongSentinel!)) { error in
+                    XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished())
+                }
+            }
+
+            try await XCTAsyncAssertNil(try await channel.readOutbound(as: Sentinel.self))
+            XCTAssertNil(sentinel)
+            try await channel.close()
+        }
+    }
 }
 
 final fileprivate class CloseRecorder: ChannelOutboundHandler {
