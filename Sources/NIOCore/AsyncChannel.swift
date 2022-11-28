@@ -35,7 +35,7 @@
 /// logic. Protocol-specific logic should be implemented as a ``ChannelHandler``, while business
 /// logic should use ``NIOAsyncChannel`` to consume and produce data to the network.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public final class NIOAsyncChannel<InboundIn, OutboundOut>: Sendable {
+public final class NIOAsyncChannel<InboundIn: Sendable, OutboundOut: Sendable>: Sendable {
     /// The underlying channel being wrapped by this ``NIOAsyncChannel``.
     public let channel: Channel
 
@@ -51,12 +51,15 @@ public final class NIOAsyncChannel<InboundIn, OutboundOut>: Sendable {
         inboundIn: InboundIn.Type = InboundIn.self,
         outboundOut: OutboundOut.Type = OutboundOut.self
     ) async throws {
+        let (inboundStream, writer) = try await channel.eventLoop.submit {
+            let inboundStream = try NIOInboundChannelStream<InboundIn>(channel, backpressureStrategy: backpressureStrategy)
+            let (handler, writer) = NIOAsyncChannelWriterHandler<OutboundOut>.makeHandler(loop: channel.eventLoop)
+            try channel.pipeline.syncOperations.addHandler(handler)
+            return (inboundStream, writer)
+        }.get()
+        
         self.channel = channel
-
-        // TODO: Reduce the number of loop hops here
-        self.inboundStream = try await NIOInboundChannelStream<InboundIn>(channel, backpressureStrategy: backpressureStrategy)
-        let (handler, writer) = NIOAsyncChannelWriterHandler<OutboundOut>.makeHandler(loop: channel.eventLoop)
-        try await channel.pipeline.addHandler(handler)
+        self.inboundStream = inboundStream
         self.outboundWriter = writer
     }
 
