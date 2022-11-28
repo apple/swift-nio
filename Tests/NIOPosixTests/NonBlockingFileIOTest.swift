@@ -282,6 +282,16 @@ class NonBlockingFileIOTest: XCTestCase {
         XCTAssertEqual(2, numCalls)
     }
 
+    func testReadMoreThanIntMaxBytesDoesntThrow() throws {
+        try XCTSkipIf(MemoryLayout<size_t>.size == MemoryLayout<UInt32>.size)
+        // here we try to read way more data back from the file than it contains but it serves the purpose
+        // even on a small file the OS will return EINVAL if you try to read > INT_MAX bytes
+        try withTemporaryFile(content: "some-dummy-content", { (filehandle, path) -> Void in
+            let content = try self.fileIO.read(fileHandle: filehandle, byteCount:Int(Int32.max)+10, allocator: .init(), eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(String(buffer: content), "some-dummy-content")
+        })
+    }
+
     func testChunkedReadDoesNotReadShort() throws {
         var innerError: Error? = nil
         try withPipe { readFH, writeFH in
