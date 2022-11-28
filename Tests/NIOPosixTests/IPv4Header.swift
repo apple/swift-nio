@@ -144,45 +144,15 @@ struct IPv4Header: Hashable {
         self.sourceIpAddress = .init(rawValue: 0)
         self.destinationIpAddress = .init(rawValue: 0)
     }
-    
-    mutating func setChecksum() {
-        self.headerChecksum = ~[
-            UInt16(versionAndIhl) << 8 | UInt16(dscpAndEcn),
-            totalLength,
-            identification,
-            flagsAndFragmentOffset,
-            UInt16(timeToLive) << 8 | UInt16(`protocol`.rawValue),
-            UInt16(sourceIpAddress.rawValue >> 16),
-            UInt16(sourceIpAddress.rawValue & 0b0000_0000_0000_0000_1111_1111_1111_1111),
-            UInt16(destinationIpAddress.rawValue >> 16),
-            UInt16(destinationIpAddress.rawValue & 0b0000_0000_0000_0000_1111_1111_1111_1111),
-        ].reduce(UInt16(0), onesComplementAdd)
-        
-        assert(isValidChecksum())
-    }
-    
-    func isValidChecksum() -> Bool {
-        let sum = ~[
-            UInt16(versionAndIhl) << 8 | UInt16(dscpAndEcn),
-            totalLength,
-            identification,
-            flagsAndFragmentOffset,
-            UInt16(timeToLive) << 8 | UInt16(`protocol`.rawValue),
-            headerChecksum,
-            UInt16(sourceIpAddress.rawValue >> 16),
-            UInt16(sourceIpAddress.rawValue & 0b0000_0000_0000_0000_1111_1111_1111_1111),
-            UInt16(destinationIpAddress.rawValue >> 16),
-            UInt16(destinationIpAddress.rawValue & 0b0000_0000_0000_0000_1111_1111_1111_1111),
-        ].reduce(UInt16(0), onesComplementAdd)
-        return sum == 0
-    }
 }
+
+
 
 extension ByteBuffer {
     @discardableResult
     mutating func readIPv4Header() -> IPv4Header? {
         #if canImport(Darwin)
-        var initialState = self
+        let initialState = self
         guard
             let versionAndIhl: UInt8 = self.readInteger(),
             let dscpAndEcn: UInt8 = self.readInteger(),
@@ -247,8 +217,8 @@ extension ByteBuffer {
         assert({
             var buffer = ByteBuffer()
             buffer._writeIPv4Header(header: header)
-            let newValue = Self(buffer: buffer)
-            return self == newValue
+            let writtenHeader = buffer.readIPv4Header()
+            return header == writtenHeader
         }())
         return self._writeIPv4Header(header: header)
     }
@@ -256,20 +226,20 @@ extension ByteBuffer {
     @discardableResult
     private mutating func _writeIPv4Header(header: IPv4Header) -> Int {
         #if canImport(Darwin)
-        let firstPart = self.writeInteger(header.versionAndIhl) +
+        return self.writeInteger(header.versionAndIhl) +
             self.writeInteger(header.dscpAndEcn) +
             // On BSD, the total length needs to be in host byte order
-            self.writeInteger(header.totalLength, endianness: .host)
-        let secondPart = self.writeInteger(header.identification) +
+            self.writeInteger(header.totalLength, endianness: .host) +
+            self.writeInteger(header.identification) +
             // fragmentOffset needs to be in host byte order as well but it is always zero in our tests
             // and fragmentOffset is 13 bits in size so we can't just use writeInteger(endianness: .host)
             self.writeInteger(header.flagsAndFragmentOffset) +
-            self.writeInteger(header.timeToLive)
-        let thirdPart = self.writeInteger(header.`protocol`.rawValue) +
+            self.writeInteger(header.timeToLive) +
+            self.writeInteger(header.`protocol`.rawValue) +
             self.writeInteger(header.headerChecksum) +
-            self.writeInteger(header.sourceIpAddress.rawValue)
-        let forthPart = self.writeInteger(header.destinationIpAddress.rawValue)
-        return firstPart + secondPart + thirdPart + forthPart
+            self.writeInteger(header.sourceIpAddress.rawValue) +
+            self.writeInteger(header.destinationIpAddress.rawValue)
+        
         #elseif os(Linux)
         return self.writeMultipleIntegers(
             header.versionAndIhl,
@@ -287,12 +257,73 @@ extension ByteBuffer {
     }
 }
 
+extension IPv4Header {
+    func computeChecksum() -> UInt16 {
+        let checksum = ~[
+            UInt16(versionAndIhl) << 8 | UInt16(dscpAndEcn),
+            totalLength,
+            identification,
+            flagsAndFragmentOffset,
+            UInt16(timeToLive) << 8 | UInt16(`protocol`.rawValue),
+            UInt16(sourceIpAddress.rawValue >> 16),
+            UInt16(sourceIpAddress.rawValue & 0b0000_0000_0000_0000_1111_1111_1111_1111),
+            UInt16(destinationIpAddress.rawValue >> 16),
+            UInt16(destinationIpAddress.rawValue & 0b0000_0000_0000_0000_1111_1111_1111_1111),
+        ].reduce(UInt16(0), onesComplementAdd)
+        assert(isValidChecksum(checksum))
+        return checksum
+    }
+    mutating func setChecksum() {
+        self.headerChecksum = computeChecksum()
+    }
+    func isValidChecksum(_ headerChecksum: UInt16) -> Bool {
+        let sum = ~[
+            UInt16(versionAndIhl) << 8 | UInt16(dscpAndEcn),
+            totalLength,
+            identification,
+            flagsAndFragmentOffset,
+            UInt16(timeToLive) << 8 | UInt16(`protocol`.rawValue),
+            headerChecksum,
+            UInt16(sourceIpAddress.rawValue >> 16),
+            UInt16(sourceIpAddress.rawValue & 0b0000_0000_0000_0000_1111_1111_1111_1111),
+            UInt16(destinationIpAddress.rawValue >> 16),
+            UInt16(destinationIpAddress.rawValue & 0b0000_0000_0000_0000_1111_1111_1111_1111),
+        ].reduce(UInt16(0), onesComplementAdd)
+        return sum == 0
+    }
+    func isValidChecksum() -> Bool {
+        isValidChecksum(headerChecksum)
+    }
+}
+
 private func onesComplementAdd<Integer: FixedWidthInteger>(lhs: Integer, rhs: Integer) -> Integer {
     var (sum, overflowed) = lhs.addingReportingOverflow(rhs)
     if overflowed {
         sum &+= 1
     }
     return sum
+}
+
+extension IPv4Header {
+    var platformIndependentTotalLengthForReceivedPacketFromRawSocket: UInt16 {
+        #if canImport(Darwin)
+        // On BSD the IP header will only contain the size of the ip packet body, not the header.
+        // This is known bug which can't be fixed without breaking old apps which already workaround the issue
+        // like e.g. we do now too.
+        return totalLength + 20
+        #elseif os(Linux)
+        return totalLength
+        #endif
+    }
+    var platformIndependentChecksumForReceivedPacketFromRawSocket: UInt16 {
+        #if canImport(Darwin)
+        // On BSD the checksum is always zero and we need to compute it
+        precondition(headerChecksum == 0)
+        return computeChecksum()
+        #elseif os(Linux)
+        return headerChecksum
+        #endif
+    }
 }
 
 extension IPv4Header: CustomStringConvertible {

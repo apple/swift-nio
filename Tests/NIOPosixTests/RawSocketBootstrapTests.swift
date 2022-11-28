@@ -61,18 +61,8 @@ final class RawSocketBootstrapTests: XCTestCase {
             let header = try XCTUnwrap(data.readIPv4Header())
             XCTAssertEqual(header.version, 4)
             XCTAssertEqual(header.protocol, .reservedForTesting)
-            #if canImport(Darwin)
-            // On BSD the IP header will only contain the size of the ip packet body not the header.
-            // This is known bug which can't be fixed without breaking old apps which already workaround the issue
-            // like we do.
-            XCTAssertEqual(Int(header.totalLength), data.readableBytes)
-            // On BSD the checksum is always zero
-            XCTAssertEqual(header.headerChecksum, 0)
-            #elseif os(Linux)
-            XCTAssertEqual(Int(header.totalLength), IPv4Header.size + data.readableBytes)
-            XCTAssertTrue(header.isValidChecksum(), "\(header)")
-            #endif
-            
+            XCTAssertEqual(Int(header.platformIndependentTotalLengthForReceivedPacketFromRawSocket), IPv4Header.size + data.readableBytes)
+            XCTAssertTrue(header.isValidChecksum(header.platformIndependentChecksumForReceivedPacketFromRawSocket), "\(header)")
             XCTAssertEqual(header.sourceIpAddress, .init(127, 0, 0, 1))
             XCTAssertEqual(header.destinationIpAddress, .init(127, 0, 0, 1))
             return String(buffer: data)
@@ -114,18 +104,8 @@ final class RawSocketBootstrapTests: XCTestCase {
             let header = try XCTUnwrap(data.readIPv4Header())
             XCTAssertEqual(header.version, 4)
             XCTAssertEqual(header.protocol, .reservedForTesting)
-            #if canImport(Darwin)
-            // On BSD the IP header will only contain the size of the ip packet body not the header.
-            // This is known bug which can't be fixed without breaking old apps which already workaround the issue
-            // like we do.
-            XCTAssertEqual(Int(header.totalLength), data.readableBytes)
-            // On BSD the checksum is always zero
-            XCTAssertEqual(header.headerChecksum, 0)
-            #elseif os(Linux)
-            XCTAssertEqual(Int(header.totalLength), IPv4Header.size + data.readableBytes)
-            XCTAssertTrue(header.isValidChecksum(), "\(header)")
-            #endif
-            XCTAssertTrue(header.isValidChecksum())
+            XCTAssertEqual(Int(header.platformIndependentTotalLengthForReceivedPacketFromRawSocket), IPv4Header.size + data.readableBytes)
+            XCTAssertTrue(header.isValidChecksum(header.platformIndependentChecksumForReceivedPacketFromRawSocket), "\(header)")
             XCTAssertEqual(header.sourceIpAddress, .init(127, 0, 0, 1))
             XCTAssertEqual(header.destinationIpAddress, .init(127, 0, 0, 1))
             return String(buffer: data)
@@ -173,15 +153,8 @@ final class RawSocketBootstrapTests: XCTestCase {
             let header = try XCTUnwrap(data.readIPv4Header())
             XCTAssertEqual(header.version, 4)
             XCTAssertEqual(header.protocol, .reservedForTesting)
-            #if canImport(Darwin)
-            // On BSD the IP header will only contain the size of the ip packet body not the header.
-            // This is known bug which can't be fixed without breaking old apps which already workaround the issue
-            // like we do.
-            XCTAssertEqual(Int(header.totalLength), data.readableBytes)
-            #elseif os(Linux)
-            XCTAssertEqual(Int(header.totalLength), IPv4Header.size + data.readableBytes)
-            #endif
-            XCTAssertTrue(header.isValidChecksum())
+            XCTAssertEqual(Int(header.platformIndependentTotalLengthForReceivedPacketFromRawSocket), IPv4Header.size + data.readableBytes)
+            XCTAssertTrue(header.isValidChecksum(header.platformIndependentChecksumForReceivedPacketFromRawSocket), "\(header)")
             XCTAssertEqual(header.sourceIpAddress, .init(127, 0, 0, 1))
             XCTAssertEqual(header.destinationIpAddress, .init(127, 0, 0, 1))
             return String(buffer: data)
