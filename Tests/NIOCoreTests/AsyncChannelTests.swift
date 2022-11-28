@@ -180,6 +180,48 @@ final class AsyncChannelTests: XCTestCase {
             try await channel.close().get()
         }
     }
+
+    func testBufferDropsReadsIfTheReaderIsGone() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        XCTAsyncTest(timeout: 5) {
+            let channel = NIOAsyncTestingChannel()
+            try await channel.pipeline.addHandler(CloseSuppressor()).get()
+            do {
+                // Create the NIOAsyncChannel, then drop it. The handler will still be in the pipeline.
+                let wrapped = try await NIOAsyncChannel(wrapping: channel, inboundIn: Sentinel.self, outboundOut: Never.self)
+            }
+
+            weak var sentinel: Sentinel? = nil
+            do {
+                let strongSentinel: Sentinel? = Sentinel()
+                sentinel = strongSentinel!
+                try await XCTAsyncAssertNotNil(try await channel.pipeline.handler(type: NIOAsyncChannelAdapterHandler<Sentinel>.self).get())
+                try await channel.writeInbound(strongSentinel!)
+                _ = try await channel.readInbound(as: Sentinel.self)
+            }
+
+            XCTAssertNil(sentinel)
+        }
+    }
+
+    func testRemovingTheHandlerTerminatesTheInboundStream() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        XCTAsyncTest(timeout: 5) {
+            let channel = NIOAsyncTestingChannel()
+            let wrapped = try await NIOAsyncChannel(wrapping: channel, inboundIn: String.self, outboundOut: Never.self)
+
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.syncOperations.fireChannelRead(NIOAny("hello"))
+                _ = channel.pipeline.context(handlerType: NIOAsyncChannelAdapterHandler<String>.self).flatMap {
+                    channel.pipeline.removeHandler(context: $0)
+                }
+            }
+            await channel.testingEventLoop.run()
+
+            let reads = try await Array(wrapped.inboundStream)
+            XCTAssertEqual(reads, ["hello"])
+        }
+    }
 }
 
 final class CloseRecorder: ChannelOutboundHandler {
@@ -199,6 +241,16 @@ final class CloseRecorder: ChannelOutboundHandler {
     }
 }
 
+final class CloseSuppressor: ChannelOutboundHandler {
+    typealias OutboundIn = Any
+    typealias OutboundOut = Any
+
+    func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        // We drop the close here.
+        promise?.fail(TestError.bang)
+    }
+}
+
 fileprivate enum TestError: Error {
     case bang
 }
@@ -212,5 +264,7 @@ extension Array {
         }
     }
 }
+
+final fileprivate class Sentinel { }
 
 

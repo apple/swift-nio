@@ -29,7 +29,7 @@ enum PendingReadState {
 /// A `ChannelHandler` that is used to transform the inbound portion of a NIO
 /// `Channel` into an `AsyncSequence` that supports backpressure.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable, ChannelDuplexHandler {
+public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable, ChannelDuplexHandler, RemovableChannelHandler {
     public typealias OutboundIn = Any
     public typealias OutboundOut = Any
 
@@ -58,6 +58,8 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
 
     @inlinable
     public func handlerRemoved(context: ChannelHandlerContext) {
+        self.channelReadComplete(context: context)
+        self.source?.finish()
         self.context = nil
     }
 
@@ -84,14 +86,12 @@ public final class NIOAsyncChannelAdapterHandler<InboundIn>: @unchecked Sendable
 
         let result = source.yield(contentsOf: self.buffer)
         switch result {
-        case .produceMore:
+        case .produceMore, .dropped:
             ()
         case .stopProducing:
             if self.pendingReadState != .pendingRead {
                 self.pendingReadState = .readBlocked
             }
-        case .dropped:
-            fatalError("TODO: can this happen?")
         }
         self.buffer.removeAll(keepingCapacity: true)
         context.fireChannelReadComplete()

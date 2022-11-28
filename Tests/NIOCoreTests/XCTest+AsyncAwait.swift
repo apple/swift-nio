@@ -116,3 +116,12 @@ internal func XCTAssertNoThrowWithResult<Result>(
     return nil
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+internal func XCTAsyncAssertNotNil(
+    _ expression: @autoclosure () async throws -> Any?,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) async rethrows {
+    let result = try await expression()
+    XCTAssertNotNil(result, file: file, line: line)
+}

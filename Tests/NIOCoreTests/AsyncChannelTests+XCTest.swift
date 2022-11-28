@@ -34,6 +34,8 @@ extension AsyncChannelTests {
                 ("testErrorsArePropagatedButAfterReads", testErrorsArePropagatedButAfterReads),
                 ("testErrorsArePropagatedToWriters", testErrorsArePropagatedToWriters),
                 ("testChannelBecomingNonWritableDelaysWriters", testChannelBecomingNonWritableDelaysWriters),
+                ("testBufferDropsReadsIfTheReaderIsGone", testBufferDropsReadsIfTheReaderIsGone),
+                ("testRemovingTheHandlerTerminatesTheInboundStream", testRemovingTheHandlerTerminatesTheInboundStream),
            ]
    }
 }
