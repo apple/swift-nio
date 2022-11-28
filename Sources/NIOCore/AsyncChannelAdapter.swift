@@ -26,11 +26,79 @@ enum ProducingState {
     case producingPausedWithOutstandingRead
 }
 
+/// A helper type that lets ``NIOAsyncChannelAdapterHandler`` and ``NIOAsyncChannelWriterHandler`` collude
+/// to ensure that the ``Channel`` they share is closed appropriately.
+///
+/// The strategy of this type is that it keeps track of which side has closed, so that the handlers can work out
+/// which of them was "last", in order to arrange closure.
+@usableFromInline
+final class CloseRatchet {
+    @usableFromInline
+    enum State {
+        case notClosed
+        case readClosed
+        case writeClosed
+        case bothClosed
+
+        @inlinable
+        mutating func closeRead() -> Action {
+            switch self {
+            case .notClosed:
+                self = .readClosed
+                return .nothing
+            case .writeClosed:
+                self = .bothClosed
+                return .close
+            case .readClosed, .bothClosed:
+                preconditionFailure("Duplicate read closure")
+            }
+        }
+
+        @inlinable
+        mutating func closeWrite() -> Action {
+            switch self {
+            case .notClosed:
+                self = .writeClosed
+                return .nothing
+            case .readClosed:
+                self = .bothClosed
+                return .close
+            case .writeClosed, .bothClosed:
+                preconditionFailure("Duplicate write closure")
+            }
+        }
+    }
+
+    @usableFromInline
+    enum Action {
+        case nothing
+        case close
+    }
+
+    @usableFromInline
+    var _state: State
+
+    @inlinable
+    init() {
+        self._state = .notClosed
+    }
+
+    @inlinable
+    func closeRead() -> Action {
+        return self._state.closeRead()
+    }
+
+    @inlinable
+    func closeWrite() -> Action {
+        return self._state.closeWrite()
+    }
+}
+
 /// A `ChannelHandler` that is used to transform the inbound portion of a NIO
 /// `Channel` into an `AsyncSequence` that supports backpressure.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
-internal final class NIOAsyncChannelAdapterHandler<InboundIn: Sendable>: ChannelDuplexHandler, RemovableChannelHandler {
+internal final class NIOAsyncChannelAdapterHandler<InboundIn: Sendable>: ChannelDuplexHandler {
     @usableFromInline
     typealias OutboundIn = Any
 
@@ -50,9 +118,12 @@ internal final class NIOAsyncChannelAdapterHandler<InboundIn: Sendable>: Channel
 
     @usableFromInline let loop: EventLoop
 
+    @usableFromInline let closeRatchet: CloseRatchet
+
     @inlinable
-    init(loop: EventLoop) {
+    init(loop: EventLoop, closeRatchet: CloseRatchet) {
         self.loop = loop
+        self.closeRatchet = closeRatchet
     }
 
     @inlinable
@@ -167,6 +238,13 @@ extension NIOAsyncChannelAdapterHandler {
 
         // Wedges the read open forever, we'll never read again.
         self.producingState = .producingPausedWithOutstandingRead
+
+        switch self.closeRatchet.closeRead() {
+        case .nothing:
+            ()
+        case .close:
+            self.context?.close(promise: nil)
+        }
     }
 
     @inlinable
@@ -219,7 +297,7 @@ extension NIOAsyncChannelAdapterHandler {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
-internal final class NIOAsyncChannelWriterHandler<OutboundOut: Sendable>: ChannelDuplexHandler, RemovableChannelHandler {
+internal final class NIOAsyncChannelWriterHandler<OutboundOut: Sendable>: ChannelDuplexHandler {
     @usableFromInline typealias InboundIn = Any
     @usableFromInline typealias InboundOut = Any
     @usableFromInline typealias OutboundIn = Any
@@ -240,14 +318,22 @@ internal final class NIOAsyncChannelWriterHandler<OutboundOut: Sendable>: Channe
     @usableFromInline
     let loop: EventLoop
 
+    @usableFromInline
+    let closeRatchet: CloseRatchet
+
+    @usableFromInline
+    let enableOutboundHalfClosure: Bool
+
     @inlinable
-    init(loop: EventLoop) {
+    init(loop: EventLoop, closeRatchet: CloseRatchet, enableOutboundHalfClosure: Bool) {
         self.loop = loop
+        self.closeRatchet = closeRatchet
+        self.enableOutboundHalfClosure = enableOutboundHalfClosure
     }
 
     @inlinable
-    static func makeHandler(loop: EventLoop) -> (NIOAsyncChannelWriterHandler<OutboundOut>, Writer) {
-        let handler = NIOAsyncChannelWriterHandler<OutboundOut>(loop: loop)
+    static func makeHandler(loop: EventLoop, closeRatchet: CloseRatchet, enableOutboundHalfClosure: Bool) -> (NIOAsyncChannelWriterHandler<OutboundOut>, Writer) {
+        let handler = NIOAsyncChannelWriterHandler<OutboundOut>(loop: loop, closeRatchet: closeRatchet, enableOutboundHalfClosure: enableOutboundHalfClosure)
         let writerComponents = Writer.makeWriter(elementType: OutboundOut.self, isWritable: true, delegate: Delegate(handler: handler))
         handler.sink = writerComponents.sink
         return (handler, writerComponents.writer)
@@ -272,9 +358,17 @@ internal final class NIOAsyncChannelWriterHandler<OutboundOut: Sendable>: Channe
 
     @inlinable
     func _didTerminate(error: Error?) {
-        // TODO: how do we spot full closure here?
         self.loop.preconditionInEventLoop()
-        self.context?.close(mode: .output, promise: nil)
+
+        switch self.closeRatchet.closeWrite() {
+        case .nothing:
+            if self.enableOutboundHalfClosure {
+                self.context?.close(mode: .output, promise: nil)
+            }
+        case .close:
+            self.context?.close(promise: nil)
+        }
+
         self.sink = nil
     }
 
@@ -361,15 +455,16 @@ public struct NIOInboundChannelStream<InboundIn: Sendable>: Sendable {
     @usableFromInline let _producer: Producer
 
     @inlinable
-    init(_ channel: Channel, backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?) throws {
+    init(_ channel: Channel, backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?, closeRatchet: CloseRatchet) throws {
         channel.eventLoop.preconditionInEventLoop()
-        let handler = NIOAsyncChannelAdapterHandler<InboundIn>(loop: channel.eventLoop)
+        let handler = NIOAsyncChannelAdapterHandler<InboundIn>(loop: channel.eventLoop, closeRatchet: closeRatchet)
         let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
         if let userProvided = backpressureStrategy {
             strategy = userProvided
         } else {
-            // Default strategy
+            // Default strategy. These numbers are fairly arbitrary, but they line up with the default value of
+            // maxMessagesPerRead.
             strategy = .init(lowWatermark: 2, highWatermark: 10)
         }
 

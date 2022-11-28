@@ -30,14 +30,15 @@ extension AsyncChannelTests {
                 ("testAsyncChannelBasicFunctionality", testAsyncChannelBasicFunctionality),
                 ("testAsyncChannelBasicWrites", testAsyncChannelBasicWrites),
                 ("testDroppingTheWriterClosesTheWriteSideOfTheChannel", testDroppingTheWriterClosesTheWriteSideOfTheChannel),
+                ("testDroppingTheWriterDoesntCloseTheWriteSideOfTheChannelIfHalfClosureIsDisabled", testDroppingTheWriterDoesntCloseTheWriteSideOfTheChannelIfHalfClosureIsDisabled),
+                ("testDroppingTheWriterFirstLeadsToChannelClosureWhenReaderIsAlsoDropped", testDroppingTheWriterFirstLeadsToChannelClosureWhenReaderIsAlsoDropped),
+                ("testDroppingEverythingClosesTheChannel", testDroppingEverythingClosesTheChannel),
                 ("testReadsArePropagated", testReadsArePropagated),
                 ("testErrorsArePropagatedButAfterReads", testErrorsArePropagatedButAfterReads),
                 ("testErrorsArePropagatedToWriters", testErrorsArePropagatedToWriters),
                 ("testChannelBecomingNonWritableDelaysWriters", testChannelBecomingNonWritableDelaysWriters),
                 ("testBufferDropsReadsIfTheReaderIsGone", testBufferDropsReadsIfTheReaderIsGone),
-                ("testRemovingTheHandlerTerminatesTheInboundStream", testRemovingTheHandlerTerminatesTheInboundStream),
                 ("testManagingBackpressure", testManagingBackpressure),
-                ("testRemovingWriterHandlerDropsWritesGracefully", testRemovingWriterHandlerDropsWritesGracefully),
            ]
    }
 }

@@ -48,12 +48,14 @@ public final class NIOAsyncChannel<InboundIn: Sendable, OutboundOut: Sendable>: 
     public init(
         wrapping channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        enableOutboundHalfClosure: Bool = true,
         inboundIn: InboundIn.Type = InboundIn.self,
         outboundOut: OutboundOut.Type = OutboundOut.self
     ) async throws {
         let (inboundStream, writer) = try await channel.eventLoop.submit {
-            let inboundStream = try NIOInboundChannelStream<InboundIn>(channel, backpressureStrategy: backpressureStrategy)
-            let (handler, writer) = NIOAsyncChannelWriterHandler<OutboundOut>.makeHandler(loop: channel.eventLoop)
+            let closeRatchet = CloseRatchet()
+            let inboundStream = try NIOInboundChannelStream<InboundIn>(channel, backpressureStrategy: backpressureStrategy, closeRatchet: closeRatchet)
+            let (handler, writer) = NIOAsyncChannelWriterHandler<OutboundOut>.makeHandler(loop: channel.eventLoop, closeRatchet: closeRatchet, enableOutboundHalfClosure: enableOutboundHalfClosure)
             try channel.pipeline.syncOperations.addHandler(handler)
             return (inboundStream, writer)
         }.get()
