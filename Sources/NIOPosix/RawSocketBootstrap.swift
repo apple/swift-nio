@@ -33,7 +33,7 @@ import NIOCore
 /// ```
 ///
 /// The `Channel` will operate on `AddressedEnvelope<ByteBuffer>` as inbound and outbound messages.
-public final class RawSocketBootstrap {
+public final class NIORawSocketBootstrap {
 
     private let group: EventLoopGroup
     private var channelInitializer: Optional<ChannelInitializerCallback>
@@ -193,5 +193,5 @@ public final class RawSocketBootstrap {
 
 #if swift(>=5.6)
 @available(*, unavailable)
-extension RawSocketBootstrap: Sendable {}
+extension NIORawSocketBootstrap: Sendable {}
 #endif

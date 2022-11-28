@@ -40,7 +40,7 @@ final class RawSocketBootstrapTests: XCTestCase {
         
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try elg.syncShutdownGracefully()) }
-        let channel = try RawSocketBootstrap(group: elg)
+        let channel = try NIORawSocketBootstrap(group: elg)
             .channelInitializer {
                 $0.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
@@ -86,14 +86,14 @@ final class RawSocketBootstrapTests: XCTestCase {
         
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try elg.syncShutdownGracefully()) }
-        let readChannel = try RawSocketBootstrap(group: elg)
+        let readChannel = try NIORawSocketBootstrap(group: elg)
             .channelInitializer {
                 $0.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
             .bind(host: "127.0.0.1", ipProtocol: .reservedForTesting).wait()
         defer { XCTAssertNoThrow(try readChannel.close().wait()) }
         
-        let writeChannel = try RawSocketBootstrap(group: elg)
+        let writeChannel = try NIORawSocketBootstrap(group: elg)
             .channelInitializer {
                 $0.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
@@ -139,7 +139,7 @@ final class RawSocketBootstrapTests: XCTestCase {
         
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try elg.syncShutdownGracefully()) }
-        let channel = try RawSocketBootstrap(group: elg)
+        let channel = try NIORawSocketBootstrap(group: elg)
             .channelOption(ChannelOptions.ipOption(.ip_hdrincl), value: 1)
             .channelInitializer {
                 $0.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
