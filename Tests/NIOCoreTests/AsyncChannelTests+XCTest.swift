@@ -39,6 +39,7 @@ extension AsyncChannelTests {
                 ("testChannelBecomingNonWritableDelaysWriters", testChannelBecomingNonWritableDelaysWriters),
                 ("testBufferDropsReadsIfTheReaderIsGone", testBufferDropsReadsIfTheReaderIsGone),
                 ("testManagingBackpressure", testManagingBackpressure),
+                ("testCanWrapAChannelSynchronously", testCanWrapAChannelSynchronously),
            ]
    }
 }

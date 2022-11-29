@@ -406,6 +406,34 @@ final class AsyncChannelTests: XCTestCase {
             XCTAssertEqual(readCounter.readCount, 16)
         }
     }
+
+    func testCanWrapAChannelSynchronously() throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        XCTAsyncTest(timeout: 5) {
+            let channel = NIOAsyncTestingChannel()
+            let wrapped = try await channel.testingEventLoop.executeInContext {
+                try NIOAsyncChannel(synchronouslyWrapping: channel, inboundIn: String.self, outboundOut: String.self)
+            }
+
+            let iterator = wrapped.inboundStream.makeAsyncIterator()
+            try await channel.writeInbound("hello")
+            let firstRead = try await iterator.next()
+            XCTAssertEqual(firstRead, "hello")
+
+            try await wrapped.writeAndFlush("world")
+            let write = try await channel.waitForOutboundWrite(as: String.self)
+            XCTAssertEqual(write, "world")
+
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+            }
+
+            let secondRead = try await iterator.next()
+            XCTAssertNil(secondRead)
+
+            try await channel.close()
+        }
+    }
 }
 
 final fileprivate class CloseRecorder: ChannelOutboundHandler {
