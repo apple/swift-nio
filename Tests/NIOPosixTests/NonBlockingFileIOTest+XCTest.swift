@@ -40,6 +40,7 @@ extension NonBlockingFileIOTest {
                 ("testReadingDifferentChunkSize", testReadingDifferentChunkSize),
                 ("testReadDoesNotReadShort", testReadDoesNotReadShort),
                 ("testChunkReadingWhereByteCountIsNotAChunkSizeMultiplier", testChunkReadingWhereByteCountIsNotAChunkSizeMultiplier),
+                ("testReadMoreThanIntMaxBytesDoesntThrow", testReadMoreThanIntMaxBytesDoesntThrow),
                 ("testChunkedReadDoesNotReadShort", testChunkedReadDoesNotReadShort),
                 ("testChunkSizeMoreThanTotal", testChunkSizeMoreThanTotal),
                 ("testFileRegionReadFromPipeFails", testFileRegionReadFromPipeFails),
