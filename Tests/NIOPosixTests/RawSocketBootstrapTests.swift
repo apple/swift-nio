@@ -58,7 +58,7 @@ final class RawSocketBootstrapTests: XCTestCase {
         
         let receivedMessages = Set(try channel.waitForDatagrams(count: 10).map { envelop -> String in
             var data = envelop.data
-            let header = try XCTUnwrap(data.readIPv4Header())
+            let header = try XCTUnwrap(data.readIPv4HeaderFromOSRawSocket())
             XCTAssertEqual(header.version, 4)
             XCTAssertEqual(header.protocol, .reservedForTesting)
             XCTAssertEqual(Int(header.platformIndependentTotalLengthForReceivedPacketFromRawSocket), IPv4Header.size + data.readableBytes)
@@ -101,7 +101,7 @@ final class RawSocketBootstrapTests: XCTestCase {
         
         let receivedMessages = Set(try readChannel.waitForDatagrams(count: 10).map { envelop -> String in
             var data = envelop.data
-            let header = try XCTUnwrap(data.readIPv4Header())
+            let header = try XCTUnwrap(data.readIPv4HeaderFromOSRawSocket())
             XCTAssertEqual(header.version, 4)
             XCTAssertEqual(header.protocol, .reservedForTesting)
             XCTAssertEqual(Int(header.platformIndependentTotalLengthForReceivedPacketFromRawSocket), IPv4Header.size + data.readableBytes)
@@ -139,18 +139,17 @@ final class RawSocketBootstrapTests: XCTestCase {
             header.destinationIpAddress = .init(127, 0, 0, 1)
             header.sourceIpAddress = .init(127, 0, 0, 1)
             header.setChecksum()
-            packet.writeIPv4Header(header)
+            packet.writeIPv4HeaderToOSRawSocket(header)
             packet.writeImmutableBuffer(message)
-            _ = try channel.write(AddressedEnvelope(
+            try channel.writeAndFlush(AddressedEnvelope(
                 remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0),
                 data: packet
-            ))
+            )).wait()
         }
-        channel.flush()
         
         let receivedMessages = Set(try channel.waitForDatagrams(count: 10).map { envelop -> String in
             var data = envelop.data
-            let header = try XCTUnwrap(data.readIPv4Header())
+            let header = try XCTUnwrap(data.readIPv4HeaderFromOSRawSocket())
             XCTAssertEqual(header.version, 4)
             XCTAssertEqual(header.protocol, .reservedForTesting)
             XCTAssertEqual(Int(header.platformIndependentTotalLengthForReceivedPacketFromRawSocket), IPv4Header.size + data.readableBytes)

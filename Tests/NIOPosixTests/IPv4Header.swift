@@ -146,32 +146,21 @@ struct IPv4Header: Hashable {
     }
 }
 
+extension FixedWidthInteger {
+    func convertEndianness(to endianness: Endianness) -> Self {
+        switch endianness {
+        case .little:
+            return self.littleEndian
+        case .big:
+            return self.bigEndian
+        }
+    }
+}
+
 
 
 extension ByteBuffer {
-    @discardableResult
     mutating func readIPv4Header() -> IPv4Header? {
-        #if canImport(Darwin)
-        let initialState = self
-        guard
-            let versionAndIhl: UInt8 = self.readInteger(),
-            let dscpAndEcn: UInt8 = self.readInteger(),
-            // On BSD, the total length is in host byte order
-            let totalLength: UInt16 = self.readInteger(endianness: .host),
-            let identification: UInt16 = self.readInteger(),
-            // fragmentOffset is in host byte order as well but it is always zero in our tests
-            // and fragmentOffset is 13 bits in size so we can't just use readInteger(endianness: .host)
-            let flagsAndFragmentOffset: UInt16 = self.readInteger(),
-            let timeToLive: UInt8 = self.readInteger(),
-            let `protocol`: UInt8 = self.readInteger(),
-            let headerChecksum: UInt16 = self.readInteger(),
-            let sourceIpAddress: UInt32 = self.readInteger(),
-            let destinationIpAddress: UInt32 = self.readInteger()
-        else {
-            self = initialState
-            return nil
-        }
-        #elseif os(Linux)
         guard let (
             versionAndIhl,
             dscpAndEcn,
@@ -195,7 +184,6 @@ extension ByteBuffer {
             UInt32,
             UInt32
         ).self) else { return nil }
-        #endif
         return .init(
             versionAndIhl: versionAndIhl,
             dscpAndEcn: dscpAndEcn,
@@ -209,6 +197,19 @@ extension ByteBuffer {
             destinationIpAddress: .init(rawValue: destinationIpAddress)
         )
     }
+    
+    mutating func readIPv4HeaderFromOSRawSocket() -> IPv4Header? {
+        #if canImport(Darwin)
+        guard var header = self.readIPv4Header() else { return nil }
+        // On BSD, the total length is in host byte order
+        header.totalLength = header.totalLength.convertEndianness(to: .big)
+        // TODO: fragmentOffset is in host byte order as well but it is always zero in our tests
+        // and fragmentOffset is 13 bits in size so we can't just use readInteger(endianness: .host)
+        return header
+        #else
+        return self.readIPv4Header()
+        #endif
+    }
 }
 
 extension ByteBuffer {
@@ -216,31 +217,15 @@ extension ByteBuffer {
     mutating func writeIPv4Header(_ header: IPv4Header) -> Int {
         assert({
             var buffer = ByteBuffer()
-            buffer._writeIPv4Header(header: header)
+            buffer._writeIPv4Header(header)
             let writtenHeader = buffer.readIPv4Header()
             return header == writtenHeader
         }())
-        return self._writeIPv4Header(header: header)
+        return self._writeIPv4Header(header)
     }
     
     @discardableResult
-    private mutating func _writeIPv4Header(header: IPv4Header) -> Int {
-        #if canImport(Darwin)
-        return self.writeInteger(header.versionAndIhl) +
-            self.writeInteger(header.dscpAndEcn) +
-            // On BSD, the total length needs to be in host byte order
-            self.writeInteger(header.totalLength, endianness: .host) +
-            self.writeInteger(header.identification) +
-            // fragmentOffset needs to be in host byte order as well but it is always zero in our tests
-            // and fragmentOffset is 13 bits in size so we can't just use writeInteger(endianness: .host)
-            self.writeInteger(header.flagsAndFragmentOffset) +
-            self.writeInteger(header.timeToLive) +
-            self.writeInteger(header.`protocol`.rawValue) +
-            self.writeInteger(header.headerChecksum) +
-            self.writeInteger(header.sourceIpAddress.rawValue) +
-            self.writeInteger(header.destinationIpAddress.rawValue)
-        
-        #elseif os(Linux)
+    private mutating func _writeIPv4Header(_ header: IPv4Header) -> Int {
         return self.writeMultipleIntegers(
             header.versionAndIhl,
             header.dscpAndEcn,
@@ -253,7 +238,29 @@ extension ByteBuffer {
             header.sourceIpAddress.rawValue,
             header.destinationIpAddress.rawValue
         )
+    }
+    
+    @discardableResult
+    mutating func writeIPv4HeaderToOSRawSocket(_ header: IPv4Header) -> Int {
+        assert({
+            var buffer = ByteBuffer()
+            buffer._writeIPv4HeaderToOSRawSocket(header)
+            let writtenHeader = buffer.readIPv4HeaderFromOSRawSocket()
+            return header == writtenHeader
+        }())
+        return self._writeIPv4HeaderToOSRawSocket(header)
+    }
+    
+    @discardableResult
+    private mutating func _writeIPv4HeaderToOSRawSocket(_ header: IPv4Header) -> Int {
+        #if canImport(Darwin)
+        var header = header
+        // On BSD, the total length needs to be in host byte order
+        header.totalLength = header.totalLength.convertEndianness(to: .big)
+        // TODO: fragmentOffset needs to be in host byte order as well but it is always zero in our tests
+        // and fragmentOffset is 13 bits in size so we can't just use writeInteger(endianness: .host)
         #endif
+        return self._writeIPv4Header(header)
     }
 }
 
