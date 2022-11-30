@@ -198,14 +198,18 @@ extension ByteBuffer {
         )
     }
     
-    mutating func readIPv4HeaderFromOSRawSocket() -> IPv4Header? {
-        #if canImport(Darwin)
+    mutating func readIPv4HeaderFromBSDRawSocket() -> IPv4Header? {
         guard var header = self.readIPv4Header() else { return nil }
         // On BSD, the total length is in host byte order
         header.totalLength = header.totalLength.convertEndianness(to: .big)
         // TODO: fragmentOffset is in host byte order as well but it is always zero in our tests
         // and fragmentOffset is 13 bits in size so we can't just use readInteger(endianness: .host)
         return header
+    }
+    
+    mutating func readIPv4HeaderFromOSRawSocket() -> IPv4Header? {
+        #if canImport(Darwin)
+        return self.readIPv4HeaderFromBSDRawSocket()
         #else
         return self.readIPv4Header()
         #endif
@@ -241,26 +245,33 @@ extension ByteBuffer {
     }
     
     @discardableResult
-    mutating func writeIPv4HeaderToOSRawSocket(_ header: IPv4Header) -> Int {
+    mutating func writeIPv4HeaderToBSDRawSocket(_ header: IPv4Header) -> Int {
         assert({
             var buffer = ByteBuffer()
-            buffer._writeIPv4HeaderToOSRawSocket(header)
-            let writtenHeader = buffer.readIPv4HeaderFromOSRawSocket()
+            buffer._writeIPv4HeaderToBSDRawSocket(header)
+            let writtenHeader = buffer.readIPv4HeaderFromBSDRawSocket()
             return header == writtenHeader
         }())
-        return self._writeIPv4HeaderToOSRawSocket(header)
+        return self._writeIPv4HeaderToBSDRawSocket(header)
     }
     
     @discardableResult
-    private mutating func _writeIPv4HeaderToOSRawSocket(_ header: IPv4Header) -> Int {
-        #if canImport(Darwin)
+    private mutating func _writeIPv4HeaderToBSDRawSocket(_ header: IPv4Header) -> Int {
         var header = header
         // On BSD, the total length needs to be in host byte order
         header.totalLength = header.totalLength.convertEndianness(to: .big)
         // TODO: fragmentOffset needs to be in host byte order as well but it is always zero in our tests
         // and fragmentOffset is 13 bits in size so we can't just use writeInteger(endianness: .host)
-        #endif
         return self._writeIPv4Header(header)
+    }
+    
+    @discardableResult
+    mutating func writeIPv4HeaderToOSRawSocket(_ header: IPv4Header) -> Int {
+        #if canImport(Darwin)
+        self.writeIPv4HeaderToBSDRawSocket(header)
+        #else
+        self.writeIPv4Header(header)
+        #endif
     }
 }
 
