@@ -70,40 +70,21 @@ final class Server {
         // saturating the average small to medium sized machine.
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
-        let serverChannel: NIOAsyncChannel<Channel, Never>
-        do {
-            // Inside this do block we want to catch any errors from creating the bootstrap.
-            // We still have to tidy up, so we can't just let this throw from here.
-            serverChannel = try await self.makeServerChannel(group: group)
-        } catch {
-            // Couldn't create the server channel. We're done here. Shut down the loop and go home.
-            try await group.shutdownGracefully()
-            throw error
-        }
+        // Next, create our server channel. We need this to be a NIOAsyncChannel.
+        let serverChannel = try! await self.makeServerChannel(group: group)
 
-        // We now have the server channel and the stream, we can start our work. First, though,
-        // we need to prepare to handle cancellation.
-        //
-        // If this Task is cancelled, the first thing to do is to shut down the server channel.
-        // This will have the effect of terminating the async loop that makes up the rest of this Task,
-        // which will naturally bring it to a close.
+        // We now have the server channel, we can start our work.
 
         // TODO: error handling!
-        try await withTaskCancellationHandler {
-            // Now we accept new connections in a loop. Each of these is going to be dispatched
-            // to a new child Task in a TaskGroup. These Tasks will be responsible for running the
-            // child connections.
-            try await withThrowingTaskGroup(of: Void.self) { taskGroup in
-                for try await childChannel in serverChannel.inboundStream {
-                    taskGroup.addTask {
-                        await Self.handleChildChannel(childChannel)
-                    }
+        // Now we accept new connections in a loop. Each of these is going to be dispatched
+        // to a new child Task in a TaskGroup. These Tasks will be responsible for running the
+        // child connections.
+        try await withThrowingTaskGroup(of: Void.self) { taskGroup in
+            for try await childChannel in serverChannel.inboundStream {
+                taskGroup.addTask {
+                    await Self.handleChildChannel(childChannel)
                 }
             }
-        } onCancel: {
-            // This is a nice property of NIO: we can do this without actually
-            // awaiting it.
-            serverChannel.channel.close(promise: nil)
         }
 
         // In our final step, we shut the loop down gracefully. This isn't necessary at
@@ -112,32 +93,17 @@ final class Server {
         try await group.shutdownGracefully()
     }
 
-    private func makeServerChannel(group: EventLoopGroup) async throws -> NIOAsyncChannel<Channel, Never> {
+    private func makeServerChannel(group: EventLoopGroup) async throws -> NIOAsyncChannel<NIOAsyncChannel<ByteBuffer, ByteBuffer>, Never> {
         // We create a server bootstrap, as normal. Note that we don't add any
         // application handlers using the channel initializers. If we had protocol
         // handlers (such as the HTTP encoders and decoders) we would add them here,
         // but we don't.
         let bootstrap = ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        let channel = try await bootstrap.bind(host: self.host, port: self.port).get()
-
-        // We have an extra do-catch here because in principle adding the NIOInboundChannelStream
-        // can fail. It's unlikely, but if it does we want to clean up the server channel. This
-        // gives this method the nice property that either it entirely succeeds or entirely fails.
-        do {
-            // We set the buffer size to maxMessagesPerRead. This is a nice middle ground: it ensures a
-            // full read will fit in an empty buffer nicely.
-            let maxMessagesPerRead = try await channel.getOption(ChannelOptions.maxMessagesPerRead).get()
-            return try await NIOAsyncChannel(wrapping: channel)
-        } catch {
-            // If creating the stream fails, we have to clean up the server channel here. We suppress any errors
-            // from close: they will just obscure the real problem.
-            try? await channel.close()
-            throw error
-        }
+        return try await bootstrap.bind(host: self.host, port: self.port)
     }
 
-    private static func handleChildChannel(_ channel: Channel) async {
+    private static func handleChildChannel(_ asyncChannel: NIOAsyncChannel<ByteBuffer, ByteBuffer>) async {
         // This function defines the "main loop" for each child channel. This is where our
         // business logic goes! As this is just a TCP echo server our business logic is pretty
         // dang simple, but it's good to see it nonetheless.
@@ -145,35 +111,21 @@ final class Server {
         // You'll notice that this function is not marked "throws". That's because there is no
         // action for our caller to take if we hit an error: we're just going to log it and drop
         // the connection. Easy!
-
-        // Once again, we set a cancellation handler, and once again it just drops this channel.
-        await withTaskCancellationHandler {
-            do {
-                // Again, we wrap the channel in a stream, and again, we use maxMessagesPerRead as our buffer
-                // size.
-                let bufferSize = try await channel.getOption(ChannelOptions.maxMessagesPerRead).get()
-                let asyncChannel = try await NIOAsyncChannel(wrapping: channel, inboundIn: ByteBuffer.self, outboundOut: ByteBuffer.self)
-
-                // And here's our business logic! As we're a TCP echo server, we just echo the bytes back
-                // to the client.
-                //
-                // For extra credit, let me pose an interview question I once received: with the pattern
-                // below, it's possible for us to accidentally livelock the connection. How, and how could
-                // we change our business logic to fix it?
-                for try await message in asyncChannel.inboundStream {
-                    try await asyncChannel.writeAndFlush(message)
-                }
-            } catch {
-                // In a real server we'd log the error here, but I didn't want to add swift-log
-                // to the mix because I figured it'd just confuse matters and obscure what this
-                // program was really doing. You should log here!
-                //
-                // Additionally, we close the channel. We don't care about any errors we hit
-                // while doing that: they aren't material.
-                try? await channel.close()
+        do {
+            // And here's our business logic! As we're a TCP echo server, we just echo the bytes back
+            // to the client.
+            //
+            // For extra credit, let me pose an interview question I once received: with the pattern
+            // below, it's possible for us to accidentally livelock the connection. How, and how could
+            // we change our business logic to fix it?
+            for try await message in asyncChannel.inboundStream {
+                try await asyncChannel.writeAndFlush(message)
             }
-        } onCancel: {
-            channel.close(promise: nil)
+        } catch {
+            // In a real server we'd log the error here, but I didn't want to add swift-log
+            // to the mix because I figured it'd just confuse matters and obscure what this
+            // program was really doing. You should log here!
+            print("Hit error: \(error)")
         }
     }
 }

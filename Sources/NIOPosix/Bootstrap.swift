@@ -363,8 +363,8 @@ public final class ServerBootstrap {
     public func bind<ChildChannelInboundIn: Sendable, ChildChannelOutboundOut: Sendable>(
         host: String,
         port: Int,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInboundIn, ChildChannelOutboundOut>, Never> {
         return try await self.bindAsyncChannel0(serverBackpressureStrategy: serverBackpressureStrategy, childBackpressureStrategy: childBackpressureStrategy) {
             return try SocketAddress.makeAddressResolvingHost(host, port: port)
@@ -378,8 +378,8 @@ public final class ServerBootstrap {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func bind<ChildChannelInboundIn: Sendable, ChildChannelOutboundOut: Sendable>(
         to address: SocketAddress,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInboundIn, ChildChannelOutboundOut>, Never> {
         return try await self.bindAsyncChannel0(serverBackpressureStrategy: serverBackpressureStrategy, childBackpressureStrategy: childBackpressureStrategy) { address }
     }
@@ -391,8 +391,8 @@ public final class ServerBootstrap {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func bind<ChildChannelInboundIn: Sendable, ChildChannelOutboundOut: Sendable>(
         unixDomainSocketPath: String,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInboundIn, ChildChannelOutboundOut>, Never> {
         return try await self.bindAsyncChannel0(serverBackpressureStrategy: serverBackpressureStrategy, childBackpressureStrategy: childBackpressureStrategy) {
             try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
@@ -408,8 +408,8 @@ public final class ServerBootstrap {
     public func bind<ChildChannelInboundIn: Sendable, ChildChannelOutboundOut: Sendable>(
         unixDomainSocketPath: String,
         cleanupExistingSocketFile: Bool,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInboundIn, ChildChannelOutboundOut>, Never> {
         if cleanupExistingSocketFile {
             try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
@@ -425,8 +425,8 @@ public final class ServerBootstrap {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func withBoundSocket<ChildChannelInboundIn: Sendable, ChildChannelOutboundOut: Sendable>(
         _ socket: NIOBSDSocket.Handle,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInboundIn, ChildChannelOutboundOut>, Never> {
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
             if enableMPTCP {
@@ -563,6 +563,11 @@ public final class ServerBootstrap {
                         synchronouslyWrapping: serverChannel,
                         backpressureStrategy: serverBackpressureStrategy
                     )
+                    // TODO: this is not ideal, we need a better way to do this wrap-then-unwrap.
+                    try serverChannel.pipeline.syncOperations.addHandler(
+                        UnwrapperHandler<ChildChannelInboundIn, ChildChannelOutboundOut>(),
+                        name: "UnwrapperHandler"
+                    )
                     return register(eventLoop, serverChannel).map { asyncChannel }
                 } catch {
                     return eventLoop.makeFailedFuture(error)
@@ -672,6 +677,17 @@ public final class ServerBootstrap {
                 channel.close(promise: nil)
                 context.fireErrorCaught(error)
             }
+        }
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private final class UnwrapperHandler<ChildChannelInboundIn: Sendable, ChildChannelOutboundOut: Sendable>: ChannelInboundHandler {
+        typealias InboundIn = NIOAsyncChannel<ChildChannelInboundIn, ChildChannelOutboundOut>
+        typealias InboundOut = Channel
+
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            let channel = self.unwrapInboundIn(data)
+            context.fireChannelRead(self.wrapInboundOut(channel.channel))
         }
     }
 }
