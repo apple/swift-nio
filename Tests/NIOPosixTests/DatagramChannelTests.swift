@@ -17,7 +17,7 @@ import NIOCore
 @testable import NIOPosix
 import XCTest
 
-private extension Channel {
+extension Channel {
     func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
         return try self.pipeline.context(name: "ByteReadRecorder").flatMap { context in
             if let future = (context.handler as? DatagramReadRecorder<ByteBuffer>)?.notifyForDatagrams(count) {
@@ -47,7 +47,7 @@ private extension Channel {
 /// A class that records datagrams received and forwards them on.
 ///
 /// Used extensively in tests to validate messaging expectations.
-private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
+final class DatagramReadRecorder<DataType>: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<DataType>
     typealias InboundOut = AddressedEnvelope<DataType>
 

@@ -83,6 +83,14 @@ extension NIOBSDSocket.SocketType {
         internal static let stream: NIOBSDSocket.SocketType =
                 NIOBSDSocket.SocketType(rawValue: SOCK_STREAM)
     #endif
+    
+    #if os(Linux)
+        internal static let raw: NIOBSDSocket.SocketType =
+                NIOBSDSocket.SocketType(rawValue: CInt(SOCK_RAW.rawValue))
+    #else
+        internal static let raw: NIOBSDSocket.SocketType =
+                NIOBSDSocket.SocketType(rawValue: SOCK_RAW)
+    #endif
 }
 
 // IPv4 Options

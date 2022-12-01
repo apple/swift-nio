@@ -267,6 +267,13 @@ extension NIOBSDSocket.Option {
     /// Control multicast time-to-live.
     public static let ip_multicast_ttl: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_MULTICAST_TTL)
+    
+    /// The IPv4 layer generates an IP header when sending a packet
+    /// unless the ``ip_hdrincl`` socket option is enabled on the socket.
+    /// When it is enabled, the packet must contain an IP header.  For
+    /// receiving, the IP header is always included in the packet.
+    public static let ip_hdrincl: NIOBSDSocket.Option =
+            NIOBSDSocket.Option(rawValue: IP_HDRINCL)
 }
 
 // IPv6 Options
