@@ -208,7 +208,7 @@ extension ByteBuffer {
     }
     
     mutating func readIPv4HeaderFromOSRawSocket() -> IPv4Header? {
-        #if canImport(Darwin)
+        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
         return self.readIPv4HeaderFromBSDRawSocket()
         #else
         return self.readIPv4Header()
@@ -267,7 +267,7 @@ extension ByteBuffer {
     
     @discardableResult
     mutating func writeIPv4HeaderToOSRawSocket(_ header: IPv4Header) -> Int {
-        #if canImport(Darwin)
+        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
         self.writeIPv4HeaderToBSDRawSocket(header)
         #else
         self.writeIPv4Header(header)
@@ -324,21 +324,21 @@ private func onesComplementAdd<Integer: FixedWidthInteger>(lhs: Integer, rhs: In
 
 extension IPv4Header {
     var platformIndependentTotalLengthForReceivedPacketFromRawSocket: UInt16 {
-        #if canImport(Darwin)
+        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
         // On BSD the IP header will only contain the size of the ip packet body, not the header.
         // This is known bug which can't be fixed without breaking old apps which already workaround the issue
         // like e.g. we do now too.
         return totalLength + 20
-        #elseif os(Linux)
+        #else
         return totalLength
         #endif
     }
     var platformIndependentChecksumForReceivedPacketFromRawSocket: UInt16 {
-        #if canImport(Darwin)
+        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
         // On BSD the checksum is always zero and we need to compute it
         precondition(headerChecksum == 0)
         return computeChecksum()
-        #elseif os(Linux)
+        #else
         return headerChecksum
         #endif
     }
