@@ -276,6 +276,11 @@ public struct ChannelOptions {
     public static let socketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .socket, name: name)
     }
+    
+    /// - seealso: `SocketOption`.
+    public static let ipOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+        .init(level: .ip, name: name)
+    }
 
     /// - seealso: `SocketOption`.
     public static let tcpOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
