@@ -1237,7 +1237,7 @@ extension EventLoopFuture {
     ///
     /// - returns: The value of the `EventLoopFuture` when it completes.
     /// - throws: The error value of the `EventLoopFuture` if it errors.
-    @available(*, noasync, message: "threads can change between suspension points and therefore the thread specific value too")
+    @available(*, noasync, message: "wait() can block indefinitely, prefer get()", renamed: "get()")
     @inlinable
     public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value {
         return try self._wait(file: file, line: line)
