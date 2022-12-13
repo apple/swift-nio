@@ -18,6 +18,8 @@ services:
   test:
     image: swift-nio:22.04-5.7
     environment:
+      - MAX_ALLOCS_ALLOWED_10000000_asyncsequenceproducer=23
+      - MAX_ALLOCS_ALLOWED_1000000_asyncwriter=1000050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=47050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers_sync=40050
       - MAX_ALLOCS_ALLOWED_1000_addRemoveHandlers_handlercontext=9050
@@ -40,9 +42,13 @@ services:
       - MAX_ALLOCS_ALLOWED_creating_10000_headers=0
       - MAX_ALLOCS_ALLOWED_decode_1000_ws_frames=2050
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer=3
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer_with_mask=2050
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer_with_space=3
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_holding_buffer_with_space_with_mask=2050
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer=3050
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_mask=5050
       - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_space=3050
+      - MAX_ALLOCS_ALLOWED_encode_1000_ws_frames_new_buffer_with_space_with_mask=5050
       - MAX_ALLOCS_ALLOWED_execute_hop_10000_tasks=0
       - MAX_ALLOCS_ALLOWED_future_erase_result=4050
       - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=55050
@@ -59,8 +65,6 @@ services:
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=97
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=12200
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=166050
-      - MAX_ALLOCS_ALLOWED_test_10000000_asyncsequenceproducer=12
-      - MAX_ALLOCS_ALLOWED_test_10000000_asyncwriter=1000007
       - FORCE_TEST_DISCOVERY=--enable-test-discovery
       - WARN_AS_ERROR_ARG=-Xswiftc -warnings-as-errors
       # - SANITIZER_ARG=--sanitize=thread # TSan broken still
