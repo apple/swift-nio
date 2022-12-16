@@ -330,3 +330,13 @@ struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSeq
         self.iterator
     }
 }
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension EventLoop {
+    @inlinable
+    public func makeFutureWithTask<Return>(_ body: @Sendable @escaping () async throws -> Return) -> EventLoopFuture<Return> {
+        let promise = self.makePromise(of: Return.self)
+        promise.completeWithTask(body)
+        return promise.futureResult
+    }
+}
