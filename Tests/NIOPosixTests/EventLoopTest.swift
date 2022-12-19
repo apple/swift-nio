@@ -1479,6 +1479,7 @@ public final class EventLoopTest : XCTestCase {
         }.wait())
     }
 
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     func testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation() {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 3)
         defer {
@@ -1491,6 +1492,36 @@ public final class EventLoopTest : XCTestCase {
             XCTAssert(el1 === el2) // MTELG _does_ supprt `any()` so all these `EventLoop`s should be the same.
             XCTAssert(el1 === MultiThreadedEventLoopGroup.currentEventLoop!)
         }.wait())
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    func testAsyncToFutureConversionSuccess() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        XCTAssertEqual("hello from async",
+                       try group.next().makeFutureWithTask {
+            try await Task.sleep(nanoseconds: 37)
+            return "hello from async"
+        }.wait())
+    }
+
+    func testAsyncToFutureConversionFailure() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        struct DummyError: Error {}
+
+        XCTAssertThrowsError(try group.next().makeFutureWithTask {
+            try await Task.sleep(nanoseconds: 37)
+            throw DummyError()
+        }.wait()) { error in
+            XCTAssert(error is DummyError)
+        }
     }
 }
 
