@@ -99,7 +99,11 @@ func main() throws {
                          runResult: RunResult) throws -> InterpretedRunResult {
         struct NoOutputFound: Error {}
 
-        guard case .signal(Int(SIGILL)) = runResult else {
+        guard case .signal(let signal) = runResult,
+              // SIGILL aka illegal instruction, expected on x86
+              // SIGTRAP aka trace trap, expected on arm64
+              [Int(SIGILL), Int(SIGTRAP)].contains(signal)
+        else {
             return .unexpectedRunResult(runResult)
         }
 

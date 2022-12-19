@@ -87,8 +87,9 @@ for mode in debug release; do
             fail "exited successfully but was supposed to fail"
         else
             exit_code=$?
-            # expecting illegal instruction as it should fail with an unacceptable errno
-            assert_equal $(( 128 + 4 )) $exit_code  # 4 == SIGILL
+            # expecting irrecoverable error as process should be terminated through fatalError/precondition/assert
+            assert_greater_than_or_equal $exit_code $(( 128 + 4 ))  # 4 == SIGILL aka illegal instruction, expected on x86
+            assert_less_than_or_equal $exit_code $(( 128 + 5 ))  # 5 == SIGTRAP aka trace trap, expected on arm64
             if [[ "$mode" == "debug" ]]; then
                 grep -q unacceptable\ errno "$temp_file"
             fi

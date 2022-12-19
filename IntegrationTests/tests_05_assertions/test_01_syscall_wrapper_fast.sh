@@ -38,5 +38,7 @@ if "$tmp/test"; then
     fail "should have crashed"
 else
     exit_code=$?
-    assert_equal $(( 128 + 4 )) $exit_code  # 4 == SIGILL
+    # expecting irrecoverable error as process should be terminated through fatalError/precondition/assert
+    assert_greater_than_or_equal $exit_code $(( 128 + 4 ))  # 4 == SIGILL aka illegal instruction, expected on x86
+    assert_less_than_or_equal $exit_code $(( 128 + 5 ))  # 5 == SIGTRAP aka trace trap, expected on arm64
 fi
