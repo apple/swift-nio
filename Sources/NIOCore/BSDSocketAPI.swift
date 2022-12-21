@@ -21,6 +21,7 @@ import let WinSDK.IPPROTO_TCP
 
 import let WinSDK.IP_ADD_MEMBERSHIP
 import let WinSDK.IP_DROP_MEMBERSHIP
+import let WinSDK.IP_HDRINCL
 import let WinSDK.IP_MULTICAST_IF
 import let WinSDK.IP_MULTICAST_LOOP
 import let WinSDK.IP_MULTICAST_TTL
@@ -267,7 +268,7 @@ extension NIOBSDSocket.Option {
     /// Control multicast time-to-live.
     public static let ip_multicast_ttl: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: IP_MULTICAST_TTL)
-    
+
     /// The IPv4 layer generates an IP header when sending a packet
     /// unless the ``ip_hdrincl`` socket option is enabled on the socket.
     /// When it is enabled, the packet must contain an IP header.  For
