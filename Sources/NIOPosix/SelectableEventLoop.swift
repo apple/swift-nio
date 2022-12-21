@@ -102,15 +102,10 @@ internal final class SelectableEventLoop: EventLoop {
     private var internalState: InternalState = .runningAndAcceptingNewRegistrations // protected by the EventLoop thread
     private var externalState: ExternalState = .open // protected by externalStateLock
 
-    private let _iovecs: UnsafeMutablePointer<IOVector>
-    private let _storageRefs: UnsafeMutablePointer<Unmanaged<AnyObject>>
-
     let iovecs: UnsafeMutableBufferPointer<IOVector>
     let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
     // Used for gathering UDP writes.
-    private let _msgs: UnsafeMutablePointer<MMsgHdr>
-    private let _addresses: UnsafeMutablePointer<sockaddr_storage>
     let msgs: UnsafeMutableBufferPointer<MMsgHdr>
     let addresses: UnsafeMutableBufferPointer<sockaddr_storage>
     
@@ -192,14 +187,10 @@ Further information:
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
-        self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
-        self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
-        self.iovecs = UnsafeMutableBufferPointer(start: self._iovecs, count: Socket.writevLimitIOVectors)
-        self.storageRefs = UnsafeMutableBufferPointer(start: self._storageRefs, count: Socket.writevLimitIOVectors)
-        self._msgs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
-        self._addresses = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
-        self.msgs = UnsafeMutableBufferPointer(start: _msgs, count: Socket.writevLimitIOVectors)
-        self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
+        self.iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: Socket.writevLimitIOVectors)
+        self.storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: Socket.writevLimitIOVectors)
+        self.msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: Socket.writevLimitIOVectors)
+        self.addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: Socket.writevLimitIOVectors)
         self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
@@ -217,10 +208,10 @@ Further information:
                "illegal internal state on deinit: \(self.internalState)")
         assert(self.externalState == .resourcesReclaimed,
                "illegal external state on shutdown: \(self.externalState)")
-        _iovecs.deallocate()
-        _storageRefs.deallocate()
-        _msgs.deallocate()
-        _addresses.deallocate()
+        self.iovecs.deallocate()
+        self.storageRefs.deallocate()
+        self.msgs.deallocate()
+        self.addresses.deallocate()
         self.controlMessageStorage.deallocate()
     }
 
