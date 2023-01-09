@@ -154,6 +154,18 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!)
     }
 
+    func testEmptyDatagram() throws {
+        let buffer = self.firstChannel.allocator.buffer(capacity: 0)
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+
+        let reads = try self.secondChannel.waitForDatagrams(count: 1)
+        XCTAssertEqual(reads.count, 1)
+        let read = reads.first!
+        XCTAssertEqual(read.data, buffer)
+        XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!)
+    }
+
     func testManyWrites() throws {
         var buffer = firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
