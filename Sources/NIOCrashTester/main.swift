@@ -98,12 +98,14 @@ func main() throws {
                          regex: String,
                          runResult: RunResult) throws -> InterpretedRunResult {
         struct NoOutputFound: Error {}
-
-        guard case .signal(let signal) = runResult,
-              // SIGILL aka illegal instruction, expected on x86
-              // SIGTRAP aka trace trap, expected on arm64
-              [Int(SIGILL), Int(SIGTRAP)].contains(signal)
-        else {
+        #if arch(i386) || arch(x86_64)
+        let expectedSignal = SIGILL
+        #elseif arch(arm) || arch(arm64)
+        let expectedSignal = SIGTRAP
+        #else
+        #error("unknown CPU architecture for which we don't know the expected signal for a crash")
+        #endif
+        guard case .signal(Int(expectedSignal)) = runResult  else {
             return .unexpectedRunResult(runResult)
         }
 
