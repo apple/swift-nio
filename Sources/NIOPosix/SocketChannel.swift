@@ -625,7 +625,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             }
             switch result {
             case .processed(let bytesRead):
-                assert(bytesRead > 0)
                 assert(self.isOpen)
                 let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
                 readPending = false
@@ -792,10 +791,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
             scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
-                guard ptr.count > 0 else {
-                    // No need to call write if the buffer is empty.
-                    return .processed(0)
-                }
                 // normal write
                 // Control bytes must not escape current stack.
                 var controlBytes = UnsafeOutboundControlBytes(
