@@ -489,4 +489,30 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(try options?.getOption(ChannelOptions.autoRead), true)
         // (Setting options isn't supported.)
     }
+
+    func testLocalAddress0() throws {
+        let channel = EmbeddedChannel()
+
+        XCTAssertThrowsError(try channel._channelCore.localAddress0()) { error in
+            XCTAssertEqual(error as? ChannelError, ChannelError.operationUnsupported)
+        }
+
+        let localAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 1234)
+        channel.localAddress = localAddress
+
+        XCTAssertEqual(try channel._channelCore.localAddress0(), localAddress)
+    }
+
+    func testRemoteAddress0() throws {
+        let channel = EmbeddedChannel()
+
+        XCTAssertThrowsError(try channel._channelCore.remoteAddress0()) { error in
+            XCTAssertEqual(error as? ChannelError, ChannelError.operationUnsupported)
+        }
+
+        let remoteAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 1234)
+        channel.remoteAddress = remoteAddress
+
+        XCTAssertEqual(try channel._channelCore.remoteAddress0(), remoteAddress)
+    }
 }
