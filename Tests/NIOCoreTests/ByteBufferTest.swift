@@ -1754,14 +1754,24 @@ class ByteBufferTest: XCTestCase {
             throw XCTSkip("This test is only supported on 64-bit systems.")
         }
 
+        // This allocator assumes that we'll never call realloc.
+        let fakeAllocator = ByteBufferAllocator(
+            hookedMalloc: { _ in .init(bitPattern: 0xdeadbeef) },
+            hookedRealloc: { _, _ in fatalError() },
+            hookedFree: { precondition($0 == .init(bitPattern: 0xdeadbeef)!) },
+            hookedMemcpy: {_, _, _ in }
+        )
+
         let targetSize = Int(UInt32.max)
-        var buffer = self.allocator.buffer(capacity: targetSize)
+        var buffer = fakeAllocator.buffer(capacity: targetSize)
 
         // Move the reader index forward such that we hit the slow path.
         let offset = Int(_UInt24.max) + 1
         buffer.moveWriterIndex(to: offset)
         buffer.moveReaderIndex(to: offset)
-        buffer.writeInteger(UInt32(0))
+
+        // Pretend we wrote a UInt32.
+        buffer.moveWriterIndex(forwardBy: 4)
 
         // We're going to move the readerIndex forward by 1, and then slice.
         buffer.moveReaderIndex(forwardBy: 1)
