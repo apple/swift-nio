@@ -139,7 +139,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
                              msg_control: controlMessageBytePointer.baseAddress,
                              msg_controllen: .init(controlMessageBytePointer.count),
                              msg_flags: 0)
-            msgs[c] = MMsgHdr(msg_hdr: msg, msg_len: CUnsignedInt(toWriteForThisBuffer))
+            msgs[c] = MMsgHdr(msg_hdr: msg, msg_len: 0)
         }
         c += 1
     }

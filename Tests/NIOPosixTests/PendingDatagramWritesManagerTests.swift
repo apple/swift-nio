@@ -155,7 +155,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                         XCTAssertEqual(expected[multiState].map { numericCast($0.0) }, ptrs.map { $0.msg_hdr.msg_iov.pointee.iov_len },
                                        "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.msg_hdr.msg_iov.pointee.iov_len }) actual",
                                        file: (file), line: line)
-                        XCTAssertEqual(expected[multiState].map { $0.0 }, ptrs.map { Int($0.msg_len) },
+                        XCTAssertEqual(ptrs.map { Int($0.msg_len) }, Array(repeating: 0, count: ptrs.count),
                                        "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.msg_len }) actual",
                             file: (file), line: line)
                         XCTAssertEqual(expected[multiState].map { $0.1 }, ptrs.map { SocketAddress($0.msg_hdr.msg_name.assumingMemoryBound(to: sockaddr.self)) }, "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState].map { $0.1 }) addresses expected but \(ptrs.map { SocketAddress($0.msg_hdr.msg_name.assumingMemoryBound(to: sockaddr.self)) }) actual",
