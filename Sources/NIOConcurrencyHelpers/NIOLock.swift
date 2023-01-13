@@ -29,6 +29,7 @@ typealias LockPrimitive = SRWLOCK
 typealias LockPrimitive = pthread_mutex_t
 #endif
 
+@usableFromInline
 enum LockOperations { }
 
 extension LockOperations {
@@ -82,6 +83,7 @@ extension LockOperations {
 // Tail allocate both the mutex and a generic value using ManagedBuffer.
 // Both the header pointer and the elements pointer are stable for
 // the class's entire lifetime.
+@usableFromInline
 final class LockStorage<Value>: ManagedBuffer<LockPrimitive, Value> {
     
     @inlinable
