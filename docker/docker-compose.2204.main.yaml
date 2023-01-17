@@ -3,19 +3,19 @@ version: "3"
 services:
 
   runtime-setup:
-    image: swift-nio:20.04-main
+    image: swift-nio:22.04-main
     build:
       args:
-        base_image: "swiftlang/swift:nightly-main-focal"
+        base_image: "swiftlang/swift:nightly-main-jammy"
 
   unit-tests:
-    image: swift-nio:20.04-main
+    image: swift-nio:22.04-main
 
   integration-tests:
-    image: swift-nio:20.04-main
+    image: swift-nio:22.04-main
 
   test:
-    image: swift-nio:20.04-main
+    image: swift-nio:22.04-main
     environment:
       - MAX_ALLOCS_ALLOWED_10000000_asyncsequenceproducer=22
       - MAX_ALLOCS_ALLOWED_1000000_asyncwriter=1000050
@@ -70,13 +70,13 @@ services:
       # - SANITIZER_ARG=--sanitize=thread # TSan broken still
 
   performance-test:
-    image: swift-nio:20.04-main
+    image: swift-nio:22.04-main
 
   shell:
-    image: swift-nio:20.04-main
+    image: swift-nio:22.04-main
 
   echo:
-    image: swift-nio:20.04-main
+    image: swift-nio:22.04-main
 
   http:
-    image: swift-nio:20.04-main
+    image: swift-nio:22.04-main
