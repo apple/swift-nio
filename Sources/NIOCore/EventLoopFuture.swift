@@ -2218,3 +2218,11 @@ extension EventLoopPromise: Sendable { }
 // that by way of the guarantees of the EventLoop protocol, so the compiler cannot
 // check it.
 extension EventLoopFuture: @unchecked Sendable { }
+
+extension EventLoopPromise where Value == Void {
+    // Deliver a successful result to the associated `EventLoopFuture<Void>` object.
+    @inlinable
+    public func succeed() {
+        succeed(Void())
+    }
+}
