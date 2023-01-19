@@ -1754,14 +1754,24 @@ class ByteBufferTest: XCTestCase {
             throw XCTSkip("This test is only supported on 64-bit systems.")
         }
 
+        // This allocator assumes that we'll never call realloc.
+        let fakeAllocator = ByteBufferAllocator(
+            hookedMalloc: { _ in .init(bitPattern: 0xdedbeef) },
+            hookedRealloc: { _, _ in fatalError() },
+            hookedFree: { precondition($0 == .init(bitPattern: 0xdedbeef)!) },
+            hookedMemcpy: {_, _, _ in }
+        )
+
         let targetSize = Int(UInt32.max)
-        var buffer = self.allocator.buffer(capacity: targetSize)
+        var buffer = fakeAllocator.buffer(capacity: targetSize)
 
         // Move the reader index forward such that we hit the slow path.
         let offset = Int(_UInt24.max) + 1
         buffer.moveWriterIndex(to: offset)
         buffer.moveReaderIndex(to: offset)
-        buffer.writeInteger(UInt32(0))
+
+        // Pretend we wrote a UInt32.
+        buffer.moveWriterIndex(forwardBy: 4)
 
         // We're going to move the readerIndex forward by 1, and then slice.
         buffer.moveReaderIndex(forwardBy: 1)
@@ -2017,6 +2027,36 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(self.buf.readerIndex, modifiedBuf.readerIndex)
         XCTAssertEqual(self.buf.writerIndex + 1, modifiedBuf.writerIndex)
         XCTAssertEqual([0x0, 0x1, 0x2, 0xa, 0xb], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
+    }
+
+    func testBufferViewAppend() throws {
+        self.buf.writeBytes([0x0, 0x1, 0x2, 0x3])
+
+        var view = ByteBufferView(self.buf)
+        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0x3]))
+
+        view.append(0xa)
+        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0x3, 0xa]))
+
+        var modifiedBuf = ByteBuffer(view)
+        XCTAssertEqual(self.buf.readerIndex, modifiedBuf.readerIndex)
+        XCTAssertEqual(self.buf.writerIndex + 1, modifiedBuf.writerIndex)
+        XCTAssertEqual([0x0, 0x1, 0x2, 0x3, 0xa], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
+    }
+
+    func testBufferViewAppendContentsOf() throws {
+        self.buf.writeBytes([0x0, 0x1, 0x2, 0x3])
+
+        var view = ByteBufferView(self.buf)
+        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0x3]))
+
+        view.append(contentsOf: [0xa, 0xb])
+        XCTAssertTrue(view.elementsEqual([0x0, 0x1, 0x2, 0x3, 0xa, 0xb]))
+
+        var modifiedBuf = ByteBuffer(view)
+        XCTAssertEqual(self.buf.readerIndex, modifiedBuf.readerIndex)
+        XCTAssertEqual(self.buf.writerIndex + 2, modifiedBuf.writerIndex)
+        XCTAssertEqual([0x0, 0x1, 0x2, 0x3, 0xa, 0xb], modifiedBuf.readBytes(length: modifiedBuf.readableBytes)!)
     }
 
     func testBufferViewEmpty() throws {

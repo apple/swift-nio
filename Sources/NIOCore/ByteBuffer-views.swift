@@ -158,6 +158,36 @@ extension ByteBufferView: RangeReplaceableCollection {
         self = ByteBufferView(ByteBuffer())
     }
 
+    /// Reserves enough space in the underlying `ByteBuffer` such that this view can
+    /// store the specified number of bytes without reallocation.
+    ///
+    /// See the documentation for ``ByteBuffer.reserveCapacity(_:)`` for more details.
+    @inlinable
+    public mutating func reserveCapacity(_ minimumCapacity: Int) {
+        let additionalCapacity = minimumCapacity - self.count
+        if additionalCapacity > 0 {
+            self._buffer.reserveCapacity(self._buffer.capacity + additionalCapacity)
+        }
+    }
+
+    /// Writes a single byte to the underlying `ByteBuffer`.
+    @inlinable
+    public mutating func append(_ byte: UInt8) {
+        // ``CollectionOfOne`` has no witness for
+        // ``Sequence.withContiguousStorageIfAvailable(_:)``. so we do this instead:
+        self._buffer.setInteger(byte, at: self._range.upperBound)
+        self._range = self._range.lowerBound ..< self._range.upperBound.advanced(by: 1)
+        self._buffer.moveWriterIndex(to: self._range.upperBound)
+    }
+
+    /// Writes a sequence of bytes to the underlying `ByteBuffer`.
+    @inlinable
+    public mutating func append<Bytes: Sequence>(contentsOf bytes: Bytes) where Bytes.Element == UInt8 {
+        let written = self._buffer.setBytes(bytes, at: self._range.upperBound)
+        self._range = self._range.lowerBound ..< self._range.upperBound.advanced(by: written)
+        self._buffer.moveWriterIndex(to: self._range.upperBound)
+    }
+
     @inlinable
     public mutating func replaceSubrange<C: Collection>(_ subrange: Range<Index>, with newElements: C) where ByteBufferView.Element == C.Element {
         precondition(subrange.startIndex >= self.startIndex && subrange.endIndex <= self.endIndex,
@@ -193,7 +223,6 @@ extension ByteBufferView: RangeReplaceableCollection {
             let additionalByteCount = newElements.count - subrange.count
             self._buffer.moveWriterIndex(forwardBy: additionalByteCount)
             self._range = self._range.startIndex ..< self._range.endIndex.advanced(by: additionalByteCount)
-
         }
     }
 }

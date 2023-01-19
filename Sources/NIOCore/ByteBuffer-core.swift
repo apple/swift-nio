@@ -1001,9 +1001,10 @@ extension ByteBuffer {
         }
 
         self._ensureAvailableCapacity(_Capacity(length), at: _toIndex(toIndex))
-        self.withVeryUnsafeBytes { ptr in
+        self.withVeryUnsafeMutableBytes { ptr in
             let srcPtr = UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: fromIndex), count: length)
-            self._setBytesAssumingUniqueBufferAccess(srcPtr, at: _toIndex(toIndex))
+            let targetPtr = UnsafeMutableRawBufferPointer(fastRebase: ptr.dropFirst(toIndex))
+            targetPtr.copyMemory(from: srcPtr)
         }
 
         return length

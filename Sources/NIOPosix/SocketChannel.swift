@@ -51,9 +51,9 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     private var connectTimeout: TimeAmount? = nil
 
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
-        var protocolSubtype = 0
+        var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
-            guard let subtype = NIOBSDSocket.mptcpProtocolSubtype else {
+            guard let subtype = NIOBSDSocket.ProtocolSubtype.mptcp else {
                 throw ChannelError.operationUnsupported
             }
             protocolSubtype = subtype
@@ -162,9 +162,9 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     override public var isWritable: Bool { return false }
 
     convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
-        var protocolSubtype = 0
+        var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
-            guard let subtype = NIOBSDSocket.mptcpProtocolSubtype else {
+            guard let subtype = NIOBSDSocket.ProtocolSubtype.mptcp else {
                 throw ChannelError.operationUnsupported
             }
             protocolSubtype = subtype
@@ -404,9 +404,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
+    init(
+        eventLoop: SelectableEventLoop,
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        protocolSubtype: NIOBSDSocket.ProtocolSubtype,
+        socketType: NIOBSDSocket.SocketType = .datagram
+    ) throws {
         self.vectorReadManager = nil
-        let socket = try Socket(protocolFamily: protocolFamily, type: .datagram)
+        let socket = try Socket(
+            protocolFamily: protocolFamily,
+            type: socketType,
+            protocolSubtype: protocolSubtype
+        )
         do {
             try socket.setNonBlocking()
         } catch let err {
@@ -616,7 +625,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             }
             switch result {
             case .processed(let bytesRead):
-                assert(bytesRead > 0)
                 assert(self.isOpen)
                 let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
                 readPending = false
@@ -783,10 +791,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
             scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
-                guard ptr.count > 0 else {
-                    // No need to call write if the buffer is empty.
-                    return .processed(0)
-                }
                 // normal write
                 // Control bytes must not escape current stack.
                 var controlBytes = UnsafeOutboundControlBytes(

@@ -120,6 +120,7 @@ class LinuxMainRunner {
              testCase(PendingDatagramWritesManagerTests.allTests),
              testCase(PipeChannelTest.allTests),
              testCase(PriorityQueueTest.allTests),
+             testCase(RawSocketBootstrapTests.allTests),
              testCase(SALChannelTest.allTests),
              testCase(SALEventLoopTests.allTests),
              testCase(SNIHandlerTest.allTests),

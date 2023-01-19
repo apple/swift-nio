@@ -17,7 +17,7 @@ import NIOCore
 @testable import NIOPosix
 import XCTest
 
-private extension Channel {
+extension Channel {
     func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
         return try self.pipeline.context(name: "ByteReadRecorder").flatMap { context in
             if let future = (context.handler as? DatagramReadRecorder<ByteBuffer>)?.notifyForDatagrams(count) {
@@ -47,7 +47,7 @@ private extension Channel {
 /// A class that records datagrams received and forwards them on.
 ///
 /// Used extensively in tests to validate messaging expectations.
-private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
+final class DatagramReadRecorder<DataType>: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<DataType>
     typealias InboundOut = AddressedEnvelope<DataType>
 
@@ -144,6 +144,18 @@ class DatagramChannelTests: XCTestCase {
     func testBasicChannelCommunication() throws {
         var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+
+        let reads = try self.secondChannel.waitForDatagrams(count: 1)
+        XCTAssertEqual(reads.count, 1)
+        let read = reads.first!
+        XCTAssertEqual(read.data, buffer)
+        XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!)
+    }
+
+    func testEmptyDatagram() throws {
+        let buffer = self.firstChannel.allocator.buffer(capacity: 0)
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
         XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
 
@@ -381,7 +393,7 @@ class DatagramChannelTests: XCTestCase {
 
             init(error: Int32) throws {
                 self.error = error
-                try super.init(protocolFamily: .inet, type: .datagram)
+                try super.init(protocolFamily: .inet, type: .datagram, protocolSubtype: .default)
             }
 
             override func recvmsg(pointer: UnsafeMutableRawBufferPointer,
@@ -537,7 +549,8 @@ class DatagramChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         let channel = try DatagramChannel(eventLoop: group.next() as! SelectableEventLoop,
-                                          protocolFamily: .inet)
+                                          protocolFamily: .inet,
+                                          protocolSubtype: .default)
         XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
             if let error = error as? ChannelError {
                 XCTAssertEqual(ChannelError.operationUnsupported, error)

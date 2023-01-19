@@ -89,6 +89,8 @@ extension EventLoopTest {
                 ("testEventLoopGroupsWithoutAnyImplementationAreValid", testEventLoopGroupsWithoutAnyImplementationAreValid),
                 ("testCallingAnyOnAnMTELGThatIsNotSelfDoesNotReturnItself", testCallingAnyOnAnMTELGThatIsNotSelfDoesNotReturnItself),
                 ("testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation", testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation),
+                ("testAsyncToFutureConversionSuccess", testAsyncToFutureConversionSuccess),
+                ("testAsyncToFutureConversionFailure", testAsyncToFutureConversionFailure),
            ]
    }
 }

@@ -1974,7 +1974,7 @@ public final class ChannelTests: XCTestCase {
         func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #filePath, line: UInt = #line,  _ body: (Channel) throws -> Void) {
             XCTAssertNoThrow(try {
                 let el = elg.next() as! SelectableEventLoop
-                let channels: [Channel] = (skipDatagram ? [] : [try DatagramChannel(eventLoop: el, protocolFamily: .inet)]) +
+                let channels: [Channel] = (skipDatagram ? [] : [try DatagramChannel(eventLoop: el, protocolFamily: .inet, protocolSubtype: .default)]) +
                     /* Xcode need help */ (skipStream ? []: [try SocketChannel(eventLoop: el, protocolFamily: .inet)]) +
                     /* Xcode need help */ (skipServerSocket ? []: [try ServerSocketChannel(eventLoop: el, group: elg, protocolFamily: .inet)])
                 for channel in channels {

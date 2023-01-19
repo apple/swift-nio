@@ -22,35 +22,21 @@
 /// acquire/release the lock in the correct place. ``NIOLockedValueBox`` makes
 /// that much easier.
 public struct NIOLockedValueBox<Value> {
-    @usableFromInline
-    internal final class _Storage {
-        @usableFromInline
-        internal let _lock = NIOLock()
-        
-        @usableFromInline
-        internal var _value: Value
-        
-        internal init(_value value: Value) {
-            self._value = value
-        }
-    }
     
     @usableFromInline
-    internal let _storage: _Storage
+    internal let _storage: LockStorage<Value>
 
     /// Initialize the `Value`.
+    @inlinable
     public init(_ value: Value) {
-        self._storage = _Storage(_value: value)
+        self._storage = .create(value: value)
     }
 
     /// Access the `Value`, allowing mutation of it.
     @inlinable
     public func withLockedValue<T>(_ mutate: (inout Value) throws -> T) rethrows -> T {
-        return try self._storage._lock.withLock {
-            return try mutate(&self._storage._value)
-        }
+        return try self._storage.withLockedValue(mutate)
     }
 }
 
 extension NIOLockedValueBox: Sendable where Value: Sendable {}
-extension NIOLockedValueBox._Storage: @unchecked Sendable {}

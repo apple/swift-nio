@@ -300,15 +300,29 @@ class EmbeddedChannelCore: ChannelCore {
     var inboundBufferConsumer: Deque<(NIOAny) -> Void> = []
 
     @usableFromInline
+    var localAddress: SocketAddress?
+
+    @usableFromInline
+    var remoteAddress: SocketAddress?
+
+    @usableFromInline
     func localAddress0() throws -> SocketAddress {
         self.eventLoop.preconditionInEventLoop()
-        throw ChannelError.operationUnsupported
+        if let localAddress = self.localAddress {
+            return localAddress
+        } else {
+            throw ChannelError.operationUnsupported
+        }
     }
 
     @usableFromInline
     func remoteAddress0() throws -> SocketAddress {
         self.eventLoop.preconditionInEventLoop()
-        throw ChannelError.operationUnsupported
+        if let remoteAddress = self.remoteAddress {
+            return remoteAddress
+        } else {
+            throw ChannelError.operationUnsupported
+        }
     }
 
     @usableFromInline
@@ -615,10 +629,24 @@ public final class EmbeddedChannel: Channel {
     public var embeddedEventLoop: EmbeddedEventLoop = EmbeddedEventLoop()
 
     /// - see: `Channel.localAddress`
-    public var localAddress: SocketAddress? = nil
+    public var localAddress: SocketAddress? {
+        get {
+            self.channelcore.localAddress
+        }
+        set {
+            self.channelcore.localAddress = newValue
+        }
+    }
 
     /// - see: `Channel.remoteAddress`
-    public var remoteAddress: SocketAddress? = nil
+    public var remoteAddress: SocketAddress? {
+        get {
+            self.channelcore.remoteAddress
+        }
+        set {
+            self.channelcore.remoteAddress = newValue
+        }
+    }
 
     /// `nil` because `EmbeddedChannel`s don't have parents.
     public let parent: Channel? = nil

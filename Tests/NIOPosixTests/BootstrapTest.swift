@@ -153,7 +153,7 @@ class BootstrapTest: XCTestCase {
         var socketFDs: [CInt] = [-1, -1]
         XCTAssertNoThrow(try Posix.socketpair(domain: .local,
                                               type: .stream,
-                                              protocol: 0,
+                                              protocolSubtype: .default,
                                               socketVector: &socketFDs))
         defer {
             // 0 is closed together with the Channel below.
@@ -173,7 +173,7 @@ class BootstrapTest: XCTestCase {
 
     func testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
         let socket =
-            try NIOBSDSocket.socket(domain: .inet, type: .stream, protocol: 0)
+            try NIOBSDSocket.socket(domain: .inet, type: .stream, protocolSubtype: .default)
 
         let serverAddress = try assertNoThrowWithValue(SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0))
         try serverAddress.withSockAddr { address, len in

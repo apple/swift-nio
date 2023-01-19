@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2020-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2020-2022 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -83,6 +83,14 @@ extension NIOBSDSocket.SocketType {
         internal static let stream: NIOBSDSocket.SocketType =
                 NIOBSDSocket.SocketType(rawValue: SOCK_STREAM)
     #endif
+    
+    #if os(Linux)
+        internal static let raw: NIOBSDSocket.SocketType =
+                NIOBSDSocket.SocketType(rawValue: CInt(SOCK_RAW.rawValue))
+    #else
+        internal static let raw: NIOBSDSocket.SocketType =
+                NIOBSDSocket.SocketType(rawValue: SOCK_RAW)
+    #endif
 }
 
 // IPv4 Options
@@ -126,6 +134,38 @@ extension NIOBSDSocket.Option {
     static let ipv6_recv_pktinfo: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: Posix.IPV6_RECVPKTINFO)
 }
+
+extension NIOBSDSocket {
+    struct ProtocolSubtype: RawRepresentable, Hashable {
+        typealias RawValue = CInt
+        var rawValue: RawValue
+        
+        init(rawValue: RawValue) {
+            self.rawValue = rawValue
+        }
+    }
+}
+
+extension NIOBSDSocket.ProtocolSubtype {
+    static let `default` = Self(rawValue: 0)
+    /// The protocol subtype for MPTCP.
+    /// - returns: nil if MPTCP is not supported.
+    static var mptcp: Self? {
+        #if os(Linux)
+        // Defined by the linux kernel, this is IPPROTO_MPTCP.
+        return .init(rawValue: 262)
+        #else
+        return nil
+        #endif
+    }
+}
+
+extension NIOBSDSocket.ProtocolSubtype {
+    init(_ protocol: NIOIPProtocol) {
+        self.rawValue = CInt(`protocol`.rawValue)
+    }
+}
+
 
 /// This protocol defines the methods that are expected to be found on
 /// `NIOBSDSocket`. While defined as a protocol there is no expectation that any
@@ -195,7 +235,7 @@ protocol _BSDSocketProtocol {
 
     static func socket(domain af: NIOBSDSocket.ProtocolFamily,
                        type: NIOBSDSocket.SocketType,
-                       `protocol`: CInt) throws -> NIOBSDSocket.Handle
+                       protocolSubtype: NIOBSDSocket.ProtocolSubtype) throws -> NIOBSDSocket.Handle
 
     static func recvmmsg(socket: NIOBSDSocket.Handle,
                          msgvec: UnsafeMutablePointer<MMsgHdr>,

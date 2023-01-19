@@ -21,6 +21,127 @@ import WinSDK
 import Glibc
 #endif
 
+#if os(Windows)
+@usableFromInline
+typealias LockPrimitive = SRWLOCK
+#else
+@usableFromInline
+typealias LockPrimitive = pthread_mutex_t
+#endif
+
+@usableFromInline
+enum LockOperations { }
+
+extension LockOperations {
+    @inlinable
+    static func create(_ mutex: UnsafeMutablePointer<LockPrimitive>) {
+#if os(Windows)
+        InitializeSRWLock(mutex)
+#else
+        var attr = pthread_mutexattr_t()
+        pthread_mutexattr_init(&attr)
+        debugOnly {
+            pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
+        }
+        
+        let err = pthread_mutex_init(mutex, &attr)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+#endif
+    }
+    
+    @inlinable
+    static func destroy(_ mutex: UnsafeMutablePointer<LockPrimitive>) {
+#if os(Windows)
+        // SRWLOCK does not need to be free'd
+#else
+        let err = pthread_mutex_destroy(mutex)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+#endif
+    }
+    
+    @inlinable
+    static func lock(_ mutex: UnsafeMutablePointer<LockPrimitive>) {
+#if os(Windows)
+        AcquireSRWLockExclusive(mutex)
+#else
+        let err = pthread_mutex_lock(mutex)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+#endif
+    }
+    
+    @inlinable
+    static func unlock(_ mutex: UnsafeMutablePointer<LockPrimitive>) {
+#if os(Windows)
+        ReleaseSRWLockExclusive(mutex)
+#else
+        let err = pthread_mutex_unlock(mutex)
+        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+#endif
+    }
+}
+
+// Tail allocate both the mutex and a generic value using ManagedBuffer.
+// Both the header pointer and the elements pointer are stable for
+// the class's entire lifetime.
+@usableFromInline
+final class LockStorage<Value>: ManagedBuffer<LockPrimitive, Value> {
+    
+    @inlinable
+    static func create(value: Value) -> Self {
+        let buffer = Self.create(minimumCapacity: 1) { _ in
+            return LockPrimitive()
+        }
+        let storage = unsafeDowncast(buffer, to: Self.self)
+        
+        storage.withUnsafeMutablePointers { lockPtr, valuePtr in
+            LockOperations.create(lockPtr)
+            valuePtr.initialize(to: value)
+        }
+        
+        return storage
+    }
+    
+    @inlinable
+    func lock() {
+        self.withUnsafeMutablePointerToHeader { lockPtr in
+            LockOperations.lock(lockPtr)
+        }
+    }
+    
+    @inlinable
+    func unlock() {
+        self.withUnsafeMutablePointerToHeader { lockPtr in
+            LockOperations.unlock(lockPtr)
+        }
+    }
+    
+    @inlinable
+    deinit {
+        self.withUnsafeMutablePointers { lockPtr, valuePtr in
+            LockOperations.destroy(lockPtr)
+            valuePtr.deinitialize(count: 1)
+        }
+    }
+    
+    @inlinable
+    func withLockPrimitive<T>(_ body: (UnsafeMutablePointer<LockPrimitive>) throws -> T) rethrows -> T {
+        try self.withUnsafeMutablePointerToHeader { lockPtr in
+            return try body(lockPtr)
+        }
+    }
+    
+    @inlinable
+    func withLockedValue<T>(_ mutate: (inout Value) throws -> T) rethrows -> T {
+        try self.withUnsafeMutablePointers { lockPtr, valuePtr in
+            LockOperations.lock(lockPtr)
+            defer { LockOperations.unlock(lockPtr) }
+            return try mutate(&valuePtr.pointee)
+        }
+    }
+}
+
+extension LockStorage: @unchecked Sendable { }
+
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///
 /// - note: ``NIOLock`` has reference semantics.
@@ -31,81 +152,19 @@ import Glibc
 /// `SRWLOCK` type.
 public struct NIOLock {
     @usableFromInline
-    internal let _storage: _Storage
-
-#if os(Windows)
-    @usableFromInline
-    internal typealias LockPrimitive = SRWLOCK
-#else
-    @usableFromInline
-    internal typealias LockPrimitive = pthread_mutex_t
-#endif
-    
-    @usableFromInline
-    internal final class _Storage {
-        // TODO: We should tail-allocate the pthread_t/SRWLock.
-        @usableFromInline
-        internal let mutex: UnsafeMutablePointer<LockPrimitive> =
-        UnsafeMutablePointer.allocate(capacity: 1)
-
-        /// Create a new lock.
-        internal init() {
-#if os(Windows)
-            InitializeSRWLock(self.mutex)
-#else
-            var attr = pthread_mutexattr_t()
-            pthread_mutexattr_init(&attr)
-            debugOnly {
-                pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
-            }
-            
-            let err = pthread_mutex_init(self.mutex, &attr)
-            precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-#endif
-        }
-        
-        internal func lock() {
-#if os(Windows)
-            AcquireSRWLockExclusive(self.mutex)
-#else
-            let err = pthread_mutex_lock(self.mutex)
-            precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-#endif
-        }
-        
-        internal func unlock() {
-#if os(Windows)
-            ReleaseSRWLockExclusive(self.mutex)
-#else
-            let err = pthread_mutex_unlock(self.mutex)
-            precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-#endif
-        }
-
-        internal func withLockPrimitive<T>(_ body: (UnsafeMutablePointer<LockPrimitive>) throws -> T) rethrows -> T {
-            return try body(self.mutex)
-        }
-        
-        deinit {
-#if os(Windows)
-            // SRWLOCK does not need to be free'd
-#else
-            let err = pthread_mutex_destroy(self.mutex)
-            precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-#endif
-            mutex.deallocate()
-        }
-    }
+    internal let _storage: LockStorage<Void>
     
     /// Create a new lock.
+    @inlinable
     public init() {
-        self._storage = _Storage()
+        self._storage = .create(value: ())
     }
 
     /// Acquire the lock.
     ///
     /// Whenever possible, consider using `withLock` instead of this method and
     /// `unlock`, to simplify lock handling.
+    @inlinable
     public func lock() {
         self._storage.lock()
     }
@@ -114,10 +173,12 @@ public struct NIOLock {
     ///
     /// Whenever possible, consider using `withLock` instead of this method and
     /// `lock`, to simplify lock handling.
+    @inlinable
     public func unlock() {
         self._storage.unlock()
     }
 
+    @inlinable
     internal func withLockPrimitive<T>(_ body: (UnsafeMutablePointer<LockPrimitive>) throws -> T) rethrows -> T {
         return try self._storage.withLockPrimitive(body)
     }
@@ -148,4 +209,3 @@ extension NIOLock {
 }
 
 extension NIOLock: Sendable {}
-extension NIOLock._Storage: Sendable {}

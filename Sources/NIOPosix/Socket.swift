@@ -32,12 +32,22 @@ typealias IOVector = iovec
     /// - parameters:
     ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
     ///     - type: The type of the socket to create.
-    ///     - protocolSubtype: The subtype of the protocol, corresponding to the `protocol`
+    ///     - protocolSubtype: The subtype of the protocol, corresponding to the `protocolSubtype`
     ///         argument to the socket syscall. Defaults to 0.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: NIOBSDSocket.ProtocolFamily, type: NIOBSDSocket.SocketType, protocolSubtype: Int = 0, setNonBlocking: Bool = false) throws {
-        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: type, protocolSubtype: protocolSubtype, setNonBlocking: setNonBlocking)
+    init(
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        type: NIOBSDSocket.SocketType,
+        protocolSubtype: NIOBSDSocket.ProtocolSubtype = .default,
+        setNonBlocking: Bool = false
+    ) throws {
+        let sock = try BaseSocket.makeSocket(
+            protocolFamily: protocolFamily,
+            type: type,
+            protocolSubtype: protocolSubtype,
+            setNonBlocking: setNonBlocking
+        )
         try super.init(socket: sock)
     }
 

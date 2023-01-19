@@ -435,12 +435,13 @@ public struct NonBlockingFileIO: Sendable {
 
     private func read0(fileHandle: NIOFileHandle,
                        fromOffset: Int64?, // > 2 GB offset is reasonable on 32-bit systems
-                       byteCount: Int,
+                       byteCount rawByteCount: Int,
                        allocator: ByteBufferAllocator,
                        eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
-        guard byteCount > 0 else {
+        guard rawByteCount > 0 else {
             return eventLoop.makeSucceededFuture(allocator.buffer(capacity: 0))
         }
+        let byteCount = rawByteCount < Int32.max ? rawByteCount : size_t(Int32.max)
 
         var buf = allocator.buffer(capacity: byteCount)
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
