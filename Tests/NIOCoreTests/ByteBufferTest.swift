@@ -1756,9 +1756,9 @@ class ByteBufferTest: XCTestCase {
 
         // This allocator assumes that we'll never call realloc.
         let fakeAllocator = ByteBufferAllocator(
-            hookedMalloc: { _ in .init(bitPattern: 0xdeadbeef) },
+            hookedMalloc: { _ in .init(bitPattern: 0xdedbeef) },
             hookedRealloc: { _, _ in fatalError() },
-            hookedFree: { precondition($0 == .init(bitPattern: 0xdeadbeef)!) },
+            hookedFree: { precondition($0 == .init(bitPattern: 0xdedbeef)!) },
             hookedMemcpy: {_, _, _ in }
         )
 
