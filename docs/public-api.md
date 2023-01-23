@@ -1,6 +1,6 @@
 # SwiftNIO 2 Public API
 
-The SwiftNIO project (which includes all of `github.com/apple/swift-nio*`) aims to follow [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html) which requires projects to declare a public API. This document along with the [API documentation](https://apple.github.io/swift-nio/) declare SwiftNIO's API.
+The SwiftNIO project (which includes all of `github.com/apple/swift-nio*`) aims to follow [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html) which requires projects to declare a public API. This document along with the [API documentation](https://swiftpackageindex.com/apple/swift-nio/main/documentation) declare SwiftNIO's API.
 
 ## What are acceptable uses of NIO's Public API
 
